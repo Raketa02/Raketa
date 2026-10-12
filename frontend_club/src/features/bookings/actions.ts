@@ -7,12 +7,9 @@ import type { Outcome } from '@/server/outcome';
 import { isId, type RefusalAbout } from '@/ui/forms';
 
 import {
-  toAccepted,
   toCancelBody,
   toFreeCourts,
   toMoveBody,
-  toRefusalBody,
-  type Accepted,
   type CancelGivesBack,
   type FreeCourt,
 } from './mappers';
@@ -20,8 +17,6 @@ import { checkAct, readAct } from './schemas';
 
 /** What landed, on which game, as the page named it to the desk. */
 export type Done = { readonly id: string; readonly name: string } & (
-  | { readonly act: 'accept'; readonly accepted: Accepted }
-  | { readonly act: 'refuse' }
   | { readonly act: 'move'; readonly court: string }
   | { readonly act: 'cancel'; readonly givesBack: CancelGivesBack | null }
 );
@@ -33,8 +28,8 @@ export interface BookingActState {
 }
 
 /**
- * Everything a request's answer can change is on more than one page: the badge in the frame,
- * Overview's list and the day on Bookings. So every page is drawn again.
+ * A move or a cancel changes more than the day on Bookings: the hours Courts & prices holds for a
+ * game, and Money's month. So every page is drawn again.
  */
 function redraw(): void {
   revalidatePath('/', 'layout');
@@ -45,35 +40,19 @@ function redrawIfStale(error: { readonly status: number }): void {
   if (error.status === 404 || error.status === 409) redraw();
 }
 
-/**
- * What came of an act: what was refused, or what landed. A reply the contract does not allow
- * (`done` finds nothing true to say of it) is the backend failing; whatever landed is on the
- * page, drawn again.
- */
-function settle<T>(
-  outcome: Outcome<T>,
-  name: string,
-  done: (data: T) => Done | null,
-): BookingActState {
+/** What came of an act: what was refused, or what landed, which is on the page, drawn again. */
+function settle<T>(outcome: Outcome<T>, name: string, done: (data: T) => Done): BookingActState {
   if (!outcome.ok) {
     redrawIfStale(outcome.error);
     return { done: null, refusal: { code: outcome.error.code, name } };
   }
   redraw();
-  const landed = done(outcome.data);
-  return landed === null
-    ? { done: null, refusal: { code: 'backend_failed', name } }
-    : { done: landed, refusal: null };
+  return { done: done(outcome.data), refusal: null };
 }
 
 /**
- * **Accept**, **Refuse**, **Move** or **Cancel** one game: which is the hidden `act`.
+ * **Move** or **Cancel** one game: which is the hidden `act`.
  *
- * - *Accept* books an On request game: every share is held now, all together or not at all, and
- *   taken at the cut-off, or taken at once after it. A card that does not go through keeps the
- *   yes and the court while its player has time to fix it or to pay, or, with no time left, calls
- *   the game off; nobody has paid either way.
- * - *Refuse*, with a note for the club's own records: nobody paid.
  * - *Move* onto another free court of its sport at its hour, until it starts.
  * - *Cancel*, with the reason the players are told: before the cut-off every hold is let go,
  *   after it everybody is refunded in full.
@@ -83,7 +62,7 @@ export async function actOnBooking(
   form: FormData,
 ): Promise<BookingActState> {
   const posted = readAct(form);
-  const { act, id, name, note, courtId, cancel, givesBack } = posted;
+  const { act, id, name, courtId, cancel, givesBack } = posted;
   const refused = checkAct(posted);
   if (refused !== null || act === null || id === null) {
     return { done: null, refusal: { code: refused ?? 'request_invalid', name } };
@@ -91,29 +70,6 @@ export async function actOnBooking(
   const path = { params: { path: { booking_id: id } } };
 
   switch (act) {
-    case 'accept':
-      return settle(
-        await writeAsClub((api, auth) =>
-          api.POST('/api/v1/club/bookings/{booking_id}/acceptance', { ...auth, ...path }),
-        ),
-        name,
-        (data) => {
-          const accepted = toAccepted(data);
-          return accepted === null ? null : { act, id, name, accepted };
-        },
-      );
-    case 'refuse':
-      return settle(
-        await writeAsClub((api, auth) =>
-          api.POST('/api/v1/club/bookings/{booking_id}/refusal', {
-            ...auth,
-            ...path,
-            body: toRefusalBody(note),
-          }),
-        ),
-        name,
-        () => ({ act, id, name }),
-      );
     case 'move':
       if (courtId === null) return { done: null, refusal: { code: 'court_required', name } };
       return settle(
@@ -168,14 +124,4 @@ export async function readFreeCourts(bookingId: string): Promise<FreeCourtsAnswe
     return { courts: null, refusal: outcome.error.code };
   }
   return { courts: toFreeCourts(outcome.data), refusal: null };
-}
-
-/**
- * **How many requests wait now**, for the frame to see whether its badge is out of date: the
- * frame is not drawn again as the desk moves between pages, and a request arrives or runs out
- * while nobody acts. `null` when the backend could not say.
- */
-export async function readRequestCount(): Promise<number | null> {
-  const outcome = await writeAsClub((api, auth) => api.GET('/api/v1/club/bookings/waiting', auth));
-  return outcome.ok ? outcome.data.bookings.length : null;
 }

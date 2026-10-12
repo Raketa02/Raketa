@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 
-import { getRequests } from '@/features/bookings/queries';
 import { getClub } from '@/features/club-details/queries';
 import { Overview } from '@/features/overview/components/Overview';
 import { getSetup, wasToldLive } from '@/features/overview/queries';
@@ -19,13 +18,10 @@ export default async function OverviewPage({
     getSetup(),
     wasToldLive(),
   ]);
-  // Once the club is live, Overview is what waits for its answer.
-  const requests = setup.live ? await getRequests() : [];
   return (
     <Overview
       club={club}
       setup={setup}
-      requests={requests}
       toldLive={toldLive}
       passwordSet={notice === 'password-set'}
       stripeFailed={notice === 'stripe-failed'}

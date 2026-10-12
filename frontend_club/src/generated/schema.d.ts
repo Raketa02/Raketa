@@ -284,26 +284,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/club/way-of-working": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Choose how the club works with Raketa
-         * @description One way for the whole club — the setup checklist's second step. Changeable later; **the change applies to hours not yet booked**. Choosing the one it has records nothing. Answers the settings page.
-         */
-        put: operations["choose_way_of_working_api_v1_club_way_of_working_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/club/raketa-settings": {
         parameters: {
             query?: never;
@@ -311,7 +291,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** How the club works with Raketa, and its settings */
+        /**
+         * The club's Raketa settings
+         * @description Every setting, **at its default until the club confirms it**. Only Raketa is the one way of working: Raketa sells the club's Raketa hours alone until each one's release time, the release lead before it, so there is no way to choose.
+         */
         get: operations["read_raketa_settings_api_v1_club_raketa_settings_get"];
         /**
          * Save — the first time, confirm — the club's Raketa settings
@@ -566,66 +549,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/club/bookings/waiting": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * What is waiting for your answer
-         * @description Every Raketa game at this club waiting for its answer — an **On request** club's full games, each asking for a court — with the players, the hour, the sport, the price and the countdown. Nobody has paid. A request whose time to confirm has run out is not listed.
-         */
-        get: operations["waiting_api_v1_club_bookings_waiting_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/club/bookings/{booking_id}/acceptance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Accept a request
-         * @description **Accept** books the game: every share is held at this moment, all together or not at all, on your account — you are the seller — and taken at your cut-off, or at once when you accept after it (#637); the players are given the court that was reserved for them. Their game and its chat open; *It's a game! · 30 zł held* (*you paid* after the cut-off) is emailed to each.
-         */
-        post: operations["accept_api_v1_club_bookings__booking_id__acceptance_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/club/bookings/{booking_id}/refusal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refuse a request
-         * @description **Refuse**, with a note for your own records if you like: nobody paid, the hour is yours to sell again, and the players read *Called off · refused* and are dealt a new card first — never this court hour again.
-         */
-        post: operations["refuse_api_v1_club_bookings__booking_id__refusal_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/club/bookings": {
         parameters: {
             query?: never;
@@ -635,7 +558,7 @@ export interface paths {
         };
         /**
          * Your bookings, by day
-         * @description Every Raketa booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's. A request a player's leaving took back is not listed: it comes back when the game is full and asks again.
+         * @description Every Raketa booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's.
          */
         get: operations["bookings_on_a_day_api_v1_club_bookings_get"];
         put?: never;
@@ -677,9 +600,29 @@ export interface paths {
         put?: never;
         /**
          * Move a game to another court
-         * @description **Move** a booked game — whole or with a seat open — onto another free court of its sport at the same hour, until it starts. The players read the new number; nothing else about the game changes. Answers the court it is on now.
+         * @description **Move** a booked game — whole or with a seat open — onto another free court of its sport at the same hour, of the same kind or indoor for an outdoor game, until it starts. The players read the new number and its kind, and are told *Game moved*; nothing else about the game changes. Answers the court it is on now.
          */
         post: operations["move_api_v1_club_bookings__booking_id__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/{booking_id}/cancellation/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a cancel would do
+         * @description The Cancel dialog: what cancelling with this `reason` would do now — **move the game** to another of your courts at its hour (`MOVED`, with the court and its kind), or **call it off** (`CALLED_OFF`). A court takes the game when it is free at the game's hour, sold at the game's price, and of the same kind or indoor for an outdoor game — indoor only for `WEATHER`, since an outdoor court at the same hour is rained on too; the same kind first, then indoor, in your own order. When it would move, offer **Cancel the game anyway**. The cancel itself decides afresh.
+         */
+        get: operations["cancellation_preview_api_v1_club_bookings__booking_id__cancellation_preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -697,7 +640,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel a game
-         * @description **Cancel** a booked game, with your reason, until it starts. **Before your cut-off** every share is only held, and every hold is let go: nothing was taken, nobody is refunded and nobody pays a fee, you included (#637). **After it** everybody is **refunded in full** — the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.
+         * @description **Cancel** a booked game, with your reason, until it starts. **First, another of your courts takes it when one can** — free at the game's hour, sold at its price, of its kind or indoor for an outdoor game, indoor only for `WEATHER` — read afresh now, whatever the preview said: the game **moves** there, every hold or payment stays exactly as it is, nobody is refunded, nobody is owed a new game, and the players are told *Game moved* with why the court they left can't be played. **Otherwise, or with `anyway`, the game is called off**: **before your cut-off** every share is only held, and every hold is let go — nothing was taken, nobody is refunded and nobody pays a fee, you included (#637); **after it** everybody is **refunded in full** — the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first. Answers which it was.
          */
         post: operations["cancel_api_v1_club_bookings__booking_id__cancellation_post"];
         delete?: never;
@@ -730,29 +673,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * AcceptOutcome
-         * @description What the club's yes came to.
-         * @enum {string}
-         */
-        AcceptOutcome: "BOOKED" | "WAITING_FOR_A_PAYMENT" | "CALLED_OFF" | "SEAT_OPENED";
-        /** AcceptanceResponse */
-        AcceptanceResponse: {
-            /** @description `BOOKED` — every share is held, and taken at your cut-off (or taken now, after it — #637); the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` — a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` — a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full. */
-            outcome: components["schemas"]["AcceptOutcome"];
-            /**
-             * Court Name
-             * @description The court the players were given — on a booked game only.
-             */
-            court_name: string | null;
-            /**
-             * Payment Due By
-             * @description When the player's payment is due — *Accepted · waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only.
-             */
-            payment_due_by?: string | null;
-            /** @description What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` — you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted · waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` — you accepted after it, where the shares are taken at once: *Accepted · waiting for one player's payment until 21:20*. `null` with `payment_due_by`. */
-            time_to?: components["schemas"]["TimeTo"] | null;
-        };
         /** AdministratorGroupSchema */
         AdministratorGroupSchema: {
             /**
@@ -847,11 +767,30 @@ export interface components {
          * @description Why a game will not be played (the mechanics §14.1, §16.7).
          * @enum {string}
          */
-        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "PAYMENT_NOT_IN_TIME";
+        CalledOffReason: "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB";
+        /**
+         * CancelOutcomeKind
+         * @description What a cancel came to — or, in its preview, would come to (#672).
+         * @enum {string}
+         */
+        CancelOutcomeKind: "MOVED" | "CALLED_OFF";
+        /** CancelOutcomeSchema */
+        CancelOutcomeSchema: {
+            /** @description `MOVED` — a free court of yours at the game's hour, sold at its price, of its kind or indoor for an outdoor game (indoor only for `WEATHER`), takes the game: every hold or payment stays as it is, nobody is refunded, and the players are told *Game moved*. `CALLED_OFF` — the game is off, the money as the cancel says. */
+            outcome: components["schemas"]["CancelOutcomeKind"];
+            /** @description The court the game moves to, and its kind; `null` when called off. */
+            court: components["schemas"]["CourtToMoveToSchema"] | null;
+        };
         /** CancelRequest */
         CancelRequest: {
-            /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with what comes of their money. */
+            /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with what comes of their money, or, when another of your courts takes the game, as why the court it left can't be played. */
             reason: components["schemas"]["ClubCancelReason"];
+            /**
+             * Anyway
+             * @description **Cancel the game anyway** — for a club closing the whole hour (an event, a power cut): the game is called off even when another court would take it.
+             * @default false
+             */
+            anyway: boolean;
         };
         /**
          * ClaimCodeRequest
@@ -951,15 +890,20 @@ export interface components {
             ends_at: string;
             /**
              * Court Name
-             * @description The court it is on — reserved for it, while it waits for your answer.
+             * @description The court it is on.
              */
             court_name: string;
+            /**
+             * Indoor
+             * @description The court's kind — *Court 3 · indoor* — as the players see it.
+             */
+            indoor: boolean;
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `WAITING_FOR_YOU` — an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` — you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted · waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` — full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
+            /** @description `BOOKED` — full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
             status: components["schemas"]["ClubStatus"];
-            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `REFUSED` — you refused the request. `NO_ANSWER` — it was not answered in time. `PAYMENT_NOT_IN_TIME` — you accepted, and a player's payment didn't come in time: nobody paid, and you were emailed *A game didn't go ahead*. Full again, the game asks you again as a new request. */
+            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why you cancelled it — on a game you cancelled, else `null`. */
             cancel_reason: components["schemas"]["ClubCancelReason"] | null;
@@ -976,18 +920,6 @@ export interface components {
             money: components["schemas"]["ClubBookingMoneySchema"];
             /** @description The group it came from — `null` for a group that is gone. */
             booked_from: components["schemas"]["BookedFromSchema"] | null;
-            /**
-             * Answer By
-             * @description Your countdown, while it waits for your answer — else `null`.
-             */
-            answer_by: string | null;
-            /**
-             * Payment Due By
-             * @description When the player's payment your yes waits on is due — `WAITING_FOR_A_PAYMENT` only, else `null`. Never who.
-             */
-            payment_due_by: string | null;
-            /** @description What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` — you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted · waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` — you accepted after it, where the shares are taken at once: *Accepted · waiting for one player's payment until 21:20*. `null` with `payment_due_by`. */
-            time_to: components["schemas"]["TimeTo"] | null;
             /**
              * May Move Or Cancel
              * @description **Move** and **Cancel** are yours: booked or with a seat open, and not started yet.
@@ -1033,8 +965,6 @@ export interface components {
         ClubCountsSchema: {
             /** All */
             all: number;
-            /** Waiting For You */
-            waiting_for_you: number;
             /** Seat Open */
             seat_open: number;
             /** Called Off */
@@ -1097,7 +1027,7 @@ export interface components {
          * @description The page's filters (the screens B4).
          * @enum {string}
          */
-        ClubFilter: "ALL" | "WAITING_FOR_YOU" | "SEAT_OPEN" | "CALLED_OFF";
+        ClubFilter: "ALL" | "SEAT_OPEN" | "CALLED_OFF";
         /**
          * ClubGroupAdministratorSchema
          * @description The Administrator running a group, as the club's own tables name them.
@@ -1264,7 +1194,7 @@ export interface components {
          * @description What a booking is to its club, right now (the mechanics §16.7).
          * @enum {string}
          */
-        ClubStatus: "WAITING_FOR_YOU" | "WAITING_FOR_A_PAYMENT" | "BOOKED" | "SEAT_OPEN" | "CALLED_OFF" | "PLAYED";
+        ClubStatus: "BOOKED" | "SEAT_OPEN" | "CALLED_OFF" | "PLAYED";
         /**
          * CourtChangeRequest
          * @description A court's edit form: the three facts it was added with, and whether it
@@ -1342,6 +1272,11 @@ export interface components {
             court_id: string;
             /** Name */
             name: string;
+            /**
+             * Indoor
+             * @description Its kind — *Court 3 · indoor*.
+             */
+            indoor: boolean;
         };
         /** CourtsResponse */
         CourtsResponse: {
@@ -1475,7 +1410,7 @@ export interface components {
         FreeCourtsResponse: {
             /**
              * Courts
-             * @description Every other court of the game's sport you still have for Raketa at its hour, in your own order. Empty: there is none — **Cancel** with *repair* if the court cannot be played.
+             * @description Every other court of the game's sport you still have for Raketa at its hour **that keeps the game's kind** — the same kind, or an indoor court for an outdoor game, never outdoors from indoors — in your own order, each with its kind. Empty: there is none — **Cancel** with *repair* if the court cannot be played.
              */
             courts: components["schemas"]["CourtToMoveToSchema"][];
         };
@@ -1801,7 +1736,7 @@ export interface components {
         RaketaSettingsRequest: {
             /**
              * Release Lead Days
-             * @description Only Raketa: days before a game unsold hours return to the club. 1–13, default 3.
+             * @description Days before a game unsold hours return to the club — the latest a Raketa game can fill, its book-by. 1–13, default 3.
              */
             release_lead_days: number;
             /**
@@ -1809,16 +1744,6 @@ export interface components {
              * @description Hours before a game players may leave free, and a game still short is called off. 0–72, default 24.
              */
             cut_off_hours: number;
-            /**
-             * Minimum Notice Hours
-             * @description Instant and On request: the latest a Raketa game can book, in hours before it. 1–48, default 2.
-             */
-            minimum_notice_hours: number;
-            /**
-             * Time To Confirm Minutes
-             * @description On request: minutes the club has to answer a full game. 5–60, default 30 — never more than the shortest minimum notice.
-             */
-            time_to_confirm_minutes: number;
             /** @description The distance is 1–50 km, default 10. */
             other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
             /**
@@ -1829,20 +1754,14 @@ export interface components {
         };
         /**
          * RaketaSettingsResponse
-         * @description How the club works with Raketa, and every setting — **at its default
-         *     until the club confirms it**, so the form can show what it would save.
+         * @description Every setting — **at its default until the club confirms it**, so the
+         *     form can show what it would save.
          */
         RaketaSettingsResponse: {
-            /** @description `null` until the club chooses. */
-            way_of_working: components["schemas"]["WayOfWorking"] | null;
             /** Release Lead Days */
             release_lead_days: number;
             /** Cut Off Hours */
             cut_off_hours: number;
-            /** Minimum Notice Hours */
-            minimum_notice_hours: number;
-            /** Time To Confirm Minutes */
-            time_to_confirm_minutes: number;
             other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
             /** Paused */
             paused: boolean;
@@ -1851,14 +1770,6 @@ export interface components {
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
-        };
-        /** RefusalRequest */
-        RefusalRequest: {
-            /**
-             * Reason
-             * @description Why, for your own records — **never shown to the players**, who read *Called off · refused*. Blank is no reason.
-             */
-            reason?: string | null;
         };
         /**
          * SearchMode
@@ -1881,7 +1792,7 @@ export interface components {
         SetupResponse: {
             /**
              * Steps
-             * @description The five, in the Overview's order: `CONNECT_PAYMENTS` (the provider says the account is ready), `WAY_OF_WORKING`, `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed).
+             * @description The four, in the Overview's order: `CONNECT_PAYMENTS` (the provider says the account is ready), `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed).
              */
             steps: components["schemas"]["SetupStepSchema"][];
             /** @description Where the club's payments account stands, for the first step's row: `NOT_STARTED` — *Connect with Stripe* — `NEEDS_DETAILS` — *Stripe needs more details*, and *Continue with Stripe* — or `READY`. **Ready can be lost**: the provider may want more later, and the club is not live again until it has it. */
@@ -1894,14 +1805,14 @@ export interface components {
         };
         /**
          * SetupStep
-         * @description The five steps, in the order the Overview lists them.
+         * @description The four steps, in the order the Overview lists them.
          * @enum {string}
          */
-        SetupStep: "CONNECT_PAYMENTS" | "WAY_OF_WORKING" | "COURTS" | "HOURS_AND_PRICES" | "SETTINGS";
+        SetupStep: "CONNECT_PAYMENTS" | "COURTS" | "HOURS_AND_PRICES" | "SETTINGS";
         /** SetupStepSchema */
         SetupStepSchema: {
             step: components["schemas"]["SetupStep"];
-            /** @description `DONE`, `TO_DO` or `LOCKED` — waiting on the step it needs: hours and prices on a court, the settings on a way of working. *Next* is the first `TO_DO`. */
+            /** @description `DONE`, `TO_DO` or `LOCKED` — waiting on the step it needs: hours and prices on a court. *Next* is the first `TO_DO`. */
             state: components["schemas"]["StepState"];
         };
         /**
@@ -1966,13 +1877,6 @@ export interface components {
          * @enum {string}
          */
         StepState: "DONE" | "TO_DO" | "LOCKED";
-        /**
-         * TimeTo
-         * @description What a refused share's thirty minutes are for (#638; the mechanics
-         *     §12.2, Q113) — one machinery, two names, decided by the club's cut-off.
-         * @enum {string}
-         */
-        TimeTo: "FIX_THE_CARD" | "PAY";
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -1999,99 +1903,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /**
-         * WaitingBookingSchema
-         * @description A full game asking for a court — **Waiting for you**.
-         */
-        WaitingBookingSchema: {
-            /**
-             * Booking Id
-             * Format: uuid
-             */
-            booking_id: string;
-            sport: components["schemas"]["Sport"];
-            /** @description Competitive, or for fun (a friendly). */
-            kind: components["schemas"]["SearchMode"];
-            /**
-             * Starts At
-             * Format: date-time
-             * @description The court hour's start; games are 1 h.
-             */
-            starts_at: string;
-            /**
-             * Ends At
-             * Format: date-time
-             */
-            ends_at: string;
-            /**
-             * Court Name
-             * @description The court reserved for the game while you decide — given to the players with your yes.
-             */
-            court_name: string;
-            /**
-             * Players
-             * @description Everybody on the game. Nobody has paid yet.
-             */
-            players: components["schemas"]["WaitingPlayerSchema"][];
-            /**
-             * Price Grosze
-             * @description The court's price for the hour.
-             */
-            price_grosze: number;
-            /**
-             * Share Grosze
-             * @description Each player's share of it.
-             */
-            share_grosze: number;
-            /**
-             * Answer By
-             * Format: date-time
-             * @description When your time to confirm runs out — the countdown. Past it the request is called off as unanswered: nobody pays and the hour is yours to sell again.
-             */
-            answer_by: string;
-        };
-        /**
-         * WaitingBookingsResponse
-         * @description Everything waiting for the club's answer — the Overview's *waiting for
-         *     your answer*, the Bookings page's *Waiting for you*, and its badge.
-         */
-        WaitingBookingsResponse: {
-            /**
-             * Read At
-             * Format: date-time
-             * @description The instant the list was read at — what each countdown runs from.
-             */
-            read_at: string;
-            /**
-             * Bookings
-             * @description The one due first, first. Empty: *Nothing is waiting for you.*
-             */
-            bookings: components["schemas"]["WaitingBookingSchema"][];
-        };
-        /** WaitingPlayerSchema */
-        WaitingPlayerSchema: {
-            /**
-             * Player Id
-             * Format: uuid
-             */
-            player_id: string;
-            /**
-             * Name
-             * @description Their Name, whole. `null` for an account that can no longer be named.
-             */
-            name: string | null;
-        };
-        /**
-         * WayOfWorking
-         * @description How a club sells through Raketa (the mechanics §16.3).
-         * @enum {string}
-         */
-        WayOfWorking: "ONLY_RAKETA" | "INSTANT" | "ON_REQUEST";
-        /** WayOfWorkingRequest */
-        WayOfWorkingRequest: {
-            /** @description `ONLY_RAKETA` — Raketa sells the club's Raketa hours alone, until the release lead; `INSTANT` — both sell and a Raketa booking is final; `ON_REQUEST` — the club confirms each full game within its time to confirm, and nobody pays until it does. */
-            way_of_working: components["schemas"]["WayOfWorking"];
         };
         /**
          * WeeklyHourResource
@@ -2891,39 +2702,6 @@ export interface operations {
             };
         };
     };
-    choose_way_of_working_api_v1_club_way_of_working_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WayOfWorkingRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RaketaSettingsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     read_raketa_settings_api_v1_club_raketa_settings_get: {
         parameters: {
             query?: never;
@@ -2968,15 +2746,6 @@ export interface operations {
             };
             /** @description `setting_out_of_range` — `details.field` names the setting and `least` and `most` its range. Nothing was recorded. */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `way_of_working_not_chosen` — which settings matter depends on the way, so it is chosen first. Nothing was recorded. */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3491,135 +3260,6 @@ export interface operations {
             };
         };
     };
-    waiting_api_v1_club_bookings_waiting_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WaitingBookingsResponse"];
-                };
-            };
-        };
-    };
-    accept_api_v1_club_bookings__booking_id__acceptance_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                booking_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AcceptanceResponse"];
-                };
-            };
-            /** @description `booking_not_found` — no such booking at this club. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `request_not_waiting` — the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` — your time to confirm ran out: it is called off as unanswered. Nothing was recorded. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `payments_unavailable` — the payment provider could not be reached to charge the players. Nothing was recorded; retry. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    refuse_api_v1_club_bookings__booking_id__refusal_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                booking_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RefusalRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `booking_not_found` — no such booking at this club. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `request_not_waiting` — the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` — your time to confirm ran out: it is called off as unanswered. Nothing was recorded. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     bookings_on_a_day_api_v1_club_bookings_get: {
         parameters: {
             query?: {
@@ -3682,7 +3322,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
+            /** @description `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3735,7 +3375,59 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. `court_not_free` — that court is not a free court of the game's sport at its hour. `court_just_taken` — another game took it a moment ago; read the free courts again. */
+            /** @description `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. `court_not_free` — that court is not a free court of the game's sport at its hour, or is outdoors for an indoor game. `court_just_taken` — another game took it a moment ago; read the free courts again. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancellation_preview_api_v1_club_bookings__booking_id__cancellation_preview_get: {
+        parameters: {
+            query: {
+                /** @description The reason the desk chose. */
+                reason: components["schemas"]["ClubCancelReason"];
+            };
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelOutcomeSchema"];
+                };
+            };
+            /** @description `booking_not_found` — no such booking at this club. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3771,11 +3463,13 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CancelOutcomeSchema"];
+                };
             };
             /** @description `booking_not_found` — no such booking at this club. */
             404: {
@@ -3786,7 +3480,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
+            /** @description `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. `court_just_taken` — the court that would have taken the game went to another game a moment ago; cancel again and it decides afresh. */
             409: {
                 headers: {
                     [name: string]: unknown;

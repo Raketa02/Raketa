@@ -7,7 +7,6 @@ import { Card } from '@/ui/Card';
 import { Form } from '@/ui/Form';
 import { sentenceFor, type Refusals } from '@/ui/forms';
 import { Notice } from '@/ui/Notice';
-import { RadioCards } from '@/ui/RadioCards';
 import { TextField } from '@/ui/TextField';
 import { Toggle } from '@/ui/Toggle';
 import { useFormFeedback } from '@/ui/useFormFeedback';
@@ -19,16 +18,8 @@ import {
   type SettingsFormState,
 } from '../actions';
 import { RANGE_REFUSALS, SETTINGS_COPY as COPY, SETTINGS_REFUSALS } from '../copy';
-import { WAYS_OF_WORKING, type WayAndSettings } from '../mappers';
-import {
-  askedFor,
-  draftOf,
-  NUMBER_FIELDS,
-  numbersOf,
-  type NumberField,
-  type SettingsDraft,
-  type SettingsField,
-} from '../schemas';
+import type { RaketaSettings } from '../mappers';
+import { draftOf, numbersOf, type NumberField, type SettingsDraft } from '../schemas';
 
 import { LeaveRaketa } from './LeaveRaketa';
 import styles from './RaketaSettingsForm.module.css';
@@ -41,12 +32,10 @@ const NOTHING_YET: SettingsFormState = {
 };
 const NOT_PAUSED: PauseState = { paused: false, refusal: null };
 
-const WAY_OPTIONS = WAYS_OF_WORKING.map((way) => ({ value: way, ...COPY.way.options[way] }));
-
-/** A field's refusal as its sentence: a number's says its range. */
-function sentenceOf(field: SettingsField, code: string | undefined): string | null {
+/** A field's refusal as its sentence: a number out of its range says its range. */
+function sentenceOf(field: NumberField, code: string | undefined): string | null {
   if (code === undefined) return null;
-  if (code === 'setting_out_of_range' && field !== 'way_of_working') return RANGE_REFUSALS[field];
+  if (code === 'setting_out_of_range') return RANGE_REFUSALS[field];
   return sentenceFor(code, SETTINGS_REFUSALS);
 }
 
@@ -57,17 +46,17 @@ function submitLabel(confirmed: boolean, pending: boolean): string {
 }
 
 /**
- * **Raketa settings** (the screens B5): one form, one save. The way the club works, as three
- * cards; then the numbers that way asks for, with the cut-off every way has; then other clubs'
- * courts and the pause. A number the chosen way does not ask for is sent as the backend holds
- * it, so a hidden box can never be what a save is refused for. The first save confirms the
- * settings, the setup checklist's last step, and the button says so.
+ * **Raketa settings** (the screens B5): one form, one save. The release lead and the cut-off;
+ * then other clubs' courts, whose distance is asked only while they are offered and is otherwise
+ * sent as the backend holds it, so a hidden box can never be what a save is refused for; then the
+ * pause. The first save confirms the settings, the setup checklist's last step, and the button
+ * says so.
  */
 export function RaketaSettingsForm({
   settings,
   confirmed,
 }: {
-  settings: WayAndSettings;
+  settings: RaketaSettings;
   confirmed: boolean;
 }) {
   const [state, formAction, pending] = useActionState(saveRaketaSettings, NOTHING_YET);
@@ -76,7 +65,7 @@ export function RaketaSettingsForm({
   const [answered, setAnswered] = useState(state);
   const [pauseAnswered, setPauseAnswered] = useState(pauseState);
   const [leaving, setLeaving] = useState(false);
-  const feedback = useFormFeedback<SettingsField | 'paused'>(state);
+  const feedback = useFormFeedback<NumberField | 'paused'>(state);
 
   // A new answer: adjust during render, as React recommends over an effect.
   if (answered !== state) {
@@ -88,9 +77,8 @@ export function RaketaSettingsForm({
     if (pauseState.paused) setDraft({ ...draft, paused: true });
   }
 
-  const refusals: Refusals<SettingsField> = feedback.refusals;
+  const refusals: Refusals<NumberField> = feedback.refusals;
   const formSentence = sentenceFor(feedback.formRefusal, SETTINGS_REFUSALS);
-  const asked = askedFor(draft.way);
   const held = numbersOf(settings);
 
   const typed = (field: NumberField, value: string) => {
@@ -109,7 +97,7 @@ export function RaketaSettingsForm({
       error={sentenceOf(field, refusals[field])}
     />
   );
-  /** A number this way does not ask for goes as the backend holds it. */
+  /** A number the page does not ask for goes as the backend holds it. */
   const asHeld = (field: NumberField) => (
     <input key={field} type="hidden" name={field} value={held[field]} />
   );
@@ -118,24 +106,10 @@ export function RaketaSettingsForm({
     <Card>
       <Form action={formAction} className={styles.form}>
         {formSentence === null ? null : <Notice tone="error">{formSentence}</Notice>}
-        <input type="hidden" name="was" value={settings.way ?? ''} />
         <input type="hidden" name="confirmed" value={String(confirmed)} />
-        <RadioCards
-          legend={COPY.way.legend}
-          name="way_of_working"
-          options={WAY_OPTIONS}
-          value={draft.way}
-          onChange={(way) => {
-            setDraft({ ...draft, way });
-            feedback.edit('way_of_working');
-          }}
-          note={COPY.way.note}
-          error={sentenceOf('way_of_working', refusals.way_of_working)}
-        />
         <div className={styles.numbers}>
-          {NUMBER_FIELDS.filter((field) => field !== 'other_clubs_courts').map((field) =>
-            asked.includes(field) ? numberBox(field) : asHeld(field),
-          )}
+          {numberBox('release_lead_days')}
+          {numberBox('cut_off_hours')}
         </div>
         <div className={styles.toggles}>
           <Toggle

@@ -5,18 +5,14 @@ import tableStyles from '@/ui/Table.module.css';
 import { Tag } from '@/ui/Tag';
 
 import { BOOKINGS_COPY, knownZloty, sportAndKind } from '../copy';
-import type { Booking, BookingStatus, PaymentDue } from '../mappers';
+import type { Booking, BookingStatus } from '../mappers';
 
 import { askedAbout, type Asked, type AskedToCancel } from './Asked';
 import styles from './Bookings.module.css';
-import { RequestActions } from './RequestActions';
-import { useReadAgainAt } from './useReadAgainAt';
 
 const COPY = BOOKINGS_COPY;
 
 const TONES = {
-  WAITING_FOR_YOU: 'amber',
-  WAITING_FOR_A_PAYMENT: 'amber',
   BOOKED: 'green',
   SEAT_OPEN: 'amber',
   CALLED_OFF: 'red',
@@ -28,21 +24,11 @@ export function rowId(bookingId: string): string {
   return `booking-${bookingId}`;
 }
 
-/**
- * Until when the club's yes waits on one player's card or payment, never whose. Once that time
- * comes the page is read again, and the game reads booked or called off.
- */
-function PaymentAwaited({ due }: { due: PaymentDue }) {
-  useReadAgainAt(due);
-  return <span className={styles.why}>{COPY.waitingFor[due.timeTo](due.until)}</span>;
-}
-
 function Status({ booking }: { booking: Booking }) {
-  const { calledOff, paymentDue } = booking;
+  const { calledOff } = booking;
   return (
     <div className={styles.status}>
       <Tag tone={TONES[booking.status]}>{COPY.statuses[booking.status]}</Tag>
-      {paymentDue === null ? null : <PaymentAwaited due={paymentDue} />}
       {calledOff === null ? null : (
         <span className={styles.why}>
           {COPY.calledOff[calledOff.reason]}
@@ -108,26 +94,21 @@ function From({ booking }: { booking: Booking }) {
 
 /**
  * **One day's bookings** (the screens B4): each game's hour and court, sport and kind, its
- * players (their share *held* or *taken*), its status (with until when a yes waits on one
- * player's card or payment), its money and the group it came from, and what the club may do
- * about it: answer a request before its countdown ends, or move or cancel a game until it
- * starts. Every act waits while one is under way. The booking a link pointed at is marked.
+ * players (their share *held* or *taken*), its status, its money and the group it came from, and
+ * what the club may do about it: move or cancel a game until it starts. Every act waits while
+ * one is under way. The booking a link pointed at is marked.
  */
 export function BookingsTable({
   bookings,
   pointedAt,
-  action,
   pending,
-  onRefuse,
   onMove,
   onCancel,
 }: {
   bookings: readonly Booking[];
   /** The booking a link pointed at, or `null`. */
   pointedAt: string | null;
-  action: (form: FormData) => void;
   pending: boolean;
-  onRefuse: (game: Asked) => void;
   onMove: (game: Asked) => void;
   onCancel: (game: AskedToCancel) => void;
 }) {
@@ -176,16 +157,7 @@ export function BookingsTable({
                 <From booking={booking} />
               </td>
               <td>
-                {booking.status === 'WAITING_FOR_YOU' && booking.answerBy !== null ? (
-                  <RequestActions
-                    id={booking.id}
-                    name={game.name}
-                    answerBy={booking.answerBy}
-                    action={action}
-                    pending={pending}
-                    onRefuse={() => onRefuse(game)}
-                  />
-                ) : booking.mayMoveOrCancel ? (
+                {booking.mayMoveOrCancel ? (
                   <div className={styles.actions}>
                     <Button
                       type="button"

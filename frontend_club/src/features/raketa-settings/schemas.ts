@@ -6,57 +6,21 @@
 
 import { formText, type Refusals } from '@/ui/forms';
 
-import {
-  isWayOfWorking,
-  type WayAndSettings,
-  type RaketaSettings,
-  type WayOfWorking,
-} from './mappers';
+import type { RaketaSettings } from './mappers';
 
 /** The settings typed as a number, by the names the backend's `details.field` gives them. */
-export const NUMBER_FIELDS = [
-  'release_lead_days',
-  'minimum_notice_hours',
-  'time_to_confirm_minutes',
-  'cut_off_hours',
-  'other_clubs_courts',
-] as const;
+export const NUMBER_FIELDS = ['release_lead_days', 'cut_off_hours', 'other_clubs_courts'] as const;
 
 export type NumberField = (typeof NUMBER_FIELDS)[number];
-
-export const SETTINGS_FIELDS = ['way_of_working', ...NUMBER_FIELDS] as const;
-
-export type SettingsField = (typeof SETTINGS_FIELDS)[number];
 
 /** Each number's range, as the domain bounds it (#535). */
 export const BOUNDS: Readonly<Record<NumberField, readonly [number, number]>> = {
   release_lead_days: [1, 13],
-  minimum_notice_hours: [1, 48],
-  time_to_confirm_minutes: [5, 60],
   cut_off_hours: [0, 72],
   other_clubs_courts: [1, 50],
 };
 
-/**
- * **The numbers a way asks for**, in the page's order: the release lead at Only Raketa, the
- * minimum notice at the other two, and the time to confirm at On request, then the cut-off at
- * every one. Until a way is chosen, only the cut-off.
- */
-export function askedFor(way: WayOfWorking | null): readonly NumberField[] {
-  switch (way) {
-    case 'ONLY_RAKETA':
-      return ['release_lead_days', 'cut_off_hours'];
-    case 'INSTANT':
-      return ['minimum_notice_hours', 'cut_off_hours'];
-    case 'ON_REQUEST':
-      return ['minimum_notice_hours', 'time_to_confirm_minutes', 'cut_off_hours'];
-    case null:
-      return ['cut_off_hours'];
-  }
-}
-
 export interface SettingsDraft {
-  readonly way: WayOfWorking | null;
   /** Each number as typed. */
   readonly numbers: Readonly<Record<NumberField, string>>;
   readonly otherClubs: boolean;
@@ -67,17 +31,14 @@ export interface SettingsDraft {
 export function numbersOf(settings: RaketaSettings): Record<NumberField, number> {
   return {
     release_lead_days: settings.releaseLeadDays,
-    minimum_notice_hours: settings.minimumNoticeHours,
-    time_to_confirm_minutes: settings.timeToConfirmMinutes,
     cut_off_hours: settings.cutOffHours,
     other_clubs_courts: settings.otherClubs.withinKm,
   };
 }
 
-export function draftOf(settings: WayAndSettings): SettingsDraft {
+export function draftOf(settings: RaketaSettings): SettingsDraft {
   const numbers = numbersOf(settings);
   return {
-    way: settings.way,
     numbers: Object.fromEntries(
       NUMBER_FIELDS.map((field) => [field, String(numbers[field])]),
     ) as Record<NumberField, string>,
@@ -87,9 +48,7 @@ export function draftOf(settings: WayAndSettings): SettingsDraft {
 }
 
 export function readSettings(form: FormData): SettingsDraft {
-  const way = formText(form, 'way_of_working');
   return {
-    way: isWayOfWorking(way) ? way : null,
     numbers: Object.fromEntries(
       NUMBER_FIELDS.map((field) => [field, formText(form, field)]),
     ) as Record<NumberField, string>,
@@ -105,9 +64,8 @@ function wholeWithin(typed: string, [least, most]: readonly [number, number]): n
   return value >= least && value <= most ? value : null;
 }
 
-export function checkSettings(draft: SettingsDraft): Refusals<SettingsField> {
-  const refusals: Refusals<SettingsField> = {};
-  if (draft.way === null) refusals.way_of_working = 'way_of_working_not_chosen';
+export function checkSettings(draft: SettingsDraft): Refusals<NumberField> {
+  const refusals: Refusals<NumberField> = {};
   for (const field of NUMBER_FIELDS) {
     if (wholeWithin(draft.numbers[field], BOUNDS[field]) === null) {
       refusals[field] = 'setting_out_of_range';
@@ -122,8 +80,6 @@ export function settingsOf(draft: SettingsDraft): RaketaSettings {
   return {
     releaseLeadDays: number('release_lead_days'),
     cutOffHours: number('cut_off_hours'),
-    minimumNoticeHours: number('minimum_notice_hours'),
-    timeToConfirmMinutes: number('time_to_confirm_minutes'),
     otherClubs: { offered: draft.otherClubs, withinKm: number('other_clubs_courts') },
     paused: draft.paused,
   };

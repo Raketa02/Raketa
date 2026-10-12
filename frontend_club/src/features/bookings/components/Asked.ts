@@ -18,7 +18,7 @@ export interface AskedToCancel extends Asked {
   readonly givesBack: CancelGivesBack;
 }
 
-/** A row of the day or a request on Overview, as the question about it names it. */
+/** A row of the day, as the question about it names it. */
 export function askedAbout(game: Omit<Asked, 'name'>): Asked {
   return {
     id: game.id,

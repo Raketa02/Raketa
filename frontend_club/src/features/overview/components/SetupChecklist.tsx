@@ -13,7 +13,6 @@ const COPY = OVERVIEW_COPY.checklist;
 
 /** Where each step's button goes. Connecting payments leaves for Stripe instead (PaymentsStep). */
 const PATHS: Readonly<Record<Exclude<SetupStep, 'CONNECT_PAYMENTS'>, string>> = {
-  WAY_OF_WORKING: '/raketa-settings',
   COURTS: '/courts',
   HOURS_AND_PRICES: '/courts#hours',
   SETTINGS: '/raketa-settings',
@@ -27,7 +26,7 @@ const TONES = {
 } as const satisfies Record<StepState, string>;
 
 /**
- * **The setup checklist** (the screens B2, the mechanics §16.2): the five steps before the
+ * **The setup checklist** (the screens B2, the mechanics §16.2): the four steps before the
  * club's courts reach anybody's game, each with where it stands and the one button that does
  * it. The next step's button is the page's primary one; a step locked behind another says which,
  * and has none.

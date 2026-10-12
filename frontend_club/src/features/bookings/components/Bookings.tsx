@@ -17,16 +17,7 @@ const COPY = BOOKINGS_COPY;
  * box, the filters with the day's count under each, and the day's games. A link may point at one
  * booking, which is marked.
  */
-export function Bookings({
-  day,
-  clubName,
-  pointedAt,
-}: {
-  day: BookingsDay;
-  /** As the players read it. */
-  clubName: string;
-  pointedAt: string | null;
-}) {
+export function Bookings({ day, pointedAt }: { day: BookingsDay; pointedAt: string | null }) {
   const at = (date: string) =>
     dayHref({ date: date === day.today ? null : date, filter: day.filter });
   return (
@@ -55,12 +46,7 @@ export function Bookings({
             current: filter === day.filter,
           }))}
         />
-        <DayBookings
-          key={`${day.day} ${day.filter}`}
-          day={day}
-          clubName={clubName}
-          pointedAt={pointedAt}
-        />
+        <DayBookings key={`${day.day} ${day.filter}`} day={day} pointedAt={pointedAt} />
       </Card>
     </>
   );

@@ -12,29 +12,18 @@ import styles from './Bookings.module.css';
 import { BookingsTable, rowId } from './BookingsTable';
 import { CancelDialog } from './CancelDialog';
 import { MoveDialog } from './MoveDialog';
-import { RefuseDialog } from './RefuseDialog';
 
 /** The question open over the day, if any. */
 type Asking =
-  | { readonly kind: 'refuse'; readonly game: Asked }
   | { readonly kind: 'move'; readonly game: Asked }
   | { readonly kind: 'cancel'; readonly game: AskedToCancel };
 
 /**
  * **The day's games and what the club does to them**: the table (or the day's empty line), the
- * questions *Refuse*, *Move* and *Cancel* ask first, and over it all what came of the last act.
- * *Move* reads the free courts as it opens, keeping the answer for the game it asked about.
+ * questions *Move* and *Cancel* ask first, and over it all what came of the last act. *Move*
+ * reads the free courts as it opens, keeping the answer for the game it asked about.
  */
-export function DayBookings({
-  day,
-  clubName,
-  pointedAt,
-}: {
-  day: BookingsDay;
-  /** As the players read it. */
-  clubName: string;
-  pointedAt: string | null;
-}) {
+export function DayBookings({ day, pointedAt }: { day: BookingsDay; pointedAt: string | null }) {
   const [state, act, acting] = useActionState(actOnBooking, NOTHING_DONE);
   const [asking, setAsking] = useState<Asking | null>(null);
   const [free, setFree] = useState<{ id: string; answer: FreeCourtsAnswer } | null>(null);
@@ -60,29 +49,20 @@ export function DayBookings({
 
   return (
     <>
-      <ActNotice state={state} clubName={clubName} />
+      <ActNotice state={state} />
       {day.bookings.length === 0 ? (
         <p className={styles.none}>{BOOKINGS_COPY.empty[day.filter]}</p>
       ) : (
         <BookingsTable
           bookings={day.bookings}
           pointedAt={pointedAt}
-          action={act}
           pending={acting}
-          onRefuse={(game) => setAsking({ kind: 'refuse', game })}
           onMove={move}
           onCancel={(game) => setAsking({ kind: 'cancel', game })}
         />
       )}
-      <RefuseDialog
-        game={asking?.kind === 'refuse' ? asking.game : null}
-        clubName={clubName}
-        action={act}
-        onClose={close}
-      />
       <MoveDialog
         game={moving}
-        clubName={clubName}
         answer={moving !== null && free?.id === moving.id ? free.answer : null}
         action={act}
         onClose={close}

@@ -4,9 +4,9 @@ import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 
 /**
- * **Raketa settings** (#561, the screens B5, the mechanics §16.3 and §16.6): one form, the way
- * the club works with Raketa and every setting it confirms. The way and the settings are two
- * saves at the backend, sent in that order; the first save of the settings confirms them, the
+ * **Raketa settings** (#561, #674, the screens B5, the mechanics §16.6): one form, every setting
+ * the club confirms: the release lead, the cut-off, other clubs' courts and the pause. Every club
+ * works one way (Q121), so there is no way to choose. The first save confirms the settings, the
  * setup checklist's last step.
  */
 
@@ -17,37 +17,23 @@ async function openSettings(page: Page) {
 }
 
 test.describe('Raketa settings', () => {
-  test('a new club sees the three ways explained, and the settings at their defaults', async ({
+  test('a new club sees the release lead and the cut-off at their defaults, and no way to choose', async ({
     page,
     club,
   }) => {
     void club;
     await openSettings(page);
 
-    const ways = page.getByRole('radiogroup', { name: 'How you work with Raketa' });
-    await expect(ways.getByRole('radio')).toHaveCount(3);
-    for (const way of ['Only Raketa', 'Instant', 'On request']) {
-      await expect(ways.getByRole('radio', { name: way })).not.toBeChecked();
-    }
-    await expect(ways.getByRole('radio', { name: 'On request' })).toHaveAccessibleDescription(
-      /You confirm each full game within your time to confirm\. The players’ shares are held when you do and taken at your cut-off\./,
-    );
-    await expect(ways).toContainText('A change applies to hours not yet booked.');
-
-    // Only the cut-off matters until a way is chosen.
+    await expect(page.getByLabel('Release lead')).toHaveValue('3');
     await expect(page.getByLabel('Free-cancellation cut-off')).toHaveValue('24');
-    await expect(page.getByLabel('Release lead')).toHaveCount(0);
+    // Only Raketa is the one way (Q121): nothing to choose, and nothing only another way asked.
+    await expect(page.getByRole('radiogroup')).toHaveCount(0);
+    await expect(page.getByRole('main').getByRole('radio')).toHaveCount(0);
+    for (const gone of ['How you work with Raketa', 'Instant', 'On request']) {
+      await expect(page.getByText(gone)).toHaveCount(0);
+    }
     await expect(page.getByLabel('Minimum notice')).toHaveCount(0);
     await expect(page.getByLabel('Time to confirm')).toHaveCount(0);
-
-    await ways.getByRole('radio', { name: 'Only Raketa' }).check();
-    await expect(page.getByLabel('Release lead')).toHaveValue('3');
-    await expect(page.getByLabel('Minimum notice')).toHaveCount(0);
-
-    await ways.getByRole('radio', { name: 'On request' }).check();
-    await expect(page.getByLabel('Release lead')).toHaveCount(0);
-    await expect(page.getByLabel('Minimum notice')).toHaveValue('2');
-    await expect(page.getByLabel('Time to confirm')).toHaveValue('30');
 
     await expect(
       page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
@@ -58,66 +44,54 @@ test.describe('Raketa settings', () => {
     await expect(page.getByRole('button', { name: 'Confirm settings' })).toBeVisible();
   });
 
-  test('Confirm settings saves the way, then every setting, and the checklist moves on', async ({
+  test('Confirm settings sends every setting and nothing else, and the checklist moves on', async ({
     page,
     stub,
     club,
   }) => {
     await openSettings(page);
-    await page.getByRole('radio', { name: 'Instant' }).check();
-    await page.getByLabel('Minimum notice').fill('3');
+    await page.getByLabel('Release lead').fill('1');
     await page.getByRole('button', { name: 'Confirm settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings confirmed.');
-    expect(stub.requests('put', '/api/v1/club/way-of-working').map((r) => r.body)).toEqual([
-      { way_of_working: 'INSTANT' },
-    ]);
     expect(stub.requests('put', '/api/v1/club/raketa-settings').map((r) => r.body)).toEqual([
       {
-        release_lead_days: 3,
+        release_lead_days: 1,
         cut_off_hours: 24,
-        minimum_notice_hours: 3,
-        time_to_confirm_minutes: 30,
         other_clubs_courts: { offered: false, within_km: 10 },
         paused: false,
       },
     ]);
-    const way = stub.requests('put', '/api/v1/club/way-of-working')[0];
-    const settings = stub.requests('put', '/api/v1/club/raketa-settings')[0];
-    expect(way!.at).toBeLessThanOrEqual(settings!.at);
     expect(club.raketa.confirmed).toBe(true);
     await expect(page.getByRole('button', { name: 'Save settings' })).toBeVisible();
 
     await page.getByRole('navigation').getByRole('link', { name: 'Overview' }).click();
     const steps = page.getByRole('list', { name: 'Setup checklist' }).locator('[data-state]');
-    await expect(steps).toHaveText(['not started', 'done ✓', 'to do', 'locked', 'done ✓']);
+    await expect(steps).toHaveText(['not started', 'to do', 'locked', 'done ✓']);
   });
 
-  test('a confirmed club saves its settings, and keeping its way sends no way', async ({
-    page,
-    stub,
-    club,
-  }) => {
-    club.raketa.way = 'ONLY_RAKETA';
+  test('a confirmed club saves its settings as they stand', async ({ page, stub, club }) => {
     club.raketa.confirmed = true;
     club.raketa.settings.release_lead_days = 5;
     await openSettings(page);
 
-    await expect(page.getByRole('radio', { name: 'Only Raketa' })).toBeChecked();
     await expect(page.getByLabel('Release lead')).toHaveValue('5');
     await page.getByLabel('Free-cancellation cut-off').fill('12');
     await page.getByRole('button', { name: 'Save settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings saved.');
-    expect(stub.requests('put', '/api/v1/club/way-of-working')).toEqual([]);
-    expect(stub.requests('put', '/api/v1/club/raketa-settings')[0]?.body).toMatchObject({
-      release_lead_days: 5,
-      cut_off_hours: 12,
-    });
+    expect(stub.requests('put', '/api/v1/club/raketa-settings').map((r) => r.body)).toEqual([
+      {
+        release_lead_days: 5,
+        cut_off_hours: 12,
+        other_clubs_courts: { offered: false, within_km: 10 },
+        paused: false,
+      },
+    ]);
   });
 
   test("other clubs' courts asks how far once it is on", async ({ page, stub, club }) => {
-    club.raketa.way = 'INSTANT';
+    void club;
     await openSettings(page);
     await expect(page.getByLabel('Distance')).toHaveCount(0);
 
@@ -137,30 +111,12 @@ test.describe('Raketa settings', () => {
     });
   });
 
-  test('without a way chosen, nothing is sent and the way says why', async ({
-    page,
-    stub,
-    club,
-  }) => {
-    void club;
-    await openSettings(page);
-    await page.getByRole('button', { name: 'Confirm settings' }).click();
-
-    const ways = page.getByRole('radiogroup', { name: 'How you work with Raketa' });
-    await expect(ways.getByText('Choose how you work with Raketa first.')).toBeVisible();
-    expect(stub.requests('put', '/api/v1/club/way-of-working')).toEqual([]);
-    expect(stub.requests('put', '/api/v1/club/raketa-settings')).toEqual([]);
-
-    await ways.getByRole('radio', { name: 'Instant' }).check();
-    await expect(ways.getByText('Choose how you work with Raketa first.')).toBeHidden();
-  });
-
   test('a setting out of its range is refused under it, by this site or the server', async ({
     page,
     stub,
     club,
   }) => {
-    club.raketa.way = 'ONLY_RAKETA';
+    void club;
     await openSettings(page);
     await page.getByLabel('Release lead').fill('20');
     await page.getByLabel('Free-cancellation cut-off').fill('');
@@ -187,7 +143,6 @@ test.describe('Raketa settings', () => {
     stub,
     club,
   }) => {
-    club.raketa.way = 'INSTANT';
     club.raketa.confirmed = true;
     await openSettings(page);
 
@@ -202,8 +157,6 @@ test.describe('Raketa settings', () => {
       {
         release_lead_days: 3,
         cut_off_hours: 24,
-        minimum_notice_hours: 2,
-        time_to_confirm_minutes: 30,
         other_clubs_courts: { offered: false, within_km: 10 },
         paused: true,
       },
@@ -221,7 +174,7 @@ test.describe('Raketa settings', () => {
     stub,
     club,
   }) => {
-    club.raketa.way = 'INSTANT';
+    void club;
     await openSettings(page);
     await page.getByRole('button', { name: 'Leave Raketa' }).click();
 
@@ -238,7 +191,6 @@ test.describe('Raketa settings', () => {
     stub,
     club,
   }) => {
-    club.raketa.way = 'INSTANT';
     club.raketa.confirmed = true;
     stub.on('put', '/api/v1/club/raketa-settings', () => ({ status: 'drop' }));
     await openSettings(page);
@@ -252,46 +204,5 @@ test.describe('Raketa settings', () => {
       "We couldn't reach the server. Try again in a moment.",
     );
     await expect(page.getByRole('switch', { name: 'Pause Raketa bookings' })).not.toBeChecked();
-  });
-
-  test('a way that landed stays chosen when the settings are refused, and is not sent again', async ({
-    page,
-    stub,
-    club,
-  }) => {
-    stub.on('put', '/api/v1/club/raketa-settings', () => ({
-      status: 400,
-      body: refusal('setting_out_of_range', 'cut_off_hours', { least: 0, most: 72 }),
-    }));
-    await openSettings(page);
-    await page.getByRole('radio', { name: 'Instant' }).check();
-    await page.getByRole('button', { name: 'Confirm settings' }).click();
-    await expect(page.getByText('A cut-off is 0 to 72 hours.')).toBeVisible();
-    expect(club.raketa.way).toBe('INSTANT');
-
-    // The backend takes the settings now: only they are sent, the way being recorded already.
-    club.raketa.install();
-    await page.getByLabel('Free-cancellation cut-off').fill('12');
-    await page.getByRole('button', { name: 'Confirm settings' }).click();
-    await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings confirmed.');
-    expect(stub.requests('put', '/api/v1/club/way-of-working')).toHaveLength(1);
-  });
-
-  test("the server's word that no way is chosen is said under the way", async ({
-    page,
-    stub,
-    club,
-  }) => {
-    club.raketa.way = 'INSTANT';
-    stub.on('put', '/api/v1/club/raketa-settings', () => ({
-      status: 409,
-      body: refusal('way_of_working_not_chosen'),
-    }));
-    await openSettings(page);
-    await page.getByRole('button', { name: 'Confirm settings' }).click();
-
-    const ways = page.getByRole('radiogroup', { name: 'How you work with Raketa' });
-    await expect(ways.getByText('Choose how you work with Raketa first.')).toBeVisible();
-    await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
   });
 });
