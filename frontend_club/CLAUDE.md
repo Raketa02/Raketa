@@ -3,8 +3,10 @@
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
 details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
 Raketa settings, followed by Overview's four-step setup checklist), runs its Raketa bookings
-(moving or cancelling a game), connects Stripe and sees its money and payouts, invites its
-Administrators and watches its official groups
+(moving a game to another court of its kind, or indoor for an outdoor game; cancelling one, which
+moves it instead when another of the club's courts takes it, as the dialog says first), connects
+Stripe and sees its money and payouts, invites its Administrators and watches its official
+groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
 Every club works one way, Only Raketa: there is nothing to choose, and no club confirms a game,
 so nothing here waits for the desk's answer
@@ -86,7 +88,9 @@ keeps the courts, prices and settings and reads the setup checklist off them (no
 a test says; `club.raketa.ready()` makes the club live), and whose bookings, `club.bookings`,
 fold their status off the clock as the backend does (a test seats them with
 `club.bookings.add(booking(…))`) and hold each share until the game's `cut_off`, taken after it
-(`club.bookings.passTheCutOff(game)` takes them), and whose money, `club.money`, answers a
+(`club.bookings.passTheCutOff(game)` takes them). Move puts a game only on a court of its kind,
+or indoor for an outdoor game; a cancel, unless _anyway_, moves it to the court that takes it,
+deciding afresh whatever the preview said. The fake club's money, `club.money`, answers a
 month's rows and the payouts a test seats (`moneyRow(…)`, `payout(…)`; a fee Stripe hasn't
 given is `null`, _not yet known_). Stripe's hosted pages are the stub's
 too, so a redirect to one lands, and `stub.stripePages` says which opened. A test about one reply overrides

@@ -34,7 +34,7 @@ e2e/                   the Playwright suite and its stub backend (§7)
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
   password?_, _Set a new password_), `club-details`, `overview` (the setup checklist and
   _Connect with Stripe_, then _Live on Raketa_),
-  `bookings` (the day's Raketa bookings, _Move_ and _Cancel_), `courts` (_Courts & prices_: the courts, their weekly hours,
+  `bookings` (the day's Raketa bookings, _Move_ and _Cancel_, which says first where the game would move), `courts` (_Courts & prices_: the courts, their weekly hours,
   exceptions and prices), `money` (a month of the club's money, its payouts and its Stripe
   dashboard), `raketa-settings`, `administrators` and `groups` (the Groups table, and a group's page:
   _Want to join_ and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
@@ -116,8 +116,16 @@ deploy-time question for the day there is a deployment.
 
 **A read with no render to read in is a server action too**, in `actions.ts`, through
 `writeAsClub`: a dialog that opens on a click, such as Bookings' _Move_, which reads the free
-courts as it opens (`readFreeCourts`). It writes nothing; the door is the one that can renew in
-place.
+courts as it opens (`readFreeCourts`), and _Cancel_, which reads what a cancel would do each time
+a reason is chosen (`readCancelPreview`). It writes nothing; the door is the one that can renew in
+place. A dialog keeps each answer by what it asked, so one that arrives late never stands for a
+later question.
+
+**What a dialog said travels with the act it confirms.** A cancel decides afresh when the desk
+confirms (Q122): the court its preview named may be taken in between, or a court come free. So
+the Cancel dialog posts what it said (`foretold`: the court, by id and name, or _called off_)
+beside the reason, and the notice over the list says what landed against it: _Court 3 was taken a moment
+ago, so the 19:00 game moved to Court 4 · indoor_. The backend's answer names only what landed.
 
 Each call is `openapi-fetch` over the generated `paths`, with a ten-second timeout, and each
 settles into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code,
@@ -220,15 +228,19 @@ points.
   and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
   makes the club live. Its setup checklist has four steps, and its settings are the release
   lead, the cut-off, other clubs' courts and the pause: every club works Only Raketa (Q121). Its bookings, `club.bookings`
-  (`e2e/stub/bookings.ts`), keep #547's, #637's and #669's rules: every game the club sees is
+  (`e2e/stub/bookings.ts`), keep #547's, #637's, #669's, #671's and #672's rules: every game the club sees is
   booked (no club confirms one), each status folded from where the booking stands and the clock,
   as the backend folds it (booked or with a seat open, called off, played once its hour is over),
   and a booking still to be played holds its court for Courts & prices. Each booking keeps the
   cut-off it was booked with (a day before it unless the test says), which the read never sends:
-  before it a booked game's shares are held and nothing is collected, after it they are taken; a
-  cancel lets every hold go and refunds what was taken, and
-  `club.bookings.passTheCutOff(game)` takes the held shares where a test needs the clock to pass
-  it. Its money, `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with
+  before it a booked game's shares are held and nothing is collected, after it they are taken.
+  _Move_ offers only the free courts of the game's kind of court, or indoor for an outdoor
+  game. A cancel, and its preview, first look for a court that takes the game (one
+  _Move_ could put it on, indoor only for _weather_, the same kind first) and move it there with
+  every share as it was; with _anyway_, or with none, the cancel lets every hold go and refunds
+  what was taken. The cancel decides afresh, so a test that seats a game on the previewed court
+  before the confirm sees the race. `club.bookings.passTheCutOff(game)` takes the held shares
+  where a test needs the clock to pass it. Its money, `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with
   their totals, deriving what is the club's on every read, _not yet known_ while a fee or a
   refund a row needs is `null` (#641), and its payouts newest first. A test seats its people in `club.administrators`, its groups in
   `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a
