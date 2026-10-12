@@ -141,19 +141,27 @@ def test_a_game_whose_result_cannot_be_read_folds_on_the_clock_alone():
 
 
 def test_a_result_to_enter_needs_you():
-    assert needs_you(HomeStatus.NEEDS_RESULT, ENTRY_OPEN)
+    assert needs_you(HomeStatus.NEEDS_RESULT, ENTRY_OPEN, kind=SearchMode.COMPETITIVE)
 
 
 def test_a_score_needs_you_only_when_it_waits_on_your_agreement():
     theirs = GameResult(stage=ResultStage.SCORE_TO_ANSWER, awaits_your_agreement=True)
     yours = GameResult(stage=ResultStage.SCORE_TO_ANSWER, awaits_your_agreement=False)
 
-    assert needs_you(HomeStatus.CONFIRM_THE_RESULT, theirs)
-    assert not needs_you(HomeStatus.CONFIRM_THE_RESULT, yours)
+    assert needs_you(HomeStatus.CONFIRM_THE_RESULT, theirs, kind=SearchMode.COMPETITIVE)
+    assert not needs_you(
+        HomeStatus.CONFIRM_THE_RESULT, yours, kind=SearchMode.COMPETITIVE
+    )
+
+
+def test_a_for_fun_game_past_its_hour_with_no_score_needs_nobody():
+    """For fun asks nothing (#654): a score may be added, and none is owed."""
+
+    assert not needs_you(HomeStatus.NEEDS_RESULT, ENTRY_OPEN, kind=SearchMode.FOR_FUN)
 
 
 def test_a_seat_open_in_your_game_needs_you():
-    assert needs_you(HomeStatus.SEAT_OPEN, ENTRY_OPEN)
+    assert needs_you(HomeStatus.SEAT_OPEN, ENTRY_OPEN, kind=SearchMode.COMPETITIVE)
 
 
 def test_a_game_somebody_didn_t_come_to_needs_whoever_a_late_claim_waits_on():
@@ -166,8 +174,8 @@ def test_a_game_somebody_didn_t_come_to_needs_whoever_a_late_claim_waits_on():
     )
     done = replace(waits, attendance_waits_on_you=False)
 
-    assert needs_you(HomeStatus.UNCOUNTED, waits)
-    assert not needs_you(HomeStatus.UNCOUNTED, done)
+    assert needs_you(HomeStatus.UNCOUNTED, waits, kind=SearchMode.COMPETITIVE)
+    assert not needs_you(HomeStatus.UNCOUNTED, done, kind=SearchMode.COMPETITIVE)
 
 
 def test_while_somebody_is_not_here_yet_only_they_are_needed():
@@ -181,8 +189,8 @@ def test_while_somebody_is_not_here_yet_only_they_are_needed():
     )
     present = replace(awaited, attendance_waits_on_you=False)
 
-    assert needs_you(HomeStatus.NEEDS_RESULT, awaited)
-    assert not needs_you(HomeStatus.NEEDS_RESULT, present)
+    assert needs_you(HomeStatus.NEEDS_RESULT, awaited, kind=SearchMode.COMPETITIVE)
+    assert not needs_you(HomeStatus.NEEDS_RESULT, present, kind=SearchMode.COMPETITIVE)
 
 
 @pytest.mark.parametrize(
@@ -197,7 +205,7 @@ def test_while_somebody_is_not_here_yet_only_they_are_needed():
     ],
 )
 def test_nothing_else_needs_you(status):
-    assert not needs_you(status, ENTRY_OPEN)
+    assert not needs_you(status, ENTRY_OPEN, kind=SearchMode.COMPETITIVE)
 
 
 # --------------------------------------------------------------------------- #
@@ -467,7 +475,10 @@ def test_a_game_its_club_has_not_answered_is_waiting_and_nobody_paid():
         money.share_state,
     ) == (False, None, None)
     assert game.court_given is False
-    assert needs_you(HomeStatus.WAITING_FOR_THE_CLUB, None) is False
+    assert (
+        needs_you(HomeStatus.WAITING_FOR_THE_CLUB, None, kind=SearchMode.COMPETITIVE)
+        is False
+    )
 
 
 @pytest.mark.parametrize(

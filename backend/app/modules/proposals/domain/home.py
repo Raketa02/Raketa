@@ -558,11 +558,15 @@ def uncounted_reason(
     return None
 
 
-def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
+def needs_you(
+    status: HomeStatus, result: GameResult | None, *, kind: SearchMode
+) -> bool:
     """Whether this game is one of the games that need the player — Home's
-    badge (the mechanics §3): a result to enter, a score waiting on their
-    agreement, a seat open in their game, an *I'm here* or a late claim theirs
-    to make or to confirm (#657)."""
+    badge (the mechanics §3): a result to enter on a Competitive game, a score
+    waiting on their agreement, a seat open in their game, an *I'm here* or a
+    late claim theirs to make or to confirm (#657). ``kind`` is stated by the
+    caller, never defaulted: **a For fun game asks nothing** (#654), so its
+    hour passing with no score is a result anybody may add and nobody owes."""
 
     match status:
         case HomeStatus.NEEDS_RESULT:
@@ -570,7 +574,7 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
                 # No score is taken while somebody is awaited: only the player
                 # awaited has something to do — *I'm here*.
                 return result.attendance_waits_on_you
-            return True
+            return kind is not SearchMode.FOR_FUN
         case HomeStatus.SEAT_OPEN:
             return True
         case HomeStatus.CONFIRM_THE_RESULT:
@@ -735,7 +739,7 @@ def state_of(
     return BookedState(
         status=status,
         # A game gone back to filling asks nothing of those still In (Q106).
-        needs_you=needs_you(status, result) and not game.filling_again,
+        needs_you=needs_you(status, result, kind=game.kind) and not game.filling_again,
         money=money_of(game, now=now, held_from=held_from),
         called_off=game.called_off_reason(now)
         if status is HomeStatus.CALLED_OFF

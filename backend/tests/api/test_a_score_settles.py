@@ -355,6 +355,33 @@ async def test_two_scores_naming_different_winners_end_disputed_and_move_no_leve
 # --------------------------------------------------------------------------- #
 
 
+async def needing_you(client, member: dict) -> int:
+    read = await client.get("/api/v1/home", headers=member["headers"])
+    assert read.status_code == 200, read.text
+    return read.json()["needing_you"]
+
+
+@pytest.mark.parametrize(
+    ("kind", "asked"),
+    [(SearchMode.FOR_FUN, False), (SearchMode.COMPETITIVE, True)],
+)
+async def test_after_its_hour_a_for_fun_game_with_no_score_asks_nobody(
+    client, session_factory, clock, world, kind, asked
+):
+    """For fun asks nothing (#654, #656): past its hour with no score it still
+    reads *needs result* — a score may be added — but it needs nobody and is
+    not on the badge. A Competitive game in the same state still asks all four.
+    """
+
+    game = await a_booked_game(client, session_factory, clock, world, kind=kind)
+    to(clock, STATED)
+
+    for member in world.four:
+        card = await home_card(client, member, game["booking"])
+        assert (card["status"], card["needs_you"]) == ("NEEDS_RESULT", asked)
+        assert await needing_you(client, member) == int(asked)
+
+
 async def test_a_for_fun_score_settles_at_once_asks_nobody_and_moves_no_level(
     client, session_factory, clock, world
 ):
