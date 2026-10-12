@@ -43,8 +43,9 @@ export { BALANCE_FORECAST } from './components/gamePresentation';
 
 /**
  * **This feature's cache key**, crossed for the acts outside it that change a game — a fill that
- * books one, a departure, a live nudge — which owe the statement that this list is now out of
- * date. The **key** crosses and the query does not: spelling `['games']` at the call site is the
- * same coupling with nothing holding the two spellings equal.
+ * books one, a departure, a live nudge, a notice that a step at the court was taken (#664) — which
+ * owe the statement that this list is now out of date. The **key** crosses and the query does not:
+ * spelling `['games']` at the call site is the same coupling with nothing holding the two spellings
+ * equal.
  */
 export { gameKeys } from './hooks/gameKeys';

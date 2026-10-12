@@ -64,7 +64,10 @@ export function bookedChatRoute(bookingId: string) {
   return { pathname: '/booking/[bookingId]/chat', params: { bookingId } } as const;
 }
 
-/** The result, told and agreed on today's game screen, over the details. */
+/**
+ * The result, told and agreed on today's game screen, over the details — or over wherever the player
+ * is, from a notice of a step at the court (#664).
+ */
 export function bookedResultRoute(bookingId: string) {
   return { pathname: '/booking/[bookingId]/result', params: { bookingId } } as const;
 }

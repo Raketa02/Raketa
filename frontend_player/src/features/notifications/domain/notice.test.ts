@@ -50,6 +50,17 @@ describe('where a notice opens', () => {
     });
   });
 
+  // #663: isn't here yet, they're at the club, How did it go?, Is that right? and Were they there?
+  it.each([
+    'NOT_HERE_YET',
+    'AT_THE_CLUB',
+    'HOW_DID_IT_GO',
+    'IS_THAT_RIGHT',
+    'WERE_THEY_THERE',
+  ] as const)('%s opens the booked game’s result screen, by the booking', (kind) => {
+    expect(targetOf(kind, 'RESULT', FACTS)).toEqual({ opens: 'result', bookingId: FACTS.gameId });
+  });
+
   it('a card waiting for you opens the group’s deck, in its sport and kind, with it on top', () => {
     expect(targetOf('CHALLENGE', 'DECK', FACTS)).toEqual({
       opens: 'deck',

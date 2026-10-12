@@ -159,6 +159,23 @@ describe('where a tap goes', () => {
     ).toEqual({ opens: 'rescue', groupId: POOL, bookingId: GAME });
   });
 
+  // #663: each step at the court, named by this build, to the booked game's result screen.
+  it.each(['NOT_HERE_YET', 'AT_THE_CLUB', 'HOW_DID_IT_GO', 'IS_THAT_RIGHT', 'WERE_THEY_THERE'])(
+    '%s, to the booked game’s result screen, by its booking',
+    (kind) => {
+      expect(
+        toTarget({
+          kind,
+          opens: 'RESULT',
+          gameId: GAME,
+          poolId: POOL,
+          sport: 'PADEL',
+          gameKind: 'COMPETITIVE',
+        }),
+      ).toEqual({ opens: 'result', bookingId: GAME });
+    },
+  );
+
   it('nowhere for a notice this build cannot name', () => {
     expect(
       toTarget({

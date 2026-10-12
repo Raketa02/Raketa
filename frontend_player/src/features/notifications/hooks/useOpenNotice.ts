@@ -7,6 +7,7 @@
  * | Opens | The screen | Read again |
  * | --- | --- | --- |
  * | a booked game | its details over Home (`proposals`' `bookedGameRoute`) | the booking |
+ * | a step at the court (#664) | its result screen over Home (`bookedResultRoute`) | the booking, and the games |
  * | a Fill in alert's open seat | the rescue, seen from outside, in its group (`rescueRoute`) | the booking |
  * | a game still filling, or one that did not fill | its details in its group (`gameRoute`) | the game |
  * | a card waiting for the player | the group's deck, the card on top (`groups`' `groupDeckRoute`) | the group's decks |
@@ -16,38 +17,52 @@
  * column lights is the route's: a booked game is Home's, the rest are Play's — as a live yes on
  * Payments opens a game's details in Play.
  *
- * **The read behind it is marked stale first**, so the screen draws what the notice said rather than
- * a read from before it: a deck read twenty seconds ago does not hold the card a notice is about.
- * The destination is still the server's to authorize — a game the player can no longer see draws
- * its own refusal, as any screen does.
+ * **The reads behind it are marked stale first**, so the screen draws what the notice said rather
+ * than a read from before it: a deck read twenty seconds ago does not hold the card a notice is
+ * about, nor a games list the score *Is that right?* asks about. The result screen finds its game
+ * through two reads — the booking, which names its Game, and `GET /games`, which holds it. The
+ * destination is still the server's to authorize — a game the player can no longer see draws its
+ * own refusal, as any screen does.
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
+import { gameKeys } from '@/features/games/types';
 import { groupDeckRoute } from '@/features/groups/types';
-import { bookedGameRoute, gameRoute, proposalKeys, rescueRoute } from '@/features/proposals/types';
+import {
+  bookedGameRoute,
+  bookedResultRoute,
+  gameRoute,
+  proposalKeys,
+  rescueRoute,
+} from '@/features/proposals/types';
 
 import type { NoticeTarget } from '../domain/notice';
 
-/** Where a notice opens, and the read that screen draws. */
-export function destinationOf(target: NoticeTarget) {
+/** Where a notice opens, and the reads that screen draws. */
+function destinationOf(target: NoticeTarget) {
   switch (target.opens) {
     case 'booking':
       return {
         route: bookedGameRoute(target.bookingId),
-        read: proposalKeys.booking(target.bookingId),
+        reads: [proposalKeys.booking(target.bookingId)],
+      };
+    case 'result':
+      return {
+        route: bookedResultRoute(target.bookingId),
+        reads: [proposalKeys.booking(target.bookingId), gameKeys.list()],
       };
     case 'rescue':
       return {
         route: rescueRoute(target.groupId, target.bookingId),
-        read: proposalKeys.booking(target.bookingId),
+        reads: [proposalKeys.booking(target.bookingId)],
       };
     case 'game':
       return {
         route: gameRoute(target.groupId, target.proposalId, target.sport, target.kind),
-        read: proposalKeys.proposal(target.proposalId),
+        reads: [proposalKeys.proposal(target.proposalId)],
       };
     case 'deck':
       return {
@@ -56,9 +71,16 @@ export function destinationOf(target: NoticeTarget) {
           kind: target.kind,
           card: target.proposalId,
         }),
-        read: proposalKeys.group(target.groupId),
+        reads: [proposalKeys.group(target.groupId)],
       };
   }
+}
+
+/** Every read a destination draws, marked stale. */
+export function rereadDestination(client: QueryClient, target: NoticeTarget) {
+  return Promise.all(
+    destinationOf(target).reads.map((queryKey) => client.invalidateQueries({ queryKey })),
+  );
 }
 
 export function useOpenNotice(): (target: NoticeTarget) => void {
@@ -67,9 +89,8 @@ export function useOpenNotice(): (target: NoticeTarget) => void {
 
   return useCallback(
     (target: NoticeTarget) => {
-      const { route, read } = destinationOf(target);
-      void client.invalidateQueries({ queryKey: read });
-      router.push(route);
+      void rereadDestination(client, target);
+      router.push(destinationOf(target).route);
     },
     [client, router],
   );

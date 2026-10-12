@@ -29,8 +29,18 @@ describe('a push’s payload', () => {
     });
   });
 
+  // #663: each step at the court opens the booked game's result screen.
+  it('reads a step at the court, which opens the result screen', () => {
+    expect(parsePushNotice({ ...PAYLOAD, kind: 'IS_THAT_RIGHT', opens: 'RESULT' })).toMatchObject({
+      kind: 'IS_THAT_RIGHT',
+      opens: 'RESULT',
+      gameId: PAYLOAD.game_id,
+    });
+  });
+
   it('is nothing to open when a key is missing or is not what it says', () => {
     expect(parsePushNotice({ ...PAYLOAD, opens: 'SOMEWHERE' })).toBeUndefined();
+    expect(parsePushNotice({ ...PAYLOAD, opens: 'result' })).toBeUndefined();
     expect(parsePushNotice({ ...PAYLOAD, notice_id: 'not-an-id' })).toBeUndefined();
     expect(parsePushNotice({ ...PAYLOAD, game_id: '../../admin' })).toBeUndefined();
     expect(parsePushNotice({ ...PAYLOAD, pool_id: undefined })).toBeUndefined();

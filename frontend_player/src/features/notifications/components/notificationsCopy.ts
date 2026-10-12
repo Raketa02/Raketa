@@ -35,10 +35,14 @@ export const NOTIFICATIONS_COPY = {
   loading: 'Reading your notifications…',
   readAgain: 'Try again',
   /**
-   * Twelve always on (A7.2 as #620 amends it, and Q113 adds *Fix your card*; mock 52 drew seven) —
-   * the mechanics §17.2's table, a row a line of it: *the club confirmed / said no / didn't answer in
-   * time* is one row for three notices, as *A game you left* is for two. The quiet row for the take
-   * at the cut-off is never pushed, so it is not listed.
+   * Seventeen always on (A7.2 as #620 amends it, Q113 adds *Fix your card*, and #663 the five steps
+   * at the court; mock 52 drew seven) — the mechanics §17.2's table, a row a line of it: *the club
+   * confirmed / said no / didn't answer in time* is one row for three notices, as *A game you left*
+   * is for two. The quiet row for the take at the cut-off is never pushed, so it is not listed.
+   *
+   * The court's five are always on because each decides someone's record or result (ADR-0195
+   * §7), and each row is its notice's title with the name and the club left out, as the rows above
+   * it are.
    */
   alwaysOn: {
     title: 'Always on',
@@ -56,6 +60,11 @@ export const NOTIFICATIONS_COPY = {
       'Your new game',
       'A game you left',
       'Your post didn’t fill',
+      '… is at the club and you’re not there yet',
+      '… is at the club · who you said isn’t here yet',
+      'How did it go? · your game’s hour has ended',
+      'Is that right? · … put a score up, or changed it',
+      'Was … at the club? · they say they were',
     ],
   },
   yourChoice: {

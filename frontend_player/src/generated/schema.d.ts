@@ -5245,7 +5245,7 @@ export interface components {
          * @description Every notice a player can be told (the mechanics §17.2).
          * @enum {string}
          */
-        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_THE_CLUB" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "CLUB_CONFIRMED" | "CLUB_COULD_NOT_TAKE_IT" | "NEW_GAME" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT";
+        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_THE_CLUB" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "CLUB_CONFIRMED" | "CLUB_COULD_NOT_TAKE_IT" | "NEW_GAME" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE";
         /**
          * NoticeSchema
          * @description One notice, in the words the phone was pushed — and where a tap opens.
@@ -5267,7 +5267,7 @@ export interface components {
              * @description When it was given — or when the day last bundled a notice into it, which is what moves it up the list.
              */
             given_at: string;
-            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top. */
+            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top; `RESULT` — the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663). */
             opens: components["schemas"]["Opens"];
             /**
              * Game Id
@@ -5300,8 +5300,8 @@ export interface components {
         };
         /**
          * NotificationChoicesSchema
-         * @description The three notices a player chooses. The nine that are always on are
-         *     no choice, and are not here.
+         * @description The three notices a player chooses. Every other kind is always on, no
+         *     choice, and not here.
          */
         NotificationChoicesSchema: {
             /**
@@ -5430,7 +5430,7 @@ export interface components {
          * @description The screen a notice opens on when tapped (the screens A9).
          * @enum {string}
          */
-        Opens: "BOOKING" | "PROPOSAL" | "DECK";
+        Opens: "BOOKING" | "PROPOSAL" | "DECK" | "RESULT";
         /**
          * OpponentVarietySchema
          * @description How widely this person spreads their games, over their **whole** record.

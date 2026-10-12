@@ -26,7 +26,12 @@ export type NoticeKind =
   | 'POST_DID_NOT_FILL'
   | 'YOU_COMPLETE_IT'
   | 'CHALLENGE'
-  | 'FILL_IN_ALERT';
+  | 'FILL_IN_ALERT'
+  | 'NOT_HERE_YET'
+  | 'AT_THE_CLUB'
+  | 'HOW_DID_IT_GO'
+  | 'IS_THAT_RIGHT'
+  | 'WERE_THEY_THERE';
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
@@ -46,12 +51,18 @@ export const NOTICE_KINDS = [
   'YOU_COMPLETE_IT',
   'CHALLENGE',
   'FILL_IN_ALERT',
+  'NOT_HERE_YET',
+  'AT_THE_CLUB',
+  'HOW_DID_IT_GO',
+  'IS_THAT_RIGHT',
+  'WERE_THEY_THERE',
 ] as const satisfies readonly NoticeKind[];
 
 /**
  * Where a tap opens a notice (the screens A9): a booked game's details, a game still filling's — or
- * one that did not fill — and a group's deck with the card on top.
+ * one that did not fill — a group's deck with the card on top, and a booked game's result screen
+ * (#663), where each step at the court is acted on.
  */
-export type Opens = 'BOOKING' | 'PROPOSAL' | 'DECK';
+export type Opens = 'BOOKING' | 'PROPOSAL' | 'DECK' | 'RESULT';
 
-export const OPENS = ['BOOKING', 'PROPOSAL', 'DECK'] as const satisfies readonly Opens[];
+export const OPENS = ['BOOKING', 'PROPOSAL', 'DECK', 'RESULT'] as const satisfies readonly Opens[];

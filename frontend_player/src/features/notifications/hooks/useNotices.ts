@@ -49,7 +49,7 @@ import { arrivalsOf, type NoticeTarget } from '../domain/notice';
 import { noticeOfPush } from '../use-cases/notifications';
 
 import { notificationKeys } from './notificationKeys';
-import { destinationOf, useOpenNotice } from './useOpenNotice';
+import { rereadDestination, useOpenNotice } from './useOpenNotice';
 import { usePushRegistration } from './usePushRegistration';
 import { useRecentNotices } from './useRecentNotices';
 
@@ -106,9 +106,7 @@ export function useNotices(): {
         if (read !== undefined) seen.current?.add(read.noticeId);
         void client.invalidateQueries({ queryKey: notificationKeys.notices() });
         void rereadHome(client);
-        if (read?.target !== undefined) {
-          void client.invalidateQueries({ queryKey: destinationOf(read.target).read });
-        }
+        if (read?.target !== undefined) void rereadDestination(client, read.target);
         arrivals += 1;
         setBanner({
           key: read?.noticeId ?? `arrival-${arrivals}`,

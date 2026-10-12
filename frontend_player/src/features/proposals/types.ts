@@ -92,12 +92,13 @@ export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
 
 /**
  * **Where a notice opens** ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens A9):
- * a game still filling's details, spelled here for the deck's own **i**, and a booked game's open
- * seat seen from outside — a booked game's own is `bookedGameRoute`, above — and the keys a tap re-reads, so the screen it opens draws what the notice
- * said rather than a read from before it, as `paymentKeys` crosses for the fill. A notice arriving
- * while the app is open re-reads Home's two reads (`rereadHome`): the games, the bar's badge with
- * them, and *TO CONFIRM* above them.
+ * a game still filling's details, spelled here for the deck's own **i**, a booked game's open seat
+ * seen from outside — a booked game's own is `bookedGameRoute`, above — and a booked game's result
+ * screen, where each step at the court is acted on (#664); and the keys a tap re-reads, so the
+ * screen it opens draws what the notice said rather than a read from before it, as `paymentKeys`
+ * crosses for the fill. A notice arriving while the app is open re-reads Home's two reads
+ * (`rereadHome`): the games, the bar's badge with them, and *TO CONFIRM* above them.
  */
-export { gameRoute, rescueRoute } from './components/proposalRoutes';
+export { bookedResultRoute, gameRoute, rescueRoute } from './components/proposalRoutes';
 export { proposalKeys } from './hooks/proposalKeys';
 export { rereadHome } from './hooks/useHome';

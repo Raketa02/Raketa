@@ -6,8 +6,9 @@
  * where it opens and the ids it opens by; its kind, because a Fill in alert opens somewhere its
  * `opens` alone does not say (`domain/notice.ts`); and the notice's own id, because the banner it is
  * drawn as is the list's too and is drawn once. The ids must be ids and where it opens one of the
- * three places. The kinds — the notice's, the sport, the game's — are narrowed where the wire is
- * read (`mappers/`), since a code this build cannot name is a notice still told and nowhere to open.
+ * four places — the fourth a booked game's result screen (#664). The kinds — the notice's, the
+ * sport, the game's — are narrowed where the wire is read (`mappers/`), since a code this build
+ * cannot name is a notice still told and nowhere to open.
  */
 
 import { z } from 'zod';

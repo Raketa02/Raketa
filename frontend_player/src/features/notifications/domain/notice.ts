@@ -15,12 +15,13 @@ import type { Weekday } from '@/shared/vocabulary/week';
 import type { NoticeKind, Opens } from './vocabulary';
 
 /**
- * Where a tap goes. A booked game is read by its booking, whose id is the game's own (#541); a game
- * still filling and a card on a deck are both in the group the pool is filed under, in a sport and a
- * kind — the deck is the read for exactly those, and a game's details draw the card that read dealt.
+ * Where a tap goes. A booked game is read by its booking, whose id is the game's own (#541) — its
+ * details, or its result screen; a game still filling and a card on a deck are both in the group the
+ * pool is filed under, in a sport and a kind — the deck is the read for exactly those, and a game's
+ * details draw the card that read dealt.
  */
 export type NoticeTarget =
-  | { readonly opens: 'booking'; readonly bookingId: string }
+  | { readonly opens: 'booking' | 'result'; readonly bookingId: string }
   | { readonly opens: 'rescue'; readonly groupId: string; readonly bookingId: string }
   | {
       readonly opens: 'game' | 'deck';
@@ -46,23 +47,33 @@ export interface NoticeFacts {
  * game! · Kazimierz Padel answers by 21:15* (Q103) opens a game still the proposal's — nobody has
  * paid and there is no Game until its club says yes — so its details in the group.
  *
+ * **Each step at the court opens the booked game's result screen** (#664; `RESULT`), where the
+ * person it waits on acts: *Ivan is at Ogrody 33 and you're not there yet* lands on *I'm here*, *Is
+ * that right?* on the score put up, *How did it go?* on putting one up.
+ *
  * **A Fill in alert is the one notice whose kind decides**: the backend sends it as `BOOKING` — the
  * booked game — to a reader who is **not in it**, so its details are the ones a *Seats to fill* row
  * opens, the open seat seen from outside, in its group (A4.3). The booked game's own details would
  * tell a reader who was never in it that the game is not theirs any more.
  */
 export function targetOf(kind: NoticeKind, opens: Opens, facts: NoticeFacts): NoticeTarget {
-  if (opens === 'BOOKING' && kind === 'FILL_IN_ALERT') {
-    return { opens: 'rescue', groupId: facts.poolId, bookingId: facts.gameId };
+  switch (opens) {
+    case 'BOOKING':
+      return kind === 'FILL_IN_ALERT'
+        ? { opens: 'rescue', groupId: facts.poolId, bookingId: facts.gameId }
+        : { opens: 'booking', bookingId: facts.gameId };
+    case 'RESULT':
+      return { opens: 'result', bookingId: facts.gameId };
+    case 'PROPOSAL':
+    case 'DECK':
+      return {
+        opens: opens === 'PROPOSAL' ? 'game' : 'deck',
+        groupId: facts.poolId,
+        proposalId: facts.gameId,
+        sport: facts.sport,
+        kind: facts.kind,
+      };
   }
-  if (opens === 'BOOKING') return { opens: 'booking', bookingId: facts.gameId };
-  return {
-    opens: opens === 'PROPOSAL' ? 'game' : 'deck',
-    groupId: facts.poolId,
-    proposalId: facts.gameId,
-    sport: facts.sport,
-    kind: facts.kind,
-  };
 }
 
 export interface Notice {

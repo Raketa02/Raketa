@@ -15,6 +15,7 @@ import { focusManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Linking } from 'react-native';
 
+import { gameKeys } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { doorRowLabel, theme } from '@/shared/ui';
@@ -28,6 +29,8 @@ import {
 } from '@/test-support/groupDeck';
 import {
   BOOKING,
+  INES,
+  bookedGameOnTheList,
   bookingDetails,
   homeGame,
   stubBooking,
@@ -37,6 +40,7 @@ import {
 import {
   DEVICES_PATH,
   DEVICE_REMOVAL_PATH,
+  GATE_USER,
   launchSignedIn,
   NOTICES_PATH,
   NOTICES_VISIT_PATH,
@@ -48,6 +52,7 @@ import {
   stubNotificationChoices,
   stubOwnRecord,
   stubProfileOptions,
+  stubGames,
   stubProfileSurface,
   stubPush,
 } from '@/test-support/onboardingRouter';
@@ -252,8 +257,9 @@ describe('the Notifications row, in the ACCOUNT group', () => {
 // ---------------------------------------------------------------------------
 
 describe('the Notifications screen', () => {
-  // The screens A7.2 as #620 amends it, and Q113 adds Fix your card: §17.2's always-on notices.
-  it('lists the twelve always on, each inert with its green tag (mock 52)', async () => {
+  // The screens A7.2 as #620 amends it, Q113 adds Fix your card, and #663 the five steps at the
+  // court: §17.2's always-on notices.
+  it('lists the seventeen always on, each inert with its green tag (mock 52)', async () => {
     const rows = [
       'It’s a game! · held',
       'It’s a game! · the club answers by …',
@@ -267,6 +273,11 @@ describe('the Notifications screen', () => {
       'Your new game',
       'A game you left',
       'Your post didn’t fill',
+      '… is at the club and you’re not there yet',
+      '… is at the club · who you said isn’t here yet',
+      'How did it go? · your game’s hour has ended',
+      'Is that right? · … put a score up, or changed it',
+      'Was … at the club? · they say they were',
     ];
     await onNotifications();
 
@@ -1213,6 +1224,188 @@ describe('It’s a game! while the club decides, and Your new game (Q103, Q107)'
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Each step at the court
+// ---------------------------------------------------------------------------
+
+/**
+ * #663's five, about a Competitive booked game — *isn't here yet*, *they're at the club*, *How did it
+ * go?*, *Is that right?* and *were they there?* — each opening the game's result screen, where the
+ * person it waits on acts: from a row behind the bell, the banner, or the phone's own notification.
+ * Saturday 3 October, padel 16:00–17:00 at Bonarka Arena; the words are the backend's (`words.py`).
+ */
+describe('each step at the court opens the game’s result screen (#663)', () => {
+  const RESULT = `/booking/${BOOKING}/result`;
+
+  /** 16:10 in Warsaw — the first half hour; 17:05, the hour just ended; the next morning. */
+  const AT_THE_COURT = '2026-10-03T14:10:00Z';
+  const HOUR_ENDED = '2026-10-03T15:05:00Z';
+  const NEXT_MORNING = '2026-10-04T07:00:00Z';
+
+  const NOT_HERE_YET = notice({
+    kind: 'NOT_HERE_YET',
+    opens: 'RESULT',
+    title: "Inés Díaz is at Bonarka Arena and you're not there yet",
+    body: "Tap I'm here when you arrive — Padel · Sat 16:00.",
+  });
+  const AT_THE_CLUB = notice({
+    kind: 'AT_THE_CLUB',
+    opens: 'RESULT',
+    title: 'Bartek Lis is at Bonarka Arena',
+    body: 'Padel · Sat 16:00 — arrived at 16:12.',
+  });
+  const HOW_DID_IT_GO = notice({
+    kind: 'HOW_DID_IT_GO',
+    opens: 'RESULT',
+    title: 'How did it go?',
+    body: 'Padel · Sat 16:00 · Bonarka Arena — put the score up.',
+  });
+  const IS_THAT_RIGHT = notice({
+    kind: 'IS_THAT_RIGHT',
+    opens: 'RESULT',
+    title: 'Is that right? · Inés Díaz put a score up',
+    body: 'Padel · Sat 16:00 at Bonarka Arena. If nobody answers by 17:30 tomorrow, it becomes the result — saying nothing costs nothing.',
+  });
+  const WERE_THEY_THERE = notice({
+    kind: 'WERE_THEY_THERE',
+    opens: 'RESULT',
+    title: 'Was Bartek Lis at Bonarka Arena?',
+    body: 'Bartek Lis tapped I was there for Padel · Sat 16:00 — confirm it by 16:30 tomorrow if so.',
+  });
+  const STEPS = [NOT_HERE_YET, AT_THE_CLUB, HOW_DID_IT_GO, IS_THAT_RIGHT, WERE_THEY_THERE];
+
+  /** A row's name begins with its notice's words, which carry `?` and `.` — matched as written. */
+  const startingWith = (words: string) =>
+    new RegExp(`^${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+
+  /** Inés's 6–4 6–3, waiting for the reader's side until 17:30 tomorrow. */
+  const INES_SCORE: Wire['StandingProposalSchema'] = {
+    side: 'B',
+    proposed_by: INES,
+    score: {
+      sets: [
+        { a: 6, b: 4 },
+        { a: 6, b: 3 },
+      ],
+    },
+    proposed_at: '2026-10-03T15:30:00Z',
+    answer_by: '2026-10-04T15:30:00Z',
+  };
+
+  /** The server at 17:05: the hour just ended, its result still to be put up. */
+  function hourJustEnded() {
+    stubBooking(transport, bookingDetails({ status: 'NEEDS_RESULT', read_at: HOUR_ENDED }));
+    stubGames(transport, [bookedGameOnTheList()], HOUR_ENDED);
+  }
+
+  it('lists all five, each opening the game’s result screen — back is the list', async () => {
+    stubNotices(transport, STEPS);
+    hourJustEnded();
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: COPY.bell }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    for (const step of STEPS) {
+      fireEvent.press(await screen.findByRole('button', { name: startingWith(step.title) }));
+      await waitFor(() => expect(screen).toHavePathname(RESULT));
+      fireEvent.press(await screen.findByLabelText('Back'));
+      await waitFor(() => expect(screen).toHavePathname('/notices'));
+    }
+  });
+
+  it('the banner Isn’t here yet opens the result screen with I’m here ready', async () => {
+    stubBooking(transport, bookingDetails({ status: 'NEEDS_RESULT', read_at: AT_THE_COURT }));
+    stubGames(
+      transport,
+      [
+        bookedGameOnTheList({
+          standing: 'NOT_HERE_YET',
+          attendance: [
+            {
+              player_id: GATE_USER.id,
+              name: GATE_USER.name ?? 'Ada',
+              state: 'WAITING',
+              noted_at: '2026-10-03T14:05:00Z',
+              arrive_by: '2026-10-03T14:30:00Z',
+              arrived_at: null,
+              claim_by: '2026-10-04T14:30:00Z',
+              claimed_at: null,
+              confirmed_at: null,
+            },
+          ],
+        }),
+      ],
+      AT_THE_COURT,
+    );
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+
+    act(() =>
+      phone.receive({
+        title: NOT_HERE_YET.title,
+        body: NOT_HERE_YET.body,
+        data: payloadOf(NOT_HERE_YET),
+      }),
+    );
+    fireEvent.press(
+      await screen.findByRole('button', { name: `${NOT_HERE_YET.title}. ${NOT_HERE_YET.body}` }),
+    );
+
+    await waitFor(() => expect(screen).toHavePathname(RESULT));
+    expect(await screen.findByRole('header', { name: 'Are you here?' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'I’m here' })).toBeTruthy();
+  });
+
+  // The result screen read the game before the score went up, and that read is held fresh past
+  // every clock jump the harness makes on a navigation — so only the tap marking it stale draws the
+  // score Is that right? is about.
+  it('a push of Is that right?, tapped, opens the score put up — not the read from before it', async () => {
+    stubNotices(transport, [HOW_DID_IT_GO]);
+    hourJustEnded();
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: COPY.bell }));
+    fireEvent.press(await screen.findByRole('button', { name: startingWith(HOW_DID_IT_GO.title) }));
+    await waitFor(() => expect(screen).toHavePathname(RESULT));
+    expect(await screen.findByRole('button', { name: /Send this score/ })).toBeTruthy();
+    const before = queryClient.getQueryData(gameKeys.list());
+    fireEvent.press(await screen.findByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+    queryClient.removeQueries({ queryKey: gameKeys.list() });
+    queryClient.getQueryCache().build(queryClient, { queryKey: gameKeys.list(), gcTime: Infinity });
+    queryClient.setQueryData(gameKeys.list(), before, { updatedAt: Date.now() + 10 * 60_000 });
+
+    stubBooking(
+      transport,
+      bookingDetails({ status: 'CONFIRM_THE_RESULT', needs_you: true, read_at: NEXT_MORNING }),
+    );
+    stubGames(
+      transport,
+      [
+        bookedGameOnTheList({
+          standing: 'AWAITING_ANSWER',
+          played_at: '2026-10-03T15:30:00Z',
+          entry_closes_at: null,
+          proposals: [INES_SCORE],
+        }),
+      ],
+      NEXT_MORNING,
+    );
+    act(() => phone.tap(payloadOf(IS_THAT_RIGHT)));
+
+    await waitFor(() => expect(screen).toHavePathname(RESULT));
+    expect(await screen.findByText('That’s right')).toBeTruthy();
+  });
+
+  it('a push of Were they there?, tapped, opens the result screen once the app is in', async () => {
+    hourJustEnded();
+    phone.tap(payloadOf(WERE_THEY_THERE));
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname(RESULT));
   });
 });
 
