@@ -52,6 +52,46 @@ card: a reason the player can mend (no saved way to pay, a read that failed) put
 back, and a game over, full, already answered or no longer theirs lets it go. Offline, the answer is
 held and the card stays gone, with the amber _resumes_ note.
 
+**A pull reads the deck again** (2026-10-12) — the group page's control, handed in as
+`refreshControl` and put on whichever scroller the tab is in: the one-time question's, the starting
+card's, a failed read's (the pull mends it as the retry does), and **the deck's own**, a scroller with
+nothing to scroll that exists for the pull — its content is the page's height (`flexGrow: 1`), so the
+stage still takes what the switch and the buttons leave. A drag down is the pull's and a drag across
+is the card's, because `DeckStage` claims only a move further across than down, and React Native's
+Android refresh layout lets go of a touch once it has moved across. A pull's read is drawn as every
+read is (below): the card being read stays on top. What the pull re-reads is
+`useRereadGroupGames`, the answer's own `reread` with the live yeses: every read under the group's
+root, the games' details and the live yeses — the Fill in board's pull too, which is the page's
+scroller's. While the first read is on its way there is nothing to pull. **Not seen on a device.**
+
+**Another player's yes reaches the deck on its next read, and the card being read stays put**
+(2026-10-12, asked by the product owner: _player B's yes on a card with player A on it reaches A
+too slowly_). Three things, all the phone's, none a request more:
+
+- **An answer's re-read lets a read already out land** (`readAgainInTurn`). TanStack's invalidation
+  threw it away and started another, so a player answering faster than the deck is read never saw one
+  land — every answer cancelled the read the one before asked for, another player's yes waited for
+  them to stop, and the server did each cancelled read's work anyway. Now the read that is out is
+  drawn, one read follows it (it may predate the answer), and every answer settling meanwhile shares
+  that one. Per read, so a deck never waits for a Fill in retrying beside it.
+- **The card on top stays on top while it is dealt** (`GamesDeck`'s `underThumb`). A read redraws it
+  — its tiles flip to In in place, which is §6.4's _B is looking at that card → A's tile flips to In_
+  on any read — and the cards behind take the server's order, so the game that gained momentum (§8.2)
+  is the next card up rather than swapped in under the thumb. A notice's card still goes first; a
+  card no longer dealt still leaves. **A call for the product owner**: a pull keeps the top card too.
+- **A card whose answer is on its way is hidden** (`useAnswersOnTheirWay`, off the mutation cache by
+  `proposalKeys.answers()`, which the deck's answers and the fill's booked yes carry): a read that set
+  out before the answer reached the server still deals it, and such reads now land. A refusal that
+  puts the card back keeps it drawn (`putBack`).
+
+Walked in `groupGames.test.tsx` (_the deck read again while it is answered_) and
+`hooks/readAgainInTurn.test.ts`. **What this does not do**: reach a player who is reading a card
+and answering nothing. Their deck learns of B's yes on their next answer, pull or return to the app.
+Telling them sooner is **owed to the backend**: a nudge from the server to the players dealt the
+game, which the phone answers with a read — not yet decided or ticketed. A poll was weighed and
+refused: a deck read
+is the whole deck recomputed, tens of queries, paid by every open deck whether anything changed.
+
 **The bar's fold is read off the tiles' Levels.** 7.11's bar takes an advantage, and a deck card's
 forecast carries only `pct` and `provisional` — so `foldOf` is your side's mean published Level minus
 theirs, a short side read as its present member (the engine's own provisional). The figure printed is
@@ -72,9 +112,9 @@ client to draw a price. **Owed, from a root session**: that document's paragraph
 order above; the IN tag drawn as a green fill (the mocks' pixels) where A2.3's words say _outline_;
 the rescue ribbon in `coralInk`; the cap's two lines the mock does not draw (_next week_, _this week
 and next_); `DECK` as the intent's surface. **Not built, and whose**:
-a tile flipping to In while the card is on screen (the read is re-asked on
-focus and after answers, never polled — a live channel is not specified). **Nothing here has been
-seen on a device.**
+a tile flipping to In while the card is on screen **and nothing is read** — since 2026-10-12 it
+flips on the deck's next read (above), and between reads it waits for a live nudge the backend has
+not built. **Nothing here has been seen on a device.**
 
 **The countdown runs from the read.** The deck's read carries no `read_at`, so the countdown starts
 from the moment it was received (`dataUpdatedAt`) and, while a card on the deck counts down, the

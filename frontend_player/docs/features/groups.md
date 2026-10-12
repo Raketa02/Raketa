@@ -246,10 +246,10 @@ somebody is asking. It reads the Owner's requests under the same key as _Want to
 now asks for them as it opens rather than when Info is opened, and an answer that takes a row takes
 it off the count in the same frame. Nobody but the Owner reads the requests, so nobody else's tab
 carries a count. **A pull on Info** re-reads the group and everything read under it that is on
-screen — who is waiting, the members row, the count — and the other three tabs, which are drawn for
-a sport, keep no pull. **So does coming back to Info** (#529 F2): from another tab, and from a screen
-pushed over the page (Members, Edit group, by `useOnReturn`), so what another phone changed meanwhile
-is on it without a pull. The first look at Info re-reads what the page asked for as it opened; that
+screen — who is waiting, the members row, the count. Games and Fill in pull too since 2026-10-12
+(below); Friends keeps none. **So does coming back to Info** (#529 F2): from another tab, and from a
+screen pushed over the page (Members, Edit group, by `useOnReturn`), so what another phone changed
+meanwhile is on it without a pull. The first look at Info re-reads what the page asked for as it opened; that
 is one more read of the group and the requests, paid on a tap.
 
 **The members row is the server's faces and the phone's arithmetic** (`domain/groupInfo.ts`'
@@ -488,6 +488,19 @@ its own. **The tab bar counts Fill in** — the _Seats to fill_ rows, the board 
 open, so `stubGroupDeck` now serves an empty Fill in too and every suite that opens a page gets it.
 **+ Post a game** floats over the page's corner on Fill in; the board leaves room under its last row
 for it. The tab's walk is `groupFillIn.test.tsx`; the board's record is [`proposals.md`](proposals.md).
+
+**Games and Fill in re-read on a pull** (2026-10-12, asked by the product owner). Until then only Info
+pulled, and a game posted, a seat offered or a card filled on another phone reached the two tabs only
+on a refocus or an answer's re-read. **One control and one spinner for the page** (`usePull`, the
+Shell's drawing), re-reading what the tab on screen draws: on Info the group, as before; on Games and
+Fill in the group — the header's count and the starting cards' roster — and every read `proposals`
+draws the two tabs from (`useRereadGroupGames`: the decks, Fill in, _You're In_'s yeses and their
+games), of which only those on screen go out at once. **Fill in's control is the page's scroller's**;
+**Games' is handed to the deck**, which lays itself out and puts it on whichever scroller it is in —
+the stage's among them (`proposals.md`). Friends keeps none — it was not asked for. Walked in
+`groupGames.test.tsx` and `groupFillIn.test.tsx` (_pulling Games_, _pulling Fill in_). **Not seen on
+a device** — the deck's pull shares the page with the card's drag, and only a thumb can say they keep
+out of each other's way.
 
 **_Post a game_ is `proposals`' screen over the page** ([#558](https://github.com/Raketa02/Raketa/issues/558),
 the screens A5). Both doors — Fill in's floating button and _Nothing picked right now_'s third — push
