@@ -30,12 +30,16 @@ is the fourth end, a decision rather than a reading of the clock, folded off
 (``called_off_by``, ``docs/adr/0172`` §4) — nobody, when it is the cut-off. It
 is not an evening, and every read that counts one leaves it out.
 
-**A booked game can say somebody did not come** (#547; the mechanics §15.3).
-The players who came report them where they would enter the result, and the
-reported player has a day to dispute it. A report is the entry for that game —
-no score stands beside one — and whatever it comes to, **the game does not
-count**. And **a booked game is called off whole** when its club takes the
-court back before its hour, with a seat open or none (``call_off_whole``).
+**A booked game catches a real absence at the court, while it happens** (#657;
+``docs/adr/0195`` §3, the mechanics §15.1). In the first thirty minutes a player
+at the club taps *Oscar isn't here yet*; Oscar's arrival — his own *I'm here*,
+or a courtmate's *they're here*, each from the club — decides on time or Came
+late, and none by then is **Didn't come**: the game takes no score and never
+counts. *I was there* within a day, confirmed by somebody else on the court,
+makes it Came late. Everybody who arrives on time does nothing at all
+(``attendance.py``). And **a booked game is called off whole** when its club
+takes the court back before its hour, with a seat open or none
+(``call_off_whole``).
 
 **A score is asked for once, and settled by one tap or by silence** (#654;
 ``docs/adr/0195`` §5). None is taken before the hour, and corrections end with
@@ -58,8 +62,8 @@ derived.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Iterable
+from dataclasses import dataclass, field, replace
+from typing import Any, Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
@@ -67,31 +71,46 @@ from app.modules.games.domain.answering import (
     ScorePutToASide,
     score_put_to_a_side,
 )
+from app.modules.games.domain.attendance import (
+    NOT_HERE_STATES,
+    Absence,
+    AttendanceState,
+    ClubVerdict,
+    is_final,
+    state_of,
+)
 from app.modules.games.domain.errors import (
     AcceptingYourOwnSidesResult,
-    ANoShowIsReported,
-    AResultIsAlreadyEntered,
+    AlreadyArrived,
     AResultMustCarryAScore,
+    AttendanceIsForBookedGames,
     CorrectionsHaveClosed,
     NobodyHasProposedAResult,
-    NobodyReportedYou,
-    NoShowsAreForBookedGames,
+    NobodySaidTheyWereNotHere,
+    NotAboutYourself,
     NotAGameToCallOff,
+    NotAtTheClub,
+    NothingToConfirm,
     NotOnThisCourt,
+    SomebodyDidntCome,
+    SomebodyIsNotHereYet,
     TheCourtHasAnOpenSeat,
-    TheDisputeWindowHasClosed,
     TheEntryWindowHasClosed,
     TheGameHasNotStarted,
     TheGameIsNotOpenToSeating,
     TheGameStartedShort,
     TheGameWasCalledOff,
+    TheLateClaimHasClosed,
     TheResultIsSettled,
-    YouCannotReportYourself,
+    TheTapWindowHasClosed,
+    TheTapWindowIsOpen,
+    YouAreNotHereYourself,
     YouWereNotOnThisCourt,
-    YouWereReportedAsANoShow,
     YourSideHasAlreadyAnswered,
 )
 from app.modules.games.domain.events import (
+    AbsenceNoted,
+    ArrivalNoted,
     GameCalledOff,
     GameDismissed,
     GamePlanned,
@@ -99,6 +118,8 @@ from app.modules.games.domain.events import (
     LineUpReseated,
     NoShowDisputed,
     NoShowReported,
+    PresenceClaimed,
+    PresenceConfirmed,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
@@ -111,7 +132,6 @@ from app.modules.games.domain.standing import (
     PLAYED,
     SETTLED,
     Acceptance,
-    NoShowReport,
     Proposal,
     GameStanding,
     agreed_score,
@@ -119,7 +139,11 @@ from app.modules.games.domain.standing import (
     settled_at,
     standing_of,
 )
-from app.modules.games.domain.windows import entry_closes_at
+from app.modules.games.domain.windows import (
+    entry_closes_at,
+    late_claim_closes_at,
+    tap_window_closes_at,
+)
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
@@ -171,10 +195,11 @@ class Game:
     #: the shape: there is nowhere here to put a third score.
     proposals: dict[GameSide, Proposal]
     acceptance: Acceptance | None
-    #: Everybody reported as not turning up to this booked game, and what became
-    #: of each report (#547). Folded off ``NoShowReported`` and
-    #: ``NoShowDisputed``; empty on every game that has no such report.
-    no_shows: dict[UUID, NoShowReport]
+    #: Everybody somebody on the court said was not here yet, and what has been
+    #: said about each since (#657) — folded off the four attendance events;
+    #: empty on every game where everybody arrived on time, which is every
+    #: ordinary game. What each **is** is ``attendance_at``'s, never stored.
+    attendance: dict[UUID, Absence]
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -364,11 +389,12 @@ class Game:
         side = self._side_of(by)
         if score is None:
             raise AResultMustCarryAScore()
-        if self.no_shows:
-            # A report is this game's entry, and no score stands beside one.
-            if self.standing_at(occurred_at) in SETTLED:
-                raise TheResultIsSettled()
-            raise ANoShowIsReported()
+        standing = self.standing_at(occurred_at)
+        if standing is GameStanding.NOT_HERE_YET:
+            # If they never come the game takes no score (#657).
+            raise SomebodyIsNotHereYet()
+        if standing is GameStanding.DIDNT_COME:
+            raise SomebodyDidntCome()
 
         if self.played_at is None:
             if self.called_off_at is not None:
@@ -447,7 +473,14 @@ class Game:
         """
 
         side = self._side_of(by)
-        if self.standing_at(occurred_at) in SETTLED:
+        standing = self.standing_at(occurred_at)
+        if standing is GameStanding.NOT_HERE_YET:
+            # An agreement settles a score, and none settles beside an absence
+            # (#657): if they never come the game takes no score.
+            raise SomebodyIsNotHereYet()
+        if standing is GameStanding.DIDNT_COME:
+            raise SomebodyDidntCome()
+        if standing in SETTLED:
             raise TheResultIsSettled()
         if side in self.proposals and side.other not in self.proposals:
             raise AcceptingYourOwnSidesResult()
@@ -463,95 +496,227 @@ class Game:
             )
         )
 
-    # -- somebody did not come ----------------------------------------------
+    # -- who turned up (#657) -----------------------------------------------
 
-    def report_no_show(
+    def note_absent(
         self,
         *,
         by: UUID,
         absent: UUID,
+        where: ClubVerdict,
         occurred_at: Instant,
     ) -> None:
-        """*Kuba didn't come* — said by somebody who came to a **booked** game,
-        where they would enter its result (#547; the mechanics §15.3).
+        """*Oscar isn't here yet* — from a player on a **booked** game's court,
+        at the club, in the tap window (``docs/adr/0195`` §3). It costs its
+        maker nothing, and a partner may be tapped as well as an opponent.
 
-        **What it refuses, in order**: somebody off the court, a game with no
-        hour, a report of yourself or of somebody who was not on it; a game
-        called off, started short, not started yet, scored, settled, or past
-        its entry window; and a reporter reported themselves, whose answer is
-        the dispute. A player already reported is reported: a second report
-        writes nothing.
+        **What it refuses, in order**: somebody off the court; a game with no
+        hour; yourself, or somebody not on the court; a game called off or
+        started short; before the hour, or after the tap window; a result
+        already **settled**, which is final; a maker who is themselves awaited;
+        a player already arrived; and, last, a maker not at the club — so the
+        sentence a player reads is about the game before it is about where they
+        stand. A player already awaited is awaited: a second tap writes nothing.
+
+        **A score still waiting for its answer does not stop it**: the entry
+        window opens at the hour's start and a score carries no location, so
+        an absent player — or their partner — could otherwise post one from
+        home at 17:00 and never be caught. The score stays on the table and is
+        nobody's while anybody is awaited or Didn't come; an arrival, or a
+        confirmed *I was there*, gives it back its game.
         """
 
         self._side_of(by)
-        if self.starts_at is None:
-            raise NoShowsAreForBookedGames()
+        starts_at = self._booked_hour()
         if absent == by:
-            raise YouCannotReportYourself()
+            raise NotAboutYourself()
         if self.line_up.side_of(absent) is None:
             raise NotOnThisCourt()
-        if self.called_off_at is not None:
-            raise TheGameWasCalledOff()
-        standing = self.standing_at(occurred_at)
-        if standing is GameStanding.STARTED_SHORT:
-            raise TheGameStartedShort()
-        if occurred_at < self.starts_at:
-            raise TheGameHasNotStarted()
-        if self.played_at is not None:
-            raise AResultIsAlreadyEntered()
-        if standing in SETTLED and standing is not GameStanding.PLAYED_NO_SCORE:
-            # A game nobody recorded is told its window closed, as a score is.
+        self._in_the_tap_window(occurred_at, starts_at=starts_at)
+        if self.standing_at(occurred_at) in SETTLED:
             raise TheResultIsSettled()
-        if occurred_at >= self.entry_closes_at:
-            raise TheEntryWindowHasClosed()
-        if by in self.no_shows:
-            raise YouWereReportedAsANoShow()
-        if absent in self.no_shows:
+        if self._not_here(by, now=occurred_at):
+            raise YouAreNotHereYourself()
+        noted = self.attendance.get(absent)
+        if noted is not None and noted.arrived_at is not None:
+            raise AlreadyArrived()
+        if not where.at_the_club:
+            raise NotAtTheClub(where.club_name)
+        if noted is not None:
             return
         self._record_that(
-            NoShowReported(
+            AbsenceNoted(
                 game_id=self.game_id,
                 player_id=absent,
-                reported_by=by,
+                noted_by=by,
                 occurred_at=occurred_at,
             )
         )
 
-    def dispute_no_show(self, *, by: UUID, occurred_at: Instant) -> None:
-        """*I was there* — the reported player, inside their day (#547). The
-        report falls; a second dispute writes nothing."""
+    def note_arrival(
+        self,
+        *,
+        by: UUID,
+        arrived: UUID,
+        where: ClubVerdict,
+        occurred_at: Instant,
+    ) -> None:
+        """**The arrival** — *I'm here* when ``by`` is ``arrived``, *they're
+        here* from anybody else on the court; at the club, in the tap window
+        (#657). The first is the one that counts, and its moment decides on
+        time or Came late.
 
-        report = self.no_shows.get(by)
-        if report is None:
-            raise NobodyReportedYou()
-        if report.disputed_at is not None:
-            return
-        if not self.may_dispute(by, now=occurred_at):
-            raise TheDisputeWindowHasClosed()
+        **What it refuses, in order**: somebody off the court; a game with no
+        hour; somebody not on the court; a game called off or started short;
+        before the hour, or after the tap window — a player still awaited then
+        Didn't come, and has *I was there*; a player nobody tapped, since
+        everybody who arrives on time does nothing; a player already arrived;
+        a courtmate who is themselves awaited; and, last, a maker not at the
+        club — *they're here* is checked too (a call, ``docs/adr/0195`` §10.4).
+        """
+
+        self._side_of(by)
+        starts_at = self._booked_hour()
+        if self.line_up.side_of(arrived) is None:
+            raise NotOnThisCourt()
+        self._in_the_tap_window(occurred_at, starts_at=starts_at)
+        noted = self.attendance.get(arrived)
+        if noted is None:
+            raise NobodySaidTheyWereNotHere()
+        if noted.arrived_at is not None:
+            raise AlreadyArrived()
+        if by != arrived and self._not_here(by, now=occurred_at):
+            raise YouAreNotHereYourself()
+        if not where.at_the_club:
+            raise NotAtTheClub(where.club_name)
         self._record_that(
-            NoShowDisputed(game_id=self.game_id, player_id=by, occurred_at=occurred_at)
+            ArrivalNoted(
+                game_id=self.game_id,
+                player_id=arrived,
+                noted_by=by,
+                occurred_at=occurred_at,
+            )
         )
 
-    def may_dispute(self, player_id: UUID, *, now: Instant) -> bool:
-        """Whether a report of this player not coming waits on their dispute at
-        ``now`` — undisputed, and inside its own day (#547)."""
+    def claim_presence(self, *, by: UUID, occurred_at: Instant) -> None:
+        """*I was there* — the player who Didn't come, within a day of the tap
+        window closing, for a phone that died at the court (#657). **No fix is
+        asked**: it is made a day later from wherever they are, and what proves
+        it is somebody else on the court confirming it. A second claim writes
+        nothing.
 
-        report = self.no_shows.get(player_id)
-        return (
-            report is not None
-            and report.disputed_at is None
-            and now < report.dispute_closes_at
+        **What it refuses, in order**: somebody off the court; a game with no
+        hour; a player nobody tapped; a player who arrived; the tap window still
+        running — *I'm here* is the answer then — and the late claim's day over.
+        """
+
+        self._side_of(by)
+        starts_at = self._booked_hour()
+        noted = self.attendance.get(by)
+        if noted is None:
+            raise NobodySaidTheyWereNotHere()
+        if noted.arrived_at is not None:
+            raise AlreadyArrived()
+        if occurred_at < tap_window_closes_at(starts_at):
+            raise TheTapWindowIsOpen()
+        if occurred_at >= late_claim_closes_at(starts_at):
+            raise TheLateClaimHasClosed()
+        if noted.claimed_at is not None:
+            return
+        self._record_that(
+            PresenceClaimed(game_id=self.game_id, player_id=by, occurred_at=occurred_at)
         )
 
-    def confirmed_no_shows_at(self, now: Instant) -> frozenset[UUID]:
-        """Everybody who did not come to this game, as it stands at ``now`` —
-        **only once the game is a no-show**, every report having had its day:
-        a report still inside its day is not a verdict yet (#547)."""
+    def confirm_presence(
+        self, *, by: UUID, claimant: UUID, occurred_at: Instant
+    ) -> None:
+        """*Yes, they were here* — anybody else on the court, agreeing with an
+        *I was there* inside the same day (#657). **It turns Didn't come into
+        Came late**, because the tap still proves they were not there when it
+        was made, and the game carries on as usual — score and Level included.
+        In singles the one who can confirm is the opponent who tapped
+        (``docs/adr/0195``'s accepted cost). A second confirmation writes
+        nothing.
 
-        if self.standing_at(now) is not GameStanding.NO_SHOW:
+        **What it refuses, in order**: somebody off the court; a game with no
+        hour; yourself, or somebody not on the court; a player who has not said
+        *I was there*; the late claim's day over; and a confirmer who Didn't
+        come themselves — two absentees cannot vouch for each other (a call
+        beside ``docs/adr/0195`` §3's *never while yourself absent*).
+        """
+
+        self._side_of(by)
+        starts_at = self._booked_hour()
+        if claimant == by:
+            raise NotAboutYourself()
+        if self.line_up.side_of(claimant) is None:
+            raise NotOnThisCourt()
+        noted = self.attendance.get(claimant)
+        if noted is None or noted.claimed_at is None:
+            raise NothingToConfirm()
+        if occurred_at >= late_claim_closes_at(starts_at):
+            raise TheLateClaimHasClosed()
+        if self._not_here(by, now=occurred_at):
+            raise YouAreNotHereYourself()
+        if noted.confirmed_at is not None:
+            return
+        self._record_that(
+            PresenceConfirmed(
+                game_id=self.game_id,
+                player_id=claimant,
+                confirmed_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def attendance_at(self, now: Instant) -> dict[UUID, AttendanceState]:
+        """What became of everybody somebody said was not here yet, at ``now``
+        — **folded on every read**, never stored. Empty on every game where
+        nobody was tapped, which is every ordinary game."""
+
+        if self.starts_at is None:
+            return {}
+        return {
+            player: state_of(absence, starts_at=self.starts_at, now=now)
+            for player, absence in self.attendance.items()
+        }
+
+    def didnt_come_at(self, now: Instant) -> frozenset[UUID]:
+        """Everybody who **Didn't come** to this game, for good, at ``now`` —
+        only once their late claim's day is over unconfirmed: a provisional
+        *Didn't come* is not a verdict yet (#657)."""
+
+        if self.starts_at is None:
             return frozenset()
+        starts_at = self.starts_at
         return frozenset(
-            player for player, report in self.no_shows.items() if report.stands_at(now)
+            player
+            for player, state in self.attendance_at(now).items()
+            if state is AttendanceState.DIDNT_COME
+            and is_final(state, starts_at=starts_at, now=now)
+        )
+
+    def attendance_waits_on(self, player_id: UUID, *, now: Instant) -> bool:
+        """Whether attendance waits on this player at ``now`` (#657): their own
+        *I'm here* while they are awaited, their own *I was there* while they
+        Didn't come and have not said it, or somebody else's *I was there* to
+        confirm. Never true off the court, and never once the late claim's day
+        is over."""
+
+        if self.line_up.side_of(player_id) is None or self.starts_at is None:
+            return False
+        if now >= late_claim_closes_at(self.starts_at):
+            return False
+        states = self.attendance_at(now)
+        own = states.get(player_id)
+        if own in (AttendanceState.WAITING, AttendanceState.DIDNT_COME):
+            return True
+        if own is AttendanceState.CLAIMED:
+            # Said; it waits on somebody else now.
+            return False
+        return any(
+            state is AttendanceState.CLAIMED and player != player_id
+            for player, state in states.items()
         )
 
     # -- reading ----------------------------------------------------------
@@ -576,7 +741,7 @@ class Game:
             acceptance=self.acceptance,
             now=now,
             line_up_complete=self.line_up.is_complete,
-            no_shows=self.no_shows,
+            attendance=self.attendance,
         )
 
     def was_played_at(self, now: Instant) -> bool:
@@ -618,10 +783,9 @@ class Game:
             # A booked game started short at its hour; a stream with no hour
             # reaches it only when its window closes on a seat still open.
             return self.starts_at or self.entry_closes_at
-        if self.no_shows:
-            # A report is the entry of a game somebody did not come to: it is
-            # history from the first one, whatever the reports come to (#547).
-            return min(report.at for report in self.no_shows.values())
+        if standing is GameStanding.DIDNT_COME and self.starts_at is not None:
+            # Somebody Didn't come once the tap window closed on them (#657).
+            return tap_window_closes_at(self.starts_at)
         if standing in PLAYED:
             # ``played_at`` is set for every standing in ``PLAYED`` — the entry
             # that records *we played* is the only thing that can set it.
@@ -780,7 +944,7 @@ class Game:
         game.departed = frozenset()
         game.proposals = {}
         game.acceptance = None
-        game.no_shows = {}
+        game.attendance = {}
         game._events = EventRecorder()
         return game
 
@@ -836,23 +1000,35 @@ class Game:
                 of_side=accepting.other,
                 at=instant(event.occurred_at),
             )
-        elif isinstance(event, NoShowReported):
-            self.no_shows = {
-                **self.no_shows,
-                event.player_id: NoShowReport(
-                    reported_by=event.reported_by, at=instant(event.occurred_at)
+        elif isinstance(event, AbsenceNoted):
+            self.attendance = {
+                **self.attendance,
+                event.player_id: Absence(
+                    noted_by=event.noted_by, noted_at=instant(event.occurred_at)
                 ),
             }
-        elif isinstance(event, NoShowDisputed):
-            report = self.no_shows[event.player_id]
-            self.no_shows = {
-                **self.no_shows,
-                event.player_id: NoShowReport(
-                    reported_by=report.reported_by,
-                    at=report.at,
-                    disputed_at=instant(event.occurred_at),
-                ),
-            }
+        elif isinstance(event, ArrivalNoted):
+            self._absence_changed(
+                event.player_id,
+                arrived_at=instant(event.occurred_at),
+                arrival_noted_by=event.noted_by,
+            )
+        elif isinstance(event, PresenceClaimed):
+            self._absence_changed(
+                event.player_id, claimed_at=instant(event.occurred_at)
+            )
+        elif isinstance(event, PresenceConfirmed):
+            self._absence_changed(
+                event.player_id,
+                confirmed_at=instant(event.occurred_at),
+                confirmed_by=event.confirmed_by,
+            )
+        elif isinstance(event, (NoShowReported, NoShowDisputed)):
+            # Retired (#657; ``docs/adr/0195`` §9): a stored report and its
+            # dispute decode and change nothing — the game reads as if nobody
+            # had made one, so a full court nobody recorded is *Played · no
+            # score*.
+            pass
         else:
             raise TypeError(f"Unsupported game event {event!r}")
         self.version += 1
@@ -864,3 +1040,40 @@ class Game:
         if side is None:
             raise YouWereNotOnThisCourt()
         return side
+
+    def _absence_changed(self, player_id: UUID, **said: Any) -> None:
+        """Fold what was said since about a player noted absent."""
+
+        self.attendance = {
+            **self.attendance,
+            player_id: replace(self.attendance[player_id], **said),
+        }
+
+    def _booked_hour(self) -> Instant:
+        """The hour a booking opened this game for — the one every attendance
+        clock runs from. A game with none has no hour to turn up to."""
+
+        if self.starts_at is None:
+            raise AttendanceIsForBookedGames()
+        return self.starts_at
+
+    def _in_the_tap_window(self, occurred_at: Instant, *, starts_at: Instant) -> None:
+        """Refuse a tap outside the first thirty minutes of a game that is
+        being played: one called off, one that started short, one whose hour
+        has not come, one whose tap window has closed."""
+
+        if self.called_off_at is not None:
+            raise TheGameWasCalledOff()
+        if self.standing_at(occurred_at) is GameStanding.STARTED_SHORT:
+            raise TheGameStartedShort()
+        if occurred_at < starts_at:
+            raise TheGameHasNotStarted()
+        if occurred_at >= tap_window_closes_at(starts_at):
+            raise TheTapWindowHasClosed()
+
+    def _not_here(self, player_id: UUID, *, now: Instant) -> bool:
+        """Whether this player is, at ``now``, somebody the court is still
+        waiting for or who Didn't come — who may not say who else is here, nor
+        vouch for anybody."""
+
+        return self.attendance_at(now).get(player_id) in NOT_HERE_STATES

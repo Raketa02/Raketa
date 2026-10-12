@@ -1,9 +1,11 @@
-"""The three clocks, and what each of them is measured against.
+"""The game's clocks, and what each of them is measured against.
 
 **None of them is ADR-0048's number.** That record clocked entry from *the final
 point* and the result window from *the match end*; these were re-derived for
 games that carried no hour (``docs/adr/0137``), and a booked game's entry now
-runs from the end of its hour (#541).
+runs from the end of its hour (#541). **Attendance has three of its own**
+(#657): the tap window, the on-time grace inside it, and the late claim after
+it — all measured from the booked hour's start.
 
 **Nothing here reads a clock.** The caller says when the line-up completed and
 when a score was put on the table, exactly as ``window_of`` is handed what day it
@@ -52,17 +54,30 @@ PROPOSAL_WINDOW: Final = timedelta(hours=24)
 #: window runs from the hour's end rather than from a week of not knowing when.
 A_BOOKED_GAME: Final = timedelta(hours=1)
 
-#: How long a player reported as not turning up has to say they did (#547; the
-#: mechanics §15.3, §18). **A day, the result's own day**: silence on a score
-#: confirms it after twenty-four hours, and silence on a report does the same —
-#: the same reach to somebody who has not opened the app, for the same reason.
-NO_SHOW_DISPUTE_WINDOW: Final = timedelta(hours=24)
+#: **The tap window**: from a booked game's start until thirty minutes after it,
+#: the first half of a one-hour game (#657; ``docs/adr/0195`` §3, the mechanics
+#: §15.1). *Isn't here yet* and an arrival — *I'm here*, *they're here* — are
+#: taken inside it and never after; a player tapped and not arrived by its end
+#: **Didn't come**.
+TAP_WINDOW: Final = timedelta(minutes=30)
+
+#: An arrival this soon after the start is **on time**: nothing is recorded,
+#: and the tap vanishes. From here to the tap window's end it is **Came late**.
+ON_TIME_GRACE: Final = timedelta(minutes=10)
+
+#: **The late claim**: how long after the tap window closes a player who
+#: Didn't come may say *I was there*, and a courtmate may confirm it (#657).
+#: **A day, the result's own day**, for a phone that died at the court: the
+#: same reach to somebody who has not opened the app as a score's answer
+#: window. Until it ends, *Didn't come* is provisional.
+LATE_CLAIM_WINDOW: Final = timedelta(hours=24)
 
 #: How long after a **booked** game's hour starts it can still ask anything of
 #: its players — **unless a score is put on its table again** (#613): its hour,
 #: the day to say *we played*, and then the day a score made at the last moment
-#: waits for its answer, or a report made then for its dispute. Every term is a
-#: clock above, so lengthening one moves this with it.
+#: waits for its answer. A late claim (``LATE_CLAIM_WINDOW``) closes a day after
+#: the tap window, inside the entry window, so it reaches no further. Every term
+#: is a clock above, so lengthening one moves this with it.
 #:
 #: **A score put on the table again reaches past it.** A correction re-dates its
 #: side's score, and that side may correct it again while the other side has
@@ -71,7 +86,7 @@ NO_SHOW_DISPUTE_WINDOW: Final = timedelta(hours=24)
 #: bounding its read by this looks for those apart
 #: (``scores_still_waiting_since``).
 A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR: Final = (
-    A_BOOKED_GAME + ENTRY_GRACE + max(PROPOSAL_WINDOW, NO_SHOW_DISPUTE_WINDOW)
+    A_BOOKED_GAME + ENTRY_GRACE + PROPOSAL_WINDOW
 )
 
 
@@ -121,8 +136,21 @@ def scores_still_waiting_since(now: Instant) -> Instant:
     return instant(now - PROPOSAL_WINDOW)
 
 
-def dispute_closes_at(reported_at: Instant) -> Instant:
-    """When a player reported as not turning up can no longer dispute it, and
-    the report stands (#547)."""
+def tap_window_closes_at(starts_at: Instant) -> Instant:
+    """When *isn't here yet* and an arrival stop being sayable, and a player
+    tapped and not arrived **Didn't come** (#657)."""
 
-    return instant(reported_at + NO_SHOW_DISPUTE_WINDOW)
+    return instant(starts_at + TAP_WINDOW)
+
+
+def on_time_until(starts_at: Instant) -> Instant:
+    """The first instant an arrival is **Came late** rather than on time."""
+
+    return instant(starts_at + ON_TIME_GRACE)
+
+
+def late_claim_closes_at(starts_at: Instant) -> Instant:
+    """When *I was there* and its confirmation stop being sayable, and an
+    unconfirmed *Didn't come* is final (#657)."""
+
+    return instant(tap_window_closes_at(starts_at) + LATE_CLAIM_WINDOW)

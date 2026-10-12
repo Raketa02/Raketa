@@ -111,7 +111,9 @@ def test_from_its_hour_a_game_nobody_said_happened_needs_its_result():
     [
         (ResultStage.SCORE_TO_ANSWER, HomeStatus.CONFIRM_THE_RESULT),
         (ResultStage.CONFIRMED, HomeStatus.COUNTED),
-        (ResultStage.UNSCORED, HomeStatus.UNCOUNTED),
+        (ResultStage.DISPUTED, HomeStatus.UNCOUNTED),
+        (ResultStage.NOT_HERE_YET, HomeStatus.NEEDS_RESULT),
+        (ResultStage.DIDNT_COME, HomeStatus.UNCOUNTED),
         (ResultStage.PLAYED_NO_SCORE, HomeStatus.PLAYED_NO_SCORE),
         (ResultStage.CALLED_OFF, HomeStatus.CALLED_OFF),
     ],
@@ -152,6 +154,35 @@ def test_a_score_needs_you_only_when_it_waits_on_your_agreement():
 
 def test_a_seat_open_in_your_game_needs_you():
     assert needs_you(HomeStatus.SEAT_OPEN, ENTRY_OPEN)
+
+
+def test_a_game_somebody_didn_t_come_to_needs_whoever_a_late_claim_waits_on():
+    """Their own *I was there* to say, or somebody else's to confirm (#657)."""
+
+    waits = GameResult(
+        stage=ResultStage.DIDNT_COME,
+        awaits_your_agreement=False,
+        attendance_waits_on_you=True,
+    )
+    done = replace(waits, attendance_waits_on_you=False)
+
+    assert needs_you(HomeStatus.UNCOUNTED, waits)
+    assert not needs_you(HomeStatus.UNCOUNTED, done)
+
+
+def test_while_somebody_is_not_here_yet_only_they_are_needed():
+    """No score is taken while somebody is awaited, so the court is asked for
+    nothing — the player awaited is asked for *I'm here* (#657)."""
+
+    awaited = GameResult(
+        stage=ResultStage.NOT_HERE_YET,
+        awaits_your_agreement=False,
+        attendance_waits_on_you=True,
+    )
+    present = replace(awaited, attendance_waits_on_you=False)
+
+    assert needs_you(HomeStatus.NEEDS_RESULT, awaited)
+    assert not needs_you(HomeStatus.NEEDS_RESULT, present)
 
 
 @pytest.mark.parametrize(

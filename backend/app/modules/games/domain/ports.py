@@ -45,6 +45,15 @@ that arrow. No ``Forecast``, no ``Split`` and no ``Stakes`` is borrowed from the
 engines: a provider that reached for the type one directory over would be the
 second-spelling trap the contract's own comment names.
 
+**``GameClubs`` is the third port consumed here** (#657; ``docs/adr/0195``
+§3): where a booked game's club is, so an attendance tap can be measured against
+it. **The Game does not know its club** — a booking does — so the demand is on
+``bookings``, signed in ``bookings/infrastructure/`` on that side of the arrow
+(``games`` imports neither ``bookings`` nor the matcher), and **measured there
+with the platform's existing great-circle distance**. What crosses back is a
+number of metres and the club's name; whether that is *at the club* is this
+context's rule (``attendance.py``), and the Game is handed only the verdict.
+
 **``attendance_for`` and ``result_answering_for`` are the two reads here that
 answer about fewer people than they were asked about**, and the exception proves
 the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0160``).
@@ -78,10 +87,12 @@ class Attendance:
 
     The *shows up* strand's whole input (``docs/adr/0140``). ``played`` is games
     the player was on the court of — somebody said it happened, or a full court
-    nobody recorded whose window closed (*Played · no score*, #655); ``missed``
-    is booked games a report of their not coming stood its day on (#547). A game
-    still inside its entry window is in **neither**: claiming it either way
-    would publish a conclusion nothing has reached.
+    nobody recorded whose window closed (*Played · no score*, #655) — **Came
+    late included** (#657: late counts as turned up, until the points ticket
+    prices it); ``missed`` is booked games they **Didn't come** to, once the
+    late claim's day is over unconfirmed (#657). A game still inside its entry
+    window, or whose *Didn't come* is still provisional, is in **neither**:
+    claiming it either way would publish a conclusion nothing has reached.
 
     **Nothing is charged to a court for silence** (``docs/adr/0195`` §2): the
     ghost — a window closing on nobody, once a miss for everybody on the court —
@@ -98,7 +109,8 @@ class Attendance:
 
     ``last_at`` is when the most recent of those opportunities **closed** — the
     moment somebody said a game was played, the moment a full court's entry
-    window shut on nobody, or the first report of somebody not coming. It is the
+    window shut on nobody, or the tap window closing on somebody who Didn't
+    come. It is the
     strand's observation moment, and dating one from the moment it was booked
     would age a record faster than the record aged.
     """
@@ -649,6 +661,52 @@ class CourtPairing(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class GameClub:
+    """The club a booked game is played at: what it is called, and its map
+    point — the precise one, as its desk dropped it (``docs/adr/0182`` §6)."""
+
+    name: str
+    latitude: float
+    longitude: float
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class FromTheClub:
+    """How far one position is from the club a booked game is played at, and
+    what the club is called — the refusal names it."""
+
+    club_name: str
+    metres: float
+
+    def __post_init__(self) -> None:
+        invariant(self.metres >= 0.0, f"a distance of {self.metres} m")
+
+
+@runtime_checkable
+class GameClubs(Protocol):
+    """**A demand on Bookings** (#657; ``docs/adr/0195`` §3): where the club a
+    booked game is played at is. A game's booking is its ``challenge_id``.
+
+    **No position this is asked about is kept**: it is measured and dropped, by
+    the adapter as by the caller.
+    """
+
+    async def of(self, booking_id: UUID) -> GameClub | None:
+        """The booking's club, or ``None`` for a booking — or a club — that no
+        longer exists."""
+        ...
+
+    async def metres_from(
+        self, booking_id: UUID, *, latitude: float, longitude: float
+    ) -> FromTheClub | None:
+        """How far this position is from the booking's club, by the platform's
+        great-circle distance; ``None`` where ``of`` is."""
+        ...
+
+
 @runtime_checkable
 class GameHistoryQuery(Protocol):
     """The three facts this context owes the rest of the platform about what
@@ -725,6 +783,9 @@ __all__ = [
     "CourtForecast",
     "CourtPairing",
     "CourtSplit",
+    "FromTheClub",
+    "GameClub",
+    "GameClubs",
     "LevelDeltas",
     "Pairing",
     "SeatLevel",

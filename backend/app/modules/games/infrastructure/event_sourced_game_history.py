@@ -129,12 +129,15 @@ class EventSourcedGameHistory:
         arranged for has not failed to come, and a ``0/0`` published here would
         say they had.
 
-        **A booked game somebody did not come to is read per player** (#547):
-        a report that stood its day is a miss for the player it named — which
-        with the broken booked game on *keeps plans* makes it the strongest
-        mark on a record — and a game played for everybody else on the court,
-        who came. **It is the only miss left**: a full court nobody recorded is
-        played for all of it (#655; ``docs/adr/0195`` §2).
+        **A booked game somebody Didn't come to is read per player** (#657):
+        once the late claim's day is over unconfirmed, a miss for each player
+        who Didn't come — which with the broken booked game on *keeps plans*
+        is the strongest mark on a record, until the points ticket prices it
+        once — and a game played for everybody else on the court, who came,
+        **late or not**. While a *Didn't come* is still provisional the game
+        is in neither half. **It is the only miss left**: a full court nobody
+        recorded is played for all of it (#655; ``docs/adr/0195`` §2), and a
+        Came late player turned up.
         """
 
         wanted = set(player_ids)
@@ -145,10 +148,13 @@ class EventSourcedGameHistory:
         missed: dict[UUID, int] = defaultdict(int)
         latest: dict[UUID, Instant] = {}
         for game in await self._games_among(wanted):
-            if game.standing_at(now) is GameStanding.NO_SHOW:
-                # **Per player, not per game** (#547): whoever a report stood
-                # against did not come — a miss — and everybody else did.
-                absent = game.confirmed_no_shows_at(now)
+            if game.standing_at(now) is GameStanding.DIDNT_COME:
+                # **Per player, not per game** (#657): whoever Didn't come, for
+                # good, missed it — and everybody else came. A *Didn't come*
+                # still provisional is nobody's yet.
+                absent = game.didnt_come_at(now)
+                if not absent:
+                    continue
                 at = game.became_history_at(now) or game.planned_at
                 for player_id in game.line_up.players & wanted:
                     if player_id in absent:

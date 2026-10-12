@@ -4,8 +4,8 @@
 row, marked — and **what became of it is the stream's**, folded by the domain's
 own rule (``keeping.py``) against the caller's clock, so a game short at its
 cut-off is a mark from the cut-off on whether or not the job has recorded it —
-and **who did not come is the Game's** (#547), asked once per booking whose hour
-has come.
+and **who Didn't come is the Game's** (#547, #657), asked once per booking whose
+hour has come.
 
 **Cost.** One stream read per booking a player ever held a seat on — and one of
 its Game's once its hour has come (#547) — each folded once per question however

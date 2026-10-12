@@ -39,6 +39,7 @@ from app.kernel import Sport, instant
 from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.blocks.presentation.dependencies import get_block_query
 from app.modules.bookings.domain.booking import BookedCourt, Booking
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.player_score.domain.strands import (
@@ -143,8 +144,9 @@ async def also_rated_in(session_factory, player_id: UUID, *, sport: Sport, mu: f
 async def a_game_not_come_to(
     session_factory, absent: UUID, reporter: UUID, *, sport: Sport
 ):
-    """A booked game ``reporter`` came to and said ``absent`` did not, the
-    report undisputed for its day (#547).
+    """A booked game ``reporter`` came to and tapped ``absent`` *isn't here
+    yet* at the club; ``absent`` never arrived and never claimed — **Didn't
+    come**, for good a day after the tap window (#657).
 
     The miss half of *shows up*, charged to **the player reported** and to
     nobody else on that court. Since #655 it is the only one: a full court
@@ -167,8 +169,13 @@ async def a_game_not_come_to(
         occurred_at=instant(starts - timedelta(days=2)),
         starts_at=starts,
     )
-    game.report_no_show(
-        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
+    # *Isn't here yet* ten minutes in, at the club, and no arrival: Didn't
+    # come at half past, for good a day later (#657).
+    game.note_absent(
+        by=reporter,
+        absent=absent,
+        where=ClubVerdict(at_the_club=True, club_name=None),
+        occurred_at=instant(starts + timedelta(minutes=10)),
     )
     async with session_factory() as session:
         await build_game_repository(

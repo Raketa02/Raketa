@@ -3,8 +3,8 @@
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``GamePlanned`` must never change what is already in the store.
 
-**Twelve names, on one aggregate — eleven written and one retired** — and every
-one of them is something a person did.
+**Sixteen names, on one aggregate — thirteen written and three retired** — and
+every one of them is something a person did.
 ``games.planned`` is the exception that proves it — a booking is everybody's yes
 arriving at a total, and it is recorded because *the arrangement at the instant
 it was settled* is not recoverable from anywhere else once seats start moving.
@@ -31,10 +31,16 @@ transaction of the act that caused it. Neither announces a standing.
 nothing writes it, and it stays registered so a stored row still decodes — the
 fold reads it and changes nothing.
 
-**``games.no_show_reported`` and ``games.no_show_disputed`` are the tenth
-and eleventh** (#547): somebody who came to a booked game saying another did not,
-and that other saying they did. Neither announces a standing — a report stands
-by its day passing in silence.
+**``games.no_show_reported`` and ``games.no_show_disputed`` are retired**
+(#657; ``docs/adr/0195`` §9): the report of somebody not coming, and its
+dispute (#547). Nothing writes them; they stay registered so a stored row still
+decodes, and the fold reads them and changes nothing.
+
+**``games.absence_noted``, ``games.arrival_noted``,
+``games.presence_claimed`` and ``games.presence_confirmed`` replace them**
+(#657): *isn't here yet*, the arrival, *I was there* and *yes, they were here*,
+caught at the court. None carries a position, and none announces an outcome —
+*Didn't come* is the tap window closing on nobody.
 
 The two most likely to be asked to carry more later are ``games.planned`` — a
 game that one day comes from something other than a booking — and
@@ -48,6 +54,8 @@ from __future__ import annotations
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.games.application.handlers import LogGameEvent
 from app.modules.games.domain.events import (
+    AbsenceNoted,
+    ArrivalNoted,
     GameCalledOff,
     GameDismissed,
     GamePlanned,
@@ -55,6 +63,8 @@ from app.modules.games.domain.events import (
     LineUpReseated,
     NoShowDisputed,
     NoShowReported,
+    PresenceClaimed,
+    PresenceConfirmed,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
@@ -75,6 +85,10 @@ _CONTRACTS = (
     (GameDismissed, "games.dismissed"),
     (NoShowReported, "games.no_show_reported"),
     (NoShowDisputed, "games.no_show_disputed"),
+    (AbsenceNoted, "games.absence_noted"),
+    (ArrivalNoted, "games.arrival_noted"),
+    (PresenceClaimed, "games.presence_claimed"),
+    (PresenceConfirmed, "games.presence_confirmed"),
 )
 
 

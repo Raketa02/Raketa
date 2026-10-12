@@ -284,6 +284,7 @@ from app.modules.bookings.infrastructure.games_opening import (
     LeaveAndCallOffTheGame,
     OpenTheGame,
 )
+from app.modules.bookings.infrastructure.game_clubs import BookedGameClubs
 from app.modules.bookings.infrastructure.games_records import GameNoShowsOnTheRecord
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
@@ -533,6 +534,7 @@ from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory 
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     CourtPairing,
+    GameClubs,
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
@@ -2793,7 +2795,7 @@ def build_game_changes(
 def build_game_no_shows(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> GameNoShows:
-    """Who did not come to a booked game, off its ordinary Game (#547)."""
+    """Who Didn't come to a booked game, off its ordinary Game (#547, #657)."""
     return GameNoShowsOnTheRecord(
         build_game_repository(
             session=session,
@@ -3315,6 +3317,23 @@ def build_game_court_pairing(
         ratings=build_rated_player_query(session, runtime=runtime),
         ruleset=build_ruleset(),
         at_stake=build_at_stake_query(session, runtime=runtime),
+    )
+
+
+def build_game_clubs(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameClubs:
+    """Where a booked game's club is, for an attendance tap to be measured
+    against (#657; ``docs/adr/0195`` §3) — the Games context's demand, answered
+    by Bookings off the booking's stream and the Club directory."""
+
+    return BookedGameClubs(
+        bookings=build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        clubs=build_club_directory(session),
     )
 
 

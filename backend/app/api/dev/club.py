@@ -16,9 +16,9 @@ reserved ``.example`` TLD, as a seeded player's account does, and any other club
 case is built. A real club's desk is somebody's, and the console never acts as
 anybody's.
 
-**No no-show button here.** The club does not report a no-show: a player on the
-court does (the mechanics §15.3) — so it is a person's row's press (#593), not
-the club's.
+**No attendance button here.** The club sees no attendance: whether somebody
+came is caught by the players on the court (the mechanics §15.1, #657) — so it
+is a person's row's press, not the club's.
 """
 
 from __future__ import annotations

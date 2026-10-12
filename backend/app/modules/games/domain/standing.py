@@ -7,14 +7,16 @@ status field on the aggregate, no ``ResultConfirmed`` event, and this function i
 the only place a standing exists: *nothing announces a conclusion the record
 already implies*, applied to a result.
 
-Ten values. Nine of them are what the record and the clock can answer for —
-six ends and three waits, the fourth end a booked game's hour coming with a
-seat open (#544), the fifth a report of somebody not turning up that stood its
-day, and the third wait that day (#547), the sixth two scores naming different
-winners when their answer window closed (#654) — and **the tenth is the one
-exemption this module holds, and it is written down so it stays one**
-(``docs/adr/0163``). The first end is a full game's entry window closing on
-nobody: **Played · no score** (#655), which took *Never played*'s place.
+Nine values. Eight of them are what the record and the clock can answer for —
+five ends and three waits: a full game's entry window closing on nobody, **Played
+· no score** (#655), which took *Never played*'s place; a confirmed score; two
+scores naming different winners when their answer window closed (#654); a
+booked game's hour coming with a seat open (#544); and somebody tapped *isn't
+here yet* and not arrived when the tap window closed, **Didn't come** (#657) —
+whose wait is the tap window itself, **not here yet**. And **the ninth is the
+one exemption this module holds, and it is written down so it stays one**
+(``docs/adr/0163``). *Unscored* and the no-show report's two standings retired
+with the report (#657, ``docs/adr/0195`` §9).
 A game called off is a decision — a booking's cut-off, or its club taking the
 court back — and there is nothing on the record to fold it out of, so it is the
 one standing an event announces — on the rule *an event may announce a
@@ -37,10 +39,15 @@ from typing import Mapping, final
 from uuid import UUID
 
 from app.kernel import Instant
+from app.modules.games.domain.attendance import (
+    DIDNT_COME_STATES,
+    Absence,
+    AttendanceState,
+    state_of,
+)
 from app.modules.games.domain.lineup import GameKind, GameSide
 from app.modules.games.domain.results import Score
 from app.modules.games.domain.windows import (
-    dispute_closes_at,
     entry_closes_at,
     proposal_closes_at,
 )
@@ -48,7 +55,7 @@ from app.modules.games.domain.windows import (
 
 @final
 class GameStanding(str, Enum):
-    """The ten standings, as codes. A client's words are the client's own."""
+    """The nine standings, as codes. A client's words are the client's own."""
 
     #: Arranged, and nobody has said it happened yet.
     AWAITING_ENTRY = "AWAITING_ENTRY"
@@ -67,18 +74,13 @@ class GameStanding(str, Enum):
     #: silence; by two scores naming the same winner, with the closer one
     #: (#654); or, For fun, by the score itself, which asks nobody.
     CONFIRMED = "CONFIRMED"
-    #: They played and no score is agreed. **An evening, not evidence**: it counts
-    #: toward how much these people have played and moves nobody's Level. **Only
-    #: a booked game every report of not coming to was disputed reaches it now**
-    #: (#547): two scores end confirmed or disputed (#654), and this goes with
-    #: the no-show report (``docs/adr/0195`` §3).
-    UNSCORED = "UNSCORED"
     #: They played, and the two scores standing when the answer window closed
     #: named **different winners** (#654; ``docs/adr/0195`` §5). No Level
     #: moves — *we will not arbitrate* — and the two players who put the scores
     #: up each have a result left in dispute (``Game.left_in_dispute_by``). An
-    #: evening, like ``UNSCORED`` and ``PLAYED_NO_SCORE``: they were on a court
-    #: together.
+    #: evening, like ``PLAYED_NO_SCORE``: they were on a court together. It took
+    #: the place *Unscored* held for two scores nobody accepted, and *Unscored*
+    #: retired with the no-show report, its last case (#657).
     DISPUTED = "DISPUTED"
     #: Somebody ended it while a seat was open, before it happened. **The one
     #: value here that no reading of the record reaches** (``docs/adr/0163``):
@@ -96,18 +98,22 @@ class GameStanding(str, Enum):
     #: who stayed had. A stream with no hour reaches it when its entry window
     #: closes on a seat still open (#655): *played* is a full court's word.
     STARTED_SHORT = "STARTED_SHORT"
-    #: Somebody who came to a **booked** game reported a player who did not
-    #: (#547), and that player's day to dispute it is still running — a wait,
-    #: like a score on the table, and not an evening yet.
-    NO_SHOW_REPORTED = "NO_SHOW_REPORTED"
-    #: Every report of not turning up that stands has had its day undisputed
-    #: (#547): **the game does not count** and nobody's Level moves, and the
-    #: player who did not come carries the strongest mark on a record. In no
-    #: tally — the people who came were not a four on a court.
-    NO_SHOW = "NO_SHOW"
+    #: Somebody on a **booked** game's court tapped *isn't here yet*, at the
+    #: club, and the player is still awaited: the tap window — the first thirty
+    #: minutes — still runs (#657; ``docs/adr/0195`` §3). A wait, and not an
+    #: evening yet: an arrival makes it the ordinary game again, on time or
+    #: Came late.
+    NOT_HERE_YET = "NOT_HERE_YET"
+    #: The tap window closed with somebody tapped and not arrived (#657):
+    #: **Didn't come**. **The game takes no score and never counts**, and
+    #: nobody's Level moves. **Provisional for a day**: *I was there*,
+    #: confirmed by somebody else on the court, makes them Came late and the
+    #: game carries on — so it is not in ``SETTLED``. In no tally either way:
+    #: the people who came were not the court the game was.
+    DIDNT_COME = "DIDNT_COME"
 
 
-#: The seven standings that mean *nothing more will happen to this game*. A
+#: The six standings that mean *nothing more will happen to this game*. A
 #: settled game refuses every act, which is ADR-0048's *a settled result is
 #: final* with no support correction path and no reversal.
 #:
@@ -116,37 +122,36 @@ class GameStanding(str, Enum):
 #: readers of this set — the sportsmanship court, every act on the result — ask
 #: *is anything more going to happen*, and for every member the answer is no.
 #: **``STARTED_SHORT``** (#544): a booked game's hour came with a seat open,
-#: and nothing more can. **``NO_SHOW``** (#547): every standing report has had
-#: its day. **``DISPUTED``** (#654): two scores named different winners.
-#: **``PLAYED_NO_SCORE``** (#655): a full game's window closed on nobody.
+#: and nothing more can. **``DISPUTED``** (#654): two scores named different
+#: winners. **``PLAYED_NO_SCORE``** (#655): a full game's window closed on
+#: nobody. **``DIDNT_COME`` is not here** (#657): a confirmed *I was there*
+#: can still make it the ordinary game, inside the late claim's day.
 SETTLED = frozenset(
     {
         GameStanding.PLAYED_NO_SCORE,
         GameStanding.CONFIRMED,
-        GameStanding.UNSCORED,
         GameStanding.DISPUTED,
         GameStanding.CALLED_OFF,
         GameStanding.STARTED_SHORT,
-        GameStanding.NO_SHOW,
     }
 )
 
-#: The five standings that mean these people were on a court together. Read by
+#: The four standings that mean these people were on a court together. Read by
 #: *shows up*, by who they have played with, and by the sportsmanship court.
 #: ``DISPUTED`` is one (#654): both sides said they played, and disagreed only
 #: about who won. **``PLAYED_NO_SCORE`` is one** (#655; ``docs/adr/0195`` §2):
 #: nobody said so, and a full court booked and paid for was played all the same
 #: — so it is a counted game for everybody on it, scored or not, and moves no
-#: Level. **``CALLED_OFF`` is not here**: the history walk answers ``None`` for
-#: it, as it does for a game still inside its window — and nor is
-#: ``STARTED_SHORT`` (#544), for the same reason, nor ``NO_SHOW`` (#547): the
-#: people who came were not the four the game was, and *shows up* reads it per
-#: player instead.
+#: Level. **A Came late player is on the court of each of these** (#657): late
+#: counts as turned up. **``CALLED_OFF`` is not here**: the history walk
+#: answers ``None`` for it, as it does for a game still inside its window — and
+#: nor is ``STARTED_SHORT`` (#544), for the same reason, nor ``DIDNT_COME``
+#: (#657): the people who came were not the court the game was, and *shows up*
+#: reads it per player instead.
 PLAYED = frozenset(
     {
         GameStanding.AWAITING_ANSWER,
         GameStanding.CONFIRMED,
-        GameStanding.UNSCORED,
         GameStanding.DISPUTED,
         GameStanding.PLAYED_NO_SCORE,
     }
@@ -185,48 +190,32 @@ class Acceptance:
     at: Instant
 
 
-@final
-@dataclass(frozen=True, slots=True)
-class NoShowReport:
-    """A player reported as not turning up to a booked game (#547): by whom,
-    when, and whether they disputed it inside their day."""
-
-    reported_by: UUID
-    at: Instant
-    disputed_at: Instant | None = None
-
-    @property
-    def dispute_closes_at(self) -> Instant:
-        return dispute_closes_at(self.at)
-
-    def stands_at(self, now: Instant) -> bool:
-        """Undisputed, and its day over: the player did not come."""
-
-        return self.disputed_at is None and now >= self.dispute_closes_at
-
-
-def no_show_standing(
-    no_shows: Mapping[UUID, NoShowReport], *, now: Instant
+def attendance_standing(
+    attendance: Mapping[UUID, Absence],
+    *,
+    starts_at: Instant | None,
+    now: Instant,
 ) -> GameStanding | None:
-    """What the reports of not turning up make of a game — ``None`` with none.
+    """What the court's attendance makes of a game at ``now`` — ``None`` while
+    it makes nothing of it (#657).
 
-    **A report has a day, and the game waits for every one** (the mechanics
-    §15.3): while any undisputed report's day still runs, the reported player may
-    still say they came, so nothing has settled. Then **one report that stood is
-    enough**: the game does not count. **Every report disputed is nobody's
-    verdict** — the platform does not arbitrate, as it does not arbitrate two
-    scores — so it is *unscored*: an evening that proves nothing, on nobody's
-    record.
+    **One player Didn't come is enough**: the game takes no score and never
+    counts, whoever else came. Then **one player still awaited** holds the game
+    in its tap window. Everybody tapped who arrived — on time or late — or whose
+    *I was there* was confirmed leaves the game as it would have been: an
+    ordinary game.
     """
 
-    if not no_shows:
+    if starts_at is None or not attendance:
         return None
-    undisputed = [one for one in no_shows.values() if one.disputed_at is None]
-    if any(now < one.dispute_closes_at for one in undisputed):
-        return GameStanding.NO_SHOW_REPORTED
-    if undisputed:
-        return GameStanding.NO_SHOW
-    return GameStanding.UNSCORED
+    states = {
+        state_of(one, starts_at=starts_at, now=now) for one in attendance.values()
+    }
+    if states & DIDNT_COME_STATES:
+        return GameStanding.DIDNT_COME
+    if AttendanceState.WAITING in states:
+        return GameStanding.NOT_HERE_YET
+    return None
 
 
 def live_acceptance(
@@ -318,7 +307,7 @@ def standing_of(
     acceptance: Acceptance | None,
     now: Instant,
     line_up_complete: bool,
-    no_shows: Mapping[UUID, NoShowReport],
+    attendance: Mapping[UUID, Absence],
 ) -> GameStanding:
     """The game's standing, from its record and this instant.
 
@@ -340,10 +329,12 @@ def standing_of(
     ahead short: nothing more can happen to it. Asked before the entry,
     because a court with a seat open refuses one.
 
-    **Did somebody not come?** (#547) A report of a booked game's player not
-    turning up is the entry for that game — no score stands beside one, and no
-    score is taken after one — so its day, and what it came to, is the
-    standing (``no_show_standing``).
+    **Is somebody not here?** (#657) A player tapped *isn't here yet* and not
+    arrived holds the game in its tap window, and one still not arrived when it
+    closed makes it a game somebody **Didn't come** to — no score stands beside
+    either, and none is taken (``attendance_standing``). Asked before the
+    entry, because a tap is refused once a score is up, and a score is refused
+    while either holds.
 
     **Did anybody say it happened?** Nothing about a score matters until
     somebody says they played. After the entry window nothing ever will, and a
@@ -367,9 +358,9 @@ def standing_of(
     ):
         return GameStanding.STARTED_SHORT
 
-    reported = no_show_standing(no_shows, now=now)
-    if reported is not None:
-        return reported
+    absent = attendance_standing(attendance, starts_at=starts_at, now=now)
+    if absent is not None:
+        return absent
 
     if played_at is None:
         if now < entry_closes_at(planned_at, starts_at=starts_at):

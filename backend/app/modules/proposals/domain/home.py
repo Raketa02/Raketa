@@ -152,9 +152,10 @@ class UncountedReason(StrEnum):
     #: nobody took the seat (#544). Nothing goes on the record of those who
     #: stayed.
     SEAT_EMPTY = "SEAT_EMPTY"
-    #: Somebody who came reported a player who did not (#547): the game does
-    #: not count, whether the report stands its day or is disputed.
-    NO_SHOW = "NO_SHOW"
+    #: Somebody tapped *isn't here yet* at the court and they never arrived
+    #: (#657): **Didn't come** — the game takes no score and never counts,
+    #: provisionally for a day while their *I was there* may be confirmed.
+    DIDNT_COME = "DIDNT_COME"
 
 
 class ResultStage(StrEnum):
@@ -165,7 +166,6 @@ class ResultStage(StrEnum):
     #: They played, and a score is on the table inside its window.
     SCORE_TO_ANSWER = "SCORE_TO_ANSWER"
     CONFIRMED = "CONFIRMED"
-    UNSCORED = "UNSCORED"
     #: Two scores named different winners and neither side gave way (#654):
     #: no Level moves.
     DISPUTED = "DISPUTED"
@@ -174,11 +174,11 @@ class ResultStage(StrEnum):
     CALLED_OFF = "CALLED_OFF"
     #: Its hour came with a seat open: no result can be told (#544).
     STARTED_SHORT = "STARTED_SHORT"
-    #: A player was reported as not coming, and their day to dispute it runs
-    #: (#547).
-    NO_SHOW_REPORTED = "NO_SHOW_REPORTED"
-    #: A report of not coming stood its day (#547): the game does not count.
-    NO_SHOW = "NO_SHOW"
+    #: Somebody was tapped *isn't here yet* and is still awaited, in the first
+    #: thirty minutes (#657): the game is being played.
+    NOT_HERE_YET = "NOT_HERE_YET"
+    #: Somebody Didn't come (#657): the game takes no score and never counts.
+    DIDNT_COME = "DIDNT_COME"
 
 
 @final
@@ -191,9 +191,10 @@ class GameResult:
     #: confirm* that is theirs to clear (the mechanics §3). Only ever true with
     #: ``SCORE_TO_ANSWER``.
     awaits_your_agreement: bool
-    #: This player was reported as not coming and may still dispute it — a
-    #: task that is theirs (#547). Only ever true with ``NO_SHOW_REPORTED``.
-    you_may_dispute: bool = False
+    #: Attendance waits on this player (#657): their own *I'm here* while they
+    #: are awaited, their own *I was there* to say, or somebody else's to
+    #: confirm. Only ever true with ``NOT_HERE_YET`` or ``DIDNT_COME``.
+    attendance_waits_on_you: bool = False
 
 
 @final
@@ -519,11 +520,14 @@ def status_of(
     match stage:
         case ResultStage.ENTRY_OPEN:
             return HomeStatus.BOOKED if now < game.start else HomeStatus.NEEDS_RESULT
+        case ResultStage.NOT_HERE_YET:
+            # In its first half hour, waiting on somebody: still being played.
+            return HomeStatus.NEEDS_RESULT
         case ResultStage.SCORE_TO_ANSWER:
             return HomeStatus.CONFIRM_THE_RESULT
         case ResultStage.CONFIRMED:
             return HomeStatus.COUNTED
-        case ResultStage.UNSCORED | ResultStage.DISPUTED:
+        case ResultStage.DISPUTED:
             return HomeStatus.UNCOUNTED
         case ResultStage.PLAYED_NO_SCORE:
             return HomeStatus.PLAYED_NO_SCORE
@@ -531,8 +535,9 @@ def status_of(
             return HomeStatus.CALLED_OFF
         case ResultStage.STARTED_SHORT:
             return HomeStatus.UNCOUNTED
-        case ResultStage.NO_SHOW_REPORTED | ResultStage.NO_SHOW:
-            # Whatever the report comes to, the game does not count (#547).
+        case ResultStage.DIDNT_COME:
+            # The game takes no score and never counts — unless a confirmed
+            # *I was there* brings it back, when it is read again (#657).
             return HomeStatus.UNCOUNTED
         case _:
             exhaustive(stage)
@@ -542,36 +547,38 @@ def uncounted_reason(
     game: BookedGame, status: HomeStatus, result: GameResult | None
 ) -> UncountedReason | None:
     """Why an *uncounted* card says so, when nobody disagreed about a score:
-    its hour came with a seat open, or somebody reported a player who did not
-    come and the report waits out its day or stood it (#547). A report every
-    reported player disputed is an ordinary *uncounted*: nobody arbitrated."""
+    its hour came with a seat open, or somebody Didn't come (#657)."""
 
     if status is not HomeStatus.UNCOUNTED:
         return None
     if game.stage is BookingStage.SEAT_OPEN:
         return UncountedReason.SEAT_EMPTY
-    if result is not None and result.stage in (
-        ResultStage.NO_SHOW_REPORTED,
-        ResultStage.NO_SHOW,
-    ):
-        return UncountedReason.NO_SHOW
+    if result is not None and result.stage is ResultStage.DIDNT_COME:
+        return UncountedReason.DIDNT_COME
     return None
 
 
 def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
     """Whether this game is one of the games that need the player — Home's
     badge (the mechanics §3): a result to enter, a score waiting on their
-    agreement, a seat open in their game, a report of their not coming to
-    dispute (#547)."""
+    agreement, a seat open in their game, an *I'm here* or a late claim theirs
+    to make or to confirm (#657)."""
 
     match status:
-        case HomeStatus.NEEDS_RESULT | HomeStatus.SEAT_OPEN:
+        case HomeStatus.NEEDS_RESULT:
+            if result is not None and result.stage is ResultStage.NOT_HERE_YET:
+                # No score is taken while somebody is awaited: only the player
+                # awaited has something to do — *I'm here*.
+                return result.attendance_waits_on_you
+            return True
+        case HomeStatus.SEAT_OPEN:
             return True
         case HomeStatus.CONFIRM_THE_RESULT:
             return result is not None and result.awaits_your_agreement
         case HomeStatus.UNCOUNTED:
-            # A report of not coming, theirs to dispute while its day runs.
-            return result is not None and result.you_may_dispute
+            # *I was there* to say, or somebody else's to confirm, while the
+            # late claim's day runs.
+            return result is not None and result.attendance_waits_on_you
         case (
             HomeStatus.WAITING_FOR_THE_CLUB
             # The payer's payment is the badge's already, as a payment to

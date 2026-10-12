@@ -7,8 +7,8 @@ this context's words at the seam.
 
 **Whose agreement a score waits on is the Game's own rule**
 (``Game.awaits_agreement_from``), asked of it and never restated here — and so
-is whose dispute a report of not turning up waits on (#547): the reported
-player's, while its day runs.
+is whom a late claim waits on (``Game.attendance_waits_on``, #657): the player
+who Didn't come, for their *I was there*, or the others, for its confirmation.
 
 **Which games a score may still wait on** is asked of the Games context's own
 read (``ScoredGames``, #613) with its own clock: a score waits a day from when
@@ -46,7 +46,7 @@ class GamesGameResults:
             results[game_id] = GameResult(
                 stage=_stage(game.standing_at(now)),
                 awaits_your_agreement=game.awaits_agreement_from(reader, now=now),
-                you_may_dispute=game.may_dispute(reader, now=now),
+                attendance_waits_on_you=game.attendance_waits_on(reader, now=now),
             )
         return results
 
@@ -66,8 +66,6 @@ def _stage(standing: GameStanding) -> ResultStage:
             return ResultStage.SCORE_TO_ANSWER
         case GameStanding.CONFIRMED:
             return ResultStage.CONFIRMED
-        case GameStanding.UNSCORED:
-            return ResultStage.UNSCORED
         case GameStanding.DISPUTED:
             return ResultStage.DISPUTED
         case GameStanding.PLAYED_NO_SCORE:
@@ -76,9 +74,9 @@ def _stage(standing: GameStanding) -> ResultStage:
             return ResultStage.CALLED_OFF
         case GameStanding.STARTED_SHORT:
             return ResultStage.STARTED_SHORT
-        case GameStanding.NO_SHOW_REPORTED:
-            return ResultStage.NO_SHOW_REPORTED
-        case GameStanding.NO_SHOW:
-            return ResultStage.NO_SHOW
+        case GameStanding.NOT_HERE_YET:
+            return ResultStage.NOT_HERE_YET
+        case GameStanding.DIDNT_COME:
+            return ResultStage.DIDNT_COME
         case _:
             exhaustive(standing)

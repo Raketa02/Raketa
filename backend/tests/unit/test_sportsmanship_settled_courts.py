@@ -22,9 +22,12 @@ still on a court together for an hour, and how that went is exactly what this
 context exists to collect. It is the member somebody simplifying to *confirmed*
 would drop, and nothing else in the suite would notice: every game the HTTP test
 settles is confirmed. Two scores used to leave a game *unscored*; they end
-confirmed or **disputed** since #654, and *unscored* is reached only by a booked
-game every report of not coming to was disputed — nobody said they played it,
-so it is in ``RATEABLE`` and draws no card.
+confirmed or **disputed** since #654, and *unscored* retired with the no-show
+report, its last case (#657).
+
+**A game somebody Didn't come to is out** (#657): ``DIDNT_COME`` is in neither
+set — the people who came were not the court the game was — and ``NOT_HERE_YET``
+is a wait.
 
 The file also pins the other half of the port's contract — that a game the caller
 did not play in is not findable through it at all, because the read asks *which
@@ -44,6 +47,7 @@ from uuid import UUID
 import pytest
 
 from app.kernel import Instant, Sport, instant
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
@@ -156,8 +160,9 @@ def _started_short():
     return game, instant(starts + timedelta(hours=1))
 
 
-def _booked_and_played(players):
-    """A booked game whose hour has come, its four on the court (#547)."""
+def _one_tapped_absent(players):
+    """A booked game whose hour has come, one of its four tapped *isn't here
+    yet* ten minutes in, at the club (#657)."""
 
     starts = instant(PLANNED_AT + timedelta(days=3))
     game = Game.planned(
@@ -170,23 +175,30 @@ def _booked_and_played(players):
         occurred_at=PLANNED_AT,
         starts_at=starts,
     )
-    reported = instant(starts + timedelta(hours=2))
-    game.report_no_show(by=players[0], absent=players[3], occurred_at=reported)
-    return game, reported
+    tapped = instant(starts + timedelta(minutes=10))
+    game.note_absent(
+        by=players[0],
+        absent=players[3],
+        where=ClubVerdict(at_the_club=True, club_name=None),
+        occurred_at=tapped,
+    )
+    return game, tapped
 
 
-def _no_show_reported():
-    """Somebody who came said one of the four did not, and their day runs."""
+def _not_here_yet():
+    """Somebody at the club said one of the four isn't here yet, in the first
+    half hour."""
 
-    game, reported = _booked_and_played(_four())
-    return game, instant(reported + timedelta(hours=1))
+    game, tapped = _one_tapped_absent(_four())
+    return game, instant(tapped + timedelta(minutes=5))
 
 
-def _no_show():
-    """A report of not coming stood its day: the game does not count."""
+def _didnt_come():
+    """Nobody arrived by half past, and nobody's *I was there* was confirmed:
+    the game takes no score and never counts."""
 
-    game, reported = _booked_and_played(_four())
-    return game, instant(reported + timedelta(days=2))
+    game, tapped = _one_tapped_absent(_four())
+    return game, instant(tapped + timedelta(days=2))
 
 
 def _awaiting_answer():
@@ -203,18 +215,6 @@ def _confirmed():
     entered = instant(PLANNED_AT + timedelta(days=1))
     game.state_result(by=players[0], score=A_SCORE, occurred_at=entered)
     return game, instant(entered + PROPOSAL_WINDOW + timedelta(minutes=1))
-
-
-def _unscored():
-    """Every report of not coming was disputed (#547): nobody arbitrated, and
-    nobody ever said they played."""
-
-    players = _four()
-    game, reported = _booked_and_played(players)
-    game.dispute_no_show(
-        by=players[3], occurred_at=instant(reported + timedelta(hours=1))
-    )
-    return game, instant(reported + timedelta(days=2))
 
 
 def _disputed():
@@ -240,27 +240,24 @@ BUILDERS = {
     GameStanding.CALLED_OFF: _called_off,
     GameStanding.AWAITING_ANSWER: _awaiting_answer,
     GameStanding.CONFIRMED: _confirmed,
-    GameStanding.UNSCORED: _unscored,
     GameStanding.DISPUTED: _disputed,
     GameStanding.STARTED_SHORT: _started_short,
-    GameStanding.NO_SHOW_REPORTED: _no_show_reported,
-    GameStanding.NO_SHOW: _no_show,
+    GameStanding.NOT_HERE_YET: _not_here_yet,
+    GameStanding.DIDNT_COME: _didnt_come,
 }
 
-#: The four that may be rated. Spelled out rather than derived, so this file
+#: The three that may be rated. Spelled out rather than derived, so this file
 #: disagrees with ``RATEABLE`` if somebody changes the derivation — which is the
 #: only way a test of a derived constant is worth writing.
 MAY_BE_RATED = {
     GameStanding.CONFIRMED,
-    GameStanding.UNSCORED,
     GameStanding.DISPUTED,
     GameStanding.PLAYED_NO_SCORE,
 }
 
 #: The three a card is drawn for: the endings somebody said they played, and a
-#: full court nobody recorded (#655). An unscored game is only ever a no-show
-#: every report of was disputed now, and nobody said they played it — so it is
-#: rateable and has no evening to rate.
+#: full court nobody recorded (#655) — every rateable standing since *unscored*
+#: retired (#657).
 DRAWN_FOR = {
     GameStanding.CONFIRMED,
     GameStanding.DISPUTED,

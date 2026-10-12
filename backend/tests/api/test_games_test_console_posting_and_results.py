@@ -3,9 +3,11 @@
 
 A person's row gains *Post a game* — read off the sheet their phone reads, at a
 court hour it lists — and *Join* on a post they were never dealt, which is their
-yes; and after the game a score entered, agreed with or countered, and a
-no-show reported or disputed. Each runs the use case their own button runs, so
-each is held to the player's route over the same cases, **refusals included**.
+yes; and after the game a score entered, agreed with or countered — and, at the
+court, *isn't here yet*, *I'm here*, *they're here*, *I was there* and *yes,
+they were here*, the first three from the club or away (#657). Each runs the use
+case their own button runs, so each is held to the player's route over the same
+cases, **refusals included**.
 And two situations: *A posted game* (9), hers, going at the next full hour a
 book-by can fall on; and *Just played* (10), her game whose hour has just ended —
 or, given minutes, one a score was stated on as if earlier, so silence confirms
@@ -121,8 +123,8 @@ async def posts(client, via: str, member: dict, world: SeedWorld, **overrides):
 async def on_the_game(
     client, via: str, member: dict, game_id: str, tail: str, body=None
 ):
-    """A press on a game — ``result``, ``result/acceptance``, ``no-shows`` or
-    ``no-shows/dispute`` — as ``member``."""
+    """A press on a game — ``result``, ``result/acceptance`` or one of the
+    ``attendance/…`` taps — as ``member``."""
 
     if via == PLAYER:
         return await client.post(
@@ -143,14 +145,52 @@ async def accepts(client, via: str, member: dict, game_id: str):
     return await on_the_game(client, via, member, game_id, "result/acceptance")
 
 
-async def reports(client, via: str, member: dict, game_id: str, absent: dict):
+#: Bonarka Arena's own point — where the phone at the club reads itself.
+BONARKA = (50.06, 19.95)
+
+
+async def at_the_court(
+    client,
+    via: str,
+    member: dict,
+    game_id: str,
+    tail: str,
+    about: dict,
+    *,
+    where: str = "AT_THE_CLUB",
+):
+    """*Isn't here yet* (``not-here-yet``) or an arrival (``arrival``) about
+    ``about`` — the phone sending a fix on the club's point or two kilometres
+    north of it, the console naming where."""
+
+    if via == PLAYER:
+        north = 0.0 if where == "AT_THE_CLUB" else 0.018
+        body: dict = {
+            "player_id": str(about["id"]),
+            "location": {
+                "latitude": BONARKA[0] + north,
+                "longitude": BONARKA[1],
+                "accuracy_m": 10,
+            },
+        }
+    else:
+        body = {"player_id": str(about["id"]), "where": where}
+    return await on_the_game(client, via, member, game_id, f"attendance/{tail}", body)
+
+
+async def claims(client, via: str, member: dict, game_id: str):
+    return await on_the_game(client, via, member, game_id, "attendance/claim")
+
+
+async def confirms(client, via: str, member: dict, game_id: str, claimant: dict):
     return await on_the_game(
-        client, via, member, game_id, "no-shows", {"player_id": str(absent["id"])}
+        client,
+        via,
+        member,
+        game_id,
+        "attendance/confirmation",
+        {"player_id": str(claimant["id"])},
     )
-
-
-async def disputes(client, via: str, member: dict, game_id: str):
-    return await on_the_game(client, via, member, game_id, "no-shows/dispute")
 
 
 # --------------------------------------------------------------------------- #
@@ -431,8 +471,10 @@ async def test_a_score_from_somebody_off_the_court_is_refused_alike(
     [
         ("result", {"score": {"sets": A_WINS}}),
         ("result/acceptance", None),
-        ("no-shows", "absent"),
-        ("no-shows/dispute", None),
+        ("attendance/not-here-yet", "absent"),
+        ("attendance/arrival", "absent"),
+        ("attendance/claim", None),
+        ("attendance/confirmation", "absent"),
     ],
 )
 async def test_each_game_press_refuses_an_id_that_is_nobody_s(
@@ -441,7 +483,7 @@ async def test_each_game_press_refuses_an_id_that_is_nobody_s(
     game = await a_booked_game(client, session_factory, clock, world)
     clock.move(AFTER_SATURDAY_S_GAME)
     if body == "absent":
-        body = {"player_id": str(game["across"][0]["id"])}
+        body = {"player_id": str(game["across"][0]["id"]), "where": "AT_THE_CLUB"}
 
     pressed = await on_the_game(
         client, CONSOLE, {"id": uuid4()}, game["game"], tail, body
@@ -450,7 +492,7 @@ async def test_each_game_press_refuses_an_id_that_is_nobody_s(
     assert pressed.status_code == 403, pressed.text
     assert code_of(pressed) == "not_a_seed_account"
     read = await game_of(client, world.marta, game["game"])
-    assert (read["standing"], read["no_shows"]) == ("AWAITING_ENTRY", [])
+    assert (read["standing"], read["attendance"]) == ("AWAITING_ENTRY", [])
 
 
 @pytest.mark.parametrize("via", ["sheet", "post"])
@@ -470,65 +512,126 @@ async def test_each_posting_press_refuses_an_id_that_is_nobody_s(
 
 
 # --------------------------------------------------------------------------- #
-# Who did not come
+# Who turned up, caught at the court (#657)
 # --------------------------------------------------------------------------- #
 
+#: Saturday 17:10 — the first half hour of her game.
+TEN_PAST = SATURDAY_FIVE - MONDAY_MORNING + timedelta(minutes=10)
+
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
-async def test_a_no_show_is_reported_alike(client, session_factory, clock, world, via):
+async def test_isn_t_here_yet_from_the_club_is_noted_alike(
+    client, session_factory, clock, world, via
+):
     game = await a_booked_game(client, session_factory, clock, world)
-    clock.move(AFTER_SATURDAY_S_GAME)
+    clock.move(TEN_PAST)
     absent = game["across"][0]
 
-    reported = await reports(client, via, world.marta, game["game"], absent)
+    tapped = await at_the_court(
+        client, via, world.marta, game["game"], "not-here-yet", absent
+    )
 
-    assert reported.status_code == 200, reported.text
-    assert reported.json()["standing"] == "NO_SHOW_REPORTED"
-    card = await home_game(client, absent, game["booking"])
-    assert (card["status"], card["uncounted_reason"]) == ("UNCOUNTED", "NO_SHOW")
+    assert tapped.status_code == 200, tapped.text
+    assert tapped.json()["standing"] == "NOT_HERE_YET"
+    [row] = (await game_of(client, absent, game["game"]))["attendance"]
+    assert (row["player_id"], row["state"]) == (str(absent["id"]), "WAITING")
 
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
-async def test_a_no_show_before_the_hour_is_refused_alike(
+async def test_isn_t_here_yet_from_away_is_refused_alike(
+    client, session_factory, clock, world, via
+):
+    game = await a_booked_game(client, session_factory, clock, world)
+    clock.move(TEN_PAST)
+
+    tapped = await at_the_court(
+        client,
+        via,
+        world.marta,
+        game["game"],
+        "not-here-yet",
+        game["across"][0],
+        where="AWAY",
+    )
+
+    assert tapped.status_code == 409, tapped.text
+    assert code_of(tapped) == "not_at_the_club"
+
+
+@pytest.mark.parametrize("via", [PLAYER, CONSOLE])
+async def test_a_tap_before_the_hour_is_refused_alike(
     client, session_factory, clock, world, via
 ):
     game = await a_booked_game(client, session_factory, clock, world)
 
-    reported = await reports(client, via, world.marta, game["game"], game["across"][0])
+    tapped = await at_the_court(
+        client, via, world.marta, game["game"], "not-here-yet", game["across"][0]
+    )
 
-    assert reported.status_code == 409, reported.text
-    assert code_of(reported) == "the_game_has_not_started"
+    assert tapped.status_code == 409, tapped.text
+    assert code_of(tapped) == "the_game_has_not_started"
 
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
-async def test_a_reported_player_disputes_it_alike(
+async def test_i_m_here_and_they_re_here_are_arrivals_alike(
     client, session_factory, clock, world, via
 ):
     game = await a_booked_game(client, session_factory, clock, world)
-    clock.move(AFTER_SATURDAY_S_GAME)
+    clock.move(TEN_PAST)
+    first, second = game["across"]
+    await at_the_court(client, PLAYER, world.marta, game["game"], "not-here-yet", first)
+    await at_the_court(
+        client, PLAYER, world.marta, game["game"], "not-here-yet", second
+    )
+    clock.move(timedelta(minutes=5))
+
+    mine = await at_the_court(client, via, first, game["game"], "arrival", first)
+    theirs = await at_the_court(
+        client, via, world.marta, game["game"], "arrival", second
+    )
+
+    assert (mine.status_code, theirs.status_code) == (200, 200), theirs.text
+    assert theirs.json()["standing"] == "AWAITING_ENTRY"
+    assert [row["state"] for row in theirs.json()["attendance"]] == [
+        "CAME_LATE",
+        "CAME_LATE",
+    ]
+
+
+@pytest.mark.parametrize("via", [PLAYER, CONSOLE])
+async def test_i_was_there_and_yes_they_were_here_alike(
+    client, session_factory, clock, world, via
+):
+    game = await a_booked_game(client, session_factory, clock, world)
+    clock.move(TEN_PAST)
     absent = game["across"][0]
-    await reports(client, PLAYER, world.marta, game["game"], absent)
+    await at_the_court(
+        client, PLAYER, world.marta, game["game"], "not-here-yet", absent
+    )
+    clock.move(timedelta(hours=16))
 
-    disputed = await disputes(client, via, absent, game["game"])
+    claimed = await claims(client, via, absent, game["game"])
+    confirmed = await confirms(client, via, game["partner"], game["game"], absent)
 
-    assert disputed.status_code == 200, disputed.text
-    assert disputed.json()["standing"] == "UNSCORED"
-    assert (await game_of(client, world.marta, game["game"]))["no_shows"][0][
-        "disputed_at"
-    ] is not None
+    assert claimed.status_code == 200, claimed.text
+    assert claimed.json()["standing"] == "DIDNT_COME"
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["standing"] == "AWAITING_ENTRY"
+    [row] = (await game_of(client, world.marta, game["game"]))["attendance"]
+    assert row["state"] == "CONFIRMED"
 
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
-async def test_a_dispute_nobody_reported_is_refused_alike(
+async def test_a_claim_nobody_asked_for_is_refused_alike(
     client, session_factory, clock, world, via
 ):
     game = await a_booked_game(client, session_factory, clock, world)
     clock.move(AFTER_SATURDAY_S_GAME)
 
-    disputed = await disputes(client, via, game["across"][0], game["game"])
+    claimed = await claims(client, via, game["across"][0], game["game"])
 
-    assert disputed.status_code == 409, disputed.text
-    assert code_of(disputed) == "nobody_reported_you"
+    assert claimed.status_code == 409, claimed.text
+    assert code_of(claimed) == "nobody_said_they_were_not_here"
 
 
 # --------------------------------------------------------------------------- #

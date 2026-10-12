@@ -38,6 +38,7 @@ from app.bootstrap.games_demands import (
     implementations_of,
 )
 from app.kernel import Instant, Sport, instant
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.errors import (
     AResultMustCarryAScore,
     AScoreMustNameAWinner,
@@ -163,8 +164,9 @@ async def _saved(session, game: Game) -> Game:
 
 
 def _a_no_show(*, absent: UUID, reporter: UUID, starts: Instant) -> Game:
-    """A booked singles game ``reporter`` came to and said ``absent`` did not,
-    half an hour in — the report undisputed for its day (#547)."""
+    """A booked singles game ``reporter`` came to and tapped ``absent`` *isn't
+    here yet* ten minutes in, at the club — and ``absent`` never arrived and
+    never claimed: **Didn't come**, for good a day after half past (#657)."""
 
     game = Game.planned(
         game_id=new_uuid(),
@@ -176,8 +178,13 @@ def _a_no_show(*, absent: UUID, reporter: UUID, starts: Instant) -> Game:
         occurred_at=instant(starts - timedelta(days=2)),
         starts_at=starts,
     )
-    game.report_no_show(
-        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
+    # *Isn't here yet* ten minutes in, at the club, and no arrival: Didn't
+    # come at half past, for good a day later (#657).
+    game.note_absent(
+        by=reporter,
+        absent=absent,
+        where=ClubVerdict(at_the_club=True, club_name=None),
+        occurred_at=instant(starts + timedelta(minutes=10)),
     )
     return game
 

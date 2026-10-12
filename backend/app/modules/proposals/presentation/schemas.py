@@ -884,11 +884,11 @@ _UNCOUNTED_REASON = (
     "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score "
     "— `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: "
     "somebody left after the cut-off and nobody took the seat. No Level moved, "
-    "and nothing is on the record of those who stayed. `NO_SHOW` — somebody "
-    "who came reported a player who did not (#547): the reported player has a "
-    "day to dispute it (`GET /games` — `no_shows`), after which it stands; the "
-    "game does not count either way. A report every reported player disputed "
-    "is an ordinary `UNCOUNTED`, with no reason: nobody arbitrated."
+    "and nothing is on the record of those who stayed. `DIDNT_COME` — somebody "
+    "was tapped *isn't here yet* at the court and never arrived (#657; "
+    "`GET /games` — `attendance`): the game takes no score and never counts. "
+    "For a day it is provisional — their *I was there*, confirmed by somebody "
+    "else on the court, makes them Came late and the game carries on."
 )
 
 _OPEN_SEATS = (

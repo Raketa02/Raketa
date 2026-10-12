@@ -98,11 +98,11 @@ class GamesSettledCourts:
             # moment — the only one there is.
             played_at = game.starts_at
         if played_at is None:
-            # A game nobody said they played: ``UNSCORED`` is reached only by a
-            # booked game every report of not coming to was disputed (#547) —
-            # two scores end confirmed or disputed since #654. A game with no
-            # evening behind it is a game with nobody to rate, which is exactly
-            # the answer every other absence here gets.
+            # A game nobody said they played and with no hour — a stream
+            # written before bookings that its window closed on (*Unscored*,
+            # the other way here, retired with the no-show report, #657). A
+            # game with no evening behind it is a game with nobody to rate,
+            # which is exactly the answer every other absence here gets.
             return None
         return SettledCourt(
             game_id=game.id,

@@ -48,6 +48,7 @@ from app.bootstrap.player_score_demands import (
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
@@ -181,9 +182,10 @@ async def _answered_a_score(
 
 
 async def _not_come_to(session, *, absent: UUID, reporter: UUID) -> Game:
-    """A booked game ``reporter`` came to and said ``absent`` did not, the
-    report undisputed for its day (#547) — the one miss on *shows up* since a
-    full court nobody recorded is played (#655)."""
+    """A booked game ``reporter`` came to and tapped ``absent`` *isn't here
+    yet* at the club, and ``absent`` **Didn't come** — for good a day later
+    (#657): the one miss on *shows up* since a full court nobody recorded is
+    played (#655)."""
 
     starts = _ago(days=6)
     game = Game.planned(
@@ -201,8 +203,13 @@ async def _not_come_to(session, *, absent: UUID, reporter: UUID) -> Game:
         occurred_at=instant(starts - timedelta(days=2)),
         starts_at=starts,
     )
-    game.report_no_show(
-        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
+    # *Isn't here yet* ten minutes in, at the club, and no arrival: Didn't
+    # come at half past, for good a day later (#657).
+    game.note_absent(
+        by=reporter,
+        absent=absent,
+        where=ClubVerdict(at_the_club=True, club_name=None),
+        occurred_at=instant(starts + timedelta(minutes=10)),
     )
     await _games(session).save(game)
     await session.commit()

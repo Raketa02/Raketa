@@ -1,5 +1,5 @@
-"""The Games context's domain events — **eleven written, one retired, and every
-one of them an act**.
+"""The Games context's domain events — **thirteen written, three retired, and
+every one of them an act**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a kind and a window as their codes, a
@@ -36,10 +36,19 @@ announces a standing — a court with an open seat is still ``AWAITING_ENTRY`` �
 and each passes ``docs/adr/0142`` §3's test: a departure, and the arrangement
 that replaces it, are decisions no arrangement of this record could reach.
 
-**Two events are about somebody who did not come** (#547): ``NoShowReported``
-is a player who came saying so of another, and ``NoShowDisputed`` is that other
-saying they did. Neither announces a standing — a report stands only by its day
-passing in silence, which is a clock, and a clock has nothing to publish.
+**Four events are about who turned up, caught at the court** (#657;
+``docs/adr/0195`` §3): ``AbsenceNoted`` (*Oscar isn't here yet*),
+``ArrivalNoted`` (*I'm here*, *they're here*), ``PresenceClaimed`` (*I was
+there*) and ``PresenceConfirmed`` (*yes, they were here*). **None carries a
+position**: the two made in the tap window were refused unless their maker was
+at the club, so the event is itself the record of *at the club, at that time*,
+and the coordinates were never kept. None announces an outcome either — *Didn't
+come* is the tap window closing on nobody, which is a clock.
+
+**The two events of the no-show report are retired** (#657, ``docs/adr/0195``
+§9): ``NoShowReported`` and ``NoShowDisputed``. Nothing writes them; they stay
+registered so a stored row still decodes, and the fold reads them and changes
+nothing — a game that held a report reads *Played · no score*.
 
 **Three proposals events and not one with a kind field.** A first score, a
 revision of your own side's score and a disagreement with the other side's are
@@ -242,11 +251,58 @@ class ResultAccepted:
 
 
 @dataclass(frozen=True)
+class AbsenceNoted:
+    """*Oscar isn't here yet* — said by ``noted_by``, at the club, about
+    ``player_id``, inside the tap window of a **booked** game (#657). Only the
+    first is written: a second tap about a player still awaited writes nothing.
+    """
+
+    game_id: UUID
+    player_id: UUID
+    noted_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ArrivalNoted:
+    """**The arrival** — *I'm here* from ``player_id`` themselves, or *they're
+    here* from somebody else on the court (``noted_by``), at the club, inside
+    the tap window (#657). Its moment decides on time or Came late."""
+
+    game_id: UUID
+    player_id: UUID
+    noted_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PresenceClaimed:
+    """*I was there* — ``player_id``, who Didn't come, inside the day after the
+    tap window closed (#657): for a phone that died at the court."""
+
+    game_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PresenceConfirmed:
+    """*Yes, they were here* — ``confirmed_by``, somebody else on the court,
+    agreeing with ``player_id``'s *I was there* inside the same day (#657). It
+    turns *Didn't come* into *Came late*."""
+
+    game_id: UUID
+    player_id: UUID
+    confirmed_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class NoShowReported:
-    """Somebody who came to a **booked** game says ``player_id`` did not (#547;
-    the mechanics §15.3) — *Kuba didn't come*, where they would have entered the
-    result. **Not a standing**: the player has a day to dispute it, and only the
-    day passing in silence makes it stand, which nothing announces.
+    """**Retired** (#657; ``docs/adr/0195`` §9): somebody who came to a booked
+    game said ``player_id`` did not (#547), from anywhere, for a day after the
+    hour. Caught at the court now (``AbsenceNoted``). Nothing writes it; a stored
+    row decodes and folds to nothing.
     """
 
     game_id: UUID
@@ -257,9 +313,9 @@ class NoShowReported:
 
 @dataclass(frozen=True)
 class NoShowDisputed:
-    """The player reported as not turning up says they did, inside their day
-    (#547). **Nobody arbitrates**: the report falls, and nothing goes on their
-    record."""
+    """**Retired** (#657; ``docs/adr/0195`` §9): the player reported as not
+    turning up said they did (#547). Nothing writes it; a stored row decodes and
+    folds to nothing."""
 
     game_id: UUID
     player_id: UUID

@@ -45,6 +45,7 @@ from app.engines.racketskill.core import (
     confidence_percent,
     likely_range,
 )
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
@@ -1048,10 +1049,10 @@ async def _a_played_plan(session, one: UUID, other: UUID) -> None:
 
 
 async def _a_game_not_come_to(session, absent: UUID, reporter: UUID) -> None:
-    """A booked game ``reporter`` came to and said ``absent`` did not, the
-    report undisputed for its day (#547) — a miss on *shows up* for the player
-    reported and nobody else. Since #655 it is the only one: a full court
-    nobody recorded is played."""
+    """A booked game ``reporter`` came to and tapped ``absent`` *isn't here
+    yet* at the club, and ``absent`` **Didn't come** — for good a day later
+    (#657): a miss on *shows up* for the player who didn't, and nobody else.
+    Since #655 it is the only one: a full court nobody recorded is played."""
 
     starts = _ago(days=6)
     game = Game.planned(
@@ -1069,8 +1070,13 @@ async def _a_game_not_come_to(session, absent: UUID, reporter: UUID) -> None:
         occurred_at=instant(starts - timedelta(days=2)),
         starts_at=starts,
     )
-    game.report_no_show(
-        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
+    # *Isn't here yet* ten minutes in, at the club, and no arrival: Didn't
+    # come at half past, for good a day later (#657).
+    game.note_absent(
+        by=reporter,
+        absent=absent,
+        where=ClubVerdict(at_the_club=True, club_name=None),
+        occurred_at=instant(starts + timedelta(minutes=10)),
     )
     await build_game_repository(
         session=session,

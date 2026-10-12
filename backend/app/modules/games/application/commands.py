@@ -1,4 +1,4 @@
-"""What a caller may ask this context to do. **Eight commands, and no flags.**
+"""What a caller may ask this context to do. **Ten commands, and no flags.**
 
 Each is one sentence a player could say. There is no *kind* on the result
 command deciding between proposing, correcting and countering: which of the three
@@ -13,6 +13,7 @@ from typing import Sequence
 from uuid import UUID
 
 from app.kernel import Instant, Sport
+from app.modules.games.domain.attendance import LocationFix
 from app.modules.games.domain.results import Score
 
 
@@ -79,17 +80,40 @@ class AcceptResultCommand:
 
 
 @dataclass(frozen=True, slots=True)
-class ReportANoShowCommand:
-    """*Kuba didn't come* (#547): ``player_id`` came, ``absent_id`` did not."""
+class NoteAbsentCommand:
+    """*Oscar isn't here yet* (#657): ``player_id`` is at the club, with the fix
+    their phone read at the tap, and ``absent_id`` is not here yet."""
 
     game_id: UUID
     player_id: UUID
     absent_id: UUID
+    fix: LocationFix
 
 
 @dataclass(frozen=True, slots=True)
-class DisputeANoShowCommand:
-    """*I was there* (#547): ``player_id`` was reported as not coming."""
+class NoteArrivalCommand:
+    """*I'm here* when ``arrived_id`` is ``player_id``, *they're here* otherwise
+    (#657) — from the club, with the fix read at the tap."""
 
     game_id: UUID
     player_id: UUID
+    arrived_id: UUID
+    fix: LocationFix
+
+
+@dataclass(frozen=True, slots=True)
+class ClaimPresenceCommand:
+    """*I was there* (#657): ``player_id`` Didn't come, and says they did."""
+
+    game_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class ConfirmPresenceCommand:
+    """*Yes, they were here* (#657): ``player_id`` agrees with
+    ``claimant_id``'s *I was there*."""
+
+    game_id: UUID
+    player_id: UUID
+    claimant_id: UUID

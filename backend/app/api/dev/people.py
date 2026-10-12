@@ -1,9 +1,10 @@
 """A person's row: *Yes*, *No* and *Withdraw* on the cards they were dealt, as
 them (``docs/adr/0194`` §2, §3; #590) — and *Leave the game*, *Take the seat*
 and *No* on a rescue, *Post a game* at a court hour its sheet lists, and after
-the game a score entered, agreed with or countered, and a no-show reported or
-disputed (#593). *Join* on a post they were never dealt is the *Yes* here,
-as it is the phone's.
+the game a score entered, agreed with or countered (#593) — and, at the court,
+*isn't here yet*, *I'm here*, *they're here*, *I was there* and *yes, they were
+here*, the first three **at the club or away** (#657). *Join* on a post they
+were never dealt is the *Yes* here, as it is the phone's.
 
 **Each route is the player's own route with the acting account in place of the
 signed-in one** — ``POST /dev/as/{player_id}/proposals/{id}/yes`` beside the
@@ -24,10 +25,12 @@ from __future__ import annotations
 import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
 
 from datetime import date
+from enum import StrEnum
 from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, status
+from pydantic import BaseModel, Field
 
 from app.api.dev.accounts import ActingDep
 from app.core.exception_handlers import ErrorResponse
@@ -35,19 +38,26 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.games.application.commands import (
     AcceptResultCommand,
-    DisputeANoShowCommand,
-    ReportANoShowCommand,
+    ClaimPresenceCommand,
+    ConfirmPresenceCommand,
+    NoteAbsentCommand,
+    NoteArrivalCommand,
     StateResultCommand,
 )
+from app.modules.games.domain.attendance import LocationFix
 from app.modules.games.presentation.dependencies import (
     AcceptResultDep,
-    DisputeANoShowDep,
-    ReportANoShowDep,
+    ClaimPresenceDep,
+    ConfirmPresenceDep,
+    GameClubsDep,
+    GameRepositoryDep,
+    NoteAbsentDep,
+    NoteArrivalDep,
     StateResultDep,
 )
 from app.modules.games.presentation.schemas import (
     GameSchema,
-    ReportANoShowRequest,
+    PresenceConfirmationRequest,
     StateResultRequest,
 )
 from app.modules.proposals.application.commands import (
@@ -353,7 +363,7 @@ async def post_a_game(
 
 
 # --------------------------------------------------------------------------- #
-# After the game: the score, and who did not come (#593)
+# After the game: the score (#593); at the court: who turned up (#657)
 # --------------------------------------------------------------------------- #
 
 _GAME_REFUSED: dict[int | str, dict[str, Any]] = {
@@ -424,28 +434,86 @@ async def accept_result(
     )
 
 
+class Where(StrEnum):
+    """Where the acting account's phone says it is when it taps."""
+
+    #: On the club's own map point.
+    AT_THE_CLUB = "AT_THE_CLUB"
+    #: Two kilometres north of it.
+    AWAY = "AWAY"
+
+
+#: How far north of the club *away* is.
+_AWAY_DEGREES_NORTH = 0.018
+#: The accuracy the console's fix claims, in metres.
+_CONSOLE_ACCURACY_M = 10.0
+
+
+class AtTheCourtPress(BaseModel):
+    """Who the tap is about, and where the acting account taps it from."""
+
+    player_id: UUID = Field(
+        description=(
+            "Who it is about: somebody else for *isn't here yet* and *they're "
+            "here*, the acting account itself for *I'm here*."
+        )
+    )
+    where: Where = Field(
+        description=(
+            "`AT_THE_CLUB` sends a fix on the club's map point, `AWAY` one two "
+            "kilometres north of it — the player route's own body then."
+        )
+    )
+
+
+async def _fix(
+    game_id: UUID, where: Where, games: GameRepositoryDep, clubs: GameClubsDep
+) -> LocationFix:
+    """The fix a phone at the club — or away from it — would send. Read off the
+    game's club through the same demand the use case measures against, so the
+    press is answered as the phone's tap is; a game or club that cannot be read
+    taps from nowhere, and the use case refuses it as the route would."""
+
+    game = await games.load(game_id)
+    club = None if game is None else await clubs.of(game.challenge_id)
+    latitude, longitude = (
+        (0.0, 0.0) if club is None else (club.latitude, club.longitude)
+    )
+    if where is Where.AWAY:
+        latitude = min(90.0, latitude + _AWAY_DEGREES_NORTH)
+    return LocationFix(
+        latitude=latitude, longitude=longitude, accuracy_m=_CONSOLE_ACCURACY_M
+    )
+
+
 @router.post(
-    "/games/{game_id}/no-shows",
+    "/games/{game_id}/attendance/not-here-yet",
     response_model=GameSchema,
     status_code=status.HTTP_200_OK,
     responses=_GAME_REFUSED,
-    summary="Say somebody didn't come, as this person",
+    summary="Say somebody isn't here yet, as this person",
     description=(
-        "`POST /api/v1/games/{id}/no-shows` as the acting account — *Kuba "
-        "didn't come*, on a booked game whose hour has come: the game does not "
-        "count, and the reported player has a day to dispute it."
+        "`POST /api/v1/games/{id}/attendance/not-here-yet` as the acting "
+        "account, from the club or away — *Oscar isn't here yet*, in the first "
+        "30 minutes of a booked game."
     ),
 )
-async def report_a_no_show(
+async def note_absent(
     game_id: UUID,
-    payload: ReportANoShowRequest,
+    payload: AtTheCourtPress,
     acting: ActingDep,
-    report: ReportANoShowDep,
+    games: GameRepositoryDep,
+    clubs: GameClubsDep,
+    note: NoteAbsentDep,
 ) -> GameSchema:
+    fix = await _fix(game_id, payload.where, games, clubs)
     return GameSchema.of(
-        await report.execute(
-            ReportANoShowCommand(
-                game_id=game_id, player_id=acting, absent_id=payload.player_id
+        await note.execute(
+            NoteAbsentCommand(
+                game_id=game_id,
+                player_id=acting,
+                absent_id=payload.player_id,
+                fix=fix,
             )
         ),
         reader_id=acting,
@@ -453,20 +521,83 @@ async def report_a_no_show(
 
 
 @router.post(
-    "/games/{game_id}/no-shows/dispute",
+    "/games/{game_id}/attendance/arrival",
     response_model=GameSchema,
     status_code=status.HTTP_200_OK,
     responses=_GAME_REFUSED,
-    summary="Say you came, as this person",
+    summary="Say you're here, or they're here, as this person",
     description=(
-        "`POST /api/v1/games/{id}/no-shows/dispute` as the acting account: the "
-        "report of them falls, and nobody arbitrates."
+        "`POST /api/v1/games/{id}/attendance/arrival` as the acting account, "
+        "from the club or away — *I'm here* naming themselves, *they're here* "
+        "naming a courtmate."
     ),
 )
-async def dispute_a_no_show(
-    game_id: UUID, acting: ActingDep, dispute: DisputeANoShowDep
+async def note_arrival(
+    game_id: UUID,
+    payload: AtTheCourtPress,
+    acting: ActingDep,
+    games: GameRepositoryDep,
+    clubs: GameClubsDep,
+    note: NoteArrivalDep,
+) -> GameSchema:
+    fix = await _fix(game_id, payload.where, games, clubs)
+    return GameSchema.of(
+        await note.execute(
+            NoteArrivalCommand(
+                game_id=game_id,
+                player_id=acting,
+                arrived_id=payload.player_id,
+                fix=fix,
+            )
+        ),
+        reader_id=acting,
+    )
+
+
+@router.post(
+    "/games/{game_id}/attendance/claim",
+    response_model=GameSchema,
+    status_code=status.HTTP_200_OK,
+    responses=_GAME_REFUSED,
+    summary="Say you were there, as this person",
+    description=(
+        "`POST /api/v1/games/{id}/attendance/claim` as the acting account — *I "
+        "was there*, within a day of the tap window closing. No location: the "
+        "player route asks none."
+    ),
+)
+async def claim_presence(
+    game_id: UUID, acting: ActingDep, claim: ClaimPresenceDep
 ) -> GameSchema:
     return GameSchema.of(
-        await dispute.execute(DisputeANoShowCommand(game_id=game_id, player_id=acting)),
+        await claim.execute(ClaimPresenceCommand(game_id=game_id, player_id=acting)),
+        reader_id=acting,
+    )
+
+
+@router.post(
+    "/games/{game_id}/attendance/confirmation",
+    response_model=GameSchema,
+    status_code=status.HTTP_200_OK,
+    responses=_GAME_REFUSED,
+    summary="Say they were here, as this person",
+    description=(
+        "`POST /api/v1/games/{id}/attendance/confirmation` as the acting account "
+        "— *yes, they were here*: the claimant Came late, and the game carries "
+        "on. No location: the player route asks none."
+    ),
+)
+async def confirm_presence(
+    game_id: UUID,
+    payload: PresenceConfirmationRequest,
+    acting: ActingDep,
+    confirm: ConfirmPresenceDep,
+) -> GameSchema:
+    return GameSchema.of(
+        await confirm.execute(
+            ConfirmPresenceCommand(
+                game_id=game_id, player_id=acting, claimant_id=payload.player_id
+            )
+        ),
         reader_id=acting,
     )

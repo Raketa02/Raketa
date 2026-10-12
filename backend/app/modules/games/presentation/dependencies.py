@@ -24,17 +24,24 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_game_clubs,
     build_game_court_pairing,
     build_game_directory,
     build_game_repository,
     build_player_names,
 )
 from app.modules.games.application.answer_result import AcceptResult, StateResult
-from app.modules.games.application.no_shows import DisputeANoShow, ReportANoShow
+from app.modules.games.application.attendance import (
+    ClaimPresence,
+    ConfirmPresence,
+    NoteAbsent,
+    NoteArrival,
+)
 from app.modules.games.application.read_game_pairing import ReadGamePairing
 from app.modules.games.application.read_games import ReadGames
 from app.modules.games.domain.ports import (
     CourtPairing,
+    GameClubs,
     GameRepository,
     PlayerNames,
 )
@@ -97,28 +104,64 @@ def get_accept_result(
 AcceptResultDep = Annotated[AcceptResult, Depends(get_accept_result)]
 
 
-def get_report_a_no_show(
+def get_game_clubs(db: DbSession) -> GameClubs:
+    """Where a booked game's club is (#657) — read per request, and nothing it
+    is asked about outlives the request."""
+
+    return build_game_clubs(db)
+
+
+GameClubsDep = Annotated[GameClubs, Depends(get_game_clubs)]
+
+
+def get_note_absent(
     clock: ClockDep,
     uow: UnitOfWorkDep,
     games: GameRepositoryDep,
     names: PlayerNamesDep,
-) -> ReportANoShow:
-    return ReportANoShow(games=games, names=names, uow=uow, clock=clock)
+    clubs: GameClubsDep,
+) -> NoteAbsent:
+    return NoteAbsent(games=games, names=names, uow=uow, clock=clock, clubs=clubs)
 
 
-ReportANoShowDep = Annotated[ReportANoShow, Depends(get_report_a_no_show)]
+NoteAbsentDep = Annotated[NoteAbsent, Depends(get_note_absent)]
 
 
-def get_dispute_a_no_show(
+def get_note_arrival(
     clock: ClockDep,
     uow: UnitOfWorkDep,
     games: GameRepositoryDep,
     names: PlayerNamesDep,
-) -> DisputeANoShow:
-    return DisputeANoShow(games=games, names=names, uow=uow, clock=clock)
+    clubs: GameClubsDep,
+) -> NoteArrival:
+    return NoteArrival(games=games, names=names, uow=uow, clock=clock, clubs=clubs)
 
 
-DisputeANoShowDep = Annotated[DisputeANoShow, Depends(get_dispute_a_no_show)]
+NoteArrivalDep = Annotated[NoteArrival, Depends(get_note_arrival)]
+
+
+def get_claim_presence(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    games: GameRepositoryDep,
+    names: PlayerNamesDep,
+) -> ClaimPresence:
+    return ClaimPresence(games=games, names=names, uow=uow, clock=clock)
+
+
+ClaimPresenceDep = Annotated[ClaimPresence, Depends(get_claim_presence)]
+
+
+def get_confirm_presence(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    games: GameRepositoryDep,
+    names: PlayerNamesDep,
+) -> ConfirmPresence:
+    return ConfirmPresence(games=games, names=names, uow=uow, clock=clock)
+
+
+ConfirmPresenceDep = Annotated[ConfirmPresence, Depends(get_confirm_presence)]
 
 
 def get_court_pairing(db: DbSession) -> CourtPairing:

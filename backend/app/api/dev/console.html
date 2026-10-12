@@ -426,13 +426,22 @@ function bookedOf(row) {
     const court = pane?.sides ? [...pane.sides.first, ...pane.sides.second] : [];
     const others = court.filter((p) => p.player_id !== row.player_id)
       .map((p) => `<option value="${p.player_id}">${nameOf(p)}</option>`).join("");
+    // The tap window: the first 30 minutes (``TAP_WINDOW``) — a highlight only;
+    // every button presses whatever it says.
+    const firstHalf = started && now < new Date(b.starts_at).getTime() + 30 * 60_000;
     const result = !b.game_id ? "" : `
       <input class="score" data-score-key="${key}" placeholder="6-4 6-3">
       ${rowButton(row, "result", "Enter score", on, started && b.standing === "AWAITING_ENTRY")}
       ${rowButton(row, "accept", "Agree", on, b.standing === "AWAITING_ANSWER")}
+      <span class="row">
       <select data-absent-key="${key}">${others}</select>
-      ${rowButton(row, "no-show", "Didn't come", on, false)}
-      ${rowButton(row, "dispute", "I came", on, b.standing === "NO_SHOW_REPORTED")}`;
+      <select data-where-key="${key}"><option value="AT_THE_CLUB">at the club</option><option value="AWAY">away</option></select>
+      ${rowButton(row, "not-here-yet", "Isn't here yet", on, firstHalf && ["AWAITING_ENTRY", "NOT_HERE_YET"].includes(b.standing))}
+      ${rowButton(row, "im-here", "I'm here", on, b.standing === "NOT_HERE_YET")}
+      ${rowButton(row, "theyre-here", "They're here", on, b.standing === "NOT_HERE_YET")}
+      ${rowButton(row, "i-was-there", "I was there", on, b.standing === "DIDNT_COME")}
+      ${rowButton(row, "they-were-here", "Yes, they were here", on, b.standing === "DIDNT_COME")}
+      </span>`;
     return `<div class="rowcard">
       <span class="when">${when(b.starts_at)}</span>
       ${pill(b.state)} ${b.standing ? pill(b.standing, "kind") : ""}
@@ -483,12 +492,16 @@ async function rowAct(button) {
     say(done, done.ok ? `${words} → the card is gone from their deck` : words);
   } else {
     const typed = document.querySelector(`input[data-score-key="${key}"]`)?.value ?? "";
-    const absent = document.querySelector(`select[data-absent-key="${key}"]`)?.value;
+    const other = document.querySelector(`select[data-absent-key="${key}"]`)?.value;
+    const where = document.querySelector(`select[data-where-key="${key}"]`)?.value;
     const [tail, body] = {
       result: ["result", { score: { sets: setsOf(typed) } }],
       accept: ["result/acceptance", undefined],
-      "no-show": ["no-shows", { player_id: absent }],
-      dispute: ["no-shows/dispute", undefined],
+      "not-here-yet": ["attendance/not-here-yet", { player_id: other, where }],
+      "im-here": ["attendance/arrival", { player_id: player, where }],
+      "theyre-here": ["attendance/arrival", { player_id: other, where }],
+      "i-was-there": ["attendance/claim", undefined],
+      "they-were-here": ["attendance/confirmation", { player_id: other }],
     }[verb];
     done = await call("POST", at(`games/${game}/${tail}`), body);
     say(done, done.ok ? `${words} → ${esc(done.json.standing)}` : words);
@@ -727,15 +740,18 @@ const MOMENT_WORDS = {
 function resultOf(result) {
   const scores = result.scores.map((s) =>
     `${esc(s.sets)} <span class="note">by ${nameOf(s.by)} (${esc(s.side)}) · answer by ${when(s.answer_by)}</span>`).join("<br>");
-  const noShows = result.no_shows.map((n) =>
-    `${nameOf(n.player)} reported ${when(n.reported_at)}` +
-    (n.disputed_at ? ` · disputed ${when(n.disputed_at)}` : ` · dispute by ${when(n.dispute_by)}`)).join("<br>");
+  const attendance = result.attendance.map((a) =>
+    `${nameOf(a.player)} ${pill(a.state)} not here at ${when(a.noted_at)}` +
+    (a.arrived_at ? ` · arrived ${when(a.arrived_at)}` : ` · arrive by ${when(a.arrive_by)}`) +
+    (a.claimed_at ? ` · I was there ${when(a.claimed_at)}` : "") +
+    (a.confirmed_at ? ` · confirmed ${when(a.confirmed_at)}`
+      : a.state === "DIDNT_COME" || a.state === "CLAIMED" ? ` · claim by ${when(a.claim_by)}` : "")).join("<br>");
   return `${pill(result.standing, "kind")} ${result.counted ? "counted" : "friendly"}
     <span class="mono">${esc(result.game_id.slice(0, 8))}</span>
     ${result.confirmed ? `<br><strong>${esc(result.confirmed)}</strong>` : ""}
     ${scores ? `<br>${scores}` : ""}
     ${result.agreed_by ? `<br>agreed by ${nameOf(result.agreed_by)}` : ""}
-    ${noShows ? `<br>${noShows}` : ""}
+    ${attendance ? `<br>${attendance}` : ""}
     ${result.standing === "AWAITING_ENTRY" ? `<br><span class="note">we played is sayable until ${when(result.entry_closes_at)}</span>` : ""}`;
 }
 

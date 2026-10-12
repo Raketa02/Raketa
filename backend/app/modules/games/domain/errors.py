@@ -318,24 +318,28 @@ class PairingIsHistory(ConflictError):
 
 
 # --------------------------------------------------------------------------- #
-# Somebody did not come (#547; the mechanics §15.3)
+# Who turned up, caught at the court (#657; docs/adr/0195 §3)
+#
+# **Refusals in plain sentences**: each message is what the player is told, and
+# a client may show it as it stands. None names a person; the one that names a
+# place names the club, which everybody on the court already knows.
 # --------------------------------------------------------------------------- #
 
 
-class NoShowsAreForBookedGames(ConflictError):
-    """*Kuba didn't come*, said of a game a completed line-up opened. Only a
-    **booked** game has an hour somebody could fail to turn up to: a Classic
-    play game is the arrangement's, and its people say whether they played."""
+class AttendanceIsForBookedGames(ConflictError):
+    """An attendance tap on a game with no hour — a stream written before
+    bookings. Only a **booked** game has an hour somebody could fail to turn up
+    to."""
 
-    code = "no_shows_are_for_booked_games"
+    code = "attendance_is_for_booked_games"
 
     def __init__(self) -> None:
-        super().__init__("Only a booked game can report somebody who did not come.")
+        super().__init__("Only a game booked on a court has an hour to turn up to.")
 
 
 class TheGameHasNotStarted(ConflictError):
-    """A score stated, or a no-show reported, before a booked game's hour:
-    nothing can have happened at a game that has not begun (#547, #654)."""
+    """A score stated, or somebody said not to be here, before a booked game's
+    hour: nothing can have happened at a game that has not begun (#654, #657)."""
 
     code = "the_game_has_not_started"
 
@@ -343,74 +347,144 @@ class TheGameHasNotStarted(ConflictError):
         super().__init__("This game hasn't started yet.")
 
 
-class AResultIsAlreadyEntered(ConflictError):
-    """A no-show reported on a game somebody already said they played, with a
-    score: a score is four people on a court, and a report that one of them
-    was not there contradicts it. The score's own answers are the way to
-    disagree with it."""
-
-    code = "a_result_is_entered"
-
-    def __init__(self) -> None:
-        super().__init__("A result is already entered for this game.")
-
-
-class ANoShowIsReported(ConflictError):
-    """A score entered while a player's report of not turning up waits out its
-    day. The game does not count whatever the report comes to — it stands, or
-    it is disputed and nobody arbitrates — so there is no score to enter."""
-
-    code = "a_no_show_is_reported"
-
-    def __init__(self) -> None:
-        super().__init__("Somebody was reported as not coming to this game.")
-
-
 class NotOnThisCourt(BadRequestError):
-    """A no-show reported of somebody who was not on the game. The court is the
-    whole of who could have come."""
+    """An attendance tap naming somebody who is not on the game. The court is
+    the whole of who could have come."""
 
     code = "not_on_this_court"
 
     def __init__(self) -> None:
-        super().__init__("That player was not on this game.")
+        super().__init__("That player isn't on this game.")
 
 
-class YouCannotReportYourself(BadRequestError):
-    """A player reporting themselves as not turning up — the one person whose
-    presence the act proves."""
+class NotAboutYourself(BadRequestError):
+    """*Isn't here yet* or *yes, they were here* said of yourself: the tap is
+    the proof that its maker is here, and a confirmation is somebody else's
+    word."""
 
-    code = "you_cannot_report_yourself"
-
-    def __init__(self) -> None:
-        super().__init__("You cannot report yourself as not coming.")
-
-
-class YouWereReportedAsANoShow(ConflictError):
-    """A player reported as not turning up reporting somebody else. Their answer
-    is the dispute, inside their day; two reports pointing at each other would
-    be the arbitration this platform refuses to make."""
-
-    code = "you_were_reported_as_a_no_show"
+    code = "not_about_yourself"
 
     def __init__(self) -> None:
-        super().__init__("You were reported as not coming; dispute it instead.")
+        super().__init__("You can't say that about yourself.")
 
 
-class NobodyReportedYou(ConflictError):
-    """A dispute from a player nobody reported as not turning up."""
+class ALocationFixIsOffTheMap(BadRequestError):
+    """A fix whose latitude is not within ±90, whose longitude is not within
+    ±180, or whose stated accuracy is not a finite distance. A fix arrives from
+    a phone, so it is refused rather than an invariant."""
 
-    code = "nobody_reported_you"
-
-    def __init__(self) -> None:
-        super().__init__("Nobody reported you as not coming to this game.")
-
-
-class TheDisputeWindowHasClosed(ConflictError):
-    """A dispute after the reported player's day: the report stands, and the
-    record already shows it."""
-
-    code = "the_dispute_window_has_closed"
+    code = "a_location_fix_is_off_the_map"
 
     def __init__(self) -> None:
-        super().__init__("The day to dispute this report has passed.")
+        super().__init__("That location isn't a place on the map.")
+
+
+class NotAtTheClub(ConflictError):
+    """A tap in the window from somewhere other than the club. **The verdict
+    and nothing else** decided it: the fix it carried was measured against the
+    club's map point and dropped."""
+
+    code = "not_at_the_club"
+
+    def __init__(self, club_name: str | None = None) -> None:
+        super().__init__(f"You can say so only from {club_name or 'the club'}.")
+
+
+class TheTapWindowHasClosed(ConflictError):
+    """*Isn't here yet* or an arrival after the first thirty minutes of the
+    game. An arrival that late is not one: a player still awaited then Didn't
+    come, and has *I was there* for a day."""
+
+    code = "the_tap_window_has_closed"
+
+    def __init__(self) -> None:
+        super().__init__("That can be said only in the first 30 minutes of the game.")
+
+
+class TheTapWindowIsOpen(ConflictError):
+    """*I was there* while the tap window still runs. A player who is at the
+    club taps *I'm here*; the late claim is for after the window, for a phone
+    that died."""
+
+    code = "the_tap_window_is_open"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Tap I'm here at the club. I was there opens once the first "
+            "30 minutes of the game are over."
+        )
+
+
+class TheLateClaimHasClosed(ConflictError):
+    """*I was there*, or its confirmation, more than a day after the tap window
+    closed. *Didn't come* is final."""
+
+    code = "the_late_claim_has_closed"
+
+    def __init__(self) -> None:
+        super().__init__("The 24 hours to say they were there have passed.")
+
+
+class AlreadyArrived(ConflictError):
+    """*Isn't here yet*, an arrival or *I was there* about a player whose
+    arrival is already noted. The first arrival is the one that counts."""
+
+    code = "already_arrived"
+
+    def __init__(self) -> None:
+        super().__init__("They're already here.")
+
+
+class YouAreNotHereYourself(ConflictError):
+    """A tap about somebody else, or a confirmation, from a player who is
+    themselves awaited or Didn't come. Somebody not at the court cannot say who
+    else is, and two absentees cannot vouch for each other."""
+
+    code = "you_are_not_here_yourself"
+
+    def __init__(self) -> None:
+        super().__init__("You're marked as not here yourself.")
+
+
+class NobodySaidTheyWereNotHere(ConflictError):
+    """An arrival, or *I was there*, about a player nobody tapped. Everybody who
+    arrives on time does nothing: there is nothing to record."""
+
+    code = "nobody_said_they_were_not_here"
+
+    def __init__(self) -> None:
+        super().__init__("Nobody has said they aren't here.")
+
+
+class NothingToConfirm(ConflictError):
+    """*Yes, they were here* about a player who has not said *I was there*."""
+
+    code = "nothing_to_confirm"
+
+    def __init__(self) -> None:
+        super().__init__("They haven't said they were there.")
+
+
+class SomebodyIsNotHereYet(ConflictError):
+    """A score while a player tapped *isn't here yet* is still awaited: if they
+    never come the game takes no score, so it waits until they arrive or the
+    first thirty minutes are over."""
+
+    code = "somebody_is_not_here_yet"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Somebody isn't here yet. The score waits until they arrive or the "
+            "first 30 minutes are over."
+        )
+
+
+class SomebodyDidntCome(ConflictError):
+    """A score on a game somebody Didn't come to: it takes no score and never
+    counts — unless their *I was there* is confirmed, which makes them Came
+    late and the game carries on."""
+
+    code = "somebody_did_not_come"
+
+    def __init__(self) -> None:
+        super().__init__("Somebody didn't come, so this game takes no score.")

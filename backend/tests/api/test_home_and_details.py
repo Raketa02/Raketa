@@ -537,37 +537,47 @@ async def test_a_score_made_as_the_entry_closes_is_sent_and_counted_while_it_wai
     assert ours["needing_you"] == 0
 
 
-async def test_a_report_still_to_dispute_is_sent_and_counted_past_the_shelf(
+async def test_a_late_claim_still_to_make_needs_only_the_player_who_didn_t_come(
     client, session_factory, clock, club, four, group
 ):
-    """Story S-33's case (F-HOME-6.1): an *uncounted* card the reader may still
-    dispute stays on the read and the badge after it has left the phone's Home
-    — and only the reported player's."""
+    """An *uncounted* card whose *I was there* the reader may still say needs
+    them, and only them, while the late claim's day runs (#657) — and needs
+    nobody once it is over, though it stays on Home until the shelf."""
 
     booked = await a_booked_game(
         client, session_factory, clock, club=club, group=group, four=four
     )
     ola, _, _, tomek = four
-    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
+    clock.at = warsaw(10, 17) + timedelta(minutes=10)
     await on_the_game(
-        client, ola, booked["game_id"], "no-shows", {"player_id": str(tomek["id"])}
+        client,
+        ola,
+        booked["game_id"],
+        "attendance/not-here-yet",
+        {
+            "player_id": str(tomek["id"]),
+            # Bonarka Arena's own point.
+            "location": {"latitude": 50.06, "longitude": 19.95, "accuracy_m": 8},
+        },
     )
 
-    clock.at = MONDAY_TWO_MINUTES_TO_SIX
-    reported = await home_of(client, tomek)
-    reporter = await home_of(client, ola)
+    clock.at = warsaw(11, 9)
+    absent = await home_of(client, tomek)
+    tapper = await home_of(client, ola)
 
-    [card] = reported["games"]
+    [card] = absent["games"]
     assert (card["status"], card["needs_you"]) == ("UNCOUNTED", True)
-    assert card["uncounted_reason"] == "NO_SHOW"
-    assert reported["needing_you"] == 1
-    assert reporter["games"] == []
-    assert reporter["needing_you"] == 0
+    assert card["uncounted_reason"] == "DIDNT_COME"
+    assert absent["needing_you"] == 1
+    [card] = tapper["games"]
+    assert (card["status"], card["needs_you"]) == ("UNCOUNTED", False)
+    assert tapper["needing_you"] == 0
 
-    clock.at = warsaw(12, 18)  # the report stood its day
-    reported = await home_of(client, tomek)
-    assert reported["games"] == []
-    assert reported["needing_you"] == 0
+    clock.at = warsaw(11, 17) + timedelta(minutes=30)  # the late claim's day is over
+    absent = await home_of(client, tomek)
+    [card] = absent["games"]
+    assert (card["status"], card["needs_you"]) == ("UNCOUNTED", False)
+    assert absent["needing_you"] == 0
 
 
 async def a_score_corrected_as_the_entry_closes(

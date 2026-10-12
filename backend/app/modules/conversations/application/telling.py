@@ -21,9 +21,9 @@ any more.
    ``GameCalledOff`` is refused because the call-off **destroys** the room in
    the same act (``docs/adr/0165`` §3): there is nobody left to read a line.
 2. **The argument belongs to somebody else.** The four result events are
-   ``games``' and ``games`` has its own conversation for them, and the two
-   no-show events are the game's record, drawn on its details. One fact in one
-   place.
+   ``games``' and ``games`` has its own conversation for them, and the four
+   attendance events (#657) are the game's record, drawn on its details — as
+   the two retired no-show events were. One fact in one place.
 
 **A refused line is not a refused telling**, and here that is load-bearing
 twice. ``GamePlanned`` still reaches the room and draws nothing, because it is
@@ -47,12 +47,16 @@ from typing import final
 from app.kernel import invariant
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
+    AbsenceNoted,
+    ArrivalNoted,
     GameCalledOff,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
     NoShowDisputed,
     NoShowReported,
+    PresenceClaimed,
+    PresenceConfirmed,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
@@ -154,23 +158,30 @@ TELLINGS: tuple[Telling, ...] = (
         reaches_the_room=False,
         why_nothing="`games` has its own conversation for the result argument",
     ),
-    Telling(
-        event=NoShowReported,
-        line=None,
-        reaches_the_room=False,
-        why_nothing=(
-            "who did not come is the game's record and is drawn on its details "
-            "(#547); a line in the room is not ruled"
-        ),
+    *(
+        Telling(
+            event=event,
+            line=None,
+            reaches_the_room=False,
+            why_nothing=(
+                "retired with the no-show report (#657): nothing writes it, and "
+                "a stored row folds to nothing"
+            ),
+        )
+        for event in (NoShowReported, NoShowDisputed)
     ),
-    Telling(
-        event=NoShowDisputed,
-        line=None,
-        reaches_the_room=False,
-        why_nothing=(
-            "the dispute is the game's record and is drawn on its details "
-            "(#547); a line in the room is not ruled"
-        ),
+    *(
+        Telling(
+            event=event,
+            line=None,
+            reaches_the_room=False,
+            why_nothing=(
+                "who turned up is the game's record and is drawn on its details "
+                "(#657); the people it concerns are told by Notifications, and "
+                "a line in the room is not ruled"
+            ),
+        )
+        for event in (AbsenceNoted, ArrivalNoted, PresenceClaimed, PresenceConfirmed)
     ),
 )
 

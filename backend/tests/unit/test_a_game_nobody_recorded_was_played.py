@@ -18,9 +18,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.kernel import Sport, instant
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.errors import (
     TheEntryWindowHasClosed,
     TheGameIsNotOpenToSeating,
+    TheTapWindowHasClosed,
 )
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
@@ -113,8 +115,13 @@ def test_a_score_after_it_is_told_the_window_has_closed():
 
     with pytest.raises(TheEntryWindowHasClosed):
         game.state_result(by=MARTA, score=_score(), occurred_at=WEDNESDAY_EIGHT)
-    with pytest.raises(TheEntryWindowHasClosed):
-        game.report_no_show(by=MARTA, absent=OSCAR, occurred_at=WEDNESDAY_EIGHT)
+    with pytest.raises(TheTapWindowHasClosed):
+        game.note_absent(
+            by=MARTA,
+            absent=OSCAR,
+            where=ClubVerdict(at_the_club=True, club_name=None),
+            occurred_at=WEDNESDAY_EIGHT,
+        )
     assert game.standing_at(WEDNESDAY_EIGHT) is GameStanding.PLAYED_NO_SCORE
 
 

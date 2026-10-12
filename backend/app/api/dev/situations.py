@@ -459,7 +459,9 @@ class StatedScore(BaseModel):
 class JustPlayedResponse(BaseModel):
     booking_id: UUID = Field(description="The booking — its pane's, and Home's.")
     game_id: UUID = Field(
-        description="The Game it opened: what a score and a no-show name."
+        description=(
+            "The Game it opened: what a score and an attendance tap name."
+        )
     )
     starts_at: datetime
     club_id: UUID = Field(description="The club the club row acts as.")

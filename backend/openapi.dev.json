@@ -1029,15 +1029,15 @@
         }
       }
     },
-    "/dev/as/{player_id}/games/{game_id}/no-shows": {
+    "/dev/as/{player_id}/games/{game_id}/attendance/not-here-yet": {
       "post": {
         "tags": [
           "dev",
           "dev"
         ],
-        "summary": "Say somebody didn't come, as this person",
-        "description": "`POST /api/v1/games/{id}/no-shows` as the acting account \u2014 *Kuba didn't come*, on a booked game whose hour has come: the game does not count, and the reported player has a day to dispute it.",
-        "operationId": "report_a_no_show_dev_as__player_id__games__game_id__no_shows_post",
+        "summary": "Say somebody isn't here yet, as this person",
+        "description": "`POST /api/v1/games/{id}/attendance/not-here-yet` as the acting account, from the club or away \u2014 *Oscar isn't here yet*, in the first 30 minutes of a booked game.",
+        "operationId": "note_absent_dev_as__player_id__games__game_id__attendance_not_here_yet_post",
         "parameters": [
           {
             "name": "game_id",
@@ -1067,7 +1067,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReportANoShowRequest"
+                "$ref": "#/components/schemas/AtTheCourtPress"
               }
             }
           }
@@ -1126,15 +1126,15 @@
         }
       }
     },
-    "/dev/as/{player_id}/games/{game_id}/no-shows/dispute": {
+    "/dev/as/{player_id}/games/{game_id}/attendance/arrival": {
       "post": {
         "tags": [
           "dev",
           "dev"
         ],
-        "summary": "Say you came, as this person",
-        "description": "`POST /api/v1/games/{id}/no-shows/dispute` as the acting account: the report of them falls, and nobody arbitrates.",
-        "operationId": "dispute_a_no_show_dev_as__player_id__games__game_id__no_shows_dispute_post",
+        "summary": "Say you're here, or they're here, as this person",
+        "description": "`POST /api/v1/games/{id}/attendance/arrival` as the acting account, from the club or away \u2014 *I'm here* naming themselves, *they're here* naming a courtmate.",
+        "operationId": "note_arrival_dev_as__player_id__games__game_id__attendance_arrival_post",
         "parameters": [
           {
             "name": "game_id",
@@ -1159,6 +1159,200 @@
             "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtTheCourtPress"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created, and nothing was asked of the use case. Any other code as the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/games/{game_id}/attendance/claim": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Say you were there, as this person",
+        "description": "`POST /api/v1/games/{id}/attendance/claim` as the acting account \u2014 *I was there*, within a day of the tap window closing. No location: the player route asks none.",
+        "operationId": "claim_presence_dev_as__player_id__games__game_id__attendance_claim_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created, and nothing was asked of the use case. Any other code as the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/games/{game_id}/attendance/confirmation": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Say they were here, as this person",
+        "description": "`POST /api/v1/games/{id}/attendance/confirmation` as the acting account \u2014 *yes, they were here*: the claimant Came late, and the game carries on. No location: the player route asks none.",
+        "operationId": "confirm_presence_dev_as__player_id__games__game_id__attendance_confirmation_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresenceConfirmationRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3515,6 +3709,208 @@
         ],
         "title": "AcceptanceResponse"
       },
+      "AtTheCourtPress": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who it is about: somebody else for *isn't here yet* and *they're here*, the acting account itself for *I'm here*."
+          },
+          "where": {
+            "$ref": "#/components/schemas/Where",
+            "description": "`AT_THE_CLUB` sends a fix on the club's map point, `AWAY` one two kilometres north of it \u2014 the player route's own body then."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "where"
+        ],
+        "title": "AtTheCourtPress",
+        "description": "Who the tap is about, and where the acting account taps it from."
+      },
+      "AttendancePane": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AttendanceState"
+          },
+          "noted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Noted At"
+          },
+          "arrive_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Arrive By",
+            "description": "The tap window's end, 30 min in."
+          },
+          "arrived_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arrived At"
+          },
+          "claim_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Claim By",
+            "description": "The end of the day for *I was there* and its confirmation."
+          },
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "state",
+          "noted_at",
+          "arrive_by",
+          "arrived_at",
+          "claim_by",
+          "claimed_at",
+          "confirmed_at"
+        ],
+        "title": "AttendancePane",
+        "description": "Somebody tapped *isn't here yet* (#657), and what became of it at\n`read_at` \u2014 the player's own read of it (`GameSchema.attendance`)."
+      },
+      "AttendanceSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account."
+          },
+          "state": {
+            "$ref": "#/components/schemas/AttendanceState",
+            "description": "`WAITING` \u2014 tapped *isn't here yet*, not arrived, and `arrive_by` still ahead. `ON_TIME` \u2014 arrived within ten minutes of the start: nothing is recorded, and the tap vanishes. `CAME_LATE` \u2014 arrived ten to thirty minutes after it. `DIDNT_COME` \u2014 no arrival by `arrive_by`: the game takes no score and never counts; provisional until `claim_by`, final after it. `CLAIMED` \u2014 said *I was there*, waiting for somebody else on the court to confirm it before `claim_by`; still *Didn't come* until then. `CONFIRMED` \u2014 *I was there*, confirmed: **Came late**, and the game carries on."
+          },
+          "noted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Noted At",
+            "description": "When somebody at the club first said they weren't here."
+          },
+          "arrive_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Arrive By",
+            "description": "The tap window's end \u2014 thirty minutes after the start. An arrival is taken until this moment and never after; **nothing happens at it** \u2014 a player still awaited simply reads `DIDNT_COME` from here on."
+          },
+          "arrived_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arrived At",
+            "description": "**The arrival**: the first *I'm here* or *they're here*, made at the club. ``null`` until one."
+          },
+          "claim_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Claim By",
+            "description": "The end of the day after `arrive_by` in which *I was there* may be said and confirmed. From here on an unconfirmed *Didn't come* is final."
+          },
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At",
+            "description": "When they said *I was there*, or ``null``."
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At",
+            "description": "When somebody else on the court said *yes, they were here*, or ``null``. Who did is not on the wire."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "state",
+          "noted_at",
+          "arrive_by",
+          "claim_by"
+        ],
+        "title": "AttendanceSchema",
+        "description": "One player somebody on the court said was not here yet, and what became\nof it (#657; ``docs/adr/0195`` \u00a73). **Folded on every read against\n`read_at`**, never stored. **Who tapped is not here**: the tap is the game's,\nand a name on it would be the platform pointing at one of the people who\ncame. Nobody is ever in this list who was not tapped: everybody who arrives\non time does nothing at all."
+      },
+      "AttendanceState": {
+        "type": "string",
+        "enum": [
+          "WAITING",
+          "ON_TIME",
+          "CAME_LATE",
+          "DIDNT_COME",
+          "CLAIMED",
+          "CONFIRMED"
+        ],
+        "title": "AttendanceState",
+        "description": "What became of one player somebody said was not here yet."
+      },
       "BankConfirmedResponse": {
         "properties": {
           "charge_id": {
@@ -5159,13 +5555,13 @@
             "title": "Proposals",
             "description": "The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` \u2014 a confirmed score is `score`, and a disputed or unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's. Always empty on a For fun game, whose score is the result the moment it is put up: it asks nobody."
           },
-          "no_shows": {
+          "attendance": {
             "items": {
-              "$ref": "#/components/schemas/NoShowSchema"
+              "$ref": "#/components/schemas/AttendanceSchema"
             },
             "type": "array",
-            "title": "No Shows",
-            "description": "Everybody reported as not coming to this **booked** game, in the court's order (#547). Empty on every other game. A report is the game's entry: no score is on the table beside one, and **the game does not count** whatever it comes to."
+            "title": "Attendance",
+            "description": "Everybody somebody on the court said was not here yet, in the court's order (#657) \u2014 **empty on an ordinary game**, where everybody arrived on time and nobody tapped anything. While anybody is `WAITING` the game is `NOT_HERE_YET`; anybody `DIDNT_COME` or `CLAIMED` makes it `DIDNT_COME`, and no score is taken beside either."
           }
         },
         "type": "object",
@@ -5178,7 +5574,7 @@
           "planned_at",
           "seats",
           "proposals",
-          "no_shows"
+          "attendance"
         ],
         "title": "GameSchema",
         "description": "One game, its court, and what it is right now."
@@ -5199,15 +5595,14 @@
           "PLAYED_NO_SCORE",
           "AWAITING_ANSWER",
           "CONFIRMED",
-          "UNSCORED",
           "DISPUTED",
           "CALLED_OFF",
           "STARTED_SHORT",
-          "NO_SHOW_REPORTED",
-          "NO_SHOW"
+          "NOT_HERE_YET",
+          "DIDNT_COME"
         ],
         "title": "GameStanding",
-        "description": "The ten standings, as codes. A client's words are the client's own."
+        "description": "The nine standings, as codes. A client's words are the client's own."
       },
       "GameToLeave": {
         "properties": {
@@ -5418,7 +5813,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Game Id",
-            "description": "The Game it opened: what a score and a no-show name."
+            "description": "The Game it opened: what a score and an attendance tap name."
           },
           "starts_at": {
             "type": "string",
@@ -5632,96 +6027,6 @@
           "says"
         ],
         "title": "NeedsHerYesResponse"
-      },
-      "NoShowPane": {
-        "properties": {
-          "player": {
-            "$ref": "#/components/schemas/PersonRef"
-          },
-          "reported_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Reported At"
-          },
-          "dispute_by": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Dispute By"
-          },
-          "disputed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Disputed At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "player",
-          "reported_at",
-          "dispute_by",
-          "disputed_at"
-        ],
-        "title": "NoShowPane"
-      },
-      "NoShowSchema": {
-        "properties": {
-          "player_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Player Id"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account."
-          },
-          "reported_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Reported At"
-          },
-          "dispute_by": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Dispute By",
-            "description": "The end of their day to say they came \u2014 24 hours from the report. **Nothing happens at this moment**: an undisputed report simply stands from here on, and the game reads `NO_SHOW` once every report has had its day."
-          },
-          "disputed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Disputed At",
-            "description": "When they disputed it. **Nobody arbitrates**: a disputed report falls and is on nobody's record; a game whose every report was disputed is `UNSCORED`."
-          }
-        },
-        "type": "object",
-        "required": [
-          "player_id",
-          "reported_at",
-          "dispute_by"
-        ],
-        "title": "NoShowSchema",
-        "description": "A player reported as not coming to this booked game (#547; the\nmechanics \u00a715.3) \u2014 and what became of it. **Who reported them is not\nhere**: the report is the game's, said by the people who came, and a name\non it would be the platform pointing at one of them."
       },
       "NotRunHereJob": {
         "properties": {
@@ -6617,6 +6922,22 @@
         "title": "PostingSlotResponse",
         "description": "A cell's sheet (the mechanics \u00a79.1 step 6; the screens A5.3)."
       },
+      "PresenceConfirmationRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Whose *I was there* this confirms \u2014 somebody else's."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id"
+        ],
+        "title": "PresenceConfirmationRequest",
+        "description": "*Yes, they were here.*"
+      },
       "ProposedSchema": {
         "properties": {
           "made": {
@@ -6864,29 +7185,13 @@
         "type": "object",
         "title": "RefusalRequest"
       },
-      "ReportANoShowRequest": {
-        "properties": {
-          "player_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Player Id",
-            "description": "Who did not come \u2014 somebody else on the game's court."
-          }
-        },
-        "type": "object",
-        "required": [
-          "player_id"
-        ],
-        "title": "ReportANoShowRequest",
-        "description": "*Kuba didn't come.*"
-      },
       "ResultPane": {
         "properties": {
           "game_id": {
             "type": "string",
             "format": "uuid",
             "title": "Game Id",
-            "description": "The Game's own id \u2014 what a score, an agreement and a no-show name; not the pane's `game_id`, which is the proposal's and the booking's."
+            "description": "The Game's own id \u2014 what a score, an agreement and an attendance tap name; not the pane's `game_id`, which is the proposal's and the booking's."
           },
           "standing": {
             "$ref": "#/components/schemas/GameStanding"
@@ -6933,12 +7238,13 @@
             "title": "Confirmed",
             "description": "The agreed score, once final."
           },
-          "no_shows": {
+          "attendance": {
             "items": {
-              "$ref": "#/components/schemas/NoShowPane"
+              "$ref": "#/components/schemas/AttendancePane"
             },
             "type": "array",
-            "title": "No Shows"
+            "title": "Attendance",
+            "description": "Everybody tapped *isn't here yet*; empty on an ordinary game."
           }
         },
         "type": "object",
@@ -6950,7 +7256,7 @@
           "scores",
           "agreed_by",
           "confirmed",
-          "no_shows"
+          "attendance"
         ],
         "title": "ResultPane",
         "description": "The Game a booking opened: whether it was played, and what was said\nabout it."
@@ -7060,7 +7366,7 @@
               }
             ],
             "title": "Game Id",
-            "description": "The Game it opened \u2014 what a score, an agreement and a no-show name. `null` while its club decides, and for good if it never said yes."
+            "description": "The Game it opened \u2014 what a score, an agreement and an attendance tap name. `null` while its club decides, and for good if it never said yes."
           },
           "starts_at": {
             "type": "string",
@@ -7091,7 +7397,7 @@
           "standing"
         ],
         "title": "RowBooked",
-        "description": "A booked game they hold a seat on \u2014 what *Leave the game*, a score and\na no-show act on."
+        "description": "A booked game they hold a seat on \u2014 what *Leave the game*, a score and\nthe attendance taps act on."
       },
       "RowCard": {
         "properties": {
@@ -8038,6 +8344,15 @@
           "answer"
         ],
         "title": "VersionPerson"
+      },
+      "Where": {
+        "type": "string",
+        "enum": [
+          "AT_THE_CLUB",
+          "AWAY"
+        ],
+        "title": "Where",
+        "description": "Where the acting account's phone says it is when it taps."
       },
       "Who": {
         "type": "string",

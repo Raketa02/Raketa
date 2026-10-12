@@ -13,10 +13,12 @@ game is then called off with that seat still open; leaving after the cut-off
 when nobody takes the seat.
 
 **Kept is a game whose hour came with every seat held**, for everybody in it
-— **unless they did not turn up** (#547; the mechanics §15.3): a no-show the
-players who came reported, and nobody disputed in its day, is *the strongest
-mark* — a broken game here, and a game missed on *shows up*, which the Game
-says. Whether one stands is the Game's to say, and the caller's to ask.
+— **unless they Didn't come** (#657; the mechanics §15.1): tapped *isn't here
+yet* at the court, not arrived in the first half hour, and no *I was there*
+confirmed in the day after, it is *the strongest mark* — a broken game here, and
+a game missed on *shows up*, which the Game says (until the points ticket prices
+it once, on *shows up*). A player who Came late kept it. Whether somebody
+Didn't come is the Game's to say, and the caller's to ask.
 **Nothing goes on the record of those who stayed** in a game that went ahead
 short, or was called off at its cut-off because of somebody else's seat (the
 mechanics §14.1): it is not a game they kept or broke. **A game the club
@@ -76,7 +78,7 @@ def keeping_of(
 ) -> Keeping | None:
     """Whether this player kept this booked game at ``now`` — ``None`` while
     it is not settled, and for a game that is nothing on their record.
-    ``no_shows`` is everybody its Game says did not turn up, at ``now``."""
+    ``no_shows`` is everybody its Game says Didn't come, for good, at ``now``."""
 
     if booking.booked_at is None:
         # Put to its club and never booked: nobody had a seat to keep.

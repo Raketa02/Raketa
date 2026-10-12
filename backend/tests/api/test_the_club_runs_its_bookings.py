@@ -1,14 +1,15 @@
-"""**The club runs its Raketa bookings, and a player's attendance is recorded**
-(#547; the mechanics §15, §16.7–§16.10, §16.14, §19; the screens B4, B6).
+"""**The club runs its Raketa bookings** (#547; the mechanics §15, §16.7–§16.10,
+§16.14, §19; the screens B4, B6).
 
 The club's desk reads its bookings **by day**, filtered, each with its players
 (name, *paid*, *held*), its money and the group it came from. It **moves** a
 booked game to another free court at the same hour, and **cancels** one with a
 reason — everybody refunded in full, nothing on anybody's record, the players
-dealt a new card first. And on the Game, the players who came **report one who
-did not**: they have a day to dispute it, and a no-show that stands is the
-strongest mark on a record. **Desk check-in is removed** (#651): a scan the desk
-made before it was is still in the booking's stream, and stops no report.
+dealt a new card first. **The club sees no attendance** (#657): a game somebody
+Didn't come to — caught at the court by the players, in
+``test_attendance_at_the_court.py`` — is *played* for the club, which was paid
+for the hour. **Desk check-in is removed** (#651): a scan the desk made before
+it was is still in the booking's stream, and stops no tap.
 
 Every act is taken over HTTP as the website and the phone take it, against the
 fake payment provider; every claim is read where somebody would read it.
@@ -421,115 +422,44 @@ async def test_a_game_is_cancelled_only_until_it_starts(client, clock, club, boo
 
 
 # --------------------------------------------------------------------------- #
-# Somebody did not come
+# Somebody did not come — caught at the court, and never the club's (#657)
 # --------------------------------------------------------------------------- #
+
+#: Bonarka Arena's own point, where a phone at the club reads it.
+AT_BONARKA = {"latitude": 50.06, "longitude": 19.95, "accuracy_m": 8}
 
 
 async def _game_id(client, player, booking) -> str:
     return (await details_of(client, player, booking))["game_id"]
 
 
-async def test_a_player_who_came_reports_one_who_did_not_and_it_stands_its_day(
+async def _not_here_yet(client, by: dict, game_id: str, absent: dict):
+    return await client.post(
+        f"/api/v1/games/{game_id}/attendance/not-here-yet",
+        json={"player_id": str(absent["id"]), "location": AT_BONARKA},
+        headers=by["headers"],
+    )
+
+
+async def test_a_game_somebody_didn_t_come_to_is_played_for_the_club(
     client, clock, club, booking, four
 ):
-    ola, kuba, ewa, tomek = four
-    game_id = await _game_id(client, ola, booking)
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(hours=2))
+    """The club sees no attendance and its money never moves on it: the game
+    reached its hour, and the club was paid for the hour."""
 
-    reported = await client.post(
-        f"/api/v1/games/{game_id}/no-shows",
-        json={"player_id": str(kuba["id"])},
-        headers=ola["headers"],
-    )
-
-    assert reported.status_code == 200, reported.text
-    assert reported.json()["standing"] == "NO_SHOW_REPORTED"
-    [no_show] = reported.json()["no_shows"]
-    assert (no_show["player_id"], no_show["name"], no_show["disputed_at"]) == (
-        str(kuba["id"]),
-        "kuba",
-        None,
-    )
-    [kubas_card] = await home_of(client, kuba)
-    [olas_card] = await home_of(client, ola)
-    assert (kubas_card["status"], kubas_card["uncounted_reason"]) == (
-        "UNCOUNTED",
-        "NO_SHOW",
-    )
-    assert (kubas_card["needs_you"], olas_card["needs_you"]) == (True, False)
-    score = await client.post(
-        f"/api/v1/games/{game_id}/result",
-        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=ewa["headers"],
-    )
-    assert (score.status_code, score.json()["code"]) == (409, "a_no_show_is_reported")
-
-    clock.move(timedelta(hours=24))
-
-    assert (await game_of(client, tomek, game_id))["standing"] == "NO_SHOW"
-    kubas = await own_record(client, kuba)
-    assert strand(kubas, "KEEPS_PLANS") == {
-        "strand": "KEEPS_PLANS",
-        "good": 0,
-        "opportunities": 1,
-        "pct": 0,
-    }
-    assert strand(kubas, "SHOWS_UP") == {
-        "strand": "SHOWS_UP",
-        "good": 0,
-        "opportunities": 1,
-        "pct": 0,
-    }
-    olas = await own_record(client, ola)
-    assert strand(olas, "KEEPS_PLANS")["good"] == 1
-    assert strand(olas, "SHOWS_UP")["good"] == 1
-
-
-async def test_the_reported_player_disputes_in_their_day_and_nobody_arbitrates(
-    client, clock, club, booking, four
-):
     ola, kuba, *_ = four
     game_id = await _game_id(client, ola, booking)
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(hours=2))
-    await client.post(
-        f"/api/v1/games/{game_id}/no-shows",
-        json={"player_id": str(kuba["id"])},
-        headers=ola["headers"],
-    )
-    clock.move(timedelta(hours=23))
-
-    disputed = await client.post(
-        f"/api/v1/games/{game_id}/no-shows/dispute", headers=kuba["headers"]
-    )
-
-    assert disputed.status_code == 200, disputed.text
-    assert disputed.json()["standing"] == "UNSCORED"
-    assert disputed.json()["no_shows"][0]["disputed_at"] is not None
+    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(minutes=10))
+    tapped = await _not_here_yet(client, ola, game_id, kuba)
+    assert tapped.status_code == 200, tapped.text
     clock.move(timedelta(days=2))
-    assert strand(await own_record(client, kuba), "KEEPS_PLANS")["good"] == 1
-    details = await details_of(client, kuba, booking)
-    assert (details["status"], details["uncounted_reason"]) == ("UNCOUNTED", None)
 
+    [row] = (await the_day(client, club[1]))["bookings"]
 
-async def test_a_dispute_after_the_day_is_too_late(client, clock, club, booking, four):
-    ola, kuba, *_ = four
-    game_id = await _game_id(client, ola, booking)
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(hours=2))
-    await client.post(
-        f"/api/v1/games/{game_id}/no-shows",
-        json={"player_id": str(kuba["id"])},
-        headers=ola["headers"],
-    )
-    clock.move(timedelta(hours=24))
-
-    late = await client.post(
-        f"/api/v1/games/{game_id}/no-shows/dispute", headers=kuba["headers"]
-    )
-
-    assert (late.status_code, late.json()["code"]) == (
-        409,
-        "the_dispute_window_has_closed",
-    )
+    assert row["status"] == "PLAYED"
+    assert row["money"]["refunded_grosze"] == 0
+    assert "attendance" not in row and "no_shows" not in row
+    assert (await game_of(client, ola, game_id))["standing"] == "DIDNT_COME"
 
 
 async def a_check_in_from_before(
@@ -554,11 +484,11 @@ async def a_check_in_from_before(
     )
 
 
-async def test_a_check_in_from_before_it_was_removed_stops_no_report(
+async def test_a_check_in_from_before_it_was_removed_stops_no_tap(
     client, clock, session_factory, club, booking, four
 ):
-    """A scan the desk made before #651 still decodes, and a report of that
-    player is taken as anybody's is: nothing consults check-ins any more."""
+    """A scan the desk made before #651 still decodes, and *isn't here yet* is
+    taken of that player as of anybody: nothing consults check-ins any more."""
 
     ola, kuba, *_ = four
     game_id = await _game_id(client, ola, booking)
@@ -568,35 +498,12 @@ async def test_a_check_in_from_before_it_was_removed_stops_no_report(
         kuba["id"],
         at=SATURDAY_FIVE - timedelta(minutes=5),
     )
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(hours=2))
+    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(minutes=10))
 
-    reported = await client.post(
-        f"/api/v1/games/{game_id}/no-shows",
-        json={"player_id": str(kuba["id"])},
-        headers=ola["headers"],
-    )
+    tapped = await _not_here_yet(client, ola, game_id, kuba)
 
-    assert reported.status_code == 200, reported.text
-    assert reported.json()["standing"] == "NO_SHOW_REPORTED"
-    [row] = (await the_day(client, club[1]))["bookings"]
-    assert row["status"] == "PLAYED"
-    assert (await details_of(client, kuba, booking))["uncounted_reason"] == "NO_SHOW"
-
-
-async def test_nobody_is_reported_before_the_game_starts(client, club, booking, four):
-    ola, kuba, *_ = four
-    game_id = await _game_id(client, ola, booking)
-
-    early = await client.post(
-        f"/api/v1/games/{game_id}/no-shows",
-        json={"player_id": str(kuba["id"])},
-        headers=ola["headers"],
-    )
-
-    assert (early.status_code, early.json()["code"]) == (
-        409,
-        "the_game_has_not_started",
-    )
+    assert tapped.status_code == 200, tapped.text
+    assert tapped.json()["standing"] == "NOT_HERE_YET"
 
 
 def test_the_game_day_is_saturday():

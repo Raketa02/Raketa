@@ -29,12 +29,16 @@ from app.modules.conversations.application.telling import (
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
+    AbsenceNoted,
+    ArrivalNoted,
     GameCalledOff,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
     NoShowDisputed,
     NoShowReported,
+    PresenceClaimed,
+    PresenceConfirmed,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
@@ -60,6 +64,10 @@ EVERY_PUBLISHED_EVENT = (
     ResultAccepted,
     NoShowReported,
     NoShowDisputed,
+    AbsenceNoted,
+    ArrivalNoted,
+    PresenceClaimed,
+    PresenceConfirmed,
 )
 
 WRITES_NOTHING = tuple(telling for telling in TELLINGS if telling.line is None)

@@ -284,15 +284,15 @@ class GameChanges(Protocol):
 
 @runtime_checkable
 class GameNoShows(Protocol):
-    """**A demand of the Games context**: who did not come to the ordinary
-    Game a booking opened (#547; the mechanics §15.3–§15.4) — *the strongest
-    mark*, which breaks the booked game on the record of whoever it names.
-    The report is the Game's, so the record asks for it rather than keeping a
-    copy."""
+    """**A demand of the Games context**: who Didn't come to the ordinary Game
+    a booking opened (#547, #657; the mechanics §15.1, §15.4) — *the strongest
+    mark* until the points ticket prices it once, which breaks the booked game
+    on the record of whoever it names. Attendance is the Game's, so the record
+    asks for it rather than keeping a copy."""
 
     async def did_not_come(self, booking_id: UUID, *, now: Instant) -> frozenset[UUID]:
-        """Everybody a report of not turning up stood against at ``now`` —
-        empty while a report's day still runs, and for a booking with no Game."""
+        """Everybody who Didn't come at ``now``, for good — empty while a late
+        claim's day still runs, and for a booking with no Game."""
         ...
 
 

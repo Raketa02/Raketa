@@ -2,9 +2,10 @@
 fill, over the one arrow ``bookings → games`` (#547).
 
 ``GameNoShowsOnTheRecord`` **answers this context's own demand** ``GameNoShows``
-over the Games context's repository: who a report of not turning up stood
-against, folded by the Game's own rule — so *keeps plans* breaks a booked game
-on the record of somebody who did not come, and never re-decides it here.
+over the Games context's repository: who **Didn't come**, for good — caught at
+the court, their late claim's day over unconfirmed (#657) — folded by the Game's
+own rule, so *keeps plans* breaks a booked game on the record of somebody who
+did not come, and never re-decides it here.
 """
 
 from __future__ import annotations
@@ -25,4 +26,4 @@ class GameNoShowsOnTheRecord:
 
     async def did_not_come(self, booking_id: UUID, *, now: Instant) -> frozenset[UUID]:
         game = await self._games.for_challenge(booking_id)
-        return frozenset() if game is None else game.confirmed_no_shows_at(now)
+        return frozenset() if game is None else game.didnt_come_at(now)

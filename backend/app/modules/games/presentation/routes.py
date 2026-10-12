@@ -1,6 +1,6 @@
-"""The six game routes: read yours, read one's pairing, state a score, agree
-with one — and, on a booked game, say somebody did not come, or say you did
-(#547).
+"""The eight game routes: read yours, read one's pairing, state a score, agree
+with one — and, on a booked game, say who isn't here yet, who has arrived, that
+you were there after all, and that somebody was (#657).
 
 **There is no route that creates a game, none that moves a seat on one, and
 none that ends one.** A game exists because a booking opened it (#541), and
@@ -37,24 +37,30 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.games.application.commands import (
     AcceptResultCommand,
-    DisputeANoShowCommand,
-    ReportANoShowCommand,
+    ClaimPresenceCommand,
+    ConfirmPresenceCommand,
+    NoteAbsentCommand,
+    NoteArrivalCommand,
     StateResultCommand,
 )
 from app.modules.games.application.read_game_pairing import GamePairingRead
 from app.modules.games.presentation.dependencies import (
     AcceptResultDep,
-    DisputeANoShowDep,
-    ReportANoShowDep,
+    ClaimPresenceDep,
+    ConfirmPresenceDep,
+    NoteAbsentDep,
+    NoteArrivalDep,
     ReadGamePairingDep,
     ReadGamesDep,
     StateResultDep,
 )
 from app.modules.games.presentation.schemas import (
+    ArrivalRequest,
     GameListResponse,
     GamePairingResponse,
     GameSchema,
-    ReportANoShowRequest,
+    NotHereYetRequest,
+    PresenceConfirmationRequest,
     StateResultRequest,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
@@ -130,49 +136,69 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "seat open: somebody left after the club's cut-off and nobody took "
             "the seat. It ends uncounted (`standing` `STARTED_SHORT`), and "
             "nothing about it can be recorded.\n\n"
-            "`a_no_show_is_reported` — somebody was reported as not coming to "
-            "this booked game and their day to dispute it runs (`no_shows`): "
-            "the game does not count, so there is no score to enter."
+            "`somebody_is_not_here_yet` — somebody was tapped *isn't here yet* "
+            "and is still awaited (`attendance`): the score waits until they "
+            "arrive or the first 30 minutes are over.\n\n"
+            "`somebody_did_not_come` — somebody Didn't come (`attendance`): the "
+            "game takes no score and never counts, unless their *I was there* "
+            "is confirmed."
         ),
     },
 }
 
-#: What reporting somebody who did not come refuses (#547).
-_REPORTING_REFUSALS: dict[int | str, dict[str, Any]] = {
+#: What a tap in the tap window refuses (#657). **Every refusal is a plain
+#: sentence** on `message`.
+_AT_THE_COURT_REFUSALS: dict[int | str, dict[str, Any]] = {
     status.HTTP_400_BAD_REQUEST: {
         "model": ErrorResponse,
         "description": (
-            "`not_on_this_court` — that player was not on this game.\n\n"
-            "`you_cannot_report_yourself` — you are the one person your report "
-            "proves came."
+            "`not_on_this_court` — that player isn't on this game.\n\n"
+            "`not_about_yourself` — *isn't here yet* is never said of yourself: "
+            "the tap is the proof that you are."
         ),
     },
-    status.HTTP_409_CONFLICT: {
-        "model": ErrorResponse,
-        "description": (
-            "Everything above, plus:\n\n"
-            "`no_shows_are_for_booked_games` — only a game booked on a court "
-            "has an hour somebody could fail to come to.\n\n"
-            "`the_game_has_not_started` — its hour has not come yet.\n\n"
-            "`a_result_is_entered` — somebody already said you played, with a "
-            "score; answer the score instead.\n\n"
-            "`you_were_reported_as_a_no_show` — you were reported yourself; "
-            "dispute it instead.\n\n"
-            "`the_game_was_called_off`, `the_game_started_short` — there was no "
-            "game to come to."
-        ),
-    },
-}
-
-#: What disputing a report refuses (#547).
-_DISPUTING_REFUSALS: dict[int | str, dict[str, Any]] = {
     status.HTTP_403_FORBIDDEN: _REFUSALS[status.HTTP_403_FORBIDDEN],
     status.HTTP_409_CONFLICT: {
         "model": ErrorResponse,
         "description": (
-            "`nobody_reported_you` — there is nothing of yours to dispute.\n\n"
-            "`the_dispute_window_has_closed` — your day to say you came has "
-            "passed: the report stands."
+            "`not_at_the_club` — the fix sent with the tap is not within 300 m "
+            "of the club's map point, allowing for its own accuracy up to "
+            "200 m: *You can say so only from Ogrody 33.*\n\n"
+            "`the_game_has_not_started`, `the_tap_window_has_closed` — a tap "
+            "is taken from the game's start until 30 minutes after it, and "
+            "never outside.\n\n"
+            "`already_arrived` — their arrival is already noted; the first one "
+            "counts.\n\n"
+            "`you_are_not_here_yourself` — you are tapped and awaited yourself, "
+            "so you can't say who else is here.\n\n"
+            "`nobody_said_they_were_not_here` — an arrival of somebody nobody "
+            "tapped: everybody who arrives on time does nothing.\n\n"
+            "`the_result_is_settled` — the result is already final. A score "
+            "still waiting for its answer stops no tap: it waits with the "
+            "game, and counts for nothing if somebody never comes.\n\n"
+            "`attendance_is_for_booked_games`, `the_game_was_called_off`, "
+            "`the_game_started_short` — there was no game to come to."
+        ),
+    },
+}
+
+#: What the late claim and its confirmation refuse (#657).
+_LATE_CLAIM_REFUSALS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_400_BAD_REQUEST: _AT_THE_COURT_REFUSALS[status.HTTP_400_BAD_REQUEST],
+    status.HTTP_403_FORBIDDEN: _REFUSALS[status.HTTP_403_FORBIDDEN],
+    status.HTTP_409_CONFLICT: {
+        "model": ErrorResponse,
+        "description": (
+            "`the_tap_window_is_open` — the first 30 minutes are not over: tap "
+            "*I'm here* at the club instead.\n\n"
+            "`the_late_claim_has_closed` — the day after the tap window "
+            "(`attendance[].claim_by`) is over: *Didn't come* is final.\n\n"
+            "`nobody_said_they_were_not_here` — nobody tapped you.\n\n"
+            "`already_arrived` — your arrival is already noted.\n\n"
+            "`nothing_to_confirm` — they haven't said *I was there*.\n\n"
+            "`you_are_not_here_yourself` — you Didn't come yourself, so you "
+            "can't vouch for anybody.\n\n"
+            "`attendance_is_for_booked_games` — a game with no hour."
         ),
     },
 }
@@ -386,40 +412,41 @@ async def accept_result(
 
 
 @router.post(
-    "/{game_id}/no-shows",
+    "/{game_id}/attendance/not-here-yet",
     response_model=GameSchema,
     status_code=status.HTTP_200_OK,
     responses={
-        status.HTTP_200_OK: {
-            "description": "The game as it stands with your report on it."
-        },
-        **_REFUSALS,
-        **_REPORTING_REFUSALS,
+        status.HTTP_200_OK: {"description": "The game as it stands with them awaited."},
+        **_AT_THE_COURT_REFUSALS,
     },
-    summary="Say somebody didn't come",
+    summary="Say somebody isn't here yet",
     description=(
-        "***Kuba didn't come*** — on a **booked** game whose hour has come, "
-        "where you would otherwise enter the result (#547). Said by somebody "
-        "who came, about somebody else on the court; a second report of the "
-        "same player answers the same and writes nothing, and each player "
-        "who did not come is reported on their own.\n\n"
-        "**The game does not count** from the report on, and nobody's Level "
-        "moves. The reported player has **24 hours to dispute it** "
-        "(`no_shows[].dispute_by`); after that it stands — the strongest mark "
-        "on a record — with nothing written at that moment. **Nobody "
-        "arbitrates a dispute**: the report falls and is on nobody's record."
+        "***Oscar isn't here yet*** — on a **booked** game, from its start until "
+        "30 minutes after it, about somebody else on the court, partner "
+        "included (#657). **Made at the club**: `location` is the fix the phone "
+        "read at the tap, measured against the club's map point and dropped — "
+        "only *at the club* is kept. It costs you nothing, and saying it of "
+        "somebody already awaited answers the same and writes nothing.\n\n"
+        "Their **arrival** — their own *I'm here*, or anybody's *they're "
+        "here* — decides what it was: **on time** within 10 minutes of the "
+        "start (nothing is recorded), **Came late** up to 30, and **Didn't "
+        "come** with no arrival by then (`attendance[].arrive_by`): the game "
+        "takes no score and never counts."
     ),
 )
-async def report_a_no_show(
+async def note_absent(
     game_id: UUID,
-    payload: ReportANoShowRequest,
+    payload: NotHereYetRequest,
     user: CurrentUserDep,
-    use_case: ReportANoShowDep,
+    use_case: NoteAbsentDep,
 ) -> GameSchema:
     return GameSchema.of(
         await use_case.execute(
-            ReportANoShowCommand(
-                game_id=game_id, player_id=user.id, absent_id=payload.player_id
+            NoteAbsentCommand(
+                game_id=game_id,
+                player_id=user.id,
+                absent_id=payload.player_id,
+                fix=payload.location.as_fix(),
             )
         ),
         reader_id=user.id,
@@ -427,31 +454,106 @@ async def report_a_no_show(
 
 
 @router.post(
-    "/{game_id}/no-shows/dispute",
+    "/{game_id}/attendance/arrival",
     response_model=GameSchema,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
-            "description": "The game as it stands with your dispute recorded."
+            "description": "The game as it stands with their arrival noted."
         },
-        **_DISPUTING_REFUSALS,
+        **_AT_THE_COURT_REFUSALS,
     },
-    summary="Say you came",
+    summary="Say you're here, or they're here",
     description=(
-        "**You were reported as not coming, and you did** (#547). Inside 24 "
-        "hours of the report. The report falls, nothing goes on your record, "
-        "and the game still does not count: nobody arbitrates which of you is "
-        "right. A second dispute answers the same and writes nothing."
+        "***I'm here*** with your own id, ***they're here*** with a "
+        "courtmate's — about somebody tapped *isn't here yet*, from the club, "
+        "before 30 minutes after the start (#657). **The first arrival is the "
+        "one that counts**, and its moment decides: on time within 10 minutes "
+        "of the start, Came late after. *They're here* is checked at the club "
+        "too."
     ),
 )
-async def dispute_a_no_show(
+async def note_arrival(
     game_id: UUID,
+    payload: ArrivalRequest,
     user: CurrentUserDep,
-    use_case: DisputeANoShowDep,
+    use_case: NoteArrivalDep,
 ) -> GameSchema:
     return GameSchema.of(
         await use_case.execute(
-            DisputeANoShowCommand(game_id=game_id, player_id=user.id)
+            NoteArrivalCommand(
+                game_id=game_id,
+                player_id=user.id,
+                arrived_id=payload.player_id,
+                fix=payload.location.as_fix(),
+            )
+        ),
+        reader_id=user.id,
+    )
+
+
+@router.post(
+    "/{game_id}/attendance/claim",
+    response_model=GameSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {"description": "The game as it stands with your claim."},
+        **_LATE_CLAIM_REFUSALS,
+    },
+    summary="Say you were there",
+    description=(
+        "***I was there*** — you Didn't come, and your phone died at the court "
+        "(#657). Within a day of the tap window closing "
+        "(`attendance[].claim_by`), from wherever you are: **no location is "
+        "asked**, because what proves it is somebody else on the court "
+        "confirming it. Until they do, you still Didn't come. A second claim "
+        "answers the same and writes nothing."
+    ),
+)
+async def claim_presence(
+    game_id: UUID,
+    user: CurrentUserDep,
+    use_case: ClaimPresenceDep,
+) -> GameSchema:
+    return GameSchema.of(
+        await use_case.execute(
+            ClaimPresenceCommand(game_id=game_id, player_id=user.id)
+        ),
+        reader_id=user.id,
+    )
+
+
+@router.post(
+    "/{game_id}/attendance/confirmation",
+    response_model=GameSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": "The game as it stands with your confirmation."
+        },
+        **_LATE_CLAIM_REFUSALS,
+    },
+    summary="Say they were here",
+    description=(
+        "***Yes, they were here*** — about somebody else's *I was there*, inside "
+        "the same day (#657). **It turns Didn't come into Came late**, because "
+        "the tap still proves they weren't there when it was made, and the game "
+        "carries on as usual — a score, and the Level with it. In singles, the "
+        "one who can confirm is the opponent who tapped. A second confirmation "
+        "answers the same and writes nothing."
+    ),
+)
+async def confirm_presence(
+    game_id: UUID,
+    payload: PresenceConfirmationRequest,
+    user: CurrentUserDep,
+    use_case: ConfirmPresenceDep,
+) -> GameSchema:
+    return GameSchema.of(
+        await use_case.execute(
+            ConfirmPresenceCommand(
+                game_id=game_id, player_id=user.id, claimant_id=payload.player_id
+            )
         ),
         reader_id=user.id,
     )

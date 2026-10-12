@@ -2,12 +2,13 @@
 
 Three rules decide everything below.
 
-**The standing is derived and travels as a code.** ``GameStanding`` is ten values —
-``STARTED_SHORT`` arrived with leaving a booked game (#544), ``NO_SHOW_REPORTED`` and
-``NO_SHOW`` with reporting a player who did not come to one (#547), ``DISPUTED`` with
-two scores that named different winners (#654), ``PLAYED_NO_SCORE`` with a full court
-nobody recorded, in *Never played*'s place (#655) — and the words for them are the
-client's (``docs/adr/0022``). It is on the response
+**The standing is derived and travels as a code.** ``GameStanding`` is nine values —
+``STARTED_SHORT`` arrived with leaving a booked game (#544), ``DISPUTED`` with two
+scores that named different winners (#654), ``PLAYED_NO_SCORE`` with a full court
+nobody recorded, in *Never played*'s place (#655), ``NOT_HERE_YET`` and
+``DIDNT_COME`` with attendance caught at the court, in place of the no-show report's
+two and *Unscored* (#657) — and the words for them are the client's
+(``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
 stale.
@@ -45,6 +46,7 @@ from pydantic import BaseModel, Field
 
 from app.kernel import Sport
 from app.modules.games.application.read_games import StandingGame
+from app.modules.games.domain.attendance import AttendanceState, LocationFix
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide
 from app.modules.games.domain.results import (
@@ -56,7 +58,11 @@ from app.modules.games.domain.results import (
     SetScore,
 )
 from app.modules.games.domain.standing import GameStanding
-from app.modules.games.domain.windows import proposal_closes_at
+from app.modules.games.domain.windows import (
+    late_claim_closes_at,
+    proposal_closes_at,
+    tap_window_closes_at,
+)
 from app.modules.player_profile.domain.weekly_hours import Window
 
 
@@ -218,11 +224,13 @@ class StandingProposalSchema(BaseModel):
     )
 
 
-class NoShowSchema(BaseModel):
-    """A player reported as not coming to this booked game (#547; the
-    mechanics §15.3) — and what became of it. **Who reported them is not
-    here**: the report is the game's, said by the people who came, and a name
-    on it would be the platform pointing at one of them."""
+class AttendanceSchema(BaseModel):
+    """One player somebody on the court said was not here yet, and what became
+    of it (#657; ``docs/adr/0195`` §3). **Folded on every read against
+    `read_at`**, never stored. **Who tapped is not here**: the tap is the game's,
+    and a name on it would be the platform pointing at one of the people who
+    came. Nobody is ever in this list who was not tapped: everybody who arrives
+    on time does nothing at all."""
 
     player_id: UUID
     name: str | None = Field(
@@ -232,22 +240,54 @@ class NoShowSchema(BaseModel):
             "no longer has the account."
         ),
     )
-    reported_at: datetime
-    dispute_by: datetime = Field(
+    state: AttendanceState = Field(
         ...,
         description=(
-            "The end of their day to say they came — 24 hours from the report. "
-            "**Nothing happens at this moment**: an undisputed report simply "
-            "stands from here on, and the game reads `NO_SHOW` once every "
-            "report has had its day."
+            "`WAITING` — tapped *isn't here yet*, not arrived, and `arrive_by` "
+            "still ahead. `ON_TIME` — arrived within ten minutes of the start: "
+            "nothing is recorded, and the tap vanishes. `CAME_LATE` — arrived "
+            "ten to thirty minutes after it. `DIDNT_COME` — no arrival by "
+            "`arrive_by`: the game takes no score and never counts; provisional "
+            "until `claim_by`, final after it. `CLAIMED` — said *I was there*, "
+            "waiting for somebody else on the court to confirm it before "
+            "`claim_by`; still *Didn't come* until then. `CONFIRMED` — *I was "
+            "there*, confirmed: **Came late**, and the game carries on."
         ),
     )
-    disputed_at: datetime | None = Field(
+    noted_at: datetime = Field(
+        ..., description="When somebody at the club first said they weren't here."
+    )
+    arrive_by: datetime = Field(
+        ...,
+        description=(
+            "The tap window's end — thirty minutes after the start. An arrival is "
+            "taken until this moment and never after; **nothing happens at it** — "
+            "a player still awaited simply reads `DIDNT_COME` from here on."
+        ),
+    )
+    arrived_at: datetime | None = Field(
         default=None,
         description=(
-            "When they disputed it. **Nobody arbitrates**: a disputed report "
-            "falls and is on nobody's record; a game whose every report was "
-            "disputed is `UNSCORED`."
+            "**The arrival**: the first *I'm here* or *they're here*, made at the "
+            "club. ``null`` until one."
+        ),
+    )
+    claim_by: datetime = Field(
+        ...,
+        description=(
+            "The end of the day after `arrive_by` in which *I was there* may be "
+            "said and confirmed. From here on an unconfirmed *Didn't come* is "
+            "final."
+        ),
+    )
+    claimed_at: datetime | None = Field(
+        default=None, description="When they said *I was there*, or ``null``."
+    )
+    confirmed_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When somebody else on the court said *yes, they were here*, or "
+            "``null``. Who did is not on the wire."
         ),
     )
 
@@ -363,13 +403,15 @@ class GameSchema(BaseModel):
             "the moment it is put up: it asks nobody."
         ),
     )
-    no_shows: list[NoShowSchema] = Field(
+    attendance: list[AttendanceSchema] = Field(
         ...,
         description=(
-            "Everybody reported as not coming to this **booked** game, in the "
-            "court's order (#547). Empty on every other game. A report is the "
-            "game's entry: no score is on the table beside one, and **the game "
-            "does not count** whatever it comes to."
+            "Everybody somebody on the court said was not here yet, in the "
+            "court's order (#657) — **empty on an ordinary game**, where everybody "
+            "arrived on time and nobody tapped anything. While anybody is "
+            "`WAITING` the game is `NOT_HERE_YET`; anybody `DIDNT_COME` or "
+            "`CLAIMED` makes it `DIDNT_COME`, and no score is taken beside "
+            "either."
         ),
     )
 
@@ -419,7 +461,7 @@ class GameSchema(BaseModel):
                 game.entry_closes_at
                 if game.played_at is None
                 and game.called_off_at is None
-                and not game.no_shows
+                and one.standing is not GameStanding.DIDNT_COME
                 else None
             ),
             called_off_at=game.called_off_at,
@@ -455,18 +497,7 @@ class GameSchema(BaseModel):
                 )
                 for proposal in (game.standing_proposals() if arguing else ())
             ],
-            no_shows=[
-                NoShowSchema(
-                    player_id=seating.player_id,
-                    name=one.names.get(seating.player_id),
-                    reported_at=report.at,
-                    dispute_by=report.dispute_closes_at,
-                    disputed_at=report.disputed_at,
-                )
-                for seating in game.line_up.seatings
-                if seating.player_id is not None
-                and (report := game.no_shows.get(seating.player_id)) is not None
-            ],
+            attendance=_attendance_of(one),
         )
 
 
@@ -474,11 +505,84 @@ def _rendered(score: Score) -> ScoreSchema:
     return ScoreSchema(sets=[SetScoreSchema(a=one.a, b=one.b) for one in score.sets])
 
 
-class ReportANoShowRequest(BaseModel):
-    """*Kuba didn't come.*"""
+def _attendance_of(one: StandingGame) -> list[AttendanceSchema]:
+    """The attendance rows, in the court's order, each folded at ``read_at``."""
+
+    game = one.game
+    starts_at = game.starts_at
+    if starts_at is None:
+        return []
+    states = game.attendance_at(one.read_at)
+    return [
+        AttendanceSchema(
+            player_id=seating.player_id,
+            name=one.names.get(seating.player_id),
+            state=states[seating.player_id],
+            noted_at=absence.noted_at,
+            arrive_by=tap_window_closes_at(starts_at),
+            arrived_at=absence.arrived_at,
+            claim_by=late_claim_closes_at(starts_at),
+            claimed_at=absence.claimed_at,
+            confirmed_at=absence.confirmed_at,
+        )
+        for seating in game.line_up.seatings
+        if seating.player_id is not None
+        and (absence := game.attendance.get(seating.player_id)) is not None
+    ]
+
+
+class LocationFixSchema(BaseModel):
+    """**One precise fix, read by the phone at the moment of the tap** and sent
+    with it (#657; ``docs/adr/0195`` §3). It is measured against the club's map
+    point and dropped: **the backend keeps only whether it was at the club**,
+    never the position."""
+
+    latitude: float = Field(..., ge=-90.0, le=90.0, allow_inf_nan=False)
+    longitude: float = Field(..., ge=-180.0, le=180.0, allow_inf_nan=False)
+    accuracy_m: float = Field(
+        ...,
+        ge=0.0,
+        allow_inf_nan=False,
+        description=(
+            "The fix's own stated accuracy, in metres — the radius the phone "
+            "says the true position lies within. Allowed for up to 200 m."
+        ),
+    )
+
+    def as_fix(self) -> LocationFix:
+        return LocationFix(
+            latitude=self.latitude,
+            longitude=self.longitude,
+            accuracy_m=self.accuracy_m,
+        )
+
+
+class NotHereYetRequest(BaseModel):
+    """*Oscar isn't here yet.*"""
 
     player_id: UUID = Field(
-        ..., description="Who did not come — somebody else on the game's court."
+        ..., description="Who isn't here yet — somebody else on the game's court."
+    )
+    location: LocationFixSchema
+
+
+class ArrivalRequest(BaseModel):
+    """*I'm here* — your own id — or *they're here*, somebody else's."""
+
+    player_id: UUID = Field(
+        ...,
+        description=(
+            "Who has arrived: yourself for *I'm here*, a courtmate for *they're here*."
+        ),
+    )
+    location: LocationFixSchema
+
+
+class PresenceConfirmationRequest(BaseModel):
+    """*Yes, they were here.*"""
+
+    player_id: UUID = Field(
+        ..., description="Whose *I was there* this confirms — somebody else's."
     )
 
 

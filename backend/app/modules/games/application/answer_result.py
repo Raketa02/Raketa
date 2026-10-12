@@ -31,8 +31,9 @@ from app.modules.games.domain.ports import GameRepository, PlayerNames
 
 class ActOnAGame:
     """What every act a player takes on a game they were on shares — stating
-    and agreeing with a score, and reporting somebody who did not come or
-    disputing it (#547): load the game, or refuse to admit it exists."""
+    and agreeing with a score, and saying who is not here, who arrived, and
+    who was there after all (#657): load the game, or refuse to admit it
+    exists."""
 
     def __init__(
         self,

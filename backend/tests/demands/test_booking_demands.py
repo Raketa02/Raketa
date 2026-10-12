@@ -38,6 +38,7 @@ from app.modules.bookings.domain.ports import (
     PlayerAddress,
     PlayerAddresses,
 )
+from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
@@ -313,12 +314,12 @@ async def test_the_club_s_cancel_calls_a_whole_game_off(implementation, session)
 
 
 # --------------------------------------------------------------------------- #
-# GameNoShows — who did not come to a booked game (#547)
+# GameNoShows — who Didn't come to a booked game (#547, #657)
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.parametrize("implementation", registered(GameNoShows))
-async def test_a_no_show_counts_only_once_its_day_has_passed_undisputed(
+async def test_didn_t_come_counts_only_once_the_late_claim_s_day_is_over(
     implementation, session
 ):
     no_shows: GameNoShows = implementation.build(session)
@@ -331,13 +332,18 @@ async def test_a_no_show_counts_only_once_its_day_has_passed_undisputed(
     )
     game = await games.for_challenge(booking_id)
     assert game is not None
-    reported = instant(SATURDAY_FIVE + timedelta(hours=2))
-    game.report_no_show(by=OLA, absent=KUBA, occurred_at=reported)
+    game.note_absent(
+        by=OLA,
+        absent=KUBA,
+        where=ClubVerdict(at_the_club=True, club_name=None),
+        occurred_at=instant(SATURDAY_FIVE + timedelta(minutes=10)),
+    )
     await games.save(game)
     await session.commit()
+    half_past = instant(SATURDAY_FIVE + timedelta(minutes=30))
 
-    assert await no_shows.did_not_come(booking_id, now=reported) == frozenset()
+    assert await no_shows.did_not_come(booking_id, now=half_past) == frozenset()
     assert await no_shows.did_not_come(
-        booking_id, now=instant(reported + timedelta(days=1))
+        booking_id, now=instant(half_past + timedelta(days=1))
     ) == frozenset({KUBA})
-    assert await no_shows.did_not_come(new_uuid(), now=reported) == frozenset()
+    assert await no_shows.did_not_come(new_uuid(), now=half_past) == frozenset()

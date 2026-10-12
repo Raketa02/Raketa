@@ -11,6 +11,12 @@ court is filed on the log where the rating context files a Level. Nothing is
 searched and nothing is indexed — the pairing is read side against side from
 the people's Levels (#575).
 
+**And where a booked game's club is** (``GameClubs``, #657): the booking's club,
+its name and its point, and how far a position is from it — the platform's one
+great-circle distance, in metres — so an attendance tap can be measured against
+the place the game is played. The world for it is a booked game, filled the way
+a group fills one.
+
 **The demands this port exists for are the ones easiest to satisfy wrongly**
 (``docs/adr/0161``). The forecast and the split are read *in the reader's
 direction*, so the case that matters most is one court read by two people on
@@ -22,8 +28,11 @@ rated.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 
+from app.api.dependencies import get_clock
 from app.bootstrap.game_demands import (
     GAME_DEMANDS,
     GAME_IMPLEMENTATIONS,
@@ -31,8 +40,18 @@ from app.bootstrap.game_demands import (
 )
 from app.kernel import InvariantViolated, Sport
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.ports import CourtPairing
+from app.modules.games.domain.ports import CourtPairing, GameClub, GameClubs
+from app.shared.ids import new_uuid
 from tests.api import players_world as players
+from tests.api.proposals_world import (
+    MONDAY_MORNING,
+    a_club_selling,
+    a_group,
+    a_player,
+    makes,
+    says_yes,
+)
+from tests.unit.fake_clock import MovableClock
 
 
 def registered(port):
@@ -41,6 +60,15 @@ def registered(port):
     return [
         pytest.param(implementation, id=implementation.name)
         for implementation in implementations_of(port)
+    ]
+
+
+def every_row():
+    """Every row in the register, whichever port it signs."""
+
+    return [
+        pytest.param(one, id=f"{one.port.__name__}:{one.name}")
+        for one in GAME_IMPLEMENTATIONS
     ]
 
 
@@ -107,7 +135,7 @@ def test_every_registered_implementation_is_of_a_published_port():
         assert implementation.port in GAME_DEMANDS
 
 
-@pytest.mark.parametrize("implementation", registered(CourtPairing))
+@pytest.mark.parametrize("implementation", every_row())
 async def test_every_implementation_satisfies_the_protocol(
     implementation, session_factory
 ):
@@ -117,7 +145,7 @@ async def test_every_implementation_satisfies_the_protocol(
     async with session_factory() as session:
         built = _port(implementation, session)
 
-    assert isinstance(built, CourtPairing)
+    assert isinstance(built, implementation.port)
 
 
 # ---------------------------------------------------------------------------
@@ -370,3 +398,89 @@ async def test_a_reader_who_is_not_on_the_court_is_a_broken_precondition(
             reader_id=stranger_id,
             line_up=_line_up((ada,), (bea,)),
         )
+
+
+# ---------------------------------------------------------------------------
+# Where a booked game's club is (#657)
+# ---------------------------------------------------------------------------
+
+#: Ogrody 33's point, as its desk dropped it.
+OGRODY = (50.0600, 19.9400)
+
+
+@pytest.fixture
+def monday(app, payments) -> MovableClock:
+    fixed = MovableClock(MONDAY_MORNING)
+    app.dependency_overrides[get_clock] = lambda: fixed
+    payments.clock = fixed
+    return fixed
+
+
+async def _a_booking_at_ogrody(client, session_factory, payments, clock) -> str:
+    """Ivan and Oscar's singles at Ogrody 33, booked by their two yeses."""
+
+    ivan, oscar = [
+        await a_player(client, payments, name, sports=(Sport.TENNIS,))
+        for name in ("ivan", "oscar")
+    ]
+    club = await a_club_selling(client, name="Ogrody 33", point=OGRODY)
+    group = await a_group(client, ivan, club, oscar)
+    proposal = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        sport=Sport.TENNIS,
+        versions=((ivan, oscar),),
+    )
+    await says_yes(client, ivan, proposal)
+    said = await says_yes(client, oscar, proposal)
+    assert said.json()["booked"] is not None, said.text
+    return said.json()["booked"]["booking_id"]
+
+
+@pytest.mark.parametrize("implementation", registered(GameClubs))
+async def test_a_booking_names_its_club_and_the_point_its_desk_dropped(
+    implementation, client, session_factory, payments, monday
+):
+    booking = await _a_booking_at_ogrody(client, session_factory, payments, monday)
+
+    async with session_factory() as session:
+        club = await _port(implementation, session).of(UUID(booking))
+
+    assert club == GameClub(name="Ogrody 33", latitude=OGRODY[0], longitude=OGRODY[1])
+
+
+@pytest.mark.parametrize("implementation", registered(GameClubs))
+async def test_a_position_is_measured_from_the_club_in_great_circle_metres(
+    implementation, client, session_factory, payments, monday
+):
+    """A kilometre north is a kilometre — the haversine every distance on the
+    platform is read with — and the club's own point is nought."""
+
+    booking = await _a_booking_at_ogrody(client, session_factory, payments, monday)
+
+    async with session_factory() as session:
+        port = _port(implementation, session)
+        there = await port.metres_from(
+            UUID(booking), latitude=OGRODY[0], longitude=OGRODY[1]
+        )
+        north = await port.metres_from(
+            UUID(booking), latitude=OGRODY[0] + 0.008993, longitude=OGRODY[1]
+        )
+
+    assert there is not None and north is not None
+    assert (there.club_name, there.metres) == ("Ogrody 33", 0.0)
+    assert north.metres == pytest.approx(1_000.0, abs=1.0)
+
+
+@pytest.mark.parametrize("implementation", registered(GameClubs))
+async def test_a_booking_that_does_not_exist_has_no_club(
+    implementation, session_factory
+):
+    async with session_factory() as session:
+        port = _port(implementation, session)
+        nowhere = new_uuid()
+
+        assert await port.of(nowhere) is None
+        assert await port.metres_from(nowhere, latitude=0.0, longitude=0.0) is None

@@ -27,7 +27,7 @@ time. A moment past is not counted down: the press acts on it now, and the next
 refresh drops it.
 
 **And what the rest of a row's buttons act on** (#593): the booked games they
-hold a seat on — *Leave the game*, then the score and the no-shows, named by
+hold a seat on — *Leave the game*, then the score and the attendance taps, named by
 the Game each booking opened, whose record the pane shows — the group's rescues
 they hold no seat on, each read through the rule *Fill in* and the deck read
 (``RescueOffers``) for whether it is offered to them and dealt to them, and the
@@ -84,6 +84,7 @@ from app.modules.bookings.domain.booking import (
 )
 from app.modules.bookings.domain.ports import BookingRepository
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, day_close_after, local_day
+from app.modules.games.domain.attendance import AttendanceState
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide
 from app.modules.games.domain.ports import GameRepository
@@ -93,7 +94,9 @@ from app.modules.games.domain.windows import (
     A_BOOKED_GAME,
     ENTRY_GRACE,
     PROPOSAL_WINDOW,
+    late_claim_closes_at,
     proposal_closes_at,
+    tap_window_closes_at,
 )
 from app.modules.games.presentation.dependencies import GameRepositoryDep
 from app.modules.groups.domain.errors import GroupNotFound
@@ -389,7 +392,7 @@ class RowCard(BaseModel):
 
 class RowBooked(BaseModel):
     """A booked game they hold a seat on — what *Leave the game*, a score and
-    a no-show act on."""
+    the attendance taps act on."""
 
     booking_id: UUID = Field(
         description=(
@@ -399,7 +402,8 @@ class RowBooked(BaseModel):
     )
     game_id: UUID | None = Field(
         description=(
-            "The Game it opened — what a score, an agreement and a no-show name. "
+            "The Game it opened — what a score, an agreement and an attendance "
+            "tap name. "
             "`null` while its club decides, and for good if it never said yes."
         )
     )
@@ -550,11 +554,20 @@ class ScorePane(BaseModel):
     )
 
 
-class NoShowPane(BaseModel):
+class AttendancePane(BaseModel):
+    """Somebody tapped *isn't here yet* (#657), and what became of it at
+    `read_at` — the player's own read of it (`GameSchema.attendance`)."""
+
     player: PersonRef
-    reported_at: datetime
-    dispute_by: datetime
-    disputed_at: datetime | None
+    state: AttendanceState
+    noted_at: datetime
+    arrive_by: datetime = Field(description="The tap window's end, 30 min in.")
+    arrived_at: datetime | None
+    claim_by: datetime = Field(
+        description="The end of the day for *I was there* and its confirmation."
+    )
+    claimed_at: datetime | None
+    confirmed_at: datetime | None
 
 
 class ResultPane(BaseModel):
@@ -563,7 +576,8 @@ class ResultPane(BaseModel):
 
     game_id: UUID = Field(
         description=(
-            "The Game's own id — what a score, an agreement and a no-show name; "
+            "The Game's own id — what a score, an agreement and an attendance "
+            "tap name; "
             "not the pane's `game_id`, which is the proposal's and the "
             "booking's."
         )
@@ -583,7 +597,9 @@ class ResultPane(BaseModel):
         )
     )
     confirmed: str | None = Field(description="The agreed score, once final.")
-    no_shows: list[NoShowPane]
+    attendance: list[AttendancePane] = Field(
+        description="Everybody tapped *isn't here yet*; empty on an ordinary game."
+    )
 
 
 class RefundPane(BaseModel):
@@ -1435,16 +1451,26 @@ class _Folded:
             ],
             agreed_by=None if agreement is None else self._ref(agreement.by),
             confirmed=None if confirmed is None else sets_of(confirmed),
-            no_shows=[
-                NoShowPane(
-                    player=self._ref(player),
-                    reported_at=report.at,
-                    dispute_by=report.dispute_closes_at,
-                    disputed_at=report.disputed_at,
-                )
-                for player, report in played.no_shows.items()
-            ],
+            attendance=self._attendance(played),
         )
+
+    def _attendance(self, played: Game) -> list[AttendancePane]:
+        starts_at = played.starts_at
+        if starts_at is None:
+            return []
+        return [
+            AttendancePane(
+                player=self._ref(player),
+                state=state,
+                noted_at=played.attendance[player].noted_at,
+                arrive_by=tap_window_closes_at(starts_at),
+                arrived_at=played.attendance[player].arrived_at,
+                claim_by=late_claim_closes_at(starts_at),
+                claimed_at=played.attendance[player].claimed_at,
+                confirmed_at=played.attendance[player].confirmed_at,
+            )
+            for player, state in played.attendance_at(self._now).items()
+        ]
 
     def _charge(self, charge: SeatCharge) -> ChargePane:
         given = charge.refund_given
