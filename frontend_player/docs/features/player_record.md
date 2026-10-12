@@ -353,3 +353,45 @@ Members serves no _New_ (ADR-0195 §8 puts only points and band there), so a new
 that others know my 100 hasn't been tested yet_. **Not seen
 on a device**: the block's second line beside _Last 5_ and _Counted_, the word beside the ring, and
 the note under the dark card.
+
+**The filter switch — _Play only with players of at least…_, the hides line and the hidden
+player's sentence** ([#662](https://github.com/Raketa02/Raketa/issues/662),
+[ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+§6, after the backend's #661). The own record's `reliability` now carries `filter` — `minimum`
+(absent while off), `hides` and `of` — and, while somebody's filter keeps the reader off a court,
+`back_with_everyone`, a band and the points that band begins at. **The mapper reads them as two
+facts**, each its own absence: `filter` (the player's own switch and what it hides) and
+`backWithEveryone` (the figure back), both absent on everybody else's record because the server
+never sends them there. **The switch's positions are a domain of three** (`domain/reliabilityFilter`):
+`OFF`, `MEDIUM`, `HIGH`, where `RELIABILITY_MINIMUMS` are the two on positions, held equal to the
+route's request union in `wireVocabulary.ts`; `filterPosition` reads the saved one off the record
+and `minimumOf` writes Off as `null`. **`ReliabilityFilterCard`** draws it between the ring and the
+record card — a `flab` label _Play only with players of_ over a 6.3 segment _Off · At least Medium ·
+At least High_, each segment spoken as the whole sentence (_Play only with players of at least High
+reliability_; Off is _Off: play with everyone_), and under it, while a filter is on, `hidesLine` —
+_Your filter hides 2 of the 11 players in your groups._ **A tap writes and the re-read settles**
+(`useSetReliabilityFilter` → `setReliabilityFilter` → `PUT /players/me/reliability-filter`,
+`204`): the hook owns which position is drawn (`shown`: the tapped one while the save is out, otherwise the
+record's) and that a tap on it writes nothing; a success re-reads every own-record
+entry (`playerRecordKeys.own()`, the new prefix) and the save stays pending until that read is in,
+so the raised segment and the hides line change together and from the server; a refusal draws a
+coral note and the segment falls back to the saved position; an offline tap is held with the amber
+note. **The hidden player's sentence** is one 5.4 `info`
+note under the card, `backWithEveryoneLine` — _Some players in your groups play only with High
+reliability or above. At 75 you're dealt with everyone again._ — drawn only where the record serves
+the figure back, and naming nobody. **Narrowing** (the mapper's table): a `minimum` this build
+cannot name drops the switch and its line, so a switch is never drawn standing at Off over a filter
+that is on, and keeps the figure back; a `back_with_everyone.band` with no word drops the sentence
+and keeps the switch. **Calls made without a ruling**: the label is the sentence's head and the
+segments its three endings, because 6.3's labels are one line and _Play only with players of at
+least High reliability_ is not; the hides line keeps showing the saved count while a tap is in
+flight rather than disappearing, since it is true until the re-read says otherwise, and so a
+tap from Off draws the on position raised with no line under it until the re-read brings the
+count — the line is the server's and is never drawn ahead of it; nothing re-reads
+the decks on a save — the deck's thirty-second staleness and refetch on focus bring the thinner deal
+when the player goes back to Play, and a card dealt before the switch is refused at the yes, which
+re-reads the deck — because `player_record` reaching for `proposals`' keys would close an import
+cycle (`proposals` already draws this feature's sheet); and `hides 0` reads _hides 0 of the 11_, as
+served, rather than a sentence of its own, since the line is drawn only while a filter is on and a
+filter that hides nobody is still on. **Not seen on a device**: the three segment labels at a third
+of the content width under Dynamic Type, and the card between the dark card and the record card.
