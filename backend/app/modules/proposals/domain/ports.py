@@ -150,7 +150,7 @@ class ProposalDirectory(Protocol):
         self, player_id: UUID, *, since: Instant | None
     ) -> Sequence[UUID]:
         """Every game this player is In on that waited for a payment as it
-        filled at a club that books at once, and has not booked — waiting
+        filled, and has not booked — waiting
         still, filling again, or ended before it was full again — **soonest
         first**, from the hour ``since`` (every one, with ``None``). It has no
         booking, so Home reads it from here (#625)."""

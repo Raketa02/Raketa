@@ -23,7 +23,6 @@ from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.courts import Court
 from app.modules.clubs.domain.hours_exceptions import HoursException
 from app.modules.clubs.domain.prices import BandDays, SportPrices, seats, share_of
-from app.modules.clubs.domain.raketa_terms import WayOfWorking
 from app.modules.clubs.domain.payments_account import PaymentsStatus
 from app.modules.clubs.domain.setup import SetupChecklist, SetupStep, StepState
 from app.modules.player_profile.presentation.schemas import WeeklyHourResource
@@ -320,19 +319,6 @@ class PricesResponse(BaseModel):
         )
 
 
-class WayOfWorkingRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    way_of_working: WayOfWorking = Field(
-        description=(
-            "`ONLY_RAKETA` — Raketa sells the club's Raketa hours alone, until "
-            "the release lead; `INSTANT` — both sell and a Raketa booking is "
-            "final; `ON_REQUEST` — the club confirms each full game within its "
-            "time to confirm, and nobody pays until it does."
-        )
-    )
-
-
 class OtherClubsCourtsSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -356,26 +342,14 @@ class RaketaSettingsRequest(BaseModel):
 
     release_lead_days: int = Field(
         description=(
-            "Only Raketa: days before a game unsold hours return to the club. "
-            "1–13, default 3."
+            "Days before a game unsold hours return to the club — the latest a "
+            "Raketa game can fill, its book-by. 1–13, default 3."
         )
     )
     cut_off_hours: int = Field(
         description=(
             "Hours before a game players may leave free, and a game still short "
             "is called off. 0–72, default 24."
-        )
-    )
-    minimum_notice_hours: int = Field(
-        description=(
-            "Instant and On request: the latest a Raketa game can book, in hours "
-            "before it. 1–48, default 2."
-        )
-    )
-    time_to_confirm_minutes: int = Field(
-        description=(
-            "On request: minutes the club has to answer a full game. 5–60, "
-            "default 30 — never more than the shortest minimum notice."
         )
     )
     other_clubs_courts: OtherClubsCourtsSchema = Field(
@@ -391,16 +365,11 @@ class RaketaSettingsRequest(BaseModel):
 
 
 class RaketaSettingsResponse(BaseModel):
-    """How the club works with Raketa, and every setting — **at its default
-    until the club confirms it**, so the form can show what it would save."""
+    """Every setting — **at its default until the club confirms it**, so the
+    form can show what it would save."""
 
-    way_of_working: WayOfWorking | None = Field(
-        description="`null` until the club chooses."
-    )
     release_lead_days: int
     cut_off_hours: int
-    minimum_notice_hours: int
-    time_to_confirm_minutes: int
     other_clubs_courts: OtherClubsCourtsSchema
     paused: bool
 
@@ -408,11 +377,8 @@ class RaketaSettingsResponse(BaseModel):
     def from_domain(cls, club: ClubCourts) -> "RaketaSettingsResponse":
         settings = club.settings
         return cls(
-            way_of_working=club.way,
             release_lead_days=settings.release_lead_days,
             cut_off_hours=settings.cut_off_hours,
-            minimum_notice_hours=settings.minimum_notice_hours,
-            time_to_confirm_minutes=settings.time_to_confirm_minutes,
             other_clubs_courts=OtherClubsCourtsSchema(
                 offered=settings.other_clubs_courts.offered,
                 within_km=settings.other_clubs_courts.within_km,
@@ -426,8 +392,7 @@ class SetupStepSchema(BaseModel):
     state: StepState = Field(
         description=(
             "`DONE`, `TO_DO` or `LOCKED` — waiting on the step it needs: hours "
-            "and prices on a court, the settings on a way of working. *Next* is "
-            "the first `TO_DO`."
+            "and prices on a court. *Next* is the first `TO_DO`."
         )
     )
 
@@ -437,10 +402,10 @@ class SetupResponse(BaseModel):
 
     steps: list[SetupStepSchema] = Field(
         description=(
-            "The five, in the Overview's order: `CONNECT_PAYMENTS` (the "
-            "provider says the account is ready), `WAY_OF_WORKING`, `COURTS` "
-            "(an offered court), `HOURS_AND_PRICES` (an offered court with hours, "
-            "and every such court's sport priced) and `SETTINGS` (confirmed)."
+            "The four, in the Overview's order: `CONNECT_PAYMENTS` (the "
+            "provider says the account is ready), `COURTS` (an offered court), "
+            "`HOURS_AND_PRICES` (an offered court with hours, and every such "
+            "court's sport priced) and `SETTINGS` (confirmed)."
         )
     )
     payments: PaymentsStatus = Field(

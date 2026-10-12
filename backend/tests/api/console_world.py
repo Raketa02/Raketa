@@ -136,8 +136,8 @@ async def presses(client, situation: str, **body):
 
 @dataclass(frozen=True)
 class SeedWorld:
-    """**Bonarka Arena** — Instant, a padel court every hour at 30 zł a seat, a
-    24-hour cut-off and two hours' notice, its desk on the seed's reserved
+    """**Bonarka Arena** — a padel court every hour at 30 zł a seat, sold until
+    a day before, a 24-hour cut-off, its desk on the seed's reserved
     TLD — and a group of nine members the seed could have made, all at padel
     2,5, free every hour, competitive, each with a card that pays."""
 

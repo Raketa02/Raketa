@@ -16,8 +16,8 @@ drained the way the worker drains it, and every claim is read off the list
 behind the bell and the mailbox.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
-**Saturday 10 October, 17:00** at Bonarka Arena, which books at once — 40 zł a
-seat, a book-by two hours before and a 24-hour cut-off.
+**Saturday 10 October, 17:00** at Bonarka Arena — 40 zł a seat, a book-by a
+day before, its release time, and a 24-hour cut-off.
 """
 
 from __future__ import annotations
@@ -50,8 +50,8 @@ from tests.api.proposals_world import (
 from tests.unit.fake_clock import MovableClock
 
 NOTICES = "/api/v1/players/me/notices"
-#: Saturday's book-by at Bonarka Arena: two hours' notice before the hour.
-BOOK_BY = SATURDAY_FIVE - timedelta(hours=2)
+#: Saturday's book-by at Bonarka Arena: its release time, a day before the hour.
+BOOK_BY = SATURDAY_FIVE - timedelta(days=1)
 #: Bonarka Arena's cut-off: a day before the hour.
 CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
 #: Thirty minutes from the last yes on Monday morning: Ewa's time to fix her
@@ -86,9 +86,9 @@ async def four(client, session_factory, payments) -> list[dict]:
 
 @pytest.fixture
 async def bonarka(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant, padel at 160 zł — 40 zł a seat."""
+    """Bonarka Arena, padel at 160 zł — 40 zł a seat."""
 
-    return await a_club_and_its_desk(client, way="INSTANT", padel_grosze=160_00)
+    return await a_club_and_its_desk(client, padel_grosze=160_00)
 
 
 async def a_full_game(client, session_factory, clock, club: str, four) -> UUID:

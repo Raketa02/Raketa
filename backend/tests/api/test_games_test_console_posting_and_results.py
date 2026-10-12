@@ -17,8 +17,8 @@ Every claim is read where somebody would read it: Home, *You're In*, the deck,
 the games list and the record through the player surface; what only a job acts
 on, through the console's own state pane and *Run it now*.
 
-The world is ``console_world.SeedWorld``: Bonarka Arena, Instant, a 24-hour
-cut-off and two hours' notice, and nine members the seed could have made. The
+The world is ``console_world.SeedWorld``: Bonarka Arena, selling until a day
+before, a 24-hour cut-off, and nine members the seed could have made. The
 clock stands on **Monday 5 October 2026, 08:00 in Kraków**.
 """
 
@@ -788,14 +788,14 @@ async def test_a_row_lists_its_played_game_with_its_game_s_id(
 async def test_a_posted_game_is_hers_and_goes_at_the_next_full_hour(
     client, clock, world
 ):
-    """At 08:00 the next book-by a post can have is 09:00 — Monday 11:00, at
-    two hours' notice."""
+    """At 08:00 the next book-by a post can have is 09:00 — Tuesday 09:00, a
+    day's release lead before it."""
 
     pressed = await her_situation(client, "a-posted-game", world)
 
     assert pressed.status_code == 200, pressed.text
     body = pressed.json()
-    assert (body["book_by"], body["starts_at"]) == (at(warsaw(5, 9)), at(warsaw(5, 11)))
+    assert (body["book_by"], body["starts_at"]) == (at(warsaw(5, 9)), at(warsaw(6, 9)))
     assert "fires at 09:00 · 60 min" in body["says"]
     post = body["game_id"]
     # Her phone: the post in her You're In; dealt to her best fits.

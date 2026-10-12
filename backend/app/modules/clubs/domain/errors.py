@@ -332,17 +332,6 @@ class SettingOutOfRange(BadRequestError):
         )
 
 
-class WayOfWorkingNotChosen(ConflictError):
-    """The settings are confirmed after the way of working is chosen: which of
-    them matter — the release lead, or the minimum notice and the time to
-    confirm — depends on it (the screens B2, the checklist's order)."""
-
-    code = "way_of_working_not_chosen"
-
-    def __init__(self) -> None:
-        super().__init__("choose how the club works with Raketa first")
-
-
 class ClubSportHasCourts(ConflictError):
     """The desk unticked a sport one of the club's courts plays — switched off
     or not. **Refused, naming the court**: a court plays one of the club's own

@@ -52,7 +52,6 @@ CLUB_OPERATIONS = {
     "delete /api/v1/club/exceptions/{exception_id}",
     "get /api/v1/club/prices",
     "put /api/v1/club/prices",
-    "put /api/v1/club/way-of-working",
     "get /api/v1/club/raketa-settings",
     "put /api/v1/club/raketa-settings",
     "get /api/v1/club/setup",

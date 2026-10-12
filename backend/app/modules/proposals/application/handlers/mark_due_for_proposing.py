@@ -39,7 +39,6 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
-    WayOfWorkingChosen,
 )
 from app.modules.groups.domain.events import GroupJoined, JoinRequestApproved
 from app.modules.player_profile.domain.events import (
@@ -94,7 +93,6 @@ CLUB_EVENTS = (
     ExceptionAdded,
     ExceptionRemoved,
     PricesSet,
-    WayOfWorkingChosen,
     RaketaSettingsChanged,
     RaketaPaused,
     RaketaResumed,

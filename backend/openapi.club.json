@@ -975,59 +975,13 @@
         ]
       }
     },
-    "/api/v1/club/way-of-working": {
-      "put": {
-        "tags": [
-          "club"
-        ],
-        "summary": "Choose how the club works with Raketa",
-        "description": "One way for the whole club \u2014 the setup checklist's second step. Changeable later; **the change applies to hours not yet booked**. Choosing the one it has records nothing. Answers the settings page.",
-        "operationId": "choose_way_of_working_api_v1_club_way_of_working_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WayOfWorkingRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RaketaSettingsResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/club/raketa-settings": {
       "get": {
         "tags": [
           "club"
         ],
-        "summary": "How the club works with Raketa, and its settings",
+        "summary": "The club's Raketa settings",
+        "description": "Every setting, **at its default until the club confirms it**. Only Raketa is the one way of working: Raketa sells the club's Raketa hours alone until each one's release time, the release lead before it, so there is no way to choose.",
         "operationId": "read_raketa_settings_api_v1_club_raketa_settings_get",
         "responses": {
           "200": {
@@ -1077,16 +1031,6 @@
           },
           "400": {
             "description": "`setting_out_of_range` \u2014 `details.field` names the setting and `least` and `most` its range. Nothing was recorded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`way_of_working_not_chosen` \u2014 which settings matter depends on the way, so it is chosen first. Nothing was recorded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3955,22 +3899,12 @@
           "release_lead_days": {
             "type": "integer",
             "title": "Release Lead Days",
-            "description": "Only Raketa: days before a game unsold hours return to the club. 1\u201313, default 3."
+            "description": "Days before a game unsold hours return to the club \u2014 the latest a Raketa game can fill, its book-by. 1\u201313, default 3."
           },
           "cut_off_hours": {
             "type": "integer",
             "title": "Cut Off Hours",
             "description": "Hours before a game players may leave free, and a game still short is called off. 0\u201372, default 24."
-          },
-          "minimum_notice_hours": {
-            "type": "integer",
-            "title": "Minimum Notice Hours",
-            "description": "Instant and On request: the latest a Raketa game can book, in hours before it. 1\u201348, default 2."
-          },
-          "time_to_confirm_minutes": {
-            "type": "integer",
-            "title": "Time To Confirm Minutes",
-            "description": "On request: minutes the club has to answer a full game. 5\u201360, default 30 \u2014 never more than the shortest minimum notice."
           },
           "other_clubs_courts": {
             "$ref": "#/components/schemas/OtherClubsCourtsSchema",
@@ -3987,8 +3921,6 @@
         "required": [
           "release_lead_days",
           "cut_off_hours",
-          "minimum_notice_hours",
-          "time_to_confirm_minutes",
           "other_clubs_courts",
           "paused"
         ],
@@ -3997,17 +3929,6 @@
       },
       "RaketaSettingsResponse": {
         "properties": {
-          "way_of_working": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WayOfWorking"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "`null` until the club chooses."
-          },
           "release_lead_days": {
             "type": "integer",
             "title": "Release Lead Days"
@@ -4015,14 +3936,6 @@
           "cut_off_hours": {
             "type": "integer",
             "title": "Cut Off Hours"
-          },
-          "minimum_notice_hours": {
-            "type": "integer",
-            "title": "Minimum Notice Hours"
-          },
-          "time_to_confirm_minutes": {
-            "type": "integer",
-            "title": "Time To Confirm Minutes"
           },
           "other_clubs_courts": {
             "$ref": "#/components/schemas/OtherClubsCourtsSchema"
@@ -4034,16 +3947,13 @@
         },
         "type": "object",
         "required": [
-          "way_of_working",
           "release_lead_days",
           "cut_off_hours",
-          "minimum_notice_hours",
-          "time_to_confirm_minutes",
           "other_clubs_courts",
           "paused"
         ],
         "title": "RaketaSettingsResponse",
-        "description": "How the club works with Raketa, and every setting \u2014 **at its default\nuntil the club confirms it**, so the form can show what it would save."
+        "description": "Every setting \u2014 **at its default until the club confirms it**, so the\nform can show what it would save."
       },
       "RefreshRequest": {
         "properties": {
@@ -4076,7 +3986,7 @@
             },
             "type": "array",
             "title": "Steps",
-            "description": "The five, in the Overview's order: `CONNECT_PAYMENTS` (the provider says the account is ready), `WAY_OF_WORKING`, `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed)."
+            "description": "The four, in the Overview's order: `CONNECT_PAYMENTS` (the provider says the account is ready), `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed)."
           },
           "payments": {
             "$ref": "#/components/schemas/PaymentsStatus",
@@ -4101,13 +4011,12 @@
         "type": "string",
         "enum": [
           "CONNECT_PAYMENTS",
-          "WAY_OF_WORKING",
           "COURTS",
           "HOURS_AND_PRICES",
           "SETTINGS"
         ],
         "title": "SetupStep",
-        "description": "The five steps, in the order the Overview lists them."
+        "description": "The four steps, in the order the Overview lists them."
       },
       "SetupStepSchema": {
         "properties": {
@@ -4116,7 +4025,7 @@
           },
           "state": {
             "$ref": "#/components/schemas/StepState",
-            "description": "`DONE`, `TO_DO` or `LOCKED` \u2014 waiting on the step it needs: hours and prices on a court, the settings on a way of working. *Next* is the first `TO_DO`."
+            "description": "`DONE`, `TO_DO` or `LOCKED` \u2014 waiting on the step it needs: hours and prices on a court. *Next* is the first `TO_DO`."
           }
         },
         "type": "object",
@@ -4314,30 +4223,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "WayOfWorking": {
-        "type": "string",
-        "enum": [
-          "ONLY_RAKETA",
-          "INSTANT",
-          "ON_REQUEST"
-        ],
-        "title": "WayOfWorking",
-        "description": "How a club sells through Raketa (the mechanics \u00a716.3)."
-      },
-      "WayOfWorkingRequest": {
-        "properties": {
-          "way_of_working": {
-            "$ref": "#/components/schemas/WayOfWorking",
-            "description": "`ONLY_RAKETA` \u2014 Raketa sells the club's Raketa hours alone, until the release lead; `INSTANT` \u2014 both sell and a Raketa booking is final; `ON_REQUEST` \u2014 the club confirms each full game within its time to confirm, and nobody pays until it does."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "way_of_working"
-        ],
-        "title": "WayOfWorkingRequest"
       },
       "WeeklyHourResource": {
         "properties": {

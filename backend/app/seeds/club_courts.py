@@ -3,27 +3,34 @@
 **A seeded court is a court a desk added** (``docs/adr/0029``): every write
 here is the use case the club website's Courts & prices and Raketa settings
 run — ``AddCourt``, ``SetRaketaHours``, ``AddException``, ``SetPrices``,
-``ChooseWayOfWorking``, ``SaveRaketaSettings`` — so each club's **Club courts**
-stream is the one a desk would have left, and nothing opens a table.
+``SaveRaketaSettings`` — so each club's **Club courts** stream is the one a
+desk would have left, and nothing opens a table.
 
 **The eight are arranged across every state the club website draws**
 (the screens B2–B5, the mechanics §16):
 
-- **two ways of working** — Instant at Ogrody 33, Bonarka Arena and Nowa Huta
-  Squash; Only Raketa at Centrum Ruchu, Zabłocie Sport, Kazimierz Padel and
-  Prądnik Tennis, which worked On request until it was removed (#669) and
-  release their hours a day ahead, so every hour from tomorrow is Raketa's to
-  sell and a card dealt there outlives a day of developing against it;
+- **every club works Only Raketa**, the one way (#670; ``docs/adr/0196`` §1):
+  Ogrody 33, Bonarka Arena and Nowa Huta Squash worked Instant, and Kazimierz
+  Padel and Prądnik Tennis On request, until both were removed (#669, #670).
+  **Each keeps a release lead that leaves its seeded games fillable**: the
+  clubs whose games the run fills — Bonarka Arena, where her group plays,
+  Kazimierz Padel, where her next week's game is, and Ogrody 33, whose played
+  history is filled two days ahead — release their hours **a day ahead**, the
+  shortest lead, as Prądnik Tennis does, so every hour from tomorrow is
+  Raketa's to sell and a card dealt there outlives a day of developing
+  against it; Centrum Ruchu keeps two days, and Nowa Huta Squash and Zabłocie
+  Sport the default three;
 - **courts per sport**, indoor and outdoor, a weekly pattern of Raketa hours on
   weekday evenings and weekend mornings — where the protagonists' own weeks
   are — **one exception** each, and **price bands** (dearer evenings or
   weekends) on every priced sport;
 - **Zabłocie Sport is paused**: live, selling what its cards would need, and
   dealing nothing new;
-- **Wisła Park is not live**: it chose a way, added courts with hours and
-  closed a few days for resurfacing, and never priced them or confirmed its
-  settings — half its checklist done — and it is **half connected**: it went
-  to the provider's pages and the provider says *Stripe needs more details*.
+- **Wisła Park is not live**: it added courts with hours, closed a few days
+  for resurfacing and confirmed its settings, and never priced its courts —
+  half its checklist done, two steps of four — and it is **half connected**:
+  it went to the provider's pages and the provider says *Stripe needs more
+  details*.
 - **Every other club's payments are ready** (#537): each desk asked for the
   link through ``ConnectPayments``, the use case *Connect with Stripe* runs,
   and a fake provider finished its onboarding the moment the link was made —
@@ -72,7 +79,6 @@ from app.modules.clubs.application.club_courts import AddCourt, SetRaketaHours
 from app.modules.clubs.application.commands import (
     AddCourtCommand,
     AddExceptionCommand,
-    ChooseWayOfWorkingCommand,
     ConnectPaymentsCommand,
     PriceBandInput,
     SaveRaketaSettingsCommand,
@@ -86,19 +92,12 @@ from app.modules.clubs.application.payments_account import (
     HeedPaymentsAccount,
 )
 from app.modules.clubs.application.prices import SetPrices
-from app.modules.clubs.application.raketa_settings import (
-    ChooseWayOfWorking,
-    SaveRaketaSettings,
-)
+from app.modules.clubs.application.raketa_settings import SaveRaketaSettings
 from app.modules.clubs.domain.court_hours import local_day
 from app.modules.clubs.domain.payments_account import PaymentsStatus
 from app.modules.clubs.domain.prices import BandDays, PriceBand
 from app.modules.clubs.domain.ports import ClubAccountRepository
-from app.modules.clubs.domain.raketa_terms import (
-    OtherClubsCourts,
-    RaketaSettings,
-    WayOfWorking,
-)
+from app.modules.clubs.domain.raketa_terms import OtherClubsCourts, RaketaSettings
 from app.modules.clubs.domain.setup import checklist_of
 from app.modules.payments.domain.provider import ClubAccountStatus
 from app.modules.player_profile.domain.weekly_hours import WEEKEND_DAYS
@@ -164,15 +163,16 @@ class SeedException:
 @dataclass(frozen=True, slots=True)
 class SeedClubCourts:
     club: str
-    way: WayOfWorking
     courts: tuple[SeedCourt, ...]
     week: tuple[tuple[int, int], ...]
     prices: tuple[SeedPrice, ...] = ()
     exception: SeedException | None = None
-    #: The settings the desk confirms — the defaults unless it changed some.
-    settings: RaketaSettings = field(default_factory=RaketaSettings)
-    #: Whether the desk confirmed its settings — the checklist's last step.
-    confirmed: bool = True
+    #: The settings the desk confirms — the defaults but for the release
+    #: lead, **a day ahead** unless a club says otherwise: the shortest, so the
+    #: most of its hours stay Raketa's to sell.
+    settings: RaketaSettings = field(
+        default_factory=lambda: RaketaSettings(release_lead_days=1)
+    )
     paused: bool = False
     #: What the provider says of its account once the desk has been to the
     #: provider's pages — ready, unless it stopped half way.
@@ -186,7 +186,6 @@ def _padel(*numbers: int) -> tuple[SeedCourt, ...]:
 SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     SeedClubCourts(
         club="Ogrody 33",
-        way=WayOfWorking.INSTANT,
         courts=(
             *_padel(1, 2),
             SeedCourt("Kort centralny", Sport.TENNIS, indoor=False),
@@ -203,7 +202,6 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     ),
     SeedClubCourts(
         club="Centrum Ruchu",
-        way=WayOfWorking.ONLY_RAKETA,
         courts=(
             *_padel(1, 2),
             SeedCourt("Court 3", Sport.SQUASH),
@@ -221,20 +219,17 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     ),
     SeedClubCourts(
         club="Kazimierz Padel",
-        way=WayOfWorking.ONLY_RAKETA,
         courts=_padel(1, 2, 3),
         week=_week((2, 3, 4, 5, 6, 7), 16, 23),
         prices=(
             SeedPrice(Sport.PADEL, 100_00, PriceBand(BandDays.WEEKEND, 7, 23, 120_00)),
         ),
         exception=SeedException("Holiday", days_ahead=12),
-        # A day ahead: the protagonist's game booked here (``bookings.py``) is
-        # at an hour it still sells.
-        settings=RaketaSettings(release_lead_days=1),
+        # A day ahead, the seed's default: the protagonist's game booked here
+        # (``bookings.py``) is at an hour it still sells.
     ),
     SeedClubCourts(
         club="Bonarka Arena",
-        way=WayOfWorking.INSTANT,
         courts=(
             *_padel(1, 2, 3, 4),
             SeedCourt("Court 5", Sport.TENNIS, indoor=False),
@@ -253,11 +248,9 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             ),
         ),
         exception=SeedException("Repair", days_ahead=3, court=4),
-        settings=RaketaSettings(minimum_notice_hours=3),
     ),
     SeedClubCourts(
         club="Zabłocie Sport",
-        way=WayOfWorking.ONLY_RAKETA,
         courts=(
             SeedCourt("Court 1", Sport.SQUASH),
             SeedCourt("Court 2", Sport.SQUASH),
@@ -271,11 +264,11 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             ),
         ),
         exception=SeedException("Tournament", days_ahead=6),
+        settings=RaketaSettings(),
         paused=True,
     ),
     SeedClubCourts(
         club="Prądnik Tennis",
-        way=WayOfWorking.ONLY_RAKETA,
         courts=(
             SeedCourt("Court 1", Sport.TENNIS, indoor=False),
             SeedCourt("Court 2", Sport.TENNIS, indoor=False),
@@ -297,19 +290,16 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     ),
     SeedClubCourts(
         club="Wisła Park",
-        way=WayOfWorking.INSTANT,
         courts=(
             SeedCourt("Court 1", Sport.TENNIS, indoor=False),
             SeedCourt("Court 2", Sport.TENNIS, indoor=False),
         ),
         week=EVENINGS_AND_WEEKENDS,
         exception=SeedException("Resurfacing", days_ahead=7, days=3),
-        confirmed=False,
         payments=ClubAccountStatus.NEEDS_DETAILS,
     ),
     SeedClubCourts(
         club="Nowa Huta Squash",
-        way=WayOfWorking.INSTANT,
         courts=(
             SeedCourt("Court 1", Sport.SQUASH),
             SeedCourt("Court 2", Sport.SQUASH),
@@ -324,7 +314,8 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             ),
         ),
         exception=SeedException("Repair", days_ahead=2, court=2, hours=(18, 19)),
-        settings=RaketaSettings(minimum_notice_hours=1),
+        # The default three days: nothing is seeded here to fill.
+        settings=RaketaSettings(),
     ),
 )
 
@@ -426,7 +417,6 @@ async def write_the_club_courts(
                     set_prices=SetPrices(
                         clubs=club_repository, courts=courts, uow=uow, clock=clock
                     ),
-                    choose=ChooseWayOfWorking(courts=courts, uow=uow, clock=clock),
                     save=SaveRaketaSettings(courts=courts, uow=uow, clock=clock),
                 )
             if (await courts.load(club_id)).payments is None:
@@ -486,13 +476,11 @@ async def _set_up(
     set_hours: SetRaketaHours,
     add_exception: AddException,
     set_prices: SetPrices,
-    choose: ChooseWayOfWorking,
     save: SaveRaketaSettings,
 ) -> None:
-    """The desk's own order: the way, the courts and their hours, the
-    exception, the prices, and — for a club that got that far — the settings."""
+    """The desk's own order: the courts and their hours, the exception, the
+    prices — for a club that got that far — and the settings."""
 
-    await choose.execute(ChooseWayOfWorkingCommand(club_id=club_id, way=declared.way))
     court_ids = [
         (
             await add_court.execute(
@@ -550,27 +538,24 @@ async def _set_up(
                 ),
             )
         )
-    if declared.confirmed:
-        settings = declared.settings
-        await save.execute(
-            SaveRaketaSettingsCommand(
-                club_id=club_id,
-                release_lead_days=settings.release_lead_days,
-                cut_off_hours=settings.cut_off_hours,
-                minimum_notice_hours=settings.minimum_notice_hours,
-                time_to_confirm_minutes=settings.time_to_confirm_minutes,
-                other_clubs_courts=settings.other_clubs_courts.offered,
-                other_clubs_within_km=settings.other_clubs_courts.within_km,
-                paused=declared.paused,
-            )
+    settings = declared.settings
+    await save.execute(
+        SaveRaketaSettingsCommand(
+            club_id=club_id,
+            release_lead_days=settings.release_lead_days,
+            cut_off_hours=settings.cut_off_hours,
+            other_clubs_courts=settings.other_clubs_courts.offered,
+            other_clubs_within_km=settings.other_clubs_courts.within_km,
+            paused=declared.paused,
         )
+    )
 
 
 def _refuse_a_live_club_with_nothing_for_sale(
     seeded: list[SeededClubCourts],
 ) -> None:
     for entry in seeded:
-        if entry.declared.confirmed and entry.declared.prices and not entry.live:
+        if entry.declared.prices and not entry.live:
             raise ClubCourtsRefused(
                 f"{entry.declared.club} was set up to be live and its checklist "
                 "says it is not"
@@ -591,7 +576,8 @@ _PAYMENTS_WORDS: Final = {
 
 
 def club_courts_lines(seeded: SeededCourts) -> list[str]:
-    """The report's section: every club, how it sells, and what it has for sale."""
+    """The report's section: every club, its release lead, and what it has for
+    sale."""
 
     new = sum(1 for entry in seeded.clubs if entry.set_up_by_this_run)
     lines = [
@@ -609,7 +595,8 @@ def club_courts_lines(seeded: SeededCourts) -> list[str]:
         )
         payments = _PAYMENTS_WORDS[entry.payments]
         lines.append(
-            f"  {declared.club} · {declared.way.value.replace('_', ' ').lower()} · "
+            f"  {declared.club} · "
+            f"releases its hours {declared.settings.release_lead_days} day(s) ahead · "
             f"{len(declared.courts)} courts · {state} · payments {payments} · "
             f"{entry.for_sale} court hours for sale in the next 14 days"
         )

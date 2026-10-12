@@ -2350,15 +2350,15 @@
         }
       }
     },
-    "/dev/situations/needs-her-yes-instant-club": {
+    "/dev/situations/needs-her-yes": {
       "post": {
         "tags": [
           "dev",
           "dev"
         ],
-        "summary": "Situation 2 \u00b7 Needs her yes, Instant club",
-        "description": "Leaves a game needing only the protagonist's yes, at a club that books at once: the soonest card of hers in the group and sport that her deck shows \u2014 one with 2 hours left before its book-by, where there is one \u2014 with enough of the people dealt it beside her saying yes \u2014 each through the yes their own phone runs. Her yes then fills it: a charge, *It's a game!*, then Home. With no such card, the proposer deals first.",
-        "operationId": "needs_her_yes_instant_club_dev_situations_needs_her_yes_instant_club_post",
+        "summary": "Situation 2 \u00b7 Needs her yes",
+        "description": "Leaves a game needing only the protagonist's yes: the soonest card of hers in the group and sport that her deck shows \u2014 one with 2 hours left before its book-by, where there is one \u2014 with enough of the people dealt it beside her saying yes \u2014 each through the yes their own phone runs. Her yes then fills it: a charge, *It's a game!*, then Home. With no such card, the proposer deals first.",
+        "operationId": "needs_her_yes_dev_situations_needs_her_yes_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2576,7 +2576,7 @@
           "dev"
         ],
         "summary": "Situation 6 \u00b7 Kuba leaves before the cut-off",
-        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's that books at once \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: their hold let go, nothing taken, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go.",
+        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: their hold let go, nothing taken, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go.",
         "operationId": "one_leaves_before_the_cut_off_dev_situations_one_leaves_before_the_cut_off_post",
         "requestBody": {
           "content": {
@@ -2649,7 +2649,7 @@
           "dev"
         ],
         "summary": "Situation 7 \u00b7 Empty seat at the cut-off",
-        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's that books at once \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go \u2014 nobody pays; taken first, the game plays.",
+        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go \u2014 nobody pays; taken first, the game plays.",
         "operationId": "empty_seat_at_the_cut_off_dev_situations_empty_seat_at_the_cut_off_post",
         "requestBody": {
           "content": {
@@ -2722,7 +2722,7 @@
           "dev"
         ],
         "summary": "Situation 8 \u00b7 Ania leaves",
-        "description": "Two games of hers to leave from the phone, at a club of the group's that books at once, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first lets her hold go \u2014 nothing taken (#637); leaving the second keeps her seat paid until a row takes it, and then refunds her.",
+        "description": "Two games of hers to leave from the phone, at a club of the group's, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first lets her hold go \u2014 nothing taken (#637); leaving the second keeps her seat paid until a row takes it, and then refunds her.",
         "operationId": "she_leaves_dev_situations_she_leaves_post",
         "requestBody": {
           "content": {
@@ -2868,7 +2868,7 @@
           "dev"
         ],
         "summary": "Situation 10 \u00b7 Just played",
-        "description": "Her game at the hour that ended last, at a club of the group's that books at once \u2014 made and filled by her and three of the group as if earlier, when the hour was on sale \u2014 awaiting its result: the rows and her phone enter a score, agree or counter, or say somebody didn't come. **With `result_confirms_in_minutes`, a score is up already**: the game is the hour that ended last before then, and somebody across the net from her stated their side won as if earlier, so silence confirms it that many minutes from now; *Run it now* on the rating catch-up then moves the Levels, and not before.",
+        "description": "Her game at the hour that ended last, at a club of the group's \u2014 made and filled by her and three of the group as if earlier, when the hour was on sale \u2014 awaiting its result: the rows and her phone enter a score, agree or counter, or say somebody didn't come. **With `result_confirms_in_minutes`, a score is up already**: the game is the hour that ended last before then, and somebody across the net from her stated their side won as if earlier, so silence confirms it that many minutes from now; *Run it now* on the rating catch-up then moves the Levels, and not before.",
         "operationId": "just_played_dev_situations_just_played_post",
         "requestBody": {
           "content": {
@@ -2941,7 +2941,7 @@
           "dev"
         ],
         "summary": "Situation 11 \u00b7 Club day close",
-        "description": "Writes the last closed club day's played games \u2014 yesterday's, or today's from 23:00 \u2014 at a club of the group's that books at once and has had no day close for it yet: up to 2, each a game's worth of the group, never the protagonist, booked inside that day on a clock backdated to it. Once the outbox has captured the shares, *Run it now* on club payouts pays the club for them, and on the new bookings summary emails its desk the day's bookings.",
+        "description": "Writes into the last closed club day \u2014 yesterday's, or today's from 23:00 \u2014 at a club of the group's that has had no day close for it yet, up to two games, each a game's worth of the group, never the protagonist and nobody on both: **one played that day**, booked before the day, an hour before its release time (no game fills later than its club's release lead before it), its shares taken at its cut-off; and **one booked inside that day**, an hour before its close, at the soonest hour the club sold then. Once the outbox has captured the shares, *Run it now* on club payouts pays the club for the first, and on the new bookings summary emails its desk the second.",
         "operationId": "club_day_close_dev_situations_club_day_close_post",
         "requestBody": {
           "content": {
@@ -4228,7 +4228,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "Played that day, soonest first."
+            "description": "The game played that day, then the one booked that day."
           },
           "says": {
             "type": "string",
@@ -4358,7 +4358,12 @@
             "type": "string",
             "format": "date-time",
             "title": "Booked At",
-            "description": "Inside the day, after the close before."
+            "description": "When it filled: the day's played game before the day began, an hour before its release time; the day's new booking inside the day, an hour before its close."
+          },
+          "played": {
+            "type": "boolean",
+            "title": "Played",
+            "description": "Played that day, and paid for at its close \u2014 or booked that day, and in its desk's summary."
           },
           "people": {
             "items": {
@@ -4373,6 +4378,7 @@
           "game_id",
           "starts_at",
           "booked_at",
+          "played",
           "people"
         ],
         "title": "DayCloseGame"

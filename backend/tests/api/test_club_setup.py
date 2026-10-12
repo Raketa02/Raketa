@@ -1,10 +1,11 @@
-"""The setup checklist on the club's Overview: five steps, and whether the club
-is live (#535, #537, the mechanics §16.2, the screens B2).
+"""The setup checklist on the club's Overview: four steps, and whether the club
+is live (#535, #537, #670, the mechanics §16.2, the screens B2).
 
 A step is **done**, **to do** or **locked** behind the one it needs — hours and
-prices behind a court, the settings behind a way of working. The club is live
-when all five are done, payments included: how the payments step moves is
-``test_club_payments.py``'s.
+prices behind a court. The club is live when all four are done, payments
+included: how the payments step moves is ``test_club_payments.py``'s. *Choose
+how you work with Raketa* was the second of five until Only Raketa became the
+one way (#670; ``docs/adr/0196`` §1).
 """
 
 from __future__ import annotations
@@ -13,7 +14,6 @@ from tests.api.club_courts_world import (
     SETUP,
     a_desk,
     adds_a_court,
-    chooses,
     confirms_settings,
     connects_payments,
     court_path,
@@ -21,7 +21,7 @@ from tests.api.club_courts_world import (
     sets_prices,
 )
 
-STEPS = ["CONNECT_PAYMENTS", "WAY_OF_WORKING", "COURTS", "HOURS_AND_PRICES", "SETTINGS"]
+STEPS = ["CONNECT_PAYMENTS", "COURTS", "HOURS_AND_PRICES", "SETTINGS"]
 
 
 async def checklist(client, desk) -> tuple[dict[str, str], bool]:
@@ -38,25 +38,16 @@ async def test_a_club_that_has_done_nothing_has_its_first_steps_to_do(client):
     assert await checklist(client, desk) == (
         {
             "CONNECT_PAYMENTS": "TO_DO",
-            "WAY_OF_WORKING": "TO_DO",
             "COURTS": "TO_DO",
             "HOURS_AND_PRICES": "LOCKED",
-            "SETTINGS": "LOCKED",
+            "SETTINGS": "TO_DO",
         },
         False,
     )
 
 
-async def test_the_desk_walks_the_checklist_and_the_club_goes_live(client):
+async def test_the_desk_walks_the_four_steps_and_the_club_goes_live(client):
     _, desk = await a_desk(client, sports=("PADEL",))
-
-    await chooses(client, desk, "INSTANT")
-    steps, live = await checklist(client, desk)
-    assert (steps["WAY_OF_WORKING"], steps["SETTINGS"], live) == (
-        "DONE",
-        "TO_DO",
-        False,
-    )
 
     court = await adds_a_court(client, desk, name="Court 1")
     steps, _ = await checklist(client, desk)
@@ -85,7 +76,6 @@ async def test_the_desk_walks_the_checklist_and_the_club_goes_live(client):
 
     assert steps == {
         "CONNECT_PAYMENTS": "DONE",
-        "WAY_OF_WORKING": "DONE",
         "COURTS": "DONE",
         "HOURS_AND_PRICES": "DONE",
         "SETTINGS": "DONE",
@@ -135,7 +125,6 @@ async def test_every_court_selling_hours_needs_its_sport_priced(client):
 
 async def test_a_club_with_every_court_switched_off_is_not_live(client):
     _, desk = await a_desk(client, sports=("PADEL",))
-    await chooses(client, desk, "ONLY_RAKETA")
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], [(6, 9)])
     await sets_prices(
@@ -164,7 +153,6 @@ async def test_a_paused_club_is_still_live(client):
     (the mechanics §16.15), not a step undone."""
 
     _, desk = await a_desk(client, sports=("PADEL",))
-    await chooses(client, desk, "ON_REQUEST")
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], [(6, 9)])
     await sets_prices(

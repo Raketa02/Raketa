@@ -86,10 +86,10 @@ def clock(app, payments):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant: padel at 160 zł — 40 zł a seat — and a 24-hour
+    """Bonarka Arena: padel at 160 zł — 40 zł a seat — and a 24-hour
     cut-off."""
 
-    return await a_club_and_its_desk(client, way="INSTANT", padel_grosze=160_00)
+    return await a_club_and_its_desk(client, padel_grosze=160_00)
 
 
 @pytest.fixture

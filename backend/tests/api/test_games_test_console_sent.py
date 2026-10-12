@@ -28,7 +28,7 @@ from tests.api.console_world import PLAYER, SEED, code_of, presses, says
 from tests.api.proposals_world import MONDAY_MORNING, a_club_selling, a_group, a_member
 from tests.unit.fake_clock import MovableClock
 
-#: The fill's notice — *It's a game! · you paid* — and its email.
+#: The fill's notice — *It's a game!* — and its email.
 BOOKED = "GAME_BOOKED"
 BOOKED_AND_PAID = "payments.game_booked.player"
 
@@ -75,7 +75,7 @@ async def her_yes_fills_it(client, world: World) -> UUID:
 
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.marta["id"],
@@ -141,7 +141,9 @@ async def test_after_her_yes_fills_situation_2_everybody_s_sent_shows_it(
         # The booking confirmation, sent — to them and nobody else — and linked
         # to the message the relay was handed under that id.
         [email] = emails_of(sent, BOOKED_AND_PAID)
-        assert email["subject"] == "It's a game! · you paid 30 zł"
+        # Before the cut-off — no game fills later than a day before it at
+        # Bonarka (#670) — so the share is held, not taken.
+        assert email["subject"] == "It's a game! · 30 zł held"
         assert email["sent_at"] is not None
         assert email["given_up_at"] is None
         assert email["in_the_mail_catcher"] == (

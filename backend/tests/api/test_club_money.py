@@ -70,7 +70,7 @@ def clock(app, payments):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    return await a_club_and_its_desk(client, way="INSTANT")
+    return await a_club_and_its_desk(client)
 
 
 #: The four pay by Mastercard, whose hold lasts seven days: a payout test lets

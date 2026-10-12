@@ -15,7 +15,7 @@ request club* (3) with On request (#669).
 Every claim is read where somebody would read it: the protagonist's Home, deck,
 receipts and booking details, and the desk's own lists.
 
-The world: **Bonarka Arena**, Instant, two padel courts at 30 zł a seat, its
+The world: **Bonarka Arena**, two padel courts at 30 zł a seat, its
 desk addressed on the seed's reserved TLD, and four members the seed could have
 made. The clock stands on **Monday 5 October 2026, 08:00 in
 Kraków**.

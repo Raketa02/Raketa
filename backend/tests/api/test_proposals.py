@@ -134,8 +134,9 @@ async def test_a_yes_lands_on_the_game_and_in_the_player_s_live_yeses(
                 "starts_at": "2026-10-10T15:00:00Z",
                 "club": {"id": club, "name": "Bonarka Arena"},
                 "share_grosze": 30_00,
-                # Instant: the start less the two hours' minimum notice.
-                "book_by": "2026-10-10T13:00:00Z",
+                # The release time: the start less the club's release lead,
+                # a day here.
+                "book_by": "2026-10-09T15:00:00Z",
             }
         ],
     }
@@ -589,7 +590,7 @@ async def test_at_its_book_by_a_game_is_over_and_the_sweep_records_it_silently(
     )
     await says_yes(client, ola, proposal)
 
-    clock.move(SATURDAY_FIVE - timedelta(hours=2) - clock.now())
+    clock.move(SATURDAY_FIVE - timedelta(days=1) - clock.now())
 
     assert await live_ids(client, ola) == []
     refused = await says_yes(client, kuba, proposal)
@@ -610,17 +611,15 @@ async def test_before_its_book_by_the_sweep_leaves_a_game_alone(
     await makes(
         session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
     )
-    clock.move(timedelta(days=5))  # Saturday 08:00, five hours before.
+    clock.move(timedelta(days=4))  # Friday 08:00, nine hours before.
 
     assert (await sweeps(session_factory, clock)).proposals == 0
 
 
-async def test_an_only_raketa_club_s_book_by_is_its_release_time(
+async def test_a_club_s_book_by_is_its_release_time(
     client, session_factory, clock, payments, four
 ):
-    club = await a_club_selling(
-        client, name="Centrum Ruchu", way="ONLY_RAKETA", release_lead_days=3
-    )
+    club = await a_club_selling(client, name="Centrum Ruchu", release_lead_days=3)
     group = await a_group(client, four[0], club, *four[1:])
     proposal = await makes(
         session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)

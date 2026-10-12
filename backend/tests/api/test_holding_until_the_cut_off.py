@@ -27,6 +27,7 @@ import pytest
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_the_cut_off
 from app.core.config import get_settings
+from tests.api.club_courts_world import confirms_settings
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -59,9 +60,9 @@ def clock(app):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant: the club and its desk's session."""
+    """Bonarka Arena: the club and its desk's session."""
 
-    return await a_club_and_its_desk(client, way="INSTANT")
+    return await a_club_and_its_desk(client)
 
 
 @pytest.fixture
@@ -451,7 +452,11 @@ async def test_a_club_cancelling_after_the_cut_off_refunds_everybody_in_full(
 async def test_a_game_filling_after_its_cut_off_is_taken_at_once(
     client, session_factory, clock, club, four, payments, mailbox
 ):
-    clock.move(CUT_OFF - MONDAY_MORNING + timedelta(hours=1))
+    # Only a club whose cut-off is longer than its release lead still fills a
+    # game past its cut-off (``docs/adr/0196`` §1): two days, and a day — so
+    # Thursday 18:00 is past Saturday's cut-off and before its book-by.
+    await confirms_settings(client, club[1], release_lead_days=1, cut_off_hours=48)
+    clock.move(CUT_OFF - timedelta(days=1) - MONDAY_MORNING + timedelta(hours=1))
 
     await a_booked_game(client, session_factory, clock, club[0], four)
     await mailbox.drain()

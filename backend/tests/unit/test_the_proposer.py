@@ -661,7 +661,7 @@ def test_a_card_whose_court_hour_is_no_longer_on_sale_is_lost():
 
 
 def test_a_card_is_not_lost_while_its_court_is_there_whatever_the_club_now_says():
-    # The club raised its minimum notice: the hour is no longer on sale now,
+    # The club lengthened its release lead: the hour is no longer on sale now,
     # but its court is still there, and the card lives to its own book-by.
     card = a_pick(A, B, C, D)
 

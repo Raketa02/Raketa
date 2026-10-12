@@ -131,7 +131,7 @@
     <div class="body">
       <div class="row">
         <button id="fresh-deal">1 · Fresh deal</button>
-        <button id="needs-her-yes">2 · Needs <span class="her">her</span> yes · Instant club</button>
+        <button id="needs-her-yes">2 · Needs <span class="her">her</span> yes</button>
         <button id="card-declines">4 · Card declines at the fill</button>
         <button id="about-to-expire">5 · About to expire</button>
         <button id="one-leaves">6 · Kuba leaves before the cut-off</button>
@@ -925,7 +925,7 @@ async function freshDeal() {
 }
 
 async function needsHerYes() {
-  const done = await call("POST", "/dev/situations/needs-her-yes-instant-club", {
+  const done = await call("POST", "/dev/situations/needs-her-yes", {
     group_id: $("group").value,
     sport: $("sport").value,
     protagonist_id: state.protagonist,

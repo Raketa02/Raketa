@@ -81,9 +81,9 @@ def clock(app):
 
 @pytest.fixture
 async def bonarka(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant: the club, and its desk's session."""
+    """Bonarka Arena: the club, and its desk's session."""
 
-    return await a_club_and_its_desk(client, way="INSTANT")
+    return await a_club_and_its_desk(client)
 
 
 @pytest.fixture
@@ -539,8 +539,8 @@ async def test_a_post_not_full_by_its_book_by_tells_its_poster(
         sport=Sport.PADEL,
     )
 
-    # Its book-by: the club's two hours' notice before the hour.
-    clock.move(SATURDAY_FIVE - timedelta(hours=2) - MONDAY_MORNING)
+    # Its book-by: the club's release time, a day before the hour.
+    clock.move(SATURDAY_FIVE - timedelta(days=1) - MONDAY_MORNING)
     await sweeps(session_factory, clock)
 
     assert await pushed_to(mailbox, pushes, ola) == [

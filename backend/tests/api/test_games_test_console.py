@@ -439,7 +439,7 @@ async def test_needs_her_yes_puts_three_in_so_her_yes_completes_it(
 ):
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.marta["id"],
@@ -490,14 +490,14 @@ async def test_needs_her_yes_prefers_a_card_she_has_time_to_answer(
         clock,
         pool_id=world.group,
         club_id=world.club,
-        start=warsaw(5, 11),
+        start=warsaw(6, 9),
         versions=(four,),
     )
     saturday = await a_card(session_factory, clock, world, *four)
 
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.marta["id"],
@@ -515,7 +515,7 @@ async def test_needs_her_yes_refuses_a_protagonist_the_seed_did_not_create(
 ):
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.piotr["id"],
@@ -532,7 +532,7 @@ async def test_needs_her_yes_says_so_when_no_game_can_be_set_up(client, clock, w
 
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="TENNIS",
         protagonist_id=world.marta["id"],

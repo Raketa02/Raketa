@@ -34,6 +34,7 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
+from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.bookings.domain.events import PlayerCheckedIn
 from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
     BOOKING_AGGREGATE,
@@ -71,10 +72,10 @@ def clock(app):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant — and a second padel court, Court 3, a game can be
+    """Bonarka Arena — and a second padel court, Court 3, a game can be
     moved to."""
 
-    club_id, desk = await a_club_and_its_desk(client, way="INSTANT")
+    club_id, desk = await a_club_and_its_desk(client)
     padel = await client.get("/api/v1/club/courts", headers=desk)
     court_1 = next(one for one in padel.json()["courts"] if one["name"] == "Court 1")
     court_2 = next(one for one in padel.json()["courts"] if one["name"] == "Court 2")
@@ -365,11 +366,16 @@ async def test_the_club_cancels_with_a_reason_and_everybody_is_refunded_in_full(
         "WEATHER",
     )
     assert row["money"]["refunded_grosze"] == 4 * SHARE
-    # The hour is the club's to sell again, and the four are owed a new card.
+    # No booking holds the hour — read before any deadline, since past its
+    # release time it is the club's own again (#670) — and the four are owed a
+    # new card.
     async with session_factory() as session:
         assert (
             await build_court_hours(session).offered(
-                UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE, now=clock.now()
+                UUID(club_id),
+                sport=Sport.PADEL,
+                start=SATURDAY_FIVE,
+                now=before_any_deadline(SATURDAY_FIVE),
             )
             is not None
         )

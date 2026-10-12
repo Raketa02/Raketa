@@ -19,9 +19,11 @@ provider; the deadline is run by its job, as the scheduler runs it.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00**, padel at 160 zł — 40 zł a seat — at Bonarka
-Arena, which books at once. Its book-by is two hours before the hour, and its
-cut-off the clubs' default 24 hours — **Friday 17:00** — so every refusal on
-Monday is a card to fix.
+Arena. It hands Raketa its hours until a day before — the book-by, **Friday
+17:00** — and players leave free until two days before — the cut-off,
+**Thursday 17:00** — so every refusal on Monday is a card to fix, and a game
+can still fill past its cut-off: only a club whose cut-off is longer than its
+release lead fills one (#670; ``docs/adr/0196`` §1).
 """
 
 from __future__ import annotations
@@ -38,7 +40,6 @@ from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHE
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
-    SATURDAY_FIVE_S_CUT_OFF,
     a_club_and_its_desk,
     a_group,
     a_member,
@@ -56,12 +57,14 @@ NOTICES = "/api/v1/players/me/notices"
 TO_CONFIRM = "/api/v1/players/me/payments-to-confirm"
 #: Thirty minutes from the last yes on Monday morning: 08:30 in Kraków.
 PAY_BY = "2026-10-05T06:30:00Z"
-#: The book-by: two hours' notice before the hour.
-BOOK_BY = SATURDAY_FIVE - timedelta(hours=2)
-#: Saturday 08:00 in Kraków — after Friday 17:00's cut-off, before the book-by.
-SATURDAY_MORNING = SATURDAY_FIVE - timedelta(hours=9)
-#: Thirty minutes from a last yes on Saturday morning: 08:30 in Kraków.
-PAY_BY_ON_SATURDAY = "2026-10-10T06:30:00Z"
+#: The book-by: the release time, a day before the hour.
+BOOK_BY = SATURDAY_FIVE - timedelta(days=1)
+#: The cut-off: two days before the hour.
+CUT_OFF = SATURDAY_FIVE - timedelta(hours=48)
+#: Friday 08:00 in Kraków — after Thursday 17:00's cut-off, before the book-by.
+FRIDAY_MORNING = SATURDAY_FIVE - timedelta(hours=33)
+#: Thirty minutes from a last yes on Friday morning: 08:30 in Kraków.
+PAY_BY_ON_FRIDAY = "2026-10-09T06:30:00Z"
 
 
 @pytest.fixture
@@ -75,9 +78,10 @@ def clock(app):
 
 @pytest.fixture
 async def bonarka(client) -> tuple[str, dict]:
-    """Bonarka Arena, which books at once, padel at 160 zł — 40 zł a seat."""
+    """Bonarka Arena, padel at 160 zł — 40 zł a seat — selling until a day
+    before, with a two-day cut-off."""
 
-    return await a_club_and_its_desk(client, way="INSTANT", padel_grosze=160_00)
+    return await a_club_and_its_desk(client, padel_grosze=160_00, cut_off_hours=48)
 
 
 @pytest.fixture
@@ -246,7 +250,7 @@ async def test_before_the_cut_off_she_is_told_to_fix_her_card_and_nothing_is_pai
     assert "Your bank wants you to confirm the 40 zł hold yourself." in email.text
     assert (
         "Nothing is paid now: fixing your card only places the 40 zł hold on it "
-        "again, taken on Fri 17:00, the club's cut-off."
+        "again, taken on Thu 17:00, the club's cut-off."
     ) in email.text
     assert "Confirm your payment" not in email.text
     waiting = (
@@ -525,8 +529,8 @@ async def test_her_time_never_runs_past_the_book_by(
 
     proposal, answer = await a_game(client, session_factory, clock, club, four)
 
-    assert answer["payment_awaited_until"] == "2026-10-10T13:00:00Z"
-    # Past Friday's cut-off: hers is a time to pay.
+    assert answer["payment_awaited_until"] == "2026-10-09T15:00:00Z"
+    # Past Thursday's cut-off: hers is a time to pay.
     assert (await the_card(client, paula, proposal))["time_to"] == "PAY"
     clock.move(timedelta(minutes=10, seconds=20))
     assert (await runs_out(session_factory, clock)).games == 1
@@ -617,19 +621,19 @@ async def test_two_refused_one_paying_in_time_keeps_her_payment_when_he_runs_out
 async def test_a_card_refused_just_before_the_cut_off_has_until_the_cut_off(
     client, session_factory, clock, payments, mailbox, bonarka, four
 ):
-    """Friday 16:50, ten minutes before the cut-off: her time to fix her card
+    """Thursday 16:50, ten minutes before the cut-off: her time to fix her card
     ends at it, not thirty minutes on."""
 
     club, _ = bonarka
     paula, *_ = four
-    clock.move(SATURDAY_FIVE_S_CUT_OFF - MONDAY_MORNING - timedelta(minutes=10))
+    clock.move(CUT_OFF - MONDAY_MORNING - timedelta(minutes=10))
 
     proposal, answer = await a_game(client, session_factory, clock, club, four)
 
-    assert answer["payment_awaited_until"] == "2026-10-09T15:00:00Z"
+    assert answer["payment_awaited_until"] == "2026-10-08T15:00:00Z"
     [owed] = await to_confirm(client, paula)
     assert (owed["confirm_by"], owed["time_to"]) == (
-        "2026-10-09T15:00:00Z",
+        "2026-10-08T15:00:00Z",
         "FIX_THE_CARD",
     )
     assert (await told(client, mailbox, paula))[0][0] == (
@@ -649,9 +653,9 @@ async def test_a_card_refused_just_before_the_cut_off_has_until_the_cut_off(
 
 @pytest.fixture
 def after_the_cut_off(clock) -> MovableClock:
-    """Saturday 08:00 — Friday 17:00's cut-off has passed, the book-by not."""
+    """Friday 08:00 — Thursday 17:00's cut-off has passed, the book-by not."""
 
-    clock.move(SATURDAY_MORNING - MONDAY_MORNING)
+    clock.move(FRIDAY_MORNING - MONDAY_MORNING)
     return clock
 
 
@@ -665,7 +669,7 @@ async def test_a_game_filling_after_its_cut_off_gives_a_refused_payment_time_to_
         client, session_factory, after_the_cut_off, club, four
     )
 
-    assert answer["payment_awaited_until"] == PAY_BY_ON_SATURDAY
+    assert answer["payment_awaited_until"] == PAY_BY_ON_FRIDAY
     [hers, *_] = await notices_of(client, mailbox, paula)
     assert (hers["kind"], hers["title"], hers["body"]) == (
         "CONFIRM_PAYMENT",
@@ -677,7 +681,7 @@ async def test_a_game_filling_after_its_cut_off_gives_a_refused_payment_time_to_
     assert "Fix your card" not in email.text
     card = await the_card(client, paula, proposal)
     assert (card["your_payment_due_by"], card["time_to"]) == (
-        PAY_BY_ON_SATURDAY,
+        PAY_BY_ON_FRIDAY,
         "PAY",
     )
     assert (await the_card(client, marta, proposal))["time_to"] == "PAY"
@@ -689,7 +693,7 @@ async def test_a_game_filling_after_its_cut_off_gives_a_refused_payment_time_to_
     assert details.json()["time_to"] == "PAY"
     assert details.json()["your_payment"]["time_to"] == "PAY"
     [owed] = await to_confirm(client, paula)
-    assert (owed["confirm_by"], owed["time_to"]) == (PAY_BY_ON_SATURDAY, "PAY")
+    assert (owed["confirm_by"], owed["time_to"]) == (PAY_BY_ON_FRIDAY, "PAY")
 
 
 async def test_paying_in_time_after_the_cut_off_takes_every_share_at_once(

@@ -13,7 +13,7 @@ the proposer: one per sport and hour, with how many courts are free then — a
 paused club's too, since its cards keep their court while it deals no new one.
 And **every hour it still holds a court for**, read off the offer as it stood
 before any deadline in the window: a card keeps the book-by it was made with,
-so a club that lengthens its notice has not taken a card's court away.
+so a club that lengthens its release lead has not taken a card's court away.
 
 **A club's terms are read off the same offer**, so *which clubs sell* has one
 answer for a card and for the hour it was made at: a live club is answered,

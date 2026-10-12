@@ -1,4 +1,4 @@
-"""The Club courts stream: what a club offers Raketa, and how it works with it.
+"""The Club courts stream: what a club offers Raketa, and on what terms.
 
 **One stream per club, filed under the club's own id** (``docs/adr/0189`` §5),
 so *this club's courts* is a stream read and a second stream for one club is not
@@ -7,8 +7,8 @@ the club's, because the club's is what the search projection every player reads
 is built from, and a desk painting hours is not a fact about where a club is.
 
 **Nothing is written when a club signs up.** A club that has done nothing here
-has no stream and folds to no courts, no way of working and the defaults —
-exactly what the setup checklist says of it — so the first act is the birth.
+has no stream and folds to no courts and the default settings — exactly what
+the setup checklist says of it — so the first act is the birth.
 
 Every event carries ``club_id``, the stream's own key, as a Plan's events carry
 their challenge's: a record read alone still says whose it is.
@@ -153,34 +153,20 @@ class PricesSet:
 
 
 @dataclass(frozen=True)
-class WayOfWorkingChosen:
-    """The club chose how it works with Raketa — or changed it, which applies
-    to hours not yet booked (the mechanics §16.3)."""
-
-    club_id: UUID
-    way: str
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
 class RaketaSettingsChanged:
     """The club saved its Raketa settings, **all of them as they now stand**.
     The first one is also the club **confirming** them — defaults included —
     which is the setup checklist's last step.
 
-    ``check_in`` is **retired** with desk check-in (#651; ``docs/adr/0195``
-    §9): a row saved before carries *We check players in*, and still decodes;
-    nothing reads it, and a row saved since carries ``null``."""
+    Written under version 2 since #670 (``event_subscriptions.py`` says
+    why)."""
 
     club_id: UUID
     release_lead_days: int
     cut_off_hours: int
-    minimum_notice_hours: int
-    time_to_confirm_minutes: int
     other_clubs_courts: bool
     other_clubs_within_km: int
     occurred_at: datetime
-    check_in: bool | None = None
 
 
 @dataclass(frozen=True)

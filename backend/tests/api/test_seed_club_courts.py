@@ -8,7 +8,6 @@ its Overview, Courts & prices and Raketa settings — never a stream or a table.
 
 from __future__ import annotations
 
-from collections import Counter
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -26,7 +25,6 @@ from tests.api.club_courts_world import (
     PRICES,
     RAKETA_SETTINGS,
     SETUP,
-    WAY_OF_WORKING,
 )
 from tests.api.test_clubs import SIGN_IN, bearer
 from tests.unit.fake_clock import MovableClock
@@ -66,23 +64,28 @@ async def read(client, desk: dict, path: str) -> dict:
     return answered.json()
 
 
-async def test_the_clubs_work_two_ways_with_one_not_live_and_one_paused(
-    client, clock, session_factory
-):
+async def test_one_club_is_not_live_and_one_is_paused(client, clock, session_factory):
+    """Every club works Only Raketa, the one way (#670): there is no way to
+    read, and each club's release lead is its own."""
+
     report = await seeded(session_factory)
 
-    ways, live, paused = Counter(), [], []
+    leads, live, paused = {}, [], []
     for declared in SEED_CLUB_COURTS:
         desk = await desk_of(client, declared.club)
         settings = await read(client, desk, RAKETA_SETTINGS)
         setup = await read(client, desk, SETUP)
-        ways[settings["way_of_working"]] += 1
+        leads[declared.club] = settings["release_lead_days"]
         if setup["live"]:
             live.append(declared.club)
         if settings["paused"]:
             paused.append(declared.club)
 
-    assert set(ways) == {"ONLY_RAKETA", "INSTANT"}
+    assert "way_of_working" not in settings
+    assert leads == {
+        declared.club: declared.settings.release_lead_days
+        for declared in SEED_CLUB_COURTS
+    }
     assert sorted(live) == sorted(
         club.name for club in SEED_CLUBS if club.name != "Wisła Park"
     )
@@ -93,16 +96,18 @@ async def test_the_clubs_work_two_ways_with_one_not_live_and_one_paused(
 async def test_the_club_that_is_not_live_has_half_its_checklist_done(
     client, clock, session_factory
 ):
+    """Two steps of four (#670): its courts, and its settings confirmed — and
+    neither its payments nor its prices."""
+
     await seeded(session_factory)
 
     setup = await read(client, await desk_of(client, "Wisła Park"), SETUP)
 
     assert {row["step"]: row["state"] for row in setup["steps"]} == {
         "CONNECT_PAYMENTS": "TO_DO",
-        "WAY_OF_WORKING": "DONE",
         "COURTS": "DONE",
         "HOURS_AND_PRICES": "TO_DO",
-        "SETTINGS": "TO_DO",
+        "SETTINGS": "DONE",
     }
     assert setup["payments"] == "NEEDS_DETAILS"
 
@@ -127,10 +132,17 @@ async def test_a_club_seeded_before_payments_is_connected_on_the_next_run(
         session_factory, settings=get_settings(), now=NOW, centre=KRAKOW
     )
     desk = await desk_of(client, "Wisła Park")
-    chosen = await client.put(
-        WAY_OF_WORKING, json={"way_of_working": "INSTANT"}, headers=desk
+    saved = await client.put(
+        RAKETA_SETTINGS,
+        json={
+            "release_lead_days": 3,
+            "cut_off_hours": 24,
+            "other_clubs_courts": {"offered": False, "within_km": 10},
+            "paused": False,
+        },
+        headers=desk,
     )
-    assert chosen.status_code == 200, chosen.text
+    assert saved.status_code == 200, saved.text
     assert (await read(client, desk, SETUP))["payments"] == "NOT_STARTED"
 
     report = await write_the_club_courts(
@@ -162,7 +174,7 @@ async def test_every_club_has_courts_per_sport_hours_an_exception_and_bands(
         assert all(court["hours"] for court in courts), declared.club
         assert len(exceptions) == 1, declared.club
         priced = [row["price_grosze"] and row["bands"] for row in prices]
-        assert all(priced) if declared.confirmed else not any(priced), declared.club
+        assert all(priced) if declared.prices else not any(priced), declared.club
 
 
 async def test_a_second_run_sets_nobody_up_twice(client, clock, session_factory):

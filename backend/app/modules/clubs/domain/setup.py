@@ -1,18 +1,20 @@
-"""The setup checklist: the five steps a club takes before its courts reach
+"""The setup checklist: the four steps a club takes before its courts reach
 anybody's deck, and whether it is **live** (the mechanics §16.2, the screens
 B2).
 
 **Read, never stored.** Every step is a fact the club's stream already holds —
-a way chosen, a court offered, an offered court's hours and its sport's price,
-the settings confirmed — so the checklist is a fold over the aggregate and
-cannot disagree with the pages that change it.
+a court offered, an offered court's hours and its sport's price, the settings
+confirmed — so the checklist is a fold over the aggregate and cannot disagree
+with the pages that change it.
 
 **A step is locked behind the one it needs**, and that is a rule rather than a
 comparison, so it is the backend's (``docs/adr/0021``): hours and prices wait
-for a court, the settings for a way of working. Which step is *next* is the
-first one to do, which a client reads off the order.
+for a court. Which step is *next* is the first one to do, which a client reads
+off the order. The settings wait on nothing: they were locked behind *Choose
+how you work with Raketa*, the second of five steps until Only Raketa became
+the one way (#670; ``docs/adr/0196`` §1).
 
-**Live is all five** (#537): the club is the seller, so a club whose payments
+**Live is all four** (#537): the club is the seller, so a club whose payments
 account cannot take a payment sells nothing, however ready its courts are. The
 first step is done while the provider says the account is **ready**, and only
 then — so a club the provider stops is live no longer until it answers, and
@@ -30,10 +32,9 @@ from app.modules.clubs.domain.payments_account import PaymentsStatus
 
 
 class SetupStep(StrEnum):
-    """The five steps, in the order the Overview lists them."""
+    """The four steps, in the order the Overview lists them."""
 
     CONNECT_PAYMENTS = "CONNECT_PAYMENTS"
-    WAY_OF_WORKING = "WAY_OF_WORKING"
     COURTS = "COURTS"
     HOURS_AND_PRICES = "HOURS_AND_PRICES"
     SETTINGS = "SETTINGS"
@@ -74,18 +75,12 @@ def checklist_of(club: ClubCourts) -> SetupChecklist:
                 SetupStep.CONNECT_PAYMENTS,
                 _done_or_to_do(club.payments_status is PaymentsStatus.READY),
             ),
-            (SetupStep.WAY_OF_WORKING, _done_or_to_do(club.way is not None)),
             (SetupStep.COURTS, _done_or_to_do(has_courts)),
             (
                 SetupStep.HOURS_AND_PRICES,
                 _done_or_to_do(hours_and_prices) if has_courts else StepState.LOCKED,
             ),
-            (
-                SetupStep.SETTINGS,
-                _done_or_to_do(club.settings_confirmed)
-                if club.way is not None
-                else StepState.LOCKED,
-            ),
+            (SetupStep.SETTINGS, _done_or_to_do(club.settings_confirmed)),
         ),
         payments=club.payments_status,
     )

@@ -455,9 +455,9 @@ class Settings(BaseSettings):
     # `ProposalExpired` a poster will be told from, and a projection whose live
     # reads stay narrow as it grows.
     #
-    # **The book-by itself is emphatically not here**: it is the club's, derived
-    # from its way of working in `clubs/domain/raketa_terms.py`, and an
-    # environment that could move it would decide when a player's yes lapses.
+    # **The book-by itself is emphatically not here**: it is the club's release
+    # time, derived from its release lead in `clubs/domain/raketa_terms.py`, and
+    # an environment that could move it would decide when a player's yes lapses.
     #
     # Every minute, chosen against the record's lag rather than a backlog: the
     # read is one indexed range of unrecorded endings.

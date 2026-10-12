@@ -361,7 +361,7 @@ async def test_a_sheet_lists_the_fits_free_then_and_the_free_courts_home_club_fi
         30_00,
         25_00,
     ]
-    assert at(sheet["free_courts"][0]["book_by"]) == SAT_17 - timedelta(hours=2)
+    assert at(sheet["free_courts"][0]["book_by"]) == SAT_17 - timedelta(days=1)
     assert sheet["rescues"] == [] and sheet["posts"] == []
 
 
@@ -814,8 +814,8 @@ async def test_a_post_not_full_by_its_book_by_disappears(
     post = await posted(client, ola, group, club, SAT_18)
     assert await deck_of(client, kuba, group)
 
-    # Its book-by: the club's two hours' notice before the hour.
-    clock.move(SAT_18 - timedelta(hours=2) - MONDAY_MORNING)
+    # Its book-by: the club's release time, a day before the hour.
+    clock.move(SAT_18 - timedelta(days=1) - MONDAY_MORNING)
     swept = await sweeps(session_factory, clock)
 
     assert swept.proposals == 1

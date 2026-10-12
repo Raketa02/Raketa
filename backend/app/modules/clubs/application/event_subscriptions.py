@@ -23,7 +23,6 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
-    WayOfWorkingChosen,
 )
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
@@ -31,6 +30,18 @@ from app.modules.clubs.domain.events import (
     ClubDetailsChanged,
     ClubRegistered,
 )
+
+
+#: The wire version ``clubs.raketa_settings_changed`` is written under: version
+#: 1 carried the minimum notice and the time to confirm, which #670 removed with
+#: Instant and On request — a change to the wire shape, versioned as one — and
+#: ``check_in``, retired with desk check-in (#651) and decodable until then.
+#: Version 1 is not registered: the store is reset with the removal, so a
+#: stored row of it is a decoding error, and no row of version 2 ever carried
+#: *We check players in*. ``clubs.way_of_working_chosen`` is unregistered with
+#: the choice (``docs/adr/0196`` §1): Only Raketa is the one way, and a class
+#: kept only so an old row decodes would be a reader for a fact nothing reads.
+RAKETA_SETTINGS_CHANGED_VERSION = 2
 
 
 def register_club_events(catalog: EventCatalog) -> None:
@@ -52,9 +63,10 @@ def register_club_events(catalog: EventCatalog) -> None:
     catalog.register(ExceptionAdded, name="clubs.exception_added", version=1)
     catalog.register(ExceptionRemoved, name="clubs.exception_removed", version=1)
     catalog.register(PricesSet, name="clubs.prices_set", version=1)
-    catalog.register(WayOfWorkingChosen, name="clubs.way_of_working_chosen", version=1)
     catalog.register(
-        RaketaSettingsChanged, name="clubs.raketa_settings_changed", version=1
+        RaketaSettingsChanged,
+        name="clubs.raketa_settings_changed",
+        version=RAKETA_SETTINGS_CHANGED_VERSION,
     )
     catalog.register(RaketaPaused, name="clubs.raketa_paused", version=1)
     catalog.register(RaketaResumed, name="clubs.raketa_resumed", version=1)
@@ -83,7 +95,6 @@ def subscribe_club_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(ExceptionAdded, LogClubCourtsEvent())
     dispatcher.subscribe(ExceptionRemoved, LogClubCourtsEvent())
     dispatcher.subscribe(PricesSet, LogClubCourtsEvent())
-    dispatcher.subscribe(WayOfWorkingChosen, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaSettingsChanged, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaPaused, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaResumed, LogClubCourtsEvent())

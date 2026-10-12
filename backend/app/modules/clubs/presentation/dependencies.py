@@ -48,10 +48,7 @@ from app.modules.clubs.application.club_courts import (
     SetRaketaHours,
 )
 from app.modules.clubs.application.prices import ReadPrices, SetPrices
-from app.modules.clubs.application.raketa_settings import (
-    ChooseWayOfWorking,
-    SaveRaketaSettings,
-)
+from app.modules.clubs.application.raketa_settings import SaveRaketaSettings
 from app.modules.clubs.application.hours_exceptions import (
     AddException,
     ReadExceptions,
@@ -268,17 +265,6 @@ def get_set_prices(
 
 
 SetPricesDep = Annotated[SetPrices, Depends(get_set_prices)]
-
-
-def get_choose_way_of_working(
-    courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
-) -> ChooseWayOfWorking:
-    return ChooseWayOfWorking(courts=courts, uow=uow, clock=clock)
-
-
-ChooseWayOfWorkingDep = Annotated[
-    ChooseWayOfWorking, Depends(get_choose_way_of_working)
-]
 
 
 def get_save_raketa_settings(

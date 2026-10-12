@@ -107,7 +107,8 @@ class CancelReason(StrEnum):
 
     WEATHER = "WEATHER"
     REPAIR = "REPAIR"
-    #: The desk sold the hour too — an Instant club's double sale (§16.16).
+    #: The desk sold a handed-over hour too, by mistake (§16.3, §16.16). It
+    #: stays with Only Raketa the one way (#670; ``docs/adr/0196`` §1).
     DOUBLE_BOOKING = "DOUBLE_BOOKING"
     OTHER = "OTHER"
 

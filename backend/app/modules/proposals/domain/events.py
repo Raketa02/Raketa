@@ -2,8 +2,8 @@
 
 **Born made**: ``ProposalMade`` is the first event and carries everything the
 card promises — the court hour at a club (never a court number, which is given
-at booking), the share fixed on it and the book-by the club's way of working
-derived for it. Nothing on it is re-read from the club later: a club changing
+at booking), the share fixed on it and the book-by — the club's release time
+for it (#670). Nothing on it is re-read from the club later: a club changing
 its prices or its settings changes only the cards dealt after (the mechanics
 §5.2, §16.6).
 

@@ -892,17 +892,21 @@ async def test_everybody_is_emailed_it_s_a_game_with_their_share_held(
 
 
 async def test_a_game_that_fills_after_its_cut_off_says_so(
-    client, session_factory, clock, mailbox, club, four, group
+    client, session_factory, clock, mailbox, four
 ):
-    """Tuesday 6 October at 07:00 is inside the 24-hour cut-off from Monday
-    08:00: the game was never free to leave."""
+    """Wednesday 7 October at 07:00 is inside a 48-hour cut-off from Monday
+    08:00: the game was never free to leave. Only a club whose cut-off is
+    longer than its release lead — a day here — still fills one
+    (``docs/adr/0196`` §1)."""
 
+    club = await a_club_selling(client, name="Kazimierz Padel", cut_off_hours=48)
+    group = await a_group(client, four[0], club, *four[1:])
     proposal = await makes(
         session_factory,
         clock,
         pool_id=group,
         club_id=club,
-        start=warsaw(6, 7),
+        start=warsaw(7, 7),
         versions=(tuple(four),),
     )
     for player in four:
@@ -939,7 +943,6 @@ async def test_kazimierz_padel_books_marta_s_game_the_moment_paula_s_yes_fills_i
     club, _ = await a_club_and_its_desk(
         client,
         name="Kazimierz Padel",
-        way="ONLY_RAKETA",
         padel_grosze=100_00,
         release_lead_days=1,
     )

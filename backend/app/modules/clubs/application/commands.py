@@ -13,7 +13,6 @@ from uuid import UUID
 
 from app.kernel import Sport
 from app.modules.clubs.domain.prices import BandDays
-from app.modules.clubs.domain.raketa_terms import WayOfWorking
 
 
 @dataclass(frozen=True)
@@ -139,20 +138,12 @@ class SetPricesCommand:
 
 
 @dataclass(frozen=True)
-class ChooseWayOfWorkingCommand:
-    club_id: UUID
-    way: WayOfWorking
-
-
-@dataclass(frozen=True)
 class SaveRaketaSettingsCommand:
     """The settings form, every field as the desk leaves it."""
 
     club_id: UUID
     release_lead_days: int
     cut_off_hours: int
-    minimum_notice_hours: int
-    time_to_confirm_minutes: int
     other_clubs_courts: bool
     other_clubs_within_km: int
     paused: bool

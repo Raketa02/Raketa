@@ -4,7 +4,7 @@ over the Club context's own published ports, so the arrow runs
 
 **The first free court** is read off what the club sells, as it stood **before
 any deadline**: a card keeps the book-by it was made with, so a club that has
-lengthened its notice since has not taken a full game's court away — the same
+lengthened its release lead since has not taken a full game's court away — the same
 reading ``proposals``' ``held`` makes of a card's court hour. The courts come in
 the club's own order, and the first of the sport at the hour is the one booked.
 

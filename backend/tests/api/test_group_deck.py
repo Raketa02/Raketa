@@ -47,7 +47,6 @@ from tests.api.club_courts_world import (
     PAYMENTS_LINK,
     a_desk,
     adds_a_court,
-    chooses,
     confirms_settings,
     connects_payments,
     court_path,
@@ -179,8 +178,8 @@ async def test_a_card_is_my_version_of_the_game_with_everything_it_draws(
     assert card["club"] == {"id": club, "name": "Bonarka Arena"}
     assert card["share_grosze"] == 30_00
     assert datetime.fromisoformat(card["starts_at"]) == SATURDAY_FIVE
-    # An Instant club: two hours' minimum notice.
-    assert datetime.fromisoformat(card["deadline"]) == warsaw(10, 15)
+    # Its book-by: the release time, a day before at this club.
+    assert datetime.fromisoformat(card["deadline"]) == warsaw(9, 17)
     assert card["in_count"] == 1
     assert card["version_count"] == 1
     assert card["open_seats_after_your_yes"] == 2
@@ -254,16 +253,22 @@ async def test_the_sides_are_the_evenest_arrangement_with_me_on_mine(
 
 
 async def test_a_last_minute_card_says_no_free_cancellation(
-    client, session_factory, clock, club, crowd, group
+    client, session_factory, clock, crowd
 ):
+    """Only a club whose cut-off is longer than its release lead still deals a
+    card past its cut-off (``docs/adr/0196`` §1): Kazimierz Padel sells its
+    hours until a day before, and players leave free until two days before."""
+
     ola, kuba, ewa, tomek = crowd[:4]
-    # Tomorrow at seven: twenty-three hours away, inside the 24-hour cut-off.
+    club = await a_club_selling(client, name="Kazimierz Padel", cut_off_hours=48)
+    group = await a_group(client, ola, club, kuba, ewa, tomek)
+    # Wednesday at seven: forty-seven hours away, inside the 48-hour cut-off.
     await makes(
         session_factory,
         clock,
         pool_id=group,
         club_id=club,
-        start=warsaw(6, 7),
+        start=warsaw(7, 7),
         versions=((ola, kuba, ewa, tomek),),
     )
 
@@ -737,7 +742,6 @@ async def test_a_club_that_stops_selling_deals_nothing_more(
     club_id, desk = await a_desk(
         client, name="Wisla Park", email="desk@wisla.pl", sports=("PADEL",)
     )
-    await chooses(client, desk, "INSTANT")
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], every_hour_of_the_week())
     await sets_prices(
@@ -776,7 +780,6 @@ async def test_a_club_whose_payments_stop_deals_nothing_more(
     club_id, desk = await a_desk(
         client, name="Wisla Park", email="desk@wisla.pl", sports=("PADEL",)
     )
-    await chooses(client, desk, "INSTANT")
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], every_hour_of_the_week())
     await sets_prices(
