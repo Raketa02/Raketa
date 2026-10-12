@@ -70,13 +70,11 @@ all free, the same hour at another club it plays at before any other hour,
 completed by their best fits. Nobody's yes carries over: a yes is to a court at
 an hour.
 
-**On request** (#543; the mechanics §16.8): a full game waiting for its club
-**holds its own court** through its request — so it is never lost because that
-court is gone from the hour, and never counted as a second card on it — and a
-game its club **turned down** is *owed*: its people are dealt a new card first,
-exactly as a lost card's are, **never at the club and hour that turned them
-down** — by the first batch that finds them an hour, until its own hour has
-passed.
+**A booked game its club cancelled** (#547) is *owed*: the people still in it
+are dealt a new card first, exactly as a lost card's are, **never at the club
+and hour that cancelled it** — by the first batch that finds them an hour,
+until its own hour has passed. No club confirms a game (``docs/adr/0196`` §1),
+so a club's cancel is the one source of an owed game (#669).
 """
 
 from __future__ import annotations
@@ -288,9 +286,8 @@ class Deal:
 @dataclass(frozen=True, slots=True)
 class Batch:
     """One pool's batch, in the order it is applied: the cards that lost their
-    court hour, the picks — those dealt to the people In on a lost card or a
-    turned-down game first — the turned-down games now done with, and the
-    deals."""
+    court hour, the picks — those dealt to the people In on a lost card or an
+    owed game first — the owed games now done with, and the deals."""
 
     lost: tuple[UUID, ...] = ()
     picks: tuple[Pick, ...] = ()
@@ -322,8 +319,8 @@ def propose(
     for, **whatever deadline the club's settings now give it** — a card lives to
     its own book-by, and loses its court hour only when no court is left;
     ``filling`` this pool's proposals in the sport still filling at ``now``; and
-    ``owed`` its games in the sport a club turned down whose people have not
-    been dealt a new card yet."""
+    ``owed`` its games in the sport a club cancelled whose people have not been
+    dealt a new card yet."""
 
     return _Batching(
         sport=sport,
@@ -444,15 +441,9 @@ class _Batching:
             )
         ordered = sorted(filling, key=lambda p: (p.start, str(p.proposal_id)))
         still_held = frozenset(held)
-        # A game its club has holds its court through its request — waiting
-        # for its answer, or for a payment its yes waits on (#626) — so the
-        # court gone from the hour is its own. One waiting for a payment at a
-        # club that books at once holds none, and loses it as any card does.
-        self._lost = tuple(
-            p
-            for p in ordered
-            if not p.with_its_club and (p.club_id, p.start) not in still_held
-        )
+        # A game still filling holds no court — one waiting for a payment
+        # neither — and loses its hour as any card does.
+        self._lost = tuple(p for p in ordered if (p.club_id, p.start) not in still_held)
         self._live = tuple(p for p in ordered if p not in self._lost)
         self._owed = tuple(sorted(owed, key=lambda p: (p.start, str(p.proposal_id))))
 
@@ -515,7 +506,7 @@ class _Batching:
         redealt = tuple(
             proposal.proposal_id
             for proposal in self._owed
-            # Anywhere but where the club turned them down.
+            # Anywhere but the club and hour that cancelled it.
             if self._deal_again_to_those_in(
                 proposal, not_at=(proposal.club_id, proposal.start)
             )
@@ -556,9 +547,9 @@ class _Batching:
     def _deal_again_to_those_in(
         self, lost: Proposal, *, not_at: tuple[UUID, Instant] | None = None
     ) -> bool:
-        """The people In on a card that lost its court hour — or a game its
-        club turned down, or the people still in a booked game its club
-        cancelled (#547) — dealt a new card first: the nearest hour they are
+        """The people In on a card that lost its court hour — or the people
+        still in a booked game its club cancelled (#547) — dealt a new card
+        first: the nearest hour they are
         all free, completed by their best fits — or as many of them as there
         are — and never ``not_at``. Whether a card was dealt."""
 
@@ -1027,8 +1018,6 @@ class _Batching:
             1
             for proposal in self._live
             if proposal.origin is Origin.PICK
-            # A request's court is off the hour's already: it holds it.
-            and not proposal.with_its_club
             and (proposal.club_id, proposal.start) == (hour.club_id, hour.start)
         ) + sum(
             1

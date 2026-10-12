@@ -12,8 +12,9 @@ game that already stopped filling is left as it is.
 Until the delivery lands, a yes from the leaver is refused already: a yes asks
 the pool who is in it now.
 
-**A game waiting for its club is not booked yet** (#543), so the leaver's yes on
-it is withdrawn too, and the request with it — as their own *Leave* would.
+**A full game waiting for one payment is not booked yet** (#625), so the
+leaver's yes on it is withdrawn too, and their hold let go — as their own
+*Leave* would.
 """
 
 from __future__ import annotations
@@ -24,7 +25,6 @@ from uuid import UUID
 from app.kernel import Instant
 from app.modules.proposals.application.answers import withdraw_a_yes
 from app.modules.proposals.domain.ports import (
-    ClubRequests,
     ProposalDirectory,
     ProposalRepository,
     UndecidedCharges,
@@ -39,12 +39,10 @@ class WithdrawALeaversYeses:
         *,
         proposals: ProposalRepository,
         directory: ProposalDirectory,
-        requests: ClubRequests,
         undecided: UndecidedCharges,
     ) -> None:
         self._proposals = proposals
         self._directory = directory
-        self._requests = requests
         self._undecided = undecided
 
     async def execute(self, *, pool_id: UUID, player_id: UUID, at: Instant) -> int:
@@ -63,7 +61,6 @@ class WithdrawALeaversYeses:
                 proposal,
                 player_id,
                 proposals=self._proposals,
-                requests=self._requests,
                 undecided=self._undecided,
                 at=at,
             )

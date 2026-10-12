@@ -45,7 +45,6 @@ from app.modules.proposals.domain.events import (
     ProposalMade,
     ProposalWithdrawn,
     Redealt,
-    TurnedDown,
     VersionDealt,
     YesResumed,
     YesSaid,
@@ -54,7 +53,6 @@ from app.modules.proposals.domain.events import (
 from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.domain.post import LevelRange, PostedFor, Who
 from app.modules.proposals.domain.proposal import (
-    ClubAnswer,
     Origin,
     Proposal,
     Standing,
@@ -490,7 +488,7 @@ def test_a_court_hour_is_lost_once_and_never_by_a_card_already_over():
 
 
 # --------------------------------------------------------------------------- #
-# Waiting for the club (#543)
+# Full, then booked (#541, #547)
 # --------------------------------------------------------------------------- #
 
 
@@ -502,80 +500,20 @@ def a_full_game() -> Proposal:
     return proposal
 
 
-def test_a_full_game_still_filling_is_waiting_for_its_club():
-    proposal = a_full_game()
+def test_a_full_game_the_fill_never_booked_expires_at_its_book_by():
+    """No club confirms a game (``docs/adr/0196`` §1): nothing holds a full
+    game past its book-by, which reads as it does for any card."""
 
-    assert proposal.waiting_for_the_club is True
-    assert dealt(a_pick(), (B, C, D, E)).waiting_for_the_club is False
-
-
-def test_a_game_waiting_for_its_club_outlives_its_book_by():
-    proposal = a_full_game()
-
-    assert proposal.standing_at(BOOK_BY + timedelta(minutes=20)) is Standing.FILLING
-    assert proposal.expire(now=BOOK_BY + timedelta(minutes=20)) is False
-    assert proposal.pull_events() == []
-
-
-def test_a_seat_opening_after_its_book_by_leaves_a_game_that_expired():
     proposal = a_full_game()
     late = BOOK_BY + timedelta(minutes=5)
 
-    proposal.withdraw_yes(C, at=late)
-
-    assert proposal.waiting_for_the_club is False
+    assert proposal.standing_at(BOOK_BY - timedelta(minutes=1)) is Standing.FILLING
     assert proposal.standing_at(late) is Standing.EXPIRED
     assert proposal.expire(now=late) is True
 
 
-def test_the_club_turning_it_down_ends_it_and_keeps_who_was_in():
-    proposal = a_full_game()
-
-    proposal.turn_down(ClubAnswer.REFUSED, at=LATER)
-
-    assert proposal.pull_events() == [
-        TurnedDown(
-            proposal_id=proposal.proposal_id, answer="REFUSED", occurred_at=LATER
-        )
-    ]
-    assert proposal.standing_at(LATER) is Standing.TURNED_DOWN
-    assert proposal.waiting_for_the_club is False
-    assert proposal.yeses == (B, C, D, E)
-    with pytest.raises(ProposalIsOver) as over:
-        proposal.withdraw_yes(C, at=LATER)
-    assert over.value.details == {"standing": "TURNED_DOWN"}
-
-
-def test_only_a_game_waiting_for_its_club_is_turned_down():
-    proposal = dealt(a_pick(), (B, C, D, E))
-    proposal.say_yes(B, at=LATER)
-
-    with pytest.raises(InvariantViolated):
-        proposal.turn_down(ClubAnswer.NO_ANSWER, at=LATER)
-
-
-#: The new card a turned-down or cancelled game's people are dealt first.
+#: The new card a cancelled game's people are dealt first.
 NEW_CARD = uuid4()
-
-
-def test_a_turned_down_game_owes_its_people_a_new_card_once():
-    proposal = a_full_game()
-    proposal.turn_down(ClubAnswer.NO_ANSWER, at=LATER)
-    proposal.pull_events()
-
-    assert proposal.owes_a_new_card is True
-    assert proposal.redeal(card_id=NEW_CARD, named=(B, C, D, E), at=LATER) is True
-    assert proposal.pull_events() == [
-        Redealt(
-            proposal_id=proposal.proposal_id,
-            occurred_at=LATER,
-            card_id=NEW_CARD,
-            player_ids=(B, C, D, E),
-        )
-    ]
-    assert proposal.owes_a_new_card is False
-    assert proposal.redeal(card_id=NEW_CARD, named=(B, C, D, E), at=LATER) is False
-    assert a_full_game().owes_a_new_card is False
 
 
 def a_booked_game() -> Proposal:
@@ -588,7 +526,7 @@ def a_booked_game() -> Proposal:
 def test_a_booked_game_remembers_whose_own_yes_filled_it():
     """The filler is never told back what their yes did (the mechanics Q102):
     the fill records who it was — and nobody, when no player's act filled it,
-    as the club's yes does."""
+    as a paused yes coming back does."""
 
     proposal = a_pick()
     proposal.deal((B, C, D, E), at=MADE_AT)
@@ -601,9 +539,9 @@ def test_a_booked_game_remembers_whose_own_yes_filled_it():
     assert (filled.filled_by, proposal.filled_by) == (E, E)
     assert Proposal.from_history([*history, filled]).filled_by == E
 
-    by_the_club = a_full_game()
-    by_the_club.fill(first_side=(B, C), second_side=(D, E), by=None, at=LATER)
-    assert by_the_club.filled_by is None
+    by_nobody = a_full_game()
+    by_nobody.fill(first_side=(B, C), second_side=(D, E), by=None, at=LATER)
+    assert by_nobody.filled_by is None
     assert a_full_game().filled_by is None
 
 

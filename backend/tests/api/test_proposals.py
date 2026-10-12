@@ -120,7 +120,6 @@ async def test_a_yes_lands_on_the_game_and_in_the_player_s_live_yeses(
         "proposal_id": str(proposal),
         "open_seats": 3,
         "booked": None,
-        "waiting_for_the_club": False,
         "your_payment": None,
         "payment_awaited_until": None,
         "money": None,

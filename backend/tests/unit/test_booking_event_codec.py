@@ -1,7 +1,7 @@
-"""What #622 adds to the Booking stream, as a **durable** contract: a request
-names the player whose own act put it to the club — defaulted rather than a
-version 2, so a request stored before names nobody, and nobody's *It's a
-game!* about it is their own.
+"""What #669 takes off the Booking stream, as a **durable** contract: On
+request's seven events leave **without decoders** — the local store is reset
+with the removal and only ``local`` has ever run — while every event of a game
+born booked still encodes and decodes under its own name.
 """
 
 from __future__ import annotations
@@ -9,27 +9,39 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
+
 from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.bookings.application.event_subscriptions import (
     register_booking_events,
 )
-from app.modules.bookings.domain.events import BookingRequested
+from app.modules.bookings.domain.events import BookingConfirmed
 
 NOW = datetime(2026, 10, 5, 6, tzinfo=timezone.utc)
 START = datetime(2026, 10, 10, 15, tzinfo=timezone.utc)
-FILLER = uuid4()
+
+#: On request's events, unregistered with it (#669).
+REMOVED = (
+    "bookings.requested",
+    "bookings.accepted",
+    "bookings.refused",
+    "bookings.timed_out",
+    "bookings.request_withdrawn",
+    "bookings.awaiting_a_payment",
+    "bookings.payment_not_in_time",
+)
 
 
-def _codec() -> JsonEventCodec:
+def _catalog() -> EventCatalog:
     catalog = EventCatalog()
     register_booking_events(catalog)
-    return JsonEventCodec(catalog)
+    return catalog
 
 
-def _requested() -> BookingRequested:
-    return BookingRequested(
+def _confirmed() -> BookingConfirmed:
+    return BookingConfirmed(
         booking_id=uuid4(),
         pool_id=uuid4(),
         club_id=uuid4(),
@@ -39,43 +51,34 @@ def _requested() -> BookingRequested:
         kind="COMPETITIVE",
         start=START,
         share_grosze=30_00,
-        first_side=(FILLER, uuid4()),
+        first_side=(uuid4(), uuid4()),
         second_side=(uuid4(), uuid4()),
         cut_off=START,
-        answer_by=datetime(2026, 10, 5, 6, 30, tzinfo=timezone.utc),
+        game_id=uuid4(),
         occurred_at=NOW,
-        filled_by=FILLER,
     )
 
 
-def _decoded(codec: JsonEventCodec, event_type: str, payload: dict):
-    return codec.decode(
+def test_a_booking_born_booked_encodes_and_decodes_back():
+    codec = JsonEventCodec(_catalog())
+    confirmed = _confirmed()
+
+    encoded = codec.encode(confirmed)
+
+    assert (encoded.event_type, encoded.schema_version) == ("bookings.confirmed", 1)
+    decoded = codec.decode(
         SerializedEventEnvelope(
             id=uuid4(),
-            event_type=event_type,
-            schema_version=1,
-            payload=payload,
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=encoded.payload,
             occurred_at=NOW,
         )
     )
+    assert decoded == confirmed
 
 
-def test_a_request_names_whose_act_put_it_to_the_club_and_decodes_back():
-    codec = _codec()
-    requested = _requested()
-
-    encoded = codec.encode(requested)
-
-    assert (encoded.event_type, encoded.schema_version) == ("bookings.requested", 1)
-    assert _decoded(codec, encoded.event_type, encoded.payload) == requested
-
-
-def test_a_request_stored_before_it_named_its_filler_names_nobody():
-    codec = _codec()
-    encoded = codec.encode(_requested())
-    older = {key: value for key, value in encoded.payload.items() if key != "filled_by"}
-
-    decoded = _decoded(codec, encoded.event_type, older)
-
-    assert isinstance(decoded, BookingRequested)
-    assert decoded.filled_by is None
+@pytest.mark.parametrize("name", REMOVED)
+def test_on_request_s_events_have_no_decoder(name: str):
+    with pytest.raises(LookupError):
+        _catalog().class_for(name, 1)

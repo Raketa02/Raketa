@@ -199,12 +199,7 @@ async def test_the_club_reads_its_bookings_by_day_with_what_it_may_see(
     assert row["booked_from"]["name"] == "Sobotni padel"
     assert row["booked_from"]["official"] is False
     assert row["may_move_or_cancel"] is True
-    assert day["counts"] == {
-        "all": 1,
-        "waiting_for_you": 0,
-        "seat_open": 0,
-        "called_off": 0,
-    }
+    assert day["counts"] == {"all": 1, "seat_open": 0, "called_off": 0}
     assert (await the_day(client, desk, day="2026-10-11"))["bookings"] == []
 
 

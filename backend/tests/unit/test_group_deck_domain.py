@@ -364,7 +364,6 @@ def a_card(
         open_seats_after_your_yes=open_after,
         version_count=1,
         no_free_cancellation=False,
-        club_confirms=False,
     )
 
 

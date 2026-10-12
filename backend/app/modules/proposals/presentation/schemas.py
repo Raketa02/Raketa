@@ -139,9 +139,8 @@ class YesAnswerResponse(BaseModel):
     open_seats: int = Field(
         description=(
             "Seats nobody is In on yet, this player's yes counted. Nought on a "
-            "game that booked — on a full game an On request club has still to "
-            "confirm — and on a full game waiting for one payment, whose seat is "
-            "its payer's alone for their time to pay (#625)."
+            "game that booked, and on a full game waiting for one payment, whose "
+            "seat is its payer's alone for their time to pay (#625)."
         )
     )
     booked: BookedSchema | None = Field(
@@ -150,15 +149,6 @@ class YesAnswerResponse(BaseModel):
             "Present when this yes booked the game: every seat's share was held "
             "until the club's cut-off, or taken after it (#637), and the booking "
             "and its Game are open. `null` otherwise."
-        ),
-    )
-    waiting_for_the_club: bool = Field(
-        default=False,
-        description=(
-            "This yes filled the game at an **On request** club: it went to the "
-            "club, which confirms it within its time to confirm, and nobody pays "
-            "until it does — the charge and *It's a game!* follow its yes. The "
-            "game is on Home as `WAITING_FOR_THE_CLUB`."
         ),
     )
     your_payment: YourPaymentSchema | None = Field(
@@ -173,7 +163,7 @@ class YesAnswerResponse(BaseModel):
     payment_awaited_until: datetime | None = Field(
         default=None,
         description=(
-            "**This yes filled the game and a share was refused** (#625, #626; "
+            "**This yes filled the game and a share was refused** (#625; "
             "Q110): the game waits for that payment until then — *It's a game!* "
             "with *Waiting for one payment · until 14:40 · Nobody pays until "
             "it's in*. Somebody else's, or this player's own (`your_payment`). "
@@ -208,7 +198,6 @@ class YesAnswerResponse(BaseModel):
                 if booked is None
                 else BookedSchema(booking_id=booked.booking_id, game_id=booked.game_id)
             ),
-            waiting_for_the_club=answer.waiting_until is not None,
             your_payment=(
                 None
                 if mine is None
@@ -513,13 +502,6 @@ class DeckCardSchema(BaseModel):
     no_free_cancellation: bool = Field(
         description="The club's cut-off has already passed for this game."
     )
-    club_confirms: bool = Field(
-        description=(
-            "An On request club: a full game waits for the club's yes before "
-            "anybody pays, so *Book it now* charges nobody at once and its stamp "
-            "carries no price."
-        )
-    )
     sides: DeckSidesSchema
     forecast: DeckForecastSchema | None = Field(
         description=(
@@ -553,7 +535,6 @@ class DeckCardSchema(BaseModel):
             court=card.court,
             court_name=card.court_name,
             no_free_cancellation=card.no_free_cancellation,
-            club_confirms=card.club_confirms,
             sides=_deck_sides(
                 card.sides, reader=reader, people=people, in_=card.in_, paid=card.paid
             ),
@@ -781,46 +762,41 @@ class PaymentsToConfirmResponse(BaseModel):
 # --------------------------------------------------------------------------- #
 
 _HOME_STATUS = (
-    "`WAITING_FOR_THE_CLUB` — an On request club has the full game and has not "
-    "answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no "
-    "court given. `BOOKED` — full and booked, its hour still ahead. "
-    "`NEEDS_RESULT` — its hour has come and nobody has said it happened. "
-    "`CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is "
-    "agreed. `UNCOUNTED` — they played and no score is agreed: two scores named "
-    "different winners (no `uncounted_reason`), or one of the reasons "
-    "`uncounted_reason` names. `PLAYED_NO_SCORE` — full at its hour, and "
-    "nobody recorded it before the entry window closed: played for everybody "
-    "on it, and no Level moves. `CALLED_OFF` — it will not be played; "
-    "`called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is "
-    "offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) "
-    "*fills by then or the game is off and everyone is refunded*, after it *the "
-    "game goes ahead*. A game whose hour comes with a seat still open is "
-    "`UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with "
-    "`filling_again`** (#624, Q106) — a full game that went back to filling "
-    "before it was booked: a player left while the club decided, or a yes was "
-    "taken back because that player's week filled or two players stopped "
-    "fitting at the club's yes. Nobody paid, there is no Game and no court, and "
-    "it asks nothing of the reader (`needs_you` is `false`): *1 seat open · "
-    "Kazimierz Padel is asked again when it's full · nobody paid* "
-    "(`club_confirms`), else *1 seat open · books when it's full · nobody "
-    "paid*. It is in the reader's live yeses too, where *Withdraw* "
-    "(`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. "
-    "Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club "
-    "that books at once); `CALLED_OFF` if its book-by passes first. "
-    "**`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) — full, and one player's "
-    "share was refused when it filled or when its On request club said yes: "
-    "*Waiting for one payment · until `payment_due_by` · Nobody pays until "
-    "it's in*. Nobody paid, there is no Game and no court given, and it asks "
-    "nothing of the reader (`needs_you` is `false`); to the payer it reads "
-    "*Confirm your payment by `your_payment_due_by`* — *Fix your card by …* "
-    "before the cut-off (`time_to`, #638) — beside their *To confirm* row. "
-    "Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with "
-    "`filling_again` — and so is a game one of the others left meanwhile."
+    "`BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour "
+    "has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is "
+    "on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and "
+    "no score is agreed: two scores named different winners (no "
+    "`uncounted_reason`), or one of the reasons `uncounted_reason` names. "
+    "`PLAYED_NO_SCORE` — full at its hour, and nobody recorded it before the "
+    "entry window closed: played for everybody on it, and no Level moves. "
+    "`CALLED_OFF` — it will not be played; `called_off_reason` says why. "
+    "`SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before "
+    "the cut-off (`money.free_to_leave_until`) *fills by then or the game is off "
+    "and everyone is refunded*, after it *the game goes ahead*. A game whose "
+    "hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` "
+    "`SEAT_EMPTY`. **`WAITING_FOR_A_PAYMENT`** (#625; Q111) — full, and one "
+    "player's share was refused when it filled: *Waiting for one payment · until "
+    "`payment_due_by` · Nobody pays until it's in*. Nobody paid, there is no "
+    "Game and no court given, and it asks nothing of the reader (`needs_you` is "
+    "`false`); to the payer it reads *Confirm your payment by "
+    "`your_payment_due_by`* — *Fix your card by …* before the cut-off "
+    "(`time_to`, #638) — beside their *To confirm* row. Paid in time it is "
+    "`BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` — and so is a "
+    "game one of the others left meanwhile. **`SEAT_OPEN` with `filling_again`** "
+    "(Q106) — a full game that went back to filling before it was booked: a "
+    "payment it waited for did not come in time, or a seat opened while it "
+    "waited — a player left, their week filled, or two players stopped fitting. "
+    "Nobody paid, there is no Game and no court, and it asks nothing of the "
+    "reader (`needs_you` is `false`): *1 seat open · books when it's full · "
+    "nobody paid*. It is in the reader's live yeses too, where *Withdraw* "
+    "(`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full "
+    "again, it reads `BOOKED`; `CALLED_OFF` if its book-by passes first. No club "
+    "confirms a game: nothing on Home waits for a club's answer (#669)."
 )
 
 _PAYMENT_DUE_BY = (
     "When the payment the game waits for is due — *Waiting for one payment · "
-    "until 14:40 · Nobody pays until it's in* (#625, #626; Q111): a share was "
+    "until 14:40 · Nobody pays until it's in* (#625; Q111): a share was "
     "refused, and its player's seat is theirs alone until then. Never names "
     "whose payment it is. `null` unless `WAITING_FOR_A_PAYMENT`. Like "
     "`free_to_leave_until`, the line switches by itself at this instant."
@@ -840,7 +816,7 @@ _YOUR_PAYMENT_DUE_BY = (
     "**The reader's own** refused share and their time to pay — *Confirm your "
     "payment by 14:40*, or before the cut-off *Fix your card by 14:40* "
     "(`time_to`, #638) — while it runs, on a game waiting for it or one gone "
-    "back to filling meanwhile (#625, #626). The payment is their *To confirm* "
+    "back to filling meanwhile (#625). The payment is their *To confirm* "
     "row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share "
     "was refused** reads, from outside, the seat kept for them alone until "
     "then (#640) — *Fix your card by 14:40 to take the seat*, or after the "
@@ -850,21 +826,13 @@ _YOUR_PAYMENT_DUE_BY = (
 
 _CALLED_OFF_REASON = (
     "Why a `CALLED_OFF` game will not be played — `null` on every other status. "
-    "`REFUSED` — the On request club refused it: *Kazimierz Padel said no*. "
-    "`NO_ANSWER` — the club did not answer in time: *Kazimierz Padel didn't "
-    "answer in time*. In both nobody paid, and the players get a new card "
-    "first. (A seat opening while it waited takes the request back instead: "
-    "the game is `SEAT_OPEN` with `filling_again` for the people still In.) "
     "`BOOK_BY_PASSED` — a game that went back to filling reached its book-by "
-    "before it was full again, or a seat opened after its book-by while the "
-    "club decided (a player left, their week filled, or two stopped fitting): "
-    "nobody paid. `COURT_HOUR_LOST` — a game that went back to "
-    "filling lost its court to another game before it was full again — or, at "
-    "a club that books at once, before the payment it waited for came in: "
-    "nobody paid, and its players are dealt a new card first. "
-    "`PAYMENT_NOT_IN_TIME` — a payment the game waited for did not come in "
-    "time and it could no longer fill: the book-by had come (#625, #626). "
-    "Nobody paid. "
+    "before it was full again: nobody paid. `COURT_HOUR_LOST` — a game that "
+    "went back to filling lost its court to another game before it was full "
+    "again — or before the payment it waited for came in: nobody paid, and its "
+    "players are dealt a new card first. `PAYMENT_NOT_IN_TIME` — a payment the "
+    "game waited for did not come in time and it could no longer fill: the "
+    "book-by had come (#625). Nobody paid. "
     "`SHORT_AT_THE_CUT_OFF` — a seat "
     "that opened before the club's cut-off was still empty at it: everybody "
     "still in is refunded in full (`money.refunded_grosze`); read off the clock "
@@ -898,29 +866,10 @@ _OPEN_SEATS = (
 )
 
 _FILLING_AGAIN = (
-    "A full game that went back to filling before it was booked (#624, Q106) — "
-    "`SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by "
+    "A full game that went back to filling before it was booked (#625, Q106) "
+    "— `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by "
     "passes, or its court goes, before it is full again. `false` on every "
     "booked game."
-)
-
-_CLUB_CONFIRMS = (
-    "The game's club confirms each game (On request): it waits for the club's "
-    "yes once full. On a game `filling_again` the line is *Kazimierz Padel is "
-    "asked again when it's full*; `false` is *books when it's full*."
-)
-
-_ANSWER_BY = (
-    "When the On request club must answer — the end of its time to confirm, "
-    "the deadline its desk is given in the request email and on its Bookings "
-    "page: *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* "
-    "(Q98). Asked again after a seat reopened and the game filled again, it is "
-    "the new deadline. `null` unless the game is waiting for its club: once "
-    "the club has said yes or refused, while the game is still filling, and at "
-    "an Instant or Only Raketa club. `null` too from the deadline on at "
-    "`read_at` — the club can no longer say yes, and the line reads only "
-    "*Nobody pays until Bonarka Arena confirms* until the game is called off. "
-    "Like `free_to_leave_until`, the line switches by itself at this instant."
 )
 
 
@@ -948,7 +897,7 @@ class BookedTileSchema(BaseModel):
     paid: bool = Field(
         description=(
             "Their share was taken — the *paid* tag. `false` while the game "
-            "waits for its club, on a request that was never booked, and on the "
+            "waits for a payment, on a game that was never booked, and on the "
             "reader's own tile when they are not on the game but offered its "
             "open seat — the dashed *You?* (#545)."
         )
@@ -985,8 +934,8 @@ class BookedMoneySchema(BaseModel):
             "ahead, and their share is held from `held_from`: *40 zł held from "
             "Sat 19:00 · taken Wed 19:00* (#639) — free to leave until the "
             "cut-off all the same. `TAKEN` — taken (`paid`). `null` while "
-            "nobody's money is on the game: waiting for its club or for a "
-            "payment, called off, and for a reader not on the game. Switches by "
+            "nobody's money is on the game: waiting for a payment, called off, "
+            "and for a reader not on the game. Switches by "
             "itself at `held_from` and at `taken_at`."
         )
     )
@@ -1112,8 +1061,8 @@ class HomeGameSchema(BaseModel):
         description=(
             "The ordinary Game it opened: the result is told and agreed on "
             "`/games/{id}/result`, and its room in `GET /conversations` carries "
-            "this id. `null` while it waits for its On request club, and on a "
-            "request the club never booked — there is no Game, and no room."
+            "this id. `null` on a game that waited for a payment and was never "
+            "booked — there is no Game, and no room."
         )
     )
     pool_id: UUID = Field(description="The pool it filled in — a group's id.")
@@ -1135,18 +1084,16 @@ class HomeGameSchema(BaseModel):
         )
     )
     filling_again: bool = Field(description=_FILLING_AGAIN)
-    club_confirms: bool = Field(description=_CLUB_CONFIRMS)
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     club: BookedClubSchema
     court_name: str | None = Field(
         description=(
-            "What the club calls the court — *Court 2*. `null` until the club "
-            "gives it: an On request club gives it with its yes."
+            "What the club calls the court — *Court 2*. `null` on a game that "
+            "was never booked, which no court was given."
         )
     )
     sides: BookedSidesSchema
     money: BookedMoneySchema
-    answer_by: datetime | None = Field(description=_ANSWER_BY)
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
     your_payment_due_by: datetime | None = Field(description=_YOUR_PAYMENT_DUE_BY)
     time_to: TimeTo | None = Field(description=_TIME_TO)
@@ -1175,7 +1122,6 @@ class HomeGameSchema(BaseModel):
             open_seats=game.open_seats,
             needs_you=card.state.needs_you,
             filling_again=game.filling_again,
-            club_confirms=game.club_confirms,
             starts_at=game.start,
             club=BookedClubSchema(id=game.club_id, name=card.club_name),
             court_name=game.court_name if game.court_given else None,
@@ -1187,7 +1133,6 @@ class HomeGameSchema(BaseModel):
                 paid=card.state.money.paid,
             ),
             money=_money(card.state.money),
-            answer_by=card.state.answer_by,
             payment_due_by=card.state.pay_by,
             your_payment_due_by=yours,
             time_to=_time_to(
@@ -1240,12 +1185,12 @@ class HomeResponse(BaseModel):
     )
     games: list[HomeGameSchema] = Field(
         description=(
-            "The reader's booked games — and their games an On request club has, "
-            "or had, to answer — **soonest first**, and only what Home draws: "
-            "**every live game** (waiting for the club, booked, with a seat open, "
-            "waiting on its result or on an answer to a score), **every game that "
-            "ended less than a day after its hour's end**, and **any game that "
-            "needs the reader** (`needs_you`). "
+            "The reader's booked games — and their full games waiting for one "
+            "payment, or gone back to filling — **soonest first**, and only what "
+            "Home draws: **every live game** (waiting for a payment, booked, with "
+            "a seat open, waiting on its result or on an answer to a score), "
+            "**every game that ended less than a day after its hour's end**, and "
+            "**any game that needs the reader** (`needs_you`). "
             "Nothing older is sent; its details (`GET /bookings/{id}`) still read "
             "it. A game a Classic play challenge opened is not here."
         )
@@ -1292,8 +1237,9 @@ class LeavingSchema(BaseModel):
             "(40 zł less the 1,76 zł kept on your payment); if nobody does, you "
             "won't. On your record if nobody takes it.* — with no figure and no "
             "clause while the fee kept is not yet known (#641). "
-            "`WHILE_WAITING_FOR_THE_CLUB` — *Nobody has paid yet. Leaving "
-            "withdraws your yes.* The same words the departure answers with."
+            "`WHILE_WAITING_FOR_A_PAYMENT` — the game waits for one payment "
+            "(#625): *Nobody has paid yet. Leaving withdraws your yes.* The same "
+            "words the departure answers with."
         )
     )
     refund_grosze: int | None = Field(
@@ -1336,12 +1282,11 @@ class DepartureResponse(BaseModel):
             "until the start; refunded, less exactly the fee kept on the payment, "
             "when somebody takes it — emailed that figure now, or none while the "
             "fee is not yet known (#641). "
-            "`WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the "
-            "request to the club are withdrawn, and the game is filling again — "
-            "`SEAT_OPEN` with `filling_again` on the others' Home. So it is on a "
-            "game already `filling_again`: the yes is withdrawn — and on one "
-            "`WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the "
-            "leaver's hold is let go, and the payer's time runs on."
+            "`WHILE_WAITING_FOR_A_PAYMENT` — on a game `WAITING_FOR_A_PAYMENT` "
+            "(#625): nobody had paid, the yes is withdrawn, the leaver's hold is "
+            "let go, and the payer's time runs on — the game is `SEAT_OPEN` with "
+            "`filling_again` on the others' Home. So it is on a game already "
+            "`filling_again`: the yes is withdrawn."
         )
     )
 
@@ -1373,8 +1318,8 @@ class BookingDetailsResponse(BaseModel):
         description=(
             "The ordinary Game it opened: its result acts, its balance forecast "
             "(`GET /games/{id}/pairing`) and its room in `GET /conversations` are "
-            "all reached by this id. `null` while it waits for its On request "
-            "club, and on a request the club never booked."
+            "all reached by this id. `null` on a game that waited for a payment "
+            "and was never booked."
         )
     )
     pool_id: UUID
@@ -1392,19 +1337,17 @@ class BookingDetailsResponse(BaseModel):
     open_seats: int = Field(description=_OPEN_SEATS)
     needs_you: bool
     filling_again: bool = Field(description=_FILLING_AGAIN)
-    club_confirms: bool = Field(description=_CLUB_CONFIRMS)
     starts_at: datetime
     ends_at: datetime = Field(description="An hour after `starts_at`: TIME's *until*.")
     where: WhereSchema
     court_name: str | None = Field(
         description=(
-            "The court the game was given — *Court 2*. `null` until the club "
-            "gives it: an On request club gives it with its yes."
+            "The court the game was given — *Court 2*. `null` on a game that "
+            "was never booked, which no court was given."
         )
     )
     sides: BookedSidesSchema
     money: BookedMoneySchema
-    answer_by: datetime | None = Field(description=_ANSWER_BY)
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
     your_payment_due_by: datetime | None = Field(description=_YOUR_PAYMENT_DUE_BY)
     time_to: TimeTo | None = Field(description=_TIME_TO)
@@ -1456,7 +1399,6 @@ class BookingDetailsResponse(BaseModel):
             open_seats=game.open_seats,
             needs_you=details.state.needs_you,
             filling_again=game.filling_again,
-            club_confirms=game.club_confirms,
             starts_at=game.start,
             ends_at=_an_hour_after(game.start),
             where=WhereSchema(
@@ -1479,7 +1421,6 @@ class BookingDetailsResponse(BaseModel):
                 ),
             ),
             money=_money(details.state.money),
-            answer_by=details.state.answer_by,
             payment_due_by=details.state.pay_by,
             your_payment_due_by=yours,
             time_to=_time_to(
@@ -1560,25 +1501,19 @@ class ProposalDetailsResponse(BaseModel):
     status: ProposalStatus = Field(
         description=(
             "`FILLING` — seats are open: *Filling · `in_count` of `seats` in*. "
-            "`WAITING_FOR_THE_CLUB` — every seat is In and an On request club has "
-            "still to say yes; nobody pays until it does, and the book-by no "
-            "longer ends it. `WAITING_FOR_A_PAYMENT` — every seat is In and one "
-            "player's refused share is awaited until `payment_due_by` (#625, "
-            "#626): their seat is theirs alone, and paying in time books it. "
-            "`FILLED` — booked: `GET /bookings/{proposal_id}`. "
-            "`EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` — it ended unfilled. "
-            "`TURNED_DOWN` — its On request club refused it or did not answer: "
-            "nobody paid, and the people In are dealt a new card first."
+            "`WAITING_FOR_A_PAYMENT` — every seat is In and one player's refused "
+            "share is awaited until `payment_due_by` (#625): their seat is "
+            "theirs alone, and paying in time books it. `FILLED` — booked: "
+            "`GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, "
+            "`COURT_HOUR_LOST` — it ended unfilled."
         )
     )
     actions: list[ReaderAction] = Field(
         description=(
             "What the reader may do now, in the screen's order: `YES` and `NO` "
             "(*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in "
-            "its place while the club decides — *Leave the game* with its sheet, "
-            "sent as the withdrawal, `DELETE /proposals/{id}/yes`, which also "
-            "calls off the request to the club — and while a payment is "
-            "awaited — and "
+            "its place while a payment is awaited — *Leave the game* with its "
+            "sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes` — and "
             "`CONFIRM_PAYMENT` when their seat waits on a refused payment "
             "(`your_payment`) — within their time to pay too, beside `LEAVE`; "
             "a payer refused for terms or a missing method has `YES` there, "
@@ -1604,19 +1539,10 @@ class ProposalDetailsResponse(BaseModel):
     no_free_cancellation: bool = Field(
         description="The club's cut-off has already passed for this game."
     )
-    club_confirms: bool = Field(
-        description="An On request club: a full game waits for its yes."
-    )
-    answer_by: datetime | None = Field(
-        description=(
-            f"{_ANSWER_BY} Here it stands in the money row in place of the "
-            "book-by, which no longer ends a game that filled in time."
-        )
-    )
     payment_due_by: datetime | None = Field(
         description=(
             "When the payment the game waits for is due — *Waiting for one "
-            "payment · until 14:40 · Nobody pays until it's in* (#625, #626) — "
+            "payment · until 14:40 · Nobody pays until it's in* (#625) — "
             "never whose. `null` unless `WAITING_FOR_A_PAYMENT`. The reader's own "
             "is `your_payment.confirm_by`."
         )
@@ -1671,8 +1597,6 @@ class ProposalDetailsResponse(BaseModel):
             share_grosze=proposal.share_grosze,
             book_by=proposal.book_by,
             no_free_cancellation=details.no_free_cancellation,
-            club_confirms=details.club_confirms,
-            answer_by=details.answer_by,
             payment_due_by=details.pay_by,
             time_to=details.time_to,
             sides=_deck_sides(

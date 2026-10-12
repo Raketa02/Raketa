@@ -6,16 +6,14 @@ like a proposal's, **its projections are written by ``save``, in the caller's
 transaction, and flushed** — so the court hour is gone from what the club
 sells, and the game counted in the player's week, the moment the fill commits.
 
-**What each read counts is the state's** (#543): a booking waiting for its club
-holds its court hour, as a booked one does, and a called-off one holds nothing;
-only a **booked** game is a game in a player's week or a group's *Games* — whole,
-or with a seat open (#544); and a player's games are every booking they have a
-seat on, whatever it came to — a request taken back because a seat opened is
-still the game of the people it left In (Q106), whose rows stay while the
-openers' go, and a leaver no longer has one. **A rescue is a seat row like any
-other** (#545): the game is the joiner's from the moment they take it — and a
-seat kept for a rescuer whose share was refused is a ``booking_keeps`` row,
-never a seat of theirs (#640).
+**What each read counts is the state's**: a booked game holds its court hour,
+and a called-off one holds nothing; only a **booked** game is a game in a
+player's week or a group's *Games* — whole, or with a seat open (#544); and a
+player's games are every booking they have a seat on, whatever it came to — a
+leaver no longer has one. **A rescue is a seat row like any other** (#545):
+the game is the joiner's from the moment they take it — and a seat kept for a
+rescuer whose share was refused is a ``booking_keeps`` row, never a seat of
+theirs (#640).
 """
 
 from __future__ import annotations
@@ -35,21 +33,14 @@ from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import Booking, BookingState
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.events import (
-    BookingAccepted,
-    BookingAwaitingAPayment,
     BookingConfirmed,
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
     CardFixed,
     CardToFix,
     CourtMoved,
     KeptSeatRanOut,
-    PaymentNotInTime,
     PlayerCheckedIn,
-    RequestWithdrawn,
     NoSaidToTheSeat,
     SeatKept,
     SeatLeft,
@@ -135,43 +126,6 @@ class EventSourcedBookingRepository:
                 )
             )
             self._seat(event.booking_id, event.first_side, event.second_side)
-        elif isinstance(event, BookingRequested):
-            await self._requested(event)
-        elif isinstance(event, BookingAccepted):
-            await self._row(
-                event.booking_id,
-                state=BookingState.BOOKED.value,
-                game_id=event.game_id,
-                booked_at=event.occurred_at,
-            )
-        elif isinstance(event, (BookingRefused, BookingTimedOut)):
-            await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
-        elif isinstance(event, BookingAwaitingAPayment):
-            # The club's yes keeps the court: the row holds its hour still.
-            await self._row(
-                event.booking_id, state=BookingState.WAITING_FOR_A_PAYMENT.value
-            )
-        elif isinstance(event, PaymentNotInTime):
-            await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
-            if not event.for_good:
-                # The payers' seats reopen; the people still In keep theirs,
-                # so the game stays on their Home (Q106).
-                await self._statement(
-                    delete(BookingSeatORM).where(
-                        BookingSeatORM.booking_id == event.booking_id,
-                        BookingSeatORM.player_id.in_(event.player_ids),
-                    )
-                )
-        elif isinstance(event, RequestWithdrawn):
-            await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
-            # The seats that opened go; the people still In keep theirs, so
-            # the game stays on their Home (Q106).
-            await self._statement(
-                delete(BookingSeatORM).where(
-                    BookingSeatORM.booking_id == event.booking_id,
-                    BookingSeatORM.player_id.in_(event.player_ids),
-                )
-            )
         elif isinstance(event, SeatLeft):
             await self._row(
                 event.booking_id,
@@ -200,7 +154,7 @@ class EventSourcedBookingRepository:
                 )
             )
         elif isinstance(event, SeatRescued):
-            # The row before its seat, as a request's are.
+            # The row before its seat.
             await self._row(
                 event.booking_id,
                 state=booking.state.value,
@@ -261,42 +215,6 @@ class EventSourcedBookingRepository:
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
 
-    async def _requested(self, event: BookingRequested) -> None:
-        """A request — the first, or the same game asked again with whoever is
-        In now, on the court free now."""
-
-        if await self._session.get(BookingORM, event.booking_id) is None:
-            self._session.add(
-                BookingORM(
-                    id=event.booking_id,
-                    pool_id=event.pool_id,
-                    club_id=event.club_id,
-                    court_id=event.court_id,
-                    sport=event.sport,
-                    start=event.start,
-                    share_grosze=event.share_grosze,
-                    cut_off=event.cut_off,
-                    state=BookingState.WAITING_FOR_THE_CLUB.value,
-                    answer_by=event.answer_by,
-                )
-            )
-        else:
-            await self._row(
-                event.booking_id,
-                court_id=event.court_id,
-                cut_off=event.cut_off,
-                state=BookingState.WAITING_FOR_THE_CLUB.value,
-                answer_by=event.answer_by,
-            )
-            await self._statement(
-                delete(BookingSeatORM).where(
-                    BookingSeatORM.booking_id == event.booking_id
-                )
-            )
-        # The row before its seats, which reference it.
-        await self._session.flush()
-        self._seat(event.booking_id, event.first_side, event.second_side)
-
     def _seat(
         self,
         booking_id: UUID,
@@ -344,7 +262,7 @@ class SqlAlchemyBookingDirectory:
         query = select(BookingORM.court_id, BookingORM.start, BookingORM.id).where(
             BookingORM.club_id == club_id,
             BookingORM.start >= start,
-            # Waiting for the club holds the court as booked does.
+            # Booked, or with a seat open: the court is the game's.
             BookingORM.state != BookingState.CALLED_OFF.value,
         )
         if end is not None:
@@ -461,28 +379,6 @@ class SqlAlchemyBookingDirectory:
             .group_by(BookingORM.pool_id)
         )
         return {pool_id: count for pool_id, count in rows.all()}
-
-    async def waiting_at(self, club_id: UUID) -> Sequence[UUID]:
-        rows = await self._session.scalars(
-            select(BookingORM.id)
-            .where(
-                BookingORM.club_id == club_id,
-                BookingORM.state == BookingState.WAITING_FOR_THE_CLUB.value,
-            )
-            .order_by(BookingORM.answer_by, BookingORM.id)
-        )
-        return list(rows.all())
-
-    async def unanswered(self, *, now: Instant) -> Sequence[UUID]:
-        rows = await self._session.scalars(
-            select(BookingORM.id)
-            .where(
-                BookingORM.state == BookingState.WAITING_FOR_THE_CLUB.value,
-                BookingORM.answer_by <= now,
-            )
-            .order_by(BookingORM.answer_by, BookingORM.id)
-        )
-        return list(rows.all())
 
     async def rescues_in(
         self, pool_id: UUID, *, sport: Sport, now: Instant

@@ -1,18 +1,16 @@
 """**Time to pay** — how it ends when the game does not book on it (#625, #626;
 the mechanics §12.2, Q109–Q112).
 
-A share refused as a full game fills — or as its On request club says yes —
-leaves its player In, the seat theirs alone for thirty minutes, never past the
-book-by, and **every other hold kept on its card**, so the payment in time books
-the game at once (``fill.py``). When it does not book on it, two things are
-owed here:
+A share refused as a full game fills leaves its player In, the seat theirs
+alone for thirty minutes, never past the book-by, and **every other hold kept
+on its card**, so the payment in time books the game at once (``fill.py``).
+When it does not book on it, two things are owed here:
 
 - **the time runs out** (``run_out``) — the payers' seats reopen, offered to
-  others and theirs to take back while free; at the club's yes the booking is
-  called off and its desk emailed (*A game didn't go ahead*), the court the
-  club's again. It is the job's (``RunOutTheTimeToPay``), and **a payer's own
-  act come too late runs it first** — a yes, a confirmation — so the deadline
-  reads the same whether or not the job has reached it;
+  others and theirs to take back while free. It is the job's
+  (``RunOutTheTimeToPay``), and **a payer's own act come too late runs it
+  first** — a yes, a confirmation — so the deadline reads the same whether or
+  not the job has reached it;
 - **what was kept is let go** (``let_go_of_what_was_kept``) — a player who
   leaves a game that waits for a payment takes their hold with them, and once
   no payment is awaited and the game did not book, every hold kept for the
@@ -44,7 +42,6 @@ from app.kernel import Clock, Instant, instant, invariant
 from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     CardsToFix,
-    ClubRequests,
     PlayerBookings,
     ProposalDirectory,
     ProposalRepository,
@@ -95,28 +92,18 @@ async def run_out(
     proposal: Proposal,
     *,
     proposals: ProposalRepository,
-    requests: ClubRequests,
     undecided: UndecidedCharges,
     now: Instant,
 ) -> tuple[UUID, ...]:
-    """Every payer whose time to pay is up at ``now`` — their seats reopen, the
-    holds kept for them are let go, and at the club's yes the booking is called
-    off, its desk told. Answers whose time ran out. **No commit.**"""
+    """Every payer whose time to pay is up at ``now`` — their seats reopen, and
+    the holds kept for them are let go. Answers whose time ran out. **No
+    commit.**"""
 
     was_paying = dict(proposal.paying)
-    on_the_clubs_yes = proposal.on_the_clubs_yes
     lapsed = proposal.run_out_of_time(at=now)
     if not lapsed:
         return ()
     await proposals.save(proposal)
-    if on_the_clubs_yes:
-        await requests.payment_not_in_time(
-            proposal.proposal_id,
-            player_ids=lapsed,
-            # Past the book-by it can no longer fill: called off for everybody.
-            for_good=now >= proposal.book_by,
-            at=now,
-        )
     await let_go_of_what_was_kept(proposal, was_paying, undecided=undecided, at=now)
     return lapsed
 
@@ -126,7 +113,6 @@ async def run_out_if_due(
     player_id: UUID,
     *,
     proposals: ProposalRepository,
-    requests: ClubRequests,
     undecided: UndecidedCharges,
     now: Instant,
 ) -> None:
@@ -139,7 +125,6 @@ async def run_out_if_due(
         await run_out(
             proposal,
             proposals=proposals,
-            requests=requests,
             undecided=undecided,
             now=now,
         )
@@ -226,7 +211,6 @@ class RunOutTheTimeToPay:
         *,
         proposals: ProposalRepository,
         directory: ProposalDirectory,
-        requests: ClubRequests,
         undecided: UndecidedCharges,
         bookings: PlayerBookings,
         games: BookedGameChanges,
@@ -236,7 +220,6 @@ class RunOutTheTimeToPay:
     ) -> None:
         self._proposals = proposals
         self._directory = directory
-        self._requests = requests
         self._undecided = undecided
         self._bookings = bookings
         self._games = games
@@ -317,7 +300,6 @@ class RunOutTheTimeToPay:
             await run_out(
                 proposal,
                 proposals=self._proposals,
-                requests=self._requests,
                 undecided=self._undecided,
                 now=now,
             )

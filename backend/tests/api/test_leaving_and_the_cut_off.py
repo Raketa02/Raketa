@@ -253,7 +253,7 @@ async def test_the_money_line_is_free_to_leave_until_the_cut_off_then_paid(
 
 
 # --------------------------------------------------------------------------- #
-# Leaving after the cut-off, after the start, and while the club decides
+# Leaving after the cut-off, and after the start
 # --------------------------------------------------------------------------- #
 
 
@@ -297,30 +297,6 @@ async def test_a_game_is_left_once_and_only_by_somebody_in_it(
 
     assert (again.status_code, again.json()["code"]) == (404, "booking_not_found")
     assert (outside.status_code, outside.json()["code"]) == (404, "booking_not_found")
-
-
-async def test_leaving_while_the_club_decides_withdraws_the_yes_and_nobody_paid(
-    client, session_factory, clock, four
-):
-    club, _desk = await a_club_and_its_desk(
-        client, name="Kazimierz Padel", way="ON_REQUEST"
-    )
-    group = await a_group(client, four[0], club, *four[1:])
-    proposal = await makes(
-        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
-    )
-    for player in four:
-        assert (await says_yes(client, player, proposal)).status_code == 200
-    ola, kuba, *_ = four
-
-    left = await leaves(client, kuba, proposal)
-
-    assert left.status_code == 200, left.text
-    assert left.json()["left"] == "WHILE_WAITING_FOR_THE_CLUB"
-    # The game is filling again, *Seat open* on the others' Home (Q106).
-    [card] = await home_of(client, ola)
-    assert (card["status"], card["filling_again"]) == ("SEAT_OPEN", True)
-    assert await home_of(client, kuba) == []
 
 
 async def test_the_leaver_leaves_the_game_s_chat_and_the_others_keep_it(

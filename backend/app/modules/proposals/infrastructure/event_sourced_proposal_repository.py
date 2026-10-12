@@ -36,7 +36,6 @@ from app.modules.proposals.domain.events import (
     TimeToPayGiven,
     TimeToPayMet,
     TimeToPayRanOut,
-    TurnedDown,
     VersionDealt,
     YesPaused,
     YesResumed,
@@ -105,15 +104,13 @@ class EventSourcedProposalRepository:
         await self._events.publish_many(pending)
         for event in pending:
             await self._project(event)
-        # Whether every seat is In and the club still to answer — what the live
-        # reads keep past a book-by — and the time to pay the game waits on
-        # (#625), written as the aggregate now says, on every save, so no event
-        # that fills or opens a seat can forget them.
+        # The time to pay the game waits on (#625), written as the aggregate
+        # now says, on every save, so no event that fills or opens a seat can
+        # forget it.
         await self._statement(
             update(ProposalORM)
             .where(ProposalORM.id == proposal.proposal_id)
             .values(
-                waiting_for_the_club=proposal.waiting_for_the_club,
                 paying_until=proposal.pay_by,
                 payment_awaited_at=proposal.payment_awaited_at,
             )
@@ -213,8 +210,6 @@ class EventSourcedProposalRepository:
             await self._end(event.proposal_id, Ending.EXPIRED)
         elif isinstance(event, CourtHourLost):
             await self._end(event.proposal_id, Ending.COURT_HOUR_LOST)
-        elif isinstance(event, TurnedDown):
-            await self._end(event.proposal_id, Ending.TURNED_DOWN)
         elif isinstance(event, ClubCancelled):
             await self._statement(
                 update(ProposalORM)
@@ -222,8 +217,8 @@ class EventSourcedProposalRepository:
                 .values(club_cancelled=True)
             )
         elif isinstance(event, Redealt):
-            # The stream's own fact: candidates are read by the ending, and
-            # the aggregate says which still owe a card.
+            # The stream's own fact: candidates are read by the club's cancel,
+            # and the aggregate says which still owe a card.
             pass
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")

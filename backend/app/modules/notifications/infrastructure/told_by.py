@@ -69,10 +69,6 @@ class BookedAndProposedGames:
             made_at=proposal.made_at,
             posted_by=proposal.poster_id,
             filling=filling,
-            waiting_for_the_club=filling and proposal.waiting_for_the_club,
-            answer_by=booking.answer_by
-            if booking is not None and booking.is_waiting
-            else None,
             open_seats=proposal.open_seats,
             in_=proposal.yeses,
             withdrawn=proposal.withdrawn,
@@ -90,7 +86,6 @@ class BookedAndProposedGames:
             ),
             booked=booking is not None and booking.is_booked,
             seated=() if booking is None else booking.players,
-            asked_the_club=booking is not None and booking.answer_by is not None,
             seats_taken={}
             if booking is None
             else {
@@ -103,11 +98,7 @@ class BookedAndProposedGames:
             else booking.cancel_reason.value,
             filled_by=proposal.filled_by,
             book_by=proposal.book_by,
-            fell_back_at=(
-                booking.taken_back_at
-                if booking is not None and booking.taken_back_at is not None
-                else proposal.fell_back_at
-            ),
+            fell_back_at=proposal.fell_back_at,
             left_it_short=()
             if booking is None
             else tuple(

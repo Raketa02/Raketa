@@ -107,8 +107,7 @@ _OVER = (
     "`proposal_is_over` — the game is no longer filling, named by "
     "`details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its "
     "poster took the post back with nobody else In, `COURT_HOUR_LOST` once the "
-    "last court at its club and hour went, `TURNED_DOWN` once its On request club "
-    "refused it or did not answer). The card leaves."
+    "last court at its club and hour went). The card leaves."
 )
 
 
@@ -170,11 +169,8 @@ _FILL_UNAVAILABLE = (
         "after the cut-off). When a "
         "share could not be held, **nobody paid**: that player's seat is open "
         "again (`open_seats`), and when it is this player's own, `your_payment` "
-        "names the refused payment to confirm. **At an On request club the last "
-        "yes puts the game to the club** (#543): `waiting_for_the_club`, "
-        "`open_seats` nought, nothing booked and nobody charged — the court is "
-        "held, the club is emailed, and the holds and *It's a game!* follow its "
-        "yes."
+        "names the refused payment to confirm. **No club confirms the game**: "
+        "the last yes books it at every club (#669)."
     ),
 )
 async def say_yes(
@@ -227,13 +223,13 @@ async def say_no(proposal_id: UUID, user: CurrentUserDep, say: SayNoDep) -> Resp
         "with nobody else In "
         "takes the post with them**; with others In, the game carries on without "
         "them.\n\n"
-        "**While an On request club decides, this is *Leave the game*** (#543): "
-        "nobody has paid; the request to the club is taken back, the held court "
-        "is free, and the game is back in the decks with this seat open — the "
+        "**While a full game waits for one payment, this is *Leave the game*** "
+        "(#625): nobody has paid; the leaver's hold is let go, the payer's time "
+        "runs on, and the game is back in the decks with this seat open — the "
         "others still In, and on their Home as `SEAT_OPEN` with `filling_again` "
-        "(#624). Full again, it goes to the club again; past its book-by it is "
-        "`CALLED_OFF` · `BOOK_BY_PASSED` for them instead. On a game already "
-        "`filling_again`, it takes the game off the player's own Home."
+        "(Q106); past its book-by it is `CALLED_OFF` · `BOOK_BY_PASSED` for them "
+        "instead. On a game already `filling_again`, it takes the game off the "
+        "player's own Home."
     ),
 )
 async def withdraw_yes(
@@ -572,9 +568,9 @@ async def read_booking_details(
         "and is offered to others until the start; the leaver is refunded, "
         "less the fee, when "
         "somebody takes it, and it is on their record if nobody does. **While "
-        "the club decides** nobody has paid: the yes and the request to the club "
-        "are withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is "
-        "filling again — and so it is on a game already `filling_again` (#624). "
+        "a payment is awaited** nobody has paid: the yes is withdrawn, as "
+        "`DELETE /proposals/{id}/yes` does, and the game is filling again — and "
+        "so it is on a game already `filling_again` (Q106). "
         "The leaver leaves the game's chat with their seat; everybody else's "
         "Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). "
         "Refused once the hour has begun."

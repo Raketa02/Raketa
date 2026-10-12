@@ -26,7 +26,7 @@ from app.application.events import EventStreamVersionConflict
 from app.application.ports import UnitOfWork
 from app.application.ports.mail import MailQueue
 from app.kernel import SPORT_SPECS, Clock, Instant, instant, invariant
-from app.modules.bookings.application.request_emails import (
+from app.modules.bookings.application.club_emails import (
     NewBooking,
     new_bookings_email,
 )

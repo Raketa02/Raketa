@@ -23,7 +23,7 @@ from uuid import UUID
 
 from app.application.ports.mail import MailQueue
 from app.kernel import Instant, invariant
-from app.modules.bookings.application.request_emails import (
+from app.modules.bookings.application.club_emails import (
     called_off_at_the_cut_off_email,
 )
 from app.modules.bookings.domain.booking import Booking

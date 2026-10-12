@@ -208,17 +208,16 @@ class SeatReopened:
 @dataclass(frozen=True)
 class TimeToPayGiven:
     """**Time to pay** (#625, #626; the mechanics §12.2, Q109): the game was
-    full and this player's share could not be held — when it filled, or when
-    its On request club said yes — so nobody paid, and **their seat is held for
-    them alone** until ``until``: thirty minutes, never past the book-by. They
-    stay In; nobody else is dealt the seat or may take it, and every other hold
-    on the game is kept, so paying in time books it at once.
+    full and this player's share could not be held when it filled, so nobody
+    paid, and **their seat is held for them alone** until ``until``: thirty
+    minutes, never past the book-by. They stay In; nobody else is dealt the
+    seat or may take it, and every other hold on the game is kept, so paying in
+    time books it at once.
 
     ``reason`` is the ``ReopenReason`` code of the refusal and
     ``seat_charge_id`` the refused payment. ``filled_by`` is the player whose
-    own act filled the game (Q102) — ``None`` when nobody's did: the club's yes,
-    a paused yes coming back. ``at_the_clubs_yes`` says the On request club had
-    said yes, and holds the court while it waits (#626).
+    own act filled the game (Q102) — ``None`` when nobody's did: a paused yes
+    coming back.
 
     ``time_to`` is the ``TimeTo`` code of what the time is for (#638; Q113):
     ``FIX_THE_CARD`` for a hold refused before the club's cut-off, where
@@ -233,7 +232,6 @@ class TimeToPayGiven:
     until: datetime
     occurred_at: datetime
     filled_by: UUID | None = None
-    at_the_clubs_yes: bool = False
     time_to: str = "PAY"
 
 
@@ -273,12 +271,11 @@ class TimeToPayRanOut:
 @dataclass(frozen=True)
 class FellBackToFilling:
     """**A full game waiting for one payment went back to filling** (#625;
-    Q104, Q106): at a club that books at once, a seat opened while the payment
-    was awaited — ``player_ids``' — so the game is filling again, and the
-    payer's time runs on. ``left`` is those of them whose own act took their yes
-    back, who are named to the others; any other seat opened by what happened
-    to its player, which is never said. The club's own analogue is the
-    booking's ``RequestWithdrawn``."""
+    Q104, Q106): a seat opened while the payment was awaited — ``player_ids``'
+    — so the game is filling again, and the payer's time runs on. ``left`` is
+    those of them whose own act took their yes back, who are named to the
+    others; any other seat opened by what happened to its player, which is
+    never said."""
 
     proposal_id: UUID
     player_ids: tuple[UUID, ...]
@@ -317,21 +314,6 @@ class YesResumed:
 
 
 @dataclass(frozen=True)
-class TurnedDown:
-    """**The club did not take it** (#543; the mechanics §16.8): every seat was
-    In and the game waited for its On request club, which refused it or did not
-    answer by its deadline. Nobody paid; *Called off · refused / no answer* is
-    the booking's to say. ``answer`` is ``REFUSED`` or ``NO_ANSWER``.
-
-    **The people who were In stay on the record** and are dealt a new card
-    first — never at this club and hour, which the club turned down."""
-
-    proposal_id: UUID
-    answer: str
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
 class ClubCancelled:
     """**The club cancelled the booked game** (#547; the mechanics §16.9): the
     booking says why, and refunds everybody still in in full. ``player_ids``
@@ -350,10 +332,10 @@ class ClubCancelled:
 
 @dataclass(frozen=True)
 class Redealt:
-    """The proposer has dealt the people In on a game its club turned down — or
-    still in on one it cancelled (#547) — a new card first. What makes such a
-    game owe nothing more; until it, every proposer run looks for an hour again,
-    while the game's own hour is still ahead.
+    """The proposer has dealt the people still in on a game its club cancelled
+    (#547) a new card first. What makes such a game owe nothing more; until it,
+    every proposer run looks for an hour again, while the game's own hour is
+    still ahead.
 
     ``card_id`` is the new card, and ``player_ids`` those of the people it owed
     who are on it — never a best fit dealt beside them, who was promised

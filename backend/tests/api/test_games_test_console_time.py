@@ -14,9 +14,8 @@ Home, the desk's payouts and its mail — and, for what only a job records, the
 console's own state pane, which reads the record rather than the clock.
 
 The world: **Bonarka Arena**, Instant, a padel court every hour at 30 zł a
-seat, with a 24-hour cut-off and two hours' notice; **Kazimierz Padel**, On
-request with thirty minutes to confirm — both desks on the seed's reserved TLD
-— and nine members the seed could have made. The clock stands on **Monday 5
+seat, with a 24-hour cut-off and two hours' notice — its desk on the seed's
+reserved TLD — and nine members the seed could have made. The clock stands on **Monday 5
 October 2026, 08:00 in Kraków**, so the last club day closed is Sunday's.
 """
 
@@ -63,7 +62,6 @@ from tests.unit.fake_clock import MovableClock
 GAMES_JOBS = (
     "proposer",
     "proposal-expiry",
-    "request-timeout",
     "time-to-pay",
     "holding",
     "cut-off",
@@ -92,9 +90,6 @@ class World:
     #: Instant: a 24-hour cut-off and two hours' notice.
     bonarka: str
     bonarka_desk: dict
-    #: On request, thirty minutes to confirm.
-    kazimierz: str
-    kazimierz_desk: dict
     group: UUID
     #: The protagonist — the phone in the tester's hand.
     marta: dict
@@ -120,13 +115,6 @@ async def world(client, session_factory, payments, clock) -> World:
     bonarka, bonarka_desk = await a_club_and_its_desk(
         client, email=f"desk.bonarka@{SEED}"
     )
-    kazimierz, kazimierz_desk = await a_club_and_its_desk(
-        client,
-        name="Kazimierz Padel",
-        email=f"desk.kazimierz@{SEED}",
-        way="ON_REQUEST",
-        point=(50.05, 19.94),
-    )
     marta, *rest = [
         await a_member(client, session_factory, payments, name, domain=SEED)
         for name in (
@@ -142,9 +130,7 @@ async def world(client, session_factory, payments, clock) -> World:
         )
     ]
     group = await a_group(client, marta, bonarka, *rest)
-    return World(
-        bonarka, bonarka_desk, kazimierz, kazimierz_desk, group, marta, tuple(rest)
-    )
+    return World(bonarka, bonarka_desk, group, marta, tuple(rest))
 
 
 async def runs(client, job: str) -> dict:
@@ -343,23 +329,6 @@ async def test_a_card_still_filling_counts_down_to_its_book_by(
     }
     [moment] = pane["moments"]
     assert moment["says"]
-
-
-async def test_a_request_counts_down_to_the_club_s_answer(
-    client, session_factory, clock, world
-):
-    game = await a_card(session_factory, clock, world, world.kazimierz)
-    assert (await all_say_yes(client, game, world))["waiting_for_the_club"] is True
-
-    pane = pane_of(await board_of(client, world.group), game)
-
-    # A request no longer ends at its book-by: the club's answer is its moment.
-    assert moments_of(pane) == {
-        "CLUB_ANSWER_DUE": (
-            at(MONDAY_MORNING + timedelta(minutes=30)),
-            "request-timeout",
-        )
-    }
 
 
 async def test_a_booked_game_counts_down_to_its_cut_off_and_its_days_close(

@@ -199,29 +199,6 @@ def test_leaving_after_the_cut_off_is_a_mark_when_nobody_takes_the_seat_by_the_s
     assert keeping_of(booking, OLA, now=START) is None
 
 
-def test_a_game_that_was_never_booked_is_on_nobody_s_record():
-    booking = Booking.requested(
-        booking_id=new_uuid(),
-        pool_id=new_uuid(),
-        club_id=new_uuid(),
-        court=COURT,
-        sport=Sport.PADEL,
-        kind=SearchMode.COMPETITIVE,
-        start=START,
-        share_grosze=30_00,
-        first_side=(OLA, KUBA),
-        second_side=(EWA, TOMEK),
-        cut_off=CUT_OFF,
-        answer_by=_at(1),
-        filled_by=None,
-        at=_at(),
-    )
-    booking.refuse(reason=None, at=_at(0.5))
-
-    assert keeping_of(booking, OLA, now=START) is None
-    assert keeping_of(booking, new_uuid(), now=START) is None
-
-
 # --------------------------------------------------------------------------- #
 # A refused holding's time to fix the card (#639)
 # --------------------------------------------------------------------------- #

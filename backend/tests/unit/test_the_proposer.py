@@ -27,10 +27,10 @@ unanswered seats go out as new versions — at most three.
 lost — never one whose court is there and whose club merely moved its deadline
 — and the people who were In on it are dealt a new card first.
 
-**On request** (#543). A full game waiting for its club holds its own court —
-it is never lost to it, and never counted twice at its hour — and a game its
-club turned down is owed: its people are dealt a new card first, never at the
-club and hour that turned them down.
+**A full game still filling** holds no court: it is lost with its court as any
+card is, and is the card on its court while it fills. **A booked game its club
+cancelled** is owed: the people still in are dealt a new card first, never at
+the club and hour that cancelled it (#547).
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.pool import Pool, PoolKind
-from app.modules.proposals.domain.proposal import ClubAnswer, Origin, Proposal
+from app.modules.proposals.domain.proposal import Origin, Proposal
 from app.modules.proposals.domain.proposer import (
     Batch,
     CourtHourOnSale,
@@ -735,7 +735,7 @@ def test_a_lost_card_nobody_was_in_on_is_simply_gone():
 
 
 # --------------------------------------------------------------------------- #
-# On request (#543)
+# A full game, and a booked one its club cancelled (#547)
 # --------------------------------------------------------------------------- #
 
 
@@ -746,49 +746,28 @@ def a_full_game(*players: UUID, start: Instant = SAT_17, club: UUID = HOME) -> P
     return game
 
 
-def test_a_game_waiting_for_its_club_is_never_lost_to_the_court_it_holds():
-    # Its held court is the last at 17:00, so the hour is held by nobody else —
-    # and the request is what holds it.
-    waiting = a_full_game(A, B, C, D)
+def test_a_full_game_still_filling_holds_no_court_and_is_lost_with_it():
+    # No club confirms a game: nothing holds a court for a full game the fill
+    # has not booked, so the last court at 17:00 going takes its card.
+    full = a_full_game(A, B, C, D)
 
-    dealt = batch([member(p) for p in (A, B, C, D)], [], held=[], filling=(waiting,))
+    dealt = batch([member(p) for p in (A, B, C, D)], [], held=[], filling=(full,))
 
-    assert dealt.lost == ()
+    assert dealt.lost == (full.proposal_id,)
 
 
-def test_a_game_waiting_for_its_club_does_not_count_twice_at_its_hour():
-    # Two courts at 17:00, one held for the request and so already off what is
-    # on sale: the other is still a card's.
-    waiting = a_full_game(A, B, C, D)
+def test_a_full_game_still_filling_is_the_card_on_its_court():
+    # Two courts at 17:00: the full game is one of them, the other a card's.
+    full = a_full_game(A, B, C, D)
     others = [member(p) for p in (E, F, G, H)]
 
     dealt = batch(
         [member(p) for p in (A, B, C, D)] + others,
-        [on_sale(SAT_17, courts=1)],
-        filling=(waiting,),
+        [on_sale(SAT_17, courts=2)],
+        filling=(full,),
     )
 
     assert [people(pick) for pick in dealt.picks] == [{"E", "F", "G", "H"}]
-
-
-def test_the_people_a_club_turned_down_are_dealt_a_new_card_first_elsewhere():
-    turned_down = a_full_game(A, B, C, D)
-    turned_down.turn_down(ClubAnswer.REFUSED, at=NOW)
-    # The club still sells 17:00 — it is the one hour it may not be.
-    members = [member(p, 3.3) for p in (A, B, C, D)]
-    members += [member(p, 3.0) for p in (E, F, G, H)]
-
-    dealt = batch(members, [on_sale(SAT_17), on_sale(SAT_18)], owed=(turned_down,))
-
-    assert dealt.redealt == (turned_down.proposal_id,)
-    first = dealt.picks[0]
-    assert (first.start, first.named, first.after) == (
-        SAT_18,
-        (A, B, C, D),
-        turned_down.proposal_id,
-    )
-    assert people(dealt.picks[1]) == {"E", "F", "G", "H"}
-    assert dealt.picks[1].start == SAT_17
 
 
 def test_the_people_still_in_a_game_its_club_cancelled_are_dealt_a_new_card_first():
@@ -803,15 +782,19 @@ def test_the_people_still_in_a_game_its_club_cancelled_are_dealt_a_new_card_firs
 
     assert dealt.redealt == (cancelled.proposal_id,)
     first = dealt.picks[0]
+    # The club still sells 17:00 — it is the one hour it may not be.
     assert (first.start, first.after) == (SAT_18, cancelled.proposal_id)
     assert {A, B, C} <= set(first.named)
+    assert people(dealt.picks[1]) == {"E", "F", "G", "H"}
+    assert dealt.picks[1].start == SAT_17
 
 
-def test_a_turned_down_game_with_no_hour_for_its_people_stays_owed():
-    turned_down = a_full_game(A, B, C, D)
-    turned_down.turn_down(ClubAnswer.NO_ANSWER, at=NOW)
+def test_a_cancelled_game_with_no_hour_for_its_people_stays_owed():
+    cancelled = a_full_game(A, B, C, D)
+    cancelled.fill(first_side=(A, B), second_side=(C, D), by=D, at=NOW)
+    cancelled.club_cancelled((A, B, C, D), at=NOW)
 
-    dealt = batch([member(p) for p in (A, B, C, D)], [], owed=(turned_down,))
+    dealt = batch([member(p) for p in (A, B, C, D)], [], owed=(cancelled,))
 
     assert dealt.picks == ()
     # Nothing recorded: the next batch looks again.

@@ -5,17 +5,11 @@ court and its number, the seats and their sides, the club's cut-off as it stood
 then, and the Game it opened — written in the transaction that took every seat's
 money.
 
-**Or born waiting for the club** (#543): at an On request club the full game is
-``BookingRequested`` — the same record but the Game, and the moment the club's
-answer is due — and the court is reserved for it until the club answers.
-``BookingAccepted`` books it and names the Game it opened; ``BookingRefused`` and
-``BookingTimedOut`` call it off with nobody paid; and ``RequestWithdrawn`` takes
-it back because a seat opened while it waited — the game is filling again, the
-people still In keep their places on it, and full again it is
-``BookingRequested`` once more on the same stream. **A share refused at the
-club's yes** keeps the yes and the court while its player has time to pay
-(#626): ``BookingAwaitingAPayment``, then ``BookingAccepted`` on the payment, or
-``PaymentNotInTime`` when it does not come.
+**Never born waiting for a club** (#669; ``docs/adr/0196`` §1): On request's
+seven events — the request, the club's yes, no and silence, the request taken
+back, and the payment its yes waited on, come or not — are removed with it,
+unregistered and undecodable, since the local store is reset with the removal
+and only ``local`` has ever run.
 
 **Then the booked game is lived** (#544): ``SeatLeft`` is a player leaving it —
 their seat open, the game still the others' — and ``CalledOffAtCutOff`` is a
@@ -87,149 +81,6 @@ class BookingConfirmed:
     def __post_init__(self) -> None:
         object.__setattr__(self, "first_side", _uuids(self.first_side))
         object.__setattr__(self, "second_side", _uuids(self.second_side))
-
-
-@dataclass(frozen=True)
-class BookingRequested:
-    """A full game was put to its On request club, which has until
-    ``answer_by`` to say yes (the mechanics §16.3, §16.8). Nobody has paid.
-
-    Everything ``BookingConfirmed`` records but the Game, which opens only when
-    the club accepts: ``court_id`` is the court **held** for the answer — the
-    first free one of the sport at the hour, as a booking's is — and the sides
-    are drawn already, so the players read the game they are waiting on.
-    Recorded again on the same stream when the game fills again after a
-    ``RequestWithdrawn``, with whoever is In then.
-
-    ``filled_by`` is the player whose own act left no seat open and so put it
-    to the club — their yes, a join, a confirmed payment — who saw *It's a
-    game!* on their own screen; ``None`` for a paused yes coming back, and for
-    the rows recorded before it was asked (#622).
-    """
-
-    booking_id: UUID
-    pool_id: UUID
-    club_id: UUID
-    court_id: UUID
-    court_name: str
-    sport: str
-    kind: str
-    start: datetime
-    share_grosze: int
-    first_side: tuple[UUID, ...]
-    second_side: tuple[UUID, ...]
-    cut_off: datetime
-    #: When the club's time to confirm runs out — the request's own deadline.
-    answer_by: datetime
-    occurred_at: datetime
-    filled_by: UUID | None = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "first_side", _uuids(self.first_side))
-        object.__setattr__(self, "second_side", _uuids(self.second_side))
-
-
-@dataclass(frozen=True)
-class BookingAccepted:
-    """The club said yes: every seat was paid, the court is the players', and
-    the ordinary Game ``game_id`` is open."""
-
-    booking_id: UUID
-    game_id: UUID
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
-class BookingRefused:
-    """The club said no — *Called off · refused*. Nobody paid. ``reason`` is
-    the club's own note, for its records; it is never shown to a player."""
-
-    booking_id: UUID
-    reason: str | None
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
-class BookingTimedOut:
-    """The club did not answer before ``answer_by`` — *Called off · no
-    answer*. Nobody paid."""
-
-    booking_id: UUID
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
-class RequestWithdrawn:
-    """A seat opened while the game waited for the club — each of
-    ``player_ids`` left, or could no longer be In — so the request is off and
-    nobody paid. **The people still In keep their places** (Q106): the game is
-    filling again, *Seat open* on their Home, and when it is full the club is
-    asked again.
-
-    ``left`` is those of them who took their own yes back — *Leave*,
-    *Withdraw*, leaving the group, a block — whom the others are told by name;
-    every other seat opened by what happened to its player (another game took
-    their hour or their week, a pair stopped fitting, a share refused at the
-    club's yes), which nobody is told (Q104). Empty on the rows recorded before
-    it was asked."""
-
-    booking_id: UUID
-    player_ids: tuple[UUID, ...]
-    occurred_at: datetime
-    left: tuple[UUID, ...] = ()
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "player_ids", _uuids(self.player_ids))
-        object.__setattr__(self, "left", _uuids(self.left))
-
-
-@dataclass(frozen=True)
-class BookingAwaitingAPayment:
-    """**The club said yes, and one share could not be held** (#626; the
-    mechanics Q109, Q112): the club's yes and its court are kept while
-    ``player_ids`` have until ``until`` to pay — thirty minutes, never past the
-    game's book-by. Nobody paid; the other holds wait on their cards, and the
-    payment in time books it (``BookingAccepted``) without asking the club
-    again. The desk reads *Accepted · waiting for one player's payment*.
-
-    ``to_fix_the_card`` when the yes came before the club's cut-off (#638;
-    Q113): nothing is taken then, only held, so their time is to fix the card
-    — *Accepted · waiting for one player's card* — never past the cut-off. A
-    row written before there were two says nothing: it was time to pay."""
-
-    booking_id: UUID
-    player_ids: tuple[UUID, ...]
-    until: datetime
-    occurred_at: datetime
-    to_fix_the_card: bool = False
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "player_ids", _uuids(self.player_ids))
-
-
-@dataclass(frozen=True)
-class PaymentNotInTime:
-    """**A payment the club's yes waited on did not come in time** (#626;
-    Q109, Q112): the booking is called off, nobody paid, and the court is the
-    club's again — its desk is emailed *A game didn't go ahead*. The people
-    still In keep their places, the game filling again for them and asked of the
-    club again when full, as after ``RequestWithdrawn``; ``player_ids`` are the
-    payers whose seats reopened.
-
-    ``for_good`` is a game that can no longer fill — the book-by had come, so no
-    time to pay was left, or it ran out on it — called off for everybody on it;
-    ``at_once`` the first of those: the share was refused at the club's yes
-    with no time left, so it never waited.
-    """
-
-    booking_id: UUID
-    player_ids: tuple[UUID, ...]
-    occurred_at: datetime
-    for_good: bool = False
-    at_once: bool = False
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "player_ids", _uuids(self.player_ids))
 
 
 @dataclass(frozen=True)

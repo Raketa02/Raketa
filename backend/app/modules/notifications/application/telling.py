@@ -11,18 +11,14 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 
 - ``SeatChargeKept`` — *It's a game! · 30 zł held*, to the payer, the cut-off
   kept on the notice as when it is taken (#637, Q113); and ``SeatChargeTaken``
-  at once after the cut-off — *It's a game! · you paid*; or *the club
-  confirmed*, at an On request club's yes; or *booked*, on a game that booked
-  on the payment it waited for (Q110). **The take at the cut-off tells
+  at once after the cut-off — *It's a game! · you paid*; or *booked*, on a game
+  that booked on the payment it waited for (Q110). **The take at the cut-off tells
   nothing**: *It's a game!* was told when the share was held. **The payer whose
   own act booked the seat** — the yes that filled the game, the seat they took
   — saw *It's a game!* on their own screen, so theirs is **their own**: born
   seen, never counted nor pushed (the mechanics Q102).
-- ``BookingRequested`` — *It's a game! · Kazimierz Padel answers by 21:15*,
-  to the four, each time the game goes to its On request club; the player
-  whose act put it there saw it happen, so theirs is their own (Q103).
 - ``SeatChargeFailed`` — *Confirm your payment*, to the payer — *by 14:40*,
-  while their time to pay runs (#625, #626); before the cut-off, where their
+  while their time to pay runs (#625); before the cut-off, where their
   time is to fix the card, *Fix your card by 14:40 to keep your seat* (#638) —
   and ``SeatChargeHoldingRefused`` the same, on a booked game whose holding
   was refused (#639). **A rescuer's**, the seat kept for them, *… by 14:40 to
@@ -31,17 +27,17 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   ``SeatChargeChecked`` is *It's a game!* as a hold kept is, free to leave
   until the cut-off all the same.
 - ``TimeToPayGiven`` — *It's a game! · waiting for one payment until 14:40*
-  to everybody In but the payer, never naming them — *Your Fri 19:00 is
-  waiting for one payment, until 21:20* at the club's yes; the player whose
-  act filled it saw it happen, so theirs is their own (Q110).
+  to everybody In but the payer, never naming them; the player whose act
+  filled it saw it happen, so theirs is their own (Q110).
 - ``TimeToPayRanOut`` — *Your time to pay ran out* to the payer — *Your time
   to fix your card ran out*, before the cut-off (#638) — and *filling again*
   to everybody else still In; past the book-by, *called off · nobody paid* to
-  them all (#625, #626).
-- ``FellBackToFilling`` — a full game waiting for one payment falling back, at a
-  club that books at once: as ``RequestWithdrawn`` is told (#625).
-- ``PaymentNotInTime`` — a share refused at the club's yes with no time left:
-  *called off · nobody paid* to everybody on it (#626).
+  them all (#625).
+- ``FellBackToFilling`` — a full game waiting for one payment falling back, to
+  everybody still In (#625, Q104): *Oscar Bertran left your game — it's
+  filling again* for a yes taken back, *Your Fri 19:00 at Bonarka Arena is
+  filling again* for anything else, never saying whose week filled, who no
+  longer fits or whose card failed.
 - ``SeatChargeRefundDecided`` — *Game called off · with the refund*, to the
   refunded; never a leaver's own refund. A leaver the club's cancel refunds is
   told in a leaver's words (Q108).
@@ -52,19 +48,12 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 - ``SeatChargeReleased`` with a reason — a held share let go: *Game called off ·
   nothing was taken*, at the cut-off or the club's cancel before it (#637);
   never a leaver's own let-go.
-- ``BookingRefused``, ``BookingTimedOut`` — *Kazimierz Padel said no* and
-  *… didn't answer in time*, to everybody waiting on it (Q105).
 - ``SeatLeft`` — *Someone left your game*, to everybody still seated; and *Fill
   in alerts*, to the pool the seat is offered to. A seat let go because its
   card wasn't fixed at its holding (#639) tells its player *Your time to fix
   your card ran out*, and that they owe nothing.
 - ``CalledOffAtCutOff`` — to each leaver whose empty seat called it off, in a
   leaver's words: it counts on their record, and their refund stands (Q108).
-- ``RequestWithdrawn`` — a full game falling back, to everybody still In
-  (Q104): *Oscar Bertran left your game — it's filling again* for a yes taken
-  back, *Your Fri 19:00 at Kazimierz Padel is filling again* for anything else,
-  never saying whose week filled, who no longer fits or whose card failed —
-  and, after the book-by, *Your Fri 19:00 is called off · nobody paid*.
 - ``ProposalExpired`` — *Your post didn't fill*, to its poster, still In; and
   a full game gone back to filling, *called off · nobody paid*, to everybody
   still In.
@@ -73,8 +62,8 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 - ``YesSaid``, ``YesResumed`` — *You complete it*, to the people named on the
   card whose yes would book it.
 - ``VersionDealt`` on a post — *Challenges for you*, to the newly dealt.
-- ``Redealt`` — *Your new game*, to the people a club's no, silence or cancel
-  promised a new card first, on the card they were dealt (Q107). **Every
+- ``Redealt`` — *Your new game*, to the people a club's cancel promised a new
+  card first, on the card they were dealt (Q107). **Every
   other card the proposer deals tells nobody.**
 
 **An alert never points at a card the reader cannot find**: *You complete it*,
@@ -102,13 +91,8 @@ from uuid import UUID
 from app.application.events import DeliveryContext
 from app.kernel import Instant, instant
 from app.modules.bookings.domain.events import (
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
     CalledOffAtCutOff,
     KeptSeatRanOut,
-    PaymentNotInTime,
-    RequestWithdrawn,
     SeatLeft,
 )
 from app.modules.clubs.domain.court_hours import local_day
@@ -299,26 +283,19 @@ class TellThePlayers:
         game = await self._games.about(event.booking_id, at=at)
         if game is None or not game.booked:
             return
-        # At an On request club the seats are taken at the club's yes, and that
-        # yes is the news: one notice, never two at once.
-        confirmed = (
-            game.asked_the_club and event.player_id not in game.seats_taken.values()
-        )
-        kind = NoticeKind.CLUB_CONFIRMED if confirmed else NoticeKind.GAME_BOOKED
         # Booked on the payment it waited for, it was *It's a game!* already
         # when it filled: *booked · you paid* now, never twice (Q110).
         # The payer whose payment booked it sees *It's a game!*: theirs says
         # so, and is their own.
         reason = (
             NoticeReason.PAYMENT_CAME_IN
-            if kind is NoticeKind.GAME_BOOKED
-            and game.booked_on_a_payment
+            if game.booked_on_a_payment
             and event.player_id != game.filled_by
             and event.player_id not in game.seats_taken.values()
             else None
         )
         # Their own yes filled it, or they took the seat: it is no news to
-        # them. The club's yes is the club's act, and news to all four.
+        # them.
         own = (
             event.player_id == game.filled_by
             or event.player_id in game.seats_taken.values()
@@ -326,9 +303,9 @@ class TellThePlayers:
         await self._give.execute(
             event.player_id,
             _notice(
-                kind,
+                NoticeKind.GAME_BOOKED,
                 game,
-                key=f"{kind}:{key}",
+                key=f"{NoticeKind.GAME_BOOKED}:{key}",
                 opens=Opens.BOOKING,
                 amount_grosze=game.share_grosze,
                 reason=reason,
@@ -348,15 +325,14 @@ class TellThePlayers:
         at: Instant,
     ) -> None:
         game = await self._games.about(event.game_id, at=at)
-        # A game over before this was delivered — called off at the club's yes
-        # with no time left to pay (#626) — has nothing to confirm a payment
-        # into: its call-off tells it.
+        # A game over before this was delivered has nothing to confirm a
+        # payment into: its ending tells it.
         if game is None or not (game.booked or game.filling):
             return
         # A refused share on a booked game was a rescue's: confirming it takes
         # the seat, from the booking's details — or its holding's (#639), the
         # card to fix by its time. Within their time to pay the notice names it
-        # (#625, #626) — and before the cut-off, where their time is to fix the
+        # (#625) — and before the cut-off, where their time is to fix the
         # card, says so (#638).
         until = game.paying.get(event.player_id)
         if until is not None and at >= until:
@@ -411,7 +387,7 @@ class TellThePlayers:
     async def _waiting_for_a_payment(
         self, event: TimeToPayGiven, *, key: str, at: Instant
     ) -> None:
-        """**The four matched, one payment missing** (#625, #626; Q110):
+        """**The four matched, one payment missing** (#625; Q110):
         everybody In but the payers is told the game waits for one payment and
         until when — never whose. Once per time to pay: two refused at one
         fill, or a payer refused again, tell nothing more. Only while the game
@@ -433,9 +409,6 @@ class TellThePlayers:
                 game,
                 key=f"{NoticeKind.WAITING_FOR_A_PAYMENT}:{game.game_id}:{until}",
                 opens=Opens.PROPOSAL,
-                reason=NoticeReason.AT_THE_CLUBS_YES
-                if event.at_the_clubs_yes
-                else None,
                 until=until,
             ),
             at=at,
@@ -445,7 +418,7 @@ class TellThePlayers:
     async def _time_ran_out(
         self, event: TimeToPayRanOut, *, key: str, at: Instant
     ) -> None:
-        """**Out of time** (#625, #626): the payers are told their seat is open
+        """**Out of time** (#625): the payers are told their seat is open
         to others, and theirs to take back while free — each in the words of
         what their time was for, to fix the card or to pay (#638); everybody
         else still In that the game is filling again, never whose payment it
@@ -474,9 +447,9 @@ class TellThePlayers:
                 _notice(kind, game, key=f"{kind}:{key}", opens=Opens.PROPOSAL),
                 at=at,
             )
-        # Full again before this was delivered — booked, asked of its club, or
-        # waiting for a payment once more — it is told by that.
-        if game.waiting_for_the_club or game.booked or game.waiting_for_a_payment:
+        # Full again before this was delivered — booked, or waiting for a
+        # payment once more — it is told by that.
+        if game.booked or game.waiting_for_a_payment:
             return
         await self._tell(
             [player for player in game.in_ if player not in payers],
@@ -488,22 +461,6 @@ class TellThePlayers:
                 reason=NoticeReason.FELL_BACK,
             ),
             at=at,
-        )
-
-    async def _called_off_at_once(
-        self, event: PaymentNotInTime, *, key: str, at: Instant
-    ) -> None:
-        """A share refused at the club's yes with no time left to pay — its
-        book-by had come (#626): called off, nobody paid, to everybody on it.
-        A time to pay that ran out is told by ``TimeToPayRanOut``."""
-
-        if not event.at_once:
-            return
-        game = await self._games.about(event.booking_id, at=at)
-        if game is None:
-            return
-        await self._payment_not_in_time(
-            game, (*event.player_ids, *game.seated, *game.in_), key=key, at=at
         )
 
     async def _payment_not_in_time(
@@ -616,53 +573,6 @@ class TellThePlayers:
             at=at,
         )
 
-    # -- the club's answer ----------------------------------------------------
-
-    async def _gone_to_the_club(
-        self, event: BookingRequested, *, key: str, at: Instant
-    ) -> None:
-        game = await self._games.about(event.booking_id, at=at)
-        answer_by = instant(event.answer_by)
-        # Told while the game still waits on this very request: one taken back
-        # or answered before this was delivered is told by what came of it.
-        if game is None or game.answer_by != answer_by:
-            return
-        await self._tell(
-            (*event.first_side, *event.second_side),
-            _notice(
-                NoticeKind.WAITING_FOR_THE_CLUB,
-                game,
-                key=f"{NoticeKind.WAITING_FOR_THE_CLUB}:{key}",
-                opens=Opens.PROPOSAL,
-                until=answer_by,
-            ),
-            at=at,
-            whose_act=event.filled_by,
-        )
-
-    async def _turned_down(
-        self, event: BookingRefused | BookingTimedOut, *, key: str, at: Instant
-    ) -> None:
-        game = await self._games.about(event.booking_id, at=at)
-        if game is None:
-            return
-        answer = (
-            NoticeReason.REFUSED
-            if isinstance(event, BookingRefused)
-            else NoticeReason.NO_ANSWER
-        )
-        await self._tell(
-            game.seated,
-            _notice(
-                NoticeKind.CLUB_COULD_NOT_TAKE_IT,
-                game,
-                key=f"{NoticeKind.CLUB_COULD_NOT_TAKE_IT}:{key}",
-                opens=Opens.PROPOSAL,
-                reason=answer,
-            ),
-            at=at,
-        )
-
     # -- somebody leaving -----------------------------------------------------
 
     async def _left(self, event: SeatLeft, *, key: str, at: Instant) -> None:
@@ -757,50 +667,29 @@ class TellThePlayers:
             )
 
     async def _fell_back(
-        self, event: RequestWithdrawn | FellBackToFilling, *, key: str, at: Instant
+        self, event: FellBackToFilling, *, key: str, at: Instant
     ) -> None:
         """**A full game falls back, and everybody still In is told** (Q104):
-        a seat opened while the club decided, so the request is off — or while
-        the game waited for a payment, at a club that books at once (#625).
-        Somebody who took their own yes back is named — *it's filling again*;
-        any other seat opened by what happened to its player, which is never
-        said. Past its book-by it can no longer fill: *called off · nobody
-        paid*."""
+        a seat opened while the game waited for a payment (#625). Somebody who
+        took their own yes back is named — *it's filling again*; any other seat
+        opened by what happened to its player, which is never said."""
 
-        game_id = (
-            event.booking_id
-            if isinstance(event, RequestWithdrawn)
-            else event.proposal_id
-        )
-        game = await self._games.about(game_id, at=at)
-        # Full again before this was delivered — asked again, booked, or
-        # waiting for a payment once more — it is told by that.
-        if (
-            game is None
-            or game.waiting_for_the_club
-            or game.booked
-            or game.waiting_for_a_payment
-        ):
+        game = await self._games.about(event.proposal_id, at=at)
+        # Full again before this was delivered — booked, or waiting for a
+        # payment once more — it is told by that.
+        if game is None or game.booked or game.waiting_for_a_payment:
             return
         opened = set(event.player_ids)
         # Still out by their own act; one who came back since is nobody's
         # departure.
         left = tuple(player for player in event.left if player in game.withdrawn)
-        if at >= game.book_by:
-            kind, reason = (
-                NoticeKind.GAME_CALLED_OFF,
-                NoticeReason.LEFT_AFTER_THE_BOOK_BY,
-            )
-        elif left:
-            kind, reason = NoticeKind.SOMEONE_LEFT, NoticeReason.FILLING_AGAIN
-        else:
-            kind, reason = NoticeKind.SOMEONE_LEFT, NoticeReason.FELL_BACK
+        reason = NoticeReason.FILLING_AGAIN if left else NoticeReason.FELL_BACK
         await self._tell(
             [player for player in game.in_ if player not in opened],
             _notice(
-                kind,
+                NoticeKind.SOMEONE_LEFT,
                 game,
-                key=f"{kind}:{key}",
+                key=f"{NoticeKind.SOMEONE_LEFT}:{key}",
                 opens=Opens.PROPOSAL,
                 people=left,
                 reason=reason,
@@ -817,10 +706,6 @@ class TellThePlayers:
         game = await self._games.about(event.proposal_id, at=at)
         if game is None:
             return
-        if game.asked_the_club and game.fell_back_at is None:
-            # Called off at its club's yes, no time left to pay (#626): told
-            # then, and never as a post that did not fill.
-            return
         if game.fell_back_at is None:
             await self._post_unfilled(game, key=key, at=at)
         elif game.fell_back_at < game.book_by:
@@ -835,8 +720,8 @@ class TellThePlayers:
 
         game = await self._games.about(event.proposal_id, at=at)
         if game is not None and game.paying and game.open_seats == 0:
-            # It went while the game waited for a payment, at a club that
-            # books at once (#625): the people In are dealt a new card first.
+            # It went while the game waited for a payment (#625): the people
+            # In are dealt a new card first.
             await self._fallen_back_ended(
                 game,
                 NoticeReason.COURT_LOST_WAITING_FOR_A_PAYMENT,
@@ -883,9 +768,7 @@ class TellThePlayers:
         self, event: YesSaid | YesResumed, *, key: str, at: Instant
     ) -> None:
         game = await self._games.about(event.proposal_id, at=at)
-        if game is None or not game.filling or game.waiting_for_the_club:
-            return
-        if game.open_seats != 1:
+        if game is None or not game.filling or game.open_seats != 1:
             return
         if (
             isinstance(event, YesSaid)
@@ -907,8 +790,8 @@ class TellThePlayers:
         )
 
     async def _new_card(self, event: Redealt, *, key: str, at: Instant) -> None:
-        """The card first a club's no, silence or cancel promised: told to
-        those it was promised to, on the card they find on top of the deck."""
+        """The card first a club's cancel promised: told to those it was
+        promised to, on the card they find on top of the deck."""
 
         if event.card_id is None:
             return
@@ -931,7 +814,7 @@ class TellThePlayers:
         game = await self._games.about(event.proposal_id, at=at)
         if game is None or game.posted_by is None:
             return
-        if not game.filling or game.waiting_for_the_club:
+        if not game.filling:
             return
         dealt = [player for player in event.player_ids if player in game.undecided]
         poster = (game.posted_by,) if game.posted_by in game.in_ else ()
@@ -956,22 +839,17 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     SeatChargeKept: TellThePlayers._seats_booked,
     SeatChargeChecked: TellThePlayers._seats_booked,
     SeatChargeTaken: TellThePlayers._seats_booked,
-    BookingRequested: TellThePlayers._gone_to_the_club,
     SeatChargeFailed: TellThePlayers._payment_refused,
     SeatChargeHoldingRefused: TellThePlayers._payment_refused,
     TimeToPayGiven: TellThePlayers._waiting_for_a_payment,
     TimeToPayRanOut: TellThePlayers._time_ran_out,
     FellBackToFilling: TellThePlayers._fell_back,
-    PaymentNotInTime: TellThePlayers._called_off_at_once,
     SeatChargeRefundDecided: TellThePlayers._refunded,
     SeatChargeRefunded: TellThePlayers._seat_taken_refunded,
     SeatChargeReleased: TellThePlayers._let_go,
-    BookingRefused: TellThePlayers._turned_down,
-    BookingTimedOut: TellThePlayers._turned_down,
     SeatLeft: TellThePlayers._left,
     KeptSeatRanOut: TellThePlayers._kept_seat_ran_out,
     CalledOffAtCutOff: TellThePlayers._called_off_short,
-    RequestWithdrawn: TellThePlayers._fell_back,
     ProposalExpired: TellThePlayers._expired,
     CourtHourLost: TellThePlayers._court_lost,
     YesSaid: TellThePlayers._one_seat_left,

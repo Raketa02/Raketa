@@ -5,7 +5,7 @@ hers is made by ``PostAGame``, the use case *Post — you're In* runs, as her, i
 *Padel po pracy* — for anybody, at the engine's own Level range — at the first
 padel hour Bonarka Arena sells in her week from ``LEAD`` out that has somebody
 who fits her free, **clear of every game and yes the layers above seeded**: her
-booked games, her answered picks, her game waiting for the club and her
+booked games, her answered picks, her game at Kazimierz Padel and her
 rescues. It is dealt to her best fits free then as a **Challenge** — *Ola
 challenged you* in their decks — and sits in her *You're In*. Nothing here
 opens a table.

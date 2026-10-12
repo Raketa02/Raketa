@@ -14,25 +14,23 @@ other people.
 **The yes that leaves no seat open books the game** (#541, ``fill.py``): every
 seat charged together or nobody, in this yes's own transaction — and the game's
 row is locked first, so two last yeses arriving together fill it once. The
-client gave its ten seconds of *Undo* before sending it — or, at an On request
-club, puts the full game to the club, and nobody pays until it says yes (#543).
+client gave its ten seconds of *Undo* before sending it. No club is asked to
+confirm it (``docs/adr/0196`` §1).
 **Confirming a refused payment is the yes again** (``ConfirmPayment``): the
 player's share is held now, so the game fills on it if the seat is still theirs
-to take. **Within their time to pay** (#625, #626) the seat is theirs alone and
-they are still In: confirming books the game at once on the holds the others
-kept — at the club's yes, without asking the club again — or, a seat having
-opened meanwhile, leaves them In with their payment held. **Past it** their
-time is run out first, as the job would have (``time_to_pay.py``), and the
-confirmation is a yes on a reopened seat.
+to take. **Within their time to pay** (#625) the seat is theirs alone and they
+are still In: confirming books the game at once on the holds the others kept —
+or, a seat having opened meanwhile, leaves them In with their payment held.
+**Past it** their time is run out first, as the job would have
+(``time_to_pay.py``), and the confirmation is a yes on a reopened seat.
 
 **A member may join a post from the slot sheet** (#546; Q79): their yes on a
 post they were never dealt — held to everything a yes is, and to who the post
 is for. Only a post: a pick is a stranger's to nobody but the people it names.
 
-**Withdrawing is leaving, while the club decides** (the mechanics §13): a yes
-taken back from a game waiting for its club takes the request with it — called
-off with nobody paid, the court free, and the game filling again with that seat
-open.
+**Withdrawing is leaving, while a payment is awaited** (the mechanics §13): a
+yes taken back from a full game waiting for one payment lets the leaver's hold
+go, and the game is filling again with that seat open.
 """
 
 from __future__ import annotations
@@ -71,7 +69,6 @@ from app.modules.proposals.domain.errors import (
 from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     CardsToFix,
-    ClubRequests,
     PlayerBookings,
     ProposalRepository,
     RefusedPayment,
@@ -92,14 +89,11 @@ class YesAnswer:
     open_seats: int
     #: The game this yes booked — *It's a game!*
     booked: Booked | None = None
-    #: This yes filled the game at an On request club, which has until then to
-    #: answer — nobody pays until it says yes.
-    waiting_until: Instant | None = None
     #: This player's own share could not be held: nobody paid, and the payment
     #: is theirs to confirm.
     your_payment: RefusedPayment | None = None
     #: The game waits for a refused payment until then — this player's own, or
-    #: somebody else's (#625, #626): *Waiting for one payment · until 14:40*.
+    #: somebody else's (#625): *Waiting for one payment · until 14:40*.
     paying_until: Instant | None = None
     #: What that time is for — to fix the card, or to pay (#638).
     time_to: TimeTo | None = None
@@ -119,7 +113,6 @@ class SayYes:
         proposals: ProposalRepository,
         guards: Guards,
         fill: Fill,
-        requests: ClubRequests,
         undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
@@ -127,7 +120,6 @@ class SayYes:
         self._proposals = proposals
         self._guards = guards
         self._fill = fill
-        self._requests = requests
         self._undecided = undecided
         self._uow = uow
         self._clock = clock
@@ -145,7 +137,6 @@ class SayYes:
             proposal,
             player_id,
             proposals=self._proposals,
-            requests=self._requests,
             undecided=self._undecided,
             now=now,
         )
@@ -276,7 +267,6 @@ class ConfirmPayment:
         fill: Fill,
         charges: SeatCharges,
         undecided: UndecidedCharges,
-        requests: ClubRequests,
         rescuer: JoinsARescue,
         bookings: PlayerBookings,
         games: BookedGameChanges,
@@ -289,7 +279,6 @@ class ConfirmPayment:
         self._fill = fill
         self._charges = charges
         self._undecided = undecided
-        self._requests = requests
         self._rescuer = rescuer
         self._bookings = bookings
         self._games = games
@@ -322,7 +311,6 @@ class ConfirmPayment:
             proposal,
             player_id,
             proposals=self._proposals,
-            requests=self._requests,
             undecided=self._undecided,
             now=now,
         )
@@ -488,7 +476,6 @@ def _answer(proposal: Proposal, player_id: UUID, outcome: FillOutcome) -> YesAns
         proposal_id=proposal.proposal_id,
         open_seats=proposal.open_seats,
         booked=outcome.booked,
-        waiting_until=outcome.waiting_until,
         your_payment=outcome.refused.get(player_id),
         paying_until=outcome.paying_until,
         time_to=outcome.time_to,
@@ -514,24 +501,22 @@ class SayNo:
 @final
 class WithdrawYes:
     """*Withdraw* on a You're In row: free and silent until the game fills —
-    and *Leave the game* while its club decides, which takes the request to the
-    club with it. **Not asked of the pool** — somebody who left the group can
+    and *Leave the game* while a payment is awaited, which lets the leaver's
+    hold go. **Not asked of the pool** — somebody who left the group can
     still take a yes back that is theirs.
 
-    The game is read **locked**, as a yes reads it, so a leaving and the club's
-    yes arriving together are one after the other."""
+    The game is read **locked**, as a yes reads it, so a leaving and a payment
+    arriving together are one after the other."""
 
     def __init__(
         self,
         *,
         proposals: ProposalRepository,
-        requests: ClubRequests,
         undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._proposals = proposals
-        self._requests = requests
         self._undecided = undecided
         self._uow = uow
         self._clock = clock
@@ -543,7 +528,6 @@ class WithdrawYes:
             proposal,
             command.player_id,
             proposals=self._proposals,
-            requests=self._requests,
             undecided=self._undecided,
             at=now,
         )
@@ -555,25 +539,16 @@ async def withdraw_a_yes(
     player_id: UUID,
     *,
     proposals: ProposalRepository,
-    requests: ClubRequests,
     undecided: UndecidedCharges,
     at: Instant,
 ) -> None:
-    """The yes taken back — and, when it was a seat of a game its club has,
-    the request to the club with it (#543), so the held court is free the
-    moment the seat is; at the club's yes, the yes with it (#626). **A leave
-    from a game waiting for a payment** lets the leaver's hold go, and the
-    payer's time runs on (#625). **No commit.**"""
+    """The yes taken back. **A leave from a game waiting for a payment** lets
+    the leaver's hold go, and the payer's time runs on (#625). **No
+    commit.**"""
 
-    was_with_its_club = proposal.with_its_club
     was_paying = dict(proposal.paying)
     proposal.withdraw_yes(player_id, at=at)
     await proposals.save(proposal)
-    if was_with_its_club and not proposal.with_its_club:
-        # Their own act: the others are told who left (Q104).
-        await requests.withdraw(
-            proposal.proposal_id, player_ids=(player_id,), left=(player_id,), at=at
-        )
     await let_go_of_what_was_kept(
         proposal, was_paying, undecided=undecided, at=at, leaver=player_id
     )

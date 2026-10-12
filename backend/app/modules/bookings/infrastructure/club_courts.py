@@ -48,7 +48,6 @@ class SellableClubCourts:
         return CourtForTheGame(
             court=courts[0],
             cut_off_hours=offer.settings.cut_off_hours,
-            time_to_confirm_minutes=offer.settings.time_to_confirm_minutes,
         )
 
     async def free_courts(

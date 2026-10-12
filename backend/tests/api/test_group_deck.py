@@ -186,7 +186,6 @@ async def test_a_card_is_my_version_of_the_game_with_everything_it_draws(
     assert card["open_seats_after_your_yes"] == 2
     assert card["court"] == "COURT_AVAILABLE"
     assert card["no_free_cancellation"] is False
-    assert card["club_confirms"] is False
 
     assert len(card["sides"]["yours"]) == len(card["sides"]["theirs"]) == 2
     assert card["sides"]["yours"][0]["player_id"] == str(ola["id"])
@@ -321,25 +320,6 @@ async def test_a_game_dealt_in_versions_counts_the_yeses_on_every_version(
     # Marek is In on the other version, so he is on mine; one seat is left
     # beside me, and the first of my version's names takes it.
     assert {tile["name"] for tile in tiles(card)} == {"kuba", "marek", "ola", "ewa"}
-
-
-async def test_at_an_on_request_club_the_card_says_the_club_confirms(
-    client, session_factory, clock, crowd, group
-):
-    ola, kuba, ewa, tomek = crowd[:4]
-    asks = await a_club_selling(client, name="Ogrody 33", way="ON_REQUEST")
-    await makes(
-        session_factory,
-        clock,
-        pool_id=group,
-        club_id=asks,
-        versions=((ola, kuba, ewa, tomek),),
-    )
-
-    [card] = (await deck_of(client, ola, group))["cards"]
-
-    assert card["club_confirms"] is True
-    assert card["club"]["name"] == "Ogrody 33"
 
 
 # --------------------------------------------------------------------------- #

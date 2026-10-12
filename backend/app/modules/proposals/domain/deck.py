@@ -238,12 +238,9 @@ class Sides:
 @dataclass(frozen=True, slots=True)
 class SellingTerms:
     """What a card needs of the club it is at, while the club sells: when its
-    free cancellation ends, and whether it confirms each full game itself."""
+    free cancellation ends."""
 
     cut_off_hours: int
-    #: An On request club: *Book it now* waits for the club, and nobody is
-    #: charged until it says yes (the mechanics §11).
-    confirms_each_game: bool
 
 
 @final
@@ -345,8 +342,6 @@ class DeckCard:
     #: says how many are In on the whole game.
     version_count: int
     no_free_cancellation: bool
-    #: At an On request club the club confirms a full game before anybody pays.
-    club_confirms: bool
     #: What the club calls the court — once booked: a rescue's (#545).
     court_name: str | None = None
     #: Everybody on a rescue's booked game — each *paid* (#545); nobody on a
@@ -397,7 +392,6 @@ def card_of(
         no_free_cancellation=cut_off_passed(
             proposal.start, cut_off_hours=terms.cut_off_hours, now=now
         ),
-        club_confirms=terms.confirms_each_game,
     )
 
 

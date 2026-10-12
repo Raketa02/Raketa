@@ -17,10 +17,10 @@ so a club that lengthens its notice has not taken a card's court away.
 
 **A club's terms are read off the same offer**, so *which clubs sell* has one
 answer for a card and for the hour it was made at: a live club is answered,
-paused or not, with the cut-off its settings hold now and its way of working — a
-card is not booked yet, so the terms in force are the ones it will be booked
-with. The offer is asked for **an empty window**: its terms, and none of its
-hours, since a card's hour was read when the card was made.
+paused or not, with the cut-off its settings hold now — a card is not booked
+yet, so the terms in force are the ones it will be booked with. The offer is
+asked for **an empty window**: its terms, and none of its hours, since a card's
+hour was read when the card was made.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from app.modules.clubs.domain.ports import (
     ClubDirectory,
     SellableCourtHours,
 )
-from app.modules.clubs.domain.raketa_terms import WayOfWorking, before_any_deadline
+from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.clubs.domain.sellable import SellableCourtHour
 from app.modules.proposals.domain.deck import SellingTerms
 from app.modules.proposals.domain.ports import OfferedCourtHour
@@ -155,9 +155,6 @@ class SellableClubTerms:
             sorted(set(club_ids)), start=now, end=now, now=now
         )
         return {
-            club_id: SellingTerms(
-                cut_off_hours=offer.settings.cut_off_hours,
-                confirms_each_game=offer.way is WayOfWorking.ON_REQUEST,
-            )
+            club_id: SellingTerms(cut_off_hours=offer.settings.cut_off_hours)
             for club_id, offer in offers.items()
         }

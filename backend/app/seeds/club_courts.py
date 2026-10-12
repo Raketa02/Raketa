@@ -9,9 +9,11 @@ stream is the one a desk would have left, and nothing opens a table.
 **The eight are arranged across every state the club website draws**
 (the screens B2–B5, the mechanics §16):
 
-- **all three ways of working** — Instant at Ogrody 33, Bonarka Arena and Nowa
-  Huta Squash; Only Raketa at Centrum Ruchu and Zabłocie Sport; On request at
-  Kazimierz Padel and Prądnik Tennis;
+- **two ways of working** — Instant at Ogrody 33, Bonarka Arena and Nowa Huta
+  Squash; Only Raketa at Centrum Ruchu, Zabłocie Sport, Kazimierz Padel and
+  Prądnik Tennis, which worked On request until it was removed (#669) and
+  release their hours a day ahead, so every hour from tomorrow is Raketa's to
+  sell and a card dealt there outlives a day of developing against it;
 - **courts per sport**, indoor and outdoor, a weekly pattern of Raketa hours on
   weekday evenings and weekend mornings — where the protagonists' own weeks
   are — **one exception** each, and **price bands** (dearer evenings or
@@ -219,16 +221,16 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     ),
     SeedClubCourts(
         club="Kazimierz Padel",
-        way=WayOfWorking.ON_REQUEST,
+        way=WayOfWorking.ONLY_RAKETA,
         courts=_padel(1, 2, 3),
         week=_week((2, 3, 4, 5, 6, 7), 16, 23),
         prices=(
             SeedPrice(Sport.PADEL, 100_00, PriceBand(BandDays.WEEKEND, 7, 23, 120_00)),
         ),
         exception=SeedException("Holiday", days_ahead=12),
-        # The longest time to confirm: the protagonist's game waiting for its
-        # answer (``bookings.py``) stays waiting for an hour after a run.
-        settings=RaketaSettings(time_to_confirm_minutes=60),
+        # A day ahead: the protagonist's game booked here (``bookings.py``) is
+        # at an hour it still sells.
+        settings=RaketaSettings(release_lead_days=1),
     ),
     SeedClubCourts(
         club="Bonarka Arena",
@@ -273,7 +275,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     ),
     SeedClubCourts(
         club="Prądnik Tennis",
-        way=WayOfWorking.ON_REQUEST,
+        way=WayOfWorking.ONLY_RAKETA,
         courts=(
             SeedCourt("Court 1", Sport.TENNIS, indoor=False),
             SeedCourt("Court 2", Sport.TENNIS, indoor=False),
@@ -289,7 +291,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
         ),
         exception=SeedException("Repair", days_ahead=4, court=1, hours=(16, 19)),
         settings=RaketaSettings(
-            time_to_confirm_minutes=20,
+            release_lead_days=1,
             other_clubs_courts=OtherClubsCourts(offered=True, within_km=8),
         ),
     ),

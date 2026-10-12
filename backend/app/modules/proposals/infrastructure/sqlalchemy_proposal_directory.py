@@ -2,9 +2,7 @@
 
 **Every live read is bounded by ``now`` as well as by the recorded ending**,
 because a proposal past its book-by is over at every instant and the sweep that
-records it runs on a cadence (``application/expire_proposals.py``) — **except a
-game waiting for its club** (#543), which filled in time and which only its
-club's answer ends.
+records it runs on a cadence (``application/expire_proposals.py``).
 """
 
 from __future__ import annotations
@@ -28,10 +26,7 @@ from app.modules.proposals.infrastructure.proposal_models import (
 
 
 def _filling(now: Instant) -> ColumnElement[bool]:
-    return and_(
-        ProposalORM.ended.is_(None),
-        or_(ProposalORM.book_by > now, ProposalORM.waiting_for_the_club.is_(True)),
-    )
+    return and_(ProposalORM.ended.is_(None), ProposalORM.book_by > now)
 
 
 def _saying_yes(player_id: UUID) -> ColumnElement[bool]:
@@ -113,7 +108,6 @@ class SqlAlchemyProposalDirectory:
                 .where(
                     ProposalORM.ended.is_(None),
                     ProposalORM.book_by <= now,
-                    ProposalORM.waiting_for_the_club.is_(False),
                     # A time to pay is ended by its own job, first (#625).
                     ProposalORM.paying_until.is_(None),
                 )
@@ -226,10 +220,7 @@ class SqlAlchemyProposalDirectory:
                 select(ProposalORM.id)
                 .where(
                     ProposalORM.pool_id == pool_id,
-                    or_(
-                        ProposalORM.ended == Ending.TURNED_DOWN.value,
-                        ProposalORM.club_cancelled.is_(True),
-                    ),
+                    ProposalORM.club_cancelled.is_(True),
                     ProposalORM.start > now,
                 )
                 .order_by(ProposalORM.start, ProposalORM.id)

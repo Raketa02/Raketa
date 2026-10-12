@@ -17,25 +17,14 @@ any group near it. Its payments account going ready — or ready no longer — i
 one of those, since it is what makes a club live (#537). **A game filling is
 one too** (#541): its booking took a court hour from every card at that club
 and hour, in any pool — and a seat reopened, or a yes paused, left a seat open.
-**So is a game put to an On request club, and the club's answer** (#543): the
-request holds a court hour, and a request refused, unanswered or withdrawn
-frees it — and a turned-down game's people are owed a new card first. **And
-the club's cancel of a booked game** (#547): its court hour is free, and the
-people still in are owed a new card first.
+**And the club's cancel of a booked game** (#547): its court hour is free, and
+the people still in are owed a new card first.
 """
 
 from __future__ import annotations
 
 from app.application.events import DeliveryContext
-from app.modules.bookings.domain.events import (
-    BookingAccepted,
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
-    CancelledByClub,
-    PaymentNotInTime,
-    RequestWithdrawn,
-)
+from app.modules.bookings.domain.events import CancelledByClub
 from app.modules.clubs.domain.club_courts_events import (
     CourtAdded,
     CourtChanged,
@@ -113,14 +102,6 @@ CLUB_EVENTS = (
     PaymentsStatusChanged,
     # A booking holds a court hour the club no longer sells (#541).
     ProposalFilled,
-    # A request holds one, and its answer or its withdrawal frees it (#543).
-    BookingRequested,
-    BookingAccepted,
-    BookingRefused,
-    BookingTimedOut,
-    RequestWithdrawn,
-    # A payment the club's yes waited on that did not come frees it (#626).
-    PaymentNotInTime,
     # The club's cancel frees its court hour, and owes its people a new card
     # first (#547).
     CancelledByClub,

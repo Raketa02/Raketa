@@ -202,7 +202,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         MAIL_DELIVERY_ENABLED=False,
         PROPOSAL_EXPIRY_ENABLED=False,
         PROPOSER_ENABLED=False,
-        REQUEST_TIMEOUT_ENABLED=False,
         TIME_TO_PAY_ENABLED=False,
         CUT_OFF_ENABLED=False,
         HOLDING_ENABLED=False,

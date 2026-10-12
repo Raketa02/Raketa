@@ -66,7 +66,7 @@ async def read(client, desk: dict, path: str) -> dict:
     return answered.json()
 
 
-async def test_the_clubs_work_all_three_ways_with_one_not_live_and_one_paused(
+async def test_the_clubs_work_two_ways_with_one_not_live_and_one_paused(
     client, clock, session_factory
 ):
     report = await seeded(session_factory)
@@ -82,7 +82,7 @@ async def test_the_clubs_work_all_three_ways_with_one_not_live_and_one_paused(
         if settings["paused"]:
             paused.append(declared.club)
 
-    assert set(ways) == {"ONLY_RAKETA", "INSTANT", "ON_REQUEST"}
+    assert set(ways) == {"ONLY_RAKETA", "INSTANT"}
     assert sorted(live) == sorted(
         club.name for club in SEED_CLUBS if club.name != "Wisła Park"
     )

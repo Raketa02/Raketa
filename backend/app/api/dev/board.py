@@ -20,7 +20,7 @@ the provider will do with its next payment — read off the process's fake, the
 one the console steers, and ``null`` where the provider is not it.
 
 **And a countdown on every pending moment** (#592): each moment still ahead on
-a game that a timed rule acts at — its book-by, the club's answer, its cut-off,
+a game that a timed rule acts at — its book-by, a payment due, its cut-off,
 the close of its club day, the moment a stated score confirms — with the job
 whose *Run it now* acts at it (``jobs.py``), so the tester presses at the right
 time. A moment past is not counted down: the press acts on it now, and the next
@@ -70,7 +70,6 @@ from app.bootstrap.jobs import (
     NEW_BOOKINGS_SUMMARY_JOB,
     PROPOSAL_EXPIRY_JOB,
     RATING_CATCH_UP_JOB,
-    REQUEST_TIMEOUT_JOB,
     TIME_TO_PAY_JOB,
 )
 from app.core.exception_handlers import ErrorResponse
@@ -214,9 +213,7 @@ class Moment(StrEnum):
 
     #: A card still filling is over at its book-by.
     BOOK_BY = "BOOK_BY"
-    #: An On request club's answer is due.
-    CLUB_ANSWER_DUE = "CLUB_ANSWER_DUE"
-    #: A refused share's time to pay ends (#625, #626) — or, before the
+    #: A refused share's time to pay ends (#625) — or, before the
     #: cut-off, its time to fix the card (#638), at the fill or at its holding
     #: (#639).
     PAYMENT_DUE = "PAYMENT_DUE"
@@ -251,16 +248,11 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
             "Unfilled by then, the card is gone from every deck; the book-by "
             "sweep records it.",
         ),
-        Moment.CLUB_ANSWER_DUE: MomentRule(
-            REQUEST_TIMEOUT_JOB,
-            "Unanswered by then, the game is called off — no answer, nobody paid.",
-        ),
         Moment.PAYMENT_DUE: MomentRule(
             TIME_TO_PAY_JOB,
             "Not fixed or paid by then, the payer's seat reopens for everybody "
-            "and the holds the others kept are let go — at a club that "
-            "confirms, the booking is called off and the court freed; a seat "
-            "kept for a refused rescuer is offered to everybody again.",
+            "and the holds the others kept are let go; a seat kept for a "
+            "refused rescuer is offered to everybody again.",
         ),
         Moment.HOLDING: MomentRule(
             HOLDING_JOB,
@@ -403,8 +395,8 @@ class RowBooked(BaseModel):
     game_id: UUID | None = Field(
         description=(
             "The Game it opened — what a score, an agreement and an attendance "
-            "tap name. "
-            "`null` while its club decides, and for good if it never said yes."
+            "tap name. `null` on a game that waited for a payment and has no "
+            "booking."
         )
     )
     starts_at: datetime
@@ -496,12 +488,6 @@ class PersonRow(BaseModel):
 class ClubPane(BaseModel):
     club_id: UUID
     name: str | None
-    confirms_each_game: bool | None = Field(
-        description=(
-            "`true` at an On request club, `false` at an Instant one; `null` for a "
-            "club no longer selling through Raketa."
-        )
-    )
 
 
 class VersionPerson(BaseModel):
@@ -533,10 +519,7 @@ class BookingPane(BaseModel):
     state: BookingState
     court_name: str
     cut_off: datetime
-    answer_by: datetime | None = Field(
-        description="When the club's answer is due, on a booking put to it."
-    )
-    booked_at: datetime | None
+    booked_at: datetime
     called_off: CalledOff | None
     cancel_reason: CancelReason | None
     departures: list[DeparturePane]
@@ -674,7 +657,6 @@ class GamePane(BaseModel):
         )
     )
     standing: Standing
-    waiting_for_the_club: bool
     share_grosze: int
     seats: int
     open_seats: int
@@ -1280,16 +1262,11 @@ class _Folded:
             origin=game.origin,
             kind=game.kind,
             poster=None if game.poster_id is None else self._ref(game.poster_id),
-            club=ClubPane(
-                club_id=game.club_id,
-                name=self._clubs.get(game.club_id),
-                confirms_each_game=None if terms is None else terms.confirms_each_game,
-            ),
+            club=ClubPane(club_id=game.club_id, name=self._clubs.get(game.club_id)),
             starts_at=game.start,
             book_by=game.book_by,
             cut_off=cut_off,
             standing=game.standing_at(self._now),
-            waiting_for_the_club=game.waiting_for_the_club,
             share_grosze=game.share_grosze,
             seats=game.seats,
             open_seats=game.open_seats,
@@ -1324,10 +1301,7 @@ class _Folded:
         """Each moment the game's record still has ahead of it."""
 
         ahead: list[tuple[Moment, Instant]] = []
-        if (
-            game.standing_at(self._now) is Standing.FILLING
-            and not game.waiting_for_the_club
-        ):
+        if game.standing_at(self._now) is Standing.FILLING:
             ahead.append((Moment.BOOK_BY, game.book_by))
         if game.ending is None and game.pay_by is not None:
             ahead.append((Moment.PAYMENT_DUE, game.pay_by))
@@ -1353,20 +1327,14 @@ class _Folded:
                 (Moment.PAYMENT_DUE, min(until for until in kept if until > self._now))
             )
         if booking is not None:
-            if (
-                booking.state is BookingState.WAITING_FOR_THE_CLUB
-                and booking.answer_by is not None
-            ):
-                ahead.append((Moment.CLUB_ANSWER_DUE, booking.answer_by))
-            if booking.state in (BookingState.BOOKED, BookingState.SEAT_OPEN):
+            if booking.is_booked:
                 ahead.append((Moment.CUT_OFF, booking.cut_off))
-            if booking.booked_at is not None:
-                # Whatever it came to since: the summary marks a game called
-                # off, and the payout nets what one gave back.
-                ahead.append(
-                    (Moment.NEW_BOOKINGS_SUMMARY, day_close_after(booking.booked_at))
-                )
-                ahead.append((Moment.CLUB_PAYOUT, day_close_after(booking.start)))
+            # Whatever it came to since: the summary marks a game called off,
+            # and the payout nets what one gave back.
+            ahead.append(
+                (Moment.NEW_BOOKINGS_SUMMARY, day_close_after(booking.booked_at))
+            )
+            ahead.append((Moment.CLUB_PAYOUT, day_close_after(booking.start)))
         if (
             played is not None
             and played.kind is GameKind.COUNTED
@@ -1408,7 +1376,6 @@ class _Folded:
             state=booking.state,
             court_name=booking.court.name,
             cut_off=booking.cut_off,
-            answer_by=booking.answer_by,
             booked_at=booking.booked_at,
             called_off=booking.called_off,
             cancel_reason=booking.cancel_reason,

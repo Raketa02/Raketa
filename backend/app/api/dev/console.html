@@ -70,10 +70,10 @@
   .pill { display: inline-block; padding: 0 8px; border: 1px solid var(--line);
     border-radius: 999px; font-size: 11px; letter-spacing: .03em; white-space: nowrap; }
   .pill.in, .pill.FILLED, .pill.BOOKED, .pill.CAPTURED { color: var(--good); border-color: var(--good); }
-  .pill.no, .pill.EXPIRED, .pill.CALLED_OFF, .pill.FAILED, .pill.TURNED_DOWN,
+  .pill.no, .pill.EXPIRED, .pill.CALLED_OFF, .pill.FAILED,
   .pill.WITHDRAWN, .pill.COURT_HOUR_LOST, .pill.CANCELLED { color: var(--bad); border-color: var(--bad); }
   .pill.phone { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .pill.FILLING, .pill.SEAT_OPEN, .pill.WAITING_FOR_THE_CLUB, .pill.TAKING { color: var(--warn); border-color: var(--warn); }
+  .pill.FILLING, .pill.SEAT_OPEN, .pill.TAKING { color: var(--warn); border-color: var(--warn); }
   #outcome { padding: 8px 12px; border-radius: 6px; background: var(--soft); min-height: 34px; }
   #outcome.bad { background: #fef3f2; }
 
@@ -145,12 +145,6 @@
         <label>a score up already, confirmed by silence in
           <input id="confirms-in" type="number" min="1" max="1440" placeholder="—"> min</label>
         <span class="note">empty: nothing entered — the rows and her phone say what happened</span>
-      </div>
-      <div class="row">
-        <button id="on-request">3 · Needs <span class="her">her</span> yes · On request club</button>
-        <label>club asked already, answer due in
-          <input id="answer-due" type="number" min="1" max="60" placeholder="—"> min</label>
-        <span class="note">empty: her yes on the phone asks the club</span>
       </div>
       <div class="row" id="jobs">
         <strong>Run it now</strong>
@@ -397,7 +391,6 @@ async function act(button) {
   if (done.ok && done.json) {
     const a = done.json;
     const after = a.booked ? "booked — It's a game!"
-      : a.waiting_for_the_club ? "full — waiting for the club"
       : a.your_payment ? `payment refused (${esc(a.your_payment.refusal ?? "")})`
       : `${a.open_seats} seat(s) open`;
     say(done, `${words} → ${after}`);
@@ -674,8 +667,6 @@ function drawGames() {
   $("games").innerHTML = games.length ? games.map((game) => {
     const booking = game.booking;
     const over = !["FILLING", "FILLED"].includes(game.standing);
-    const club = game.club.confirms_each_game === null ? "not selling"
-      : game.club.confirms_each_game ? "On request" : "Instant";
     const sides = game.sides
       ? `${names(game.sides.first)} <span class="note">v</span> ${names(game.sides.second)}`
       : "—";
@@ -701,10 +692,9 @@ function drawGames() {
       </tr>`).join("")}</tbody></table>` : `<span class="note">no charge</span>`;
     return `<div class="game ${over ? "over" : ""}">
       <h3>${when(game.starts_at)} · ${esc(game.club.name ?? "?")}
-        ${pill(game.standing)} ${booking ? pill(booking.state) : ""}
-        ${game.waiting_for_the_club ? pill("waiting for the club", "WAITING_FOR_THE_CLUB") : ""}</h3>
+        ${pill(game.standing)} ${booking ? pill(booking.state) : ""}</h3>
       <dl>
-        <dt>Game</dt><dd>${esc(game.origin)} · ${esc(game.kind)} · ${club}${game.poster ? ` · posted by ${nameOf(game.poster)}` : ""}
+        <dt>Game</dt><dd>${esc(game.origin)} · ${esc(game.kind)}${game.poster ? ` · posted by ${nameOf(game.poster)}` : ""}
           <span class="mono">${esc(game.game_id.slice(0, 8))}</span></dd>
         <dt>In</dt><dd>${names(game.people_in)} · ${game.open_seats} of ${game.seats} open</dd>
         <dt>Sides</dt><dd>${sides}</dd>
@@ -716,8 +706,7 @@ function drawGames() {
         ${booking ? `
         <dt>Booking</dt><dd>${pill(booking.state)}${booking.called_off ? ` ${esc(booking.called_off)}` : ""}
           ${booking.cancel_reason ? ` · ${esc(booking.cancel_reason)}` : ""}
-          ${booking.booked_at ? ` · booked ${when(booking.booked_at)}` : ""}
-          ${booking.answer_by ? ` · club answers by ${when(booking.answer_by)}` : ""}</dd>
+          · booked ${when(booking.booked_at)}</dd>
         <dt>Left</dt><dd>${departures}</dd>` : ""}
         ${game.result ? `<dt>Result</dt><dd>${resultOf(game.result)}</dd>` : ""}
         <dt>Pending</dt><dd>${momentsOf(game)}</dd>
@@ -730,7 +719,7 @@ function drawGames() {
 }
 
 const MOMENT_WORDS = {
-  BOOK_BY: "Book-by", CLUB_ANSWER_DUE: "Club's answer due",
+  BOOK_BY: "Book-by",
   PAYMENT_DUE: "Payment due · pay or fix the card", HOLDING: "Holding",
   CUT_OFF: "Cut-off",
   NEW_BOOKINGS_SUMMARY: "Day close · desk told", CLUB_PAYOUT: "Day close · club paid",
@@ -779,10 +768,6 @@ function clubButtons(game) {
   const id = game.game_id;
   const b = (verb, label, extra = "") =>
     `<button data-club="${verb}" data-club-id="${club}" data-game="${id}" ${extra}>${label}</button>`;
-  if (booking.state === "WAITING_FOR_THE_CLUB") {
-    return `<span class="club">${b("accept", "Accept")}${b("refuse", "Refuse")}
-      <span class="note">answer by ${when(booking.answer_by)}</span></span>`;
-  }
   if (booking.state === "CALLED_OFF") return `<span class="note">called off</span>`;
   const courts = state.freeCourts[id];
   const moves = courts === undefined ? b("free-courts", "Move…")
@@ -798,13 +783,7 @@ async function clubAct(button) {
   const at = (tail) => `/dev/clubs/${clubId}/${tail}`;
   const words = `The club · ${verb} on ${esc(game.slice(0, 8))}`;
   let done;
-  if (verb === "accept") {
-    done = await call("POST", at(`bookings/${game}/acceptance`));
-    say(done, done.ok ? `${words} → ${esc(done.json.outcome)}` : words);
-  } else if (verb === "refuse") {
-    done = await call("POST", at(`bookings/${game}/refusal`));
-    say(done, done.ok ? `${words} → refused` : words);
-  } else if (verb === "free-courts") {
+  if (verb === "free-courts") {
     done = await call("GET", at(`bookings/${game}/free-courts`));
     if (done.ok) state.freeCourts[game] = done.json.courts;
     say(done, done.ok ? `${words} → ${done.json.courts.length} free court(s)` : words);
@@ -959,16 +938,6 @@ function herSituation() {
   return { group_id: $("group").value, sport: $("sport").value, protagonist_id: state.protagonist };
 }
 
-async function onRequest() {
-  const due = $("answer-due").value;
-  const done = await call("POST", "/dev/situations/needs-her-yes-on-request-club", {
-    ...herSituation(),
-    ...(due ? { answer_due_in_minutes: Number(due) } : {}),
-  });
-  say(done, done.ok ? `On request club → ${esc(done.json.says)}` : "On request club");
-  await loadBoard();
-}
-
 async function cardDeclines() {
   const done = await call("POST", "/dev/situations/card-declines-at-the-fill", herSituation());
   say(done, done.ok ? `Card declines → ${esc(done.json.says)} Say yes on the phone.` : "Card declines");
@@ -1035,7 +1004,6 @@ $("protagonist").addEventListener("change", () => {
 });
 $("fresh-deal").addEventListener("click", freshDeal);
 $("needs-her-yes").addEventListener("click", needsHerYes);
-$("on-request").addEventListener("click", onRequest);
 $("card-declines").addEventListener("click", cardDeclines);
 $("about-to-expire").addEventListener("click", aboutToExpire);
 $("empty-seat").addEventListener("click", emptySeat);

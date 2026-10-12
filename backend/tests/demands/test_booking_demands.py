@@ -1,4 +1,4 @@
-"""What ``bookings`` demands of the rest of the platform (#543, #544), run
+"""What ``bookings`` demands of the rest of the platform (#541, #544), run
 against every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
@@ -35,15 +35,12 @@ from app.modules.bookings.domain.ports import (
     GameChanges,
     GameNoShows,
     GameOpening,
-    PlayerAddress,
-    PlayerAddresses,
 )
 from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
 from app.shared.ids import new_uuid
-from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -85,7 +82,7 @@ def test_every_registered_implementation_answers_a_declared_demand():
 
 
 # --------------------------------------------------------------------------- #
-# ClubCourtsAtTheHour — the first free court, its cut-off and time to confirm
+# ClubCourtsAtTheHour — the first free court and its cut-off
 # --------------------------------------------------------------------------- #
 
 
@@ -93,9 +90,7 @@ def test_every_registered_implementation_answers_a_declared_demand():
 async def test_the_first_free_court_comes_with_the_club_s_terms(
     implementation, client, session
 ):
-    club_id, _ = await a_club_and_its_desk(
-        client, way="ON_REQUEST", time_to_confirm_minutes=20
-    )
+    club_id, _ = await a_club_and_its_desk(client)
     courts: ClubCourtsAtTheHour = implementation.build(session)
 
     found = await courts.first_free(
@@ -104,7 +99,7 @@ async def test_the_first_free_court_comes_with_the_club_s_terms(
 
     assert found is not None
     assert found.court.name == "Court 1"
-    assert (found.cut_off_hours, found.time_to_confirm_minutes) == (24, 20)
+    assert found.cut_off_hours == 24
     assert (
         await courts.first_free(UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE)
         is None
@@ -147,22 +142,6 @@ async def test_a_club_s_desk_is_its_one_sign_in_and_its_name(
         email="desk@ogrody.pl", club_name="Ogrody 33"
     )
     assert await desks.of(new_uuid()) is None
-
-
-# --------------------------------------------------------------------------- #
-# PlayerAddresses — whom the club's no, or its silence, is emailed to (#623)
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize("implementation", registered(PlayerAddresses))
-async def test_a_player_is_addressed_at_their_sign_in(implementation, client, session):
-    ola, _ = await players.register(client, "ola")
-    addresses: PlayerAddresses = implementation.build(session)
-
-    found = await addresses.of([ola, new_uuid()])
-
-    assert found == {ola: PlayerAddress(email="ola@example.com")}
-    assert await addresses.of([]) == {}
 
 
 # --------------------------------------------------------------------------- #

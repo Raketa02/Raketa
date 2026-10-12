@@ -2,7 +2,7 @@
 §4–§5): every seat held together on the club's account until the cut-off
 (#637), or nobody; a Booking on the first free court, opening an ordinary Game
 and its chat; and what that does to everybody's other yeses and to the club's
-hours.
+hours. **At every club** (#669; ADR-0196 §1): no club confirms a game.
 
 Every act is taken over HTTP as the phone takes it, against the **fake payment
 provider** the application holds, and every claim is read where somebody would
@@ -27,7 +27,8 @@ from sqlalchemy import select
 
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_court_hours
-from app.core.config import get_settings
+from app.bootstrap.jobs import build_scheduled_jobs
+from app.core.config import Settings, get_settings
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
 from app.modules.conversations.infrastructure.conversation_model import (
@@ -916,25 +917,85 @@ async def test_a_game_that_fills_after_its_cut_off_says_so(
 
 
 # --------------------------------------------------------------------------- #
-# On request, and singles
+# No club confirms a game, and singles
 # --------------------------------------------------------------------------- #
 
+#: Wednesday 7 October 2026, 10:15 in Kraków.
+WEDNESDAY_MORNING = warsaw(7, 10) + timedelta(minutes=15)
+#: Thursday's 19:00 — its cut-off, the club's default 24 hours, Wednesday 19:00.
+THURSDAY_SEVEN = warsaw(8, 19)
 
-async def test_a_full_game_at_an_on_request_club_waits_and_nobody_pays(
-    client, session_factory, clock, payments, four
+
+async def test_kazimierz_padel_books_marta_s_game_the_moment_paula_s_yes_fills_it(
+    client, session_factory, clock, payments, mailbox
 ):
-    club, _ = await a_club_and_its_desk(client, way="ON_REQUEST")
-    group = await a_group(client, four[0], club, *four[1:])
-    proposal = await a_full_card_but_one(
-        client, session_factory, clock, club=club, group=group, four=four
-    )
+    """Kazimierz Padel sells padel at 100 zł a court-hour and hands Raketa its
+    hours until a day before. On Wednesday at 10:15 Paula's yes fills Marta's
+    Thursday 19:00: **it is booked at once**, every 25 zł share held until the
+    club's cut-off — and nothing waits on the desk: no email asks it anything,
+    and no job is there to run an answer out."""
 
-    last = await says_yes(client, four[3], proposal)
+    clock.move(WEDNESDAY_MORNING - clock.now())
+    club, _ = await a_club_and_its_desk(
+        client,
+        name="Kazimierz Padel",
+        way="ONLY_RAKETA",
+        padel_grosze=100_00,
+        release_lead_days=1,
+    )
+    marta, ivan, oscar, paula = [
+        await a_player(client, payments, name)
+        for name in ("marta", "ivan", "oscar", "paula")
+    ]
+    group = await a_group(client, marta, club, ivan, oscar, paula)
+    proposal = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        start=THURSDAY_SEVEN,
+        versions=((marta, ivan, oscar, paula),),
+    )
+    for player in (marta, ivan, oscar):
+        said = await says_yes(client, player, proposal)
+        assert said.status_code == 200, said.text
+
+    last = await says_yes(client, paula, proposal)
 
     assert last.status_code == 200, last.text
-    assert last.json()["open_seats"] == 0
-    assert last.json()["booked"] is None
-    assert payments.called("authorise") == []
+    answer = last.json()
+    assert (answer["open_seats"], answer["your_payment"]) == (0, None)
+    assert answer["booked"]["booking_id"] == str(proposal)
+    held = payments.called("authorise")
+    assert {call.arguments["amount_grosze"] for call in held} == {25_00}
+    assert len(held) == 4
+    assert payments.called("capture") == []
+    for player in (marta, ivan, oscar, paula):
+        home = await client.get("/api/v1/home", headers=player["headers"])
+        [card] = home.json()["games"]
+        assert (card["status"], card["court_name"]) == ("BOOKED", "Court 1")
+        assert (
+            card["money"]["share_grosze"],
+            card["money"]["share_state"],
+            card["money"]["free_to_leave_until"],
+        ) == (25_00, "HELD", "2026-10-07T17:00:00Z")
+    await mailbox.drain()
+    for name in ("marta", "ivan", "oscar", "paula"):
+        [email] = await mailbox.to(f"{name}@example.com")
+        assert email.subject == "It's a game! · 25 zł held"
+    assert await mailbox.to("desk@kazimierz.pl") == []
+    every_job_on = get_settings().model_copy(
+        update={
+            name: True for name in Settings.model_fields if name.endswith("_ENABLED")
+        }
+    )
+    assert "request-timeout" not in {
+        job.name
+        for job in build_scheduled_jobs(
+            session_factory=object(),  # type: ignore[arg-type]
+            settings=every_job_on,
+        )
+    }
 
 
 async def test_a_singles_game_books_one_against_one(

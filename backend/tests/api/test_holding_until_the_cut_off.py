@@ -1,13 +1,11 @@
 """**The fill holds the shares and the cut-off takes them** (#637; the mechanics
-Q113, §12.2, §12.3, §13, §14.1, §16.8, §16.9; ADR-0189's 2026-10-10
-amendment).
+Q113, §12.2, §12.3, §13, §14.1, §16.9; ADR-0189's 2026-10-10 amendment).
 
 When a game fills, every seat's share is **held** on its player's card and
 nothing is taken; the club's **cut-off** takes it. Leaving before the cut-off
 lets the hold go — nothing is taken, nobody is refunded, no fee arises — and a
 game still short at its cut-off is called off with every hold let go, so nobody
-pays anything. A game that fills after its cut-off, or an On request club's yes
-after it, is taken at once, as before.
+pays anything. A game that fills after its cut-off is taken at once, as before.
 
 Every act is taken over HTTP as the phone and the desk take it, against the
 fake payment provider; the cut-off job runs as the job does, the clock moved to
@@ -470,54 +468,3 @@ async def test_a_game_filling_after_its_cut_off_is_taken_at_once(
         if sent.subject.startswith("It's a game!")
     ]
     assert booked.subject == "It's a game! · you paid 30 zł"
-
-
-# --------------------------------------------------------------------------- #
-# An On request club's yes
-# --------------------------------------------------------------------------- #
-
-
-async def accepts(client, desk: dict, booking: str):
-    accepted = await client.post(f"{BOOKINGS}/{booking}/acceptance", headers=desk)
-    assert accepted.status_code == 200, accepted.text
-    return accepted.json()
-
-
-async def test_an_on_request_club_s_yes_before_the_cut_off_holds_every_share(
-    client, session_factory, clock, four, payments, mailbox
-):
-    club, desk = await a_club_and_its_desk(client, way="ON_REQUEST")
-    last = await fills(client, session_factory, clock, club, four)
-    assert last["waiting_for_the_club"] is True
-    [asked] = await mailbox.to("desk@bonarka.pl")
-    assert "the shares are held when you accept and taken at the cut-off" in asked.text
-
-    await accepts(client, desk, last["proposal_id"])
-    await mailbox.drain()
-
-    assert calls(payments, "authorise") == 4
-    assert calls(payments, "capture") == 0
-    card = await card_of(client, four[0])
-    assert (card["money"]["paid"], card["money"]["share_state"]) == (False, "HELD")
-    clock.move(CUT_OFF - MONDAY_MORNING)
-    await cuts_off(session_factory, clock)
-    await mailbox.drain()
-    assert calls(payments, "capture") == 4
-
-
-async def test_an_on_request_club_s_yes_after_the_cut_off_takes_at_once(
-    client, session_factory, clock, four, payments, mailbox
-):
-    club, desk = await a_club_and_its_desk(
-        client, way="ON_REQUEST", time_to_confirm_minutes=60
-    )
-    clock.move(CUT_OFF - MONDAY_MORNING - timedelta(minutes=10))
-    last = await fills(client, session_factory, clock, club, four)
-    clock.move(timedelta(minutes=20))
-
-    await accepts(client, desk, last["proposal_id"])
-    await mailbox.drain()
-
-    assert calls(payments, "capture") == 4
-    card = await card_of(client, four[0])
-    assert (card["money"]["paid"], card["money"]["share_state"]) == (True, "TAKEN")

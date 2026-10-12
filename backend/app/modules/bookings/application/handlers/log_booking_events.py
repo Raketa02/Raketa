@@ -2,7 +2,7 @@
 
 A delivered event with no handler is a delivery failure, so each is logged as
 every context's are: the booking, and — where the event carries them — its club
-and its game. Never who paid what, and never a club's note on a refusal.
+and its game. Never who paid what.
 """
 
 from __future__ import annotations
@@ -11,12 +11,7 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.bookings.domain.events import (
-    BookingAccepted,
-    BookingAwaitingAPayment,
     BookingConfirmed,
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
     CardFixed,
@@ -24,9 +19,7 @@ from app.modules.bookings.domain.events import (
     KeptSeatRanOut,
     NewBookingsSummarised,
     CourtMoved,
-    PaymentNotInTime,
     PlayerCheckedIn,
-    RequestWithdrawn,
     NoSaidToTheSeat,
     SeatKept,
     SeatLeft,
@@ -37,11 +30,6 @@ logger = logging.getLogger(__name__)
 
 BookingEvent = (
     BookingConfirmed
-    | BookingRequested
-    | BookingAccepted
-    | BookingRefused
-    | BookingTimedOut
-    | RequestWithdrawn
     | SeatLeft
     | CalledOffAtCutOff
     | SeatRescued
@@ -49,8 +37,6 @@ BookingEvent = (
     | CourtMoved
     | CancelledByClub
     | PlayerCheckedIn
-    | BookingAwaitingAPayment
-    | PaymentNotInTime
     | CardToFix
     | CardFixed
     | SeatKept
@@ -59,11 +45,6 @@ BookingEvent = (
 
 _NAMES = {
     BookingConfirmed: "bookings.booking.confirmed",
-    BookingRequested: "bookings.booking.requested",
-    BookingAccepted: "bookings.booking.accepted",
-    BookingRefused: "bookings.booking.refused",
-    BookingTimedOut: "bookings.booking.timed_out",
-    RequestWithdrawn: "bookings.booking.request_withdrawn",
     SeatLeft: "bookings.booking.seat_left",
     CalledOffAtCutOff: "bookings.booking.called_off_at_cut_off",
     SeatRescued: "bookings.booking.seat_rescued",
@@ -71,8 +52,6 @@ _NAMES = {
     CourtMoved: "bookings.booking.court_moved",
     CancelledByClub: "bookings.booking.cancelled_by_club",
     PlayerCheckedIn: "bookings.booking.player_checked_in",
-    BookingAwaitingAPayment: "bookings.booking.awaiting_a_payment",
-    PaymentNotInTime: "bookings.booking.payment_not_in_time",
     CardToFix: "bookings.booking.card_to_fix",
     CardFixed: "bookings.booking.card_fixed",
     SeatKept: "bookings.booking.seat_kept",
@@ -88,9 +67,8 @@ class LogBookingEvent:
             "event_id": str(context.event_id),
             "attempt": context.attempt,
         }
-        if isinstance(event, (BookingConfirmed, BookingRequested)):
+        if isinstance(event, BookingConfirmed):
             extra["club_id"] = str(event.club_id)
-        if isinstance(event, (BookingConfirmed, BookingAccepted)):
             extra["game_id"] = str(event.game_id)
         logger.info(_NAMES[type(event)], extra=extra)
 

@@ -194,13 +194,8 @@ class GameBrief:
     made_at: Instant
     #: The member who posted it — ``None`` on the engine's pick.
     posted_by: UUID | None
-    #: Still filling — and so not booked, over or past its book-by; a game
-    #: waiting for its club is.
+    #: Still filling — and so not booked, over or past its book-by.
     filling: bool
-    waiting_for_the_club: bool
-    #: When its club must answer the request it waits on — ``None`` unless it
-    #: waits for its club.
-    answer_by: Instant | None
     #: Seats nobody is In on, while it fills.
     open_seats: int
     #: Everybody In, while it fills.
@@ -217,24 +212,19 @@ class GameBrief:
     booked: bool
     #: Everybody with a seat on the booked game now.
     seated: tuple[UUID, ...]
-    #: The booking waited for its club's answer before it was booked.
-    asked_the_club: bool
     #: Each leaver whose seat was taken, and who took it.
     seats_taken: Mapping[UUID, UUID]
     #: Why the club cancelled it, once it did — ``WEATHER``, ``REPAIR``,
     #: ``DOUBLE_BOOKING`` or ``OTHER``.
     cancel_reason: str | None
     #: The player whose own act booked it — their yes, a join, a confirmed
-    #: payment — which they saw happen; ``None`` while it fills, and when the
-    #: club's yes or a paused yes coming back booked it.
+    #: payment — which they saw happen; ``None`` while it fills, and when a
+    #: paused yes coming back booked it.
     filled_by: UUID | None
-    #: The last moment it can fill: past it, a game still filling is over —
-    #: one waiting for its club excepted.
+    #: The last moment it can fill: past it, a game still filling is over.
     book_by: Instant
-    #: When it went back to filling, full: its request taken back because a
-    #: seat opened while the club decided (Q106) — or, at a club that books at
-    #: once, a seat opening or a time to pay running out while it waited for a
-    #: payment (#625) — ``None`` while it waits, once asked again, and on a
+    #: When it went back to filling, full: a seat opening or a time to pay
+    #: running out while it waited for a payment (#625, Q106) — ``None`` on a
     #: game never full.
     fell_back_at: Instant | None
     #: Each leaver whose seat opened before the club's cut-off and nobody took
@@ -243,7 +233,7 @@ class GameBrief:
     left_it_short: tuple[UUID, ...]
 
     #: Everybody In whose refused share the game waits for, and until when —
-    #: their time to pay (#625, #626).
+    #: their time to pay (#625).
     paying: Mapping[UUID, Instant] = field(default_factory=dict)
     #: Those of them whose time is to fix the card, before the cut-off — every
     #: other one's is to pay (#638).

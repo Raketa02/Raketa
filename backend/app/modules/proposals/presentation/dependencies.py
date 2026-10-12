@@ -19,7 +19,6 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
-    build_accept_the_request,
     build_booked_games,
     build_cancel_the_game,
     build_move_the_game,
@@ -43,8 +42,6 @@ from app.bootstrap.composition import (
     build_read_posting_grid,
     build_read_posting_slot,
     build_read_proposal_details,
-    build_read_waiting_requests,
-    build_refuse_the_request,
     build_say_yes,
     build_withdraw_yes,
 )
@@ -62,11 +59,6 @@ from app.modules.proposals.application.club_bookings import (
     MoveTheGame,
     ReadClubBookings,
     ReadFreeCourts,
-)
-from app.modules.proposals.application.club_requests import (
-    AcceptTheRequest,
-    ReadWaitingRequests,
-    RefuseTheRequest,
 )
 from app.modules.proposals.application.games_and_money import (
     ReadGamesAndMoney,
@@ -157,12 +149,9 @@ def get_say_no(
 SayNoDep = Annotated[SayNo, Depends(get_say_no)]
 
 
-def get_withdraw_yes(
-    db: DbSession, clock: ClockDep, settings: SettingsDep
-) -> WithdrawYes:
-    """*Withdraw*, and *Leave the game* while its club decides — which takes
-    the request to the club with it (#543)."""
-    return build_withdraw_yes(db, clock=clock, settings=settings)
+def get_withdraw_yes(db: DbSession, clock: ClockDep) -> WithdrawYes:
+    """*Withdraw*, and *Leave the game* while a payment is awaited (#625)."""
+    return build_withdraw_yes(db, clock=clock)
 
 
 WithdrawYesDep = Annotated[WithdrawYes, Depends(get_withdraw_yes)]
@@ -304,47 +293,6 @@ def get_say_no_to_a_rescue(
 
 
 SayNoToARescueDep = Annotated[SayNoToARescue, Depends(get_say_no_to_a_rescue)]
-
-
-# --------------------------------------------------------------------------- #
-# The club's answer to a request (#543)
-# --------------------------------------------------------------------------- #
-
-
-def get_read_waiting_requests(
-    db: DbSession, clock: ClockDep, settings: SettingsDep
-) -> ReadWaitingRequests:
-    return build_read_waiting_requests(db, clock=clock, settings=settings)
-
-
-ReadWaitingRequestsDep = Annotated[
-    ReadWaitingRequests, Depends(get_read_waiting_requests)
-]
-
-
-def get_accept_the_request(
-    db: DbSession,
-    clock: ClockDep,
-    provider: PaymentProviderDep,
-    settings: SettingsDep,
-) -> AcceptTheRequest:
-    """The club's yes, charging every seat over the provider this process moves
-    money through."""
-    return build_accept_the_request(
-        db, clock=clock, provider=provider, settings=settings
-    )
-
-
-AcceptTheRequestDep = Annotated[AcceptTheRequest, Depends(get_accept_the_request)]
-
-
-def get_refuse_the_request(
-    db: DbSession, clock: ClockDep, settings: SettingsDep
-) -> RefuseTheRequest:
-    return build_refuse_the_request(db, clock=clock, settings=settings)
-
-
-RefuseTheRequestDep = Annotated[RefuseTheRequest, Depends(get_refuse_the_request)]
 
 
 # --------------------------------------------------------------------------- #

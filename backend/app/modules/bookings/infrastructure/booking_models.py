@@ -8,12 +8,10 @@ stream is the record.
 
 **A court hour is held by one booking**, and the unique index says so: two
 cards filling at once on the last court of an hour cannot both book it — the
-second's transaction fails, and nothing it held is taken. **A booking waiting
-for its club holds its court as a booked one does** (#543), and **a booking
-called off holds nothing**: the index is partial, so the hour is the club's to
-sell again the moment a request is refused, unanswered or withdrawn — and the
-called-off row stays, since its players still read why. **A club's yes waiting
-on one payment holds the court too** (#626), until it comes or does not.
+second's transaction fails, and nothing it held is taken. **A booking called
+off holds nothing**: the index is partial, so the hour is the club's to sell
+again the moment the game is called off — and the called-off row stays, since
+its players still read why.
 
 **A leaver keeps their seat row, marked with when they left** (#544): the
 record reads who ever held a seat — a mark is a leaver's — while every read of
@@ -53,8 +51,6 @@ class BookingORM(Base):
             sqlite_where=text("state <> 'CALLED_OFF'"),
         ),
         Index("ix_bookings_club_id_start", "club_id", "start"),
-        # The requests whose answer is due — the timeout job's read.
-        Index("ix_bookings_state_answer_by", "state", "answer_by"),
         # The games whose cut-off came with a seat open — the cut-off job's.
         Index("ix_bookings_state_cut_off", "state", "cut_off"),
         # A day's new bookings — the club's daily summary (#548).
@@ -69,18 +65,14 @@ class BookingORM(Base):
     start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     share_grosze: Mapped[int] = mapped_column(Integer, nullable=False)
     cut_off: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    #: ``WAITING_FOR_THE_CLUB``, ``WAITING_FOR_A_PAYMENT`` (#626), ``BOOKED``,
-    #: ``SEAT_OPEN`` or ``CALLED_OFF``.
+    #: ``BOOKED``, ``SEAT_OPEN`` or ``CALLED_OFF``.
     state: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default="BOOKED"
     )
-    #: The Game it opened — ``NULL`` until an On request club says yes.
+    #: The Game it opened. Nullable from On request, when a booking waited for
+    #: its club's yes before it had one (#543, removed by #669).
     game_id: Mapped[Optional[UUID]] = mapped_column(
         UUIDType(binary=False), nullable=True
-    )
-    #: When the club's answer is due, on a booking that was ever put to it.
-    answer_by: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
     )
     booked_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True

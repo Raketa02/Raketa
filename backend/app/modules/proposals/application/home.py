@@ -29,18 +29,13 @@ them, every payment they have to confirm — a game still filling, which is not 
 Home, but which the mechanics count among the games that need you (§3): its seat
 is the reader's only until somebody else takes it.
 
-**A full game gone back to filling is here too** (#624, Q106): its request was
-taken back because a seat opened, and it stays on the Home of the people still
-In as *Seat open* — folded against its proposal (``as_it_stands``), so somebody
-who took their yes back since no longer finds it, and it is *called off* once
-its book-by passes, or its court goes, before it is full again.
-
-**A game waiting for one payment is here too** (#625, #626; Q111): *Waiting
-for one payment* on all four's Home while a refused share's time to pay runs.
-At a club that books at once it has **no booking** until it books — no court is
-held — so it is read off its proposal (``without_a_booking``) for everybody In,
-the payer among them: waiting, then *Seat open* once the time ran out or
-somebody else's seat opened, or *called off*.
+**A game waiting for one payment is here too** (#625; Q111): *Waiting for one
+payment* on all four's Home while a refused share's time to pay runs. It has
+**no booking** until it books — no court is held — so it is read off its
+proposal (``without_a_booking``) for everybody In, the payer among them:
+waiting, then *Seat open* once the time ran out or somebody else's seat opened
+— a full game gone back to filling (Q106) — or *called off*. Nothing else is
+on Home before it is booked: no club confirms a game (``docs/adr/0196`` §1).
 
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
@@ -59,7 +54,6 @@ from app.modules.proposals.application.payments_to_confirm import owed_by
 from app.modules.proposals.domain.home import (
     BookedGame,
     BookedState,
-    as_filling_again,
     on_home,
     on_home_since,
     state_of,
@@ -131,22 +125,14 @@ class ReadHome:
         now = instant(self._clock.now())
         since = on_home_since(now)
         booked = [
-            game
-            for game in [
-                *await self._older_still_waiting(since, reader=reader, now=now),
-                *[
-                    await as_it_stands(game, self._proposals, now=now)
-                    for game in await self._bookings.of_player(reader, since=since)
-                ],
-            ]
-            # Gone back to filling, it is the game of the people In now.
-            if game is not None and game.has_a_seat_for(reader)
+            *await self._older_still_waiting(since, reader=reader, now=now),
+            *await self._bookings.of_player(reader, since=since),
         ]
         booked = sorted(
             [*booked, *await self._without_a_booking(booked, reader, since, now)],
             key=lambda game: (game.start, game.booking_id),
         )
-        # A game still waiting for its club, or never booked by it, has none.
+        # A game that waited for a payment and never booked has none.
         results = await self._results.of(
             [game.game_id for game in booked if game.game_id is not None],
             reader=reader,
@@ -196,8 +182,8 @@ class ReadHome:
         since: Instant,
         now: Instant,
     ) -> list[BookedGame]:
-        """The reader's games at a club that books at once that waited for a
-        payment and have no booking (#625)."""
+        """The reader's games that waited for a payment and have no booking
+        (#625)."""
 
         found: list[BookedGame] = []
         seen = {game.booking_id for game in booked}
@@ -232,28 +218,6 @@ class ReadHome:
         return sorted(found, key=lambda game: (game.start, game.booking_id))
 
 
-async def as_it_stands(
-    game: BookedGame, proposals: ProposalRepository, *, now: Instant
-) -> BookedGame | None:
-    """A booked game as its players read it at ``now`` — **a full game gone
-    back to filling folded against its proposal** (#624, Q106): who is In now,
-    whether it ended before it was full again, and whose time to pay still
-    runs (#626). ``None`` for one whose proposal is gone."""
-
-    if not game.filling_again:
-        return game
-    proposal = await proposals.load(game.booking_id)
-    if proposal is None:
-        return None
-    return as_filling_again(
-        game,
-        in_=proposal.yeses,
-        standing=proposal.standing_at(now),
-        paying=proposal.payments_due,
-        time_to=proposal.time_to,
-    )
-
-
 async def the_game(
     booking_id: UUID,
     *,
@@ -261,14 +225,13 @@ async def the_game(
     proposals: ProposalRepository,
     now: Instant,
 ) -> BookedGame | None:
-    """The game under this id as its players read it at ``now``: its booking,
-    as it stands — or, **a game at a club that books at once that waited for a
-    payment**, its proposal, since it has no booking until it books (#625).
-    ``None`` for neither."""
+    """The game under this id as its players read it at ``now``: its booking —
+    or, **a game that waited for a payment**, its proposal, since it has no
+    booking until it books (#625). ``None`` for neither."""
 
     found = await bookings.find(booking_id)
     if found is not None:
-        return await as_it_stands(found, proposals, now=now)
+        return found
     proposal = await proposals.load(booking_id)
     if proposal is None or proposal.payment_awaited_at is None:
         return None

@@ -379,8 +379,7 @@ class BookedGamesOver:
         for game_id in sorted(set(game_ids)):
             # A booking takes its proposal's id, which every charge was made for.
             game = await self._bookings.find(game_id)
-            # A game gone back to filling took no money (#624).
-            if game is None or game.filling_again:
+            if game is None:
                 continue
             if (
                 game.stage is BookingStage.CALLED_OFF

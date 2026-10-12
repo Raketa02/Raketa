@@ -19,7 +19,7 @@ Two acts and two reads on the club surface, each for the desk's own club:
 Desk check-in is removed (#651).
 
 Move and Cancel are the club's **until the game starts**, and never on a game
-called off or still waiting for the club's answer. **Every act locks the game
+called off. **Every act locks the game
 first** — its proposal's row, the booking's own id — as every act on a game
 does, so a club's cancel, a player's leaving and a rescue arriving together are
 one after another; and each is one transaction, the money following the commit.
@@ -54,14 +54,12 @@ from app.modules.proposals.domain.club_bookings import (
 )
 from app.modules.proposals.domain.errors import (
     BookingIsCalledOff,
-    BookingNotBooked,
     BookingNotFound,
     CourtNotFree,
     GameHasStarted,
 )
 from app.modules.proposals.domain.home import (
     BookedGame,
-    BookingStage,
     ClubCancelReason,
 )
 from app.modules.proposals.domain.ports import (
@@ -280,9 +278,7 @@ async def _the_clubs(
     bookings: PlayerBookings, club_id: UUID, booking_id: UUID
 ) -> BookedGame:
     game = await bookings.find(booking_id)
-    # A request taken back is no booking of the club's: the game is filling
-    # again, as it was before it was full (#624).
-    if game is None or game.club_id != club_id or game.filling_again:
+    if game is None or game.club_id != club_id:
         raise BookingNotFound()
     return game
 
@@ -293,8 +289,6 @@ async def _still_the_clubs_to_play(
     """The club's game, refused unless it may still be moved or cancelled."""
 
     game = await _the_clubs(bookings, club_id, booking_id)
-    if game.stage is BookingStage.WAITING_FOR_THE_CLUB:
-        raise BookingNotBooked()
     if game.called_off_reason(now) is not None:
         raise BookingIsCalledOff()
     if now >= game.start:

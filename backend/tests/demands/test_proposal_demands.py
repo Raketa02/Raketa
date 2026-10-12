@@ -1,7 +1,7 @@
 """What ``proposals`` demands of the rest of the platform for Home and a game's
-details (#542), On request (#543), leaving and the cut-off (#544), rescues
-(#545), posting (#546) and the club running its bookings (#547), run against
-every registered implementation.
+details (#542), leaving and the cut-off (#544), rescues (#545), posting (#546)
+and the club running its bookings (#547), run against every registered
+implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/proposal_demands.py`` is
@@ -48,20 +48,17 @@ from app.modules.payments.domain.seat_charge import (
 )
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
-from app.modules.proposals.domain.home import BookingStage, ResultStage
+from app.modules.proposals.domain.home import ResultStage
 from app.modules.proposals.domain.home import ClubCancelReason, LateRefund
 from app.modules.proposals.domain.ports import (
     PaymentRefusal,
     RefusedPayment,
-    BookableCourt,
     BookedGameChanges,
     BookingTakings,
     LateRefunds,
     ClubBookings,
     ClubDistances,
-    ClubRequests,
     GameResults,
-    GameToAsk,
     CardsToFix,
     CheckedShares,
     HeldShares,
@@ -77,8 +74,7 @@ from app.modules.proposals.domain.ports import (
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.post import LevelRange
-from app.modules.proposals.domain.proposal import ClubAnswer, TimeTo
-from app.kernel import minutes
+from app.modules.proposals.domain.proposal import TimeTo
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
@@ -164,36 +160,6 @@ async def _booked(
     return await _saved_booking(session, booking)
 
 
-async def _waiting(
-    session, *, start: Instant, taken_back_from: UUID | None = None
-) -> Booking:
-    """A full game its On request club has not answered: no Game yet — or,
-    ``taken_back_from`` a player whose seat opened while it waited, a game
-    filling again (#624)."""
-
-    booking = Booking.requested(
-        booking_id=new_uuid(),
-        pool_id=new_uuid(),
-        club_id=new_uuid(),
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
-        sport=Sport.PADEL,
-        kind=SearchMode.COMPETITIVE,
-        start=start,
-        share_grosze=30_00,
-        first_side=(OLA, KUBA),
-        second_side=(EWA, TOMEK),
-        cut_off=start - timedelta(hours=24),
-        answer_by=_at(1),
-        filled_by=None,
-        at=_at(),
-    )
-    if taken_back_from is not None:
-        booking.withdraw_request(
-            (taken_back_from,), left=(taken_back_from,), at=_at()
-        )
-    return await _saved_booking(session, booking)
-
-
 async def _saved_booking(session, booking: Booking) -> Booking:
     repository = build_booking_repository(
         session,
@@ -229,38 +195,6 @@ async def test_a_player_s_booked_games_come_soonest_first_as_booked(
 
 
 @pytest.mark.parametrize("implementation", registered(PlayerBookings))
-async def test_a_request_taken_back_is_a_game_filling_again_to_those_still_in(
-    implementation, session
-):
-    """Kuba's seat opened while the club decided (#624, Q106): the others keep
-    their places, and he no longer has one."""
-
-    booking = await _waiting(session, start=_at(48), taken_back_from=KUBA)
-    bookings: PlayerBookings = implementation.build(session)
-
-    [game] = await bookings.of_player(EWA, since=None)
-
-    assert game.booking_id == booking.booking_id
-    assert (game.stage, game.called_off) == (BookingStage.FILLING_AGAIN, None)
-    assert (game.first_side, game.second_side) == ((OLA,), (EWA, TOMEK))
-    assert await bookings.of_player(KUBA, since=None) == []
-    found = await bookings.find(booking.booking_id)
-    assert found is not None and found.filling_again
-
-
-@pytest.mark.parametrize("implementation", registered(ClubBookings))
-async def test_a_request_taken_back_is_no_booking_of_the_club_s(
-    implementation, session
-):
-    booking = await _waiting(session, start=_at(48), taken_back_from=KUBA)
-    club: ClubBookings = implementation.build(session)
-
-    assert (
-        await club.on_day(booking.club_id, start=_at(47), end=_at(49))
-    ) == []
-
-
-@pytest.mark.parametrize("implementation", registered(PlayerBookings))
 async def test_a_player_s_booked_games_are_read_from_an_hour_on(
     implementation, session
 ):
@@ -283,12 +217,11 @@ async def test_the_games_of_a_player_s_older_bookings_are_named_unread(
     implementation, session
 ):
     """Each Game a player's booking opened before an hour, to its booking —
-    never one with no Game yet, and never one whose seat they left."""
+    never one whose seat they left."""
 
     older = await _booked(session, start=_at(48))
     await _booked(session, start=_at(120))
     await _booked(session, start=_at(49), left_by=EWA)
-    await _waiting(session, start=_at(50))
     bookings: PlayerBookings = implementation.build(session)
 
     found = await bookings.games_before(EWA, before=_at(120))
@@ -437,162 +370,6 @@ async def test_a_player_with_no_location_area_is_nowhere(
     distances: ClubDistances = implementation.build(session)
 
     assert await distances.from_player(new_uuid(), [UUID(club_id)]) == {}
-
-
-# --------------------------------------------------------------------------- #
-# ClubRequests — a full game put to its On request club, and its answer (#543)
-# --------------------------------------------------------------------------- #
-
-
-def _a_game_to_ask(club_id: UUID, *, start: Instant, at: Instant) -> GameToAsk:
-    return GameToAsk(
-        proposal_id=new_uuid(),
-        pool_id=new_uuid(),
-        club_id=club_id,
-        sport=Sport.PADEL,
-        kind=SearchMode.COMPETITIVE,
-        start=start,
-        share_grosze=30_00,
-        first_side=(OLA, KUBA),
-        second_side=(EWA, TOMEK),
-        court=BookableCourt(
-            court_id=new_uuid(),
-            name="Court 1",
-            cut_off=start - timedelta(hours=24),
-            time_to_confirm=minutes(30),
-        ),
-        answer_by=at + timedelta(minutes=30),
-        filled_by=TOMEK,
-    )
-
-
-@pytest.mark.parametrize("implementation", registered(ClubRequests))
-async def test_a_request_waits_at_its_club_until_its_answer_is_due(
-    implementation, session
-):
-    club_id = new_uuid()
-    game = _a_game_to_ask(club_id, start=_at(48), at=_at())
-    requests: ClubRequests = implementation.build(session)
-
-    await requests.ask(game, at=_at())
-    await session.commit()
-
-    found = await requests.find(game.proposal_id)
-    assert found is not None and found.waiting is True
-    assert (found.club_id, found.court_name, found.answer_by) == (
-        club_id,
-        "Court 1",
-        game.answer_by,
-    )
-    assert found.players == (OLA, KUBA, EWA, TOMEK)
-    assert [r.booking_id for r in await requests.waiting_at(club_id)] == [
-        game.proposal_id
-    ]
-    assert await requests.waiting_at(new_uuid()) == []
-    assert await requests.unanswered(now=_at()) == []
-    assert await requests.unanswered(now=game.answer_by) == [game.proposal_id]
-    assert await requests.find(new_uuid()) is None
-
-
-@pytest.mark.parametrize("implementation", registered(ClubRequests))
-async def test_a_request_is_answered_once_and_a_withdrawn_one_asked_again(
-    implementation, session
-):
-    club_id = new_uuid()
-    refused = _a_game_to_ask(club_id, start=_at(48), at=_at())
-    accepted = _a_game_to_ask(club_id, start=_at(72), at=_at())
-    requests: ClubRequests = implementation.build(session)
-    await requests.ask(refused, at=_at())
-    await requests.ask(accepted, at=_at())
-
-    await requests.turn_down(
-        refused.proposal_id, answer=ClubAnswer.REFUSED, reason=None, at=_at()
-    )
-    assert await requests.withdraw(
-        accepted.proposal_id, player_ids=(KUBA,), left=(KUBA,), at=_at()
-    )
-    await requests.ask(accepted, at=_at())
-    game_id = await requests.accept(accepted.proposal_id, at=_at())
-    await session.commit()
-
-    gone = await requests.find(refused.proposal_id)
-    booked = await requests.find(accepted.proposal_id)
-    assert gone is not None and gone.waiting is False
-    assert booked is not None and booked.waiting is False
-    assert game_id is not None
-    assert await requests.waiting_at(club_id) == []
-    assert not await requests.withdraw(refused.proposal_id, player_ids=(OLA,), at=_at())
-
-
-@pytest.mark.parametrize("implementation", registered(ClubRequests))
-async def test_a_club_s_yes_waits_on_a_payment_then_books_or_is_called_off(
-    implementation, session
-):
-    """#626: a share refused at the club's yes keeps the yes and its court
-    until the payment's time; paid, the club's yes books it, not asked again —
-    not paid, it is called off, and a request no longer the club's records
-    nothing."""
-
-    club_id = new_uuid()
-    paid = _a_game_to_ask(club_id, start=_at(48), at=_at())
-    lapsed = _a_game_to_ask(club_id, start=_at(72), at=_at())
-    requests: ClubRequests = implementation.build(session)
-    for game in (paid, lapsed):
-        await requests.ask(game, at=_at())
-        await requests.await_a_payment(
-            game.proposal_id,
-            player_ids=(TOMEK,),
-            until=_at(1),
-            to_fix_the_card=game is paid,
-            at=_at(),
-        )
-
-    awaiting = await requests.find(paid.proposal_id)
-    assert awaiting is not None
-    assert (awaiting.waiting, awaiting.pay_by) == (False, _at(1))
-    assert await requests.waiting_at(club_id) == []
-    assert await requests.unanswered(now=_at(48)) == []
-    assert await requests.accept(paid.proposal_id, at=_at()) is not None
-    assert await requests.payment_not_in_time(
-        lapsed.proposal_id, player_ids=(TOMEK,), for_good=False, at=_at(1)
-    )
-    assert not await requests.payment_not_in_time(
-        lapsed.proposal_id, player_ids=(TOMEK,), for_good=False, at=_at(1)
-    )
-    await session.commit()
-
-    booked = await requests.find(paid.proposal_id)
-    called_off = await requests.find(lapsed.proposal_id)
-    assert booked is not None and booked.pay_by is None
-    assert called_off is not None and called_off.waiting is False
-
-
-@pytest.mark.parametrize("implementation", registered(ClubBookings))
-async def test_a_game_its_club_s_yes_waits_on_says_what_the_time_is_for(
-    implementation, session
-):
-    """#638: a yes before the cut-off waits on a card to fix; one after it, on
-    a payment — and the club's day reads which."""
-
-    fixing = await _waiting(session, start=_at(48))
-    paying = await _waiting(session, start=_at(72))
-    requests: ClubRequests = registered_build(ClubRequests, session)
-    for booking, to_fix_the_card in ((fixing, True), (paying, False)):
-        await requests.await_a_payment(
-            booking.booking_id,
-            player_ids=(TOMEK,),
-            until=_at(1),
-            to_fix_the_card=to_fix_the_card,
-            at=_at(),
-        )
-    await session.commit()
-    club: ClubBookings = implementation.build(session)
-
-    [fix] = await club.on_day(fixing.club_id, start=_at(47), end=_at(49))
-    [pay] = await club.on_day(paying.club_id, start=_at(71), end=_at(73))
-
-    assert (fix.pay_by, fix.time_to) == (_at(1), TimeTo.FIX_THE_CARD)
-    assert (pay.pay_by, pay.time_to) == (_at(1), TimeTo.PAY)
 
 
 # --------------------------------------------------------------------------- #

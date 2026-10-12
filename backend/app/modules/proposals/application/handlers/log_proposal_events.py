@@ -26,7 +26,6 @@ from app.modules.proposals.domain.events import (
     TimeToPayGiven,
     TimeToPayMet,
     TimeToPayRanOut,
-    TurnedDown,
     VersionDealt,
     YesPaused,
     YesResumed,
@@ -49,7 +48,6 @@ ProposalEvent = (
     | SeatReopened
     | YesPaused
     | YesResumed
-    | TurnedDown
     | Redealt
     | ClubCancelled
     | TimeToPayGiven
@@ -71,7 +69,6 @@ _LINES: dict[type, str] = {
     SeatReopened: "proposals.seat.reopened",
     YesPaused: "proposals.yes.paused",
     YesResumed: "proposals.yes.resumed",
-    TurnedDown: "proposals.proposal.turned_down",
     Redealt: "proposals.proposal.redealt",
     ClubCancelled: "proposals.proposal.club_cancelled",
     TimeToPayGiven: "proposals.time_to_pay.given",

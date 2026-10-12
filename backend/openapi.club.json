@@ -1818,198 +1818,13 @@
         }
       }
     },
-    "/api/v1/club/bookings/waiting": {
-      "get": {
-        "tags": [
-          "club"
-        ],
-        "summary": "What is waiting for your answer",
-        "description": "Every Raketa game at this club waiting for its answer \u2014 an **On request** club's full games, each asking for a court \u2014 with the players, the hour, the sport, the price and the countdown. Nobody has paid. A request whose time to confirm has run out is not listed.",
-        "operationId": "waiting_api_v1_club_bookings_waiting_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WaitingBookingsResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/club/bookings/{booking_id}/acceptance": {
-      "post": {
-        "tags": [
-          "club"
-        ],
-        "summary": "Accept a request",
-        "description": "**Accept** books the game: every share is held at this moment, all together or not at all, on your account \u2014 you are the seller \u2014 and taken at your cut-off, or at once when you accept after it (#637); the players are given the court that was reserved for them. Their game and its chat open; *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off) is emailed to each.",
-        "operationId": "accept_api_v1_club_bookings__booking_id__acceptance_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "booking_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Booking Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AcceptanceResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`booking_not_found` \u2014 no such booking at this club.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`request_not_waiting` \u2014 the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` \u2014 your time to confirm ran out: it is called off as unanswered. Nothing was recorded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`payments_unavailable` \u2014 the payment provider could not be reached to charge the players. Nothing was recorded; retry.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/club/bookings/{booking_id}/refusal": {
-      "post": {
-        "tags": [
-          "club"
-        ],
-        "summary": "Refuse a request",
-        "description": "**Refuse**, with a note for your own records if you like: nobody paid, the hour is yours to sell again, and the players read *Called off \u00b7 refused* and are dealt a new card first \u2014 never this court hour again.",
-        "operationId": "refuse_api_v1_club_bookings__booking_id__refusal_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "booking_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Booking Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/RefusalRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Payload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "404": {
-            "description": "`booking_not_found` \u2014 no such booking at this club.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`request_not_waiting` \u2014 the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` \u2014 your time to confirm ran out: it is called off as unanswered. Nothing was recorded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/club/bookings": {
       "get": {
         "tags": [
           "club"
         ],
         "summary": "Your bookings, by day",
-        "description": "Every Raketa booking at this club on one of its calendar days \u2014 the Bookings page \u2014 each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's. A request a player's leaving took back is not listed: it comes back when the game is full and asks again.",
+        "description": "Every Raketa booking at this club on one of its calendar days \u2014 the Bookings page \u2014 each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's.",
         "operationId": "bookings_on_a_day_api_v1_club_bookings_get",
         "security": [
           {
@@ -2117,7 +1932,7 @@
             }
           },
           "409": {
-            "description": "`booking_not_booked` \u2014 it is waiting for your answer: accept or refuse it. `booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
+            "description": "`booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2196,7 +2011,7 @@
             }
           },
           "409": {
-            "description": "`booking_not_booked` \u2014 it is waiting for your answer: accept or refuse it. `booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded. `court_not_free` \u2014 that court is not a free court of the game's sport at its hour. `court_just_taken` \u2014 another game took it a moment ago; read the free courts again.",
+            "description": "`booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded. `court_not_free` \u2014 that court is not a free court of the game's sport at its hour. `court_just_taken` \u2014 another game took it a moment ago; read the free courts again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2268,7 +2083,7 @@
             }
           },
           "409": {
-            "description": "`booking_not_booked` \u2014 it is waiting for your answer: accept or refuse it. `booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
+            "description": "`booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2351,67 +2166,6 @@
   },
   "components": {
     "schemas": {
-      "AcceptOutcome": {
-        "type": "string",
-        "enum": [
-          "BOOKED",
-          "WAITING_FOR_A_PAYMENT",
-          "CALLED_OFF",
-          "SEAT_OPENED"
-        ],
-        "title": "AcceptOutcome",
-        "description": "What the club's yes came to."
-      },
-      "AcceptanceResponse": {
-        "properties": {
-          "outcome": {
-            "$ref": "#/components/schemas/AcceptOutcome",
-            "description": "`BOOKED` \u2014 every share is held, and taken at your cut-off (or taken now, after it \u2014 #637); the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
-          },
-          "court_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Court Name",
-            "description": "The court the players were given \u2014 on a booked game only."
-          },
-          "payment_due_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payment Due By",
-            "description": "When the player's payment is due \u2014 *Accepted \u00b7 waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only."
-          },
-          "time_to": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TimeTo"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted \u00b7 waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` \u2014 you accepted after it, where the shares are taken at once: *Accepted \u00b7 waiting for one player's payment until 21:20*. `null` with `payment_due_by`."
-          }
-        },
-        "type": "object",
-        "required": [
-          "outcome",
-          "court_name"
-        ],
-        "title": "AcceptanceResponse"
-      },
       "AdministratorGroupSchema": {
         "properties": {
           "id": {
@@ -2570,11 +2324,8 @@
       "CalledOffReason": {
         "type": "string",
         "enum": [
-          "REFUSED",
-          "NO_ANSWER",
           "SHORT_AT_THE_CUT_OFF",
-          "CANCELLED_BY_THE_CLUB",
-          "PAYMENT_NOT_IN_TIME"
+          "CANCELLED_BY_THE_CLUB"
         ],
         "title": "CalledOffReason",
         "description": "Why a game will not be played (the mechanics \u00a714.1, \u00a716.7)."
@@ -2729,7 +2480,7 @@
           "court_name": {
             "type": "string",
             "title": "Court Name",
-            "description": "The court it is on \u2014 reserved for it, while it waits for your answer."
+            "description": "The court it is on."
           },
           "sport": {
             "$ref": "#/components/schemas/Sport"
@@ -2740,7 +2491,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/ClubStatus",
-            "description": "`WAITING_FOR_YOU` \u2014 an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` \u2014 you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted \u00b7 waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` \u2014 full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
+            "description": "`BOOKED` \u2014 full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
           },
           "called_off_reason": {
             "anyOf": [
@@ -2751,7 +2502,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`). `REFUSED` \u2014 you refused the request. `NO_ANSWER` \u2014 it was not answered in time. `PAYMENT_NOT_IN_TIME` \u2014 you accepted, and a player's payment didn't come in time: nobody paid, and you were emailed *A game didn't go ahead*. Full again, the game asks you again as a new request."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`)."
           },
           "cancel_reason": {
             "anyOf": [
@@ -2791,43 +2542,6 @@
             ],
             "description": "The group it came from \u2014 `null` for a group that is gone."
           },
-          "answer_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer By",
-            "description": "Your countdown, while it waits for your answer \u2014 else `null`."
-          },
-          "payment_due_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payment Due By",
-            "description": "When the player's payment your yes waits on is due \u2014 `WAITING_FOR_A_PAYMENT` only, else `null`. Never who."
-          },
-          "time_to": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TimeTo"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted \u00b7 waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` \u2014 you accepted after it, where the shares are taken at once: *Accepted \u00b7 waiting for one player's payment until 21:20*. `null` with `payment_due_by`."
-          },
           "may_move_or_cancel": {
             "type": "boolean",
             "title": "May Move Or Cancel",
@@ -2849,9 +2563,6 @@
           "open_seats",
           "money",
           "booked_from",
-          "answer_by",
-          "payment_due_by",
-          "time_to",
           "may_move_or_cancel"
         ],
         "title": "ClubBookingSchema",
@@ -2914,10 +2625,6 @@
             "type": "integer",
             "title": "All"
           },
-          "waiting_for_you": {
-            "type": "integer",
-            "title": "Waiting For You"
-          },
           "seat_open": {
             "type": "integer",
             "title": "Seat Open"
@@ -2930,7 +2637,6 @@
         "type": "object",
         "required": [
           "all",
-          "waiting_for_you",
           "seat_open",
           "called_off"
         ],
@@ -3026,7 +2732,6 @@
         "type": "string",
         "enum": [
           "ALL",
-          "WAITING_FOR_YOU",
           "SEAT_OPEN",
           "CALLED_OFF"
         ],
@@ -3287,8 +2992,6 @@
       "ClubStatus": {
         "type": "string",
         "enum": [
-          "WAITING_FOR_YOU",
-          "WAITING_FOR_A_PAYMENT",
           "BOOKED",
           "SEAT_OPEN",
           "CALLED_OFF",
@@ -4356,25 +4059,6 @@
         ],
         "title": "RefreshRequest"
       },
-      "RefusalRequest": {
-        "properties": {
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason",
-            "description": "Why, for your own records \u2014 **never shown to the players**, who read *Called off \u00b7 refused*. Blank is no reason."
-          }
-        },
-        "type": "object",
-        "title": "RefusalRequest"
-      },
       "SearchMode": {
         "type": "string",
         "enum": [
@@ -4563,15 +4247,6 @@
         ],
         "title": "StepState"
       },
-      "TimeTo": {
-        "type": "string",
-        "enum": [
-          "FIX_THE_CARD",
-          "PAY"
-        ],
-        "title": "TimeTo",
-        "description": "What a refused share's thirty minutes are for (#638; the mechanics\n\u00a712.2, Q113) \u2014 one machinery, two names, decided by the club's cut-off."
-      },
       "TokenResponse": {
         "properties": {
           "access_token": {
@@ -4639,129 +4314,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "WaitingBookingSchema": {
-        "properties": {
-          "booking_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Booking Id"
-          },
-          "sport": {
-            "$ref": "#/components/schemas/Sport"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/SearchMode",
-            "description": "Competitive, or for fun (a friendly)."
-          },
-          "starts_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Starts At",
-            "description": "The court hour's start; games are 1 h."
-          },
-          "ends_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Ends At"
-          },
-          "court_name": {
-            "type": "string",
-            "title": "Court Name",
-            "description": "The court reserved for the game while you decide \u2014 given to the players with your yes."
-          },
-          "players": {
-            "items": {
-              "$ref": "#/components/schemas/WaitingPlayerSchema"
-            },
-            "type": "array",
-            "title": "Players",
-            "description": "Everybody on the game. Nobody has paid yet."
-          },
-          "price_grosze": {
-            "type": "integer",
-            "title": "Price Grosze",
-            "description": "The court's price for the hour."
-          },
-          "share_grosze": {
-            "type": "integer",
-            "title": "Share Grosze",
-            "description": "Each player's share of it."
-          },
-          "answer_by": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Answer By",
-            "description": "When your time to confirm runs out \u2014 the countdown. Past it the request is called off as unanswered: nobody pays and the hour is yours to sell again."
-          }
-        },
-        "type": "object",
-        "required": [
-          "booking_id",
-          "sport",
-          "kind",
-          "starts_at",
-          "ends_at",
-          "court_name",
-          "players",
-          "price_grosze",
-          "share_grosze",
-          "answer_by"
-        ],
-        "title": "WaitingBookingSchema",
-        "description": "A full game asking for a court \u2014 **Waiting for you**."
-      },
-      "WaitingBookingsResponse": {
-        "properties": {
-          "read_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Read At",
-            "description": "The instant the list was read at \u2014 what each countdown runs from."
-          },
-          "bookings": {
-            "items": {
-              "$ref": "#/components/schemas/WaitingBookingSchema"
-            },
-            "type": "array",
-            "title": "Bookings",
-            "description": "The one due first, first. Empty: *Nothing is waiting for you.*"
-          }
-        },
-        "type": "object",
-        "required": [
-          "read_at",
-          "bookings"
-        ],
-        "title": "WaitingBookingsResponse",
-        "description": "Everything waiting for the club's answer \u2014 the Overview's *waiting for\nyour answer*, the Bookings page's *Waiting for you*, and its badge."
-      },
-      "WaitingPlayerSchema": {
-        "properties": {
-          "player_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Player Id"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "Their Name, whole. `null` for an account that can no longer be named."
-          }
-        },
-        "type": "object",
-        "required": [
-          "player_id",
-          "name"
-        ],
-        "title": "WaitingPlayerSchema"
       },
       "WayOfWorking": {
         "type": "string",
