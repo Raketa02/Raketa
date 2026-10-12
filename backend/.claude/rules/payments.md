@@ -58,8 +58,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   The **Seat charge** — one stream per payment for one share, its verdict, its refund and the
   provider's answers — is `bookings.md`'s. **A refusal with time to pay keeps every other
   hold** (#625, #626; `GameToCharge.pay_by`): the holds just made are recorded held and none
-  is released, so the payment in time books on them; the confirm email names the time, and
-  with no time left at the club's yes nobody is emailed — the game is called off. **Refused
+  is released, so the payment in time books on them; the confirm email names the time.
+  Holding or taking shares at a club's yes went with On request (#669). **Refused
   before the cut-off** (`GameToCharge.free_to_leave_until` set: the share would only be held)
   it is the player's time to fix the card (#638): *Fix your card by 14:40 to keep your seat*,
   the reason said of the hold, and *Nothing is paid now: fixing your card only places the 40

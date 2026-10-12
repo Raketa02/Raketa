@@ -22,8 +22,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
   §4, #586): `application/blocking.py`, subscribed to `blocks.player_blocked`, withdraws
   each live yes of the blocker on a game the blocked player is **In** on — picks and posts
-  alike, through `withdraw_a_yes`, so on a game waiting for its club the request goes too
-  and the others In are told *someone left* — and each yes of theirs a booking paused there
+  alike, through `withdraw_a_yes`, so on a full game waiting for one payment the
+  blocker's hold goes too and the others In are told *someone left* — and each yes of theirs a booking paused there
   (`Proposal.withdraw_paused_yes`, the same `YesWithdrawn`, so it never resumes after an
   unblock); never the blocked player's yes and never a booked game. It is owed by the block being recorded, so a block lifted before delivery still took
   the yeses back; until delivery the fill's `NO_LONGER_FITS` re-check is the backstop. **Yeses are
@@ -51,16 +51,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   player stays In with `Proposal.paying` until their time to pay ends — the game full to
   everybody else, `waiting_for_a_payment` — and `TimeToPayRanOut` reopens it; before the
   club's cut-off the same time is **to fix the card** (`TimeTo`, #638); see `bookings.md`.
-  `with_its_club` (waiting for its answer, or for a payment its yes waits on) is what a
-  withdrawal asks before taking a request back, and what the proposer asks before reading
-  a card's court as lost.
   **No route makes a proposal**: `MakeProposal` and `DealVersion` are the dealer's, built by
   the composition root for the proposer (#540), seeds and tests; **the yes that leaves
   `open_seats` at nought books the game** — `FILLED`, every version gone — or reopens the seat
   of whoever could not pay or no longer fits, and pauses or withdraws the players' other yeses
-  (#541, see `bookings.md`) — or, at an On request club, **puts it to the club**, full and
-  still filling, its book-by no longer ending it, until the club's yes fills it or its no or
-  silence **turns it down** (`TURNED_DOWN`, migration 0041; #543, see `bookings.md`). Seeded by `app/seeds/proposals.py`, which
+  (#541, see `bookings.md`) — **at every club: no club confirms a game** (#669; ADR-0196
+  §1), so a full game is never put to a club and nothing is turned down; migration 0058
+  dropped `waiting_for_the_club` and `TURNED_DOWN`. Seeded by `app/seeds/proposals.py`, which
   **runs the proposer for every pool**: the protagonist's *Padel po pracy* at Bonarka Arena,
   gathered from the cohort members who want competitive padel and fit her and each other,
   and four of her picks answered — nought, one, two and three In.
@@ -76,7 +73,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   not fit is withheld, a name that does not fit them or anybody on the card is left off —
   the Play intent (`WantedKinds`; *no preference* is both segments, undeclared is none), a
   club no longer selling (`ClubTerms`, off the published offer, which is also where *no free
-  cancellation* and *the club confirms* come from), and the reader's **Games & money** — its own event-sourced aggregate, one stream
+  cancellation* comes from), and the reader's **Games & money** — its own event-sourced aggregate, one stream
   per player, born by being used (`GET/PUT /players/me/games-and-money`,
   `proposals.games_and_money_set` / v1). Games per week and *one game per hour* read
   **`BookedGames`**, answered off the bookings (#541); API tests may override
@@ -116,14 +113,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **the offer before any deadline**, so a club lengthening its notice takes no card's
   court and a paused club's cards keep theirs — the card is over, and the people In are
   dealt a new card first at the nearest hour they are all free, the same hour at another
-  of the pool's clubs before another hour. **On request** (#543): a game waiting for its
-  club **holds its own court** through its request, so it is never lost to it and never
-  counted twice at its hour; a game its club **turned down** — or **cancelled once booked**
-  (#547, `ClubCancelled`, owed to the people still in: `Proposal.owed_to`) — is *owed*, read
-  by `ProposalDirectory.owed_a_new_card_in` (`ended = 'TURNED_DOWN'` or
-  `club_cancelled`), its people dealt a new card first exactly as a lost
-  card's are, **never at the club and hour that turned them down**, by the first run that
-  finds them an hour — owed until then, while the game's own hour is ahead
+  of the pool's clubs before another hour. **A booked game its club cancelled** (#547,
+  `ClubCancelled`, owed to the people still in: `Proposal.owed_to`) is *owed* — the one
+  source of an owed game since On request went (#669) — read by
+  `ProposalDirectory.owed_a_new_card_in` (`club_cancelled`), its people dealt a new card
+  first exactly as a lost card's are, **never at that club and hour** (a rule written for a
+  club's refusal, which #673 lifts), by the first run that finds them an hour — owed until then, while the game's own hour is ahead
   (`proposals.redealt`, recorded once the pick has really been made, naming the card and
   those of the owed people on it — `card_id`, `player_ids` — whom Notifications tells
   *Your new game*, #622). **When**: `ProposeGames` runs per pool from two
@@ -138,12 +133,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a payment to confirm, a game already answered. A reader still deciding sees **their own card**,
   exactly as the deck deals it, and is refused `proposal_not_found` where the deck withholds it
   (somebody In they do not fit); a reader **In** sees everybody In and nobody's deciding. **A full
-  game still filling is *waiting for the club*** — only an On request club leaves one so — and
-  says when the club must answer (`answer_by`, Q98, #614): the status is the proposal's, and
-  only then is the request asked for its deadline (`ClubRequests.find`, the proposal's own
-  id), folded as Home folds it (`answer_by_ahead`) and `null` if the club answered between the
-  two reads. The `actions` are what the routes would take: `YES`/`NO`, `WITHDRAW`, `LEAVE`
-  while the club decides, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing
+  game still filling is *waiting for a payment*** (#625) — no club confirms a game — and says
+  until when (`payment_due_by`). The `actions` are what the routes would take: `YES`/`NO`,
+  `WITHDRAW`, `LEAVE` while a payment is awaited, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing
   once it is over or the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's
   badge counts the payments to confirm** beside the cards that need the reader (`owed_by`,
   shared with the TO CONFIRM read).

@@ -50,8 +50,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   where a person placed a test key, and is skipped by name otherwise (ADR-0190 §1).
   **The tenth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
   details' three demands — a player's bookings (`bookings`), a booked game's result (`games`), a
-  club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
-  requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
+  club's distance (the Player profile and `clubs`) — and, since #543, the players' Names on
+  a club's bookings (`users`; its other demand, an On request club's requests and answers,
+  went with On request, #669), and since #544
   what happens to a booked game after the fill (`BookedGameChanges`), a paid share given back
   (`SeatRefunds`, and since #641 a late leaver told the figure) and, since #641 in place of
   the estimate's `CardFees`, what a leaver after the cut-off would get back (`LateRefunds`)
@@ -71,7 +72,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first
-  free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
+  free court of a club at an hour with its cut-off, and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
   club's cancel do to it (`GameChanges`, #544, #545, #547), and who Didn't come to it

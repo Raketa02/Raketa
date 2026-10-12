@@ -60,7 +60,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   cannot untick a sport one of its courts plays (`club_sport_has_courts`), asked before the
   official groups are. Every hour is wall clock in `CLUB_ZONE` — one zone for every club, a
   locale assumption until the first club somewhere else — through `slot_start`.
-  Seeded by `app/seeds/club_courts.py`: all three ways of working, Wisła Park half set up and
+  Seeded by `app/seeds/club_courts.py`: Only Raketa and Instant (On request's two clubs work
+  Only Raketa since #669), Wisła Park half set up and
   not live, Zabłocie Sport paused, and a run that fails if a live club has nothing for sale in
   the next fortnight.
 - **A club's payments account is on its Club courts stream, and the provider decides
