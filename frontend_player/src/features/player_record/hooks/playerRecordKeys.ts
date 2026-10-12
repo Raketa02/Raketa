@@ -88,4 +88,10 @@ export const playerRecordKeys = {
    * have one observer's `select` and `gcTime` deciding for the other.
    */
   ownFace: () => [...playerRecordKeys.all, 'me', 'face'] as const,
+  /**
+   * **Every read of your own record** — the sheet's entry from any sport and the face — as a
+   * prefix, for the one write that moves what they say: the filter's switch (#662). The record is
+   * never cached between opens, so what this reaches is the read on screen under the switch.
+   */
+  own: () => [...playerRecordKeys.all, 'me'] as const,
 };

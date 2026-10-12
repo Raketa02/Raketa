@@ -20,6 +20,16 @@
  * line under the ring — where the figure starts and what *New* means — and the counts as they
  * are served, noughts included.
  *
+ * ## The filter sits between the figure and the counts, and the figure back under it
+ *
+ * `ReliabilityFilterCard` — *Play only with players of · Off | At least Medium | At least High*,
+ * with *Your filter hides 2 of the 11 players in your groups* while it is on (ADR-0195 §6,
+ * [#662](https://github.com/Raketa02/Raketa/issues/662)) — is drawn where the record serves a
+ * filter, which is on your own record only. Under it, for a player somebody's filter keeps off a
+ * court, one 5.4 `info` note: *Some players in your groups play only with High reliability or
+ * above. At 75 you're dealt with everyone again.* It names nobody, and it is explanation and not
+ * status, which is what `info` is for.
+ *
  * ## The sportsmanship row draws what the record serves
  *
  * The figure and its count — *Sportsmanship, by players · 4,3 / 5 · 12 players* — the same row
@@ -39,11 +49,13 @@ import { useOwnRecord } from '../hooks/useOwnRecord';
 
 import { RecordCard } from './RecordCard';
 import { RETRY_RECORD_LABEL } from './recordPresentation';
+import { ReliabilityFilterCard } from './ReliabilityFilterCard';
 import {
   NEW_PLAYER_NOTE,
   OUT_OF_100,
   PLAYER_RELIABILITY_TITLE,
   READING_OWN_RECORD,
+  backWithEveryoneLine,
   reliabilityWord,
   scoreRingLabel,
 } from './youRecordPresentation';
@@ -94,6 +106,14 @@ export function PlayerReliabilityScreen() {
       )}
 
       {reliability?.isNew === true ? <Note variant="info">{NEW_PLAYER_NOTE}</Note> : null}
+
+      {reliability?.filter === undefined ? null : (
+        <ReliabilityFilterCard filter={reliability.filter} />
+      )}
+
+      {reliability?.backWithEveryone === undefined ? null : (
+        <Note variant="info">{backWithEveryoneLine(reliability.backWithEveryone)}</Note>
+      )}
 
       {own === undefined ? null : (
         <RecordCard

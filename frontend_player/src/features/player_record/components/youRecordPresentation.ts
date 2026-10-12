@@ -5,20 +5,28 @@
  * The passport is the result card once per rating and the reliability screen is the record
  * card under a ring, so their sentences are the result's and `recordPresentation`'s, cited.
  * What is new is small on purpose: the two rows' titles and live lines, the passport's chip
- * and its two cards, the band said in full beside the figure, and the one sentence a new player
- * is told.
+ * and its two cards, the band said in full beside the figure, the one sentence a new player
+ * is told, and the filter's switch with its two lines (#662).
  */
 
 import { sportLabel } from '@/features/onboarding/types';
+import { counted } from '@/shared/formatting/counted';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
-import type { TagVariant } from '@/shared/ui';
+import type { SegmentOption, TagVariant } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { RatedSport, ReliabilityFigure } from '../domain/playerRecord';
+import type {
+  BackWithEveryone,
+  RatedSport,
+  ReliabilityFigure,
+  ReliabilityFilter,
+} from '../domain/playerRecord';
+import { FILTER_POSITIONS, type FilterPosition } from '../domain/reliabilityFilter';
 
 import {
   OWN_RECORD_TITLE,
   PLAYER_SCORE_BLOCK,
+  RELIABILITY_BAND_WORD,
   reliabilityHead,
   reliabilityMark,
   scorePillLabel,
@@ -99,6 +107,57 @@ export const SCORE_LABEL = 'Score';
  */
 export const NEW_PLAYER_NOTE =
   'Everyone starts at 100. Yours reads New until you’ve played 3 games through.';
+
+// --- the filter ---------------------------------------------------------------------------------
+
+/**
+ * **The switch** — *Play only with players of at least High reliability*, or *at least Medium*,
+ * or off ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+ * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)). A segmented control under a label:
+ * the label is the sentence's head, the segments its three endings, and each segment's spoken
+ * name is the whole sentence, because *At least High* on its own says nothing about whom.
+ */
+export const FILTER_LABEL = 'Play only with players of';
+
+export const FILTER_POSITION_LABEL: Readonly<Record<FilterPosition, string>> = {
+  OFF: 'Off',
+  MEDIUM: 'At least Medium',
+  HIGH: 'At least High',
+};
+
+export const FILTER_POSITION_SPOKEN: Readonly<Record<FilterPosition, string>> = {
+  OFF: 'Off: play with everyone',
+  MEDIUM: 'Play only with players of at least Medium reliability',
+  HIGH: 'Play only with players of at least High reliability',
+};
+
+/** The three segments, in the switch's order, each spoken as the whole sentence. */
+export const FILTER_SEGMENTS: readonly SegmentOption<FilterPosition>[] = FILTER_POSITIONS.map(
+  (position) => ({
+    key: position,
+    label: FILTER_POSITION_LABEL[position],
+    accessibilityLabel: FILTER_POSITION_SPOKEN[position],
+  }),
+);
+
+/**
+ * `Your filter hides 2 of the 11 players in your groups.` — drawn while the filter is on, from the
+ * server's two counts and never from a roster this phone holds. Nobody is named: the number is
+ * the whole of what the filtering player is told.
+ */
+export function hidesLine({ hides, of }: ReliabilityFilter): string {
+  return `Your filter hides ${hides} of the ${counted(of, 'player', 'players')} in your groups.`;
+}
+
+/**
+ * **What a hidden player is told, naming nobody** — *Some players in your groups play only with
+ * High reliability or above. At 75 you're dealt with everyone again.* The band's word and the
+ * points are the server's: it chose the band so that reaching its floor passes every filter that
+ * hides the player at once.
+ */
+export function backWithEveryoneLine({ band, points }: BackWithEveryone): string {
+  return `Some players in your groups play only with ${RELIABILITY_BAND_WORD[band]} reliability or above. At ${points} you’re dealt with everyone again.`;
+}
 
 // --- the passport -------------------------------------------------------------------------------
 

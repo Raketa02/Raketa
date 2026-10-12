@@ -1,5 +1,6 @@
 /**
- * The two routes a record is read through, and the only place their paths are written down.
+ * The two routes a record is read through, the one write beside them, and the only place their
+ * paths are written down.
  *
  * One of the two layers allowed to read generated types.
  *
@@ -31,10 +32,11 @@
  * parameter — a citation, when the chat and the games list open this sheet — arriving as a
  * hand-joined `&`.
  *
- * ## A `signal`, because both are reads
+ * ## A `signal` on the reads and none on the write
  *
  * The asymmetry every api module in this app draws: a `GET` records nothing, so a sheet closed
- * while its request is in flight costs nobody a row.
+ * while its request is in flight costs nobody a row. The filter's `PUT` is a setting the player
+ * asked for, and a screen left mid-save does not take the asking back.
  */
 
 import type { components } from '@/generated/schema';
@@ -42,6 +44,7 @@ import { httpRequest } from '@/shared/lib/http';
 
 type PlayerRecordResponse = components['schemas']['PlayerRecordResponse'];
 type WireSport = components['schemas']['Sport'];
+type SetReliabilityFilterRequest = components['schemas']['SetReliabilityFilterRequest'];
 
 /** The read may be abandoned — see the module note. */
 export interface Cancellable {
@@ -92,4 +95,24 @@ export function getOwnRecord({ sport, signal }: RecordAsk = {}): Promise<PlayerR
  */
 function askedSport(sport: WireSport | undefined): string {
   return sport === undefined ? '' : `?${new URLSearchParams({ sport }).toString()}`;
+}
+
+/**
+ * **The reliability filter** — *Play only with players of at least High reliability*, *at least
+ * Medium*, or `null` for off (ADR-0195 §6, #662). `204` and no body: what is saved is read back
+ * on the own record, with how many players in the player's groups it hides. Unkeyed on purpose —
+ * an unchanged value records nothing, so a repeat lands the same state. `404
+ * player_profile_not_found` is a profile onboarding has not finished; `409
+ * concurrent_modification` lost a race with another write to the profile.
+ */
+export function putReliabilityFilter(
+  minimum: SetReliabilityFilterRequest['minimum'],
+): Promise<void> {
+  const body: SetReliabilityFilterRequest = { minimum };
+  return httpRequest<void>({
+    method: 'PUT',
+    path: '/api/v1/players/me/reliability-filter',
+    body,
+    authenticated: true,
+  });
 }

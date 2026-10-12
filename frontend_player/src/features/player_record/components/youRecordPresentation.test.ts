@@ -12,6 +12,9 @@ import { OWN_RECORD_TITLE, PLAYER_SCORE_BLOCK } from './recordPresentation';
 import {
   ADD_A_SPORT,
   ADD_A_SPORT_BODY,
+  FILTER_LABEL,
+  FILTER_POSITION_LABEL,
+  FILTER_POSITION_SPOKEN,
   HOW_OTHERS_SEE_YOU_LINE,
   HOW_OTHERS_SEE_YOU_TITLE,
   NEW_PLAYER_NOTE,
@@ -20,6 +23,8 @@ import {
   SCORE_LABEL,
   SKILL_PASSPORT_TITLE,
   THE_LADDER,
+  backWithEveryoneLine,
+  hidesLine,
   ladderRung,
   passportLine,
   rateSportChip,
@@ -93,6 +98,41 @@ describe('the reliability screen', () => {
 
   it('labels the header card’s ring with the one word under it', () => {
     expect(SCORE_LABEL).toBe('Score');
+  });
+});
+
+describe('the filter', () => {
+  /** The label is the sentence's head and the segments its endings; spoken, each is the whole. */
+  it('offers Off, at least Medium and at least High under one label, spoken as whole sentences', () => {
+    expect(FILTER_LABEL).toBe('Play only with players of');
+    expect(FILTER_POSITION_LABEL).toEqual({
+      OFF: 'Off',
+      MEDIUM: 'At least Medium',
+      HIGH: 'At least High',
+    });
+    expect(FILTER_POSITION_SPOKEN.HIGH).toBe('Play only with players of at least High reliability');
+    expect(FILTER_POSITION_SPOKEN.MEDIUM).toBe(
+      'Play only with players of at least Medium reliability',
+    );
+    expect(FILTER_POSITION_SPOKEN.OFF).toBe('Off: play with everyone');
+  });
+
+  it('tells the filtering player how many it hides, out of how many, naming nobody', () => {
+    expect(hidesLine({ minimum: 'HIGH', hides: 2, of: 11 })).toBe(
+      'Your filter hides 2 of the 11 players in your groups.',
+    );
+    expect(hidesLine({ minimum: 'MEDIUM', hides: 0, of: 1 })).toBe(
+      'Your filter hides 0 of the 1 player in your groups.',
+    );
+  });
+
+  it('tells a hidden player the band and the figure back, naming nobody', () => {
+    expect(backWithEveryoneLine({ band: 'HIGH', points: 75 })).toBe(
+      'Some players in your groups play only with High reliability or above. At 75 you’re dealt with everyone again.',
+    );
+    expect(backWithEveryoneLine({ band: 'MEDIUM', points: 50 })).toBe(
+      'Some players in your groups play only with Medium reliability or above. At 50 you’re dealt with everyone again.',
+    );
   });
 });
 

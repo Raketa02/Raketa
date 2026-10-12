@@ -113,6 +113,41 @@ export interface ReliabilityCounts {
 }
 
 /**
+ * **The two bands a filter can ask for** — the switch's on positions, *at least Medium* and *at
+ * least High* ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+ * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)). Two and not four: the route offers
+ * exactly these, and the two are held equal to its request in `mappers/wireVocabulary.ts`.
+ */
+export const RELIABILITY_MINIMUMS = ['MEDIUM', 'HIGH'] as const;
+
+export type ReliabilityMinimum = (typeof RELIABILITY_MINIMUMS)[number];
+
+/**
+ * **Your filter, as it stands in your groups** — on your own record only, and it names nobody.
+ *
+ * `minimum` is **absent while the filter is off**, which it is until the player switches it on;
+ * `hides` is how many of the `of` other players in the player's groups it keeps off their courts,
+ * never somebody New, and nought while it is off. Both counts are the server's: the client holds
+ * no roster to count against.
+ */
+export interface ReliabilityFilter {
+  readonly minimum?: ReliabilityMinimum;
+  readonly hides: number;
+  readonly of: number;
+}
+
+/**
+ * **The figure that deals you with everyone again** — present only while somebody in the player's
+ * groups filters them out, and it names nobody: the band in *play only with High reliability or
+ * above* and the points that band begins at. The server picks the band (the highest minimum among
+ * the filters that hide the player), so reaching its floor passes every one of them at once.
+ */
+export interface BackWithEveryone {
+  readonly band: ReliabilityBand;
+  readonly points: number;
+}
+
+/**
  * **Player reliability** — the figure in points, its band, *New*, and the counts it is read
  * beside ([#660](https://github.com/Raketa02/Raketa/issues/660)).
  *
@@ -122,6 +157,14 @@ export interface ReliabilityCounts {
  */
 export interface Reliability extends ReliabilityFigure {
   readonly counts: ReliabilityCounts;
+  /**
+   * The player's own filter and what it hides — **on your own record only**, and absent where
+   * this build cannot name the position it is saved at, so a switch is never drawn standing at
+   * Off over a filter that is on.
+   */
+  readonly filter?: ReliabilityFilter;
+  /** Somebody's filter keeps you off a court, and this is the figure back. Own record only. */
+  readonly backWithEveryone?: BackWithEveryone;
 }
 
 /**

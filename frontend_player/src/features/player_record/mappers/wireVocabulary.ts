@@ -21,7 +21,7 @@
 import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
-import type { ReliabilityBand } from '../domain/playerRecord';
+import type { ReliabilityBand, ReliabilityMinimum } from '../domain/playerRecord';
 
 /**
  * Exported because a value nothing reads is a value a linter is entitled to delete, and this
@@ -29,6 +29,15 @@ import type { ReliabilityBand } from '../domain/playerRecord';
  */
 export const WIRE_VOCABULARY_AGREES: {
   readonly reliabilityBand: Exact<ReliabilityBand, components['schemas']['ReliabilityBand']>;
+  /**
+   * The switch's two on positions are exactly the two the route accepts (#662): a third band
+   * offered there fails here, and then again on the segment that has no label for it.
+   */
+  readonly reliabilityMinimum: Exact<
+    ReliabilityMinimum,
+    NonNullable<components['schemas']['SetReliabilityFilterRequest']['minimum']>
+  >;
 } = {
   reliabilityBand: true,
+  reliabilityMinimum: true,
 };

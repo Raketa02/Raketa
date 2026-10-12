@@ -9,7 +9,9 @@
  * is what the two screens add: a card **per** rating with its status chip, no ceiling tick
  * where none was served, the record's blocks under each card from that sport's read, *Add a
  * sport* drawn and inert, the ladder printing only the edges it was sent; the figure in points
- * with the band's word, the four counts, and the one sentence a new player is told (#660).
+ * with the band's word, the four counts, and the one sentence a new player is told (#660); the
+ * filter's switch writing what is tapped and drawing what the re-read says is saved, its *hides*
+ * line, and the hidden player's sentence (#662).
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
@@ -29,8 +31,21 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import { SERGIO_RELIABILITY, servedReliability } from '@/test-support/playerRecord';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  FILTER_OFF,
+  HIDDEN_BY_A_HIGH_FILTER,
+  MARTA_FILTER,
+  SERGIO_RELIABILITY,
+  servedReliability,
+} from '@/test-support/playerRecord';
+import {
+  errorResponse,
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
 import {
   COUNTED_BLOCK,
@@ -46,6 +61,8 @@ import {
 } from './recordPresentation';
 import {
   ADD_A_SPORT,
+  FILTER_LABEL,
+  FILTER_POSITION_SPOKEN,
   HOW_OTHERS_SEE_YOU_LINE,
   HOW_OTHERS_SEE_YOU_TITLE,
   NEW_PLAYER_NOTE,
@@ -53,6 +70,8 @@ import {
   PLAYER_RELIABILITY_TITLE,
   SKILL_PASSPORT_TITLE,
   THE_LADDER,
+  backWithEveryoneLine,
+  hidesLine,
   ladderRung,
   passportLine,
   rateSportChip,
@@ -345,6 +364,149 @@ describe('Player reliability', () => {
     expect(await screen.findByText('Shows up')).toBeTruthy();
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
     expect(screen.queryByText(SPORTSMANSHIP_LABEL)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The filter
+// ---------------------------------------------------------------------------
+
+/**
+ * **Marta switches it on, and both sides understand** (#662, ADR-0195 §6). The switch writes the
+ * position tapped and draws what the re-read says is saved; the *hides* line shows while a filter
+ * is on; and a hidden player reads the sentence that names nobody and gives the figure.
+ */
+describe('the reliability filter', () => {
+  const FILTER_PATH = '/api/v1/players/me/reliability-filter';
+  const RELIABILITY_LINE = reliabilityLine({ playerScore: 75, band: 'HIGH', isNew: false });
+
+  /** The own record, answered live: a save moves what the next read says. */
+  function serveOwnRecord(filter: Wire['ReliabilityFilterSchema']) {
+    const served = { ...OWN_RECORD_SERVED, reliability: { ...SERGIO_RELIABILITY, filter } };
+    transport.on('GET', OWN_RECORD_PATH, () => json(served));
+  }
+
+  async function openReliability(line: string = RELIABILITY_LINE) {
+    await onYou();
+    fireEvent.press(await screen.findByLabelText(doorRowLabel(PLAYER_RELIABILITY_TITLE, line)));
+    await screen.findByRole('header', { name: PLAYER_RELIABILITY_TITLE });
+    await screen.findByText(FILTER_LABEL);
+  }
+
+  function segment(position: keyof typeof FILTER_POSITION_SPOKEN) {
+    return screen.getByRole('button', { name: FILTER_POSITION_SPOKEN[position] });
+  }
+
+  /** The one raised segment, as a listener is told it: the three asked by name and state. */
+  function expectSaved(saved: keyof typeof FILTER_POSITION_SPOKEN) {
+    for (const position of ['OFF', 'MEDIUM', 'HIGH'] as const) {
+      expect(
+        screen.getByRole('button', {
+          name: FILTER_POSITION_SPOKEN[position],
+          selected: position === saved,
+        }),
+      ).toBeTruthy();
+    }
+  }
+
+  it('offers Off, At least Medium and At least High — off by default, with no hides line', async () => {
+    await openReliability();
+
+    expectSaved('OFF');
+    expect(screen.queryByText(hidesLine({ hides: 0, of: 11 }))).toBeNull();
+    expect(screen.queryByText(/dealt with everyone again/)).toBeNull();
+  });
+
+  /**
+   * **The tap writes, the re-read settles.** *At least High* sends `{ minimum: 'HIGH' }`; the
+   * `204` has no body, so what is drawn afterwards — the raised segment and *hides 2 of the 11* —
+   * is the record read again. Then *Off* sends `null` and the line goes.
+   */
+  it('writes the position tapped, and shows the position and the hides line the re-read says are saved', async () => {
+    let saved: Wire['ReliabilityFilterSchema'] = FILTER_OFF;
+    transport.on('GET', OWN_RECORD_PATH, () =>
+      json({ ...OWN_RECORD_SERVED, reliability: { ...SERGIO_RELIABILITY, filter: saved } }),
+    );
+    transport.on('PUT', FILTER_PATH, (request) => {
+      const { minimum } = request.body as Wire['SetReliabilityFilterRequest'];
+      saved = minimum === null ? FILTER_OFF : { ...MARTA_FILTER, minimum };
+      return noContent();
+    });
+    await openReliability();
+
+    fireEvent.press(segment('HIGH'));
+
+    expect(await screen.findByText(hidesLine({ hides: 2, of: 11 }))).toBeTruthy();
+    expect(transport.requestsTo('PUT', FILTER_PATH).map((r) => r.body)).toEqual([
+      { minimum: 'HIGH' },
+    ]);
+    expectSaved('HIGH');
+
+    fireEvent.press(segment('OFF'));
+
+    await waitFor(() => expect(screen.queryByText(hidesLine({ hides: 2, of: 11 }))).toBeNull());
+    expect(transport.requestsTo('PUT', FILTER_PATH).map((r) => r.body)).toEqual([
+      { minimum: 'HIGH' },
+      { minimum: null },
+    ]);
+    expectSaved('OFF');
+  });
+
+  it('writes nothing for a tap on the position already saved', async () => {
+    transport.on('PUT', FILTER_PATH, () => noContent());
+    await openReliability();
+
+    fireEvent.press(segment('OFF'));
+
+    expect(transport.requestsTo('PUT', FILTER_PATH)).toEqual([]);
+  });
+
+  /** A saved filter is drawn as saved: the raised segment and its line, from the record alone. */
+  it('draws a filter that is on as the record says it is saved', async () => {
+    serveOwnRecord(MARTA_FILTER);
+    await openReliability();
+
+    expectSaved('HIGH');
+    expect(screen.getByText('Your filter hides 2 of the 11 players in your groups.')).toBeTruthy();
+  });
+
+  /** A refusal says so, and the segment falls back to what the record says — nothing is guessed. */
+  it('says so when the save is refused, and the switch falls back to what is saved', async () => {
+    transport.on('PUT', FILTER_PATH, () => errorResponse(409, 'concurrent_modification'));
+    await openReliability();
+
+    fireEvent.press(segment('MEDIUM'));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expectSaved('OFF');
+    expect(screen.queryByText(/Your filter hides/)).toBeNull();
+  });
+
+  /**
+   * **Sergio, at 69, reads the sentence that names nobody** — the band and the figure back — under
+   * his own switch, which is off. Marta, whom nobody filters, never sees it.
+   */
+  it('tells a hidden player, naming nobody, the band and the figure that brings them back', async () => {
+    transport.on('GET', OWN_RECORD_PATH, () =>
+      json({
+        ...OWN_RECORD_SERVED,
+        reliability: {
+          ...SERGIO_RELIABILITY,
+          player_score: 69,
+          band: 'MEDIUM',
+          filter: HIDDEN_BY_A_HIGH_FILTER,
+        },
+      }),
+    );
+    await openReliability(reliabilityLine({ playerScore: 69, band: 'MEDIUM', isNew: false }));
+
+    expect(
+      screen.getByText(
+        'Some players in your groups play only with High reliability or above. At 75 you’re dealt with everyone again.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(backWithEveryoneLine({ band: 'HIGH', points: 75 }))).toBeTruthy();
+    expectSaved('OFF');
   });
 });
 

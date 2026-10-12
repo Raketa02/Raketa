@@ -110,7 +110,7 @@ import {
 import { queryClient } from '@/shared/lib/query-client';
 
 import { fakePayments } from './platform';
-import { SERGIO_RELIABILITY } from './playerRecord';
+import { FILTER_OFF, SERGIO_RELIABILITY } from './playerRecord';
 import { errorResponse, json, noContent, type Transport, type Wire } from './transport';
 
 /**
@@ -815,8 +815,9 @@ export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
     likely_range: { low: 2.09, high: 3.33 },
     last_five: ['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'],
   },
-  // Sergio's six months — 75 · High, turned up 12 of 13, kept 13 of 14, late once (#660).
-  reliability: SERGIO_RELIABILITY,
+  // Sergio's six months — 75 · High, turned up 12 of 13, kept 13 of 14, late once (#660) — and
+  // the filter the own record always carries, off (#662).
+  reliability: { ...SERGIO_RELIABILITY, filter: FILTER_OFF },
   variety: { distinct_opponents: 14, times_on_court: 20 },
   // The figure and its count, to the subject as to anybody (#468, ADR-0179 §5).
   sportsmanship: { average: 4.3, raters: 12 },

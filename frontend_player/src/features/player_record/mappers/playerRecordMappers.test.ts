@@ -6,7 +6,13 @@
  * *we have nothing to say* into a nought.
  */
 
-import { SERGIO_RELIABILITY, servedReliability } from '@/test-support/playerRecord';
+import {
+  FILTER_OFF,
+  HIDDEN_BY_A_HIGH_FILTER,
+  MARTA_FILTER,
+  SERGIO_RELIABILITY,
+  servedReliability,
+} from '@/test-support/playerRecord';
 import type { Wire } from '@/test-support/transport';
 
 import { toPlayerRecord } from './playerRecordMappers';
@@ -233,6 +239,93 @@ describe('what the platform watched', () => {
     expect(read).not.toHaveProperty('band');
     expect(read.playerScore).toBe(42);
     expect(read.counts.late).toBe(3);
+  });
+});
+
+/**
+ * **The filter, on your own record** (#662, ADR-0195 §6) — two facts off one wire object: the
+ * player's own switch with what it hides, and the figure that deals them with everyone again
+ * where somebody else's filter keeps them off a court. Each is its own absence.
+ */
+describe('the reliability filter', () => {
+  it('is absent on everybody else’s record, both halves', () => {
+    const read = toPlayerRecord(response()).reliability;
+
+    expect(read).not.toHaveProperty('filter');
+    expect(read).not.toHaveProperty('backWithEveryone');
+  });
+
+  it('carries a filter that is off with no minimum, and the counts as served', () => {
+    const served = response({
+      is_self: true,
+      reliability: servedReliability({ filter: FILTER_OFF }),
+    });
+
+    expect(toPlayerRecord(served).reliability.filter).toEqual({ hides: 0, of: 11 });
+    expect(toPlayerRecord(served).reliability).not.toHaveProperty('backWithEveryone');
+  });
+
+  it('carries the saved minimum and what it hides', () => {
+    const served = response({
+      is_self: true,
+      reliability: servedReliability({ filter: MARTA_FILTER }),
+    });
+
+    expect(toPlayerRecord(served).reliability.filter).toEqual({
+      minimum: 'HIGH',
+      hides: 2,
+      of: 11,
+    });
+  });
+
+  it('carries the figure back where somebody’s filter hides the reader, beside their own switch', () => {
+    const served = response({
+      is_self: true,
+      reliability: servedReliability({ filter: HIDDEN_BY_A_HIGH_FILTER }),
+    });
+    const read = toPlayerRecord(served).reliability;
+
+    expect(read.filter).toEqual({ hides: 0, of: 11 });
+    expect(read.backWithEveryone).toEqual({ band: 'HIGH', points: 75 });
+  });
+
+  /**
+   * **A switch is never drawn standing at Off over a filter that is on.** A minimum this build
+   * cannot name — a band the route began to offer after this phone was installed — takes the
+   * switch and its line with it; the figure back is a different fact and stays.
+   */
+  it('drops the switch for a minimum this build cannot name, and keeps the figure back', () => {
+    const served = response({
+      is_self: true,
+      reliability: servedReliability({
+        filter: {
+          ...HIDDEN_BY_A_HIGH_FILTER,
+          minimum: 'VERY_HIGH' as Wire['ReliabilityFilterSchema']['minimum'],
+          hides: 5,
+        },
+      }),
+    });
+    const read = toPlayerRecord(served).reliability;
+
+    expect(read).not.toHaveProperty('filter');
+    expect(read.backWithEveryone).toEqual({ band: 'HIGH', points: 75 });
+  });
+
+  /** The sentence names the band, so a band with no word is no sentence rather than a blank. */
+  it('drops the figure back where its band has no word on this build, and keeps the switch', () => {
+    const served = response({
+      is_self: true,
+      reliability: servedReliability({
+        filter: {
+          ...MARTA_FILTER,
+          back_with_everyone: { band: 'SHAKY' as Wire['ReliabilityBand'], points: 60 },
+        },
+      }),
+    });
+    const read = toPlayerRecord(served).reliability;
+
+    expect(read.filter).toEqual({ minimum: 'HIGH', hides: 2, of: 11 });
+    expect(read).not.toHaveProperty('backWithEveryone');
   });
 });
 

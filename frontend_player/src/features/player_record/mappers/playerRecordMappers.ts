@@ -17,6 +17,8 @@
  * | `skill.sport` | the **whole panel** goes | the sport is printed on the panel and on the poster beside it; a card that could not say which sport it was about would be a Level with no subject |
  * | `skill.last_five` | the **whole run** goes | its length is a claim: dropping one entry says a counted game fewer than the platform counted, and a third kind of square is a drawing nobody has designed |
  * | `reliability.band` | the **word** goes, the figure stays | the points are the server's and still true; a word this phone guessed from them would be the thresholds it gave up |
+ * | `reliability.filter.minimum` | the **switch** goes, with its line | a switch drawn standing at Off over a filter that is on would say the opposite of the truth, and *Off* is the one position it could stand at |
+ * | `reliability.filter.back_with_everyone.band` | that **sentence** goes | it names the band — *play only with High reliability or above* — and a sentence with a blank where the band goes is no sentence |
  * | `review` | folded to *no mark* | the absence is already a state, and it is the one that draws nothing |
  *
  * The band's answer is the opposite of the skill panel's sport and for the reason stated there:
@@ -57,18 +59,23 @@ import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags
 
 import {
   RELIABILITY_BANDS,
+  RELIABILITY_MINIMUMS,
+  type BackWithEveryone,
   type Opinion,
   type OpponentVariety,
   type PlayerRecord,
   type RatedSport,
   type Reliability,
   type ReliabilityBand,
+  type ReliabilityFilter,
+  type ReliabilityMinimum,
   type SkillPanel,
 } from '../domain/playerRecord';
 
 type PlayerRecordResponse = components['schemas']['PlayerRecordResponse'];
 type SkillPanelSchema = components['schemas']['SkillPanelSchema'];
 type ReliabilitySchema = components['schemas']['ReliabilitySchema'];
+type ReliabilityFilterSchema = components['schemas']['ReliabilityFilterSchema'];
 type OpponentVarietySchema = components['schemas']['OpponentVarietySchema'];
 
 export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
@@ -137,7 +144,38 @@ function reliability(served: ReliabilitySchema): Reliability {
       keptOf: served.kept_of,
       leftInDispute: served.left_in_dispute,
     },
+    ...filterFacts(served.filter),
   };
+}
+
+/**
+ * **The filter's two facts, off one wire object** (#662, ADR-0195 §6) — the player's own switch
+ * with what it hides, and the figure that deals them with everyone again. Served on your own
+ * record only, so both are absent on anybody else's; each is narrowed on its own, per the table
+ * above, because each is drawn on its own.
+ */
+function filterFacts(served: ReliabilityFilterSchema | undefined): {
+  readonly filter?: ReliabilityFilter;
+  readonly backWithEveryone?: BackWithEveryone;
+} {
+  if (served === undefined) return {};
+  return { ...ownSwitch(served), ...backWithEveryone(served.back_with_everyone) };
+}
+
+/** The switch and its line, or neither — see the narrowing table. Off is *no minimum*. */
+function ownSwitch(served: ReliabilityFilterSchema): { readonly filter?: ReliabilityFilter } {
+  if (served.minimum === undefined) return { filter: { hides: served.hides, of: served.of } };
+  const minimum = toReliabilityMinimum(served.minimum);
+  return minimum === undefined ? {} : { filter: { minimum, hides: served.hides, of: served.of } };
+}
+
+/** The figure back, whole or not at all: the sentence names the band. */
+function backWithEveryone(served: ReliabilityFilterSchema['back_with_everyone']): {
+  readonly backWithEveryone?: BackWithEveryone;
+} {
+  if (served === undefined) return {};
+  const band = toReliabilityBand(served.band);
+  return band === undefined ? {} : { backWithEveryone: { band, points: served.points } };
 }
 
 /** The raw pair, whole. The share it is drawn as is `varietyShare`'s one division. */
@@ -195,6 +233,7 @@ function lastFive(served: readonly string[]): { readonly lastFive?: readonly Gam
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
 const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
 const KNOWN_BANDS = new Set<string>(RELIABILITY_BANDS);
+const KNOWN_MINIMUMS = new Set<string>(RELIABILITY_MINIMUMS);
 
 function toGameResult(served: string): GameResult | undefined {
   return KNOWN_RESULTS.has(served) ? (served as GameResult) : undefined;
@@ -211,4 +250,9 @@ function toSocialTagId(served: string): SocialTagId | undefined {
  */
 export function toReliabilityBand(served: string): ReliabilityBand | undefined {
   return KNOWN_BANDS.has(served) ? (served as ReliabilityBand) : undefined;
+}
+
+/** A served minimum this build can offer on its switch, or nothing — see the narrowing table. */
+function toReliabilityMinimum(served: string): ReliabilityMinimum | undefined {
+  return KNOWN_MINIMUMS.has(served) ? (served as ReliabilityMinimum) : undefined;
 }

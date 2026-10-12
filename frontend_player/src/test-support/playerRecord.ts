@@ -50,3 +50,21 @@ export const NEW_MEMBER_RELIABILITY = {
   player_score: 100,
   reliability_band: 'VERY_HIGH',
 } as const satisfies Pick<Wire['GroupMemberSchema'], 'player_score' | 'reliability_band'>;
+
+/**
+ * **The filter on your own record** (#662, ADR-0195 §6) — served on `/players/me/record` always,
+ * and on nobody else's. Off by default: no minimum, nothing hidden, eleven other players in the groups.
+ */
+export const FILTER_OFF: Wire['ReliabilityFilterSchema'] = { hides: 0, of: 11 };
+
+/** Marta's switch at *at least High*: it hides 2 of the 11 players in her groups. */
+export const MARTA_FILTER: Wire['ReliabilityFilterSchema'] = { minimum: 'HIGH', hides: 2, of: 11 };
+
+/**
+ * Somebody's High filter keeps the reader off a court, and 75 is the figure back. The reader's own
+ * filter is off, and the two are served together because they are one object on the wire.
+ */
+export const HIDDEN_BY_A_HIGH_FILTER: Wire['ReliabilityFilterSchema'] = {
+  ...FILTER_OFF,
+  back_with_everyone: { band: 'HIGH', points: 75 },
+};
