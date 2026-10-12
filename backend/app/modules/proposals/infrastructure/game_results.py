@@ -68,6 +68,8 @@ def _stage(standing: GameStanding) -> ResultStage:
             return ResultStage.CONFIRMED
         case GameStanding.UNSCORED:
             return ResultStage.UNSCORED
+        case GameStanding.DISPUTED:
+            return ResultStage.DISPUTED
         case GameStanding.NEVER_PLAYED:
             return ResultStage.NEVER_PLAYED
         case GameStanding.CALLED_OFF:

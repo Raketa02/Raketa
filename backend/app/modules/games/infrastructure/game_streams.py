@@ -1,4 +1,4 @@
-"""Finding the game streams to fold. **Two reads, and only one starts from a player.**
+"""Finding the game streams to fold. **Three reads, and only one starts from a player.**
 
 Every read this context had until ``docs/adr/0139`` started the same way — *which
 streams seat this person* — and they differ only in what they fold the answer
@@ -9,7 +9,9 @@ fixed in one place.
 
 The second read starts from **nobody**, and is at the bottom of this file. The
 rating context walks confirmed results forward and has no player to ask about
-until it has folded the game.
+until it has folded the game. The third starts from **games already named** —
+the first read's second statement, and an agreement asking about its own game
+(#654).
 
 **The match is a substring.**
 The court crosses the wire as one code per seating (``lineup.py``), so a player is
@@ -110,15 +112,24 @@ async def streams_seating(
         )
         .distinct()
     )
-    game_ids = list(found.scalars().all())
-    if not game_ids:
+    return await streams_of(session, codec, found.scalars().all())
+
+
+async def streams_of(
+    session: AsyncSession, codec: EventCodec, game_ids: Collection[UUID]
+) -> dict[UUID, list[DomainEvent]]:
+    """The whole of each of these game streams, each ordered by ``version`` — a
+    game that does not exist is absent."""
+
+    wanted = sorted(set(game_ids))
+    if not wanted:
         return {}
 
     rows = await session.execute(
         select(EventStoreORM)
         .where(
             EventStoreORM.aggregate_type == GAME_AGGREGATE,
-            EventStoreORM.aggregate_id.in_(game_ids),
+            EventStoreORM.aggregate_id.in_(wanted),
         )
         .order_by(EventStoreORM.version)
     )

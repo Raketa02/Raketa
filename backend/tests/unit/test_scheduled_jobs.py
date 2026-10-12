@@ -283,6 +283,16 @@ def test_the_catch_up_is_registered_and_carries_the_configured_cadence():
     assert jobs[0].interval_seconds == 900.0
 
 
+def test_the_catch_up_runs_every_minute_unless_told_otherwise():
+    """**Levels move within a minute of a result settling** (#654;
+    ``docs/adr/0195`` §5) — a window closing is picked up by the next run, and
+    the hourly cadence is retired."""
+
+    from app.core.config import Settings
+
+    assert Settings.model_fields["RATING_CATCH_UP_INTERVAL_SECONDS"].default == 60
+
+
 def test_the_catch_up_without_a_session_factory_refuses_to_be_registered():
     """It reads the log and writes streams, so it joins the loud branch.
 

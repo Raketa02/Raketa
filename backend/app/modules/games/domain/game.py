@@ -36,6 +36,14 @@ no score stands beside one — and whatever it comes to, **the game does not
 count**. And **a booked game is called off whole** when its club takes the
 court back before its hour, with a seat open or none (``call_off_whole``).
 
+**A score is asked for once, and settled by one tap or by silence** (#654;
+``docs/adr/0195`` §5). None is taken before the hour, and corrections end with
+the entry window. *That's right* from across the net settles it at once and
+closes the game; silence settles it a day after it went up; two scores nobody
+gave way on settle when the later one's day is up — with the closer, naming the
+same winner, or **disputed**, naming different ones. A For fun game asks
+nobody: its score is the result the moment it is put up.
+
 **One aggregate per game and never one per player.** Whether you won is a
 property of the game and of which side you were on; a per-player record would be
 four copies of one score, and the day two of them disagreed there would be
@@ -63,6 +71,7 @@ from app.modules.games.domain.errors import (
     ANoShowIsReported,
     AResultIsAlreadyEntered,
     AResultMustCarryAScore,
+    CorrectionsHaveClosed,
     NobodyHasProposedAResult,
     NobodyReportedYou,
     NoShowsAreForBookedGames,
@@ -75,8 +84,6 @@ from app.modules.games.domain.errors import (
     TheGameIsNotOpenToSeating,
     TheGameStartedShort,
     TheGameWasCalledOff,
-    TheOtherSideHasAnswered,
-    TheResultIsAlreadyAccepted,
     TheResultIsSettled,
     YouCannotReportYourself,
     YouWereNotOnThisCourt,
@@ -342,9 +349,9 @@ class Game:
         are doing follows from what already stands:
 
         - **nothing stands** — they are saying *we played, here is the score*,
-          which is two facts and two events;
+          which is two facts and two events; never before the hour (#654);
         - **their own side's score stands, unanswered** — a correction, free, and
-          not a second proposal;
+          not a second proposal, until the entry window closes (#654);
         - **the other side's score stands** — a counter, which is their side's
           one turn.
 
@@ -370,6 +377,10 @@ class Game:
                 raise TheGameWasCalledOff()
             if self.standing_at(occurred_at) is GameStanding.STARTED_SHORT:
                 raise TheGameStartedShort()
+            if self.starts_at is not None and occurred_at < self.starts_at:
+                # **No score before the hour** (#654): nothing can have
+                # happened at a game that has not begun.
+                raise TheGameHasNotStarted()
             if occurred_at >= self.entry_closes_at:
                 raise TheEntryWindowHasClosed()
             if not self.line_up.is_complete:
@@ -410,8 +421,11 @@ class Game:
 
         if side.other in self.proposals:
             raise YourSideHasAlreadyAnswered()
-        if self.standing_acceptance() is not None:
-            raise TheOtherSideHasAnswered()
+        if occurred_at >= self.entry_closes_at:
+            # **Corrections end with the entry window** (#654): a correction
+            # re-dates its side's score, and a side that kept correcting would
+            # keep the game waiting for ever.
+            raise CorrectionsHaveClosed()
         self._record_that(
             ResultCorrected(
                 game_id=self.game_id,
@@ -423,13 +437,12 @@ class Game:
         )
 
     def accept_result(self, *, by: UUID, occurred_at: Instant) -> None:
-        """*That is what happened.* **From across the net, and one is enough.**
-
-        It settles nothing on its own. The grace runs from the proposal, so
-        inside it a counter still wins — which is the whole reason the grace
-        exists: in a four somebody is always slower to their phone, and without
-        it a partner's fast tap closes the door on an opponent who has not read
-        the score yet.
+        """*That's right.* **From across the net, and one is enough** — and it
+        **settles the result at once and closes the game** (#654;
+        ``docs/adr/0195`` §5). No different score is taken after it, so in
+        doubles the first agreement from the other side is the one that counts.
+        The six-hour grace that once let a counter beat it is retired: a score
+        is asked for once, and an agreement is its answer.
         """
 
         side = self._side_of(by)
@@ -439,9 +452,6 @@ class Game:
             raise AcceptingYourOwnSidesResult()
         if side.other not in self.proposals:
             raise NobodyHasProposedAResult()
-        standing = self.standing_acceptance()
-        if standing is not None and standing.side is side:
-            raise TheResultIsAlreadyAccepted()
 
         self._record_that(
             ResultAccepted(
@@ -555,6 +565,7 @@ class Game:
         """What this game is, at this instant. **The only place a standing exists.**"""
 
         return standing_of(
+            kind=self.kind,
             planned_at=self.planned_at,
             starts_at=self.starts_at,
             played_at=self.played_at,
@@ -622,7 +633,9 @@ class Game:
 
         if self.standing_at(now) is not GameStanding.CONFIRMED:
             return None
-        return agreed_score(proposals=self.proposals, acceptance=self.acceptance)
+        return agreed_score(
+            kind=self.kind, proposals=self.proposals, acceptance=self.acceptance
+        )
 
     def confirmed_at(self, now: Instant) -> Instant | None:
         """When this game's result became final, or ``None`` while none has.
@@ -637,7 +650,33 @@ class Game:
 
         if self.standing_at(now) is not GameStanding.CONFIRMED:
             return None
-        return settled_at(proposals=self.proposals, acceptance=self.acceptance)
+        return settled_at(
+            kind=self.kind, proposals=self.proposals, acceptance=self.acceptance
+        )
+
+    def settled_by_agreement_at(self, now: Instant) -> Acceptance | None:
+        """The *That's right* that settled this game, or ``None`` — on every
+        game not confirmed at ``now``, and on one silence or the closer of two
+        scores settled (#654)."""
+
+        if self.standing_at(now) is not GameStanding.CONFIRMED:
+            return None
+        return live_acceptance(proposals=self.proposals, acceptance=self.acceptance)
+
+    def left_in_dispute_by(self, now: Instant) -> frozenset[UUID]:
+        """Whoever put up the two scores that named different winners — **a
+        result left in dispute** on each of their records (#654;
+        ``docs/adr/0195`` §5) — once the answer window has closed on them.
+        Empty on every other standing.
+
+        **The people who put the standing scores up**, read off the record: a
+        side's score is its last correction's, so whoever corrected it is the
+        one who put it there. It costs nobody points; it is information.
+        """
+
+        if self.standing_at(now) is not GameStanding.DISPUTED:
+            return frozenset()
+        return frozenset(proposal.by for proposal in self.proposals.values())
 
     def score_put_to_a_side_at(self, now: Instant) -> ScorePutToASide | None:
         """The one score this game put to somebody, and what became of it.
@@ -650,8 +689,13 @@ class Game:
         because *is a counter an answer* is a judgement about what a result is;
         this is where a reader asks the question, on the aggregate, the way
         ``was_played_at`` and ``confirmed_at`` are asked (``docs/adr/0160``).
+
+        **A For fun game puts its score to nobody** (#654): it asks nothing, so
+        nobody can have stayed silent about it.
         """
 
+        if self.kind is GameKind.FRIENDLY:
+            return None
         return score_put_to_a_side(
             played_at=self.played_at,
             proposals=self.proposals,
@@ -663,19 +707,14 @@ class Game:
         """Whether a score on the table waits on this player's agreement — the
         *result to confirm* that is theirs to clear (#542; the mechanics §3).
 
-        **The other side's score is up and nobody has agreed with anything**: a
-        score of their own side's waits on the other side, and an agreement
-        running out its grace is settled unless somebody disagrees — a right
-        the screen still offers, not a task. Never true off the court, and never
-        outside ``AWAITING_ANSWER``.
+        **The other side's score is up**: a score of their own side's waits on
+        the other side. An agreement settles the game at once (#654), so there
+        is none still to wait out. Never true off the court, and never outside
+        ``AWAITING_ANSWER`` — which a For fun game never reaches.
         """
 
         side = self.line_up.side_of(player_id)
-        if (
-            side is None
-            or self.standing_at(now) is not GameStanding.AWAITING_ANSWER
-            or self.standing_acceptance() is not None
-        ):
+        if side is None or self.standing_at(now) is not GameStanding.AWAITING_ANSWER:
             return False
         return any(proposal.side is not side for proposal in self.standing_proposals())
 
@@ -697,9 +736,10 @@ class Game:
         """Every score currently on the table. **At most two, side ``A`` first.**
 
         Empty before anybody has entered one, and two of them is the
-        disagreement this platform does not resolve — which is a state a reader
-        has to be able to *see*, because either side accepting the other's is its
-        only end that is not the game going unscored.
+        disagreement this platform does not arbitrate — which is a state a reader
+        has to be able to *see*, because either side may still accept the
+        other's, before the later score's day settles it with the closer score
+        or **disputed** (#654).
 
         Ordered by side rather than by arrival, because the order of the two acts
         is a fact about who reached their phone first and nothing here is about
@@ -712,37 +752,6 @@ class Game:
             for side in (GameSide.A, GameSide.B)
             if side in self.proposals
         )
-
-    def standing_acceptance(self) -> Acceptance | None:
-        """The agreement that still stands, if one does. **A counter voids it.**
-
-        It does not answer *has this settled* — ``standing_at`` does — and the
-        gap between the two answers is the whole point of it: for the length of
-        the grace the proposing side has stopped waiting on silence, and nothing
-        else on this aggregate says so.
-        """
-
-        return live_acceptance(
-            proposals=self.proposals, acceptance=self.acceptance
-        )
-
-    def accepted_proposal(self) -> Proposal | None:
-        """The score a standing agreement agreed with. ``None`` with no agreement.
-
-        The other half of ``standing_acceptance``, and they are ``None``
-        together: an agreement is always *of* a score, and the grace it runs out
-        is measured from **that score** rather than from the tap — so anybody
-        rendering the moment needs both, and neither is answerable alone.
-
-        Asked through ``get`` like the fold's own three readers, and for their
-        reason: an agreement whose score is missing is a stream nothing here
-        wrote, and the failure mode of a subscript is a crash in a **read**.
-        """
-
-        agreement = self.standing_acceptance()
-        if agreement is None:
-            return None
-        return self.proposals.get(agreement.of_side)
 
     # -- folding ----------------------------------------------------------
 

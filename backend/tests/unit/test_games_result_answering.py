@@ -23,7 +23,7 @@ from app.kernel import Instant, Sport, instant
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
-from app.modules.games.domain.windows import ACCEPTANCE_GRACE, PROPOSAL_WINDOW
+from app.modules.games.domain.windows import PROPOSAL_WINDOW
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
@@ -175,19 +175,15 @@ def test_a_plan_nobody_claimed_puts_no_score_to_anybody():
     assert _asked_about(_game(), now=instant(PLANNED_AT + timedelta(days=30))) is None
 
 
-def test_an_acceptance_inside_the_grace_is_still_an_answer():
-    """The grace decides when a result **settles**, never whether somebody spoke.
-
-    An acceptance that a counter later voids still happened, and the person who
-    made it answered the score put in front of them.
-    """
+def test_an_acceptance_is_an_answer_the_moment_it_is_made():
+    """An agreement settles the result at once (#654), and the opportunity
+    closed on it then — not when the score's day would have run out."""
 
     game = _put(_game())
     accepted_at = instant(PLAYED_AT + timedelta(minutes=5))
     game.accept_result(by=ASKED, occurred_at=accepted_at)
 
-    inside = instant(accepted_at + ACCEPTANCE_GRACE - timedelta(minutes=1))
-    asked = _asked_about(game, now=inside)
+    asked = _asked_about(game, now=accepted_at)
 
     assert asked is not None and asked.answered is True
     assert asked.closed_at == accepted_at
@@ -216,9 +212,8 @@ def test_two_scores_on_the_table_wait_on_both_sides():
     assert game.awaits_agreement_from(OPENER, now=now)
 
 
-def test_an_agreement_running_out_its_grace_waits_on_nobody():
-    """Settled unless somebody disagrees — a right the screen still offers,
-    never a task."""
+def test_an_agreement_waits_on_nobody():
+    """It settled the result at once (#654): there is nothing left to answer."""
 
     game = _put(_game())
     accepted_at = instant(PLAYED_AT + timedelta(hours=1))

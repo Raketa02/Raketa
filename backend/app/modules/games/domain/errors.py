@@ -243,20 +243,20 @@ class YourSideHasAlreadyAnswered(ConflictError):
         super().__init__("Your side has already put a score on the table.")
 
 
-class TheOtherSideHasAnswered(ConflictError):
-    """A correction arriving after the other side responded.
+class CorrectionsHaveClosed(ConflictError):
+    """A correction arriving after the game's entry window closed (#654;
+    ``docs/adr/0195`` §5).
 
-    Correcting is free **until the other side responds** and not afterwards: past
-    that point the score has been read and answered, and revising it would be a
-    second proposal wearing a correction's name.
+    **Corrections end with the entry window**: a correction re-dates its side's
+    score, so a side that kept correcting could keep a game waiting for ever.
+    The score it would have corrected still stands and its answer window still
+    runs — only the side that put it up can no longer change it.
     """
 
-    code = "the_other_side_has_answered"
+    code = "corrections_have_closed"
 
     def __init__(self) -> None:
-        super().__init__(
-            "The other side has answered, so this score can no longer be corrected."
-        )
+        super().__init__("The time to correct this score has passed.")
 
 
 class NobodyHasProposedAResult(ConflictError):
@@ -280,15 +280,6 @@ class AcceptingYourOwnSidesResult(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("Only the other side can accept a result.")
-
-
-class TheResultIsAlreadyAccepted(ConflictError):
-    """An acceptance of a score the accepter's side has already agreed to."""
-
-    code = "the_result_is_already_accepted"
-
-    def __init__(self) -> None:
-        super().__init__("Your side has already accepted this result.")
 
 
 class NoGameOfYoursHasThatId(NotFoundError):
@@ -342,13 +333,13 @@ class NoShowsAreForBookedGames(ConflictError):
 
 
 class TheGameHasNotStarted(ConflictError):
-    """A no-show reported before the game's hour: nobody can have failed to
-    turn up to a game that has not begun."""
+    """A score stated, or a no-show reported, before a booked game's hour:
+    nothing can have happened at a game that has not begun (#547, #654)."""
 
     code = "the_game_has_not_started"
 
     def __init__(self) -> None:
-        super().__init__("This game has not started yet.")
+        super().__init__("This game hasn't started yet.")
 
 
 class AResultIsAlreadyEntered(ConflictError):

@@ -91,9 +91,9 @@ def score_put_to_a_side(
     )
     spoke = [one.at for one in (countered, accepted) if one is not None]
     if spoke:
-        # The **first** thing they said. A side that accepts and then counters
-        # inside the grace has answered twice, and the opportunity closed on the
-        # first of them.
+        # The **first** thing they said. A stream written while an agreement
+        # still ran out a grace may hold a side that accepted and then
+        # countered: it answered twice, and the opportunity closed on the first.
         return ScorePutToASide(side=asked, closed_at=min(spoke), answered=True)
 
     closes = proposal_closes_at(opener.at)

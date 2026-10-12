@@ -18,9 +18,10 @@ read as `standing: CALLED_OFF` with `called_off_at` beside it
 is computed when asked, for the reader, for as long as the game has not
 happened — and the seat on the list still carries a name and nothing else.
 
-**There is no route called confirm.** A result is confirmed when a clock passes,
-and a clock is nobody's request. Silence confirming is not an endpoint that goes
-missing; it is the absence of one.
+**There is no route called confirm.** A result is settled by silence when a clock
+passes, and a clock is nobody's request — or at once by *That's right* from across
+the net, which is the acceptance (#654). Silence settling is not an endpoint that
+goes missing; it is the absence of one.
 
 **There is no rejection.** Disagreement is a score, always, and the only way to
 say *that is not what happened* is to say what did.
@@ -79,10 +80,11 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
             "time, so it now reads as never played to everybody who has looked "
             "at it. An entry that resurrected it would contradict a card the "
             "platform has already drawn.\n\n"
-            "`the_result_is_settled` — the result is agreed, or the two sides "
-            "disagreed and neither answered. **Both are final**: there is no "
-            "correction path and no reversal, and reopening a disagreement a day "
-            "later is the arbitration this platform refuses."
+            "`the_result_is_settled` — the result is final: agreed with, settled "
+            "by silence, settled with the closer of two scores naming the same "
+            "winner, or **disputed** — two scores naming different winners. "
+            "There is no correction path and no reversal, and reopening a "
+            "disagreement a day later is the arbitration this platform refuses."
         ),
     },
 }
@@ -109,12 +111,15 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
         "model": ErrorResponse,
         "description": (
             "Everything above, plus:\n\n"
+            "`the_game_has_not_started` — no score is taken before the game's "
+            "hour: nothing can have happened yet.\n\n"
             "`your_side_has_already_answered` — one score per side. The cap is "
             "what bounds an argument to two rounds, and what makes silence safe "
-            "to read as agreement.\n\n"
-            "`the_other_side_has_answered` — correcting is free until they "
-            "respond and not afterwards. `acceptance.agreed_at` is when they "
-            "did, so the sentence a player reads need not be vague about it.\n\n"
+            "to read as agreement. A correction after the other side has put "
+            "its own score up is the same refusal.\n\n"
+            "`corrections_have_closed` — the entry window has closed (24 hours "
+            "after the hour ended), and with it the time to correct your side's "
+            "score. It still stands, and its answer window still runs.\n\n"
             "`the_court_has_an_open_seat` — somebody left and nobody has filled "
             "their seat, so there is no court to have played on. Fill it, or "
             "let the window close.\n\n"
@@ -183,9 +188,7 @@ _ACCEPTING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "side to accept.\n\n"
             "`accepting_your_own_sides_result` — **only the other side can "
             "accept**, because a teammate agreeing with a teammate proves "
-            "nothing.\n\n"
-            "`the_result_is_already_accepted` — your side has already agreed to "
-            "this one."
+            "nothing."
         ),
     },
 }
@@ -316,12 +319,16 @@ async def read_game_pairing(
         "- the other side's score on the table → your side's **one** "
         "disagreement, and it carries a score because there is no bare "
         "rejection.\n\n"
-        "**A lone score is confirmed by silence** when its 24 hours run out, and "
-        "the game counts. **Two scores nobody accepts leave the game unscored** "
-        "— which still counts as an evening you played and moves nobody's "
-        "Level.\n\n"
-        "**Nobody is penalised for any of this.** Not for saying nothing, not "
-        "for disagreeing, not for a disagreement the other side ignored."
+        "**No score is taken before the game's hour**, and a correction is "
+        "refused once the entry window has closed.\n\n"
+        "**A lone score is settled by silence** when its 24 hours "
+        "(`proposals[].answer_by`) run out, and the game counts. **Two scores "
+        "nobody agrees with settle when the later one's 24 hours run out**: "
+        "naming the same winner, the game counts with the **closer** score — "
+        "the smaller margin in games, and on a tie the first put up; naming "
+        "different winners, it ends `DISPUTED` and moves nobody's Level.\n\n"
+        "**A For fun game asks nobody**: its score is the result the moment it "
+        "is put up (`CONFIRMED`), with no answer window, and no Level moves."
     ),
 )
 async def state_result(
@@ -355,18 +362,15 @@ async def state_result(
     },
     summary="Agree with the result",
     description=(
-        "**One opponent suffices.** The person across the net is the whole of "
-        "the evidence that a score was real.\n\n"
-        "**It does not settle the result immediately.** The grace runs from the "
-        "*score*, not from your tap, and inside it a disagreement still wins — "
-        "so a partner who is quick to their phone cannot close the door on an "
-        "opponent who has not read it yet. `acceptance.settles_at` is when it "
-        "becomes final, and it is on the response the **proposing** side reads "
-        "too — a score that has been agreed is no longer a score waiting on "
-        "silence.\n\n"
-        "**Saying nothing does the same thing**, a day later. Accepting is how "
-        "you make it true sooner, and it is never how you avoid a penalty — "
-        "there is none."
+        "***That's right.*** **One opponent suffices**: the person across the "
+        "net is the whole of the evidence that a score was real.\n\n"
+        "**It settles the result at once and closes the game** (`standing` "
+        "`CONFIRMED`, the agreed score on `score`). No different score is "
+        "taken after it, so in doubles the first agreement from the other "
+        "side is the one that counts. On a Competitive game the Levels move "
+        "within a minute.\n\n"
+        "**Saying nothing settles it too**, once the score's 24 hours "
+        "(`proposals[].answer_by`) run out."
     ),
 )
 async def accept_result(

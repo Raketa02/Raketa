@@ -168,7 +168,8 @@ class Evening:
     #: A cohort handle.
     opponent: str
     #: ``True`` she won, ``False`` they did, ``None`` they each stated a score
-    #: and neither accepted the other's — an evening, not evidence.
+    #: naming a different winner and neither accepted the other's — **disputed**
+    #: (#654): an evening, not evidence.
     she_won: bool | None
     #: ``False`` is a game nobody said was played: its entry window closed over
     #: it and it reads as never played.

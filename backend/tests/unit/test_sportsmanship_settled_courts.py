@@ -14,11 +14,14 @@ evening that did not happen — so the intersection is the whole of the narrowin
 and a reader who reached for ``SETTLED`` alone would offer cards for games nobody
 turned up to.
 
-**An unscored game is in, on purpose.** Two people who cannot agree what the
-score was were still on a court together for two hours, and how that went is
-exactly what this context exists to collect. It is the member somebody
-simplifying to *confirmed* would drop, and nothing else in the suite would
-notice: every game the HTTP test settles is confirmed.
+**A disputed game is in, on purpose.** Two people who cannot agree who won were
+still on a court together for an hour, and how that went is exactly what this
+context exists to collect. It is the member somebody simplifying to *confirmed*
+would drop, and nothing else in the suite would notice: every game the HTTP test
+settles is confirmed. Two scores used to leave a game *unscored*; they end
+confirmed or **disputed** since #654, and *unscored* is reached only by a booked
+game every report of not coming to was disputed — nobody said they played it,
+so it is in ``RATEABLE`` and draws no card.
 
 The file also pins the other half of the port's contract — that a game the caller
 did not play in is not findable through it at all, because the read asks *which
@@ -192,7 +195,20 @@ def _confirmed():
 
 
 def _unscored():
-    """Both sides put a score up, neither gave way, and both windows closed."""
+    """Every report of not coming was disputed (#547): nobody arbitrated, and
+    nobody ever said they played."""
+
+    players = _four()
+    game, reported = _booked_and_played(players)
+    game.dispute_no_show(
+        by=players[3], occurred_at=instant(reported + timedelta(hours=1))
+    )
+    return game, instant(reported + timedelta(days=2))
+
+
+def _disputed():
+    """Both sides put a score up naming different winners, neither gave way,
+    and both windows closed (#654)."""
 
     players = _four()
     game = a_doubles_game(*players)
@@ -214,15 +230,25 @@ BUILDERS = {
     GameStanding.AWAITING_ANSWER: _awaiting_answer,
     GameStanding.CONFIRMED: _confirmed,
     GameStanding.UNSCORED: _unscored,
+    GameStanding.DISPUTED: _disputed,
     GameStanding.STARTED_SHORT: _started_short,
     GameStanding.NO_SHOW_REPORTED: _no_show_reported,
     GameStanding.NO_SHOW: _no_show,
 }
 
-#: The two the card may be drawn for. Spelled out rather than derived, so this
-#: file disagrees with ``RATEABLE`` if somebody changes the derivation — which is
-#: the only way a test of a derived constant is worth writing.
-MAY_BE_RATED = {GameStanding.CONFIRMED, GameStanding.UNSCORED}
+#: The three that may be rated. Spelled out rather than derived, so this file
+#: disagrees with ``RATEABLE`` if somebody changes the derivation — which is the
+#: only way a test of a derived constant is worth writing.
+MAY_BE_RATED = {
+    GameStanding.CONFIRMED,
+    GameStanding.UNSCORED,
+    GameStanding.DISPUTED,
+}
+
+#: The two a card is drawn for: the endings somebody said they played. An
+#: unscored game is only ever a no-show every report of was disputed now, and
+#: nobody said they played it — so it is rateable and has no evening to rate.
+DRAWN_FOR = {GameStanding.CONFIRMED, GameStanding.DISPUTED}
 
 
 def test_every_standing_has_a_builder():
@@ -243,7 +269,7 @@ async def test_a_card_may_be_drawn_for_exactly_the_two_endings_that_happened(
     courts = GamesSettledCourts(Directory(games=(game,)))
     court = await courts.court_of(game.id, player_id=me, now=read_at)
 
-    if standing in MAY_BE_RATED:
+    if standing in DRAWN_FOR:
         assert court is not None, f"{standing.value} should be rateable"
         assert court.game_id == game.id
         assert court.rater_id == me
@@ -264,7 +290,7 @@ async def test_the_list_offers_exactly_the_same_two_endings(standing: GameStandi
 
     found = await courts.courts_of(me, now=read_at)
 
-    if standing in MAY_BE_RATED:
+    if standing in DRAWN_FOR:
         (only,) = found
         assert only.game_id == game.id
         assert only.rater_id == me

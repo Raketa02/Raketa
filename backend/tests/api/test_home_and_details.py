@@ -566,38 +566,48 @@ async def test_a_report_still_to_dispute_is_sent_and_counted_past_the_shelf(
     assert reported["needing_you"] == 0
 
 
-async def a_score_corrected_two_days_on(
+async def a_score_corrected_as_the_entry_closes(
     client, session_factory, clock, *, club, group, four
 ) -> tuple[dict, dict]:
-    """Ola's score as the entry closes, corrected by her as Home would stop
-    reading the game — the game, and her rival."""
+    """Ola's score at five on Sunday, corrected by her in the entry window's
+    last minute — the last moment a correction is taken (#654) — the game, and
+    her rival."""
 
     booked = await a_booked_game(
         client, session_factory, clock, club=club, group=group, four=four
     )
-    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
+    clock.at = warsaw(11, 17)
     ola = four[0]
     await on_the_game(client, ola, booked["game_id"], "result", A_SCORE)
     [card] = (await home_of(client, ola))["games"]
-    clock.at = MONDAY_TWO_MINUTES_TO_SIX
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
     await on_the_game(client, ola, booked["game_id"], "result", ANOTHER_SCORE)
     return booked, opponent_of(card, four)
 
 
-async def test_a_score_corrected_two_days_on_is_still_sent_and_counted(
+async def test_a_score_corrected_as_the_entry_closes_waits_a_day_from_the_correction(
     client, session_factory, clock, club, four, group
 ):
-    """**A correction re-dates its side's score**, and that side may correct it
-    again while the other has not answered: a score can wait on the reader for
-    as long as its side keeps correcting it — so Home still finds the game long
-    after the hour it otherwise reads from has passed it."""
+    """**A correction re-dates its side's score**, until the entry window
+    closes (#654): the score waits on the reader a day from its last
+    correction, and Home sends it until then — and a correction a minute later
+    is refused."""
 
-    booked, rival = await a_score_corrected_two_days_on(
+    booked, rival = await a_score_corrected_as_the_entry_closes(
         client, session_factory, clock, club=club, group=group, four=four
     )
     ola = four[0]
 
-    clock.at = warsaw(13, 12)  # Tuesday noon: Home reads from Sunday 11:00
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX + timedelta(minutes=1)
+    refused = await client.post(
+        f"/api/v1/games/{booked['game_id']}/result",
+        json=A_SCORE,
+        headers=ola["headers"],
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "corrections_have_closed"
+
+    clock.at = MONDAY_TWO_MINUTES_TO_SIX
     theirs = await home_of(client, rival)
     ours = await home_of(client, ola)
 
@@ -608,7 +618,7 @@ async def test_a_score_corrected_two_days_on_is_still_sent_and_counted(
     [card] = ours["games"]
     assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", False)
 
-    clock.at = warsaw(13, 18)  # a day after the correction: counted by silence
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX + timedelta(days=1)  # counted by silence
     theirs = await home_of(client, rival)
     assert theirs["games"] == []
     assert theirs["needing_you"] == 0
@@ -617,24 +627,25 @@ async def test_a_score_corrected_two_days_on_is_still_sent_and_counted(
 async def test_a_counter_to_a_corrected_score_waits_a_day_of_its_own(
     client, session_factory, clock, club, four, group
 ):
-    """The rival counters on Tuesday: two scores now wait on each other's side
-    for a day from the later — past the correction's day."""
+    """The rival counters on Monday: two scores now wait on each other's side
+    for a day from the later — past the correction's day, and past the hour
+    Home otherwise reads from, so Home finds it by the score."""
 
-    booked, rival = await a_score_corrected_two_days_on(
+    booked, rival = await a_score_corrected_as_the_entry_closes(
         client, session_factory, clock, club=club, group=group, four=four
     )
     ola = four[0]
-    clock.at = warsaw(13, 12)
+    clock.at = warsaw(12, 17)
     await on_the_game(client, rival, booked["game_id"], "result", A_SCORE_THEIRS)
 
-    clock.at = warsaw(14, 11)  # the correction is 41 hours old, the counter 23
+    clock.at = warsaw(13, 16)  # the correction is 46 hours old, the counter 23
     for player in (ola, rival):
         home = await home_of(client, player)
         [card] = home["games"]
         assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", True)
         assert home["needing_you"] == 1
 
-    clock.at = warsaw(14, 12)  # a day after the counter: nobody agreed
+    clock.at = warsaw(13, 17)  # a day after the counter: disputed
     for player in (ola, rival):
         assert (await home_of(client, player))["games"] == []
 

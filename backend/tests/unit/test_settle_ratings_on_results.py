@@ -58,6 +58,19 @@ class Ledger:
         self.reads += 1
         return self.results
 
+    async def confirmed_counted_result(
+        self, game_id: UUID, *, now: Instant
+    ) -> ConfirmedGame | None:
+        self.reads += 1
+        return next(
+            (
+                one
+                for one in self.results
+                if one.game_id == game_id and one.confirmed_at <= now
+            ),
+            None,
+        )
+
 
 @dataclass
 class Ratings:
@@ -557,3 +570,110 @@ async def test_a_singles_sport_is_priced_whole(sport):
     ).execute()
 
     assert ratings.held[(winner, sport)].mu == pytest.approx(3.15, abs=0.001)
+
+
+# ---------------------------------------------------------------------------
+# One game, from the outbox — *That's right* moves the Levels at once (#654)
+# ---------------------------------------------------------------------------
+
+
+async def test_one_game_agreed_with_is_settled_as_it_stood_when_it_was_agreed():
+    """``docs/adr/0195`` §5: a result settled by an acceptance is settled for
+    rating from the outbox, **for that one game** — and the delivery's
+    transaction is the boundary, so nothing is committed here."""
+
+    winner, loser = new_uuid(), new_uuid()
+    ratings = held(
+        a_rating(player_id=winner, mu=3.00),
+        a_rating(player_id=loser, mu=3.00),
+    )
+    agreed = a_result(winners=(winner,), losers=(loser,))
+    other = a_result(winners=(loser,), losers=(winner,))
+    work = Work()
+
+    settled = await catch_up(
+        ledger=Ledger((other, agreed)), ratings=ratings, work=work
+    ).settle(agreed.game_id, at=SETTLED_AT)
+
+    assert ratings.held[(winner, Sport.TENNIS)].mu > 3.00
+    assert ratings.held[(loser, Sport.TENNIS)].mu < 3.00
+    assert ratings.held[(winner, Sport.TENNIS)].counted_results == 1, (
+        "the other game is the catch-up's, not this delivery's"
+    )
+    assert ratings.held[(winner, Sport.TENNIS)].updated_at == SETTLED_AT
+    assert settled == type(settled)(games=1, ratings=2, unrated=0, conflicts=0)
+    assert work.commits == 0
+
+
+async def test_one_game_settled_twice_moves_nothing_the_second_time():
+    """At-least-once delivery, and the catch-up beside it: the rating streams
+    are the cursor for both."""
+
+    winner, loser = new_uuid(), new_uuid()
+    ratings = held(
+        a_rating(player_id=winner, mu=3.00),
+        a_rating(player_id=loser, mu=3.00),
+    )
+    agreed = a_result(winners=(winner,), losers=(loser,))
+    use_case = catch_up(ledger=Ledger((agreed,)), ratings=ratings)
+
+    await use_case.settle(agreed.game_id, at=SETTLED_AT)
+    after_once = ratings.held[(winner, Sport.TENNIS)].mu
+    again = await use_case.settle(agreed.game_id, at=SETTLED_AT)
+    caught_up = await use_case.execute()
+
+    assert ratings.held[(winner, Sport.TENNIS)].mu == after_once
+    assert again.games == 0
+    assert caught_up.games == 0
+
+
+async def test_one_game_not_final_at_that_moment_moves_nobody():
+    """A friendly, or a game whose result had not settled when asked about:
+    the ledger has nothing to publish, and nothing moves."""
+
+    winner, loser = new_uuid(), new_uuid()
+    ratings = held(
+        a_rating(player_id=winner, mu=3.00),
+        a_rating(player_id=loser, mu=3.00),
+    )
+    later = a_result(winners=(winner,), losers=(loser,))
+
+    settled = await catch_up(ledger=Ledger((later,)), ratings=ratings).settle(
+        later.game_id, at=instant(SETTLED_AT - timedelta(minutes=1))
+    )
+
+    assert ratings.held[(winner, Sport.TENNIS)].mu == 3.00
+    assert settled.games == 0
+
+
+async def test_an_agreement_delivered_from_the_outbox_settles_its_game():
+    """The subscriber: ``games.result_accepted`` names the game and the moment
+    of the tap, and the game is settled as it stood then — whatever the
+    delivering process's clock says."""
+
+    from app.application.events.envelope import DeliveryContext
+    from app.modules.games.domain.events import ResultAccepted
+    from app.modules.rating.application.handlers import SettleRatingsOnAnAgreement
+
+    winner, loser = new_uuid(), new_uuid()
+    ratings = held(
+        a_rating(player_id=winner, mu=3.00),
+        a_rating(player_id=loser, mu=3.00),
+    )
+    agreed = a_result(winners=(winner,), losers=(loser,))
+    handler = SettleRatingsOnAnAgreement(
+        catch_up(ledger=Ledger((agreed,)), ratings=ratings)
+    )
+
+    await handler(
+        ResultAccepted(
+            game_id=agreed.game_id,
+            player_id=loser,
+            side="B",
+            occurred_at=SETTLED_AT,
+        ),
+        DeliveryContext(event_id=new_uuid(), attempt=1, occurred_at=SETTLED_AT),
+    )
+
+    assert ratings.held[(winner, Sport.TENNIS)].mu > 3.00
+    assert ratings.held[(loser, Sport.TENNIS)].mu < 3.00

@@ -375,9 +375,11 @@ async def run_the_new_bookings_summary(
     response_model=RanResponse,
     summary=_summary(RATING_CATCH_UP_JOB),
     description=(
-        "Moves every Level a confirmed result has tested and nothing has "
-        "applied yet — the only path a result has to a Level. A result still "
-        "waiting for its answer is not confirmed, and moves nothing."
+        "Settles for rating everything that has become final and nothing has "
+        "applied yet: a score silence settled, two scores naming the same winner "
+        "settled with the closer, and an agreement the outbox has not delivered "
+        "yet. A result still waiting for its answer is not final, and a "
+        "disputed one never is — neither moves anything."
     ),
 )
 async def run_the_rating_catch_up(settle: SettleRatingsOnResultsDep) -> RanResponse:

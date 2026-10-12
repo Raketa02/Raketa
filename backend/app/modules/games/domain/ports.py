@@ -217,9 +217,9 @@ class ConfirmedGame:
     which lied.
 
     ``confirmed_at`` is **when the result became final**, not when it was entered:
-    an acceptance's grace, or a proposal window closing on silence. Derived, so it
-    is the same instant on every reader's clock — which is what makes it safe to
-    order a catch-up on.
+    an acceptance's own moment, or the answer window closing on silence or on two
+    scores naming the same winner (#654). Derived, so it is the same instant on
+    every reader's clock — which is what makes it safe to order a catch-up on.
 
     **Tuples and not sets.** The order is the line-up's own, so a walk over this
     is the same walk on every process and under every ``PYTHONHASHSEED``
@@ -366,9 +366,23 @@ class ConfirmedResultLedger(Protocol):
 
         **Counted only, and confirmed only.** A friendly is absent because it was
         never evidence about anybody by the choice of the people who arranged it;
-        an unscored game is absent because *an evening is not evidence*. Both
-        absences are the same absence a caller needs — everything returned here
-        may move a Level, and nothing else may.
+        an unscored or a disputed game is absent because *an evening is not
+        evidence*. Both absences are the same absence a caller needs —
+        everything returned here may move a Level, and nothing else may.
+        """
+        ...
+
+    async def confirmed_counted_result(
+        self, game_id: UUID, *, now: Instant
+    ) -> ConfirmedGame | None:
+        """**One** game, if it is a counted result confirmed by this instant —
+        ``None`` otherwise, for the same absences as above (#654).
+
+        **What an agreement is settled for rating through.** *That's right*
+        settles a result at once (``docs/adr/0195`` §5), and the outbox that
+        delivers it asks about that game alone, as it stood at the tap, rather
+        than walking every game the platform has. A game that does not exist
+        is absent.
         """
         ...
 

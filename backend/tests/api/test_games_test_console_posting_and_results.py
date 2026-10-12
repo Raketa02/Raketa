@@ -376,8 +376,12 @@ async def test_an_agreement_from_across_the_net_alike(
     agreed = await accepts(client, via, game["across"][0], game["game"])
 
     assert agreed.status_code == 200, agreed.text
-    assert agreed.json()["acceptance"]["agreed_by"] == str(game["across"][0]["id"])
-    assert (await game_of(client, world.marta, game["game"]))["acceptance"] is not None
+    assert agreed.json()["standing"] == "CONFIRMED", "*That's right* settles at once"
+    read = await game_of(client, world.marta, game["game"])
+    assert (read["standing"], read["score"]["sets"]) == (
+        "CONFIRMED",
+        game["her_side_wins"],
+    )
 
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
@@ -560,11 +564,85 @@ async def test_the_pane_counts_down_to_the_score_confirming(
         at(stated_at + timedelta(hours=24)),
         "rating-catch-up",
     )
-    # …and, agreed with, once the agreement's grace has run.
+    # …and, agreed with, at once: nothing is left to count down to (#654).
     await accepts(client, CONSOLE, game["across"][0], game["game"])
     pane = pane_of(await board_of(client, world.group), game["booking"])
+    assert pane["result"]["standing"] == "CONFIRMED"
     assert pane["result"]["agreed_by"]["player_id"] == str(game["across"][0]["id"])
-    assert moments_of(pane)["RESULT_CONFIRMS"][0] == at(stated_at + timedelta(hours=6))
+    assert "RESULT_CONFIRMS" not in moments_of(pane)
+
+
+async def test_the_pane_counts_down_to_two_scores_settling_only_when_they_agree_who_won(
+    client, session_factory, clock, world
+):
+    """Two scores settle on the later one's day: with the closer, naming the
+    same winner — a moment the catch-up acts at — and disputed, naming
+    different winners, which moves no Level and so is no moment of its."""
+
+    game = await a_booked_game(client, session_factory, clock, world)
+    clock.move(AFTER_SATURDAY_S_GAME)
+    await states(client, CONSOLE, world.marta, game["game"], game["her_side_wins"])
+    clock.move(timedelta(minutes=30))
+    countered_at = clock.now()
+    theirs = B_WINS if game["her_side_wins"] == A_WINS else A_WINS
+    await states(client, CONSOLE, game["across"][0], game["game"], theirs)
+
+    pane = pane_of(await board_of(client, world.group), game["booking"])
+
+    assert pane["result"]["standing"] == "AWAITING_ANSWER"
+    assert len(pane["result"]["scores"]) == 2
+    assert "RESULT_CONFIRMS" not in moments_of(pane)
+    clock.move(countered_at + timedelta(hours=24) - clock.now())
+    pane = pane_of(await board_of(client, world.group), game["booking"])
+    assert pane["result"]["standing"] == "DISPUTED"
+
+
+async def test_the_pane_counts_down_to_two_scores_naming_one_winner_settling(
+    client, session_factory, clock, world
+):
+    """Two scores naming the same winner settle with the closer on the later
+    one's day — a moment the catch-up acts at."""
+
+    game = await a_booked_game(client, session_factory, clock, world)
+    clock.move(AFTER_SATURDAY_S_GAME)
+    await states(client, CONSOLE, world.marta, game["game"], game["her_side_wins"])
+    clock.move(timedelta(minutes=30))
+    countered_at = clock.now()
+    closer = (
+        [{"a": 7, "b": 5}, {"a": 6, "b": 4}]
+        if game["her_side_wins"] == A_WINS
+        else [{"a": 5, "b": 7}, {"a": 4, "b": 6}]
+    )
+    await states(client, CONSOLE, game["across"][0], game["game"], closer)
+
+    pane = pane_of(await board_of(client, world.group), game["booking"])
+
+    assert moments_of(pane)["RESULT_CONFIRMS"] == (
+        at(countered_at + timedelta(hours=24)),
+        "rating-catch-up",
+    )
+    clock.move(timedelta(hours=24))
+    assert (await runs(client, "rating-catch-up"))["done"] == 1
+    assert (await game_of(client, world.marta, game["game"]))["score"]["sets"] == closer
+
+
+async def test_run_it_now_folds_an_agreed_score_at_once(
+    client, session_factory, clock, world
+):
+    """The rating press settles what has become final: an agreement is final
+    the moment it is made, so the press folds it straight away — the outbox,
+    not run here, would have done the same."""
+
+    game = await a_booked_game(client, session_factory, clock, world)
+    clock.move(AFTER_SATURDAY_S_GAME)
+    await states(client, CONSOLE, world.marta, game["game"], game["her_side_wins"])
+    assert (await runs(client, "rating-catch-up"))["done"] == 0
+
+    await accepts(client, CONSOLE, game["across"][0], game["game"])
+
+    assert (await runs(client, "rating-catch-up"))["done"] == 1
+    assert (await record_of(client, world.marta))["counted_games"] == 1
+    assert (await runs(client, "rating-catch-up"))["done"] == 0
 
 
 async def test_run_it_now_leaves_a_score_before_its_day_and_folds_it_after(

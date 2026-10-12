@@ -610,23 +610,26 @@ class Settings(BaseSettings):
     # --- the rating catch-up (docs/adr/0139)
     #
     # **The second job that appends a domain event, and the first whose absence a
-    # player would notice.** A confirmation is a clock passing and nothing
-    # announces one, so this is what turns a result into a Level that moved. Turn
-    # it off and every rating on the platform quietly stops being tested — which
-    # is why it is the one loop here whose default is on for a reason about the
-    # product rather than about a record.
+    # player would notice.** A result settled by a window closing — silence, or
+    # two scores naming the same winner — is a clock passing and nothing
+    # announces one, so this is what turns it into a Level that moved. Turn it
+    # off and those ratings quietly stop being tested — which is why it is the
+    # one loop here whose default is on for a reason about the product rather
+    # than about a record. (*That's right* settles at once and moves its Levels
+    # from the outbox, #654.)
     #
-    # Hourly, and the number is chosen against the clock the result settled on: a
-    # move is stamped with the moment the result became final rather than with
-    # the moment the run noticed, so the interval is how late the *stream* is and
-    # never what it says. Finer would buy a fresher card and pay for it in a walk
-    # of every game the platform has recorded.
+    # Every minute, because **Levels move within a minute of a result settling**
+    # (docs/adr/0195 §5): the hourly cadence is retired. A move is stamped with
+    # the moment the result became final rather than with the moment the run
+    # noticed, so the interval is how late the *stream* is and never what it
+    # says — and the price of a fresh Level is a walk of every game the platform
+    # has recorded, sixty times an hour.
     #
     # The **rule** it applies is not here and could not be: an environment that
     # could pick a K-factor is an environment that decides how a marketplace
     # rates people.
     RATING_CATCH_UP_ENABLED: bool = True
-    RATING_CATCH_UP_INTERVAL_SECONDS: float = 60 * 60
+    RATING_CATCH_UP_INTERVAL_SECONDS: float = 60
 
     # --- the conversation sweep (docs/adr/0153, docs/adr/0142)
     #

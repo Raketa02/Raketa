@@ -16,8 +16,9 @@ nothing sends a date, because the booked hour is already on the game.
 **A court with a seat open refuses a result** (``docs/adr/0162`` §3): a side the
 engine cannot price, and a seat with no outcome to give anyone.
 
-**Silence confirms, and no route is called confirm.** The proposal's window is
-the whole mechanism, and the response says when it closes.
+**Silence settles, and no route is called confirm.** The proposal's window is
+the whole mechanism, and the response says when it closes. An agreement settles
+at once (#654).
 
 **Disagreement carries a score.** There is no rejection endpoint and no body
 without one.
@@ -249,14 +250,15 @@ async def test_stating_a_result_records_that_the_game_happened(
     assert body["score"] is None, "a score nobody has answered is not the result"
     (proposal,) = body["proposals"]
     assert proposal["proposed_by"] == str(searcher["id"])
-    assert proposal["answer_by"] > proposal["settles_at"] > proposal["proposed_at"]
-    assert body["acceptance"] is None, "nobody has agreed with it yet"
+    assert proposal["answer_by"] > proposal["proposed_at"]
+    assert "settles_at" not in proposal, "an agreement settles at once (#654)"
 
 
 async def test_the_other_side_agrees_and_the_game_has_a_winner(
     client, session_factory, searcher
 ):
-    """One opponent suffices, and the outcome is rendered **for the reader**.
+    """One opponent suffices, it settles the result **at once** (#654), and the
+    outcome is rendered **for the reader**.
 
     The score is absolute and the outcome is not: the same game is a win on one
     list and a loss on another, which is why neither side stores the other's.
@@ -277,9 +279,12 @@ async def test_the_other_side_agrees_and_the_game_has_a_winner(
     )
 
     assert agreed.status_code == 200, agreed.text
-    assert agreed.json()["standing"] == "AWAITING_ANSWER", (
-        "an acceptance settles nothing until its grace has passed"
-    )
+    body = agreed.json()
+    assert (body["standing"], body["outcome"]) == ("CONFIRMED", "LOSS")
+    assert body["score"]["sets"] == [{"a": 6, "b": 4}, {"a": 6, "b": 3}]
+    assert "acceptance" not in body, "an agreement is never pending"
+    (mine,) = await _games(client, searcher["token"])
+    assert (mine["standing"], mine["outcome"]) == ("CONFIRMED", "WIN")
 
 
 async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
@@ -331,10 +336,9 @@ async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it
     """**The exit from an argument, readable by both people in it.**
 
     ``accept_result`` passes with both sides in ``proposals`` — either side
-    accepting the other's is the only end a two-proposal disagreement has that is
-    not the game going unscored. A response that carried neither score offered
-    that act to nobody: agreeing with a score you cannot be shown is worse than
-    not being asked.
+    accepting the other's ends the disagreement at once, with that score. A
+    response that carried neither score offered that act to nobody: agreeing
+    with a score you cannot be shown is worse than not being asked.
 
     The proposals travel **side A first and never in the order they arrived**, so
     the pair reads the same on both phones and on a second reading of the same
@@ -376,57 +380,11 @@ async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it
 
     assert agreed.status_code == 200, agreed.text
     body = agreed.json()
-    ours, theirs = body["proposals"]
-    acceptance = body["acceptance"]
-    assert acceptance["of_side"] == "B", (
-        "the score agreed with is the other side's, and the response names it"
+    assert (body["standing"], body["proposals"]) == ("CONFIRMED", [])
+    assert body["score"]["sets"] == [{"a": 4, "b": 6}, {"a": 3, "b": 6}], (
+        "the score agreed with is the other side's"
     )
-    # **Two scores, two graces**, and the one that counts is the one whose score
-    # was agreed with — a check the single-proposal case cannot make, because
-    # there the wrong answer and the right one are the same instant.
-    assert ours["settles_at"] != theirs["settles_at"]
-    assert acceptance["settles_at"] == theirs["settles_at"]
-
-
-async def test_a_pending_acceptance_says_who_agreed_and_when_it_settles(
-    client, session_factory, searcher
-):
-    """**The grace, visible to the side it is being run against.**
-
-    It settles nothing for six hours, and for those six hours the proposing side
-    was told silence would confirm their score — which had stopped being the live
-    question — and was offered a correction ``state_result`` refuses. Both are
-    read off this field, and *when* they answered is on it because a second ago
-    and five hours ago are not the same news.
-    """
-
-    people, _ = await _an_arranged_game(client, session_factory, searcher)
-    (game,) = await _games(client, searcher["token"])
-    stated = await client.post(
-        f"/api/v1/games/{game['game_id']}/result",
-        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=players.auth(searcher["token"]),
-    )
-    assert stated.status_code == 200, stated.text
-    opponent = _an_opponent_of(game, searcher, people)
-    await client.post(
-        f"/api/v1/games/{game['game_id']}/result/acceptance",
-        headers=players.auth(opponent["token"]),
-    )
-
-    (mine,) = await _games(client, searcher["token"])
-
-    assert mine["standing"] == "AWAITING_ANSWER", (
-        "an acceptance settles nothing until its grace has passed"
-    )
-    acceptance = mine["acceptance"]
-    assert acceptance["agreed_by"] == str(opponent["id"])
-    assert acceptance["of_side"] == _side_of(game, str(searcher["id"]))
-    assert acceptance["agreed_at"] <= acceptance["settles_at"]
-    (proposal,) = mine["proposals"]
-    assert acceptance["settles_at"] == proposal["settles_at"], (
-        "the grace is measured from the score, not from the tap"
-    )
+    assert body["outcome"] == "LOSS"
 
 
 async def test_a_level_score_is_refused_because_a_result_names_a_winner(
@@ -464,13 +422,15 @@ async def _leaves(session_factory, booking_id, player_id) -> None:
         await session.commit()
 
 
-async def test_a_court_with_a_seat_open_cannot_record_a_result(
+async def test_a_court_with_a_seat_open_takes_no_score_before_its_hour(
     client, session_factory, searcher
 ):
-    """``docs/adr/0162`` §3 — a score on a court with a seat open is a score
-    with a side nobody can price. Booked well ahead here, so the hour has not
-    come and the game has not *started short*; it is still awaiting its entry,
-    with the leaver's seat drawn open."""
+    """Booked well ahead, so the hour has not come and the game has not
+    *started short*; it is still awaiting its entry, with the leaver's seat
+    drawn open — and **no score is taken before the hour** (#654), seat open or
+    not. Once the hour comes with the seat still open, the game started short
+    (``docs/adr/0162`` §3's refusal of a score on a court nobody can price is
+    the aggregate's, for a game with no hour)."""
 
     people = await _a_city(client, session_factory, searcher["mu"])
     booked = await players.a_booked_game(
@@ -487,7 +447,7 @@ async def test_a_court_with_a_seat_open_cannot_record_a_result(
     )
 
     assert stated.status_code == 409, stated.text
-    assert stated.json()["code"] == "the_court_has_an_open_seat"
+    assert stated.json()["code"] == "the_game_has_not_started"
     (game,) = await _games(client, searcher["token"])
     assert game["standing"] == "AWAITING_ENTRY"
     assert [seat for seat in game["seats"] if seat["player_id"] is None]

@@ -228,8 +228,9 @@ class Moment(StrEnum):
     NEW_BOOKINGS_SUMMARY = "NEW_BOOKINGS_SUMMARY"
     #: The close of the club day it is played on: the club is paid for it.
     CLUB_PAYOUT = "CLUB_PAYOUT"
-    #: A score stated on a counted game becomes final — its day of silence, or
-    #: an agreement's grace — and the rating catch-up moves the Levels.
+    #: A score stated on a counted game becomes final on its day of silence —
+    #: two naming the same winner, on the later one's — and the rating catch-up
+    #: moves the Levels. An agreement settles at once and waits on no moment.
     RESULT_CONFIRMS = "RESULT_CONFIRMS"
 
 
@@ -282,9 +283,10 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
         ),
         Moment.RESULT_CONFIRMS: MomentRule(
             RATING_CATCH_UP_JOB,
-            "Unless the other side counters first, the score is final — by "
-            "silence, or the agreement's grace — and the rating catch-up moves "
-            "the Levels.",
+            "Unless somebody answers first, the score is final by silence — with "
+            "two scores naming the same winner, the closer one — and the rating "
+            "catch-up moves the Levels. *That's right* settles it at once, and "
+            "the outbox moves the Levels then.",
         ),
     }
 )
@@ -575,7 +577,10 @@ class ResultPane(BaseModel):
         description="Every score on the table, side A's first — two disagree."
     )
     agreed_by: PersonRef | None = Field(
-        description="Who agreed with the other side's score, while its grace runs."
+        description=(
+            "Who said *That's right* to the other side's score — which settled "
+            "it at once (#654). `null` on a result silence settled."
+        )
     )
     confirmed: str | None = Field(description="The agreed score, once final.")
     no_shows: list[NoShowPane]
@@ -1351,11 +1356,14 @@ class _Folded:
             and played.kind is GameKind.COUNTED
             and played.standing_at(self._now) is GameStanding.AWAITING_ANSWER
         ):
-            # The Game's own answer to *when does this become final*: an
-            # agreement's grace, or the lone score's day — none while two
-            # scores disagree, which settles nothing.
+            # The Game's own answer to *when does this become final*: the lone
+            # score's day, or the later score's when two name the same winner —
+            # none when two name different winners, which ends disputed and
+            # moves no Level (#654).
             confirms = settled_at(
-                proposals=played.proposals, acceptance=played.acceptance
+                kind=played.kind,
+                proposals=played.proposals,
+                acceptance=played.acceptance,
             )
             if confirms is not None:
                 ahead.append((Moment.RESULT_CONFIRMS, confirms))
@@ -1404,13 +1412,11 @@ class _Folded:
     def _result(self, played: Game) -> ResultPane:
         standing = played.standing_at(self._now)
         # The argument is on the table only while it is one, as the player's
-        # own read of the game has it (``GameSchema.of``) — and an agreement is
-        # one only with the score it agreed with, which the Game answers with
-        # it, ``None`` together.
+        # own read of the game has it (``GameSchema.of``). An agreement is never
+        # on it: *That's right* settles the game at once (#654), so who said it
+        # is read off a confirmed game, beside the score it agreed with.
         arguing = standing is GameStanding.AWAITING_ANSWER
-        agreement = played.standing_acceptance() if arguing else None
-        if played.accepted_proposal() is None:
-            agreement = None
+        agreement = played.settled_by_agreement_at(self._now)
         confirmed = played.confirmed_score_at(self._now)
         return ResultPane(
             game_id=played.id,

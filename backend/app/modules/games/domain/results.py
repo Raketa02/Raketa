@@ -139,6 +139,15 @@ class Score:
         return sum(1 for one in self.sets if one.winner is side)
 
     @property
+    def margin(self) -> int:
+        """How many more games the winner took than the loser, **across every
+        set** — what makes one of two scores naming the same winner the
+        *closer* (#654; ``docs/adr/0195`` §5). Read off the games and never the
+        sets: 6–4 3–6 6–4 is closer than 6–0 6–0, though it went to three."""
+
+        return abs(sum(one.a for one in self.sets) - sum(one.b for one in self.sets))
+
+    @property
     def winner(self) -> GameSide:
         """The side that won. **Always answerable**, by the invariant above."""
 

@@ -92,6 +92,7 @@ from app.modules.player_profile.application.event_subscriptions import (
 from app.modules.rating.application.event_subscriptions import (
     register_rating_events,
     subscribe_rating_handlers,
+    subscribe_the_rating_settler,
 )
 from app.modules.users.application.event_subscriptions import (
     register_user_events,
@@ -215,6 +216,7 @@ class EventRuntime:
             build_push_the_notice,
             build_resume_paused_yeses,
             build_send_club_payout,
+            build_settle_ratings_on_results,
             build_settle_seat_charges,
             build_tell_the_players,
             build_tell_the_room,
@@ -281,6 +283,12 @@ class EventRuntime:
             build_resume_paused_yeses(
                 session, provider=payments, settings=get_settings(), runtime=self
             ),
+        )
+        # *That's right* settles a result at once, so its delivery moves the
+        # Levels of that game in its own transaction (#654).
+        subscribe_the_rating_settler(
+            dispatcher,
+            build_settle_ratings_on_results(session, runtime=self, clock=clock),
         )
         # What players are told about a game and its money, given in the
         # delivery's own transaction — and a notice given, pushed to their

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
-from app.modules.rating.application.handlers import LogRatingEvent
+from app.modules.games.domain.events import ResultAccepted
+from app.modules.rating.application.handlers import (
+    LogRatingEvent,
+    SettleRatingsOnAnAgreement,
+)
+from app.modules.rating.application.settle_results import SettleRatingsOnResults
 from app.modules.rating.domain.events import (
     AnswerRevised,
     AnswerSubmitted,
@@ -48,3 +53,14 @@ def subscribe_rating_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(
         RatingMovedOnResult, LogRatingEvent("rating.moved_on_result")
     )
+
+
+def subscribe_the_rating_settler(
+    dispatcher: EventDispatcher, settle: SettleRatingsOnResults
+) -> None:
+    """The subscriber that moves the Levels of a game *That's right* settled
+    (#654; ``docs/adr/0195`` §5). It **writes** — a rating stream per seat — so
+    it is added per delivery run over that run's session, as the room teller
+    is; the catch-up job still walks every result a window closing settled."""
+
+    dispatcher.subscribe(ResultAccepted, SettleRatingsOnAnAgreement(settle))

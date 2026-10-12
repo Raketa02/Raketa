@@ -74,10 +74,10 @@ def hours_before(now: Instant, hours: int) -> FixedClock:
 
     :func:`days_before` is the unit the population is written in — a profile's age
     is compared against a window measured in days, and nothing there needs an
-    hour. The loop's own states do: a result is confirmed six hours after the
-    score was proposed and an ended game keeps its card for twenty-four, so *this
-    evening* and *yesterday evening* are two different cards and a day apart is
-    too coarse to name either.
+    hour. The loop's own states do: a score nobody answers is confirmed a day
+    after it was put up and an ended game keeps its card for twenty-four hours,
+    so *this evening* and *yesterday evening* are two different cards and a day
+    apart is too coarse to name either.
 
     The same function of the run's own *now* rather than of a calendar instant,
     and for :func:`days_before`'s reason.

@@ -45,7 +45,7 @@ from sqlalchemy import select
 
 from app.api.dependencies import get_clock
 from app.kernel import Instant, instant
-from app.modules.games.domain.windows import ACCEPTANCE_GRACE, PROPOSAL_WINDOW
+from app.modules.games.domain.windows import PROPOSAL_WINDOW
 from app.modules.sportsmanship.domain.window import (
     CARD_OPENS_AFTER,
     CARD_STAYS_OPEN_FOR,
@@ -683,9 +683,9 @@ async def test_a_game_still_awaiting_an_answer_is_not_asked_about(
 async def test_a_game_settled_the_same_evening_is_not_asked_about_until_tomorrow(
     client, session_factory, searcher, clock
 ):
-    """**Settled is not enough.** An explicit agreement settles a result in six
-    hours, and this is the one path that reaches *over, but not yet a day* — so
-    it is the case that tells the two conditions apart."""
+    """**Settled is not enough.** An explicit agreement settles a result at
+    once (#654), and this is the one path that reaches *over, but not yet a
+    day* — so it is the case that tells the two conditions apart."""
 
     people = await _a_city(client, session_factory, searcher["mu"])
     game_id = await _a_played_game(client, session_factory, clock, searcher, people)
@@ -696,7 +696,7 @@ async def test_a_game_settled_the_same_evening_is_not_asked_about_until_tomorrow
         ),
     )
     assert agreed.status_code == 200, agreed.text
-    clock.move(ACCEPTANCE_GRACE + timedelta(minutes=1))
+    clock.move(timedelta(minutes=1))
     game = await _the_game(client, searcher["token"], game_id)
     assert game["standing"] == "CONFIRMED", "the agreement should have settled it"
 

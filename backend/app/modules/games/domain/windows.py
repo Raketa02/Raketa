@@ -35,28 +35,17 @@ PLAN_HORIZON: Final = timedelta(days=7)
 #: because gluing the two would hide both arguments.
 ENTRY_GRACE: Final = timedelta(hours=24)
 
-#: How long a score stands before silence confirms it. ADR-0048's day, kept for
-#: ADR-0048's reason: the prompt reaches nobody who has not opened the app, and
-#: shortening it without a notification channel reintroduces the discarded-game
-#: problem the flow was designed to remove.
+#: How long a score stands before silence settles it — **the answer window**.
+#: ADR-0048's day, kept for ADR-0048's reason: the prompt reaches nobody who has
+#: not opened the app, and shortening it reintroduces the discarded-game problem
+#: the flow was designed to remove.
 #:
 #: **A day is short enough because of what the default does**: silence on a
-#: proposed score **confirms** it, and a window whose default is benign can be
-#: short.
+#: proposed score **settles** it, and a window whose default is benign can be
+#: short. An agreement settles at once and waits on nothing (#654;
+#: ``docs/adr/0195`` §5): the six-hour grace an acceptance once ran out is
+#: retired, and with it the counter that could still beat one.
 PROPOSAL_WINDOW: Final = timedelta(hours=24)
-
-#: How long an acceptance waits before it settles anything. **Six hours, not
-#: thirty minutes.** ADR-0048 chose half an hour when the prompt appeared on
-#: court inside a thirty-minute result window and everybody was still at the
-#: club; entry now happens at home, possibly days later, and a grace that binds
-#: only when both opponents are on their phones at once does not do the job it
-#: exists for — *somebody is always slower to their phone*.
-#:
-#: An **admitted hypothesis**, with its falsifiers named: counters arriving
-#: between this grace and the proposal's close are the objections it exists to
-#: protect, and the share of results settled by an explicit acceptance rather
-#: than by silence says whether accepting is still worth a tap.
-ACCEPTANCE_GRACE: Final = timedelta(hours=6)
 
 #: How long a **booked** game lasts: one hour, every sport (the mechanics §2).
 #: A booking opens a game with its hour on it (#541), and that game's entry
@@ -124,23 +113,12 @@ def scores_still_waiting_since(now: Instant) -> Instant:
     corrected or countered — and still wait for an answer at ``now`` (#613).
 
     A lone score waits a day from when it was last put there, two scores a day
-    from the later, and an agreement settles six hours after the score it
-    agrees with — so **every score still waiting was put on the table inside
-    the last day**, however long ago its game was played.
+    from the later, and an agreement settles at once — so **every score still
+    waiting was put on the table inside the last day**, however long ago its
+    game was played.
     """
 
-    return instant(now - max(PROPOSAL_WINDOW, ACCEPTANCE_GRACE))
-
-
-def acceptance_settles_at(proposed_at: Instant) -> Instant:
-    """When an acceptance of this proposal becomes final.
-
-    Measured from the **proposal**, not from the acceptance: the person the grace
-    protects is the opponent who has not read the score yet, and their clock
-    started when the score was put in front of them.
-    """
-
-    return instant(proposed_at + ACCEPTANCE_GRACE)
+    return instant(now - PROPOSAL_WINDOW)
 
 
 def dispute_closes_at(reported_at: Instant) -> Instant:

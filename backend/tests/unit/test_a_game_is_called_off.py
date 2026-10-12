@@ -24,6 +24,7 @@ from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.commands import CallOffGameCommand
 from app.modules.games.domain.errors import (
     NotAGameToCallOff,
+    TheCourtHasAnOpenSeat,
     TheGameIsNotOpenToSeating,
     TheGameWasCalledOff,
     TheResultIsSettled,
@@ -73,6 +74,23 @@ def _a_reopened_game() -> Game:
     game = _a_game()
     game.vacate(CY, occurred_at=at(1))
     return game
+
+
+def test_a_court_with_a_seat_open_takes_no_score():
+    """``docs/adr/0162`` §3: a score on a court with a seat open is a score
+    with a side nobody can price. A booked game meets its hour first — before
+    it no score is taken, and at it the game started short (#654, #544) — so
+    this is the refusal of a game with no hour."""
+
+    game = _a_reopened_game()
+
+    with pytest.raises(TheCourtHasAnOpenSeat):
+        game.state_result(
+            by=ANA,
+            score=Score.of((SetScore(a=6, b=4), SetScore(a=6, b=3))),
+            occurred_at=at(2),
+        )
+    assert game.standing_at(at(2)) is GameStanding.AWAITING_ENTRY
 
 
 #: A booked game's hour, three days after it was booked.

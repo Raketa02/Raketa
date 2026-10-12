@@ -82,9 +82,11 @@ PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
 PHOTO_REVIEW_BACKFILL_JOB = "photo-review-backfill"
 
 #: The rating catch-up. The **first** job that writes a domain event, and the
-#: only one on this list whose output a player would miss: a confirmation is a
-#: clock passing and announces nothing (``docs/adr/0137``), so without this a
-#: result never reaches a Level. It holds no cursor — the rating streams are the
+#: only one on this list whose output a player would miss: a result a window
+#: closing settled is a clock passing and announces nothing (``docs/adr/0137``),
+#: so without this it never reaches a Level — every minute, so Levels move within
+#: one of it (``docs/adr/0195`` §5). An agreement settles at once and moves its
+#: Levels from the outbox (#654). It holds no cursor — the rating streams are the
 #: cursor (``docs/adr/0139``) — so *N processes, N runs* costs a repeated read
 #: and a counted collision, and a run that dies half way is re-derived in full by
 #: the next tick.
@@ -723,9 +725,11 @@ def build_rating_catch_up_job(
 
     **The one loop here that correctness depends on.** Every other job buys a
     record, or a table the size of what is live; this one is the only path a
-    result has to a rating, because ``docs/adr/0137`` refused a
-    ``ResultConfirmed`` event and recorded that cost by name. A player whose game
-    confirmed on Tuesday keeps Monday's Level until this runs.
+    result settled by a window closing has to a rating, because
+    ``docs/adr/0137`` refused a ``ResultConfirmed`` event and recorded that cost
+    by name. A player whose game confirmed on Tuesday keeps Monday's Level until
+    this runs — within the minute (#654). An agreement's game is usually moved
+    already, from the outbox, and the walk steps over it.
 
     **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): every
     move records the game that caused it, so a rating that has already folded a

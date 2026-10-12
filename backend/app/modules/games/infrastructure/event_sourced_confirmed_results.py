@@ -18,6 +18,7 @@ believed.
 from __future__ import annotations
 
 from typing import final
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +27,7 @@ from app.kernel import Instant
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind
 from app.modules.games.domain.ports import ConfirmedGame
-from app.modules.games.infrastructure.game_streams import every_stream
+from app.modules.games.infrastructure.game_streams import every_stream, streams_of
 
 
 @final
@@ -54,14 +55,24 @@ class EventSourcedConfirmedResults:
         found.sort(key=lambda one: (one.confirmed_at, one.game_id))
         return tuple(found)
 
+    async def confirmed_counted_result(
+        self, game_id: UUID, *, now: Instant
+    ) -> ConfirmedGame | None:
+        streams = await streams_of(self._session, self._codec, (game_id,))
+        events = streams.get(game_id)
+        if not events:
+            return None
+        return _confirmed_counted(Game.from_history(events), now)
+
 
 def _confirmed_counted(game: Game, now: Instant) -> ConfirmedGame | None:
     """One game as a result, or ``None`` if it is not one that may move a Level.
 
     Three things are asked and each of them is a decision recorded elsewhere: a
     **friendly** was never evidence about anybody, by the choice of the people who
-    arranged it; an **unscored** game is an evening and not evidence; and a game
-    still inside its windows has not settled on anything to apply.
+    arranged it; an **unscored** or **disputed** game is an evening and not
+    evidence; and a game still inside its windows has not settled on anything to
+    apply.
     """
 
     if game.kind is not GameKind.COUNTED:

@@ -164,6 +164,9 @@ class ResultStage(StrEnum):
     SCORE_TO_ANSWER = "SCORE_TO_ANSWER"
     CONFIRMED = "CONFIRMED"
     UNSCORED = "UNSCORED"
+    #: Two scores named different winners and neither side gave way (#654):
+    #: no Level moves.
+    DISPUTED = "DISPUTED"
     NEVER_PLAYED = "NEVER_PLAYED"
     CALLED_OFF = "CALLED_OFF"
     #: Its hour came with a seat open: no result can be told (#544).
@@ -517,7 +520,7 @@ def status_of(
             return HomeStatus.CONFIRM_THE_RESULT
         case ResultStage.CONFIRMED:
             return HomeStatus.COUNTED
-        case ResultStage.UNSCORED:
+        case ResultStage.UNSCORED | ResultStage.DISPUTED:
             return HomeStatus.UNCOUNTED
         case ResultStage.NEVER_PLAYED:
             return HomeStatus.NEVER_PLAYED

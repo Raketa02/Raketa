@@ -662,27 +662,29 @@ async def test_a_never_played_games_room_ends_when_its_entry_window_closes(
     assert gone.json()["code"] == "conversation_not_found"
 
 
-async def test_a_room_whose_game_was_played_ends_a_grace_after_we_played(
+async def test_a_played_games_room_still_ends_when_its_entry_window_closes(
     client, session_factory, clock, four
 ):
-    """``docs/adr/0153`` §2 — forty-eight hours after somebody said *we played*,
-    and not a moment before, while that is the earlier anchor: here the hour is
-    days ahead, so entry closes after the grace runs out."""
+    """``docs/adr/0153`` §2 — the **earlier** of the two anchors. No score is
+    taken before the hour (#654), so *we played* plus its forty-eight hours
+    always falls after a booked game's entry window closes, a day after its
+    hour: a played game's room goes when the window does."""
 
-    room = await _a_booked_room(
-        client, session_factory, four, starts_at=clock.at + timedelta(days=4)
-    )
+    starts_at = clock.at + timedelta(days=4)
+    room = await _a_booked_room(client, session_factory, four, starts_at=starts_at)
     token = four["ana"]["token"]
     conversation_id = room["room"]["conversation_id"]
-    said_at = clock.at = _now()
+    closes_at = await _entry_closes_at(client, token)
+    said_at = clock.at = starts_at + timedelta(hours=1, minutes=5)
     await _state(client, room["game_id"], token)
     await players.deliver_the_outbox(session_factory)
+    assert said_at + CONVERSATION_GRACE > closes_at
 
-    clock.at = said_at + CONVERSATION_GRACE - timedelta(seconds=1)
+    clock.at = closes_at - timedelta(seconds=1)
     standing = await _room_read(client, conversation_id, token)
     assert standing.status_code == 200, standing.text
 
-    clock.at = said_at + CONVERSATION_GRACE
+    clock.at = closes_at
     assert await _rooms(client, token) == []
     gone = await _room_read(client, conversation_id, token)
     assert gone.status_code == 404, gone.text

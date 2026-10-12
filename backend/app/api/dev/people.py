@@ -412,7 +412,7 @@ async def state_result(
     summary="Agree with the score, as this person",
     description=(
         "`POST /api/v1/games/{id}/result/acceptance` as the acting account: the "
-        "other side's score agreed with — final once its grace has run."
+        "other side's score agreed with — final at once, and the game closed."
     ),
 )
 async def accept_result(

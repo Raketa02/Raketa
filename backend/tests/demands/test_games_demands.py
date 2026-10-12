@@ -60,7 +60,6 @@ from app.modules.games.domain.ports import (
 from app.modules.games.domain.results import Outcome, Score, SetScore
 from app.modules.games.domain.standing import GameStanding
 from app.modules.games.domain.windows import (
-    ACCEPTANCE_GRACE,
     ENTRY_GRACE,
     PLAN_HORIZON,
     PROPOSAL_WINDOW,
@@ -213,7 +212,8 @@ async def test_a_counted_game_with_a_confirmed_result_was_played_and_has_an_outc
 async def test_a_counted_game_nobody_agreed_is_an_evening_and_never_evidence(
     implementation, session
 ):
-    """Two scores, nobody accepted either, both days gone.
+    """Two scores naming different winners, nobody accepted either, both days
+    gone: **disputed** (#654).
 
     ``docs/adr/0049``: it counts toward how much these people have played and it
     **moves nobody's Level**. So they turned up for it and it is not in their
@@ -242,7 +242,7 @@ async def test_a_counted_game_nobody_agreed_is_an_evening_and_never_evidence(
     )
     await _saved(session, game)
 
-    assert game.standing_at(now) is GameStanding.UNSCORED
+    assert game.standing_at(now) is GameStanding.DISPUTED
 
     attendance = await port.attendance_for([one, other], now=now)
 
@@ -314,13 +314,10 @@ async def test_silence_confirms_a_lone_score_when_its_window_closes():
     assert game.outcome_for(winner, now=a_day_later) is Outcome.WIN
 
 
-async def test_an_acceptance_settles_nothing_until_its_grace_has_passed():
-    """The opponent still in the shower.
-
-    One opponent's yes is enough, and it does not close the door on the other
-    one: inside the grace a disagreement still wins, and the grace runs from the
-    **score** rather than from the tap.
-    """
+async def test_an_acceptance_settles_at_once_and_closes_the_game():
+    """*That's right* from one opponent is enough, and it closes the door (#654;
+    ``docs/adr/0195`` §5): the result is final at the tap, and a different
+    score from the other opponent afterwards is refused."""
 
     a_one, a_two = new_uuid(), new_uuid()
     b_one, b_two = new_uuid(), new_uuid()
@@ -333,6 +330,7 @@ async def test_an_acceptance_settles_nothing_until_its_grace_has_passed():
         )
     )
     entered = _ago(days=1)
+    agreed = instant(entered + timedelta(minutes=2))
     game = _planned(line_up=line_up, at=_ago(days=2), sport=Sport.PADEL)
     game.state_result(
         by=a_one,
@@ -341,21 +339,18 @@ async def test_an_acceptance_settles_nothing_until_its_grace_has_passed():
         ),
         occurred_at=entered,
     )
-    game.accept_result(by=b_one, occurred_at=instant(entered + timedelta(minutes=2)))
+    game.accept_result(by=b_one, occurred_at=agreed)
 
-    inside = instant(entered + timedelta(minutes=3))
-    assert game.standing_at(inside) is GameStanding.AWAITING_ANSWER
-
-    game.state_result(
-        by=b_two,
-        score=_score(
-            (4, 6),
-        ),
-        occurred_at=inside,
-    )
-    assert game.standing_at(instant(entered + ACCEPTANCE_GRACE)) is (
-        GameStanding.AWAITING_ANSWER
-    )
+    assert game.standing_at(agreed) is GameStanding.CONFIRMED
+    assert game.confirmed_at(agreed) == agreed
+    with pytest.raises(TheResultIsSettled):
+        game.state_result(
+            by=b_two,
+            score=_score(
+                (4, 6),
+            ),
+            occurred_at=instant(entered + timedelta(minutes=3)),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -919,7 +914,7 @@ async def test_the_side_that_entered_the_score_was_asked_nothing(
     )
     await _saved(session, game)
 
-    assert game.standing_at(now) is GameStanding.UNSCORED
+    assert game.standing_at(now) is GameStanding.DISPUTED
 
     answering = await port.result_answering_for(
         [opener, other], since=_forever_ago(), now=now
@@ -1020,14 +1015,10 @@ async def test_an_opportunity_older_than_the_callers_window_is_in_neither_half(
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_friendly_puts_a_score_in_front_of_somebody_like_any_other_game(
-    implementation, session
-):
-    """A score is a question whether or not the evening was evidence.
-
-    The choice that makes a game a friendly is a choice about ratings; it says
-    nothing about whether the people on that court answered each other.
-    """
+async def test_a_friendly_puts_its_score_in_front_of_nobody(implementation, session):
+    """**For fun asks nothing** (#654; ``docs/adr/0195`` §5): its score is the
+    result the moment it is put up, so nobody was asked and nobody can have
+    stayed silent about it."""
 
     port = implementation.build(session)
     now = instant(datetime.now(timezone.utc))
@@ -1045,9 +1036,11 @@ async def test_a_friendly_puts_a_score_in_front_of_somebody_like_any_other_game(
     )
     await _saved(session, game)
 
-    answering = await port.result_answering_for([other], since=_forever_ago(), now=now)
+    answering = await port.result_answering_for(
+        [opener, other], since=_forever_ago(), now=now
+    )
 
-    assert (answering[other].answered, answering[other].ignored) == (0, 1)
+    assert answering == {}
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
@@ -1189,7 +1182,9 @@ async def test_a_game_says_whether_it_was_counted_and_whether_it_was_confirmed(
     assert by_id[counted.id].kind is GameKind.COUNTED
     assert by_id[counted.id].standing_at(now) is GameStanding.CONFIRMED
     assert by_id[friendly.id].kind is GameKind.FRIENDLY
-    assert by_id[friendly.id].standing_at(now) is GameStanding.AWAITING_ANSWER
+    assert by_id[friendly.id].standing_at(now) is GameStanding.CONFIRMED, (
+        "a For fun score settles at once (#654)"
+    )
 
 
 @pytest.mark.parametrize("implementation", registered(GameDirectory))
@@ -1272,10 +1267,11 @@ async def test_a_four_publishes_two_people_on_each_side_in_the_line_ups_order(
 
 
 @pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
-async def test_an_unscored_game_is_an_evening_and_never_reaches_the_ledger(
+async def test_a_disputed_game_is_an_evening_and_never_reaches_the_ledger(
     implementation, session
 ):
-    """Two scores, nobody accepted either, both windows gone. **It moves nobody.**"""
+    """Two scores naming different winners, nobody accepted either, both
+    windows gone: **disputed**, and it moves nobody (#654)."""
 
     port = implementation.build(session)
     now = instant(datetime.now(timezone.utc))
@@ -1298,8 +1294,9 @@ async def test_an_unscored_game_is_an_evening_and_never_reaches_the_ledger(
     )
     await _saved(session, game)
 
-    assert game.standing_at(now) is GameStanding.UNSCORED
+    assert game.standing_at(now) is GameStanding.DISPUTED
     assert await port.confirmed_counted_results(now=now) == ()
+    assert await port.confirmed_counted_result(game.id, now=now) is None
 
 
 @pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
@@ -1391,6 +1388,57 @@ async def test_results_are_published_in_the_order_they_became_final(
 
     assert [one.game_id for one in published] == [earlier.id, later.id]
     assert published[0].confirmed_at < published[1].confirmed_at
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_one_game_agreed_with_is_published_alone_from_the_tap(
+    implementation, session
+):
+    """*That's right* settles a result at once (#654), and its delivery asks
+    about that one game as it stood at the tap — never another game, and
+    nothing before the tap."""
+
+    port = implementation.build(session)
+    winner, loser = new_uuid(), new_uuid()
+    agreed_at = _ago(hours=1)
+
+    game = _planned(line_up=_singles(winner, loser), at=_ago(days=1))
+    game.state_result(
+        by=winner, score=_score((6, 4), (6, 3)), occurred_at=_ago(hours=2)
+    )
+    game.accept_result(by=loser, occurred_at=agreed_at)
+    await _saved(session, game)
+    other = _planned(line_up=_singles(winner, loser), at=_ago(days=3))
+    other.state_result(by=loser, score=_score((6, 1)), occurred_at=_ago(days=2))
+    await _saved(session, other)
+
+    published = await port.confirmed_counted_result(game.id, now=agreed_at)
+
+    assert published is not None
+    assert (published.game_id, published.winners, published.losers) == (
+        game.id,
+        (winner,),
+        (loser,),
+    )
+    assert published.confirmed_at == agreed_at
+    before = instant(agreed_at - timedelta(seconds=1))
+    assert await port.confirmed_counted_result(game.id, now=before) is None
+    assert await port.confirmed_counted_result(new_uuid(), now=agreed_at) is None
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_one_friendly_is_never_published_alone_either(implementation, session):
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    winner, loser = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_singles(winner, loser), at=_ago(days=3), kind=GameKind.FRIENDLY
+    )
+    game.state_result(by=winner, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    assert await port.confirmed_counted_result(game.id, now=now) is None
 
 
 @pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))

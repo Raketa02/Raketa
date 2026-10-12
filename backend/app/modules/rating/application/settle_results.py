@@ -22,6 +22,16 @@ a move. Nothing here holds a cursor, so there is no second record of progress to
 go stale, and re-deriving the whole walk from the clock is the recovery path
 rather than an incident.
 
+**And one game, from the outbox** (#654; ``docs/adr/0195`` §5). *That's right*
+settles a result at once, so the delivery of that agreement settles its game for
+rating — that game alone, as it stood at the tap, in the delivery's own
+transaction — and Levels move within a minute rather than at the next run. The
+catch-up still walks every result a window closing settled, now every minute; a
+game the delivery already moved is one its walk steps over. The cost is the
+order: an agreement settled from the outbox may be applied before a result whose
+window closed a moment earlier and that the next run picks up — at most a
+minute's disorder, accepted for a Level that moves when the result does.
+
 **A four moves four ratings against one snapshot.** Every player's move is priced
 against the Levels as they stood *before* the game, not against a partner who has
 already been updated inside the same loop — otherwise whoever the iteration reached
@@ -43,7 +53,7 @@ from app.engines.racketskill.update_v1 import (
     one_side,
     rating_after,
 )
-from app.kernel import Clock, Sport, invariant
+from app.kernel import Clock, Instant, Sport, invariant
 from app.modules.games.domain.ports import ConfirmedGame, ConfirmedResultLedger
 from app.modules.rating.domain.ports import SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
@@ -109,7 +119,9 @@ class SettleRatingsOnResults:
 
         for game in await self._results.confirmed_counted_results(now=now):
             try:
-                outcome = await self._settle(game)
+                outcome = await self._move_levels(game)
+                if outcome.ratings:
+                    await self._uow.commit()
             except EventStreamVersionConflict:
                 # Somebody else got there first. Their append is this game
                 # applied, so stepping over it loses nothing — and ending the run
@@ -126,8 +138,31 @@ class SettleRatingsOnResults:
             games=games, ratings=moved, unrated=unrated, conflicts=conflicts
         )
 
-    async def _settle(self, game: ConfirmedGame) -> "_Outcome":
-        """One game, one transaction. **The snapshot is read before anything moves.**"""
+    async def settle(self, game_id: UUID, *, at: Instant) -> Settled:
+        """One game, **as it stood at ``at``** — the moment an agreement settled
+        it (#654). **No commit**: the outbox delivery that asks is the
+        transaction, and a conflict is its to retry, the rating streams being
+        the cursor either way.
+
+        Folded at the agreement's own moment rather than at the delivering
+        process's clock, so a delivery that runs late — or on a clock a test
+        moved — settles the game exactly as the tap left it.
+        """
+
+        game = await self._results.confirmed_counted_result(game_id, now=at)
+        if game is None:
+            return Settled(games=0, ratings=0, unrated=0, conflicts=0)
+        outcome = await self._move_levels(game)
+        return Settled(
+            games=1 if outcome.ratings else 0,
+            ratings=outcome.ratings,
+            unrated=outcome.unrated,
+            conflicts=0,
+        )
+
+    async def _move_levels(self, game: ConfirmedGame) -> "_Outcome":
+        """One game. **The snapshot is read before anything moves**, and the
+        caller decides where the transaction ends."""
 
         winners = await self._ratings_of(game.winners, game.sport)
         losers = await self._ratings_of(game.losers, game.sport)
@@ -156,8 +191,6 @@ class SettleRatingsOnResults:
             losers, own_side=losing_side, opposition=winning_side,
             won=False, share=share, game=game,
         )
-        if moved:
-            await self._uow.commit()
         return _Outcome(ratings=moved, unrated=unrated)
 
     async def _move(

@@ -949,7 +949,7 @@
           "dev"
         ],
         "summary": "Agree with the score, as this person",
-        "description": "`POST /api/v1/games/{id}/result/acceptance` as the acting account: the other side's score agreed with \u2014 final once its grace has run.",
+        "description": "`POST /api/v1/games/{id}/result/acceptance` as the acting account: the other side's score agreed with \u2014 final at once, and the game closed.",
         "operationId": "accept_result_dev_as__player_id__games__game_id__result_acceptance_post",
         "parameters": [
           {
@@ -3293,7 +3293,7 @@
           "dev"
         ],
         "summary": "Run it now \u00b7 the rating catch-up",
-        "description": "Moves every Level a confirmed result has tested and nothing has applied yet \u2014 the only path a result has to a Level. A result still waiting for its answer is not confirmed, and moves nothing.",
+        "description": "Settles for rating everything that has become final and nothing has applied yet: a score silence settled, two scores naming the same winner settled with the closer, and an agreement the outbox has not delivered yet. A result still waiting for its answer is not final, and a disputed one never is \u2014 neither moves anything.",
         "operationId": "run_the_rating_catch_up_dev_jobs_rating_catch_up_post",
         "responses": {
           "200": {
@@ -3514,40 +3514,6 @@
           "court_name"
         ],
         "title": "AcceptanceResponse"
-      },
-      "AcceptanceSchema": {
-        "properties": {
-          "agreed_by": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Agreed By"
-          },
-          "of_side": {
-            "$ref": "#/components/schemas/GameSide",
-            "description": "Whose score was agreed with. **Always the accepter's opposite** \u2014 a teammate agreeing with a teammate proves nothing \u2014 so this names the score and, with it, which of the two people this is news for."
-          },
-          "agreed_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Agreed At",
-            "description": "When they agreed. On the wire because *a second ago* and *five hours ago* are the same refusal to a client that cannot see it, and the sentence a player reads has to be able to say which."
-          },
-          "settles_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Settles At",
-            "description": "When this agreement becomes final. Measured from the **score**, not from the tap: the person the grace protects is the opponent who has not read the score yet, and their clock started when it was put in front of them."
-          }
-        },
-        "type": "object",
-        "required": [
-          "agreed_by",
-          "of_side",
-          "agreed_at",
-          "settles_at"
-        ],
-        "title": "AcceptanceSchema",
-        "description": "Somebody agreed with the other side's score, and it has not settled yet.\n\n**Present only while the grace runs.** Once it has passed the game is\nconfirmed and the agreed score is on `score`; inside it nothing has settled,\na disagreement still wins, and the proposing side is no longer waiting on\nsilence \u2014 which is a different sentence on their screen and a correction the\naggregate will now refuse."
       },
       "BankConfirmedResponse": {
         "properties": {
@@ -5172,7 +5138,7 @@
                 "type": "null"
               }
             ],
-            "description": "The agreed score. ``null`` until something settles on one \u2014 including while a lone score is still waiting, because a score nobody has answered yet is not the result."
+            "description": "The agreed score. ``null`` until something settles on one \u2014 including while a lone score is still waiting, because a score nobody has answered yet is not the result, and on a `DISPUTED` game, whose two scores named different winners. Two scores naming the same winner settle on the **closer**: the smaller margin in games, and on a tie the first put up."
           },
           "outcome": {
             "anyOf": [
@@ -5191,18 +5157,7 @@
             },
             "type": "array",
             "title": "Proposals",
-            "description": "The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` \u2014 a confirmed score is `score` and an unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's."
-          },
-          "acceptance": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AcceptanceSchema"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The agreement that is waiting out its grace, and `null` when none is. **A counter voids one**, so this is what still stands rather than what was once recorded."
+            "description": "The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` \u2014 a confirmed score is `score`, and a disputed or unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's. Always empty on a For fun game, whose score is the result the moment it is put up: it asks nobody."
           },
           "no_shows": {
             "items": {
@@ -5245,13 +5200,14 @@
           "AWAITING_ANSWER",
           "CONFIRMED",
           "UNSCORED",
+          "DISPUTED",
           "CALLED_OFF",
           "STARTED_SHORT",
           "NO_SHOW_REPORTED",
           "NO_SHOW"
         ],
         "title": "GameStanding",
-        "description": "The nine standings, as codes. A client's words are the client's own."
+        "description": "The ten standings, as codes. A client's words are the client's own."
       },
       "GameToLeave": {
         "properties": {
@@ -6963,7 +6919,7 @@
                 "type": "null"
               }
             ],
-            "description": "Who agreed with the other side's score, while its grace runs."
+            "description": "Who said *That's right* to the other side's score \u2014 which settled it at once (#654). `null` on a result silence settled."
           },
           "confirmed": {
             "anyOf": [
@@ -7842,13 +7798,7 @@
             "type": "string",
             "format": "date-time",
             "title": "Answer By",
-            "description": "When the other side's silence becomes agreement. **Nothing happens at this moment** \u2014 no job runs and nothing is written; the game simply reads as confirmed from here on."
-          },
-          "settles_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Settles At",
-            "description": "When an acceptance of this score would become final. Earlier than `answer_by`, and it is the grace an opponent who has not read the score yet is given: inside it a disagreement still wins."
+            "description": "When the other side's silence makes this score the result: 24 hours after it was put up, or after its last correction. **Nothing happens at this moment** \u2014 no job runs and nothing is written; the game simply reads as settled from here on. With two scores on the table, the later one's `answer_by` is when the game settles. *That's right* settles it at once, before this."
           }
         },
         "type": "object",
@@ -7857,11 +7807,10 @@
           "proposed_by",
           "score",
           "proposed_at",
-          "answer_by",
-          "settles_at"
+          "answer_by"
         ],
         "title": "StandingProposalSchema",
-        "description": "One side's score, on the table and not yet settled on.\n\n**At most one per side**, which is what bounds an argument to two rounds. Two\nof them is the disagreement this platform does not resolve \u2014 and it does not\nresolve it by *arbitrating*, not by hiding it: both scores travel, either\nside may agree with the other's, and that is the only end short of the game\ngoing unscored."
+        "description": "One side's score, on the table and not yet settled on.\n\n**At most one per side**, which is what bounds an argument to two rounds. Two\nof them is a disagreement this platform does not arbitrate, and does not\nhide: both scores travel, and either side may agree with the other's. If\nneither does, the game settles when the later score's `answer_by` comes \u2014\nwith the closer score if both name the same winner, and `DISPUTED` if they\nname different winners."
       },
       "StateResultRequest": {
         "properties": {

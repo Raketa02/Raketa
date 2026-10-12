@@ -7,11 +7,13 @@ status field on the aggregate, no ``ResultConfirmed`` event, and this function i
 the only place a standing exists: *nothing announces a conclusion the record
 already implies*, applied to a result.
 
-Nine values. Eight of them are what the record and the clock can answer for —
-five ends and three waits, the fourth end a booked game's hour coming with a
+Ten values. Nine of them are what the record and the clock can answer for —
+six ends and three waits, the fourth end a booked game's hour coming with a
 seat open (#544), the fifth a report of somebody not turning up that stood its
-day, and the third wait that day (#547) — and **the ninth is the one exemption
-this module holds, and it is written down so it stays one** (``docs/adr/0163``).
+day, and the third wait that day (#547), the sixth two scores naming different
+winners when their answer window closed (#654) — and **the tenth is the one
+exemption this module holds, and it is written down so it stays one**
+(``docs/adr/0163``).
 A game called off is a decision — a booking's cut-off, or its club taking the
 court back — and there is nothing on the record to fold it out of, so it is the
 one standing an event announces — on the rule *an event may announce a
@@ -34,10 +36,9 @@ from typing import Mapping, final
 from uuid import UUID
 
 from app.kernel import Instant
-from app.modules.games.domain.lineup import GameSide
+from app.modules.games.domain.lineup import GameKind, GameSide
 from app.modules.games.domain.results import Score
 from app.modules.games.domain.windows import (
-    acceptance_settles_at,
     dispute_closes_at,
     entry_closes_at,
     proposal_closes_at,
@@ -46,7 +47,7 @@ from app.modules.games.domain.windows import (
 
 @final
 class GameStanding(str, Enum):
-    """The nine standings, as codes. A client's words are the client's own."""
+    """The ten standings, as codes. A client's words are the client's own."""
 
     #: Arranged, and nobody has said it happened yet.
     AWAITING_ENTRY = "AWAITING_ENTRY"
@@ -55,11 +56,22 @@ class GameStanding(str, Enum):
     NEVER_PLAYED = "NEVER_PLAYED"
     #: They played, a score is on the table, and its window is still open.
     AWAITING_ANSWER = "AWAITING_ANSWER"
-    #: They played and a score is agreed — by an acceptance, or by silence.
+    #: They played and a score is agreed — by an acceptance, at once; by
+    #: silence; by two scores naming the same winner, with the closer one
+    #: (#654); or, For fun, by the score itself, which asks nobody.
     CONFIRMED = "CONFIRMED"
     #: They played and no score is agreed. **An evening, not evidence**: it counts
-    #: toward how much these people have played and moves nobody's Level.
+    #: toward how much these people have played and moves nobody's Level. **Only
+    #: a booked game every report of not coming to was disputed reaches it now**
+    #: (#547): two scores end confirmed or disputed (#654), and this goes with
+    #: the no-show report (``docs/adr/0195`` §3).
     UNSCORED = "UNSCORED"
+    #: They played, and the two scores standing when the answer window closed
+    #: named **different winners** (#654; ``docs/adr/0195`` §5). No Level
+    #: moves — *we will not arbitrate* — and the two players who put the scores
+    #: up each have a result left in dispute (``Game.left_in_dispute_by``). An
+    #: evening, like ``UNSCORED``: they were on a court together.
+    DISPUTED = "DISPUTED"
     #: Somebody ended it while a seat was open, before it happened. **The one
     #: value here that no reading of the record reaches** (``docs/adr/0163``):
     #: nobody said they played and no window closed, so it can reuse none of the
@@ -99,29 +111,33 @@ class GameStanding(str, Enum):
 #: happen*, and for both the answer is no. **``STARTED_SHORT`` is the fifth**
 #: (#544): a booked game's hour came with a seat open, and nothing more can.
 #: **``NO_SHOW`` is the sixth** (#547): every standing report has had its day.
+#: **``DISPUTED`` is the seventh** (#654): two scores named different winners.
 SETTLED = frozenset(
     {
         GameStanding.NEVER_PLAYED,
         GameStanding.CONFIRMED,
         GameStanding.UNSCORED,
+        GameStanding.DISPUTED,
         GameStanding.CALLED_OFF,
         GameStanding.STARTED_SHORT,
         GameStanding.NO_SHOW,
     }
 )
 
-#: The three standings that mean these people were on a court together. Read by
-#: the pairwise fold, and by ``counted_games``. **``CALLED_OFF`` is not here**,
-#: and neither is it read as a ghost anywhere: the history walk answers ``None``
-#: for it, as it does for a game still inside its window — and nor is
-#: ``STARTED_SHORT`` (#544), for the same reason, nor ``NO_SHOW`` (#547): the
-#: people who came were not the four the game was, and *shows up* reads it per
-#: player instead.
+#: The four standings that mean these people were on a court together. Read by
+#: the pairwise fold, and by ``counted_games``. ``DISPUTED`` is one (#654): both
+#: sides said they played, and disagreed only about who won. **``CALLED_OFF`` is
+#: not here**, and neither is it read as a ghost anywhere: the history walk
+#: answers ``None`` for it, as it does for a game still inside its window — and
+#: nor is ``STARTED_SHORT`` (#544), for the same reason, nor ``NO_SHOW`` (#547):
+#: the people who came were not the four the game was, and *shows up* reads it
+#: per player instead.
 PLAYED = frozenset(
     {
         GameStanding.AWAITING_ANSWER,
         GameStanding.CONFIRMED,
         GameStanding.UNSCORED,
+        GameStanding.DISPUTED,
     }
 )
 
@@ -145,12 +161,11 @@ class Proposal:
 @final
 @dataclass(frozen=True, slots=True)
 class Acceptance:
-    """Somebody agreed with the other side's score, and when.
+    """Somebody agreed with the other side's score, and when — **which is when
+    it settled** (#654).
 
     ``of_side`` is the side whose proposal was accepted — always the accepter's
-    opposite, because *a teammate agreeing with a teammate proves nothing*. It is
-    recorded rather than re-derived so the grace can be measured from the
-    proposal it settles.
+    opposite, because *a teammate agreeing with a teammate proves nothing*.
     """
 
     by: UUID
@@ -210,16 +225,11 @@ def live_acceptance(
 ) -> Acceptance | None:
     """The acceptance that still stands, if one does.
 
-    **A counter beats a pending acceptance**, and this is the whole of that rule.
-    Inside the grace a disagreement wins, so an acceptance with a score put on
-    the table *after* it is void — and there is no other way for a proposal to be
-    younger than an acceptance, because a correction is refused once the other
-    side has answered and everything is refused once the grace has passed.
-
-    Written here rather than inside the fold because two callers need the same
-    answer: the fold, to decide whether anything has settled, and the aggregate,
-    to decide whether a second tap from the same side is a repeat or an agreement
-    with a score that has since changed.
+    **An acceptance settles at once and closes the game** (#654), so nothing is
+    put on the table after one. A stream written while an acceptance still ran
+    out a six-hour grace may hold a counter made inside it, which beat the
+    acceptance then — so an acceptance with a score put on the table *after* it
+    is void, and that stream still folds to what it was.
     """
 
     if acceptance is None:
@@ -230,8 +240,65 @@ def live_acceptance(
     return None if countered else acceptance
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class Settlement:
+    """How the scores on a game's table settle, and when — **off the record
+    alone**; whether the clock has reached ``at`` is the caller's question.
+
+    ``score`` is the result, or ``None`` when the two scores named different
+    winners, which settles the game **disputed** (#654). ``at`` is the moment it
+    settles: the acceptance's own, the answer window closing, or — For fun —
+    the score itself.
+    """
+
+    score: Score | None
+    at: Instant
+
+
+def settlement_of(
+    *,
+    kind: GameKind,
+    proposals: Mapping[GameSide, Proposal],
+    acceptance: Acceptance | None,
+) -> Settlement | None:
+    """How the scores on the table settle (#654; ``docs/adr/0195`` §5), or
+    ``None`` with none on it. **The one place the rules are**, so the standing,
+    the agreed score and the moment it settled are one answer.
+
+    - **For fun asks nothing**: the first score put up is the result, at once.
+    - **One *That's right* settles it at once**, with the score it agreed with.
+    - **A lone score** settles on silence when its answer window closes.
+    - **Two scores** settle when the later one's answer window closes: naming
+      the same winner, with the **closer** one — the smaller margin in games,
+      and on a tie the first put up; naming different winners, **disputed**.
+    """
+
+    if not proposals:
+        return None
+    # The first put up, by when; the side breaks a tie the aggregate cannot
+    # produce, so the answer never rests on mapping order (``docs/adr/0105``).
+    first, *rest = sorted(proposals.values(), key=lambda one: (one.at, one.side.value))
+    if kind is GameKind.FRIENDLY:
+        return Settlement(score=first.score, at=first.at)
+    agreed = live_acceptance(proposals=proposals, acceptance=acceptance)
+    if agreed is not None:
+        accepted = proposals.get(agreed.of_side)
+        if accepted is not None:
+            return Settlement(score=accepted.score, at=agreed.at)
+    if not rest:
+        return Settlement(score=first.score, at=proposal_closes_at(first.at))
+    (second,) = rest
+    closes = proposal_closes_at(second.at)
+    if first.score.winner is not second.score.winner:
+        return Settlement(score=None, at=closes)
+    closer = second if second.score.margin < first.score.margin else first
+    return Settlement(score=closer.score, at=closes)
+
+
 def standing_of(
     *,
+    kind: GameKind,
     planned_at: Instant,
     starts_at: Instant | None,
     played_at: Instant | None,
@@ -255,7 +322,7 @@ def standing_of(
     closed. ``called_off_at`` is **stated by every caller and never defaulted**,
     so a second reader of this function has to say which game it is asking about
     rather than inheriting an answer — and so is ``line_up_complete``, for the
-    same reason.
+    same reason, and ``kind``.
 
     **Did its booked hour come with a seat open?** (#544) A booked game is
     the one with an hour, and a seat nobody took by then is a game that went
@@ -270,15 +337,9 @@ def standing_of(
     **Did it happen at all?** Nothing about a score matters until somebody says
     they played, and after the entry window nothing ever will.
 
-    **Did somebody explicitly agree?** An acceptance settles the result once its
-    grace has passed, and inside the grace it settles nothing — which is what
-    keeps a fast partner from closing the door on an opponent still in the
-    shower.
-
-    **Is one score on the table, or two?** A lone proposal is confirmed by
-    silence when its window closes; two standing proposals are the disagreement
-    this platform has refused to arbitrate, and when both windows have closed
-    they leave the game unscored.
+    **Has what is on the table settled?** ``settlement_of`` says how it settles
+    and when: once the clock has reached that moment the game is confirmed —
+    or, two scores having named different winners, disputed.
     """
 
     if called_off_at is not None:
@@ -303,48 +364,26 @@ def standing_of(
             else GameStanding.NEVER_PLAYED
         )
 
-    standing = live_acceptance(proposals=proposals, acceptance=acceptance)
-    if standing is not None:
-        accepted = proposals.get(standing.of_side)
-        if accepted is not None and now >= acceptance_settles_at(accepted.at):
-            return GameStanding.CONFIRMED
-
-    if not proposals:
-        # Unreachable through the aggregate — the entry that records *we played*
-        # records a score in the same act, and there is no other way to set a
-        # played moment. Stated rather than left to a ``max()`` over an empty
-        # sequence, because the failure mode of the alternative is a crash in a
-        # read rather than a wrong answer, and a stream that somehow arrived here
-        # is still a game nobody has agreed a score for.
+    settles = settlement_of(kind=kind, proposals=proposals, acceptance=acceptance)
+    if settles is None or now < settles.at:
+        # ``None`` is unreachable through the aggregate — the entry that records
+        # *we played* records a score in the same act — and is stated rather
+        # than raised, because a read is a bad place to crash about a stream
+        # somebody else wrote: it is still a game nobody has agreed a score for.
         return GameStanding.AWAITING_ANSWER
-
-    if len(proposals) == 1:
-        (only,) = proposals.values()
-        return (
-            GameStanding.CONFIRMED
-            if now >= proposal_closes_at(only.at)
-            else GameStanding.AWAITING_ANSWER
-        )
-
-    if standing is not None:
-        # Inside the grace, with both sides' scores on the table. The acceptance
-        # is pending and a counter still beats it, so nothing has settled.
-        return GameStanding.AWAITING_ANSWER
-
-    latest = max(proposal.at for proposal in proposals.values())
-    return (
-        GameStanding.UNSCORED
-        if now >= proposal_closes_at(latest)
-        else GameStanding.AWAITING_ANSWER
-    )
+    if settles.score is None:
+        return GameStanding.DISPUTED
+    return GameStanding.CONFIRMED
 
 
 def settled_at(
     *,
+    kind: GameKind,
     proposals: Mapping[GameSide, Proposal],
     acceptance: Acceptance | None,
 ) -> Instant | None:
-    """**When** a result became final, for a game whose standing says one has.
+    """**When** a result becomes final — ``None`` when the scores on the table
+    settle on no result, because they named different winners.
 
     The third question beside *which score* and *has it settled*, and it is asked
     separately for the same reason those two are: it is answerable off the record
@@ -354,28 +393,21 @@ def settled_at(
     It exists because a confirmation **announces nothing** (``docs/adr/0137``),
     so anybody catching up on results has to walk them in an order, and the only
     honest order is the one they became final in. The instant is derived — an
-    acceptance's grace, or the proposal window closing on silence — so it is the
-    same answer at every instant and on every reader's clock, which is exactly
-    what a cursor needs and what a stored ``confirmed_at`` column could not
-    promise (``docs/adr/0139``).
-
-    ``None`` when nothing has settled on a score, which is the disagreement this
-    platform refuses to arbitrate.
+    acceptance's own moment, or the answer window closing — so it is the same
+    answer at every instant and on every reader's clock, which is exactly what a
+    cursor needs and what a stored ``confirmed_at`` column could not promise
+    (``docs/adr/0139``).
     """
 
-    standing = live_acceptance(proposals=proposals, acceptance=acceptance)
-    if standing is not None:
-        accepted = proposals.get(standing.of_side)
-        if accepted is not None:
-            return acceptance_settles_at(accepted.at)
-    if len(proposals) == 1:
-        (only,) = proposals.values()
-        return proposal_closes_at(only.at)
-    return None
+    settles = settlement_of(kind=kind, proposals=proposals, acceptance=acceptance)
+    if settles is None or settles.score is None:
+        return None
+    return settles.at
 
 
 def agreed_score(
     *,
+    kind: GameKind,
     proposals: Mapping[GameSide, Proposal],
     acceptance: Acceptance | None,
 ) -> Score | None:
@@ -387,16 +419,9 @@ def agreed_score(
     is that pair written once, so nobody publishes a score the standing has not
     reached.
 
-    ``None`` when two scores stand with nothing accepted, which is the
-    disagreement this platform refuses to arbitrate.
+    ``None`` when two scores named different winners, which this platform
+    refuses to arbitrate.
     """
 
-    standing = live_acceptance(proposals=proposals, acceptance=acceptance)
-    if standing is not None:
-        accepted = proposals.get(standing.of_side)
-        if accepted is not None:
-            return accepted.score
-    if len(proposals) == 1:
-        (only,) = proposals.values()
-        return only.score
-    return None
+    settles = settlement_of(kind=kind, proposals=proposals, acceptance=acceptance)
+    return None if settles is None else settles.score

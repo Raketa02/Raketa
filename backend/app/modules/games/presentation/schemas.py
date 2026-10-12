@@ -2,10 +2,11 @@
 
 Three rules decide everything below.
 
-**The standing is derived and travels as a code.** ``GameStanding`` is nine values —
+**The standing is derived and travels as a code.** ``GameStanding`` is ten values —
 ``STARTED_SHORT`` arrived with leaving a booked game (#544), ``NO_SHOW_REPORTED`` and
-``NO_SHOW`` with reporting a player who did not come to one (#547) — and the words for
-them are the client's (``docs/adr/0022``). It is on the response
+``NO_SHOW`` with reporting a player who did not come to one (#547), ``DISPUTED`` with
+two scores that named different winners (#654) — and the words for them are the
+client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
 stale.
@@ -25,8 +26,12 @@ That last sentence is why ``proposals`` is a **list and not one standing score**
 The field used to carry a proposal *when exactly one stood*, which made the
 disagreement the one state whose two scores never crossed — the client was told
 there was an argument and shown nothing being argued about, and could not offer
-the acceptance that ends it. Both scores and one acceptance are what the four
-people on the court can see between them, and none of the three names anybody.
+the acceptance that ends it. Both scores are what the four people on the court
+can see between them, and neither names anybody.
+
+**An agreement is not on the wire**, because it is never pending: *That's right*
+settles the result at once and closes the game (#654; ``docs/adr/0195`` §5), so
+the game it answers reads ``CONFIRMED`` with the agreed score on ``score``.
 """
 
 from __future__ import annotations
@@ -50,10 +55,7 @@ from app.modules.games.domain.results import (
     SetScore,
 )
 from app.modules.games.domain.standing import GameStanding
-from app.modules.games.domain.windows import (
-    acceptance_settles_at,
-    proposal_closes_at,
-)
+from app.modules.games.domain.windows import proposal_closes_at
 from app.modules.player_profile.domain.weekly_hours import Window
 
 
@@ -191,10 +193,11 @@ class StandingProposalSchema(BaseModel):
     """One side's score, on the table and not yet settled on.
 
     **At most one per side**, which is what bounds an argument to two rounds. Two
-    of them is the disagreement this platform does not resolve — and it does not
-    resolve it by *arbitrating*, not by hiding it: both scores travel, either
-    side may agree with the other's, and that is the only end short of the game
-    going unscored.
+    of them is a disagreement this platform does not arbitrate, and does not
+    hide: both scores travel, and either side may agree with the other's. If
+    neither does, the game settles when the later score's `answer_by` comes —
+    with the closer score if both name the same winner, and `DISPUTED` if they
+    name different winners.
     """
 
     side: GameSide = Field(..., description="Which side put this score on the table")
@@ -204,55 +207,12 @@ class StandingProposalSchema(BaseModel):
     answer_by: datetime = Field(
         ...,
         description=(
-            "When the other side's silence becomes agreement. **Nothing happens "
+            "When the other side's silence makes this score the result: 24 hours "
+            "after it was put up, or after its last correction. **Nothing happens "
             "at this moment** — no job runs and nothing is written; the game "
-            "simply reads as confirmed from here on."
-        ),
-    )
-    settles_at: datetime = Field(
-        ...,
-        description=(
-            "When an acceptance of this score would become final. Earlier than "
-            "`answer_by`, and it is the grace an opponent who has not read the "
-            "score yet is given: inside it a disagreement still wins."
-        ),
-    )
-
-
-class AcceptanceSchema(BaseModel):
-    """Somebody agreed with the other side's score, and it has not settled yet.
-
-    **Present only while the grace runs.** Once it has passed the game is
-    confirmed and the agreed score is on `score`; inside it nothing has settled,
-    a disagreement still wins, and the proposing side is no longer waiting on
-    silence — which is a different sentence on their screen and a correction the
-    aggregate will now refuse.
-    """
-
-    agreed_by: UUID
-    of_side: GameSide = Field(
-        ...,
-        description=(
-            "Whose score was agreed with. **Always the accepter's opposite** — a "
-            "teammate agreeing with a teammate proves nothing — so this names the "
-            "score and, with it, which of the two people this is news for."
-        ),
-    )
-    agreed_at: datetime = Field(
-        ...,
-        description=(
-            "When they agreed. On the wire because *a second ago* and *five hours "
-            "ago* are the same refusal to a client that cannot see it, and the "
-            "sentence a player reads has to be able to say which."
-        ),
-    )
-    settles_at: datetime = Field(
-        ...,
-        description=(
-            "When this agreement becomes final. Measured from the **score**, not "
-            "from the tap: the person the grace protects is the opponent who has "
-            "not read the score yet, and their clock started when it was put in "
-            "front of them."
+            "simply reads as settled from here on. With two scores on the table, "
+            "the later one's `answer_by` is when the game settles. *That's right* "
+            "settles it at once, before this."
         ),
     )
 
@@ -375,7 +335,10 @@ class GameSchema(BaseModel):
         description=(
             "The agreed score. ``null`` until something settles on one — "
             "including while a lone score is still waiting, because a score "
-            "nobody has answered yet is not the result."
+            "nobody has answered yet is not the result, and on a `DISPUTED` "
+            "game, whose two scores named different winners. Two scores naming "
+            "the same winner settle on the **closer**: the smaller margin in "
+            "games, and on a tie the first put up."
         ),
     )
     outcome: Outcome | None = Field(
@@ -392,17 +355,11 @@ class GameSchema(BaseModel):
             "The scores on the table, **side A's first and never in the order "
             "they arrived**. Empty unless the game is awaiting an answer: before "
             "that nobody has entered one, and after it the ending is on "
-            "`standing` — a confirmed score is `score` and an unscored game is an "
-            "evening, not a transcript of the argument. Two entries **is** the "
-            "disagreement, and either side may agree with the other's."
-        ),
-    )
-    acceptance: AcceptanceSchema | None = Field(
-        default=None,
-        description=(
-            "The agreement that is waiting out its grace, and `null` when none "
-            "is. **A counter voids one**, so this is what still stands rather "
-            "than what was once recorded."
+            "`standing` — a confirmed score is `score`, and a disputed or "
+            "unscored game is an evening, not a transcript of the argument. Two "
+            "entries **is** the disagreement, and either side may agree with the "
+            "other's. Always empty on a For fun game, whose score is the result "
+            "the moment it is put up: it asks nobody."
         ),
     )
     no_shows: list[NoShowSchema] = Field(
@@ -494,11 +451,9 @@ class GameSchema(BaseModel):
                     score=_rendered(proposal.score),
                     proposed_at=proposal.at,
                     answer_by=proposal_closes_at(proposal.at),
-                    settles_at=acceptance_settles_at(proposal.at),
                 )
                 for proposal in (game.standing_proposals() if arguing else ())
             ],
-            acceptance=_agreement(game) if arguing else None,
             no_shows=[
                 NoShowSchema(
                     player_id=seating.player_id,
@@ -516,26 +471,6 @@ class GameSchema(BaseModel):
 
 def _rendered(score: Score) -> ScoreSchema:
     return ScoreSchema(sets=[SetScoreSchema(a=one.a, b=one.b) for one in score.sets])
-
-
-def _agreement(game: Game) -> AcceptanceSchema | None:
-    """The agreement waiting out its grace, and ``None`` when none is.
-
-    The two readers are asked together because the moment is dated from the
-    **score** and never from the tap: an agreement and the proposal it settles
-    are one answer, and the aggregate returns them ``None`` together.
-    """
-
-    acceptance = game.standing_acceptance()
-    accepted = game.accepted_proposal()
-    if acceptance is None or accepted is None:
-        return None
-    return AcceptanceSchema(
-        agreed_by=acceptance.by,
-        of_side=acceptance.of_side,
-        agreed_at=acceptance.at,
-        settles_at=acceptance_settles_at(accepted.at),
-    )
 
 
 class ReportANoShowRequest(BaseModel):

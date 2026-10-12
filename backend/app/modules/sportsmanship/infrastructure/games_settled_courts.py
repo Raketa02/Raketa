@@ -91,12 +91,11 @@ class GamesSettledCourts:
             return None
         played_at = game.played_at
         if played_at is None:
-            # Unreachable: every standing in ``RATEABLE`` is one somebody said
-            # they played, and there is no other way to set that moment. Stated
-            # rather than asserted, because the failure mode of the alternative
-            # is a 500 in a list read — and a game with no evening behind it is
-            # a game with nobody to rate either way, which is exactly the answer
-            # every other absence here gets.
+            # A game nobody said they played: ``UNSCORED`` is reached only by a
+            # booked game every report of not coming to was disputed (#547) —
+            # two scores end confirmed or disputed since #654. A game with no
+            # evening behind it is a game with nobody to rate, which is exactly
+            # the answer every other absence here gets.
             return None
         return SettledCourt(
             game_id=game.id,

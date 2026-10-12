@@ -227,9 +227,12 @@ class ResultCountered:
 class ResultAccepted:
     """Somebody on the opposing side agreed. **One opponent suffices.**
 
-    It settles nothing on its own: the grace runs from the proposal, and inside
-    it a counter still wins. ``side`` is the accepter's; the proposal it accepts
-    is the other one, by construction.
+    It settles the result at once and closes the game (#654; ``docs/adr/0195``
+    §5) — which no fold has to announce, because the standing reads it: no
+    ``ResultConfirmed`` follows it. ``side`` is the accepter's; the proposal it
+    accepts is the other one, by construction. A row written while an agreement
+    still ran out a six-hour grace may be followed by a counter, which voided it
+    (``standing.live_acceptance``).
     """
 
     game_id: UUID

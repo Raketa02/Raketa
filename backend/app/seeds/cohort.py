@@ -637,9 +637,9 @@ class PlayedGame:
 #: between databases is a fixture nobody can develop a screen against.
 #:
 #: The floor is two days rather than one: a result confirmed by **silence** needs
-#: its window to have closed, and the game left unscored needs both sides' to
-#: have. A game seeded an hour ago would be a game still awaiting an answer,
-#: which is a different card.
+#: its window to have closed, and two scores settle only once both sides' have.
+#: A game seeded an hour ago would be a game still awaiting an answer, which is a
+#: different card.
 PLAYED_AT_LEAST_DAYS_AGO: Final = 2
 
 #: How long ago an arrangement has to have been made before **nobody claiming
@@ -667,7 +667,7 @@ GHOSTED_AT_LEAST_DAYS_AGO: Final = (PLAN_HORIZON + ENTRY_GRACE).days + 1
 #:   two with a run of one and the **gap** rather than a padded row.
 #: - The second of those two is the one nobody agreed a score for, which is what
 #:   puts ``cohort-a-13`` and ``cohort-a-14`` on a card with a **count and no
-#:   run** — the state an unscored evening leaves behind.
+#:   run** — the state a disputed evening leaves behind.
 #: - ``cohort-a-05``, ``cohort-a-06`` and ``cohort-a-07`` are named nowhere here,
 #:   so the blocks are **absent** on their cards and the empty card is proved
 #:   correct on a real read rather than assumed.
@@ -1669,8 +1669,9 @@ def _refuse_an_ending_no_evening_can_have(index: int, game: PlayedGame) -> None:
             f"played game {index} declares that the asked side never answered "
             f"*and* that nobody agreed a score. Those are two different "
             f"endings: silence **confirms** what was stated, so an unanswered "
-            f"score has a winner. What leaves a game unscored is two sides who "
-            f"each answered with a score of their own (`docs/adr/0137`)."
+            f"score has a winner. What leaves a game without one is two sides "
+            f"who each put up a score naming a different winner — disputed "
+            f"(`docs/adr/0195`)."
         )
 
 
