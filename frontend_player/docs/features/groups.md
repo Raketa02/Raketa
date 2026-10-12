@@ -509,3 +509,18 @@ picks another (`useGroupSport`'s `opening`, `openingSport`'s `wanted`) — **ope
 the phone's last sport is untouched — turns to Games, moves the switch to the card's kind
 (`gameIntent.store`, one value for the app), and hands the card to the deck as `onTop`. An arrival
 this build cannot read opens the page as it always opens: the group's id alone is a page.
+
+**Members' score tag is the served band, on every row** ([#660](https://github.com/Raketa02/Raketa/issues/660),
+ADR-0195 §1). Every Members row carries `player_score` and `reliability_band` since the backend's
+#659 — everyone starts at 100 — so `GroupMember.playerScore` is no longer optional and the tag is
+drawn on every row; _no record, no tag_ is gone with the absence it drew. The tint is **the band
+the server served**, never the figure's: VERY_HIGH mint, HIGH neutral, MEDIUM amber, LOW red, and a
+band this build cannot name on the neutral tint — `player_record`'s `toReliabilityBand` narrows the
+code in `toGroupMembers`, so the list and the record it opens read one band one way, and the phone
+holds no 90 / 70 / 50 of its own (the 2026-10-01 paragraph's `scoreBand`, with its _70 is the
+matcher's `SCORE_MIN`_, is retired). **The row says the band in words**: _Karol Tomczak, reliability
+75, High, admin, Padel 2,75_ — the copy's `score` became `reliability`, and the band's word is
+`player_record`'s `RELIABILITY_BAND_WORD`, because the tint is now a served fact and colour is never
+its only carrier. Members carries no _New_, so a new player's tag reads `100` in mint. Tapping a row
+opens the same sheet the player reads about themselves: the figure with the band's word or _New_,
+and the four counts under _Full record_ (`player_record.md`).

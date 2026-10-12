@@ -36,7 +36,7 @@ is referenced from the other by a sentence, not copied.
 | [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`proposals.md`](proposals.md)               | A group's Games deck and details; Games & money; the fill; Home's games; Fill in; posting      |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step that ends setting up, the commit                            |
-| [`player_record.md`](player_record.md)       | The record sheet a face opens, the metered rows, what opponents said                           |
+| [`player_record.md`](player_record.md)       | The record sheet a face opens, reliability in points and its counts, what opponents said       |
 | [`shell.md`](shell.md)                       | Three tabs over one stack, the reset, Home, the bar standing down                              |
 | [`sportsmanship.md`](sportsmanship.md)       | The star card at the foot of a booked game's result screen                                     |
 

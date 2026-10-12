@@ -312,3 +312,44 @@ a block is not a gate any more, in either direction — the blocker opens the re
 the blocked person's read is the same byte for byte — so _This record isn't available._ now answers
 three causes (never disclosed, held or not showable, no such player), and the code comments that
 listed four say three.
+
+**Player reliability is points: the band's word, _100 · New_, and four counts instead of metered
+strands** ([#660](https://github.com/Raketa02/Raketa/issues/660),
+[ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+§1, after the backend's #659). The record's `reliability` is **always there** now — everyone starts
+at 100 — and the mapper reads it field for field: `playerScore`, the served `band` (narrowed by
+`toReliabilityBand`; a band this build cannot name drops the **word** and keeps the figure),
+`isNew`, and `counts` — turned up of, late, kept of, and results left in dispute, over the last six
+months. **`RecordCard` draws the four counts as 5.5 rows** — _Shows up · turned up 12 of 13_,
+_Keeps plans · kept 13 of 14_, _Being late · late 1 time_, _Results left in dispute · 0_
+(`countLines`) — then opponent variety and sportsmanship as before, with **no meter and no tone**:
+`StrandMeterRow`, `countedRows`, `recordCardDrawn`, the strand vocabulary and `domain/scoreTone`
+(`SCORE_FLOOR` 70, `SCORE_STRONG` 90, `scoreBand`'s 50) are deleted, and the _Full record_ fold is
+always drawn, since every record has its counts. **The block prints the band's word or _New_ under
+the figure** (`reliabilityMark`), so a group-mate reads what the player reads about themselves —
+_New_ is the word that tells them a 100 has not been tested yet (PRD #649, story 33). **The
+reliability screen** draws the ring with the band said in full beside it (`reliabilityWord` —
+_Very high_, _High_, _Medium_ or _Low reliability_) or _New_, and _Out of 100_; a new player gets
+one note under it, `NEW_PLAYER_NOTE` — _Everyone starts at 100. Yours reads New until you’ve
+played 3 games through._ — and the old _nothing has fallen due … no plan has settled_ sentence is gone with
+the arm it served. **The You row's line is the sheet's head**, `75 · High` or `100 · New`
+(`reliabilityLine` → `reliabilityHead`). **`PlayerScoreTag` is tinted by the served band** —
+VERY_HIGH mint, HIGH neutral, MEDIUM amber, LOW red, an unnamed band neutral — and `types.ts`
+exports `toReliabilityBand` and `RELIABILITY_BAND_WORD` for `groups`' Members rows, so the list and
+the record it opens read one band one way. **What this reverses**, above: the #385 paragraph's
+metered rows and one tone ladder (and its `SCORE_FLOOR` as the matcher's `SCORE_MIN` — nothing
+applies 70 now), #469's `92 of 100 · 3 things counted`, _Nothing counted yet_ and the ladder's
+_Reliable_ · _Holding_ · _Under the bar_, and the 2026-10-01 `scoreBand`. `Meter` (7.3) has no
+caller since, and stays in `shared/ui`. **Calls made without a ruling**: _New_ takes the band's
+place whatever the figure, so a new player with a failure on their first booking reads `75 · New`;
+the counts are drawn as served, so a new player reads _turned up 0 of 0_ and _late 0 times_ rather
+than a hidden card; the band's word sits on its own line under the block's figure rather than
+beside it, so _Very high_ never shares a third of the width with `100`; and the new-player sentence
+is this ticket's words (`the-words.md` §27 left it to #660 and does not yet quote it). The block on
+somebody else's sheet says the short word (_High_, under a box already named _Player reliability_)
+and no _Out of 100_ — the spoken label carries the scale. **Owed a ruling, not a phone bug**:
+Members serves no _New_ (ADR-0195 §8 puts only points and band there), so a new player's tag reads
+`100` in mint and is spoken _Very high_ on the one list a group-mate scans, against story 33's _so
+that others know my 100 hasn't been tested yet_. **Not seen
+on a device**: the block's second line beside _Last 5_ and _Counted_, the word beside the ring, and
+the note under the dark card.
