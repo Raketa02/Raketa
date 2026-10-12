@@ -1066,7 +1066,6 @@ a For fun game the wire calls `NEEDS_RESULT` or `COUNTED` — and every table th
 (`STATUS_INK`, `OPEN_GAME_VARIANT`, `status`, `statusInLine`) is keyed by it, so the card, the
 details, the room's line and the card's spoken name say one word. `PLAYED` is `mint`, settled, and
 its _Open game_ `onDark`. The details' door on it is **_Add the score_** (`resultActOf`'s
-`add-score`), not _We played_, onto `games`' result screen, which asks nobody. **Known gap, the
-read's to close**: the backend still marks a For fun game whose hour has come `needs_you`, so Home's
-count on the tab counts it until it is scored or its entry window closes — the phone draws the count
-it is sent rather than a second one (`backend/app/modules/proposals/domain/home.py`, `needs_you`).
+`add-score`), not _We played_, onto `games`' result screen, which asks nobody. **Nor is it on
+Home's count**: the backend's `845decf0` made a For fun game whose hour has come `needs_you` false,
+so the tab counts it no more — the phone draws the count it is sent and holds no second one.
