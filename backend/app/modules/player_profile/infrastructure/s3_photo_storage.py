@@ -22,6 +22,15 @@ it. SigV4 signs the host, so a URL signed for the internal name is invalid at th
 external one; signing has its own client for exactly that reason. See
 `docs/environments.md` for the rule these two names come from.
 
+**Signing holds one client for the life of the process; every other call builds
+its own** (#702, ADR-0197 §2a). Presigning is a signature over the request that
+would be sent and sends nothing, so building a client was the whole of its cost
+— and it ran once per face on every screen that draws faces. The one client is
+botocore's own synchronous one, which opens no connection and binds to no event
+loop, so the shape the class docstring warns about for the talking client does
+not arise. The credentials it holds are the settings' and rotate as they do:
+with a restart.
+
 Nothing here wakes ADR-0010's dormant deployment path: no credential is created,
 no workflow trigger changes, and the only store this runs against today is a
 container on a laptop.
@@ -29,10 +38,12 @@ container on a laptop.
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any, AsyncGenerator, Iterable, Iterator, Mapping
 from uuid import UUID
 
 import aioboto3
+import botocore.session
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
@@ -184,15 +195,74 @@ def reports_an_absent_object(error: ClientError) -> bool:
     return str(error.response.get("Error", {}).get("Code", "")) in _ABSENT_CODES
 
 
+def _addressing() -> Config:
+    """How every client here addresses the store, talking or signing.
+
+    MinIO speaks SigV4 and path-style addressing. Virtual-host style would
+    resolve `bucket.minio` on the compose network, which is not a name anything
+    answers to. One function, so the URL a phone opens is addressed exactly as
+    the object was written.
+    """
+
+    return Config(signature_version="s3v4", s3={"addressing_style": "path"})
+
+
+@lru_cache(maxsize=None)
+def signing_client(
+    *,
+    endpoint_url: str | None,
+    region_name: str,
+    access_key_id: str,
+    secret_access_key: str,
+) -> Any:
+    """The process's one client for signing URLs, built on first use and shared
+    by every request after it (#702).
+
+    **One per signing setup**, which in any one process is one: the key is
+    everything a signature depends on — the host it is over, the region in its
+    scope and the credential it is derived from — so two setups can never share
+    a client and sign for the wrong host. The bucket is not here, because it is
+    in the request being signed, not in the client.
+
+    Synchronous botocore rather than aiobotocore, on purpose. Presigning never
+    sends a request, so there is nothing to await and no connection to pool; a
+    synchronous client opens no socket and binds to no event loop, which is
+    what lets it outlive every request and every test loop. A coroutine signing
+    on the loop would cost exactly the same CPU, held in the same place.
+    """
+
+    return botocore.session.get_session().create_client(
+        "s3",
+        endpoint_url=endpoint_url,
+        region_name=region_name,
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key,
+        config=_addressing(),
+    )
+
+
+def signing_clients_forgotten() -> None:
+    """Drop the process's signing clients, so the next signing builds one.
+
+    For a test that counts constructions; nothing in the application calls it,
+    because a credential rotates with a restart, as the settings carrying it
+    already do.
+    """
+
+    signing_client.cache_clear()
+
+
 class S3PhotoStorage:
     """`PhotoStorage` over any S3-compatible store.
 
-    A client is created per operation rather than held. aiobotocore clients bind
-    to the event loop and the connection pool they were made on, so a long-lived
-    one on a module or an application object is the shape that fails under a
-    second loop — a worker, a management command, a test — with a symptom far
-    from its cause. The cost is one client construction per call, which is
-    service-model lookup against botocore's own cache, not a round trip.
+    A *talking* client is created per operation rather than held. aiobotocore
+    clients bind to the event loop and the connection pool they were made on,
+    so a long-lived one on a module or an application object is the shape that
+    fails under a second loop — a worker, a management command, a test — with a
+    symptom far from its cause. The cost is one client construction per call,
+    which is service-model lookup against botocore's own cache, not a round
+    trip. **Signing is the one exception**, and :func:`signing_client` says why
+    it can be.
     """
 
     def __init__(
@@ -213,18 +283,13 @@ class S3PhotoStorage:
             aws_secret_access_key=secret_access_key,
             region_name=region_name,
         )
+        self._region_name = region_name
+        self._access_key_id = access_key_id
+        self._secret_access_key = secret_access_key
 
     def _client(self, *, endpoint_url: str | None) -> Any:
         return self._session.client(
-            "s3",
-            endpoint_url=endpoint_url,
-            # MinIO speaks SigV4 and path-style addressing. Virtual-host style
-            # would resolve `bucket.minio` on the compose network, which is not
-            # a name anything answers to.
-            config=Config(
-                signature_version="s3v4",
-                s3={"addressing_style": "path"},
-            ),
+            "s3", endpoint_url=endpoint_url, config=_addressing()
         )
 
     async def put(
@@ -389,14 +454,20 @@ class S3PhotoStorage:
     async def presigned_read_url(self, ref: PhotoRef, *, valid_for_seconds: int) -> str:
         # Signed against the *public* endpoint: the URL is opened by a phone, not
         # by this process. No request is made — presigning is a signature over
-        # the request that would be sent.
-        async with self._client(endpoint_url=self._public_endpoint_url) as s3:
-            url: str = await s3.generate_presigned_url(
-                "get_object",
-                Params={
-                    "Bucket": self._bucket,
-                    "Key": object_key_for(ref.owner_id, ref.photo_id),
-                },
-                ExpiresIn=valid_for_seconds,
-            )
-            return url
+        # the request that would be sent — so the client is the process's one
+        # signing client (the module docstring), never one built for the call.
+        signer = signing_client(
+            endpoint_url=self._public_endpoint_url,
+            region_name=self._region_name,
+            access_key_id=self._access_key_id,
+            secret_access_key=self._secret_access_key,
+        )
+        url: str = signer.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": self._bucket,
+                "Key": object_key_for(ref.owner_id, ref.photo_id),
+            },
+            ExpiresIn=valid_for_seconds,
+        )
+        return url

@@ -167,6 +167,107 @@ async def test_path_style_addressing_keeps_the_bucket_out_of_the_hostname() -> N
 
 
 # ---------------------------------------------------------------------------
+# One signing client per process (#702, ADR-0197 §2a)
+# ---------------------------------------------------------------------------
+
+
+async def todays_signer(storage: S3PhotoStorage, ref: PhotoRef, *, seconds: int) -> str:
+    """The URL the adapter signed before #702: a client built for the call, over
+    the public endpoint, SigV4 and path-style. Kept here as the comparator."""
+
+    import aioboto3
+    from botocore.client import Config
+
+    session = aioboto3.Session(
+        aws_access_key_id="raketa_photos",
+        aws_secret_access_key="raketa_photos_pwd",
+        region_name="us-east-1",
+    )
+    async with session.client(
+        "s3",
+        endpoint_url="http://localhost:9000",
+        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+    ) as s3:
+        url: str = await s3.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": "raketa-player-photos",
+                "Key": object_key_for(ref.owner_id, ref.photo_id),
+            },
+            ExpiresIn=seconds,
+        )
+        return url
+
+
+async def test_the_url_is_todays_url_apart_from_the_signature_and_its_date() -> None:
+    """Scheme, host, path, expiry and the query's keys match the signer this
+    replaced; only the signature and the date it is over may differ."""
+
+    expected = urlparse(await todays_signer(minio(), REF, seconds=300))
+    signed = urlparse(await minio().presigned_read_url(REF, valid_for_seconds=300))
+
+    assert (signed.scheme, signed.netloc, signed.path) == (
+        expected.scheme,
+        expected.netloc,
+        expected.path,
+    )
+    ours, theirs = parse_qs(signed.query), parse_qs(expected.query)
+    assert set(ours) == set(theirs)
+    assert ours["X-Amz-Expires"] == theirs["X-Amz-Expires"] == ["300"]
+    assert ours["X-Amz-Credential"] == theirs["X-Amz-Credential"]
+    assert ours["X-Amz-SignedHeaders"] == theirs["X-Amz-SignedHeaders"]
+
+
+async def test_signing_builds_one_client_per_process_and_shares_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every signing in the process — across requests, which is across adapter
+    instances — goes through one client built once. Presigning sends nothing,
+    so building the client was the whole cost, once per face per response."""
+
+    import botocore.session
+
+    from app.modules.player_profile.infrastructure import s3_photo_storage
+
+    built: list[str] = []
+    original = botocore.session.Session.create_client
+
+    def counting(self, service_name, *args, **kwargs):
+        built.append(service_name)
+        return original(self, service_name, *args, **kwargs)
+
+    monkeypatch.setattr(botocore.session.Session, "create_client", counting)
+    s3_photo_storage.signing_clients_forgotten()
+
+    first = await minio().presigned_read_url(REF, valid_for_seconds=300)
+    second = await minio().presigned_read_url(
+        PhotoRef(owner_id=BOB, photo_id=PHOTO), valid_for_seconds=600
+    )
+    third = await minio().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert built == ["s3"]
+    assert urlparse(first).path == urlparse(third).path
+    assert parse_qs(urlparse(second).query)["X-Amz-Expires"] == ["600"]
+
+
+async def test_a_different_signing_setup_is_a_different_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One client per *signing setup*: a second endpoint, region or credential
+    is another client, never a signature over the wrong host."""
+
+    from app.modules.player_profile.infrastructure import s3_photo_storage
+
+    s3_photo_storage.signing_clients_forgotten()
+
+    local = await minio().presigned_read_url(REF, valid_for_seconds=300)
+    deployed = await aws().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert urlparse(local).netloc == "localhost:9000"
+    assert urlparse(deployed).netloc.endswith("amazonaws.com")
+
+
+# ---------------------------------------------------------------------------
 # Absent versus broken
 # ---------------------------------------------------------------------------
 
