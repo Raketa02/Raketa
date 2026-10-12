@@ -360,3 +360,47 @@ longer reads _Inés Díaz · checked in at the club_ with nothing to press (`che
 deleted), and `BookedFacts` carries only the `reread`. `gameErrorMessage` loses
 `checked_in_at_the_club`, which the backend no longer raises. The record is
 [`proposals.md`](proposals.md), where the booking stopped carrying the desk's word.
+
+**The result screen tells the truth: silence costs nothing, _That's right_ settles at once, For
+fun asks nothing** ([#656](https://github.com/Raketa02/Raketa/issues/656); ADR-0195 §2, §5, Q114,
+Q119; the backend's #654 and #655). Four things moved, each because the rule under it did.
+**_Is that right?_ names the moment and says silence is free.** The standing line says when silence
+makes the score the result, on the club's clock — _tomek.p put a score up. If neither of you answers,
+it becomes the result at 20:30 on Wednesday._, _if you don't answer_ in singles (`theirs-stands`
+carries `withPartner`), _at 20:30 today_ on the read's own day, and no clause at all for an instant
+it cannot read — and the clock under it says _Saying nothing costs nothing._ The screen said _there
+is no penalty_ over a silence that cost a miss on _Answers about results_; ADR-0195 made silence
+free, and nothing on these screens talks about penalties now. The rule this record kept since #314 —
+_there is no absolute time anywhere_ — is reversed for the moment a score settles: a booked game has
+a calendar, the story names the moment, and the platform zone's clock (`shared/date/platformZone`)
+is the one every booked hour in the app is drawn on. Two scores say when they settle too, at the
+later one's `answer_by`, and what each ending is. **The agreement is not a state any more.** #654
+retired the six-hour grace, so the wire carries no `acceptance` and no `settles_at`: the `agreed`
+arm, `StandingAgreement`, its _Agreed — settling_ title and clock, and the refusals
+`the_other_side_has_answered` and `the_result_is_already_accepted` are deleted, and _That's right_
+reads back as the game `CONFIRMED` — _The result_ over _Counted._, since an agreement, silence and
+the closer of two scores naming one winner all end there and the wire does not say which, so
+nothing calls the score _agreed_ (`SCORE_LEAD.result`, `worthLine`'s _its result_). **Two new ends,
+and one corrected.** `PLAYED_NO_SCORE` replaces `NEVER_PLAYED` — _Played · no score_, a full court
+nobody recorded, played for everybody, with nothing said about marks: _Never played_ said _Nobody
+is marked for that_ over a record that marked all four, and the window's refusal said it too — and `DISPUTED` joins — _Disputed_, _The two
+scores named different winners._, and why: Raketa doesn't decide who won. Both end on the fact list
+`UNSCORED_FACTS` became, `EVENING_FACTS` (`endsAsAnEvening`), with `unscored`, whose body said _nobody wrote a score
+down_ — false of the two-score games it used to cover — and now says what reaches it since #654: the
+game everybody marked as not coming said they came to. The worth line is said only where a score is
+up or stands (`saysWhatItIsWorth`), never over an ending that took none — which also takes it off
+the called-off, started-short and no-show endings, where _its result becomes part of your record_
+was never true. The screen's classifications of the argument are the deck's exhaustive switches
+(`saysWhatItIsWorth`, `endsAsAnEvening`, `settledScore`), not ad-hoc tests in `GameScreen`. **For fun asks nothing.** A
+`FRIENDLY` game is one arm, `for-fun`, before its score and after: _Played_, no _How did it go?_, no
+_Is that right?_, no clock; the grid is the screen until a score is up, under _You can add the score
+if you like, up to a day after the game. It stands as you put it — nobody is asked to agree, and no
+Level moves._ — reached only by the details' _Add the score_, so the grid is what was asked for —
+and the score reads _The score_ once it stands. Across an open seat the body offers nothing. The _Didn't come?_ rows are offered wherever a first score may go
+in (`actsOffered`), on it as on the entry, until attendance replaces them (#658). **The entry asks _How did it go?_** (§15.2), and its standing line
+counts down to putting a score up rather than to a game that never happened; the entry draws no
+clock, and `clockLine` is the one place that says which arms count down. **Refusals in plain sentences**: a score
+before the hour (`the_game_has_not_started`, its own sentence for a score; a mark keeps _The game
+hasn't started yet._), a correction after the entry window (`corrections_have_closed`), and the
+one-score-per-side race, which a partner's counter can cause as well as the other side's score.
+**Not seen on a device.**

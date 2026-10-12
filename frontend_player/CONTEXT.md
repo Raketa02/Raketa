@@ -439,10 +439,14 @@ Eight client-only concepts, all of them in `features/games/`. The domain terms �
 Score, Proposal, Correction, Counter, Acceptance, Standing — are the **root glossary's** and are
 not restated here; what follows is only what this client had to invent to draw them.
 
-- **Result argument** — **the seven screen states** a game can be in for the player reading
-  it, folded in `domain/resultArgument.ts` from the standing, the standing proposal and which
-  seat is theirs: awaiting an entry · never played · our score stands · their score stands ·
-  both stand · confirmed · unscored, plus _not yours_ for a link that has gone stale. It is what
+- **Result argument** — **the screen states** a game can be in for the player reading it,
+  folded in `domain/resultArgument.ts` from the standing, the scores on the table, the game's
+  kind and which seat is theirs: awaiting an entry (_How did it go?_) · our score stands ·
+  their score stands (_Is that right?_) · both stand · confirmed · disputed · played · no score ·
+  for fun (_Played_, which asks nothing) · unscored, the endings a booked game adds (called off,
+  started short, the no-show report's two), plus _not yours_ for a link that has gone stale.
+  **An agreement is not one of them** since #654: _That's right_ settles at once, so the next
+  read is confirmed ([#656](https://github.com/Raketa02/Raketa/issues/656)). It is what
   decides whether a screen offers a **correction** or a **counter** — the same request and
   completely different news — so nothing outside that file reads a `GameStanding` directly.
   _Avoid_: "the result **conversation**", which this client used until
@@ -476,7 +480,8 @@ not restated here; what follows is only what this client had to invent to draw t
   Level, no band, no area, no run of form, because those are what a player reads to decide
   about a game that might happen. They are drawn in the eyebrow — _Padel · with Kasia Wójcik,
   Tomek Przybylski and Marek Baran_, which is what tells two padel games in a week apart — and in
-  the two sentences about something a **person** did: putting a score up, and agreeing with one.
+  the sentences about something a **person** did: putting a score up, and leaving a game that was
+  then called off.
   Always the **whole** name
   ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, read
   through [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
@@ -487,9 +492,9 @@ not restated here; what follows is only what this client had to invent to draw t
 - **The open seat** — a seat somebody has **left** and nobody has filled: `player_id: null` on
   the wire, `playerId` absent here (`openSeats`), and **still a seat** — it keeps its place and
   its side, and the court keeps its size. _We played_ is withheld while one is open
-  (`actsOffered`), until it is filled, the game is called off, or the window closes into _Never
-  played_. _Avoid_: dropping the seat (a three-person doubles game), and drawing `?` in it (that
-  is a person `users` cannot name).
+  (`actsOffered`), until it is filled or the game is called off; a booked game whose hour comes
+  with one open started short. _Avoid_: dropping the seat (a three-person doubles game), and
+  drawing `?` in it (that is a person `users` cannot name).
 - **The slots** — the four `ReactNode`s `GameScreen` grew when it stopped being only the result
   argument ([#368](https://github.com/Raketa02/Raketa/issues/368)) — `card`, `court`, `plan` and
   `fill` — and `entryLead`, which of two things an `AWAITING_ENTRY` arm leads with, the plan or

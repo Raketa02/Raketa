@@ -1054,3 +1054,19 @@ had a desk line. `CheckInCard`, its QR drawing (`qrPath.ts`, the `qrcode` core d
 court has a _didn't come_ row (`games.md`). **The phone was broken against the backend until this
 landed**: #651 stopped sending `check_in`, and the mapper read `wire.check_in.short_code` whenever
 the field was not `null`, so every booked game's details threw.
+
+**_Played · no score_, and a For fun game reads _Played_**
+([#656](https://github.com/Raketa02/Raketa/issues/656); ADR-0195 §2, §5, Q114, Q119; the backend's
+#654 and #655). `HomeStatus` swaps `NEVER_PLAYED` for `PLAYED_NO_SCORE`: Home's card, the details'
+tag and second line say _Played · no score_ — `onDarkHair` as _Never played_ was, an ending with the
+room as before — and offer nothing. **A For fun game after its hour reads _Played_**, not _Needs
+result_ and not _Counted_: it asks nobody for a result, and a score on it stands at once and counts
+nothing. That is `shownStatus` in `domain/home.ts` — the wire's status with one more, `PLAYED`, for
+a For fun game the wire calls `NEEDS_RESULT` or `COUNTED` — and every table the tag is drawn from
+(`STATUS_INK`, `OPEN_GAME_VARIANT`, `status`, `statusInLine`) is keyed by it, so the card, the
+details, the room's line and the card's spoken name say one word. `PLAYED` is `mint`, settled, and
+its _Open game_ `onDark`. The details' door on it is **_Add the score_** (`resultActOf`'s
+`add-score`), not _We played_, onto `games`' result screen, which asks nobody. **Known gap, the
+read's to close**: the backend still marks a For fun game whose hour has come `needs_you`, so Home's
+count on the tab counts it until it is scored or its entry window closes — the phone draws the count
+it is sent rather than a second one (`backend/app/modules/proposals/domain/home.py`, `needs_you`).
