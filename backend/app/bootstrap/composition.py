@@ -199,6 +199,7 @@ from app.modules.proposals.application.answers import (
 from app.modules.proposals.application.club_bookings import (
     CancelTheGame,
     MoveTheGame,
+    PreviewTheCancel,
     ReadClubBookings,
     ReadFreeCourts,
 )
@@ -1980,7 +1981,7 @@ def build_club_bookings(
 ) -> ClubBookings:
     """A club's bookings as its desk reads and runs them, over the Bookings
     context's own use cases: a day of them, the free courts and the move, and
-    the cancel (#547)."""
+    the cancel (#547) — which a free court may absorb (#672)."""
 
     def bookings() -> BookingRepository:
         return build_booking_repository(
@@ -1997,7 +1998,9 @@ def build_club_bookings(
             courts=build_club_courts_at_the_hour(session, runtime=runtime),
         ),
         cancel=CancelTheBooking(
-            bookings=bookings(), games=build_game_changes(session, runtime=runtime)
+            bookings=bookings(),
+            games=build_game_changes(session, runtime=runtime),
+            courts=build_club_courts_at_the_hour(session, runtime=runtime),
         ),
     )
 
@@ -2070,6 +2073,17 @@ def build_move_the_game(
     )
 
 
+def build_preview_the_cancel(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> PreviewTheCancel:
+    """What a cancel with a reason would do now — the Cancel dialog (#672)."""
+    return PreviewTheCancel(
+        bookings=build_player_bookings(session, runtime=runtime),
+        club=build_club_bookings(session, runtime=runtime),
+        clock=clock,
+    )
+
+
 def build_cancel_the_game(
     session: AsyncSession,
     *,
@@ -2077,8 +2091,9 @@ def build_cancel_the_game(
     settings: Settings,
     runtime: EventRuntime | None = None,
 ) -> CancelTheGame:
-    """*Cancel* — everybody refunded in full, nobody's record, a new card
-    first (#547)."""
+    """*Cancel* — moved onto a free court that absorbs it (#672), or called
+    off: everybody refunded in full, nobody's record, a new card first
+    (#547)."""
     return CancelTheGame(
         proposals=build_proposal_repository(
             session,

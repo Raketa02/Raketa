@@ -24,7 +24,7 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.bookings.domain.booking import BookedCourt, Booking
+from app.modules.bookings.domain.booking import BookedCourt, Booking, FreeCourt
 from app.modules.bookings.domain.keeping import KeepingRecord
 from app.modules.bookings.domain.summary import NewBookingsSummary
 
@@ -203,11 +203,13 @@ class ClubCourtsAtTheHour(Protocol):
 
     async def free_courts(
         self, club_id: UUID, *, sport: Sport, start: Instant
-    ) -> Sequence[BookedCourt]:
+    ) -> Sequence[FreeCourt]:
         """Every court of ``sport`` the club still has for Raketa from
         ``start``, read as ``first_free`` reads it — **in the club's own
-        order** — where a booked game may be moved to (#547). Empty when there
-        is none, or the club no longer sells."""
+        order** — where a booked game may be moved to (#547), each with the
+        share one player pays for it at that hour, which a club's cancel asks
+        of a court before it absorbs the game (#672). Empty when there is none,
+        or the club no longer sells."""
         ...
 
 

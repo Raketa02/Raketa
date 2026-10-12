@@ -110,6 +110,8 @@ class RecordedNotice:
     #: The court a move put the game on, and its kind (#671).
     court_name: str | None = None
     indoor: bool | None = None
+    #: The court a club's cancel moved the game from (#672).
+    moved_from: str | None = None
     #: Reached the list — given, or gathered into — since the player last
     #: opened it, and not their own: one the bell counts.
     new: bool = False

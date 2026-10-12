@@ -55,6 +55,15 @@ _SPORT_WORDS: Final = {
 #: A court's kind, as a player reads it (Q122).
 _KIND_WORDS: Final = {True: "indoor", False: "outdoor"}
 
+#: Why the court a club's cancel moved the game from can't be played, as *Game
+#: moved* says it after the court's name (#672; the mechanics §17.2, Q122).
+_CANNOT_BE_PLAYED: Final[dict[str, str]] = {
+    CancelReason.WEATHER: "can't be played in this weather",
+    CancelReason.REPAIR: "can't be played",
+    CancelReason.DOUBLE_BOOKING: "was booked twice",
+    CancelReason.OTHER: "isn't available",
+}
+
 #: Why a game was called off, as the notice says it — ``None`` is the club's
 #: *other*, which names none.
 _CALLED_OFF_BECAUSE: Final[dict[str, str | None]] = {
@@ -99,6 +108,8 @@ class Said:
     #: The court a move put the game on, and its kind (#671).
     court_name: str | None = None
     indoor: bool | None = None
+    #: The court a club's cancel moved the game from (#672).
+    moved_from: str | None = None
 
 
 def _when(at: Instant) -> str:
@@ -215,12 +226,18 @@ def words_for(said: Said) -> Words:
         )
     if kind is NoticeKind.GAME_MOVED:
         # The club's own Move (#671, Q122): the new court and its kind, and
-        # that nothing else — the hour, the price, the players — changes.
+        # that nothing else — the hour, the price, the players — changes. A
+        # move by cancel (#672) first says why the court it left can't be
+        # played, in the words of the club's reason.
         court = said.court_name or "another court"
         kind_of_court = "" if said.indoor is None else f" · {_KIND_WORDS[said.indoor]}"
+        body = f"{sport}{kind_of_court} · nothing else changes"
+        if said.reason is not None:
+            left = said.moved_from or "Your court"
+            body = f"{left} {_CANNOT_BE_PLAYED[said.reason]} · {body}"
         return Words(
             title=f"{said.club} moved your game to {court} · {_hour(said.starts_at)}",
-            body=f"{sport}{kind_of_court} · nothing else changes",
+            body=body,
         )
     if kind is NoticeKind.CONFIRM_PAYMENT:
         return _confirm_payment(said, game=game, money=money)

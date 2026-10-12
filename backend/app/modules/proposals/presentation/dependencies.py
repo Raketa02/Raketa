@@ -22,6 +22,7 @@ from app.bootstrap.composition import (
     build_booked_games,
     build_cancel_the_game,
     build_move_the_game,
+    build_preview_the_cancel,
     build_read_club_bookings,
     build_read_club_money,
     build_read_free_courts,
@@ -57,6 +58,7 @@ from app.modules.proposals.application.club_money import ReadClubMoney
 from app.modules.proposals.application.club_bookings import (
     CancelTheGame,
     MoveTheGame,
+    PreviewTheCancel,
     ReadClubBookings,
     ReadFreeCourts,
 )
@@ -326,6 +328,13 @@ def get_move_the_game(db: DbSession, clock: ClockDep) -> MoveTheGame:
 
 
 MoveTheGameDep = Annotated[MoveTheGame, Depends(get_move_the_game)]
+
+
+def get_preview_the_cancel(db: DbSession, clock: ClockDep) -> PreviewTheCancel:
+    return build_preview_the_cancel(db, clock=clock)
+
+
+PreviewTheCancelDep = Annotated[PreviewTheCancel, Depends(get_preview_the_cancel)]
 
 
 def get_cancel_the_game(

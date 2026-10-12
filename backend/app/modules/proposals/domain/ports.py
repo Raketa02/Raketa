@@ -1056,11 +1056,29 @@ class ClubBookings(Protocol):
         when another game claimed it a moment ago."""
         ...
 
+    async def absorbing_court(
+        self, booking_id: UUID, *, because: ClubCancelReason
+    ) -> CourtToMoveTo | None:
+        """The free court a cancel ``because`` would move the game to now (#672;
+        the mechanics §16.9, Q122) — another of the club's at its hour, sold at
+        its share, of its kind or indoor for an outdoor game, and indoor for
+        *weather*, the same kind first — or ``None`` when it would call the
+        game off."""
+        ...
+
     async def cancel(
-        self, booking_id: UUID, *, because: ClubCancelReason, at: Instant
-    ) -> ClubCancellation:
-        """Cancel the game, its Game and room with it — and answer whom it
-        owes."""
+        self,
+        booking_id: UUID,
+        *,
+        because: ClubCancelReason,
+        anyway: bool,
+        at: Instant,
+    ) -> ClubCancellation | CourtToMoveTo:
+        """Cancel the game: **moved** onto the court a cancel ``because``
+        finds absorbing it, read afresh now, owing nobody anything — or, with
+        none or ``anyway``, called off, its Game and room with it, answering
+        whom it owes. ``CourtJustTaken`` when another game claimed the
+        absorbing court a moment ago."""
         ...
 
 

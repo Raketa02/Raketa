@@ -1655,7 +1655,7 @@
           "dev"
         ],
         "summary": "Cancel a game, as the club",
-        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: every hold let go before the cut-off, everybody refunded in full after it, on nobody's record, a new card owed.",
+        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: moved onto a free court of the club's that absorbs it, nothing else changing (#672) \u2014 or, with none or `anyway`, called off: every hold let go before the cut-off, everybody refunded in full after it, on nobody's record, a new card owed. Answers which it was.",
         "operationId": "cancel_dev_clubs__club_id__bookings__booking_id__cancellation_post",
         "parameters": [
           {
@@ -1692,8 +1692,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelOutcomeSchema"
+                }
+              }
+            }
           },
           "403": {
             "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
@@ -3951,6 +3958,40 @@
         "title": "CalledOffBySchema",
         "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The name is carried because the court cannot supply it**: the leaver whose\ndeparture called the game off has been **vacated** \u2014 their seat is drawn\n`player_id: null` \u2014 so the seats alone could not name them. It is the same\nname a seat carries, read in the same set read, and it is `null` for the\nsame reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
       },
+      "CancelOutcomeKind": {
+        "type": "string",
+        "enum": [
+          "MOVED",
+          "CALLED_OFF"
+        ],
+        "title": "CancelOutcomeKind",
+        "description": "What a cancel came to \u2014 or, in its preview, would come to (#672)."
+      },
+      "CancelOutcomeSchema": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/CancelOutcomeKind",
+            "description": "`MOVED` \u2014 a free court of yours at the game's hour, sold at its price, of its kind or indoor for an outdoor game (indoor only for `WEATHER`), takes the game: every hold or payment stays as it is, nobody is refunded, and the players are told *Game moved*. `CALLED_OFF` \u2014 the game is off, the money as the cancel says."
+          },
+          "court": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourtToMoveToSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The court the game moves to, and its kind; `null` when called off."
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "court"
+        ],
+        "title": "CancelOutcomeSchema"
+      },
       "CancelReason": {
         "type": "string",
         "enum": [
@@ -3966,7 +4007,13 @@
         "properties": {
           "reason": {
             "$ref": "#/components/schemas/ClubCancelReason",
-            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money."
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money, or, when another of your courts takes the game, as why the court it left can't be played."
+          },
+          "anyway": {
+            "type": "boolean",
+            "title": "Anyway",
+            "description": "**Cancel the game anyway** \u2014 for a club closing the whole hour (an event, a power cut): the game is called off even when another court would take it.",
+            "default": false
           }
         },
         "type": "object",

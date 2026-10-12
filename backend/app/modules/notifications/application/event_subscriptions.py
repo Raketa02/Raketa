@@ -21,6 +21,8 @@ store is reset with the removal and only ``local`` has ever run.
 names the court the game is on now and its kind — two facts added to
 ``notifications.notice_given`` **defaulted**, as ``own``, ``until`` and
 ``rescue`` were, so a row given before names no court and the version stays.
+**A move by cancel says the court it left** (#672): ``moved_from``, a third
+fact added the same way, beside the cancel's reason in ``reason``.
 """
 
 from __future__ import annotations

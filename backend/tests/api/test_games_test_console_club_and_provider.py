@@ -1,16 +1,17 @@
 """The games test console as the club and the payment provider (#591;
 ``docs/adr/0194`` §2–§5).
 
-**The club row** moves and cancels as the club whose court it is — each press
-the club route's own use case, so it answers what the desk's own button
-answers, refusals included. **The payment provider** is the process's fake,
-given controls: a card set to succeed, decline or ask for the bank's check; a
-payment the bank confirms on the phone a laptop cannot reach the bank from; a
-refund delivered; and the notices it would have sent, replayed twice or out of
-order through the webhook's own handling. And one situation: *Card declines at
-the fill* (4). *Check-in at the club* went with desk check-in (#651), and the
-club's Accept and Refuse, the club's answer window and *Needs her yes, On
-request club* (3) with On request (#669).
+**The club row** moves and cancels as the club whose court it is — a cancel
+another free court absorbs moving the game, and *Cancel anyway* calling it off
+(#672) — each press the club route's own use case, so it answers what the
+desk's own button answers, refusals included. **The payment provider** is the
+process's fake, given controls: a card set to succeed, decline or ask for the
+bank's check; a payment the bank confirms on the phone a laptop cannot reach
+the bank from; a refund delivered; and the notices it would have sent,
+replayed twice or out of order through the webhook's own handling. And one
+situation: *Card declines at the fill* (4). *Check-in at the club* went with
+desk check-in (#651), and the club's Accept and Refuse, the club's answer
+window and *Needs her yes, On request club* (3) with On request (#669).
 
 Every claim is read where somebody would read it: the protagonist's Home, deck,
 receipts and booking details, and the desk's own lists.
@@ -267,7 +268,36 @@ async def test_moving_onto_a_court_that_is_not_free_is_refused_alike(
 
 
 @pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_cancelling_a_game_as_the_club_s_own(
+async def test_a_cancel_court_3_absorbs_moves_the_game_as_the_club_s_own(
+    client, session_factory, payments, clock, world, via
+):
+    """#672: Court 3 is free at the hour, indoor like Court 1 and at the same
+    price, so the cancel moves the game there and calls nothing off."""
+
+    game = await a_booked_game(client, session_factory, payments, clock, world)
+
+    cancelled = await club_does(
+        client,
+        via,
+        "cancel",
+        world.bonarka,
+        world.bonarka_desk,
+        game,
+        body={"reason": "REPAIR"},
+    )
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["outcome"] == "MOVED"
+    assert (cancelled.json()["court"]["name"], cancelled.json()["court"]["indoor"]) == (
+        "Court 3",
+        True,
+    )
+    home = await her_home_game(client, world, game)
+    assert (home["status"], home["court_name"]) == ("BOOKED", "Court 3")
+
+
+@pytest.mark.parametrize("via", [CLUB, CONSOLE])
+async def test_cancelling_a_game_anyway_as_the_club_s_own(
     client, session_factory, payments, clock, world, via
 ):
     game = await a_booked_game(client, session_factory, payments, clock, world)
@@ -279,10 +309,11 @@ async def test_cancelling_a_game_as_the_club_s_own(
         world.bonarka,
         world.bonarka_desk,
         game,
-        body={"reason": "WEATHER"},
+        body={"reason": "WEATHER", "anyway": True},
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json() == {"outcome": "CALLED_OFF", "court": None}
     home = await her_home_game(client, world, game)
     assert (home["status"], home["called_off_reason"], home["club_cancel_reason"]) == (
         "CALLED_OFF",
@@ -303,9 +334,9 @@ async def test_cancelling_a_game_called_off_already_is_refused_alike(
         world.bonarka,
         world.bonarka_desk,
         game,
-        body={"reason": "REPAIR"},
+        body={"reason": "REPAIR", "anyway": True},
     )
-    assert first.status_code == 204, first.text
+    assert first.status_code == 200, first.text
 
     again = await club_does(
         client,
@@ -314,7 +345,7 @@ async def test_cancelling_a_game_called_off_already_is_refused_alike(
         world.bonarka,
         world.bonarka_desk,
         game,
-        body={"reason": "REPAIR"},
+        body={"reason": "REPAIR", "anyway": True},
     )
 
     assert again.status_code == 409, again.text
@@ -551,14 +582,16 @@ async def test_the_controls_refuse_a_provider_that_is_not_the_process_s_fake(
 
 async def the_club_cancels(client, game: UUID, world: World) -> None:
     """From its desk, after the cut-off took the shares: everybody refunded in
-    full (#637) — a refund decided, and made from the outbox."""
+    full (#637) — a refund decided, and made from the outbox. *Anyway*: Court 3
+    would otherwise take the game (#672)."""
 
     cancelled = await client.post(
         f"/api/v1/club/bookings/{game}/cancellation",
-        json={"reason": "WEATHER"},
+        json={"reason": "WEATHER", "anyway": True},
         headers=world.bonarka_desk,
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
 
 
 def kinds(receipts: list[dict]) -> list[str]:

@@ -107,6 +107,9 @@ class NoticeORM(Base):
     #: *Game moved* alone.
     court_name: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     indoor: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    #: The court a club's cancel moved the game from (#672) — *Court 2 can't
+    #: be played*.
+    moved_from: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
 
 
 class NoticesOpenedORM(Base):

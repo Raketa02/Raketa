@@ -1977,13 +1977,92 @@
         }
       }
     },
+    "/api/v1/club/bookings/{booking_id}/cancellation/preview": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "What a cancel would do",
+        "description": "The Cancel dialog: what cancelling with this `reason` would do now \u2014 **move the game** to another of your courts at its hour (`MOVED`, with the court and its kind), or **call it off** (`CALLED_OFF`). A court takes the game when it is free at the game's hour, sold at the game's price, and of the same kind or indoor for an outdoor game \u2014 indoor only for `WEATHER`, since an outdoor court at the same hour is rained on too; the same kind first, then indoor, in your own order. When it would move, offer **Cancel the game anyway**. The cancel itself decides afresh.",
+        "operationId": "cancellation_preview_api_v1_club_bookings__booking_id__cancellation_preview_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ClubCancelReason",
+              "description": "The reason the desk chose."
+            },
+            "description": "The reason the desk chose."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelOutcomeSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booking at this club.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/club/bookings/{booking_id}/cancellation": {
       "post": {
         "tags": [
           "club"
         ],
         "summary": "Cancel a game",
-        "description": "**Cancel** a booked game, with your reason, until it starts. **Before your cut-off** every share is only held, and every hold is let go: nothing was taken, nobody is refunded and nobody pays a fee, you included (#637). **After it** everybody is **refunded in full** \u2014 the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.",
+        "description": "**Cancel** a booked game, with your reason, until it starts. **First, another of your courts takes it when one can** \u2014 free at the game's hour, sold at its price, of its kind or indoor for an outdoor game, indoor only for `WEATHER` \u2014 read afresh now, whatever the preview said: the game **moves** there, every hold or payment stays exactly as it is, nobody is refunded, nobody is owed a new game, and the players are told *Game moved* with why the court they left can't be played. **Otherwise, or with `anyway`, the game is called off**: **before your cut-off** every share is only held, and every hold is let go \u2014 nothing was taken, nobody is refunded and nobody pays a fee, you included (#637); **after it** everybody is **refunded in full** \u2014 the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first. Answers which it was.",
         "operationId": "cancel_api_v1_club_bookings__booking_id__cancellation_post",
         "security": [
           {
@@ -2013,8 +2092,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelOutcomeSchema"
+                }
+              }
+            }
           },
           "404": {
             "description": "`booking_not_found` \u2014 no such booking at this club.",
@@ -2027,7 +2113,7 @@
             }
           },
           "409": {
-            "description": "`booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
+            "description": "`booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded. `court_just_taken` \u2014 the court that would have taken the game went to another game a moment ago; cancel again and it decides afresh.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2274,11 +2360,51 @@
         "title": "CalledOffReason",
         "description": "Why a game will not be played (the mechanics \u00a714.1, \u00a716.7)."
       },
+      "CancelOutcomeKind": {
+        "type": "string",
+        "enum": [
+          "MOVED",
+          "CALLED_OFF"
+        ],
+        "title": "CancelOutcomeKind",
+        "description": "What a cancel came to \u2014 or, in its preview, would come to (#672)."
+      },
+      "CancelOutcomeSchema": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/CancelOutcomeKind",
+            "description": "`MOVED` \u2014 a free court of yours at the game's hour, sold at its price, of its kind or indoor for an outdoor game (indoor only for `WEATHER`), takes the game: every hold or payment stays as it is, nobody is refunded, and the players are told *Game moved*. `CALLED_OFF` \u2014 the game is off, the money as the cancel says."
+          },
+          "court": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourtToMoveToSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The court the game moves to, and its kind; `null` when called off."
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "court"
+        ],
+        "title": "CancelOutcomeSchema"
+      },
       "CancelRequest": {
         "properties": {
           "reason": {
             "$ref": "#/components/schemas/ClubCancelReason",
-            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money."
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money, or, when another of your courts takes the game, as why the court it left can't be played."
+          },
+          "anyway": {
+            "type": "boolean",
+            "title": "Anyway",
+            "description": "**Cancel the game anyway** \u2014 for a club closing the whole hour (an event, a power cut): the game is called off even when another court would take it.",
+            "default": false
           }
         },
         "type": "object",

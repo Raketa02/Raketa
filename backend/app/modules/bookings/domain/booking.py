@@ -92,6 +92,16 @@ class BookedCourt:
         return court.indoor or not self.indoor
 
 
+@dataclass(frozen=True, slots=True)
+class FreeCourt:
+    """A court of the game's sport its club still sells at the game's hour,
+    and the share one player pays for it there — what a club's cancel asks of
+    it before the court may absorb the game (#672)."""
+
+    court: BookedCourt
+    share_grosze: int
+
+
 class BookingState(StrEnum):
     """Where a booking stands (the mechanics §14.1, §16.7)."""
 
@@ -606,14 +616,48 @@ class Booking:
         )
         return True
 
-    def move_to(self, court: BookedCourt, *, at: Instant) -> None:
+    def absorbing_court(
+        self, free: Iterable[FreeCourt], *, because: CancelReason
+    ) -> BookedCourt | None:
+        """The court that takes the game when its club cancels it ``because``
+        — a **move by cancel** (#672; the mechanics §16.9, Q122) — or ``None``
+        when none does, and the cancel calls the game off.
+
+        ``free`` is every court of the game's sport its club still sells at
+        the game's hour, in the club's order. One absorbs the cancel when
+        nothing about the game would change: **the same share**, **the same
+        kind, or indoor for an outdoor game** — and, for *weather*, **indoor
+        only**, since an outdoor court at the same hour is rained on too. Of
+        two, the same kind comes first, then indoor; within that, the club's
+        own order."""
+
+        absorbing = [
+            one.court
+            for one in free
+            if one.court.court_id != self.court.court_id
+            and one.share_grosze == self.share_grosze
+            and self.court.may_move_to(one.court)
+            and (because is not CancelReason.WEATHER or one.court.indoor)
+        ]
+        # A stable sort: the club's order holds within each kind.
+        absorbing.sort(key=lambda court: court.indoor is not self.court.indoor)
+        return absorbing[0] if absorbing else None
+
+    def move_to(
+        self, court: BookedCourt, *, at: Instant, because: CancelReason | None = None
+    ) -> None:
         """The club puts the game on ``court`` — another court of its sport,
         free at the hour (#547). Whether it is free, of the sport, and of a kind
         the players would accept — the same kind, or indoor for an outdoor game
         (#671, Q122) — is the caller's question, asked of what the club sells;
         that the game is still to be played, and the court another, is this
         one's. The record carries the new court's kind, so the players read
-        *Court 3 · indoor* from here on."""
+        *Court 3 · indoor* from here on, and the court it left.
+
+        ``because`` is the club's cancel the move takes the place of — a move
+        by cancel (#672), its court found by ``absorbing_court`` — and ``None``
+        for the club's own Move. Either way nothing else about the game
+        changes: its players, its seats and their money stay as they are."""
 
         self._refuse_unless_still_to_be_played(at)
         invariant(
@@ -627,6 +671,8 @@ class Booking:
                 court_name=court.name,
                 indoor=court.indoor,
                 occurred_at=at,
+                reason=None if because is None else because.value,
+                moved_from=self.court.name,
             )
         )
 

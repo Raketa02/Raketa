@@ -278,7 +278,9 @@ async def test_a_day_that_cost_the_club_is_netted_against_the_next_one_paid(
     cancelled = await client.post(
         f"{BOOKINGS}/{booking}/cancellation", json={"reason": "WEATHER"}, headers=desk
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     sunday = await makes(
         session_factory,
         clock,

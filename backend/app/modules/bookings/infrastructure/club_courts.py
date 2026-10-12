@@ -21,7 +21,7 @@ from typing import Final, final
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.bookings.domain.booking import BookedCourt
+from app.modules.bookings.domain.booking import BookedCourt, FreeCourt
 from app.modules.bookings.domain.ports import BookingDirectory, CourtForTheGame
 from app.modules.clubs.domain.ports import SellableCourtHours, TakenCourtHour
 from app.modules.clubs.domain.raketa_terms import before_any_deadline
@@ -46,13 +46,13 @@ class SellableClubCourts:
         if offer is None or not courts:
             return None
         return CourtForTheGame(
-            court=courts[0],
+            court=courts[0].court,
             cut_off_hours=offer.settings.cut_off_hours,
         )
 
     async def free_courts(
         self, club_id: UUID, *, sport: Sport, start: Instant
-    ) -> Sequence[BookedCourt]:
+    ) -> Sequence[FreeCourt]:
         offer = await self._offer(club_id, start=start)
         return () if offer is None else _courts(offer, sport=sport, start=start)
 
@@ -67,14 +67,17 @@ class SellableClubCourts:
         ).get(club_id)
 
 
-def _courts(
-    offer: ClubOffer, *, sport: Sport, start: Instant
-) -> tuple[BookedCourt, ...]:
+def _courts(offer: ClubOffer, *, sport: Sport, start: Instant) -> tuple[FreeCourt, ...]:
     """The courts of ``sport`` on sale from ``start``, in the club's order,
-    each with its kind (#671)."""
+    each with its kind (#671) and its share at the hour (#672)."""
 
     return tuple(
-        BookedCourt(court_id=hour.court_id, name=hour.court_name, indoor=hour.indoor)
+        FreeCourt(
+            court=BookedCourt(
+                court_id=hour.court_id, name=hour.court_name, indoor=hour.indoor
+            ),
+            share_grosze=hour.share_grosze,
+        )
         for hour in offer.hours
         if hour.sport is sport and hour.start == start
     )

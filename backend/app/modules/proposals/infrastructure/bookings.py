@@ -31,6 +31,7 @@ from uuid import UUID
 from app.kernel import Instant, Sport
 from app.modules.bookings.application.at_the_club import (
     CancelTheBooking,
+    MovedByCancel,
     MoveTheBooking,
 )
 from app.modules.bookings.application.book_the_game import (
@@ -404,8 +405,7 @@ class BookingsClubBookings:
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
         return [
-            CourtToMoveTo(court_id=court.court_id, name=court.name, indoor=court.indoor)
-            for court in await self._move.free_courts(booking_id)
+            _to_move_to(court) for court in await self._move.free_courts(booking_id)
         ]
 
     async def move(
@@ -417,17 +417,41 @@ class BookingsClubBookings:
             raise CourtJustTaken() from taken
         if court is None:
             return None
-        return CourtToMoveTo(court.court_id, court.name, court.indoor)
+        return _to_move_to(court)
+
+    async def absorbing_court(
+        self, booking_id: UUID, *, because: ClubCancelReason
+    ) -> CourtToMoveTo | None:
+        court = await self._cancel.absorbing_court(
+            booking_id, CancelReason(because.value)
+        )
+        return None if court is None else _to_move_to(court)
 
     async def cancel(
-        self, booking_id: UUID, *, because: ClubCancelReason, at: Instant
-    ) -> ClubCancellation:
-        cancelled = await self._cancel.execute(
-            booking_id, CancelReason(because.value), at=at
-        )
+        self,
+        booking_id: UUID,
+        *,
+        because: ClubCancelReason,
+        anyway: bool,
+        at: Instant,
+    ) -> ClubCancellation | CourtToMoveTo:
+        try:
+            cancelled = await self._cancel.execute(
+                booking_id, CancelReason(because.value), anyway=anyway, at=at
+            )
+        except CourtTaken as taken:
+            raise CourtJustTaken() from taken
+        if isinstance(cancelled, MovedByCancel):
+            return _to_move_to(cancelled.court)
         return ClubCancellation(
             still_in=cancelled.still_in, refunded=cancelled.refunded
         )
+
+
+def _to_move_to(court: BookedCourt) -> CourtToMoveTo:
+    """A booked game's court, as the club's desk reads it."""
+
+    return CourtToMoveTo(court_id=court.court_id, name=court.name, indoor=court.indoor)
 
 
 @final

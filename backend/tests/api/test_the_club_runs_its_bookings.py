@@ -5,11 +5,13 @@ The club's desk reads its bookings **by day**, filtered, each with its players
 (name, *paid*, *held*), its money and the group it came from. It **moves** a
 booked game to another free court at the same hour, and **cancels** one with a
 reason — everybody refunded in full, nothing on anybody's record, the players
-dealt a new card first. **The club sees no attendance** (#657): a game somebody
-Didn't come to — caught at the court by the players, in
-``test_attendance_at_the_court.py`` — is *played* for the club, which was paid
-for the hour. **Desk check-in is removed** (#651): a scan the desk made before
-it was is still in the booking's stream, and stops no tap.
+dealt a new card first — unless another of its courts takes the game, which
+``test_a_cancel_moves_the_game.py`` proves (#672). **The club sees no
+attendance** (#657): a game somebody Didn't come to — caught at the court by
+the players, in ``test_attendance_at_the_court.py`` — is *played* for the
+club, which was paid for the hour. **Desk check-in is removed** (#651): a scan
+the desk made before it was is still in the booking's stream, and stops no
+tap.
 
 Every act is taken over HTTP as the website and the phone take it, against the
 fake payment provider; every claim is read where somebody would read it.
@@ -412,17 +414,21 @@ async def test_the_club_cancels_with_a_reason_and_everybody_is_refunded_in_full(
 ):
     """After the cut-off took the shares: everybody is refunded in full, and
     the club bears the fees (#637; before it, every hold is let go —
-    ``test_holding_until_the_cut_off.py``)."""
+    ``test_holding_until_the_cut_off.py``). *Anyway*, since Court 3 would
+    otherwise take the game (#672, ``test_a_cancel_moves_the_game.py``)."""
 
     club_id, desk = club
     await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
 
     cancelled = await client.post(
-        f"{BOOKINGS}/{booking}/cancellation", json={"reason": "WEATHER"}, headers=desk
+        f"{BOOKINGS}/{booking}/cancellation",
+        json={"reason": "WEATHER", "anyway": True},
+        headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json() == {"outcome": "CALLED_OFF", "court": None}
     await mailbox.drain()
     for player in four:
         [card] = await home_of(client, player)
@@ -486,9 +492,11 @@ async def test_a_cancelled_game_is_on_nobody_s_record(
     assert left.status_code == 200, left.text
 
     cancelled = await client.post(
-        f"{BOOKINGS}/{booking}/cancellation", json={"reason": "REPAIR"}, headers=desk
+        f"{BOOKINGS}/{booking}/cancellation",
+        json={"reason": "REPAIR", "anyway": True},
+        headers=desk,
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
     clock.move(timedelta(days=2))
 
     for player in four:

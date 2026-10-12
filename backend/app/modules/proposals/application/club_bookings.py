@@ -1,7 +1,7 @@
 """**The club runs its Raketa bookings** (#547; the mechanics §16.7, §16.9,
 §16.14, §16.16; the screens B4, B6).
 
-Two acts and two reads on the club surface, each for the desk's own club:
+Two acts and three reads on the club surface, each for the desk's own club:
 
 - **the day** — every booking whose game starts on a calendar day at the club,
   filtered, each with its status, its players (name, *paid*, *held*), its money
@@ -10,11 +10,19 @@ Two acts and two reads on the club surface, each for the desk's own club:
 - **the free courts** — where a game may be moved: every other court of its sport
   the club still has for Raketa at its hour;
 - **Move** — onto one of them; the players read the new number;
-- **Cancel**, with the club's reason — everybody still in refunded **in full**,
-  and a leaver whose open seat was still paid for; nothing on anybody's record;
-  the game, its room and its court hour off; and **the people still in dealt a
-  new card first** — never at this club and hour — by the proposer, which the
-  cancel makes due (``propose_games.py``).
+- **Cancel**, with the club's reason — **first a move by cancel** (#672; the
+  mechanics §16.9, Q122): when a free court of the club's absorbs it — the
+  same hour and share, the same kind or indoor for an outdoor game, indoor for
+  *weather* — the game moves there and nothing else happens: every hold or
+  taken share stays as it is, nobody is refunded, let go or owed a card, and
+  the players are told *Game moved*. Otherwise, or *anyway*: everybody still
+  in refunded **in full**, and a leaver whose open seat was still paid for;
+  nothing on anybody's record; the game, its room and its court hour off; and
+  **the people still in dealt a new card first** — never at this club and hour
+  — by the proposer, which the cancel makes due (``propose_games.py``);
+- **the cancel's preview** — what a cancel with a reason would do now: move
+  the game to a named court of a named kind, or call it off. The cancel
+  decides afresh when the club confirms.
 
 Desk check-in is removed (#651).
 
@@ -44,6 +52,7 @@ from app.modules.clubs.domain.court_hours import (
 from app.modules.proposals.domain.club_bookings import (
     NOTHING_TAKEN,
     BookedFrom,
+    CancelOutcome,
     ClubFilter,
     ClubStatus,
     CourtToMoveTo,
@@ -220,6 +229,27 @@ class MoveTheGame:
 
 
 @final
+class PreviewTheCancel:
+    """What a cancel with a reason would do now — the Cancel dialog (#672)."""
+
+    def __init__(
+        self, *, bookings: PlayerBookings, club: ClubBookings, clock: Clock
+    ) -> None:
+        self._bookings = bookings
+        self._club = club
+        self._clock = clock
+
+    async def execute(
+        self, *, club_id: UUID, booking_id: UUID, because: ClubCancelReason
+    ) -> CancelOutcome:
+        now = instant(self._clock.now())
+        await _still_the_clubs_to_play(self._bookings, club_id, booking_id, now=now)
+        return CancelOutcome(
+            moved_to=await self._club.absorbing_court(booking_id, because=because)
+        )
+
+
+@final
 class CancelTheGame:
     def __init__(
         self,
@@ -241,13 +271,29 @@ class CancelTheGame:
         self._clock = clock
 
     async def execute(
-        self, *, club_id: UUID, booking_id: UUID, because: ClubCancelReason
-    ) -> None:
+        self,
+        *,
+        club_id: UUID,
+        booking_id: UUID,
+        because: ClubCancelReason,
+        anyway: bool,
+    ) -> CancelOutcome:
+        """A move by cancel when a free court absorbs it now, or — with none,
+        or ``anyway`` — the game called off; the answer says which."""
+
         now = instant(self._clock.now())
         proposal = await self._proposals.load_for_update(booking_id)
         await _still_the_clubs_to_play(self._bookings, club_id, booking_id, now=now)
         proposal = invariant(proposal, f"a booking {booking_id} with no proposal")
-        cancelled = await self._club.cancel(booking_id, because=because, at=now)
+        came_to = await self._club.cancel(
+            booking_id, because=because, anyway=anyway, at=now
+        )
+        if isinstance(came_to, CourtToMoveTo):
+            # Moved, never called off: every hold or taken share stays as it
+            # is, and nobody is refunded, let go or owed a card.
+            await self._uow.commit()
+            return CancelOutcome(moved_to=came_to)
+        cancelled = came_to
         await self._refunds.refund(
             booking_id,
             cancelled.still_in,
@@ -272,6 +318,7 @@ class CancelTheGame:
         proposal.club_cancelled(cancelled.still_in, at=now)
         await self._proposals.save(proposal)
         await self._uow.commit()
+        return CancelOutcome(moved_to=None)
 
 
 async def _the_clubs(

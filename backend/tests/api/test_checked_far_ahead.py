@@ -523,7 +523,9 @@ async def test_a_club_cancel_while_his_card_is_to_fix_leaves_nothing_to_run_out(
         json={"reason": "WEATHER"},
         headers=club[1],
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     await mailbox.drain()
 
     assert await to_confirm(client, four["ivan"]) == []
@@ -545,7 +547,9 @@ async def test_a_club_cancel_of_a_checked_share_says_nothing_was_held(
         json={"reason": "WEATHER"},
         headers=club[1],
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     await mailbox.drain()
 
     [ivan_s] = [

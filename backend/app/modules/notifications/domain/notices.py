@@ -201,6 +201,9 @@ class Notice:
     #: notice, so *Court 3 · indoor* reads the same after a second move.
     court_name: str | None = None
     indoor: bool | None = None
+    #: The court the game left, said when a club's cancel moved it — *Court 2
+    #: can't be played* (#672).
+    moved_from: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,6 +293,7 @@ class NoticesOfADay:
             rescue=notice.rescue,
             court_name=notice.court_name,
             indoor=notice.indoor,
+            moved_from=notice.moved_from,
         )
         self._record_that(given)
         return given

@@ -122,3 +122,58 @@ def test_a_booking_or_a_move_without_the_court_s_kind_has_no_decoder(name: str):
 
     with pytest.raises(LookupError):
         _catalog().class_for(name, 1)
+
+
+def test_a_move_by_cancel_keeps_its_reason_and_the_court_it_left():
+    """#672: a club's cancel that a free court absorbed is a ``CourtMoved``
+    naming the cancel's reason and the court the game left — two defaulted
+    fields, version 2 unchanged."""
+
+    codec = JsonEventCodec(_catalog())
+    moved = CourtMoved(
+        booking_id=uuid4(),
+        court_id=uuid4(),
+        court_name="Court 3",
+        indoor=True,
+        occurred_at=NOW,
+        reason="REPAIR",
+        moved_from="Court 2",
+    )
+
+    encoded = codec.encode(moved)
+
+    assert encoded.schema_version == 2
+    assert codec.decode(_envelope(encoded)) == moved
+
+
+def test_a_move_recorded_before_reads_as_the_club_s_own():
+    codec = JsonEventCodec(_catalog())
+    encoded = codec.encode(
+        CourtMoved(
+            booking_id=uuid4(),
+            court_id=uuid4(),
+            court_name="Court 3",
+            indoor=True,
+            occurred_at=NOW,
+        )
+    )
+    before = {
+        key: value
+        for key, value in encoded.payload.items()
+        if key not in ("reason", "moved_from")
+    }
+
+    decoded = codec.decode(_envelope(encoded, payload=before))
+
+    assert isinstance(decoded, CourtMoved)
+    assert (decoded.reason, decoded.moved_from) == (None, None)
+
+
+def _envelope(encoded, *, payload=None) -> SerializedEventEnvelope:
+    return SerializedEventEnvelope(
+        id=uuid4(),
+        event_type=encoded.event_type,
+        schema_version=encoded.schema_version,
+        payload=encoded.payload if payload is None else payload,
+        occurred_at=NOW,
+    )

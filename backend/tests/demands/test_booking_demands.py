@@ -113,7 +113,9 @@ async def test_the_free_courts_at_an_hour_are_the_sport_s_in_the_club_s_order(
     implementation, client, session
 ):
     """#547: where a booked game may be moved — each with its kind, indoor or
-    outdoor, which the move keeps (#671, Q122)."""
+    outdoor, which the move keeps (#671, Q122), and the share one player pays
+    for it at the hour, which a club's cancel asks of a court before it absorbs
+    the game (#672)."""
 
     club_id, desk = await a_club_and_its_desk(client)
     outdoor = await adds_a_court(
@@ -126,9 +128,9 @@ async def test_the_free_courts_at_an_hour_are_the_sport_s_in_the_club_s_order(
         UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
     )
 
-    assert [(court.name, court.indoor) for court in padel] == [
-        ("Court 1", True),
-        ("Court 4", False),
+    assert [(one.court.name, one.court.indoor, one.share_grosze) for one in padel] == [
+        ("Court 1", True, 30_00),
+        ("Court 4", False, 30_00),
     ]
     first = await courts.first_free(
         UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE

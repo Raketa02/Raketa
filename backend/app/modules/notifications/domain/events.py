@@ -106,6 +106,8 @@ class NoticeGiven:
     and its kind (#671) — *Bonarka Arena moved your game to Court 3* / *Padel ·
     indoor* — kept on the notice so it reads the same after a second move;
     ``None`` on every other kind, and on the rows recorded before.
+    ``moved_from`` is the court the game left, said when a club's cancel moved
+    it — *Court 2 can't be played*, the cancel's reason in ``reason`` (#672).
     """
 
     notice_id: UUID
@@ -134,6 +136,7 @@ class NoticeGiven:
     rescue: bool = False
     court_name: str | None = None
     indoor: bool | None = None
+    moved_from: str | None = None
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``

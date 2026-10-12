@@ -20,6 +20,11 @@ Q122): each gained the court's kind, ``indoor``, a required fact on the wire —
 a change to the shape, versioned as one. Version 1 of each is not registered:
 the store is reset with the change, so a stored row of it is a decoding error,
 and no row of version 2 ever named a court without its kind.
+
+**``bookings.court_moved`` version 2 gained two defaulted facts** (#672): the
+club's cancel a move took the place of (``reason``) and the court it left
+(``moved_from``). Defaulted, so the version stays and a move recorded before
+reads as the club's own — the way ``notifications.notice_given`` grows.
 """
 
 from __future__ import annotations

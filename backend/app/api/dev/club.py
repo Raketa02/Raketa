@@ -1,7 +1,8 @@
 """The club row: a game moved or cancelled — as the club whose court it is
-(``docs/adr/0194`` §2, §3; #591). Its check-in press went with desk check-in
-(#651), and its Accept and Refuse with On request (#669): no club confirms a
-game.
+(``docs/adr/0194`` §2, §3; #591). A cancel another of the club's courts
+absorbs moves the game, and *Cancel anyway* calls it off all the same (#672).
+Its check-in press went with desk check-in (#651), and its Accept and Refuse
+with On request (#669): no club confirms a game.
 
 **Each route is the club's own route with the acting club in place of the
 signed-in desk** — ``POST /dev/clubs/{club_id}/bookings/{id}/move`` beside the
@@ -29,13 +30,14 @@ import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Response, status
+from fastapi import APIRouter, Depends, Path, status
 
 from app.api.dev.accounts import NotASeedAccount, is_seed_account
 from app.core.exception_handlers import ErrorResponse
 from app.modules.clubs.domain.ports import ClubAccountRepository
 from app.modules.clubs.presentation.dependencies import ClubAccountRepositoryDep
 from app.modules.proposals.presentation.club_routes import (
+    CancelOutcomeSchema,
     CancelRequest,
     CourtToMoveToSchema,
     FreeCourtsResponse,
@@ -137,14 +139,16 @@ async def move(
 
 @router.post(
     "/bookings/{booking_id}/cancellation",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
+    response_model=CancelOutcomeSchema,
+    status_code=status.HTTP_200_OK,
     responses=_REFUSED,
     summary="Cancel a game, as the club",
     description=(
         "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: "
-        "every hold let go before the cut-off, everybody refunded in full after "
-        "it, on nobody's record, a new card owed."
+        "moved onto a free court of the club's that absorbs it, nothing else "
+        "changing (#672) — or, with none or `anyway`, called off: every hold "
+        "let go before the cut-off, everybody refunded in full after it, on "
+        "nobody's record, a new card owed. Answers which it was."
     ),
 )
 async def cancel(
@@ -152,6 +156,12 @@ async def cancel(
     payload: CancelRequest,
     club: ActingClubDep,
     cancel: CancelTheGameDep,
-) -> Response:
-    await cancel.execute(club_id=club, booking_id=booking_id, because=payload.reason)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+) -> CancelOutcomeSchema:
+    return CancelOutcomeSchema.of(
+        await cancel.execute(
+            club_id=club,
+            booking_id=booking_id,
+            because=payload.reason,
+            anyway=payload.anyway,
+        )
+    )

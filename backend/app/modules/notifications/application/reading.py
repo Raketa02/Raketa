@@ -57,6 +57,7 @@ def recorded(given: NoticeGiven) -> RecordedNotice:
         rescue=given.rescue,
         court_name=given.court_name,
         indoor=given.indoor,
+        moved_from=given.moved_from,
     )
 
 
@@ -93,6 +94,7 @@ class NoticeWords:
                     rescue=notice.rescue,
                     court_name=notice.court_name,
                     indoor=notice.indoor,
+                    moved_from=notice.moved_from,
                 )
             )
             for notice in notices

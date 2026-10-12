@@ -28,7 +28,11 @@ saying no to it. **A rescuer whose share was refused keeps a seat** (#640):
 **The club runs it** (#547): ``CourtMoved`` puts the game on another court of
 its sport at the same hour — of the same kind, or indoor for an outdoor game
 (#671, Q122) — and ``CancelledByClub`` calls it off with the club's reason —
-everybody still in named, to be refunded in full.
+everybody still in named, to be refunded in full. **A club's cancel that a free
+court absorbs is a ``CourtMoved``** naming the cancel's reason and the court it
+left (#672): the game is never called off, so nothing a cancel does follows.
+Both fields are defaulted, version 2 unchanged, so a move recorded before reads
+as the club's own.
 
 **The court's kind travels with the court** (#671): ``BookingConfirmed`` and
 ``CourtMoved`` each carry ``indoor`` beside the court's name, since a booked
@@ -228,6 +232,15 @@ class CourtMoved:
     #: The new court's kind, indoor or outdoor.
     indoor: bool
     occurred_at: datetime
+    #: The club's cancel this move took the place of — a **move by cancel**
+    #: (#672; the mechanics §16.9, Q122): ``WEATHER``, ``REPAIR``,
+    #: ``DOUBLE_BOOKING`` or ``OTHER``, told to the players as why the court it
+    #: left can't be played. ``None`` for the club's own Move, and on the rows
+    #: recorded before.
+    reason: str | None = None
+    #: What the club calls the court the game left. ``None`` on the rows
+    #: recorded before it was asked.
+    moved_from: str | None = None
 
 
 @dataclass(frozen=True)

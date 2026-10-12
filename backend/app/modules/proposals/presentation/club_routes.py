@@ -1,6 +1,7 @@
 """**The club's Raketa bookings**, on the club surface: **the club runs them** —
 a day of bookings, Move and Cancel (#547; the mechanics §16.7, §16.9, §16.14;
-the screens B4, B6). The desk's Check in is removed (#651), and so are On
+the screens B4, B6), the Cancel dialog's preview, and a cancel another court
+absorbs (#672). The desk's Check in is removed (#651), and so are On
 request's waiting list, Accept and Refuse (#669; ``docs/adr/0196`` §1): no club
 confirms a game.
 
@@ -20,7 +21,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, status
 from pydantic import BaseModel, Field
 
 from app.core.exception_handlers import ErrorResponse
@@ -33,6 +34,7 @@ from app.modules.proposals.application.club_bookings import (
 )
 from app.modules.proposals.application.club_money import ClubMoney, MoneyRow
 from app.modules.proposals.domain.club_bookings import (
+    CancelOutcome,
     ClubFilter,
     ClubStatus,
     CourtToMoveTo,
@@ -43,6 +45,7 @@ from app.modules.proposals.domain.home import BookedGame, ClubCancelReason
 from app.modules.proposals.presentation.dependencies import (
     CancelTheGameDep,
     MoveTheGameDep,
+    PreviewTheCancelDep,
     ReadClubBookingsDep,
     ReadClubMoneyDep,
     ReadFreeCourtsDep,
@@ -290,9 +293,52 @@ class CancelRequest(BaseModel):
     reason: ClubCancelReason = Field(
         description=(
             "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the "
-            "players with what comes of their money."
+            "players with what comes of their money, or, when another of your "
+            "courts takes the game, as why the court it left can't be played."
         )
     )
+    anyway: bool = Field(
+        default=False,
+        description=(
+            "**Cancel the game anyway** — for a club closing the whole hour (an "
+            "event, a power cut): the game is called off even when another "
+            "court would take it."
+        ),
+    )
+
+
+class CancelOutcomeKind(StrEnum):
+    """What a cancel came to — or, in its preview, would come to (#672)."""
+
+    #: Another of the club's courts took the game: *This game moves to Court 3
+    #: · indoor · the players are told, nobody is refunded*.
+    MOVED = "MOVED"
+    #: The game is called off.
+    CALLED_OFF = "CALLED_OFF"
+
+
+class CancelOutcomeSchema(BaseModel):
+    outcome: CancelOutcomeKind = Field(
+        description=(
+            "`MOVED` — a free court of yours at the game's hour, sold at its "
+            "price, of its kind or indoor for an outdoor game (indoor only for "
+            "`WEATHER`), takes the game: every hold or payment stays as it is, "
+            "nobody is refunded, and the players are told *Game moved*. "
+            "`CALLED_OFF` — the game is off, the money as the cancel says."
+        )
+    )
+    court: CourtToMoveToSchema | None = Field(
+        description="The court the game moves to, and its kind; `null` when called off."
+    )
+
+    @classmethod
+    def of(cls, outcome: CancelOutcome) -> "CancelOutcomeSchema":
+        if outcome.moved_to is None:
+            return cls(outcome=CancelOutcomeKind.CALLED_OFF, court=None)
+        return cls(
+            outcome=CancelOutcomeKind.MOVED,
+            court=CourtToMoveToSchema.of(outcome.moved_to),
+        )
 
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
@@ -393,10 +439,10 @@ async def move(
     )
 
 
-@router.post(
-    "/{booking_id}/cancellation",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
+@router.get(
+    "/{booking_id}/cancellation/preview",
+    response_model=CancelOutcomeSchema,
+    status_code=status.HTTP_200_OK,
     responses={
         **_NOT_FOUND,
         status.HTTP_409_CONFLICT: {
@@ -404,16 +450,64 @@ async def move(
             "description": _NOT_TO_BE_PLAYED,
         },
     },
+    summary="What a cancel would do",
+    description=(
+        "The Cancel dialog: what cancelling with this `reason` would do now — "
+        "**move the game** to another of your courts at its hour (`MOVED`, "
+        "with the court and its kind), or **call it off** (`CALLED_OFF`). A "
+        "court takes the game when it is free at the game's hour, sold at the "
+        "game's price, and of the same kind or indoor for an outdoor game — "
+        "indoor only for `WEATHER`, since an outdoor court at the same hour is "
+        "rained on too; the same kind first, then indoor, in your own order. "
+        "When it would move, offer **Cancel the game anyway**. The cancel "
+        "itself decides afresh."
+    ),
+)
+async def cancellation_preview(
+    booking_id: UUID,
+    account: CurrentClubAccountDep,
+    read: PreviewTheCancelDep,
+    reason: ClubCancelReason = Query(description="The reason the desk chose."),
+) -> CancelOutcomeSchema:
+    return CancelOutcomeSchema.of(
+        await read.execute(
+            club_id=account.club_id, booking_id=booking_id, because=reason
+        )
+    )
+
+
+@router.post(
+    "/{booking_id}/cancellation",
+    response_model=CancelOutcomeSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        **_NOT_FOUND,
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                f"{_NOT_TO_BE_PLAYED} `court_just_taken` — the court that would "
+                "have taken the game went to another game a moment ago; cancel "
+                "again and it decides afresh."
+            ),
+        },
+    },
     summary="Cancel a game",
     description=(
-        "**Cancel** a booked game, with your reason, until it starts. **Before "
-        "your cut-off** every share is only held, and every hold is let go: "
-        "nothing was taken, nobody is refunded and nobody pays a fee, you "
-        "included (#637). **After it** everybody is **refunded in full** — the "
-        "card fees on those payments are not returned, and as the seller you "
-        "bear them. Either way it goes on **nobody's record**, the hour is "
-        "yours to sell again, and the players are told you cancelled, with the "
-        "reason, and dealt a new game first."
+        "**Cancel** a booked game, with your reason, until it starts. **First, "
+        "another of your courts takes it when one can** — free at the game's "
+        "hour, sold at its price, of its kind or indoor for an outdoor game, "
+        "indoor only for `WEATHER` — read afresh now, whatever the preview "
+        "said: the game **moves** there, every hold or payment stays exactly as "
+        "it is, nobody is refunded, nobody is owed a new game, and the players "
+        "are told *Game moved* with why the court they left can't be played. "
+        "**Otherwise, or with `anyway`, the game is called off**: **before your "
+        "cut-off** every share is only held, and every hold is let go — nothing "
+        "was taken, nobody is refunded and nobody pays a fee, you included "
+        "(#637); **after it** everybody is **refunded in full** — the card fees "
+        "on those payments are not returned, and as the seller you bear them. "
+        "Either way it goes on **nobody's record**, the hour is yours to sell "
+        "again, and the players are told you cancelled, with the reason, and "
+        "dealt a new game first. Answers which it was."
     ),
 )
 async def cancel(
@@ -421,11 +515,15 @@ async def cancel(
     payload: CancelRequest,
     account: CurrentClubAccountDep,
     cancel: CancelTheGameDep,
-) -> Response:
-    await cancel.execute(
-        club_id=account.club_id, booking_id=booking_id, because=payload.reason
+) -> CancelOutcomeSchema:
+    return CancelOutcomeSchema.of(
+        await cancel.execute(
+            club_id=account.club_id,
+            booking_id=booking_id,
+            because=payload.reason,
+            anyway=payload.anyway,
+        )
     )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --------------------------------------------------------------------------- #

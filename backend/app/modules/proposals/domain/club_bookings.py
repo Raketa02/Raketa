@@ -164,6 +164,17 @@ class CourtToMoveTo:
 
 @final
 @dataclass(frozen=True, slots=True)
+class CancelOutcome:
+    """What the club's cancel came to — or, in its preview, would come to
+    (#672; the mechanics §16.9, Q122): the game moved to ``moved_to``, a free
+    court of the club's that absorbed the cancel, or called off when
+    ``None``."""
+
+    moved_to: CourtToMoveTo | None
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class ClubCancellation:
     """What the club's cancel owes: everybody still in — refunded in full and
     dealt a new card first — and everybody given money back, which adds a

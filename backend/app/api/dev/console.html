@@ -776,8 +776,10 @@ function clubButtons(game) {
     : courts.length ? courts.map((c) => b("move", `→ ${esc(c.name)} · ${kindOf(c)}`, `data-court="${c.court_id}"`)).join("")
     : `<span class="note">no free court</span>`;
   const reasons = CANCEL_REASONS.map((r) => `<option>${r}</option>`).join("");
+  // Cancel moves the game when a free court of the club's absorbs it (#672);
+  // Cancel anyway calls it off all the same.
   return `<span class="club">${moves}
-      <select data-reason-for="${id}">${reasons}</select>${b("cancel", "Cancel")}</span>`;
+      <select data-reason-for="${id}">${reasons}</select>${b("cancel", "Cancel")}${b("cancel-anyway", "Cancel anyway")}</span>`;
 }
 
 async function clubAct(button) {
@@ -794,10 +796,14 @@ async function clubAct(button) {
   } else if (verb === "move") {
     done = await call("POST", at(`bookings/${game}/move`), { court_id: court });
     say(done, done.ok ? `${words} → now on ${esc(done.json.name)} · ${kindOf(done.json)}` : words);
-  } else if (verb === "cancel") {
+  } else if (verb === "cancel" || verb === "cancel-anyway") {
     const reason = document.querySelector(`select[data-reason-for="${game}"]`).value;
-    done = await call("POST", at(`bookings/${game}/cancellation`), { reason });
-    say(done, done.ok ? `${words} → cancelled (${esc(reason)})` : words);
+    const anyway = verb === "cancel-anyway";
+    done = await call("POST", at(`bookings/${game}/cancellation`), { reason, anyway });
+    const came = !done.ok ? "" : done.json.outcome === "MOVED"
+      ? `moved to ${esc(done.json.court.name)} · ${kindOf(done.json.court)}`
+      : "called off";
+    say(done, done.ok ? `${words} → ${came} (${esc(reason)})` : words);
   }
   delete state.freeCourts[game];
   await loadBoard();

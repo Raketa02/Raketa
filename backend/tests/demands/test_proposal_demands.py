@@ -48,6 +48,10 @@ from app.modules.payments.domain.seat_charge import (
 )
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
+from app.modules.proposals.domain.club_bookings import (
+    ClubCancellation,
+    CourtToMoveTo,
+)
 from app.modules.proposals.domain.home import ResultStage
 from app.modules.proposals.domain.home import ClubCancelReason, LateRefund
 from app.modules.proposals.domain.ports import (
@@ -400,8 +404,15 @@ async def test_a_player_is_named_by_their_name_and_a_stranger_not_at_all(
 # --------------------------------------------------------------------------- #
 
 
-async def _booked_with_its_game(session, *, start: Instant) -> Booking:
-    """A booking, and the ordinary Game it opened — as the fill makes both."""
+async def _booked_with_its_game(
+    session,
+    *,
+    start: Instant,
+    club_id: UUID | None = None,
+    court: BookedCourt | None = None,
+) -> Booking:
+    """A booking, and the ordinary Game it opened — as the fill makes both. At
+    a club nobody sells, unless told which club and court."""
 
     game_id = await build_game_opening(session).open(
         booking_id=(booking_id := new_uuid()),
@@ -415,8 +426,12 @@ async def _booked_with_its_game(session, *, start: Instant) -> Booking:
     booking = Booking.confirmed(
         booking_id=booking_id,
         pool_id=new_uuid(),
-        club_id=new_uuid(),
-        court=BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True),
+        club_id=new_uuid() if club_id is None else club_id,
+        court=(
+            BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True)
+            if court is None
+            else court
+        ),
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
         start=start,
@@ -1186,17 +1201,80 @@ async def test_a_club_s_day_is_its_bookings_and_its_cancel_says_whom_it_owes(
     cut_off = start - timedelta(hours=24)
     changes: BookedGameChanges = registered_build(BookedGameChanges, session)
     await changes.leave(booking.booking_id, KUBA, at=cut_off + timedelta(hours=1))
+    # No court absorbs the cancel: it calls the game off (#672).
+    assert (
+        await club.absorbing_court(booking.booking_id, because=ClubCancelReason.REPAIR)
+        is None
+    )
     cancelled = await club.cancel(
         booking.booking_id,
         because=ClubCancelReason.REPAIR,
+        anyway=False,
         at=cut_off + timedelta(hours=2),
     )
     await session.commit()
 
+    assert isinstance(cancelled, ClubCancellation)
     assert cancelled.still_in == (OLA, EWA, TOMEK)
     assert set(cancelled.refunded) == {OLA, KUBA, EWA, TOMEK}
     [after] = await club.on_day(booking.club_id, start=day_opens, end=day_closes)
     assert after.cancel_reason is ClubCancelReason.REPAIR
+
+
+@pytest.mark.parametrize("implementation", registered(ClubBookings))
+async def test_a_club_s_cancel_a_free_court_absorbs_moves_the_game(
+    implementation, client, session
+):
+    """#672 (Q122): Court 3, indoor like Court 1 and sold at the game's share,
+    absorbs a cancel — the preview names it, and the cancel moves the game
+    there, owing nobody anything; *anyway* calls the game off all the same."""
+
+    club_id, desk = await a_club_and_its_desk(client)
+    courts = (await client.get("/api/v1/club/courts", headers=desk)).json()["courts"]
+    court_1 = next(one for one in courts if one["name"] == "Court 1")
+    court_3 = await adds_a_court(client, desk, name="Court 3", sport="PADEL")
+    await sets_hours(client, desk, [court_3["id"]], every_hour_of_the_week())
+    booking = await _booked_with_its_game(
+        session,
+        start=instant(SATURDAY_FIVE),
+        club_id=UUID(club_id),
+        court=BookedCourt(court_id=UUID(court_1["id"]), name="Court 1", indoor=True),
+    )
+    club: ClubBookings = implementation.build(session)
+    to_court_3 = CourtToMoveTo(
+        court_id=UUID(court_3["id"]), name="Court 3", indoor=True
+    )
+
+    assert (
+        await club.absorbing_court(booking.booking_id, because=ClubCancelReason.WEATHER)
+        == to_court_3
+    )
+    moved = await club.cancel(
+        booking.booking_id,
+        because=ClubCancelReason.WEATHER,
+        anyway=False,
+        at=_at(1),
+    )
+    await session.commit()
+
+    assert moved == to_court_3
+    [game] = await club.on_day(
+        booking.club_id,
+        start=SATURDAY_FIVE - timedelta(hours=1),
+        end=SATURDAY_FIVE + timedelta(hours=1),
+    )
+    assert (game.court_name, game.cancel_reason) == ("Court 3", None)
+    # Court 1 is free again and would take it; *anyway* calls it off all the
+    # same.
+    cancelled = await club.cancel(
+        booking.booking_id,
+        because=ClubCancelReason.OTHER,
+        anyway=True,
+        at=_at(2),
+    )
+    await session.commit()
+    assert isinstance(cancelled, ClubCancellation)
+    assert cancelled.still_in == (OLA, KUBA, EWA, TOMEK)
 
 
 @pytest.mark.parametrize("implementation", registered(CourtKinds))

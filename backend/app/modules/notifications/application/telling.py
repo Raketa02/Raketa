@@ -55,8 +55,9 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 - ``CalledOffAtCutOff`` — to each leaver whose empty seat called it off, in a
   leaver's words: it counts on their record, and their refund stands (Q108).
 - ``CourtMoved`` — *Game moved*, to everybody with a seat on the booking: the
-  court it is on now and its kind, and that nothing else changes (#671, Q122).
-  Always on, opening the booked game, never emailed.
+  court it is on now and its kind, and that nothing else changes (#671, Q122)
+  — and, when a club's cancel moved it, why the court it left can't be played
+  (#672). Always on, opening the booked game, never emailed.
 - ``ProposalExpired`` — *Your post didn't fill*, to its poster, still In; and
   a full game gone back to filling, *called off · nobody paid*, to everybody
   still In.
@@ -197,6 +198,7 @@ def _notice(
     rescue: bool = False,
     court_name: str | None = None,
     indoor: bool | None = None,
+    moved_from: str | None = None,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -218,6 +220,7 @@ def _notice(
         rescue=rescue,
         court_name=court_name,
         indoor=indoor,
+        moved_from=moved_from,
     )
 
 
@@ -678,7 +681,9 @@ class TellThePlayers:
         """The club's own Move (#671; the mechanics §17.2, Q122): everybody
         with a seat on the booking reads the court it is on now and its kind,
         and that nothing else changes. The court and its kind are the event's
-        — kept on the notice, so it reads the same after a second move."""
+        — kept on the notice, so it reads the same after a second move. **A
+        move by cancel** (#672) says why the court it left can't be played:
+        the cancel's reason and that court travel on the event too."""
 
         game = await self._games.about(event.booking_id, at=at)
         if game is None or not game.booked:
@@ -690,8 +695,10 @@ class TellThePlayers:
                 game,
                 key=f"{NoticeKind.GAME_MOVED}:{key}",
                 opens=Opens.BOOKING,
+                reason=event.reason,
                 court_name=event.court_name,
                 indoor=event.indoor,
+                moved_from=event.moved_from,
             ),
             at=at,
         )

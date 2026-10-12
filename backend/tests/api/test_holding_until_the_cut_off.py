@@ -385,7 +385,9 @@ async def cancels(client, desk: dict, booking_id: str) -> None:
         json={"reason": "WEATHER"},
         headers=desk,
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
 
 
 async def test_a_club_cancelling_before_the_cut_off_lets_every_hold_go(

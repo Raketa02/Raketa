@@ -429,7 +429,9 @@ async def test_a_paid_leaver_the_club_s_cancel_refunds_is_told_as_a_leaver(
         headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     assert await last_told(client, mailbox, oscar) == (
         "Saturday's 17:00 at Bonarka Arena, which you left, was cancelled",
         "Bonarka Arena cancelled it because of the weather — you're refunded 40 zł.",
@@ -472,7 +474,9 @@ async def test_a_leaver_refunded_already_hears_nothing_of_the_club_s_cancel(
         headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     assert await told(client, mailbox, oscar) == told_oscar
     assert await subjects_to(mailbox, oscar) == emails_before
 

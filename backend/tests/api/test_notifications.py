@@ -490,7 +490,9 @@ async def test_a_game_the_club_cancels_is_called_off_with_its_reason(
         headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     for player in crowd[:4]:
         assert (await pushed_to(mailbox, pushes, player))[-1] == (
             "Game called off · nothing was taken",
@@ -651,7 +653,9 @@ async def a_game_the_club_cancels(
         json={"reason": "REPAIR"},
         headers=desk,
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     await mailbox.drain()
     return four, group
 
