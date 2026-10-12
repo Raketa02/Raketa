@@ -66,7 +66,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the reader, the rest of their version in dealt order (`domain/deck.py`) — with the sides
   drawn as the evenest arrangement **the engine's own `forecast`** gives over rating's
   estimates (`BalanceForecasts`), an overlap grid graded off the
-  engine's `group_availability` (`domain/overlap.py`), and the court block. The order is
+  engine's `group_availability` (`domain/overlap.py`), and the court block — **with the kind
+  of court it promises only when that is certain** (#671; the mechanics §5.2, Q122):
+  `DeckCard.indoor` is *Indoor* or *Outdoor* when every free court of the card's sport at
+  its club and hour is of that kind, read live off `CourtKinds` (`SellableCourtKinds`, the
+  offer before any deadline, as `held` reads it — registered in `proposal_demands.py`), and
+  `None` when they are mixed, since the first free court in the club's order is the one
+  booked; a `SEAT_OPEN` card carries its booked court's kind. The details read it the same
+  way (`ProposalDetails.indoor`). A player sees it and never chooses by it. The order is
   §8.2's four keys, the fourth read as **the forecast of the reader's version**; the same
   people only at their best hour, per segment. Every filter is read live: `PlayerFit` for
   blocks, gender preference and the level window — a card with somebody In the reader does

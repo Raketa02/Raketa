@@ -29,7 +29,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   *they're here* — each **at the club or away**, the press building the fix on the club's
   point (`GameClubs.of`) or 2 km north of it — *I was there* and *yes, they were here*,
   #657 — a
-  *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591), the payment
+  *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591; the move press
+  lists each free court with its kind, *→ Court 3 · indoor*, and the pane names the booked
+  court's, #671), the payment
   provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
   the situations under `/dev/situations/…`, *Run it now* under `/dev/jobs/{job}` — the
   scheduler's own job name (#592; #591's club's answer window went with On request, #669) —

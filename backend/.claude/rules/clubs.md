@@ -38,7 +38,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `clubs` holds a third aggregate, **Club courts** (`domain/club_courts.py`), filed under the
   **club's own id** and **born by being used** — nothing is written at sign-up, and `load`
   answers an unwritten aggregate. It holds the courts (one sport each, from
-  the club's own; indoor or outdoor; offered or switched off), each court's **Raketa hours** —
+  the club's own; indoor or outdoor — **the kind of court**, carried on every sellable hour
+  and read by the fill, the club's Move and a card's promise, #671, Q122; offered or
+  switched off), each court's **Raketa hours** —
   the player's own `WeeklyHours`, imported rather than respelled, with no floor — the
   exceptions, the price table, the settings and pause, and the club's
   payments account (#537); **no projection of courts is written beside it** — the one row is

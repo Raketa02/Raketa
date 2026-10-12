@@ -96,6 +96,16 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     sport and kind). Once per card: `Redealt` is recorded once per owed game. **A card the
     proposer deals for any other reason tells nobody** — a lost court hour's new card first
     included, which no notice promised; older `Redealt` rows name no card and tell nobody.
+- **The club's own Move is told** (#671; the mechanics §16.4, §17.2, Q122) — always on,
+  never capped, never emailed, since no money moves:
+  - **`GAME_MOVED`** on `bookings.court_moved` — *Bonarka Arena moved your game to Court 3 ·
+    Thu 19:00* / *Padel · indoor · nothing else changes* — to everybody with a seat on the
+    booking (`GameBrief.seated`), opening the booked game (`BOOKING`). **The court and its
+    kind are the event's, and kept on the notice** (`Notice.court_name`, `indoor` →
+    `NoticeGiven` → `notices`, migration 0059, defaulted `None` for every other kind and
+    every row before), so the row reads *Court 3 · indoor* after a second move too; a
+    notice told without them says *another court*. The move by cancel's wording — *Court 2
+    can't be played* — is #672's.
 - **A time to pay names its time and never its payer** (#625, #626; Q109, Q110). Always
   on, never capped, and emailed only where money is — the payer's confirm email:
   - **`CONFIRM_PAYMENT`** with `until` — *Confirm your payment by 14:40 to keep your seat* /

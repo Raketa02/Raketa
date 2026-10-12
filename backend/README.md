@@ -427,7 +427,10 @@ booking events and the proposal event that recorded requests, and the club's
 time to confirm — a clean cut, since only `local` has ever run. A store written before it
 holds streams nothing can read, so `make down-v && make up && make seed`; migration
 `0058` drops the columns only requests used. `make seed` alone is not enough: it reads the
-store it is given.
+store it is given. **The same reset follows the kind of court** (#671; ADR-0196 §4):
+`bookings.confirmed` and `bookings.court_moved` moved to version 2 carrying the court's
+kind, indoor or outdoor, and version 1 of each left without a decoder; migration `0059`
+adds the court a *Game moved* notice names.
 
 Every address is `<state>@raketa.example`, and the state is what the name says. The
 catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the
@@ -566,7 +569,8 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   booking's state, and every charge and refund. Every press refreshes the board;
   *Refresh* covers the rest — nothing on the page acts on its own.
 - **The club** acts from its game's pane, as the club whose court it is:
-  *Move* to a free court, and *Cancel* with a reason —
+  *Move* to a free court of the same kind, or an indoor one for an outdoor game — each
+  listed with its kind — and *Cancel* with a reason —
   `/dev/clubs/{club_id}/…`, each the desk's own route's use case. (Attendance is the
   players' at the court, never the club's.)
 - **The payment provider** is the backend's in-process fake, steered: each row's saved card

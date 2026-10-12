@@ -175,8 +175,11 @@ unregistered and the local store reset, so the last yes books the game at every 
 - **A Booking is born booked, under the proposal's own id** (`bookings/domain/booking.py`)
   — one id from the first card to the court, and a second booking of one proposal an
   append conflict.
-  It holds what the fill decided: the court and its name (**the first free court** of the sport,
-  in the club's order, read off what it sells **before any deadline**, as a card's held hour is),
+  It holds what the fill decided: the court, its name and **its kind**, indoor or outdoor
+  (**the first free court** of the sport, in the club's order, read off what it sells
+  **before any deadline**, as a card's held hour is; `BookedCourt.indoor`, on
+  `bookings.confirmed` at **version 2** since #671 — a row of version 1, which named no
+  kind, is a decoding error, the local store reset with the change),
   the sides (**the engine's own forecast** over every arrangement, the deck's `evenest`), the
   cut-off as the club's setting stood at the fill, and the Game it opened. Its projections —
   `bookings` (its `state`, and one court hour per booking held by a **partial** unique index:
@@ -422,11 +425,20 @@ unregistered and the local store reset, so the last yes books the game at every 
   share, less the fee kept where withheld); the group comes from `groups`
   (`PoolOrigins`). **Move and Cancel are the club's while the game is booked or seat open, not
   short at its cut-off, and not started** (`booking_is_called_off`,
-  `game_has_started`). **Move** (`CourtMoved`) is onto a court of `ClubCourtsAtTheHour.free_courts`
-  — every court of the sport the club still sells at the hour, read before any deadline, the
-  game's own excluded since its booking holds it; anything else is `court_not_free`, and a
+  `game_has_started`). **Move** (`CourtMoved`, at **version 2** since it carries the new
+  court's kind, #671) is onto a court of `ClubCourtsAtTheHour.free_courts`
+  — every court of the sport the club still sells at the hour, read before any deadline, each
+  with its kind, the game's own excluded since its booking holds it — **that keeps the
+  game's kind** (`MoveTheBooking.free_courts` over `BookedCourt.may_move_to`; the mechanics §16.4, Q122):
+  the same kind, or an indoor court for an outdoor game, never outdoors from indoors, which
+  would be a different game to the players; anything else is `court_not_free`, and a
   race on the court hour's index is `court_just_taken` — so **a club that is not live (its
-  payments account needs attention) has no court to move to**, and cancels instead. **Cancel**
+  payments account needs attention) has no court to move to**, and cancels instead. **A
+  booked game always names its court's kind** — Home's rows, the details, Fill in's rows,
+  the deck's `SEAT_OPEN` card and the club's row carry `indoor`, folded off the booking,
+  so the kind follows a move — and **a move wakes the proposer** (`CourtMoved` in
+  `MarkDueForProposing`'s `CLUB_EVENTS`), since the court it left is free at the hour again;
+  every player on the booking is told *Game moved* (`notifications.md`). **Cancel**
   (`CancelledByClub`, reason `WEATHER`/`REPAIR`/`DOUBLE_BOOKING`/`OTHER`) frees the court
   (partial index), calls the Game off by nobody **whole or with a seat open** (`Game.call_off_whole`,
   through `GameChanges.call_off_whole`), **before the cut-off lets every hold go** — nothing
