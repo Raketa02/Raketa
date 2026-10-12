@@ -404,3 +404,70 @@ before the hour (`the_game_has_not_started`, its own sentence for a score; a mar
 hasn't started yet._), a correction after the entry window (`corrections_have_closed`), and the
 one-score-per-side race, which a partner's counter can cause as well as the other side's score.
 **Not seen on a device.**
+
+**Who's here, caught at the court — attendance replaces the no-show report**
+([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3; the backend's #657). `gen:api`
+brought #657's wire: `GameSchema.no_shows` became `attendance` — one row per player somebody tapped,
+`AttendanceState` (`WAITING`, `ON_TIME`, `CAME_LATE`, `DIDNT_COME`, `CLAIMED`, `CONFIRMED`, held
+equal in `wireVocabulary.ts`) with `notedAt`, `arriveBy`, `arrivedAt`, `claimBy`, `claimedAt` and
+`confirmedAt`, and never who tapped. `GameStanding` gains `NOT_HERE_YET` and `DIDNT_COME` and loses
+`NO_SHOW_REPORTED`, `NO_SHOW` and `UNSCORED`; a state this build cannot read keeps its row and says
+nothing of it. **Two arms replace three**: `not-here-yet` (who is awaited, who the game waits
+with, whether the reader is one of them, and `arriveBy`) — _Are you here?_ over _Ivan Petrov is
+waiting for you._ to the player awaited, _Not here yet_ over _Waiting for Oscar Nowak._ to everybody
+else, each with the half hour on the clock — and `didnt-come` (who didn't come, and the reader's own
+as `may-claim`, `claimed` or `final` off `claimBy` against `readAt`) — _Were you there?_ with its day
+on the clock while _I was there_ may be said, _Didn't come_ otherwise. Neither offers a score act,
+neither is an evening (`endsAsAnEvening`), and `ResultAct` is about scores alone again: `dispute`
+left it. **The taps are `domain/attendance.ts`'s** — `attendanceBlock(game, reader, hour)`, the
+rows of the _Who's here_ block (`WhosHere`) in the court's order: _Oscar Nowak isn't here yet_ for
+everybody nobody has tapped and _Oscar Nowak is here_ for anybody awaited, while the first half
+hour runs and the standing takes a tap (`AWAITING_ENTRY`, `AWAITING_ANSWER`, `NOT_HERE_YET` — a
+waiting score stops no tap) and the reader is not away themselves; afterwards _Oscar Nowak says
+they were there_ with _Yes, Oscar Nowak was here_ while the claim's day runs; and _came late_ beside
+anybody who did, the reader too. On time vanishes, and a Didn't come is the standing line's. **The
+reader's own act is pinned**, the `primary` where the score's send is: _I'm here_ while they are
+awaited, _I was there_ while they didn't come and their day runs. **One press, and no sheet**: the
+tap costs its maker nothing and an arrival lifts it, so #560's _Before you say so_ sheet,
+`NoShowBlock`, `noShowRows`, `markErrorMessage` and the no-show writes are deleted. **The block sits
+above the grid**, under the body: in the first half hour it is what a player at the court opens the
+screen for, and the grid is the screen from the hour's start. **The position is read at the tap
+and kept by nobody** — `useAttendance.ts`: the two writes made at the club ask for the permission
+where asking achieves something (`ensurePermission`), read one precise fix through the location
+port's new `readPreciseFix` (`Accuracy.High`; the area's `readFix` stays `Balanced`), and hand it
+straight to the request **inside the mutation**, so it is never a mutation's variables and the
+cache never holds it. A refused permission, one blocked for good (with _Open Settings_ beside the
+sentence) and a phone that produced no fix are `LocationAtTheTap`, said in the footer like a refusal;
+the backend's `not_at_the_club` reads _You can say so only from Bonarka Arena._ with the booking's
+club — **unless the fix was rougher than the check allows for** (`isRoughFix`, wider than the
+backend's 200 m), which is the likeliest reason a player standing there hears it (iOS with Precise
+Location off, Android's approximate location; expo-location reports the granted accuracy on
+Android only), so that one says the phone could tell only roughly where it is, with _Open
+Settings_. The backend still decides; the phone only picks the sentence. The precise read is
+bounded (`PRECISE_FIX_WITHIN_MS`, 15 s): an arrival is dated when it lands, so a GPS that never
+settles indoors answers no fix rather than holding the tap. `BookedFacts` gains `startsAt` and `club` for these. **Those two are made online or not at
+all** (`networkMode: 'always'`): when an arrival lands decides what it was, so a tap is never
+queued to the next reconnect, and with no connection it says _This can't be sent until you're
+back._ The claim and its confirmation carry no position and pause like every other write. Every
+refusal the four routes make has a sentence (`attendanceErrorMessage`, keyed by the act where one
+code means two things), and the score's own refusals gain `somebody_is_not_here_yet` and
+`somebody_did_not_come`. **The permission text changed with it** (`app.config.ts`'s
+`locationWhenInUsePermission`): _Raketa uses your location to set the area you play in and, when
+you say who's at a game, to check you're at the club._ It is native configuration — the iOS
+prompt's Info.plist string — so **it needs a new build** to reach a phone; a development build made
+before this change still shows the old sentence. **Not seen on a device.**
+
+**Calls made here, open for the product owner**:
+
+- **The first half hour is measured on the phone before anybody is tapped.** `GameSchema` carries
+  no hour and no window, so `tapsAreOpen` reads the booking's `startsAt` plus 30 minutes against
+  `readAt` — a copy of the backend's `TAP_WINDOW`. A list read in the window and still on screen
+  after it offers a tap the backend refuses as `the_tap_window_has_closed`, which is said.
+- **The awaited player reads everybody the game waits with** (_Piotr Sowa, Inés Díaz and Bartek Lis
+  are waiting for you_), because who tapped is on no wire; in singles that is the one person who
+  could have. The push (#663/#664) names the tapper.
+- **A platform that states no accuracy sends `accuracy_m: 0`** — no allowance claimed, the fix
+  measured as it stands — rather than inventing a radius.
+- **A row's tap and its line are both drawn for a late claim** (_Oscar Nowak says they were there_
+  over _Yes, Oscar Nowak was here_); an awaited player reads others awaited as a line, with nothing
+  to press.

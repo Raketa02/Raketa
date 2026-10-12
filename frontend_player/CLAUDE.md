@@ -85,8 +85,9 @@ asserting it renders correctly.
 ## Safety — never without an explicit request
 
 - **Ask for a background location.** Foreground only, permanently; `app.config.ts` disables it
-  on both platforms and two tests assert the absence. A fix is coarsened to about a kilometre
-  the moment it is read.
+  on both platforms and two tests assert the absence. Two uses, and the prompt names both: the
+  area's fix is coarsened to about a kilometre the moment it is read, and an attendance tap's
+  precise fix is read at the tap, sent with it and kept by nobody (ADR-0195 §3).
 - **Store credentials anywhere but the OS keychain**, reached only through
   `src/shared/lib/auth`. Never `AsyncStorage`, never a module variable that outlives a session,
   never a log line. _(lint)_
