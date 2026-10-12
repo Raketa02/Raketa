@@ -53,9 +53,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0139](../../../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
   the first that appends a domain event and **the only one on this list that correctness
   depends on**. Every other job buys a record or a table's size; this is the only path a
-  confirmed result has to a Level, because ADR-0137 refused a `ResultConfirmed` event — a
-  confirmation is a clock passing and announces nothing — and recorded that cost by name. A
-  player whose game confirmed on Tuesday keeps Monday's Level until it runs. It **holds no
+  result settled by a window closing has to a Level, because ADR-0137 refused a
+  `ResultConfirmed` event — silence settling a score is a clock passing and announces
+  nothing — and recorded that cost by name. **It runs every minute** (#654,
+  [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §5: Levels move within a minute of a result settling; the hourly cadence is retired), and
+  *That's right*, which settles at once, moves its game's Levels from the outbox
+  (`subscribe_the_rating_settler`, the use case's `settle(game_id, at=…)`, folded at the
+  tap) — so the walk usually steps over an agreed game, and an agreement may be applied up
+  to a minute before a silence-settled result that became final just before it. It **holds no
   cursor**: every move records the game that caused it, so *have I applied this* is answered
   by replaying the aggregate that would change, and a half-finished run is re-derived in full
   by the next tick rather than being a lost result. Its walk is over every game the platform

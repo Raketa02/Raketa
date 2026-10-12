@@ -36,7 +36,7 @@ from the code.
   (`the_court_has_an_open_seat`), every fold reads the current court, and the pairing read
   omits the forecast, the split and the stakes until it is whole. A seat no longer moves once
   the game is not awaiting its entry (`the_line_up_is_settled`).
-- **Four ends are folded from the record and the clock, and the fifth is announced; none is
+- **Its ends are folded from the record and the clock, and one is announced; none is
   stored.** There is no `ResultConfirmed`, no sweep and no job, because a derived standing has
   exactly one place to be true; *silence confirms* is a clock passing, so the test for it
   advances a clock and there is deliberately no method called `confirm`. `GameCalledOff` may
@@ -98,8 +98,30 @@ from the code.
 - **A booked game is a game with an hour** (#541, `bookings.md`). `GamePlanned.starts_at`
   carries the booked hour (nullable, defaulted: a row written before bookings is a game with no
   hour, and only such a row still measures its entry window from `PLAN_HORIZON`).
-  `Game.entry_closes_at` runs from that hour's end plus `ENTRY_GRACE`. *We played* is not yet
-  refused before the hour (#544, #547).
+  `Game.entry_closes_at` runs from that hour's end plus `ENTRY_GRACE`. *We played* is refused
+  before the hour (`the_game_has_not_started`, #654).
+- **A score is asked once, and settled by one tap or by silence** (#654;
+  [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §5). The rules are **one fold**, `standing.settlement_of` — which score settles and when —
+  and the standing, `agreed_score` and `settled_at` all read it, so they cannot disagree.
+  *That's right* (`accept_result`) **settles at once and closes the game**: the result is
+  final at the tap, no counter is taken after it (so in doubles the first agreement from the
+  other side wins), and the six-hour `ACCEPTANCE_GRACE` is retired. A lone score settles by
+  silence a day after it went up. **Two scores** settle when the later one's day is up: naming
+  the same winner, `CONFIRMED` with the **closer** (`Score.margin`, games won across every set;
+  a tie goes to the first put up); naming different winners, **`DISPUTED`** — in `SETTLED` and
+  in `PLAYED`, no Level moves, and `Game.left_in_dispute_by` names the two who put the scores
+  up (the record's *Results left in dispute*, read by #659). `UNSCORED` is reached now only by
+  a booked game every no-show report of was disputed, and goes with the report (#657). **A
+  correction is refused once the entry window has closed** (`corrections_have_closed`); a
+  counter is not a correction and stays open while the score it answers waits. **For fun asks
+  nothing**: its first score is the result at once, nobody is asked
+  (`score_put_to_a_side_at` is `None`), and no Level moves. The wire carries no agreement —
+  it is never pending — so `acceptance` and a proposal's `settles_at` are gone. **Levels move
+  within a minute**: `games.result_accepted` is delivered to rating's
+  `SettleRatingsOnAnAgreement`, which settles that one game as it stood at the tap
+  (`ConfirmedResultLedger.confirmed_counted_result`), and the catch-up runs every minute for
+  everything a window closing settled (`jobs.md`).
 - **A booked game whose hour comes with a seat open has *started short*** (#544; the
   mechanics §14.1, §19). `GameStanding.STARTED_SHORT` is folded from `starts_at` and a line-up
   with a seat open at `now >= starts_at`, asked right after a call-off and before the entry

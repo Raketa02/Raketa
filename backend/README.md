@@ -311,7 +311,7 @@ serving HTTP.
 | `PHOTO_REVIEW_BACKFILL_BATCH_LIMIT` | Most photos one backfill run may send to the reviewer. |
 | `PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS` | Gap between two reviews inside one run. Not which photos it picks — that is the note on the object. |
 | `REDIS_URL` | The ephemeral store, holding a room's live channel and its typing roster. Server-to-server; no scheme rule. |
-| `RATING_CATCH_UP_ENABLED` | Enables the hourly rating catch-up, which moves a Level on every confirmed counted result. **The only job whose absence a player would notice** — nothing announces a confirmation, so this is the whole path a result has to a rating. |
+| `RATING_CATCH_UP_ENABLED` | Enables the rating catch-up — every minute — which moves a Level on every confirmed counted result a window closing settled. **The only job whose absence a player would notice** — nothing announces silence settling a score, so this is the whole path such a result has to a rating. (*That's right* settles at once and moves its Levels from the outbox.) |
 | `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
 | `CONVERSATION_SWEEP_ENABLED` | Enables the hourly conversation sweep, which destroys every room whose episode is over. **Destroyed, not delisted** — turning it off changes no answer, because the end is derived and every route already refuses past it; what stops is the rows going away. |
 | `CONVERSATION_SWEEP_INTERVAL_SECONDS` | How often it runs. **Not `CONVERSATION_GRACE`**, which is how long a room outlives its game and is domain. |
