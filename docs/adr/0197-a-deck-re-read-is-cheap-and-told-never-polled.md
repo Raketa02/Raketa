@@ -1,8 +1,8 @@
 # ADR-0197 — A deck re-read is cheap and told, never polled
 
 - **Status:** Proposed
-  - §1 is built in the player app, on `feat/RKTA-06_games_fill_in`, uncommitted on 2026-10-12.
-  - §2's three optimisations are ticketed for the backend: [#702](https://github.com/Raketa02/Raketa/issues/702), [#703](https://github.com/Raketa02/Raketa/issues/703) and [#704](https://github.com/Raketa02/Raketa/issues/704).
+  - §1 is built in the player app, on `feat/RKTA-06_games_fill_in` (a91b71bb).
+  - §2's three optimisations are built in the backend on the same branch, 2026-10-12: [#702](https://github.com/Raketa02/Raketa/issues/702) (432c315b), [#703](https://github.com/Raketa02/Raketa/issues/703) (e51fc77f) and [#704](https://github.com/Raketa02/Raketa/issues/704) (f588b29a). The figures as built are under §2.
   - §3 waits on the product owner's choice of transport.
   - (0196 is taken on `feature/club_no_confirms`.)
 - **Date:** 2026-10-12
@@ -86,7 +86,7 @@ mostly on nothing.
 With the card under the thumb held, the old reason for never re-reading an open deck is gone. What
 stops a poll now is only its price.
 
-### 2. The deck read is made cheap before anything multiplies it (ticketed)
+### 2. The deck read is made cheap before anything multiplies it (built)
 
 Three optimisations, each **pure** — every response byte-identical, photo-URL signatures aside,
 since those carry the signing instant and differ on every signing anyway. Each is measured in place
@@ -98,6 +98,26 @@ against the real code and local data:
 | **b** · [#703](https://github.com/Raketa02/Raketa/issues/703) | **A week's hours answer *is this hour ticked?* by lookup**, not by scanning every ticked hour. | Grid 40 → 8 ms | Grid 5 → 1 ms | Post a game's grid −14%; the proposer's *free for the hour*. |
 | **c** · [#704](https://github.com/Raketa02/Raketa/issues/704) | **Each event stream is read once per deck read.** Today each adapter replays the same profile and rating streams again. | 256 → 137 statements, −32 ms CPU | 107 → 61 | Every removed statement is a network round trip once deployed. |
 | **all three** | | **171 → 59 ms CPU (−65%)** | **90 → 29 ms (−68%)** | 6 cards, no photos: 28 → 17 ms |
+
+**As built** (2026-10-12, the same method on the same seed decks, the container's log at
+WARNING for every run so that a DEBUG line per signature counts in neither; the busy deck
+is 47 dealt, 33 shown, 13 people, 59 faces; each cell the median of 15 reads, and the busy
+deck's CPU read twice because run-to-run noise is about ±10 ms):
+
+| The reader's deck | Before | after #702 | after #703 | after #704 (all three) |
+| --- | --- | --- | --- | --- |
+| 47 dealt | 160 ms, 257 statements | 118–137 ms | 98 ms | **56 ms, 138 statements** |
+| 16 dealt, 9 faces | 72 ms, 108 | 41 ms | 42 ms | **26 ms, 62** |
+| 12 dealt, 14 faces | 101 ms, 210 | 72 ms | 73 ms | **38 ms, 101** |
+| 6 cards, no photos | 25 ms, 56 | 27 ms | 24 ms | **20 ms, 38** |
+| A group's page | 49–52 ms, 67 | **20–22 ms** | 22 ms | 20 ms |
+| Post a game's grid | 104–107 ms, 211 | 114 ms (noise) | 101–104 ms | 87 ms, 211 (not wired to §2c) |
+
+Under cProfile, the overlap grid's share of the busy deck fell from 123 to 24 ms per read
+(§2b). The deck's response is byte-identical before and after apart from each photo URL's
+signature and its date, which change on every signing; Post a game's grid is byte-identical.
+§2c's wrapper is `ReadOnceEventStore`, built in `build_read_group_deck` alone, and every
+builder it reaches takes it as an optional `event_store`.
 
 **The bar a deck optimisation ticket clears.** It must:
 - keep every response identical, shown by tests;

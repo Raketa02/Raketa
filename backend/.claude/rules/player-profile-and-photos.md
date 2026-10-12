@@ -97,3 +97,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `reliability_minimum_not_offered` (400). It sits beside the gender preference because it is a
   clause of the same pair rule — `proposals`' `MatcherPlayerFit` reads it off the profile load
   it already makes — and it is read back on the player's own record, never on the profile read.
+- **A photo URL is signed by one client per process, and the week answers *is this hour
+  ticked?* by lookup** (#702, #703; ADR-0197 §2a, §2b). Presigning sends no request, so
+  building an S3 client was the whole cost of a signature, once per face on every screen
+  that draws faces: `s3_photo_storage.signing_client` is botocore's **synchronous** client,
+  one per signing setup (host, region, credential — the bucket is in the request), built on
+  first use and held for the life of the process; it opens no socket and binds to no event
+  loop, which is what the per-call *talking* client cannot promise. The credentials rotate
+  as the settings carrying them do, with a restart. The URL is today's URL apart from the
+  signature and its date, shown against the signer it replaced. `WeeklyHours.ticked` is the
+  week's hours as a `frozenset` of `(weekday, hour)`, derived once in `__post_init__` and
+  **no part of the value** — out of equality, the hash and the repr, stored nowhere, carried
+  by no event — so the overlap grid's millions of *is this hour ticked* on a busy deck are
+  lookups. Measured on the busy seed deck: signing took a group's page from 52 to 20 ms and
+  the deck read 160 → 118–137 ms; the lookup cut the overlap's share of the deck fivefold
+  under cProfile (123 → 24 ms) and the read to 98 ms.

@@ -101,6 +101,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   method** (`ReadGroupDeck.deal_to`), and `shows` asks them of one card for one reader:
   Notifications' *You complete it* and challenges go only where the deck shows the card
   (#549), so a new filter added anywhere but `deal_to` is one an alert would not know.
+  **And the read loads each stream once** (#704, ADR-0197 §2c): `build_read_group_deck`
+  hands every adapter one `ReadOnceEventStore` over the request's store, so the profile,
+  rating, proposal, booking, intent, Games & money and club-courts streams the pair rule,
+  the forecasts, the card's people and the rescues share are replayed once per read, and two
+  loads in flight together are one. It lives as long as the request and **no writing
+  composition takes it** — a use case that appends and reloads must see its own events —
+  which is why the wrapper's `append` forgets its stream and why
+  `tests/api/test_group_deck_read_once.py` reads with the reuse and without it. Each builder
+  takes it as an optional `event_store` and builds its own when handed none. Post a game's
+  grid loads the same way and is deliberately not wired (211 statements measured; a
+  follow-up once the seam has proved out). Measured on the busy seed deck (47 dealt, 33
+  shown, 13 people): 257 → 138 statements, 160 → 56 ms CPU with #702 and #703.
 - **The proposer builds the games, and its rules are one pure batch** (#540, the mechanics
   §4.3, §5, §6.2–§6.3, §7): `domain/proposer.py`'s `propose` — one pool, one sport, one
   instant; members (Level and σ off rating's estimates, weekly hours, intent, Games & money,
