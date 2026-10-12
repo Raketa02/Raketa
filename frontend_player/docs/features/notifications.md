@@ -19,16 +19,19 @@ date past it — by the Warsaw calendar, never by the hours since).
 
 **Where a notice opens** (A9): `BOOKING` the booked game's details over Home (`proposals`'
 `bookedGameRoute` — the booking's id is the game's own), `PROPOSAL` a game still filling — or one
-that did not fill — in its group (`gameRoute`), and `DECK` the group's deck **with the card on top**
-(`groups`' `groupDeckRoute`). **A Fill in alert is the one notice whose kind decides**: the backend
+that did not fill — in its group (`gameRoute`), `DECK` the group's deck **with the card on top**
+(`groups`' `groupDeckRoute`), and `RESULT` the booked game's result screen (`bookedResultRoute`,
+since [#664](https://github.com/Raketa02/Raketa/issues/664)) — every step at the court. **A Fill in alert is the one notice whose kind decides**: the backend
 sends it as `BOOKING` to a reader who is **not in the game**, so it opens the open seat seen from
 outside, in its group (`rescueRoute`, A4.3) — the booked game's own details would tell that reader the
-game is not theirs any more. **One function opens all four** (`useOpenNotice`'s `destinationOf`: the
-route, and the read behind it), whichever way the
+game is not theirs any more. **One function opens all five** (`useOpenNotice`'s `destinationOf`: the
+route, and the reads behind it), whichever way the
 tap came — a row of the list, the banner, the phone's own notification — and it **pushes over
 wherever the player is**: a notice is not a tab press, so nothing is laid down and _back_ goes where
-the player was. The read behind the screen is marked stale first, so a deck read twenty seconds ago
-does not open without the card the notice is about. A notice whose sport or kind this build cannot
+the player was. The reads behind the screen are marked stale first, so a deck read twenty seconds ago
+does not open without the card the notice is about — and the result screen, which draws two (the
+booking, which names its Game, and `games`' list, which holds it), does not open on a score from
+before the one _Is that right?_ asks about. A notice whose sport or kind this build cannot
 name is listed, words and all, and opens nothing.
 
 **The deck opens at the card** (A9: _the deck opens with the card on top for You complete it,
@@ -46,13 +49,16 @@ writes its answer, a refusal says so under the cards and the three are read agai
 taps are held. The row's line is the chosen ones that are on, short — _You complete it · Challenges ·
 Fill in alerts_ (mock 50) — or _Only the ones always on_.
 
-**The always on are words and a tag, never controls** — twelve since #643. Mock 52 drew seven; the rows are
+**The always on are words and a tag, never controls** — seventeen since #664. Mock 52 drew seven; the rows are
 A7.2's as [#620](https://github.com/Raketa02/Raketa/issues/620) amends it, a row a line of the
 mechanics §17.2's table, in its order ([#628](https://github.com/Raketa02/Raketa/issues/628)): _It's a
 game! · you paid_ (_· held_ since #642) · _It's a game! · the club answers by …_ · _Waiting for one payment_ · _Fix your card
 by … to keep your seat_ (since #643) · _Confirm your payment by … to keep your seat_ · _Game called off · with the refund_ (_· nothing was taken, or with the refund_ since #642) · _Someone left your game · or
 it's filling again_ · _You've been refunded_ · _The club confirmed / said no / didn't answer in time_ ·
-_Your new game_ · _A game you left_ · _Your post didn't fill_. One row can be several notices — _the
+_Your new game_ · _A game you left_ · _Your post didn't fill_ · and since #664 the five steps at the
+court: _… is at the club and you're not there yet_ · _… is at the club · who you said isn't here yet_
+· _How did it go? · your game's hour has ended_ · _Is that right? · … put a score up, or changed it_ ·
+_Was … at the club? · they say they were_. One row can be several notices — _the
 club confirmed / said no / didn't answer in time_ is three, _A game you left_ two — and a row names a
 notice before the backend gives it: _Waiting for one payment_ comes with #625, _A game you left_ and
 _filling again_ with #623. Each has 6.4's green **on** tag, one element to a listener (_…, always
@@ -124,7 +130,7 @@ on Home.
 **A push tapped on the phone opens its game** — with the app in the background, or not running at
 all: the port hands over the tap that started the app once the first listener subscribes, and every
 tap once however it arrives. **The payload is untrusted input** (`schemas/pushNotice.ts`): its seven
-keys are checked — ids that are ids, one of three places; the kinds narrowed where the wire is read —
+keys are checked — ids that are ids, one of four places; the kinds narrowed where the wire is read —
 and anything else opens nothing. Pushes are only heard while the tabs are up, so a tap that arrives on a sign-in screen is
 answered once the player is in.
 
@@ -219,8 +225,21 @@ permission is asked, the choices save and the list is read, and nothing is pushe
 20. **The always-on rows name notices the backend does not give yet** (_Waiting for one payment_,
     _A game you left_, _or it's filling again_): A7.2 lists the amended table, and #623 and #625 bring
     them.
+21. **The five steps at the court are worded on the settings by the phone** (#664): no table lists
+    them yet — the mechanics §17.2 and the screens A7.2 are the root's to amend — so each row is its
+    notice's title with the name, the club and the time left out, as the rows above it are, and a
+    title that would not say on its own what it is about gains a line after the dot — whom _… is at
+    the club_ is told to, when _How did it go?_ comes, that the player _Was … at the club?_ asks about
+    says they were. _Is that right?_ is one row for its three variants — a score put up, a different
+    one put up, a score changed — which its line names as _put a score up, or changed it_.
+22. **A step at the court opens the result screen over wherever the player is**, as call 3 has every
+    notice do — so _back_ from it is the list, Home or You, never the booked details beneath it.
+23. **A step at the court whose sport or kind this build cannot name opens nothing**, as every notice
+    does, although the result screen needs only the booking's id: one rule for every notice, and an
+    old build cannot draw that game's sport anyway.
 
-**Owed**: #533's Expo project id into `shared/config/push.ts` (and Android's FCM credentials), and
+**Owed**: the root's §17.2 table, A7.2's always-on list and A9's destinations for #664's five, and
+`CONTEXT.md`'s _Notice_ entries for them (#663's handover). #533's Expo project id into `shared/config/push.ts` (and Android's FCM credentials), and
 O6 before `IPHONE_PUSH` turns true — both then need a development build rebuilt. **A development
 build is owed now**: `expo-notifications` is a native module. The root owes ADR-0189 §5's amendment
 and `CONTEXT.md`'s _Notice_ and _Notification preferences_ (#549's handover). Agent config, left for
@@ -283,3 +302,22 @@ after _Waiting for one payment_ and before _Confirm your payment by … to keep 
 orders them. **Why**: a card refused before the cut-off is told to its player every way there is, as
 a time to pay is. The notice's words, and _Your time to fix your card ran out_, are the backend's; an
 arrival re-reads _TO CONFIRM_ as any does, so a row loses its time when the time-ran-out notice lands.
+
+**Each step at the court is told, and a tap lands where it is acted on**
+([#664](https://github.com/Raketa02/Raketa/issues/664); the backend's
+[#663](https://github.com/Raketa02/Raketa/issues/663); the spec #649, F-RESULT-10.1 and 35.1;
+[ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+§7). At
+16:10 Ivan taps _Oscar isn't here yet_ at Ogrody 33: Oscar is told _Ivan is at Ogrody 33 and you're
+not there yet_, and the banner — or the phone's own notification — opens the game's result screen on
+_Are you here?_ with **I'm here** ready. When Oscar arrives, Ivan is told _Oscar is at Ogrody 33_. At
+the hour's end all four of a Competitive game are asked _How did it go?_; when Marta puts 6–4 6–3 up,
+Oscar and Paula are asked _Is that right?_, which opens on her score with _That's right_; and when
+Oscar says _I was there_ the next morning, his courtmates are asked _Was Oscar at Ogrody 33?_. **Why**:
+each step waits on one person, and a notice that opens anywhere else leaves them to find the screen.
+The phone spells the five kinds — `NOT_HERE_YET`, `AT_THE_CLUB`, `HOW_DID_IT_GO`, `IS_THAT_RIGHT`,
+`WERE_THEY_THERE` — and the new destination `RESULT` (`domain/vocabulary.ts`, held to the wire by
+`wireVocabulary.ts`), which `targetOf` reads as the result screen by the notice's `game_id`, the
+booking's. The words are the backend's, a For fun game is told none of these, and all five are
+always on, because each decides somebody's record or result. Push itself is still off: switching it
+on is the set-up ticket's.
