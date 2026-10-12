@@ -52,6 +52,7 @@ from app.engines.matchfit.ruleset import Ruleset
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
+from app.infrastructure.events.read_once_event_store import ReadOnceEventStore
 from app.infrastructure.mail.smtp_mailer import SmtpMailer
 from app.infrastructure.mail.sqlalchemy_mail_queue import SqlAlchemyMailQueue
 from app.kernel import Clock
@@ -858,15 +859,20 @@ def build_court_bookings(session: AsyncSession) -> CourtBookings:
 
 
 def build_sellable_court_hours(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> SellableCourtHours:
     """What the Club context publishes about courts: the hours each live club
     can sell, derived from its stream less what bookings hold
-    (``docs/adr/0189`` §5)."""
+    (``docs/adr/0189`` §5). ``event_store`` is the deck read's shared one
+    (#704); every other caller gets a store of its own."""
     return ClubCourtsSellableHours(
         courts=build_club_courts_repository(
             session,
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=event_store
+            or build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
         bookings=build_court_bookings(session),
@@ -1287,22 +1293,27 @@ def build_pools(session: AsyncSession) -> Pools:
 
 
 def build_player_fit(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> PlayerFit:
     """Whether two people may be on one game, by the matcher's own pair rule
     under the live ruleset: blocks off the log, genders, preferences and
     reliability filters off each profile, Levels off rating's published read,
     and — where a filter is on — everybody's points off ``player_score``'s
-    (#661)."""
+    (#661). ``event_store`` is the deck read's shared one (#704); every other
+    caller gets a store of its own."""
+    store = event_store or build_domain_event_store(session, runtime=runtime)
     return MatcherPlayerFit(
         blocks=build_block_query(session, runtime=runtime),
         profiles=build_player_profile_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=store,
             events=build_event_publisher(session, runtime=runtime),
         ),
-        ratings=build_rated_player_query(session, runtime=runtime),
+        ratings=build_rated_player_query(session, runtime=runtime, event_store=store),
         ruleset=build_ruleset(),
-        scores=build_published_score_query(session),
+        scores=build_published_score_query(session, event_store=store),
     )
 
 
@@ -1487,49 +1498,71 @@ def build_booked_games(session: AsyncSession) -> BookedGames:
 
 
 def build_deck_people(
-    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> DeckPeople:
     """What a card draws of a person: a name from ``users``, a face and a week
     from the Player profile, a published Level from rating. The window is the
-    platform's one photo window."""
+    platform's one photo window. ``event_store`` as ``build_player_fit``'s."""
+    store = event_store or build_domain_event_store(session, runtime=runtime)
     return ProfileDeckPeople(
         users=build_user_repository(session),
         profiles=build_player_profile_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=store,
             events=build_event_publisher(session, runtime=runtime),
         ),
         photos=build_photo_storage(settings),
-        ratings=build_rated_player_query(session, runtime=runtime),
+        ratings=build_rated_player_query(session, runtime=runtime, event_store=store),
         photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
     )
 
 
 def build_balance_forecasts(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> BalanceForecasts:
     """How even a card's game is forecast: the engine's own forecast under the
-    live ruleset, over rating's estimates."""
+    live ruleset, over rating's estimates. ``event_store`` as
+    ``build_player_fit``'s."""
     return MatcherBalanceForecasts(
-        ratings=build_rated_player_query(session, runtime=runtime),
+        ratings=build_rated_player_query(
+            session, runtime=runtime, event_store=event_store
+        ),
         ruleset=build_ruleset(),
     )
 
 
 def build_club_terms(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> ClubTerms:
     """Which clubs sell through Raketa now, each one's cut-off and whether it
-    confirms each game — off the offer the Club context publishes."""
-    return SellableClubTerms(build_sellable_court_hours(session, runtime=runtime))
+    confirms each game — off the offer the Club context publishes.
+    ``event_store`` as ``build_player_fit``'s."""
+    return SellableClubTerms(
+        build_sellable_court_hours(session, runtime=runtime, event_store=event_store)
+    )
 
 
 def build_wanted_kinds(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> WantedKinds:
-    """Which kinds of game a player wants in a sport, off their Play intent."""
+    """Which kinds of game a player wants in a sport, off their Play intent.
+    ``event_store`` as ``build_player_fit``'s."""
     return ProfileWantedKinds(
         build_play_intent_declaration_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=event_store
+            or build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         )
     )
@@ -1546,27 +1579,42 @@ def build_read_group_deck(
     """A reader's group deck — the Games tab's route, and the seed's screen
     assertion. ``booked`` is the one port a caller may hand in, because nothing
     can be booked yet and a test stands in for the bookings to come."""
+    # **Every adapter here reads streams through one store that loads each
+    # once** (#704, ``docs/adr/0197`` §2c). The read replays a person's profile
+    # and rating streams for the pair rule, the forecasts and the card's
+    # people, and a rescue's candidates again; handed one ``ReadOnceEventStore``
+    # they replay each once. It lives as long as this object, which is the
+    # request. **A read and nothing else is built over it**: a use case that
+    # appends and reloads must see its own events, so no writing composition
+    # takes this wrapper.
+    once: DomainEventStore = ReadOnceEventStore(
+        build_domain_event_store(session, runtime=runtime)
+    )
     return ReadGroupDeck(
         pools=build_pools(session),
         directory=build_proposal_directory(session),
         proposals=build_proposal_repository(
             session,
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=once,
             events=build_event_publisher(session, runtime=runtime),
         ),
         settings=build_games_and_money_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=once,
             events=build_event_publisher(session, runtime=runtime),
         ),
-        wanted=build_wanted_kinds(session, runtime=runtime),
+        wanted=build_wanted_kinds(session, runtime=runtime, event_store=once),
         booked=booked if booked is not None else build_booked_games(session),
-        terms=build_club_terms(session, runtime=runtime),
-        fit=build_player_fit(session, runtime=runtime),
-        forecasts=build_balance_forecasts(session, runtime=runtime),
-        people=build_deck_people(session, settings=settings, runtime=runtime),
+        terms=build_club_terms(session, runtime=runtime, event_store=once),
+        fit=build_player_fit(session, runtime=runtime, event_store=once),
+        forecasts=build_balance_forecasts(session, runtime=runtime, event_store=once),
+        people=build_deck_people(
+            session, settings=settings, runtime=runtime, event_store=once
+        ),
         clubs=build_proposal_club_names(session),
-        offers=build_rescue_offers(session, booked=booked, runtime=runtime),
-        players=build_players_in_play(session, runtime=runtime),
+        offers=build_rescue_offers(
+            session, booked=booked, runtime=runtime, event_store=once
+        ),
+        players=build_players_in_play(session, runtime=runtime, event_store=once),
         clock=clock,
     )
 
@@ -1585,16 +1633,20 @@ def build_where_pools_play(
 
 
 def build_players_in_play(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> PlayersInPlay:
     """Each member's Level off rating's estimates and week off their profile —
-    what the proposer deals from."""
+    what the proposer deals from. ``event_store`` as ``build_player_fit``'s."""
+    store = event_store or build_domain_event_store(session, runtime=runtime)
     return ProfilePlayersInPlay(
         profiles=build_player_profile_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=store,
             events=build_event_publisher(session, runtime=runtime),
         ),
-        ratings=build_rated_player_query(session, runtime=runtime),
+        ratings=build_rated_player_query(session, runtime=runtime, event_store=store),
     )
 
 
@@ -2331,21 +2383,24 @@ def build_rescue_offers(
     *,
     booked: BookedGames | None = None,
     runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> RescueOffers:
     """Who a booked game's open seat is offered to, and its best fits — read
-    live over the pool's members (#545). ``booked`` as the deck's."""
+    live over the pool's members (#545). ``booked`` as the deck's, and
+    ``event_store`` as ``build_player_fit``'s."""
+    store = event_store or build_domain_event_store(session, runtime=runtime)
     return RescueOffers(
         pools=build_pools(session),
-        bookings=build_player_bookings(session, runtime=runtime),
-        wanted=build_wanted_kinds(session, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime, event_store=store),
+        wanted=build_wanted_kinds(session, runtime=runtime, event_store=store),
         settings=build_games_and_money_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=store,
             events=build_event_publisher(session, runtime=runtime),
         ),
         booked=booked if booked is not None else build_booked_games(session),
-        players=build_players_in_play(session, runtime=runtime),
-        fit=build_player_fit(session, runtime=runtime),
-        forecasts=build_balance_forecasts(session, runtime=runtime),
+        players=build_players_in_play(session, runtime=runtime, event_store=store),
+        fit=build_player_fit(session, runtime=runtime, event_store=store),
+        forecasts=build_balance_forecasts(session, runtime=runtime, event_store=store),
     )
 
 
@@ -2610,15 +2665,19 @@ def build_booking_directory(session: AsyncSession) -> BookingDirectory:
 
 
 def build_player_bookings(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> PlayerBookings:
     """A player's booked games, folded from each booking's stream — Home's and
-    the details' (#542)."""
+    the details' (#542). ``event_store`` as ``build_player_fit``'s."""
     return BookingsPlayerBookings(
         directory=build_booking_directory(session),
         bookings=build_booking_repository(
             session,
-            event_store=build_domain_event_store(session, runtime=runtime),
+            event_store=event_store
+            or build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
     )
@@ -3243,28 +3302,34 @@ def build_account_status_query(session: AsyncSession) -> AccountStatusQuery:
     return UsersAccountStatus(build_user_repository(session))
 
 
-def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
+def build_published_score_query(
+    session: AsyncSession, *, event_store: DomainEventStore | None = None
+) -> PublishedScoreQuery:
     """``player_score`` — Player reliability in points (#659) — over the two
     contexts that keep a record of anything: the games, and the bookings.
 
     It is built from the two providers' own published ports rather than from the
     session, so this line stays a choice of implementation and the folds behind
-    it stay with the contexts that own them.
+    it stay with the contexts that own them. ``event_store`` as
+    ``build_player_fit``'s.
     """
     return PointsFromTheRecord(
         games=build_game_history_query(session),
-        bookings=build_booking_history(session),
+        bookings=build_booking_history(session, event_store=event_store),
     )
 
 
-def build_booking_history(session: AsyncSession) -> BookingHistoryQuery:
+def build_booking_history(
+    session: AsyncSession, *, event_store: DomainEventStore | None = None
+) -> BookingHistoryQuery:
     """Who kept the booked games they held a seat on, and how the others were
-    broken — folded off each booking's stream (#544, #659)."""
+    broken — folded off each booking's stream (#544, #659). ``event_store`` as
+    ``build_player_fit``'s."""
     return EventSourcedBookingHistory(
         directory=build_booking_directory(session),
         bookings=build_booking_repository(
             session,
-            event_store=build_domain_event_store(session),
+            event_store=event_store or build_domain_event_store(session),
             events=build_event_publisher(session),
         ),
     )
@@ -3371,16 +3436,18 @@ def build_rated_player_query(
     session: AsyncSession,
     *,
     runtime: EventRuntime | None = None,
+    event_store: DomainEventStore | None = None,
 ) -> RatedPlayerQuery:
     """Levels read and never held, over the rating streams.
 
     Narrower than ``build_skill_rating_repository`` on purpose: that one
     remembers stream versions so a rating it found can be saved, and a reader
     that only wants two floats has no business with the path that could move
-    them.
+    them. ``event_store`` is the deck read's shared one (#704); every other
+    caller gets a store of its own.
     """
     return EventSourcedRatedPlayers(
-        event_store=build_domain_event_store(session, runtime=runtime)
+        event_store=event_store or build_domain_event_store(session, runtime=runtime)
     )
 
 
