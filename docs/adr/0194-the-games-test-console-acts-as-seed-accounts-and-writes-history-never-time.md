@@ -2,6 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
+- **Its mentions of requests amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)** §6. *On
+  request* and *Instant* are removed, so the console's request situation, its Accept and Refuse
+  presses, the request-timeout job's *Run it now* and every *waiting for the club* and *answer by* on
+  its board go, and its hours finder loses the *on request* filter. Acting as a club, it gains a
+  cancel with a reason, which moves the game when a free court absorbs it, *Cancel the game anyway*,
+  and a move to a chosen court. Every rule below stands; only its examples that name a request are
+  out of date.
 - **Replaces the dev console's rules** (#256). They were never an ADR: they live in
   `backend/CONTEXT.md` (*Dev console*, *Console gate*), `backend/.claude/rules/surfaces.md` and
   `app/api/dev/`'s docstrings. Three are **reversed** here:
@@ -71,6 +78,12 @@ Considered and rejected:
   password. A console that acts without signing in is a door with no credential at all. On any
   shared host, anybody who reaches the address can be any seeded player, steer payments, and run
   jobs.
+
+> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §6.** *On request* and *Instant* are removed,
+> so nothing above waits on a club any more: no request to accept on the club website, no club's
+> half hour or answer window, no club answer to add to a fill. The club still acts in the console, by
+> cancelling a game, which moves it when a free court of the same club absorbs it, by *Cancel the
+> game anyway*, and by moving it to a chosen court.
 
 ## Decision
 
@@ -143,6 +156,12 @@ timeout, the day close, and every other scheduled job the new games run.
 - **It never brings anything forward.** Work that isn't due stays untouched, so a press can do
   nothing the next scheduled tick wouldn't. A countdown on every pending moment tells the tester when
   a press will find something.
+
+> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §6.** §4's *Needs Ania's yes, Instant club* and
+> §5's *the club's answer timeout* name what is gone: every club works Only Raketa, the situations
+> that found an *on request* hour find Only Raketa hours, and the request-timeout job and its press
+> are removed. §4's *the club's answer window* has nothing left to build. The rules of both sections
+> stand.
 
 ### 6. One page, no build, no token, and nothing that acts on its own
 
