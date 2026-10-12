@@ -1,10 +1,10 @@
 /**
- * **The club's Raketa bookings, as the backend would keep them** (#547, #637, #669): each
- * booking's court, hour, players and money, and its status **folded on every read** from where it
- * stands and the clock, as `proposals/domain/club_bookings.py` folds it. The rules are the club
- * surface's own, from `backend/openapi.club.json`, kept just deep enough that a test can list a
- * day, move a game and cancel one without programming each reply. A test that is about one reply
- * overrides that handler with `stub.on`.
+ * **The club's Raketa bookings, as the backend would keep them** (#547, #637, #669, #671, #672):
+ * each booking's court and its kind, hour, players and money, and its status **folded on every
+ * read** from where it stands and the clock, as `proposals/domain/club_bookings.py` folds it. The
+ * rules are the club surface's own, from `backend/openapi.club.json`, kept just deep enough that a
+ * test can list a day, move a game, preview a cancel and cancel one without programming each
+ * reply. A test that is about one reply overrides that handler with `stub.on`.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -18,6 +18,9 @@ import { SEATS, type Court, type Exception } from './courts';
 type ClubStatus = components['schemas']['ClubStatus'];
 type ClubFilter = components['schemas']['ClubFilter'];
 type ClubBooking = components['schemas']['ClubBookingSchema'];
+type CancelReason = components['schemas']['ClubCancelReason'];
+type CancelOutcome = components['schemas']['CancelOutcomeSchema'];
+type CourtToMoveTo = components['schemas']['CourtToMoveToSchema'];
 type ErrorBody = components['schemas']['ErrorResponse'];
 
 const HOUR_MS = 3_600_000;
@@ -216,11 +219,37 @@ export class FakeClubBookings {
     );
   }
 
+  /**
+   * **Where Move may put the game** (#671): its free courts of its kind of court, or
+   * indoor for an outdoor game, never outdoors from indoors; in the club's order.
+   */
+  movableTo(held: FakeBooking): Court[] {
+    return this.freeCourts(held).filter((court) => court.indoor || !held.indoor);
+  }
+
+  /**
+   * **The court that takes the game when the club cancels it `because`** (#672), or `undefined`
+   * when none does and the cancel calls it off: one Move may put it on, indoor only for
+   * `WEATHER`, the same kind first, then indoor, each in the club's order. The backend also asks
+   * for the same share; the fake prices a sport once, so every court of it is the same price.
+   */
+  absorbing(held: FakeBooking, because: CancelReason): Court | undefined {
+    const takers = this.movableTo(held).filter((court) => because !== 'WEATHER' || court.indoor);
+    return (
+      takers.find((court) => court.indoor === held.indoor) ?? takers.find((court) => court.indoor)
+    );
+  }
+
   /** Why the club may not move or cancel the game now, or `null` when it may. */
   private stillPlayable(held: FakeBooking) {
     if (held.stage === 'CALLED_OFF') return conflict('booking_is_called_off');
     if (!this.stillToBePlayed(held)) return conflict('game_has_started');
     return null;
+  }
+
+  /** The game on `to` now, nothing else about it changed. */
+  private moveTo(held: FakeBooking, to: Court): void {
+    this.replace({ ...held, court_id: to.id, court_name: to.name, indoor: to.indoor });
   }
 
   private replace(changed: FakeBooking): FakeBooking {
@@ -271,11 +300,7 @@ export class FakeClubBookings {
       return {
         status: 200,
         body: {
-          courts: this.freeCourts(held).map((court) => ({
-            court_id: court.id,
-            name: court.name,
-            indoor: court.indoor,
-          })),
+          courts: this.movableTo(held).map(courtToMoveTo),
         },
       };
     });
@@ -287,11 +312,26 @@ export class FakeClubBookings {
       if (held === undefined) return notFound;
       const refused = this.stillPlayable(held);
       if (refused !== null) return refused;
-      const to = this.freeCourts(held).find((court) => court.id === body.court_id);
+      const to = this.movableTo(held).find((court) => court.id === body.court_id);
       if (to === undefined) return conflict('court_not_free');
-      this.replace({ ...held, court_id: to.id, court_name: to.name, indoor: to.indoor });
-      return { status: 200, body: { court_id: to.id, name: to.name, indoor: to.indoor } };
+      this.moveTo(held, to);
+      return { status: 200, body: courtToMoveTo(to) };
     });
+
+    stub.on(
+      'get',
+      '/api/v1/club/bookings/{booking_id}/cancellation/preview',
+      ({ headers, params, query }) => {
+        const signedOut = this.guard(headers.authorization);
+        if (signedOut !== null) return signedOut;
+        const held = this.find(params.booking_id);
+        if (held === undefined) return notFound;
+        const refused = this.stillPlayable(held);
+        if (refused !== null) return refused;
+        const to = this.absorbing(held, query.reason as CancelReason);
+        return { status: 200, body: to === undefined ? CALLED_OFF : moved(to) };
+      },
+    );
 
     stub.on(
       'post',
@@ -303,8 +343,14 @@ export class FakeClubBookings {
         if (held === undefined) return notFound;
         const refused = this.stillPlayable(held);
         if (refused !== null) return refused;
-        // Called off: every hold is let go and every share taken is refunded in full (#637). No
-        // other court takes the game here (#672).
+        // Decided afresh, whatever the preview said: a court that takes the game moves it there,
+        // every hold and payment as it was (#672).
+        const to = body.anyway ? undefined : this.absorbing(held, body.reason);
+        if (to !== undefined) {
+          this.moveTo(held, to);
+          return { status: 200, body: moved(to) };
+        }
+        // Called off: every hold is let go and every share taken is refunded in full (#637).
         this.replace({
           ...held,
           stage: 'CALLED_OFF',
@@ -313,12 +359,23 @@ export class FakeClubBookings {
           players: held.players.map((player) => ({ ...player, held: false })),
           money: { ...held.money, refunded_grosze: held.money.collected_grosze },
         });
-        return { status: 200, body: { outcome: 'CALLED_OFF' as const, court: null } };
+        return { status: 200, body: CALLED_OFF };
       },
     );
 
     return this;
   }
+}
+
+const CALLED_OFF: CancelOutcome = { outcome: 'CALLED_OFF', court: null };
+
+/** A court as the wire names one a game moves to: its id, name and kind. */
+function courtToMoveTo(court: Court): CourtToMoveTo {
+  return { court_id: court.id, name: court.name, indoor: court.indoor };
+}
+
+function moved(to: Court): CancelOutcome {
+  return { outcome: 'MOVED', court: courtToMoveTo(to) };
 }
 
 function conflict(code: string) {

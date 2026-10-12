@@ -11,8 +11,10 @@ type WireDay = components['schemas']['ClubBookingsResponse'];
 type WireBooking = components['schemas']['ClubBookingSchema'];
 type WirePlayer = components['schemas']['ClubBookingPlayerSchema'];
 type WireFreeCourts = components['schemas']['FreeCourtsResponse'];
+type WireCourtToMoveTo = components['schemas']['CourtToMoveToSchema'];
 type WireMoveBody = components['schemas']['MoveRequest'];
 type WireCancelBody = components['schemas']['CancelRequest'];
+type WireCancelOutcome = components['schemas']['CancelOutcomeSchema'];
 
 /** What a booking is to the club right now (the mechanics §16.7). */
 export type BookingStatus = components['schemas']['ClubStatus'];
@@ -108,6 +110,15 @@ export function clubHour(startsAt: string, endsAt: string): ClubHour {
   };
 }
 
+/**
+ * **A court a game is on, or may go to**: its name and its kind of court, indoor or outdoor, as
+ * the players read it, *Court 3 · indoor* (Q122).
+ */
+export interface GameCourt {
+  readonly name: string;
+  readonly indoor: boolean;
+}
+
 /** A player on a game, as the club sees them: a name, and where their share stands. */
 export interface BookingPlayer {
   readonly id: string;
@@ -130,7 +141,7 @@ export interface BookedFrom {
 export interface Booking {
   readonly id: string;
   readonly hour: ClubHour;
-  readonly court: string;
+  readonly court: GameCourt;
   readonly sport: Sport;
   readonly kind: Kind;
   readonly status: BookingStatus;
@@ -189,7 +200,7 @@ function toBooking(wire: WireBooking): Booking {
   return {
     id: wire.booking_id,
     hour: clubHour(wire.starts_at, wire.ends_at),
-    court: wire.court_name,
+    court: { name: wire.court_name, indoor: wire.indoor },
     sport: wire.sport,
     kind: wire.kind,
     status: wire.status,
@@ -231,14 +242,24 @@ export function toBookingsDay(wire: WireDay, today: string): BookingsDay {
   };
 }
 
-/** A court a game can be moved to: another of its sport, free at its hour. */
-export interface FreeCourt {
+/**
+ * A court a game can be moved to: another of its sport, free at its hour, of its kind or indoor
+ * for an outdoor game, as the backend offers them.
+ */
+export interface FreeCourt extends GameCourt {
   readonly id: string;
-  readonly name: string;
+}
+
+export function toGameCourt(wire: WireCourtToMoveTo): GameCourt {
+  return { name: wire.name, indoor: wire.indoor };
+}
+
+function toFreeCourt(wire: WireCourtToMoveTo): FreeCourt {
+  return { id: wire.court_id, ...toGameCourt(wire) };
 }
 
 export function toFreeCourts(wire: WireFreeCourts): readonly FreeCourt[] {
-  return wire.courts.map((each) => ({ id: each.court_id, name: each.name }));
+  return wire.courts.map(toFreeCourt);
 }
 
 export function toMoveBody(courtId: string): WireMoveBody {
@@ -246,10 +267,23 @@ export function toMoveBody(courtId: string): WireMoveBody {
 }
 
 /**
- * A cancel **calls the game off**, as the dialog says it will: `anyway`, so another free court
- * never takes the game in its place. Showing where a cancel would move the game, and offering
- * *Cancel the game anyway* only then, is the dialog's own change to come (#675).
+ * **What a cancel does, or would do** (the mechanics §16.9, Q122): another of the club's courts
+ * takes the game, which moves there with every hold and payment as it was, or the game is called
+ * off. The dialog reads it before the desk confirms; the cancel decides afresh, and answers it.
  */
-export function toCancelBody(reason: CancelReason): WireCancelBody {
-  return { reason, anyway: true };
+export type CancelOutcome =
+  { readonly outcome: 'MOVED'; readonly court: FreeCourt } | { readonly outcome: 'CALLED_OFF' };
+
+export function toCancelOutcome(wire: WireCancelOutcome): CancelOutcome {
+  return wire.outcome === 'MOVED' && wire.court !== null
+    ? { outcome: 'MOVED', court: toFreeCourt(wire.court) }
+    : { outcome: 'CALLED_OFF' };
+}
+
+/**
+ * A cancel, with the reason the players are told. `anyway` is *Cancel the game anyway*, for a
+ * club closing the whole hour: called off, even when another court would take the game.
+ */
+export function toCancelBody(reason: CancelReason, anyway: boolean): WireCancelBody {
+  return { reason, anyway };
 }

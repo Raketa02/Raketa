@@ -31,7 +31,9 @@ test('the signed-out pages fit a phone', async ({ page }) => {
   }
 });
 
-test('the signed-in pages fit a phone, top bar and all', async ({ page }) => {
+test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) => {
+  // The fake club answers the sign-in: without it, this test leaned on the one before it.
+  void club;
   await signIn(page);
   for (const path of [
     '/overview',
@@ -232,6 +234,9 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
   await signIn(page);
   await page.goto(`/bookings?date=${day}`);
   await expect(page.getByRole('rowheader')).toHaveCount(2);
+  await expect(page.getByRole('rowheader').first()).toContainText(
+    'Kort centralny przy wejściu · indoor',
+  );
   await fitsSideways(page, '/bookings');
 
   await page.getByRole('button', { name: /^Move/ }).click();
@@ -239,8 +244,15 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
   await fitsSideways(page, '/bookings, moving');
   await page.getByRole('dialog').getByRole('button', { name: 'Back' }).click();
 
+  // The cancel would move the game to Court 2: the dialog says so and offers to cancel anyway.
   await page.getByRole('button', { name: /^Cancel/ }).click();
   await page.getByRole('dialog').getByRole('radio', { name: 'Repair' }).check();
+  await expect(page.getByRole('dialog').getByRole('status')).toContainText(
+    'This game moves to Court 2 · indoor',
+  );
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: 'Cancel the game anyway' }),
+  ).toBeVisible();
   await fitsSideways(page, '/bookings, cancelling');
 });
 

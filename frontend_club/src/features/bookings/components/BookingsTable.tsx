@@ -4,7 +4,7 @@ import { Button } from '@/ui/Button';
 import tableStyles from '@/ui/Table.module.css';
 import { Tag } from '@/ui/Tag';
 
-import { BOOKINGS_COPY, knownZloty, sportAndKind } from '../copy';
+import { BOOKINGS_COPY, courtWithKind, knownZloty, sportAndKind } from '../copy';
 import type { Booking, BookingStatus } from '../mappers';
 
 import { askedAbout, type Asked, type AskedToCancel } from './Asked';
@@ -93,7 +93,8 @@ function From({ booking }: { booking: Booking }) {
 }
 
 /**
- * **One day's bookings** (the screens B4): each game's hour and court, sport and kind, its
+ * **One day's bookings** (the screens B4): each game's hour and court with the court's kind,
+ * *Court 3 · indoor* (Q122), its sport and kind, its
  * players (their share *held* or *taken*), its status, its money and the group it came from, and
  * what the club may do about it: move or cancel a game until it starts. Every act waits while
  * one is under way. The booking a link pointed at is marked.
@@ -141,7 +142,7 @@ export function BookingsTable({
                 <span className={styles.hours}>
                   {booking.hour.from}–{booking.hour.until}
                 </span>{' '}
-                <span className={styles.court}>{booking.court}</span>
+                <span className={styles.court}>{courtWithKind(booking.court)}</span>
               </th>
               <td>{sportAndKind(booking.sport, booking.kind)}</td>
               <td>

@@ -10,7 +10,7 @@ import { Form } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
 
 import type { FreeCourtsAnswer } from '../actions';
-import { actRefusal, BOOKINGS_COPY } from '../copy';
+import { actRefusal, BOOKINGS_COPY, courtWithKind } from '../copy';
 import type { FreeCourt } from '../mappers';
 
 import type { Asked } from './Asked';
@@ -38,7 +38,7 @@ function MoveForm({
       <Choices
         legend={COPY.to}
         name="court_id"
-        options={courts.map((court) => ({ value: court.id, label: court.name }))}
+        options={courts.map((court) => ({ value: court.id, label: courtWithKind(court) }))}
         value={chosen}
         onChange={setChosen}
       />
@@ -56,8 +56,8 @@ function MoveForm({
 
 /**
  * **"Move the 19:00 game on Sat 3 Oct"** (the screens B4, the mechanics §16.16): the free courts
- * of its sport at its hour, read as it opens, to choose one of. None free says what to do
- * instead; a game that can no longer be moved says why.
+ * of its sport at its hour of its kind of court, or indoor for an outdoor game, each with its
+ * kind, read as it opens, to choose one of (Q122). None free says what to do instead; a game that can no longer be moved says why.
  */
 export function MoveDialog({
   game,
@@ -82,11 +82,15 @@ export function MoveDialog({
       );
     }
     if (read.refusal !== null) {
-      return <Notice tone="error">{actRefusal({ code: read.refusal, name: asked.name })}</Notice>;
+      return (
+        <Notice tone="error">
+          {actRefusal({ code: read.refusal, name: asked.name, act: 'move' })}
+        </Notice>
+      );
     }
     return (
       <p className={styles.none}>
-        {COPY.none(sportName(asked.sport).toLowerCase(), asked.hour.from)}
+        {COPY.none(sportName(asked.sport).toLowerCase(), asked.hour.from, asked.court.indoor)}
       </p>
     );
   };
@@ -98,7 +102,7 @@ export function MoveDialog({
     >
       {game === null ? null : (
         <>
-          <p className={styles.lead}>{COPY.lead(game.court)}</p>
+          <p className={styles.lead}>{COPY.lead(courtWithKind(game.court))}</p>
           {answer !== null && answer.refusal === null && answer.courts.length > 0 ? (
             <MoveForm
               key={game.id}
