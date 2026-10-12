@@ -386,10 +386,13 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   payment ids carry their amount** (`pi_fake_3000g_…`) so a fake in another process — a seed
   run, a laptop after a reload — adopts a taken payment for a refund at what it was for.
 - **The record: a booked game is a plan with a moment** (`bookings/domain/keeping.py`,
-  `BookingHistoryQuery`). *Keeps plans* (`ReliabilityStrand.KEEPS_PLANS`, live since #544)
-  replaces *answers challenges* in the Player Score: **kept** is a game whose hour came with
-  every seat held, for everybody in it; **broken** is leaving before the cut-off when the
-  game is then called off, or after it when nobody takes the seat by the start; leaving free
+  `BookingHistoryQuery`). *Keeps plans* (since #544) is read by the Player Score: **kept** is
+  a game whose hour came with every seat held, for everybody in it — whoever Didn't come
+  included (#659); **broken** is leaving before the cut-off — or a card not fixed in time —
+  when the game is then called off (`Broken.CALLED_OFF_BY_LEAVING`), or after it when
+  nobody takes the seat by the start (`Broken.LEFT_AFTER_THE_CUT_OFF`) — two ways Player
+  reliability prices apart, its prices `player_score`'s. `keeping_for` answers every settled `Keeping`, oldest
+  first; the six months are `player_score`'s. Leaving free
   when the game still plays, a game never booked, and staying in a game that went ahead short
   or was called off because of somebody else's seat (§14.1) are nothing.
   A leaver is found through their kept `booking_seats` row (`ever_seated`).
@@ -532,12 +535,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   check-in stored before the removal stops no tap, and the club sees no attendance. The
   Game's club is the booking's: **`GameClubs`** (`infrastructure/game_clubs.py`,
   `BookedGameClubs`) answers where it is, and how far a position is from it, for an attendance
-  tap. **The strongest mark is two strands, until #659 prices it once**: a final *Didn't
-  come* (`Game.didnt_come_at`, the late claim's day over) is a miss on *shows up*
-  (`attendance_for` per player: the absent missed, everybody else — late or not — played)
-  **and** a broken booked game on *keeps plans* (`keeping_of(…, no_shows=)`, fed by
-  `GameNoShows` once the hour has come); an ordinary mark is *keeps plans* alone, and a Came
-  late player kept it. Home reads *uncounted · `DIDNT_COME`* from the tap window's end, and
+  tap. **A *Didn't come* is priced once** (#659; ADR-0195 §1): −25 on *shows up*, read off
+  the Game (`Game.turnout_of`, the late claim's day over), and the booking they held is
+  **kept** on *keeps plans* — `keeping_of` lost `no_shows` and `GameNoShows` went; Came late
+  is also the Game's to say. Home reads *uncounted · `DIDNT_COME`* from the tap window's end, and
   *needs result* while somebody is not here yet (`NOT_HERE_YET`, the game still being
   played) — `needs_you` then only for the player awaited, whose *I'm here* it is; and
   `needs_you` while a late claim waits on the reader — their own *I was there*, or somebody

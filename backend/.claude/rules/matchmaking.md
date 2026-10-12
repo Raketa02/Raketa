@@ -33,7 +33,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Games card's overlap grade (`proposals/domain/overlap.py`). `domain/geography.py` and
   `domain/areas.py` are distances to clubs and the areas a record is drawn with.
 - **The engine is what those call and nothing else.** `app/engines/matchfit/` holds
-  `SearchMode` (the kind of game), `ReliabilityStrand` (the Player Score's six strands),
+  `SearchMode` (the kind of game), `ReliabilityBand` and its floors (Player reliability's
+  four bands, read by the record, Members and #661's filter — the six strands left, #659),
   the forecast's shapes (`Forecast`, `Split`, `SigmaCombiner`), `LevelReading`,
   `GridCell`, and `v1/group.py`'s `forecast`, `forecast_and_split`, `forecast_pct` and
   `group_availability`. **The ruleset is two sections**: the balance rules and each kind

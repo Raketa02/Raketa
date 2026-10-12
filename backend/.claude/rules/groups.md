@@ -53,8 +53,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`DELETE /groups/{id}`) is the Owner's, only while alone (`group_has_other_members`).
   **Members** (`GET /groups/{id}/members?sport=`) lists only the members rated in the
   sport, the reader, then the Owner, then newest joined first (`domain/members.py`), each
-  with the published Level and the Player Score — omitted, never `0`, for somebody with no
-  record. It is the one read also open to **whoever runs an official group now**
+  with the published Level and **Player reliability** — `player_score` and
+  `reliability_band`, copied from their record (`MemberReliability`), and on every row since
+  #659: everyone starts at a hundred. It is the one read also open to **whoever runs an official group now**
   (`listing_for_a_member_or_its_runner`, #566), who reads the same rows and is one only once
   they join as a player. **A block hides nobody**, either way round, there or on the Info
   tab's members row that opens it (`member_faces`, up to five, everybody but the reader in
@@ -70,7 +71,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   query itself and escaping `LIKE`), rating's `RatedPlayerQuery` (published Levels for a
   request card and a Members row), users and the Player profile for a face or, name only,
   a group's Owner, the profile's Location area for distance, `player_score`'s
-  `PublishedScoreQuery` (`GroupMemberScores`) — and its domain
+  `PublishedScoreQuery` (`GroupMemberReliability`) — and its domain
   borrows two pure functions, clubs' `fold` and the matcher's distance print, and says
   so where it does. **The two searches answer one card**, `ClubCardSchema`, built by
   `views.club_cards`, and one order — the **printed** distance (`shown_kilometres`, from

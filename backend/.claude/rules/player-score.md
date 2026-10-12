@@ -2,67 +2,59 @@
 paths:
   - "app/modules/player_score/**"
   - "app/modules/bookings/domain/keeping.py"
-  - "app/modules/games/domain/answering.py"
+  - "app/modules/games/domain/attendance.py"
 ---
 
 # The Player Score
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
-- **A Player Score is what the platform watched, and two strands is what it can see**
-  ([ADR-0140](../../../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
-  `app/modules/player_score/` is the seventh context and the first that **keeps no record at
-  all** — no aggregate, no repository, no table, no migration. It folds `games`' and
-  `bookings`' published ports (`challenges`' until #578) and does arithmetic over them, because a stored score would be a
-  second place for *did that game happen* to be true and the copy is what gets believed. Four
-  things about it are load-bearing. **Its port is `PublishedScoreQuery` and not
-  `PlayerScoreQuery`** — the matcher's port of that name is the *demand* and this is the
-  *publication*, and ADR-0137's rule applies: the cost of a shared word is paid by whoever
-  arrives second. **Three of six strands are live and three are absent, never nought** —
-  since #544 the live three are *shows up*, *answers about results* and **keeps plans**, folded
-  off `bookings`' `BookingHistoryQuery` (a booked game is a plan with a moment: kept when its
-  hour comes with every seat held, broken by leaving so that it is called off at the cut-off,
-  or after the cut-off with nobody taking the seat — `bookings/domain/keeping.py`), and *answers challenges* **stood down**
-  (challenges no longer wait for answers, the mechanics §15.4; challenges' `answering_for`
-  went with it). *Settles up* has no provider, *sportsmanship* is published in its own right
-  and the matcher may not read it, and a player with no record at all is absent from the
-  answer, which is the one rule the demand suite is written around. **No weight moved**: each
-  name keeps its published share, and the matcher's rulesets already weighed *keeps plans* —
-  so no ruleset release, no gate moved (no corpus has a Player Score), and no wire enum
-  changed; the client's label for `KEEPS_PLANS` is its own to rename.
-  **The published weights live in the context and never in a ruleset**, because a weight release
-  must not change what somebody's own profile says about them; they sum to a hundred by
-  arithmetic and not by rule — 85 for as long as a name was missing — since the blend
-  renormalises over the strands present. And **reliability stopped being absent
-  platform-wide**: `NoPlayerScoresExist` retired, `build_absent_terms` answers empty and lost its
-  argument, a stood-down reliability is now `NOTHING_FROM_THEM`, and the evidence gate counts
-  eight live terms rather than seven — excluding nobody, at a margin of zero rather than one.
-- **A results strand counts answers, and never agreements**
-  ([ADR-0160](../../../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
-  `ReliabilityStrand.ANSWERS_RESULTS` is the third live strand, and the thing to hold in your
-  head is that **it is not the strand ADR-0137 struck**. *Confirms results* counted agreements,
-  and because silence already confirms a lone score it could only ever have counted
-  disagreements — every denominator tried on it docked somebody ADR-0049 protects. This one
-  counts **answers**: a counter scores exactly as an acceptance does, so disagreeing costs
-  nothing and only silence is priced. Four things are load-bearing. **There is at most one
-  opportunity per game and the opener has none** (`games/domain/answering.py`): the entry that
-  says *we played* carries a score, so one side asks and the other answers, and once both sides
-  have put a score up the argument is capped — filing the opener's silence would price
-  **surrender**, which is docking somebody for disagreeing by a later route. **It is the only
-  strand that forgets** — twelve months, a named exception to ADR-0140 §4, because turning up is
-  a commitment somebody made and answering a score is a habit of opening an app; the window is
-  `player_score`'s (`ANSWERED_RESULTS_WINDOW`) and crosses to `games` as an instant. It was
-  chosen to equal the matcher's `horizon_days`, which went with the ranking (#580), so it is the
-  only staleness horizon left. **The published figure has no observation bar**, which is
-  deliberate: on the sheet the honesty mechanism is printing the fraction. The per-strand bars
-  and the two per-mode strand vectors were the matcher's ruleset and went with it (#580).
-- **Didn't come is the strongest mark because it is two** (#547, #657; the mechanics §15.4),
-  until #659 prices it once on *shows up*: a miss on *shows up* (`attendance_for` reads a
-  `DIDNT_COME` game per player, once the late claim's day is over — `Game.didnt_come_at`) and a
-  broken booked game on *keeps plans* (`keeping_of(…, no_shows=)` over `bookings`'
-  `GameNoShows`), where an ordinary mark is *keeps plans* alone. **Came late counts as turned
-  up** until then: a Came late player is on the court of a played game. No weight moved and no ruleset release. A game the
-  club cancelled is on nobody's record. See `bookings.md`. **It is the only miss on *shows
-  up* since #655**: a full court nobody recorded is `PLAYED_NO_SCORE`, played for everybody on
-  it, and the ghost charged to the whole court retired with `NEVER_PLAYED`
-  (ADR-0195 §2) — the strand fold itself is unchanged until #659 turns it into points.
+- **A Player Score is what the platform watched, and it keeps no record of its own**
+  ([ADR-0140](../../../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)
+  §1, which [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §1 keeps). `app/modules/player_score/` is the seventh context and the first that **keeps no
+  record at all** — no aggregate, no repository, no table, no migration. It folds `games`' and
+  `bookings`' published ports and does arithmetic over them, because a stored score would be a
+  second place for *did that game happen* to be true and the copy is what gets believed. **Its
+  port is `PublishedScoreQuery` and not `PlayerScoreQuery`** — the matcher's port of that name
+  was the *demand* and this is the *publication*, and ADR-0137's rule applies: the cost of a
+  shared word is paid by whoever arrives second.
+- **Player reliability is points** (#659; ADR-0195 §1; `domain/points.py`). **Everyone starts
+  at 100**; each line on the record has a price — *Didn't come* −25, *Came late* −10, leaving
+  after the cut-off with the seat left empty −15, leaving before it (or a card not fixed in
+  time) when the empty seat calls the game off −10, a game **played through** +5 — clamped to
+  0–100 at each step, taken **in time order** over the last **six calendar months**
+  (`remembered_after`: a line counts while younger; on 31 August the window opens on 28
+  February). Two lines at one moment take the larger cost first (a call: the booked hour is
+  both a game's turnout and its booking's keeping). **Each line is dated when it happened** —
+  a game by its booked hour, a keeping by the hour or the cut-off that settled it — so *missed
+  on 13 October* drops out on 13 April. The **band** is the engine's (`ReliabilityBand`,
+  `RELIABILITY_BAND_FLOORS` in `app/engines/matchfit/core.py`: 90 / 75 / 50, one home for the
+  record, Members and #661's filter); **New** is fewer than 3 games played through **ever**,
+  so every line is read for it and only the six months for the rest. **The counts** — *turned
+  up* of *turned up of*, *late*, *kept* of *kept of*, *left in dispute* — are over the same
+  six months; noughts are measured now, not invented. **Everybody asked is answered**: a
+  player with nothing reads *100 · New*, so the absence rule this context was written around
+  is retired and the record's reliability zone is never omitted. One figure across sports.
+- **What each line is is the provider's, and the price is this context's.** `games`'
+  `games_on_the_record_for` gives a `GameOnTheRecord` per player per game once
+  `Game.turnout_of` is final — `PLAYED_THROUGH` (a played standing, on time: scored, disputed
+  or *Played · no score*), `CAME_LATE` (from the arrival or the confirmed claim: final then,
+  so priced then, while the game carries on), `DIDNT_COME` (once the late claim's day is
+  over), `TURNED_UP_UNCOUNTED` — and `left_in_dispute` (`Game.left_in_dispute_by`).
+  `bookings`' `keeping_for` gives every settled `Keeping` with how it was `Broken`
+  (`LEFT_AFTER_THE_CUT_OFF`, `CALLED_OFF_BY_LEAVING`) or kept. `PointsFromTheRecord` maps both
+  onto `Happened` and calls `score_of`. Both reads are **unbounded**: the window is this
+  context's to apply. **Calls made without a ruling** (#659): **the players who came on time
+  to a game somebody Didn't come to earn nothing** — `TURNED_UP_UNCOUNTED`, on *Shows up*'s
+  count and priced 0, since the game took no score (the ticket's *scored or Played · no
+  score*), as one that started short earns those who stayed nothing; ADR-0195 §1's *reached
+  its hour full* could be read the other way. Came late is priced at the arrival; the ties
+  rule; calendar months.
+- **A *Didn't come* is priced once** (ADR-0195 §1): `keeping_of` no longer takes `no_shows`,
+  the booking a player Didn't come to reads **kept**, and `bookings`' `GameNoShows` demand,
+  its adapter and its register row are gone. **Silence on a score costs nothing**: *answers
+  about results* (ADR-0160), `ResultAnswering`, `games/domain/answering.py` and
+  `Game.score_put_to_a_side_at` are gone, and so are the strands, `StrandRatio`, the published
+  weights and `ReliabilityStrand` — off the wire too. A game the club cancelled is on nobody's
+  record. See `bookings.md`.

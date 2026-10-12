@@ -1012,9 +1012,9 @@ player's: they are read on the player's own screen, on a group's Members list, a
 ([ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
 [ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md), #544). It is
 now **points** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
-§1, §6), decided and not yet built ([#659](https://github.com/Raketa02/Raketa/issues/659) the
-points, [#661](https://github.com/Raketa02/Raketa/issues/661) the filter); until they land, the
-code still computes the weighted strand blend that the retired **Strand** entry below describes.
+§1, §6): the points, bands, *New* and counts are built
+([#659](https://github.com/Raketa02/Raketa/issues/659)), and the **Reliability filter** is
+decided and not yet built ([#661](https://github.com/Raketa02/Raketa/issues/661)).
 
 - **Player Score** — the figure a player sees as **Player reliability**, out of a hundred, one per
   player across all sports. Computed from what happened, never from opinions and never from
@@ -1221,10 +1221,11 @@ every fact read through the owning context's published port, and one rule of its
   `player_score`'s, read through that context's published port and never recomputed here. **The weights are not on the
   wire**: they are a fact about how the number is made rather than about the person.
   **Retired 2026-10-11** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
-  §8, not yet built — [#659](https://github.com/Raketa02/Raketa/issues/659)): the record's
-  reliability block becomes the **points**, the **band**, **New** and the four **counts** (Player
-  Score), and for the subject also their **Reliability filter** and what it hides. No row, pair or
-  ratio per strand crosses.
+  §8, built by [#659](https://github.com/Raketa02/Raketa/issues/659)): the record's
+  reliability block is the **points**, the **band**, **New** and the four **counts** (Player
+  Score) — and, once [#661](https://github.com/Raketa02/Raketa/issues/661) lands, for the
+  subject also their **Reliability filter** and what it hides. No row, pair or ratio per strand
+  crosses.
 - **Run of form** — a player's **last five counted results, oldest to newest**, each a win or a
   loss, in the record's skill panel beside their **counted games**. **Outcomes in order and no
   dates, at any granularity**: a moment beside one of them would be activity recency, which no
@@ -1269,9 +1270,9 @@ every fact read through the owning context's published port, and one rule of its
 - **A missing zone is omitted whole, never nulled or emptied.** A player with no publishable
   strand has no reliability section at all — no `player_score` to draw a red pill from and no
   empty list to head a card with. (Since ADR-0195 everyone has a figure, *100 · New* to start, so
-  this absence retires when #659 lands; the other three stand.) The four absences on this sheet are four different
-  questions: rated in nothing, no counted game ever played, nothing ever fallen due, and
-  nobody having said anything.
+  this absence retired with #659; the other three stand.) The three absences on this sheet are
+  three different questions: rated in nothing, no counted game ever played, and nobody having
+  said anything.
 - **No zone depends on who is reading.** *What other players said* crossed as a band to its
   subject until [ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5;
   it is now the figure and its count for every reader, and the sheet about you is one answer

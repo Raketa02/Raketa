@@ -115,8 +115,7 @@ from the code.
   report, its last case (#657). **A
   correction is refused once the entry window has closed** (`corrections_have_closed`); a
   counter is not a correction and stays open while the score it answers waits. **For fun asks
-  nothing**: its first score is the result at once, nobody is asked
-  (`score_put_to_a_side_at` is `None`), and no Level moves. The wire carries no agreement —
+  nothing**: its first score is the result at once, nobody is asked, and no Level moves. The wire carries no agreement —
   it is never pending — so `acceptance` and a proposal's `settles_at` are gone. **Levels move
   within a minute**: `games.result_accepted` is delivered to rating's
   `SettleRatingsOnAnAgreement`, which settles that one game as it stood at the tap
@@ -173,8 +172,11 @@ from the code.
   be caught — it waits with the game and counts for nothing if they never come; only a
   **settled** result refuses a tap (`the_result_is_settled` — a For fun score settles at
   once, the one way left round it). **The windows are half-open**: an arrival at exactly
-  17:10 is Came late, and a tap at exactly 17:30 is refused. `Game.didnt_come_at` is the final set — the record's (`attendance_for` per player,
-  `bookings`' `GameNoShows` on *keeps plans*: the old strongest mark until #659), and
+  17:10 is Came late, and a tap at exactly 17:30 is refused. `Game.didnt_come_at` is the final
+  set, and **`Game.turnout_of` is what a game says about each player on their record** (#659):
+  Came late from the arrival, Didn't come once final, played through on a played standing,
+  and on time beside somebody else's final *Didn't come* — read by `player_score` through
+  `games_on_the_record_for`, a *Didn't come* priced once (`player-score.md`); and
   `Game.attendance_waits_on` is Home's `needs_you` — the awaited player's *I'm here*, the
   absent player's *I was there*, a courtmate's confirmation; while somebody is not here yet
   Home reads *needs result* and needs nobody else. **At the club** is

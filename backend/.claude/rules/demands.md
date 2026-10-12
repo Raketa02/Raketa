@@ -74,9 +74,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
-  club's cancel do to it (`GameChanges`, #544, #545, #547), and who Didn't come to it
-  (`GameNoShows`, #547 — a stood report then, a final *Didn't come* since #657), which the
-  record reads. **`game_demands.py` gained its third row with #547**: who the club's desk
+  club's cancel do to it (`GameChanges`, #544, #545, #547). Who Didn't come to it
+  (`GameNoShows`, #547, #657) went with #659: a *Didn't come* is priced once, on *shows up*,
+  so *keeps plans* no longer asks. **`game_demands.py` gained its third row with #547**: who the club's desk
   checked in (`ClubCheckIns`), the booking's fact a no-show report asked first — signed by
   `bookings`; it went with desk check-in (#651). **Its second row now is `GameClubs`**
   (#657): where a booked game's club is — its name and map point, and how far a position is

@@ -26,8 +26,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   cannot live on the answers. **You rate everybody else on the court**, partner included, so
   there is no *side* in this context and rating yourself is refused by the same rule that
   refuses a stranger. **The matcher never reads it** — held by an `.importlinter` contract
-  rather than by a test — and that is also why the reliability pill stays the counted-only
-  number. And **no individual
+  rather than by a test — and that is also why Player reliability stays the counted-only
+  number, in points since #659. And **no individual
   rating reaches anybody in any shape**: the write answers `204`, the use case returns
   `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
   me* — only *which of these cards are closed*, which is a fact about an act. **What this

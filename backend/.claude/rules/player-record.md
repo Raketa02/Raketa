@@ -75,32 +75,30 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   answers about **one player and never a collection**, the fence is the signature, and both
   sides of the seam assert their own. What crosses is the **raw pair and no percentage**: a
   bare share would hide whether *70 %* is fourteen of twenty or seven of ten, which is the
-  argument the metered rows beside it print their fractions for, and the division is a
+  argument the reliability counts beside it print *12 of 13* for, and the division is a
   client's. Absence is the same absence everything else here spells — no counted game means
   the row is **omitted**, never `0` and never `0 / 0` — and it is a *different* absence from
   `skill`'s, so the assembler asks for it whatever sport resolved. Which games count is
   `games`' own predicate (`_counted_and_played`), written once and read by both halves of the
   pair, so the sheet cannot print two ideas of a counted game.
-  **The metered rows are the fourth fact, and they are `player_score`'s live strands put
-  on a wire for the first time** (#381, and a third of them with #383). Nothing new is
-  computed: the raw counts already existed in that domain and the caller stopped throwing
-  them away. Each row crosses as **its
-  pair and its figure** — and that third number is where a strand parts company with the
-  variety beside it: a strand's percentage is what the platform *acts* on, `StrandRatio.value`
-  is derived in one place so a card, a profile and the matcher's evidence cannot print three
-  roundings of one record, and a client dividing the pair would be the fourth. Variety prices
-  no promise, so its division stays the client's. **The weights stay off the wire** — the blend
-  arrives already taken, and a row carrying its weight would let a reader re-derive the pill and
-  draw one strand as worth more than another. A player with no publishable strand has the
-  **whole zone omitted**, a third absence asking a third question: not `skill`'s and not
-  `variety`'s, since a plan that dissolved and a seat that ran out are opportunities and
-  neither is a game anybody played. `SubjectReliability` is the eighth demand and the **first
-  here whose provider reads a set** — `PublishedScoreQuery` answers about five hundred
-  candidates for the matcher, and the narrowing to one person is the adapter's, which is the
-  mirror of variety's fence. And `ReliabilityStrand` is the one name this context imports
-  rather than respells: the engines are the pure layer every context reads and none owns —
-  the argument `player_score` already made beside its own import contract — and the codes are
-  on the player contract under that spelling already.
+  **Player reliability is the fourth fact, and it is `player_score`'s figure put on a wire
+  whole** (#381, #383, then #659). Since ADR-0195 §1 it is **points, the band, *New* and four
+  counts** — `reliability.{player_score, band, is_new, turned_up, turned_up_of, late, kept,
+  kept_of, left_in_dispute}` — every one copied from `PlayerScore` by
+  `ScoreSubjectReliability` and none derived here: the band is the engine's floors, *New*
+  reads every game ever played through, and a second derivation would be a second place for
+  the number a player reads about themselves to be true. The strand rows, their raw pairs,
+  their `pct` and `ReliabilityStrand` left the domain, the shape and the emitted document with
+  the strands. **It is never absent now**: everyone starts at a hundred, so somebody nothing
+  has happened to reads *100 · New* with every count at nought, `PlayerRecord.reliability`
+  is not optional and `SubjectReliability.reliability_of` never answers `None` — the third
+  absence this sheet used to spell is gone, and sportsmanship's is now the third.
+  `SubjectReliability` is the eighth demand and the **first here whose provider reads a set**
+  — `PublishedScoreQuery` answers about a whole group's members for the Members list, and
+  the narrowing to one person is the adapter's, which is the mirror of variety's fence.
+  `ReliabilityBand` is the one name this context imports rather than respells: the engines
+  are the pure layer every context reads and none owns, and the band is on the player contract
+  under that spelling on the record and on Members alike.
   **What other players said is the fifth fact, and it no longer depends on who is
   reading** (#382, then #468). It was the one zone that did — the figure and its count for
   a reader, a **coarse band and neither** for the person it is about, split on the **port**
@@ -115,7 +113,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   subject — is accepted by name in that record's Consequences and is not restated here.
   It takes **neither a sport nor an instant**, the only demand here that
   takes neither: nothing decays, because the window is fifty *people* and not fifty days.
-  Its absence is the **fourth**, asking a fourth question — rating is a favour, ignoring a
+  Its absence is the **third** (the fourth until #659), asking its own question — rating is a favour, ignoring a
   card costs nothing, and nothing records the omission, so a nought would publish a verdict
   nobody gave. The matcher reads none of it, held by an `.importlinter` contract, and a
   test walks the emitted contract to prove the words reach exactly one response type — and
