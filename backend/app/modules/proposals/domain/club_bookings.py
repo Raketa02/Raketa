@@ -154,10 +154,12 @@ class BookedFrom:
 @final
 @dataclass(frozen=True, slots=True)
 class CourtToMoveTo:
-    """A free court of the game's sport at its hour, as the club calls it."""
+    """A free court of the game's sport at its hour the game may move to, as
+    the club calls it, and its kind (#671, Q122)."""
 
     court_id: UUID
     name: str
+    indoor: bool
 
 
 @final

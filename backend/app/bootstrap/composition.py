@@ -167,6 +167,7 @@ from app.modules.proposals.domain.ports import (
     ClubNames as ProposalClubNames,
     ClubTerms,
     CourtHours,
+    CourtKinds,
     DeckPeople,
     GamesAndMoneyRepository,
     PlayerFit,
@@ -182,6 +183,7 @@ from app.modules.proposals.infrastructure.club_court_hours import (
     ClubCourtHours,
     DirectoryClubNames,
     SellableClubTerms,
+    SellableCourtKinds,
 )
 from app.modules.proposals.infrastructure.event_sourced_games_and_money_repository import (  # noqa: E501
     EventSourcedGamesAndMoneyRepository,
@@ -1291,6 +1293,14 @@ def build_court_hours(
     return ClubCourtHours(build_sellable_court_hours(session, runtime=runtime))
 
 
+def build_court_kinds(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> CourtKinds:
+    """The kind of court a card promises — indoor, outdoor or neither — off the
+    free courts of its sport at its club and hour (the mechanics §5.2, Q122)."""
+    return SellableCourtKinds(build_sellable_court_hours(session, runtime=runtime))
+
+
 def build_proposal_club_names(session: AsyncSession) -> ProposalClubNames:
     return DirectoryClubNames(build_club_directory(session))
 
@@ -1535,6 +1545,7 @@ def build_read_group_deck(
         wanted=build_wanted_kinds(session, runtime=runtime),
         booked=booked if booked is not None else build_booked_games(session),
         terms=build_club_terms(session, runtime=runtime),
+        kinds=build_court_kinds(session, runtime=runtime),
         fit=build_player_fit(session, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
@@ -2576,6 +2587,7 @@ def build_read_proposal_details(
         forecasts=build_balance_forecasts(session, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         terms=build_club_terms(session, runtime=runtime),
+        kinds=build_court_kinds(session, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
         players=build_players_in_play(session, runtime=runtime),

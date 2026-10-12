@@ -238,10 +238,11 @@ async def test_a_seat_left_is_on_the_board_of_a_member_who_fits_and_is_free(
     assert board["badge"] == 1
     [row] = board["seats_to_fill"]
     assert row["booking_id"] == booking
-    assert (row["sport"], row["kind"], row["court_name"]) == (
+    assert (row["sport"], row["kind"], row["court_name"], row["indoor"]) == (
         "PADEL",
         "COMPETITIVE",
         "Court 1",
+        True,
     )
     assert row["club"]["name"] == "Bonarka Arena"
     assert (row["share_grosze"], row["open_seats"]) == (SHARE, 1)
@@ -545,7 +546,11 @@ async def test_a_seat_open_card_is_dealt_to_the_best_fits(
 
     assert card["type"] == "SEAT_OPEN"
     assert card["proposal_id"] == booking
-    assert (card["court"], card["court_name"]) == ("BOOKED", "Court 1")
+    assert (card["court"], card["court_name"], card["indoor"]) == (
+        "BOOKED",
+        "Court 1",
+        True,
+    )
     assert (card["share_grosze"], card["open_seats_after_your_yes"]) == (SHARE, 0)
     assert card["in_count"] == 0
     assert card["no_free_cancellation"] is False

@@ -17,7 +17,11 @@ from app.api.dependencies import get_clock
 from app.core.config import get_settings
 from app.kernel import instant
 from app.seeds.catalog import SEED_PASSWORD, Centre
-from app.seeds.club_courts import SEED_CLUB_COURTS, write_the_club_courts
+from app.seeds.club_courts import (
+    SEED_CLUB_COURTS,
+    sports_of_both_kinds,
+    write_the_club_courts,
+)
 from app.seeds.clubs import SEED_CLUBS, desk_email, write_the_clubs
 from tests.api.club_courts_world import (
     COURTS,
@@ -175,6 +179,36 @@ async def test_every_club_has_courts_per_sport_hours_an_exception_and_bands(
         assert len(exceptions) == 1, declared.club
         priced = [row["price_grosze"] and row["bands"] for row in prices]
         assert all(priced) if declared.prices else not any(priced), declared.club
+
+
+async def test_a_live_club_has_indoor_and_outdoor_courts_of_one_sport_at_one_hour(
+    client, clock, session_factory
+):
+    """#671 (Q122): a move that keeps the kind, a weather cancel and a card's
+    kind are walked at Bonarka Arena, where padel Court 4 is outdoor beside
+    three indoor courts on the same Raketa hours — and at Ogrody 33's tennis,
+    where the outdoor court comes first."""
+
+    await seeded(session_factory)
+    bonarka = next(one for one in SEED_CLUB_COURTS if one.club == "Bonarka Arena")
+    ogrody = next(one for one in SEED_CLUB_COURTS if one.club == "Ogrody 33")
+    assert [s.value for s in sports_of_both_kinds(bonarka)] == ["PADEL"]
+    assert [s.value for s in sports_of_both_kinds(ogrody)] == ["TENNIS"]
+
+    desk = await desk_of(client, "Bonarka Arena")
+    padel = [
+        court
+        for court in (await read(client, desk, COURTS))["courts"]
+        if court["sport"] == "PADEL"
+    ]
+
+    assert [(court["name"], court["indoor"]) for court in padel] == [
+        ("Court 1", True),
+        ("Court 2", True),
+        ("Court 3", True),
+        ("Court 4", False),
+    ]
+    assert len({tuple(sorted(map(tuple, court["hours"]))) for court in padel}) == 1
 
 
 async def test_a_second_run_sets_nobody_up_twice(client, clock, session_factory):

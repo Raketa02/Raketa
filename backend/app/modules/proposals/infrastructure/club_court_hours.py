@@ -1,5 +1,5 @@
-"""``CourtHours``, ``ClubNames`` and ``ClubTerms``, over what the Club context
-publishes.
+"""``CourtHours``, ``CourtKinds``, ``ClubNames`` and ``ClubTerms``, over what
+the Club context publishes.
 
 **The share and the book-by are read, never derived here**: each sellable hour
 already carries both (``clubs/domain/sellable.py``), so a proposal and the club
@@ -14,6 +14,14 @@ paused club's too, since its cards keep their court while it deals no new one.
 And **every hour it still holds a court for**, read off the offer as it stood
 before any deadline in the window: a card keeps the book-by it was made with,
 so a club that lengthens its release lead has not taken a card's court away.
+
+**The kind of court a card promises is read off the same offer, as it stood
+before any deadline** (#671; the mechanics §5.2, Q122): the free courts of the
+card's sport at its club and hour are the courts it could be booked on, and
+the card says *Indoor* or *Outdoor* only when every one of them is of that
+kind — a club with both kinds free at the hour promises neither, since the
+first free court in the club's order is the one booked and a court may be
+taken meanwhile.
 
 **A club's terms are read off the same offer**, so *which clubs sell* has one
 answer for a card and for the hour it was made at: a live club is answered,
@@ -36,9 +44,9 @@ from app.modules.clubs.domain.ports import (
     SellableCourtHours,
 )
 from app.modules.clubs.domain.raketa_terms import before_any_deadline
-from app.modules.clubs.domain.sellable import SellableCourtHour
+from app.modules.clubs.domain.sellable import ClubOffer, SellableCourtHour
 from app.modules.proposals.domain.deck import SellingTerms
-from app.modules.proposals.domain.ports import OfferedCourtHour
+from app.modules.proposals.domain.ports import CourtHourKey, OfferedCourtHour
 from app.modules.proposals.domain.proposer import CourtHourOnSale
 
 #: Every game is one hour, for every sport (the mechanics §2).
@@ -115,19 +123,58 @@ class ClubCourtHours:
     async def held(
         self, club_ids: Collection[UUID], *, start: Instant, end: Instant
     ) -> Collection[tuple[UUID, Sport, Instant]]:
-        # The offer as it stood before any hour in the window could have closed:
-        # what the club still has, bookings, exceptions and hours taken off it,
-        # and no deadline — a card's own book-by is the card's.
-        offers = await self._sellable.between(
-            list(dict.fromkeys(club_ids)),
-            start=start,
-            end=end,
-            now=before_any_deadline(start),
-        )
+        offers = await _held_offers(self._sellable, club_ids, start=start, end=end)
         return {
             (club_id, hour.sport, hour.start)
             for club_id, offer in offers.items()
             for hour in offer.hours
+        }
+
+
+async def _held_offers(
+    sellable: SellableCourtHours,
+    club_ids: Collection[UUID],
+    *,
+    start: Instant,
+    end: Instant,
+) -> Mapping[UUID, ClubOffer]:
+    """The offer as it stood before any hour in the window could have closed:
+    what the club still has, bookings, exceptions and hours taken off it, and
+    no deadline — a card's own book-by is the card's."""
+
+    return await sellable.between(
+        list(dict.fromkeys(club_ids)),
+        start=start,
+        end=end,
+        now=before_any_deadline(start),
+    )
+
+
+@final
+class SellableCourtKinds:
+    """``CourtKinds`` over ``SellableCourtHours``."""
+
+    def __init__(self, sellable: SellableCourtHours) -> None:
+        self._sellable = sellable
+
+    async def of(self, hours: Collection[CourtHourKey]) -> Mapping[CourtHourKey, bool]:
+        if not hours:
+            return {}
+        starts = [start for _, _, start in hours]
+        offers = await _held_offers(
+            self._sellable,
+            [club_id for club_id, _, _ in hours],
+            start=min(starts),
+            end=max(starts) + _A_GAME,
+        )
+        kinds: dict[CourtHourKey, set[bool]] = {}
+        for club_id, offer in offers.items():
+            for hour in offer.hours:
+                key = (club_id, hour.sport, hour.start)
+                if key in hours:
+                    kinds.setdefault(key, set()).add(hour.indoor)
+        return {
+            key: next(iter(found)) for key, found in kinds.items() if len(found) == 1
         }
 
 

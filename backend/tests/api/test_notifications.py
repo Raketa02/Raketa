@@ -45,7 +45,7 @@ from app.modules.payments.domain.entered_cards import A_CARD_THAT_DECLINES_LATER
 from app.modules.proposals.application.propose_games import Proposed
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
-from tests.api.club_courts_world import EXCEPTIONS
+from tests.api.club_courts_world import EXCEPTIONS, adds_a_court, sets_hours
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -53,6 +53,7 @@ from tests.api.proposals_world import (
     a_group,
     a_member,
     deals,
+    every_hour_of_the_week,
     makes,
     saves_a_card,
     says_no,
@@ -495,6 +496,46 @@ async def test_a_game_the_club_cancels_is_called_off_with_its_reason(
             "Game called off · nothing was taken",
             "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the weather.",
         )
+
+
+async def test_a_game_the_club_moves_tells_everybody_the_court_and_its_kind(
+    client, bonarka, booking, crowd, mailbox, pushes
+):
+    """*Game moved* (#671; the mechanics §17.2, Q122): always on, to every
+    player on the booking, opening the booked game, and never emailed."""
+
+    _, desk = bonarka
+    court_3 = await adds_a_court(client, desk, name="Court 3", sport="PADEL")
+    await sets_hours(client, desk, [court_3["id"]], every_hour_of_the_week())
+    told_before = {player["name"]: len(pushes.to(player["phone"])) for player in crowd}
+
+    moved = await client.post(
+        f"/api/v1/club/bookings/{booking}/move",
+        json={"court_id": court_3["id"]},
+        headers=desk,
+    )
+
+    assert moved.status_code == 200, moved.text
+    for player in crowd[:4]:
+        assert (await pushed_to(mailbox, pushes, player))[
+            told_before[player["name"]] :
+        ] == [
+            (
+                "Bonarka Arena moved your game to Court 3 · Sat 17:00",
+                "Padel · indoor · nothing else changes",
+            )
+        ]
+        [notice, *_] = await notices_of(client, mailbox, player)
+        assert (notice["kind"], notice["opens"], notice["game_id"]) == (
+            "GAME_MOVED",
+            "BOOKING",
+            booking,
+        )
+        assert notice["your_own"] is False
+        emails = await mailbox.to(f"{player['name']}@example.com")
+        assert all("moved" not in email.subject.lower() for email in emails)
+    for player in crowd[4:]:
+        assert len(pushes.to(player["phone"])) == told_before[player["name"]]
 
 
 async def test_a_leaver_whose_seat_was_taken_is_told_they_were_refunded(

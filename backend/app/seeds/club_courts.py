@@ -23,7 +23,14 @@ desk would have left, and nothing opens a table.
 - **courts per sport**, indoor and outdoor, a weekly pattern of Raketa hours on
   weekday evenings and weekend mornings — where the protagonists' own weeks
   are — **one exception** each, and **price bands** (dearer evenings or
-  weekends) on every priced sport;
+  weekends) on every priced sport. **At least one live club has indoor and
+  outdoor courts of one sport at the same Raketa hours** (#671, Q122), so a
+  move that keeps the kind, a weather cancel and a card's kind can all be
+  walked, and the run refuses a seed with none: Bonarka Arena's padel Court 4
+  is outdoor beside Courts 1–3 indoors — a padel card there promises neither
+  kind, her game books Court 1 and may move to 2 or 3, never 4 — and Ogrody
+  33's tennis has Kort centralny outdoors beside Court 4 indoors, where a game
+  books the outdoor court first and may move indoors;
 - **Zabłocie Sport is paused**: live, selling what its cards would need, and
   dealing nothing new;
 - **Wisła Park is not live**: it added courts with hours, closed a few days
@@ -231,7 +238,10 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
     SeedClubCourts(
         club="Bonarka Arena",
         courts=(
-            *_padel(1, 2, 3, 4),
+            *_padel(1, 2, 3),
+            # Outdoor beside three indoor courts: a card here promises neither
+            # kind, and a game on Court 1 never moves here (#671, Q122).
+            SeedCourt("Court 4", Sport.PADEL, indoor=False),
             SeedCourt("Court 5", Sport.TENNIS, indoor=False),
             SeedCourt("Court 6", Sport.TENNIS, indoor=False),
             SeedCourt("Court 7", Sport.BADMINTON),
@@ -453,6 +463,7 @@ async def write_the_club_courts(
             )
 
     _refuse_a_live_club_with_nothing_for_sale(seeded)
+    _refuse_a_seed_with_no_club_of_both_kinds(seeded)
     return SeededCourts(clubs=tuple(seeded))
 
 
@@ -567,6 +578,31 @@ def _refuse_a_live_club_with_nothing_for_sale(
             )
 
 
+def sports_of_both_kinds(declared: SeedClubCourts) -> tuple[Sport, ...]:
+    """The sports this club offers on indoor and on outdoor courts alike — at
+    the same Raketa hours, since a seeded club's week is every court's."""
+
+    return tuple(
+        sport
+        for sport in Sport
+        if {court.indoor for court in declared.courts if court.sport is sport}
+        == {True, False}
+    )
+
+
+def _refuse_a_seed_with_no_club_of_both_kinds(
+    seeded: list[SeededClubCourts],
+) -> None:
+    """A move that keeps the kind, a weather cancel and a card's kind are
+    walked at a live club with both kinds of one sport (#671, Q122)."""
+
+    if not any(entry.live and sports_of_both_kinds(entry.declared) for entry in seeded):
+        raise ClubCourtsRefused(
+            "no live club has indoor and outdoor courts of one sport at the "
+            "same Raketa hours — a move that keeps the kind cannot be walked"
+        )
+
+
 #: The payments step as the Overview words it.
 _PAYMENTS_WORDS: Final = {
     PaymentsStatus.NOT_STARTED: "not started",
@@ -594,10 +630,16 @@ def club_courts_lines(seeded: SeededCourts) -> list[str]:
             else "not live (half its checklist)"
         )
         payments = _PAYMENTS_WORDS[entry.payments]
+        both = sports_of_both_kinds(declared)
+        kinds = (
+            f" · indoor and outdoor {', '.join(s.value.lower() for s in both)}"
+            if both
+            else ""
+        )
         lines.append(
             f"  {declared.club} · "
             f"releases its hours {declared.settings.release_lead_days} day(s) ahead · "
-            f"{len(declared.courts)} courts · {state} · payments {payments} · "
+            f"{len(declared.courts)} courts{kinds} · {state} · payments {payments} · "
             f"{entry.for_sale} court hours for sale in the next 14 days"
         )
     return lines

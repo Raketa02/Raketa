@@ -55,6 +55,7 @@ from app.modules.proposals.domain.ports import (
     RefusedPayment,
     BookedGameChanges,
     BookingTakings,
+    CourtKinds,
     LateRefunds,
     ClubBookings,
     ClubDistances,
@@ -78,6 +79,12 @@ from app.modules.proposals.domain.proposal import TimeTo
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
+from tests.api.club_courts_world import adds_a_court, court_path, sets_hours
+from tests.api.proposals_world import (
+    SATURDAY_FIVE,
+    a_club_and_its_desk,
+    every_hour_of_the_week,
+)
 
 OLA, KUBA, EWA, TOMEK = (new_uuid() for _ in range(4))
 
@@ -144,7 +151,7 @@ async def _booked(
         booking_id=new_uuid(),
         pool_id=new_uuid(),
         club_id=new_uuid(),
-        court=BookedCourt(court_id=new_uuid(), name=court),
+        court=BookedCourt(court_id=new_uuid(), name=court, indoor=True),
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
         start=start,
@@ -409,7 +416,7 @@ async def _booked_with_its_game(session, *, start: Instant) -> Booking:
         booking_id=booking_id,
         pool_id=new_uuid(),
         club_id=new_uuid(),
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True),
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
         start=start,
@@ -1190,6 +1197,40 @@ async def test_a_club_s_day_is_its_bookings_and_its_cancel_says_whom_it_owes(
     assert set(cancelled.refunded) == {OLA, KUBA, EWA, TOMEK}
     [after] = await club.on_day(booking.club_id, start=day_opens, end=day_closes)
     assert after.cancel_reason is ClubCancelReason.REPAIR
+
+
+@pytest.mark.parametrize("implementation", registered(CourtKinds))
+async def test_the_kind_of_court_a_card_promises_is_certain_or_nothing(
+    implementation, client, session
+):
+    """#671 (Q122): indoor or outdoor when every free court of the sport at the
+    club and hour is of that kind; absent when they are mixed, and where no
+    court is held."""
+
+    club_id, desk = await a_club_and_its_desk(client)
+    kinds: CourtKinds = implementation.build(session)
+    padel = (UUID(club_id), Sport.PADEL, SATURDAY_FIVE)
+    squash = (UUID(club_id), Sport.SQUASH, SATURDAY_FIVE)
+    nowhere = (new_uuid(), Sport.PADEL, SATURDAY_FIVE)
+
+    assert await kinds.of([padel, squash, nowhere]) == {padel: True}
+    assert await kinds.of([]) == {}
+
+    outdoor = await adds_a_court(
+        client, desk, name="Court 4", sport="PADEL", indoor=False
+    )
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
+    assert await kinds.of([padel]) == {}
+
+    courts = (await client.get("/api/v1/club/courts", headers=desk)).json()["courts"]
+    court_1 = next(one for one in courts if one["name"] == "Court 1")
+    off = await client.put(
+        court_path(court_1["id"]),
+        json={"name": "Court 1", "sport": "PADEL", "indoor": True, "offered": False},
+        headers=desk,
+    )
+    assert off.status_code == 200, off.text
+    assert await kinds.of([padel]) == {padel: False}
 
 
 @pytest.mark.parametrize("implementation", registered(BookingTakings))

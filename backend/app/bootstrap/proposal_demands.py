@@ -2,8 +2,8 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Sixteen rows, and
-the tuple is what is asserted over**: a player's booked games (``bookings``),
+consumer gets a new register, not a row in somebody else's. **Seventeen rows,
+and the tuple is what is asserted over**: a player's booked games (``bookings``),
 where each booked game's result stands (``games``), how far a club is from a
 player (the Player profile and ``clubs``), what each player is called on a
 club's bookings (``users``) — and, for leaving and the cut-off (#544), what
@@ -14,8 +14,10 @@ makes (the matcher's pair rule over blocks, the Player profile and rating) and
 each member's Level, week, gender and preference (rating and the Player
 profile) — and, for the club running its bookings (#547), a club's bookings as
 its desk reads and runs them (``bookings``), what each took and gave back
-(``payments``) and the group each pool is (``groups``) — each a fact another
-context owns, read through a port declared in this context's words.
+(``payments``) and the group each pool is (``groups``) — and, for the kind of
+court a card promises (#671), the kinds of the free courts at a club and hour
+(``clubs``) — each a fact another context owns, read through a port declared
+in this context's words.
 
 **Not yet the whole of the context's demands.** The rest of the deck's, the
 proposer's and the fill's ports (#538–#541) were contracted over HTTP and never
@@ -47,6 +49,7 @@ from app.bootstrap.composition import (
     build_players_in_play,
     build_proposal_player_names,
     build_seat_refunds,
+    build_court_kinds,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
@@ -59,6 +62,7 @@ from app.modules.proposals.domain.ports import (
     GameResults,
     CardsToFix,
     CheckedShares,
+    CourtKinds,
     HeldShares,
     HoldingTimes,
     PlayerBookings,
@@ -91,6 +95,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     ClubBookings,
     BookingTakings,
     PoolOrigins,
+    CourtKinds,
 )
 
 
@@ -99,6 +104,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PlayerBookings,
         name="BookingsPlayerBookings",
         build=build_player_bookings,
+    ),
+    RegisteredImplementation(
+        port=CourtKinds,
+        name="SellableCourtKinds",
+        build=build_court_kinds,
     ),
     RegisteredImplementation(
         port=GameResults,

@@ -7667,6 +7667,18 @@
             "title": "Court Name",
             "description": "The court the game was given \u2014 *Court 2*. `null` on a game that was never booked, which no court was given."
           },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 2 \u00b7 indoor* \u2014 which follows a move (Q122). `null` with `court_name`."
+          },
           "sides": {
             "$ref": "#/components/schemas/BookedSidesSchema"
           },
@@ -7757,6 +7769,7 @@
           "ends_at",
           "where",
           "court_name",
+          "indoor",
           "sides",
           "money",
           "payment_due_by",
@@ -8634,6 +8647,18 @@
             "title": "Court Name",
             "description": "What the club calls the court \u2014 *Court 6* \u2014 on a `SEAT_OPEN` card; `null` on a game still filling, which is given one at booking."
           },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The kind of court the card promises \u2014 `true` *Indoor*, `false` *Outdoor* \u2014 when every free court it could be booked on is of that kind; `null` when they are mixed, which promises neither (Q122). Shown, never chosen by. On a `SEAT_OPEN` card: the booked court's kind."
+          },
           "no_free_cancellation": {
             "type": "boolean",
             "title": "No Free Cancellation",
@@ -8672,6 +8697,7 @@
           "open_seats_after_your_yes",
           "court",
           "court_name",
+          "indoor",
           "no_free_cancellation",
           "sides",
           "forecast",
@@ -10424,6 +10450,18 @@
             "title": "Court Name",
             "description": "What the club calls the court \u2014 *Court 2*. `null` on a game that was never booked, which no court was given."
           },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 2 \u00b7 indoor* \u2014 which follows a move (Q122). `null` with `court_name`."
+          },
           "sides": {
             "$ref": "#/components/schemas/BookedSidesSchema"
           },
@@ -10485,6 +10523,7 @@
           "starts_at",
           "club",
           "court_name",
+          "indoor",
           "sides",
           "money",
           "payment_due_by",
@@ -11458,6 +11497,7 @@
           "SOMEONE_LEFT",
           "REFUNDED",
           "NEW_GAME",
+          "GAME_MOVED",
           "POST_DID_NOT_FILL",
           "YOU_COMPLETE_IT",
           "CHALLENGE",
@@ -12830,6 +12870,18 @@
             "title": "No Free Cancellation",
             "description": "The club's cut-off has already passed for this game."
           },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The kind of court the game promises \u2014 `true` *Indoor*, `false` *Outdoor* \u2014 when every free court it could be booked on is of that kind; `null` when they are mixed (Q122). Shown, never chosen by."
+          },
           "payment_due_by": {
             "anyOf": [
               {
@@ -12892,6 +12944,7 @@
           "share_grosze",
           "book_by",
           "no_free_cancellation",
+          "indoor",
           "payment_due_by",
           "time_to",
           "sides",
@@ -13614,6 +13667,11 @@
             "title": "Court Name",
             "description": "What the club calls the court."
           },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 3 \u00b7 indoor* (Q122)."
+          },
           "share_grosze": {
             "type": "integer",
             "title": "Share Grosze",
@@ -13652,6 +13710,7 @@
           "starts_at",
           "club",
           "court_name",
+          "indoor",
           "share_grosze",
           "open_seats",
           "deadline",

@@ -43,7 +43,7 @@ def _at(hours: float = 0) -> Instant:
 #: Saturday's game, five days out; free to leave until a day before it.
 START = _at(5 * 24)
 CUT_OFF = START - timedelta(hours=24)
-COURT = BookedCourt(court_id=new_uuid(), name="Court 1")
+COURT = BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True)
 
 
 _OPENINGS: dict[object, BookingConfirmed] = {}

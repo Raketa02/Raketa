@@ -69,6 +69,10 @@ class NoticeKind(StrEnum):
     #: *Your new game · Fri 19:00 at Bonarka Arena* — the card first the club's
     #: cancel promised (Q107).
     NEW_GAME = "NEW_GAME"
+    #: *Bonarka Arena moved your game to Court 3 · Thu 19:00* / *Padel · indoor
+    #: · nothing else changes* — the club's own Move (#671, Q122). Always on,
+    #: to everybody on the booking, opening the booked game, never emailed.
+    GAME_MOVED = "GAME_MOVED"
     #: *Your post didn't fill.*
     POST_DID_NOT_FILL = "POST_DID_NOT_FILL"
     #: *You complete it* — a card needs only you.
@@ -193,6 +197,10 @@ class Notice:
     #: About a seat the player went for on a booked game and does not hold —
     #: a rescue (#640): *to take the seat*, never *to keep your seat*.
     rescue: bool = False
+    #: The court a move put the game on, and its kind (#671) — kept on the
+    #: notice, so *Court 3 · indoor* reads the same after a second move.
+    court_name: str | None = None
+    indoor: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -280,6 +288,8 @@ class NoticesOfADay:
             you_left=notice.you_left,
             kept_grosze=notice.kept_grosze,
             rescue=notice.rescue,
+            court_name=notice.court_name,
+            indoor=notice.indoor,
         )
         self._record_that(given)
         return given

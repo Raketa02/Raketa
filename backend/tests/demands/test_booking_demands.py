@@ -42,10 +42,12 @@ from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
 from app.shared.ids import new_uuid
 from tests.api.administration_world import club_signs_up
+from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
     a_club_and_its_desk,
+    every_hour_of_the_week,
 )
 
 
@@ -110,16 +112,28 @@ async def test_the_first_free_court_comes_with_the_club_s_terms(
 async def test_the_free_courts_at_an_hour_are_the_sport_s_in_the_club_s_order(
     implementation, client, session
 ):
-    """#547: where a booked game may be moved."""
+    """#547: where a booked game may be moved — each with its kind, indoor or
+    outdoor, which the move keeps (#671, Q122)."""
 
-    club_id, _ = await a_club_and_its_desk(client)
+    club_id, desk = await a_club_and_its_desk(client)
+    outdoor = await adds_a_court(
+        client, desk, name="Court 4", sport="PADEL", indoor=False
+    )
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
     courts: ClubCourtsAtTheHour = implementation.build(session)
 
     padel = await courts.free_courts(
         UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
     )
 
-    assert [court.name for court in padel] == ["Court 1"]
+    assert [(court.name, court.indoor) for court in padel] == [
+        ("Court 1", True),
+        ("Court 4", False),
+    ]
+    first = await courts.first_free(
+        UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
+    )
+    assert first is not None and first.court.indoor is True
     squash = await courts.free_courts(
         UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE
     )

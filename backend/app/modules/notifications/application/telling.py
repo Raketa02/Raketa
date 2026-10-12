@@ -54,6 +54,9 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   your card ran out*, and that they owe nothing.
 - ``CalledOffAtCutOff`` — to each leaver whose empty seat called it off, in a
   leaver's words: it counts on their record, and their refund stands (Q108).
+- ``CourtMoved`` — *Game moved*, to everybody with a seat on the booking: the
+  court it is on now and its kind, and that nothing else changes (#671, Q122).
+  Always on, opening the booked game, never emailed.
 - ``ProposalExpired`` — *Your post didn't fill*, to its poster, still In; and
   a full game gone back to filling, *called off · nobody paid*, to everybody
   still In.
@@ -92,6 +95,7 @@ from app.application.events import DeliveryContext
 from app.kernel import Instant, instant
 from app.modules.bookings.domain.events import (
     CalledOffAtCutOff,
+    CourtMoved,
     KeptSeatRanOut,
     SeatLeft,
 )
@@ -191,6 +195,8 @@ def _notice(
     you_left: bool = False,
     kept_grosze: int | None = None,
     rescue: bool = False,
+    court_name: str | None = None,
+    indoor: bool | None = None,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -210,6 +216,8 @@ def _notice(
         you_left=you_left,
         kept_grosze=kept_grosze,
         rescue=rescue,
+        court_name=court_name,
+        indoor=indoor,
     )
 
 
@@ -666,6 +674,28 @@ class TellThePlayers:
                 at=at,
             )
 
+    async def _moved(self, event: CourtMoved, *, key: str, at: Instant) -> None:
+        """The club's own Move (#671; the mechanics §17.2, Q122): everybody
+        with a seat on the booking reads the court it is on now and its kind,
+        and that nothing else changes. The court and its kind are the event's
+        — kept on the notice, so it reads the same after a second move."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked:
+            return
+        await self._tell(
+            game.seated,
+            _notice(
+                NoticeKind.GAME_MOVED,
+                game,
+                key=f"{NoticeKind.GAME_MOVED}:{key}",
+                opens=Opens.BOOKING,
+                court_name=event.court_name,
+                indoor=event.indoor,
+            ),
+            at=at,
+        )
+
     async def _fell_back(
         self, event: FellBackToFilling, *, key: str, at: Instant
     ) -> None:
@@ -850,6 +880,7 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     SeatLeft: TellThePlayers._left,
     KeptSeatRanOut: TellThePlayers._kept_seat_ran_out,
     CalledOffAtCutOff: TellThePlayers._called_off_short,
+    CourtMoved: TellThePlayers._moved,
     ProposalExpired: TellThePlayers._expired,
     CourtHourLost: TellThePlayers._court_lost,
     YesSaid: TellThePlayers._one_seat_left,

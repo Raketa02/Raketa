@@ -59,6 +59,7 @@ from app.modules.proposals.domain.ports import (
     ClubDistances,
     ClubNames,
     ClubTerms,
+    CourtKinds,
     DeckPeople,
     DeckPerson,
     PlayerFit,
@@ -98,6 +99,9 @@ class ProposalDetails:
     #: The club's cut-off has already passed for this game. ``False`` for a
     #: club no longer selling.
     no_free_cancellation: bool
+    #: The kind of court the card promises — *Indoor*, *Outdoor*, or ``None``
+    #: when the free courts it could be booked on are of mixed kinds (Q122).
+    indoor: bool | None
     club_name: str | None
     distance_km: float | None
     people: Mapping[UUID, DeckPerson]
@@ -114,6 +118,7 @@ class ReadProposalDetails:
         forecasts: BalanceForecasts,
         people: DeckPeople,
         terms: ClubTerms,
+        kinds: CourtKinds,
         clubs: ClubNames,
         distances: ClubDistances,
         players: PlayersInPlay,
@@ -126,6 +131,7 @@ class ReadProposalDetails:
         self._forecasts = forecasts
         self._people = people
         self._terms = terms
+        self._kinds = kinds
         self._clubs = clubs
         self._distances = distances
         self._clock = clock
@@ -182,6 +188,15 @@ class ReadProposalDetails:
         names = await self._clubs.names_of([proposal.club_id])
         distances = await self._distances.from_player(reader, [proposal.club_id])
         status = status_of_proposal(proposal, now=now)
+        # The kind a card promises is read off the free courts only while the
+        # game still fills: once booked, its court and kind are the booking's
+        # (``GET /bookings/{id}``), and the courts still free say nothing.
+        hour = (proposal.club_id, proposal.sport, proposal.start)
+        kinds = (
+            await self._kinds.of([hour])
+            if status in (ProposalStatus.FILLING, ProposalStatus.WAITING_FOR_A_PAYMENT)
+            else {}
+        )
         return ProposalDetails(
             proposal=proposal,
             read_at=now,
@@ -213,6 +228,7 @@ class ReadProposalDetails:
             and cut_off_passed(
                 proposal.start, cut_off_hours=terms.cut_off_hours, now=now
             ),
+            indoor=kinds.get(hour),
             club_name=names.get(proposal.club_id),
             distance_km=distances.get(proposal.club_id),
             people=people,

@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.application.events import DeliveryContext
+from app.modules.bookings.domain.events import CourtMoved
 from app.modules.clubs.domain.club_courts_events import ExceptionAdded
 from app.modules.groups.domain.events import GroupJoined, GroupLeft
 from app.modules.player_profile.domain.events import WeeklyHoursSet
@@ -74,4 +75,25 @@ async def test_a_change_to_what_a_club_sells_is_everywhere_and_leaving_is_nothin
         ),
         CONTEXT,
     )
+    assert due.take() == Due(everywhere=True)
+
+
+async def test_a_club_s_move_frees_a_court_hour_and_is_everywhere():
+    """#671: the court a move frees is offered again at once — a move wakes
+    the proposer as the club's other acts do."""
+
+    due = DueForProposing()
+    marks = MarkDueForProposing(due)
+
+    await marks(
+        CourtMoved(
+            booking_id=uuid4(),
+            court_id=uuid4(),
+            court_name="Court 3",
+            indoor=True,
+            occurred_at=NOW,
+        ),
+        CONTEXT,
+    )
+
     assert due.take() == Due(everywhere=True)

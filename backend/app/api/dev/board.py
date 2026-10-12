@@ -518,6 +518,8 @@ class DeparturePane(BaseModel):
 class BookingPane(BaseModel):
     state: BookingState
     court_name: str
+    #: The court's kind, which a move keeps (#671).
+    indoor: bool
     cut_off: datetime
     booked_at: datetime
     called_off: CalledOff | None
@@ -1375,6 +1377,7 @@ class _Folded:
         return BookingPane(
             state=booking.state,
             court_name=booking.court.name,
+            indoor=booking.court.indoor,
             cut_off=booking.cut_off,
             booked_at=booking.booked_at,
             called_off=booking.called_off,

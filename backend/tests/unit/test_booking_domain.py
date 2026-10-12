@@ -30,7 +30,7 @@ def _at(minutes: int = 0) -> Instant:
 
 
 START = _at(5 * 24 * 60)
-COURT = BookedCourt(court_id=new_uuid(), name="Court 1")
+COURT = BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True)
 
 
 def _confirmed(**overrides) -> Booking:

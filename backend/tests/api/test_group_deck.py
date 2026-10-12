@@ -56,6 +56,7 @@ from tests.api.club_courts_world import (
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
+    a_club_and_its_desk,
     a_club_selling,
     a_group,
     a_member,
@@ -275,6 +276,58 @@ async def test_a_last_minute_card_says_no_free_cancellation(
     [card] = (await deck_of(client, ola, group))["cards"]
 
     assert card["no_free_cancellation"] is True
+
+
+async def test_a_card_says_its_kind_of_court_only_when_that_is_certain(
+    client, session_factory, clock, crowd
+):
+    """The kind of court is on the card only when every free court it could
+    be booked on is of one kind (#671; the mechanics §5.2, Q122): *Indoor*
+    at a club whose padel courts are all indoor, nothing once an outdoor one
+    is free at the hour too, *Outdoor* once only outdoor courts are."""
+
+    ola, kuba, ewa, tomek = crowd[:4]
+    club_id, desk = await a_club_and_its_desk(client, name="Kazimierz Padel")
+    group = await a_group(client, ola, club_id, kuba, ewa, tomek)
+    proposal = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club_id,
+        versions=((ola, kuba, ewa, tomek),),
+    )
+
+    [card] = (await deck_of(client, ola, group))["cards"]
+    assert card["indoor"] is True
+    assert (await proposal_of(client, ola, proposal))["indoor"] is True
+
+    outdoor = await adds_a_court(
+        client, desk, name="Court 4", sport="PADEL", indoor=False
+    )
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
+    [card] = (await deck_of(client, ola, group))["cards"]
+    assert card["indoor"] is None
+    assert (await proposal_of(client, ola, proposal))["indoor"] is None
+
+    courts = (await client.get("/api/v1/club/courts", headers=desk)).json()["courts"]
+    court_1 = next(one for one in courts if one["name"] == "Court 1")
+    off = await client.put(
+        court_path(court_1["id"]),
+        json={"name": "Court 1", "sport": "PADEL", "indoor": True, "offered": False},
+        headers=desk,
+    )
+    assert off.status_code == 200, off.text
+    [card] = (await deck_of(client, ola, group))["cards"]
+    assert card["indoor"] is False
+    assert (await proposal_of(client, ola, proposal))["indoor"] is False
+
+
+async def proposal_of(client, player: dict, proposal_id) -> dict:
+    read = await client.get(
+        f"/api/v1/proposals/{proposal_id}", headers=player["headers"]
+    )
+    assert read.status_code == 200, read.text
+    return read.json()
 
 
 async def test_a_challenge_names_its_poster_until_they_withdraw(

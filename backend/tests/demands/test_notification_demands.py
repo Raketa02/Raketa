@@ -108,7 +108,7 @@ def _booked(proposal: Proposal, *, at: Instant) -> Booking:
         booking_id=proposal.proposal_id,
         pool_id=proposal.pool.id,
         club_id=proposal.club_id,
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True),
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
         start=START,

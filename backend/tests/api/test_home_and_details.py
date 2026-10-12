@@ -181,7 +181,7 @@ async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
         assert card["needs_you"] is False
         assert card["starts_at"] == SATURDAY_FIVE_UTC
         assert card["club"] == {"id": club, "name": "Bonarka Arena"}
-        assert card["court_name"] == "Court 1"
+        assert (card["court_name"], card["indoor"]) == ("Court 1", True)
         assert card["money"] == {
             "share_grosze": 30_00,
             "paid": False,
@@ -673,7 +673,7 @@ async def test_a_player_in_the_game_reads_its_details(
     assert details["starts_at"] == SATURDAY_FIVE_UTC
     assert details["ends_at"] == "2026-10-10T16:00:00Z"
     assert details["where"] == {"id": club, "name": "Bonarka Arena", "distance_km": 3.3}
-    assert details["court_name"] == "Court 1"
+    assert (details["court_name"], details["indoor"]) == ("Court 1", True)
     assert details["money"] == {
         "share_grosze": 30_00,
         "paid": False,
@@ -795,6 +795,8 @@ async def test_a_player_still_deciding_reads_their_own_card(
     assert "court_name" not in details
     assert details["share_grosze"] == 30_00
     assert details["no_free_cancellation"] is False
+    # Bonarka's one padel court is indoor: the card promises it (Q122).
+    assert details["indoor"] is True
     tiles = details["sides"]["yours"] + details["sides"]["theirs"]
     assert {tile["player_id"] for tile in tiles} == {str(one["id"]) for one in four}
     assert details["sides"]["yours"][0]["is_you"] is True
@@ -889,6 +891,9 @@ async def test_a_filled_game_reads_filled_with_nothing_to_do(
 
     assert details["status"] == "FILLED"
     assert details["actions"] == []
+    # Its court is given now: the kind is the booking's to say, never read off
+    # the courts still free (#671).
+    assert details["indoor"] is None
 
 
 async def test_a_refused_payment_is_confirmed_from_the_details(

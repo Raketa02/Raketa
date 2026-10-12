@@ -16,6 +16,11 @@ the ``AT_THE_CLUBS_YES``, ``REFUSED``, ``NO_ANSWER`` and ``LEFT_AFTER_THE_BOOK_B
 reasons. ``notifications.notice_given`` keeps its name and version — its shape did
 not change — and a stored row naming a retired kind no longer folds: the local
 store is reset with the removal and only ``local`` has ever run.
+
+**One kind joined with the club's Move** (#671; Q122): ``GAME_MOVED``, which
+names the court the game is on now and its kind — two facts added to
+``notifications.notice_given`` **defaulted**, as ``own``, ``until`` and
+``rescue`` were, so a row given before names no court and the version stays.
 """
 
 from __future__ import annotations

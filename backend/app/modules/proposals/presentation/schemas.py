@@ -499,6 +499,15 @@ class DeckCardSchema(BaseModel):
             "`null` on a game still filling, which is given one at booking."
         )
     )
+    indoor: bool | None = Field(
+        description=(
+            "The kind of court the card promises — `true` *Indoor*, `false` "
+            "*Outdoor* — when every free court it could be booked on is of "
+            "that kind; `null` when they are mixed, which promises neither "
+            "(Q122). Shown, never chosen by. On a `SEAT_OPEN` card: the booked "
+            "court's kind."
+        )
+    )
     no_free_cancellation: bool = Field(
         description="The club's cut-off has already passed for this game."
     )
@@ -534,6 +543,7 @@ class DeckCardSchema(BaseModel):
             open_seats_after_your_yes=card.open_seats_after_your_yes,
             court=card.court,
             court_name=card.court_name,
+            indoor=card.indoor,
             no_free_cancellation=card.no_free_cancellation,
             sides=_deck_sides(
                 card.sides, reader=reader, people=people, in_=card.in_, paid=card.paid
@@ -1092,6 +1102,12 @@ class HomeGameSchema(BaseModel):
             "was never booked, which no court was given."
         )
     )
+    indoor: bool | None = Field(
+        description=(
+            "The court's kind — *Court 2 · indoor* — which follows a move "
+            "(Q122). `null` with `court_name`."
+        )
+    )
     sides: BookedSidesSchema
     money: BookedMoneySchema
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
@@ -1125,6 +1141,7 @@ class HomeGameSchema(BaseModel):
             starts_at=game.start,
             club=BookedClubSchema(id=game.club_id, name=card.club_name),
             court_name=game.court_name if game.court_given else None,
+            indoor=game.indoor if game.court_given else None,
             sides=_booked_sides(
                 game.seen_by(reader),
                 game=game,
@@ -1346,6 +1363,12 @@ class BookingDetailsResponse(BaseModel):
             "was never booked, which no court was given."
         )
     )
+    indoor: bool | None = Field(
+        description=(
+            "The court's kind — *Court 2 · indoor* — which follows a move "
+            "(Q122). `null` with `court_name`."
+        )
+    )
     sides: BookedSidesSchema
     money: BookedMoneySchema
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
@@ -1407,6 +1430,7 @@ class BookingDetailsResponse(BaseModel):
                 distance_km=details.distance_km,
             ),
             court_name=game.court_name if game.court_given else None,
+            indoor=game.indoor if game.court_given else None,
             sides=_booked_sides(
                 details.sides,
                 game=game,
@@ -1539,6 +1563,14 @@ class ProposalDetailsResponse(BaseModel):
     no_free_cancellation: bool = Field(
         description="The club's cut-off has already passed for this game."
     )
+    indoor: bool | None = Field(
+        description=(
+            "The kind of court the game promises — `true` *Indoor*, `false` "
+            "*Outdoor* — when every free court it could be booked on is of "
+            "that kind; `null` when they are mixed (Q122). Shown, never chosen "
+            "by."
+        )
+    )
     payment_due_by: datetime | None = Field(
         description=(
             "When the payment the game waits for is due — *Waiting for one "
@@ -1597,6 +1629,7 @@ class ProposalDetailsResponse(BaseModel):
             share_grosze=proposal.share_grosze,
             book_by=proposal.book_by,
             no_free_cancellation=details.no_free_cancellation,
+            indoor=details.indoor,
             payment_due_by=details.pay_by,
             time_to=details.time_to,
             sides=_deck_sides(
@@ -1633,6 +1666,7 @@ class SeatToFillSchema(BaseModel):
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     club: BookedClubSchema
     court_name: str = Field(description="What the club calls the court.")
+    indoor: bool = Field(description="The court's kind — *Court 3 · indoor* (Q122).")
     share_grosze: int = Field(description="What *I'm in* charges at once.")
     open_seats: int = Field(
         description="The dashed **?** squares after the players' posters."
@@ -1675,6 +1709,7 @@ class SeatToFillSchema(BaseModel):
             starts_at=game.start,
             club=BookedClubSchema(id=game.club_id, name=club_name),
             court_name=game.court_name,
+            indoor=game.indoor,
             share_grosze=game.share_grosze,
             open_seats=game.open_seats,
             deadline=deadline,

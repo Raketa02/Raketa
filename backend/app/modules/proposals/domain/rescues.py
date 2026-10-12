@@ -198,8 +198,8 @@ def card_of_a_rescue(
     now: Instant,
 ) -> DeckCard:
     """The *Seat open* card: the players *paid*, the reader in the seat that
-    opened first, the court and its name, **Booked** — and the deadline the
-    board says, the cut-off and then the start."""
+    opened first, the court, its name and its kind (#671), **Booked** — and
+    the deadline the board says, the cut-off and then the start."""
 
     return DeckCard(
         proposal_id=game.booking_id,
@@ -218,6 +218,7 @@ def card_of_a_rescue(
         version_count=1,
         no_free_cancellation=not fills_by_the_cut_off(game, now=now),
         court_name=game.court_name,
+        indoor=game.indoor,
         # Held until the cut-off, taken at it (#637).
         paid=() if fills_by_the_cut_off(game, now=now) else game.players,
     )

@@ -26,8 +26,15 @@ saying no to it. **A rescuer whose share was refused keeps a seat** (#640):
 ``KeptSeatRanOut``.
 
 **The club runs it** (#547): ``CourtMoved`` puts the game on another court of
-its sport at the same hour, and ``CancelledByClub`` calls it off with the club's
-reason — everybody still in named, to be refunded in full. ``PlayerCheckedIn``,
+its sport at the same hour — of the same kind, or indoor for an outdoor game
+(#671, Q122) — and ``CancelledByClub`` calls it off with the club's reason —
+everybody still in named, to be refunded in full.
+
+**The court's kind travels with the court** (#671): ``BookingConfirmed`` and
+``CourtMoved`` each carry ``indoor`` beside the court's name, since a booked
+game always shows *Court 3 · indoor* and the kind follows a move. Both are at
+**version 2** for it, version 1 of each left without a decoder, the local store
+reset with the change. ``PlayerCheckedIn``,
 the desk's scan of a player's code on the day, is **retired** with desk
 check-in (#651): nothing writes it, and it stays registered so a stored row
 still decodes.
@@ -66,6 +73,8 @@ class BookingConfirmed:
     court_id: UUID
     #: What the court is called at the club — *Court 2* — given at booking.
     court_name: str
+    #: The court's kind, indoor or outdoor (#671, Q122).
+    indoor: bool
     sport: str
     #: ``COMPETITIVE`` or ``FOR_FUN``.
     kind: str
@@ -209,12 +218,15 @@ class NoSaidToTheSeat:
 class CourtMoved:
     """The club moved the booked game to another court of its sport at the same
     hour — a broken court, a desk's own reshuffle (#547; the mechanics §16.16).
-    The players read the new number; nothing else about the game moves."""
+    The players read the new number and its kind; nothing else about the game
+    moves (#671, Q122)."""
 
     booking_id: UUID
     court_id: UUID
     #: What the new court is called at the club.
     court_name: str
+    #: The new court's kind, indoor or outdoor.
+    indoor: bool
     occurred_at: datetime
 
 

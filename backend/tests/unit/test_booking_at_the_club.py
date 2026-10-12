@@ -43,8 +43,9 @@ def _at(hours: float = 0) -> Instant:
 
 START = _at(5 * 24)
 CUT_OFF = START - timedelta(hours=24)
-COURT_1 = BookedCourt(court_id=new_uuid(), name="Court 1")
-COURT_3 = BookedCourt(court_id=new_uuid(), name="Court 3")
+COURT_1 = BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True)
+COURT_3 = BookedCourt(court_id=new_uuid(), name="Court 3", indoor=True)
+COURT_4 = BookedCourt(court_id=new_uuid(), name="Court 4", indoor=False)
 
 _OPENINGS: dict[object, BookingConfirmed] = {}
 
@@ -90,8 +91,27 @@ def test_moving_puts_the_game_on_the_other_court_and_the_players_read_its_name()
     assert booking.court == COURT_3
     [event] = booking.pull_events()
     assert isinstance(event, CourtMoved)
-    assert (event.court_id, event.court_name) == (COURT_3.court_id, "Court 3")
+    assert (event.court_id, event.court_name, event.indoor) == (
+        COURT_3.court_id,
+        "Court 3",
+        True,
+    )
     assert _replayed(booking, [event]).court == COURT_3
+
+
+def test_the_moved_event_carries_the_new_court_s_kind_and_the_players_read_it():
+    """#671 (Q122): a booked game always names its court's kind, and the kind
+    follows a move — *Court 4 · outdoor* once the game is there."""
+
+    booking = _booked()
+    assert booking.court.indoor is True
+
+    booking.move_to(COURT_4, at=_at(1))
+
+    [event] = booking.pull_events()
+    assert isinstance(event, CourtMoved)
+    assert event.indoor is False
+    assert _replayed(booking, [event]).court.indoor is False
 
 
 def test_a_game_with_a_seat_open_can_be_moved_too():

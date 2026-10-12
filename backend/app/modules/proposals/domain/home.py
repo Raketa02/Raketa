@@ -237,6 +237,9 @@ class BookedGame:
     #: The ordinary Game the booking opened — ``None`` on a game that waited
     #: for a payment and has no booking (#625).
     game_id: UUID | None
+    #: The court's kind, indoor or outdoor, which follows a move (#671, Q122)
+    #: — meaningful only where a court was given (``court_given``).
+    indoor: bool = False
     stage: BookingStage = BookingStage.BOOKED
     #: Why it will not be played, once called off.
     called_off: CalledOffReason | None = None
@@ -788,8 +791,9 @@ def without_a_booking(proposal: Proposal, *, now: Instant) -> BookedGame:
         booking_id=proposal.proposal_id,
         pool_id=proposal.pool.id,
         club_id=proposal.club_id,
-        # No court is held for it, and none given.
+        # No court is held for it, and none given — nor a kind.
         court_name="",
+        indoor=False,
         sport=proposal.sport,
         kind=proposal.kind,
         start=proposal.start,

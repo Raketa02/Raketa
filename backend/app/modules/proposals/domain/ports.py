@@ -298,6 +298,26 @@ class CourtHours(Protocol):
         ...
 
 
+#: One club, sport and hour: the key a card's court hour is read under.
+CourtHourKey = tuple[UUID, Sport, Instant]
+
+
+@runtime_checkable
+class CourtKinds(Protocol):
+    """**A demand of the Club context**: the kind of court a card promises —
+    *Indoor* or *Outdoor* when it is certain, and nothing when it is not (the
+    mechanics §5.2, Q122; #671). A player sees it and never chooses by it."""
+
+    async def of(self, hours: Collection[CourtHourKey]) -> Mapping[CourtHourKey, bool]:
+        """For each club, sport and hour asked, whether the free courts of the
+        sport the club still has for Raketa then are **all indoor** (``True``)
+        or **all outdoor** (``False``) — read as ``CourtHours.held`` reads
+        them, before any deadline, since a card keeps the court hour it was
+        made with. **Absent** where the free courts are of mixed kinds, and
+        where no court is held: neither is a kind the card can promise."""
+        ...
+
+
 @runtime_checkable
 class ClubNames(Protocol):
     async def names_of(self, club_ids: Collection[UUID]) -> Mapping[UUID, str]:
@@ -481,10 +501,13 @@ class WantedKinds(Protocol):
 @dataclass(frozen=True, slots=True)
 class BookableCourt:
     """The court a full game would be booked on — the first free one of its
-    sport at its hour — and when the club's free cancellation ends for it."""
+    sport at its hour — its kind, and when the club's free cancellation ends
+    for it."""
 
     court_id: UUID
     name: str
+    #: Indoor or outdoor (#671, Q122): what the booked game shows.
+    indoor: bool
     cut_off: Instant
 
 
@@ -1020,15 +1043,17 @@ class ClubBookings(Protocol):
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
         """Every other court of the game's sport the club still has for Raketa
-        at its hour, in the club's order."""
+        at its hour, in the club's order, **of a kind the players would
+        accept** — the same kind, or indoor for an outdoor game (#671, Q122) —
+        each with its kind."""
         ...
 
     async def move(
         self, booking_id: UUID, court_id: UUID, *, at: Instant
     ) -> CourtToMoveTo | None:
         """Move the game onto that court — ``None`` when it is not one of the
-        free courts. ``CourtJustTaken`` when another game claimed it a moment
-        ago."""
+        free courts, a court of the wrong kind included. ``CourtJustTaken``
+        when another game claimed it a moment ago."""
         ...
 
     async def cancel(

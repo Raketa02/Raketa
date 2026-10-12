@@ -14,6 +14,12 @@ decodes, and the Booking's fold reads it and changes nothing.
 ``bookings.awaiting_a_payment`` and ``bookings.payment_not_in_time``. The local
 store is reset with the removal and only ``local`` has ever run, so a class
 kept only so an old row decodes would be a reader for a fact nothing reads.
+
+**``bookings.confirmed`` and ``bookings.court_moved`` are at version 2** (#671;
+Q122): each gained the court's kind, ``indoor``, a required fact on the wire —
+a change to the shape, versioned as one. Version 1 of each is not registered:
+the store is reset with the change, so a stored row of it is a decoding error,
+and no row of version 2 ever named a court without its kind.
 """
 
 from __future__ import annotations
@@ -56,9 +62,19 @@ _EVENTS = (
 )
 
 
+#: The wire version the two events that name a court are written under: a
+#: court without its kind was version 1 (#671).
+WITH_THE_COURT_S_KIND_VERSION = 2
+
+
 def register_booking_events(catalog: EventCatalog) -> None:
     for event_class, name in _EVENTS:
-        catalog.register(event_class, name=name, version=1)
+        version = (
+            WITH_THE_COURT_S_KIND_VERSION
+            if event_class in (BookingConfirmed, CourtMoved)
+            else 1
+        )
+        catalog.register(event_class, name=name, version=version)
 
 
 def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:

@@ -145,6 +145,9 @@ class ClubBookingSchema(BaseModel):
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     ends_at: datetime
     court_name: str = Field(description="The court it is on.")
+    indoor: bool = Field(
+        description="The court's kind — *Court 3 · indoor* — as the players see it."
+    )
     sport: Sport
     kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
     status: ClubStatus = Field(
@@ -191,6 +194,7 @@ class ClubBookingSchema(BaseModel):
             starts_at=game.start,
             ends_at=game.start + GAME_LENGTH,
             court_name=game.court_name,
+            indoor=game.indoor,
             sport=game.sport,
             kind=game.kind,
             status=row.status,
@@ -259,18 +263,21 @@ class ClubBookingsResponse(BaseModel):
 class CourtToMoveToSchema(BaseModel):
     court_id: UUID
     name: str
+    indoor: bool = Field(description="Its kind — *Court 3 · indoor*.")
 
     @classmethod
     def of(cls, court: CourtToMoveTo) -> "CourtToMoveToSchema":
-        return cls(court_id=court.court_id, name=court.name)
+        return cls(court_id=court.court_id, name=court.name, indoor=court.indoor)
 
 
 class FreeCourtsResponse(BaseModel):
     courts: list[CourtToMoveToSchema] = Field(
         description=(
             "Every other court of the game's sport you still have for Raketa at "
-            "its hour, in your own order. Empty: there is none — **Cancel** with "
-            "*repair* if the court cannot be played."
+            "its hour **that keeps the game's kind** — the same kind, or an "
+            "indoor court for an outdoor game, never outdoors from indoors — in "
+            "your own order, each with its kind. Empty: there is none — "
+            "**Cancel** with *repair* if the court cannot be played."
         )
     )
 
@@ -358,17 +365,19 @@ async def free_courts(
             "model": ErrorResponse,
             "description": (
                 f"{_NOT_TO_BE_PLAYED} `court_not_free` — that court is not a free "
-                "court of the game's sport at its hour. `court_just_taken` — "
-                "another game took it a moment ago; read the free courts again."
+                "court of the game's sport at its hour, or is outdoors for an "
+                "indoor game. `court_just_taken` — another game took it a moment "
+                "ago; read the free courts again."
             ),
         },
     },
     summary="Move a game to another court",
     description=(
         "**Move** a booked game — whole or with a seat open — onto another free "
-        "court of its sport at the same hour, until it starts. The players read "
-        "the new number; nothing else about the game changes. Answers the court "
-        "it is on now."
+        "court of its sport at the same hour, of the same kind or indoor for an "
+        "outdoor game, until it starts. The players read the new number and "
+        "its kind, and are told *Game moved*; nothing else about the game "
+        "changes. Answers the court it is on now."
     ),
 )
 async def move(

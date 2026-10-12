@@ -6,8 +6,11 @@ proposal's — every act on a game locks its proposal's row first — and
 **nothing here commits**:
 
 - **the free courts** — every other court of the game's sport the club still
-  has for Raketa at its hour, in the club's order: where a game may be moved;
-- **moved** — the game is on one of them, and the players read its number;
+  has for Raketa at its hour, in the club's order, **of a kind the players would
+  accept**: the same kind, or an indoor court for an outdoor game — never
+  outdoors from indoors (#671; the mechanics §16.4, Q122) — each with its kind;
+- **moved** — the game is on one of them, and the players read its number and
+  its kind; a move to any other court is refused;
 - **cancelled** — the game is off with the club's reason, its Game and room end
   with it, and everybody it owes money to is answered, for the caller to refund
   in full.
@@ -39,8 +42,10 @@ class MoveTheBooking:
         self._courts = courts
 
     async def free_courts(self, booking_id: UUID) -> tuple[BookedCourt, ...]:
-        """The courts the game may be moved to. The game's own is not among
-        them: its booking holds it."""
+        """The courts the game may be moved to: the free courts of its sport at
+        its hour that keep its kind — the same kind, or indoor for an outdoor
+        game (#671, Q122). The game's own is not among them: its booking holds
+        it."""
 
         booking = await _loaded(self._bookings, booking_id)
         return tuple(
@@ -49,6 +54,7 @@ class MoveTheBooking:
                 booking.club_id, sport=booking.sport, start=booking.start
             )
             if court.court_id != booking.court.court_id
+            and booking.court.may_move_to(court)
         )
 
     async def execute(

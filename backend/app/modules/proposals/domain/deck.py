@@ -344,6 +344,11 @@ class DeckCard:
     no_free_cancellation: bool
     #: What the club calls the court — once booked: a rescue's (#545).
     court_name: str | None = None
+    #: The kind of court the card promises (the mechanics §5.2, Q122; #671):
+    #: ``True`` *Indoor*, ``False`` *Outdoor* — a rescue's booked court, or
+    #: every free court the card could be booked on being of one kind — and
+    #: ``None`` when they are of mixed kinds, which is nothing to promise.
+    indoor: bool | None = None
     #: Everybody on a rescue's booked game — each *paid* (#545); nobody on a
     #: game still filling, whose people are In.
     paid: tuple[UUID, ...] = ()
@@ -370,9 +375,11 @@ def card_of(
     weeks: Sequence[WeeklyHours],
     terms: SellingTerms,
     now: Instant,
+    indoor: bool | None = None,
 ) -> DeckCard:
     """The card ``view`` is of, standing as ``sides`` — ``weeks`` being the
-    weeks of the people on it, whose overlap it draws on the club's clock."""
+    weeks of the people on it, whose overlap it draws on the club's clock, and
+    ``indoor`` the kind of court it promises, when that is certain (Q122)."""
 
     return DeckCard(
         proposal_id=proposal.proposal_id,
@@ -392,6 +399,7 @@ def card_of(
         no_free_cancellation=cut_off_passed(
             proposal.start, cut_off_hours=terms.cut_off_hours, now=now
         ),
+        indoor=indoor,
     )
 
 

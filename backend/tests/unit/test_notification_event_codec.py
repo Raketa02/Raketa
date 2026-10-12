@@ -95,6 +95,34 @@ def test_a_notice_given_before_own_was_asked_is_nobody_s_own():
     assert decoded.own is False
 
 
+def test_a_notice_keeps_the_court_a_move_named_and_one_given_before_names_none():
+    """#671: *Game moved* records the court it moved to and its kind, so the
+    row reads *Court 3 · indoor* after a second move; a notice given before
+    names no court."""
+
+    codec = _codec()
+    given = _given(own=False)
+    moved = NoticeGiven(
+        **{
+            **given.__dict__,
+            "kind": "GAME_MOVED",
+            "court_name": "Court 3",
+            "indoor": True,
+        }
+    )
+    encoded = codec.encode(moved)
+    older = {
+        key: value
+        for key, value in encoded.payload.items()
+        if key not in ("court_name", "indoor")
+    }
+
+    assert _decoded(codec, encoded.event_type, encoded.payload) == moved
+    decoded = _decoded(codec, encoded.event_type, older)
+    assert isinstance(decoded, NoticeGiven)
+    assert (decoded.court_name, decoded.indoor) == (None, None)
+
+
 def test_a_notice_keeps_the_deadline_it_names_and_one_given_before_names_none():
     codec = _codec()
     given = _given(own=False, until=datetime(2026, 10, 9, 19, 15, tzinfo=timezone.utc))

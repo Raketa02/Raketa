@@ -70,10 +70,11 @@ class SellableClubCourts:
 def _courts(
     offer: ClubOffer, *, sport: Sport, start: Instant
 ) -> tuple[BookedCourt, ...]:
-    """The courts of ``sport`` on sale from ``start``, in the club's order."""
+    """The courts of ``sport`` on sale from ``start``, in the club's order,
+    each with its kind (#671)."""
 
     return tuple(
-        BookedCourt(court_id=hour.court_id, name=hour.court_name)
+        BookedCourt(court_id=hour.court_id, name=hour.court_name, indoor=hour.indoor)
         for hour in offer.hours
         if hour.sport is sport and hour.start == start
     )

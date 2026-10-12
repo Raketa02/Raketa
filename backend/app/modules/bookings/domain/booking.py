@@ -75,10 +75,21 @@ from app.shared.domain.events import EventRecorder
 
 @dataclass(frozen=True, slots=True)
 class BookedCourt:
-    """The court a game is booked on: its id, and what the club calls it."""
+    """The court a game is booked on: its id, what the club calls it, and its
+    **kind** — indoor or outdoor — which the players always see on a booked
+    game (#671; the mechanics §5.2, Q122)."""
 
     court_id: UUID
     name: str
+    indoor: bool
+
+    def may_move_to(self, court: "BookedCourt") -> bool:
+        """Whether a game on this court may move to ``court`` for its kind
+        (the mechanics §16.4, Q122, *a call*): the same kind, or indoor for an
+        outdoor game — never outdoors from indoors, which would be a different
+        game to the players."""
+
+        return court.indoor or not self.indoor
 
 
 class BookingState(StrEnum):
@@ -227,6 +238,7 @@ class Booking:
             club_id=club_id,
             court_id=court.court_id,
             court_name=court.name,
+            indoor=court.indoor,
             sport=sport.value,
             kind=kind.value,
             start=start,
@@ -258,7 +270,11 @@ class Booking:
             booking_id=confirmed.booking_id,
             pool_id=confirmed.pool_id,
             club_id=confirmed.club_id,
-            court=BookedCourt(court_id=confirmed.court_id, name=confirmed.court_name),
+            court=BookedCourt(
+                court_id=confirmed.court_id,
+                name=confirmed.court_name,
+                indoor=confirmed.indoor,
+            ),
             sport=Sport(confirmed.sport),
             kind=SearchMode(confirmed.kind),
             start=instant(confirmed.start),
@@ -592,9 +608,12 @@ class Booking:
 
     def move_to(self, court: BookedCourt, *, at: Instant) -> None:
         """The club puts the game on ``court`` — another court of its sport,
-        free at the hour (#547). Whether it is free, and of the sport, is the
-        caller's question, asked of what the club sells; that the game is still
-        to be played, and the court another, is this one's."""
+        free at the hour (#547). Whether it is free, of the sport, and of a kind
+        the players would accept — the same kind, or indoor for an outdoor game
+        (#671, Q122) — is the caller's question, asked of what the club sells;
+        that the game is still to be played, and the court another, is this
+        one's. The record carries the new court's kind, so the players read
+        *Court 3 · indoor* from here on."""
 
         self._refuse_unless_still_to_be_played(at)
         invariant(
@@ -606,6 +625,7 @@ class Booking:
                 booking_id=self.booking_id,
                 court_id=court.court_id,
                 court_name=court.name,
+                indoor=court.indoor,
                 occurred_at=at,
             )
         )
@@ -739,7 +759,9 @@ class Booking:
             self.cards_to_fix = {}
             self.kept = {}
         elif isinstance(event, CourtMoved):
-            self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
+            self.court = BookedCourt(
+                court_id=event.court_id, name=event.court_name, indoor=event.indoor
+            )
         elif isinstance(event, CancelledByClub):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.CANCELLED_BY_THE_CLUB

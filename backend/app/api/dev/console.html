@@ -212,6 +212,8 @@ function firesAt(iso, now) {
   return `fires at ${today ? CLOCK.format(at) : when(iso)} · ${left}`;
 }
 const zl = (grosze) => (grosze === null || grosze === undefined ? "—" : (grosze / 100).toFixed(2) + " zł");
+// A court's kind, as a player reads it (#671).
+const kindOf = (court) => (court.indoor ? "indoor" : "outdoor");
 
 function esc(text) {
   return String(text ?? "").replace(/[&<>"']/g, (c) => ({
@@ -699,7 +701,7 @@ function drawGames() {
         <dt>In</dt><dd>${names(game.people_in)} · ${game.open_seats} of ${game.seats} open</dd>
         <dt>Sides</dt><dd>${sides}</dd>
         <dt>Dealt</dt><dd>${versions}</dd>
-        <dt>Court hour</dt><dd>${when(game.starts_at)}${booking ? ` · ${esc(booking.court_name)}` : ""}</dd>
+        <dt>Court hour</dt><dd>${when(game.starts_at)}${booking ? ` · ${esc(booking.court_name)} · ${kindOf(booking)}` : ""}</dd>
         <dt>Book by</dt><dd>${when(game.book_by)}</dd>
         <dt>Cut-off</dt><dd>${when(game.cut_off)}</dd>
         <dt>Share</dt><dd>${zl(game.share_grosze)}</dd>
@@ -771,7 +773,7 @@ function clubButtons(game) {
   if (booking.state === "CALLED_OFF") return `<span class="note">called off</span>`;
   const courts = state.freeCourts[id];
   const moves = courts === undefined ? b("free-courts", "Move…")
-    : courts.length ? courts.map((c) => b("move", `→ ${esc(c.name)}`, `data-court="${c.court_id}"`)).join("")
+    : courts.length ? courts.map((c) => b("move", `→ ${esc(c.name)} · ${kindOf(c)}`, `data-court="${c.court_id}"`)).join("")
     : `<span class="note">no free court</span>`;
   const reasons = CANCEL_REASONS.map((r) => `<option>${r}</option>`).join("");
   return `<span class="club">${moves}
@@ -791,7 +793,7 @@ async function clubAct(button) {
     return;
   } else if (verb === "move") {
     done = await call("POST", at(`bookings/${game}/move`), { court_id: court });
-    say(done, done.ok ? `${words} → now on ${esc(done.json.name)}` : words);
+    say(done, done.ok ? `${words} → now on ${esc(done.json.name)} · ${kindOf(done.json)}` : words);
   } else if (verb === "cancel") {
     const reason = document.querySelector(`select[data-reason-for="${game}"]`).value;
     done = await call("POST", at(`bookings/${game}/cancellation`), { reason });

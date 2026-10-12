@@ -98,6 +98,7 @@ class BookingsGameBookings:
         return BookableCourt(
             court_id=offered.court.court_id,
             name=offered.court.name,
+            indoor=offered.court.indoor,
             cut_off=offered.cut_off,
         )
 
@@ -119,7 +120,11 @@ class BookingsGameBookings:
                 share_grosze=game.share_grosze,
                 first_side=game.first_side,
                 second_side=game.second_side,
-                court=BookedCourt(court_id=game.court.court_id, name=game.court.name),
+                court=BookedCourt(
+                    court_id=game.court.court_id,
+                    name=game.court.name,
+                    indoor=game.court.indoor,
+                ),
                 cut_off=game.court.cut_off,
             ),
             at=at,
@@ -316,6 +321,7 @@ def _booked_game(booking: Booking) -> BookedGame:
         pool_id=booking.pool_id,
         club_id=booking.club_id,
         court_name=booking.court.name,
+        indoor=booking.court.indoor,
         sport=booking.sport,
         kind=booking.kind,
         start=booking.start,
@@ -398,7 +404,7 @@ class BookingsClubBookings:
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
         return [
-            CourtToMoveTo(court_id=court.court_id, name=court.name)
+            CourtToMoveTo(court_id=court.court_id, name=court.name, indoor=court.indoor)
             for court in await self._move.free_courts(booking_id)
         ]
 
@@ -409,7 +415,9 @@ class BookingsClubBookings:
             court = await self._move.execute(booking_id, court_id, at=at)
         except CourtTaken as taken:
             raise CourtJustTaken() from taken
-        return None if court is None else CourtToMoveTo(court.court_id, court.name)
+        if court is None:
+            return None
+        return CourtToMoveTo(court.court_id, court.name, court.indoor)
 
     async def cancel(
         self, booking_id: UUID, *, because: ClubCancelReason, at: Instant
