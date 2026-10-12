@@ -236,7 +236,7 @@ export function bookedGameOnTheList(extra: Partial<Wire['GameSchema']> = {}): Wi
       { side: 'B', player_id: BARTEK, name: 'Bartek Lis' },
     ],
     proposals: [],
-    no_shows: [],
+    attendance: [],
     ...extra,
   };
 }

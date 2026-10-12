@@ -4,7 +4,7 @@
  * A game is what a booked court becomes, and **a result is the record that it happened**
  * ([ADR-0137](../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). This
  * feature is the screen that makes that producible — entering, correcting, agreeing and
- * disagreeing, and marking who did not come — and the words for the three ends a game can reach.
+ * disagreeing, and saying who turned up at the court — and the words for the ends a game can reach.
  *
  * **What is exported is what has a caller**, and since the old loop's game card, its rail and the
  * `/games/[id]` route were removed ([#576](https://github.com/Raketa02/Raketa/issues/576)) every
@@ -19,6 +19,13 @@
  * (`BookedFacts`); everything else on the screen is derived from the one list this feature reads.
  */
 export { GameScreen, type BookedFacts, type GameScreenProps } from './components/GameScreen';
+
+/**
+ * **Whether a booked game's first half hour runs at an instant** (#658) — the window in which a
+ * player at the court says who isn't here yet, crossed for the booked details' door, which reads
+ * *Who's here* through it. The rule is this feature's; the clock is the caller's.
+ */
+export { tapsAreOpen } from './domain/attendance';
 
 /**
  * **The forecast block alone**, for a surface that draws its own people — a booked game's details

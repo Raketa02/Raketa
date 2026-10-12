@@ -36,13 +36,23 @@
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 
-import type { Game, GameSeat, NoShowReport, Score, StandingProposal } from '../domain/game';
-import type { GameKind, GameSide, GameStanding, Outcome } from '../domain/vocabulary';
+import type { TapPosition } from '../domain/attendance';
+import type { Attendance, Game, GameSeat, Score, StandingProposal } from '../domain/game';
+import type {
+  AttendanceState,
+  GameKind,
+  GameSide,
+  GameStanding,
+  Outcome,
+} from '../domain/vocabulary';
 
+type ArrivalRequest = components['schemas']['ArrivalRequest'];
+type AttendanceSchema = components['schemas']['AttendanceSchema'];
 type GameListResponse = components['schemas']['GameListResponse'];
 type GameSchema = components['schemas']['GameSchema'];
-type NoShowSchema = components['schemas']['NoShowSchema'];
-type ReportANoShowRequest = components['schemas']['ReportANoShowRequest'];
+type LocationFixSchema = components['schemas']['LocationFixSchema'];
+type NotHereYetRequest = components['schemas']['NotHereYetRequest'];
+type PresenceConfirmationRequest = components['schemas']['PresenceConfirmationRequest'];
 type ScoreSchema = components['schemas']['ScoreSchema'];
 type SeatingSchema = components['schemas']['SeatingSchema'];
 type StandingProposalSchema = components['schemas']['StandingProposalSchema'];
@@ -53,12 +63,20 @@ const STANDINGS: Readonly<Record<GameStanding, true>> = {
   PLAYED_NO_SCORE: true,
   AWAITING_ANSWER: true,
   CONFIRMED: true,
-  UNSCORED: true,
   DISPUTED: true,
   CALLED_OFF: true,
   STARTED_SHORT: true,
-  NO_SHOW_REPORTED: true,
-  NO_SHOW: true,
+  NOT_HERE_YET: true,
+  DIDNT_COME: true,
+};
+
+const ATTENDANCE_STATES: Readonly<Record<AttendanceState, true>> = {
+  WAITING: true,
+  ON_TIME: true,
+  CAME_LATE: true,
+  DIDNT_COME: true,
+  CLAIMED: true,
+  CONFIRMED: true,
 };
 
 const KINDS: Readonly<Record<GameKind, true>> = { COUNTED: true, FRIENDLY: true };
@@ -118,14 +136,23 @@ function toStandingProposal(wire: StandingProposalSchema): StandingProposal | un
   };
 }
 
-/** A no-show report, every `null` an absent field — a lost name, a report nobody disputed. */
-function toNoShowReport(wire: NoShowSchema): NoShowReport {
+/**
+ * **One player somebody said was not here yet**, every `null` an absent field — a lost name, an
+ * arrival, a claim or a confirmation not made. A state this build cannot read is absent rather than
+ * a dropped row: the row says nothing, and the game's other rows still stand.
+ */
+function toAttendance(wire: AttendanceSchema): Attendance {
+  const state = member(ATTENDANCE_STATES, wire.state);
   return {
     playerId: wire.player_id,
     ...(wire.name == null ? {} : { name: wire.name }),
-    reportedAt: wire.reported_at,
-    disputeBy: wire.dispute_by,
-    ...(wire.disputed_at == null ? {} : { disputedAt: wire.disputed_at }),
+    ...(state === undefined ? {} : { state }),
+    notedAt: wire.noted_at,
+    arriveBy: wire.arrive_by,
+    ...(wire.arrived_at == null ? {} : { arrivedAt: wire.arrived_at }),
+    claimBy: wire.claim_by,
+    ...(wire.claimed_at == null ? {} : { claimedAt: wire.claimed_at }),
+    ...(wire.confirmed_at == null ? {} : { confirmedAt: wire.confirmed_at }),
   };
 }
 
@@ -164,7 +191,7 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     score: wire.score == null ? undefined : toScore(wire.score),
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
     proposals: proposals.filter((one): one is StandingProposal => one !== undefined),
-    noShows: wire.no_shows.map(toNoShowReport),
+    attendance: wire.attendance.map(toAttendance),
     readAt,
   };
 }
@@ -186,7 +213,26 @@ export function toStateResultRequest(score: Score): StateResultRequest {
   return { score: { sets: score.sets.map((set) => ({ a: set.a, b: set.b })) } };
 }
 
-/** *Kuba didn't come* — who, and nothing else: who says so is the reader, and the server knows it. */
-export function toReportANoShowRequest(playerId: string): ReportANoShowRequest {
+/**
+ * **The fix, as the tap carries it** — and nothing else about the phone. A platform that states no
+ * accuracy sends `0`, which **claims no allowance**: the fix is measured as it stands, never given a
+ * radius the device did not state.
+ */
+function toLocationFix(at: TapPosition): LocationFixSchema {
+  return { latitude: at.latitude, longitude: at.longitude, accuracy_m: at.accuracyMetres ?? 0 };
+}
+
+/** *Oscar isn't here yet* — who, and where the tap was made. Who says so is the reader. */
+export function toNotHereYetRequest(playerId: string, at: TapPosition): NotHereYetRequest {
+  return { player_id: playerId, location: toLocationFix(at) };
+}
+
+/** *I'm here* with the reader's own id, *they're here* with somebody else's — and where. */
+export function toArrivalRequest(playerId: string, at: TapPosition): ArrivalRequest {
+  return { player_id: playerId, location: toLocationFix(at) };
+}
+
+/** *Yes, they were here* — whose *I was there* it confirms, and no position: a day later, from anywhere. */
+export function toPresenceConfirmationRequest(playerId: string): PresenceConfirmationRequest {
   return { player_id: playerId };
 }

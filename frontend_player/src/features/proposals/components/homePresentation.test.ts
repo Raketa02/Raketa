@@ -193,12 +193,12 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     ).toBe('Bonarka Arena cancelled it · Refunded 30 zł');
   });
 
-  /** Somebody didn't come (#560) — said to the player marked as theirs to answer. */
-  it('tells the player marked that they were, and everybody else that somebody didn’t come', () => {
-    expect(moneyWords({ kind: 'noShow', yours: true })).toBe(
-      'You were marked as not coming · say so if you were there',
+  /** Somebody didn't come (#658) — and, where a late claim waits on the reader, what to do. */
+  it('says somebody didn’t come, and to a reader a late claim waits on, to say who was there', () => {
+    expect(moneyWords({ kind: 'didntCome', needsYou: true })).toBe(
+      'Somebody didn’t come · say who was there',
     );
-    expect(moneyWords({ kind: 'noShow', yours: false })).toBe(
+    expect(moneyWords({ kind: 'didntCome', needsYou: false })).toBe(
       'Somebody didn’t come · no Level moved',
     );
   });

@@ -7,7 +7,7 @@
  * reaches for a background permission.
  */
 
-import { deviceLocation } from './location';
+import { PRECISE_FIX_WITHIN_MS, deviceLocation } from './location';
 
 const native = jest.requireMock('expo-location') as {
   getForegroundPermissionsAsync: jest.Mock;
@@ -95,6 +95,49 @@ describe('reading one fix', () => {
 });
 
 /**
+ * **The second use** (#658; ADR-0195 §3): saying who's at a game reads one precise fix, at the tap,
+ * so the backend can tell whether the player is at the club. The area's read stays `Balanced` — a
+ * city block is all an area needs — and the tap's asks for `High`, because 300 m is the question.
+ */
+describe('reading one precise fix, at a tap', () => {
+  it('asks the device for a high-accuracy fix, and hands back what the device said', async () => {
+    await expect(deviceLocation.readPreciseFix()).resolves.toEqual({
+      latitude: 41.3874,
+      longitude: 2.1686,
+      accuracyMetres: 12,
+    });
+    expect(native.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: 4 });
+  });
+
+  it('leaves the area’s read at a city block', async () => {
+    await deviceLocation.readFix();
+    expect(native.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: 3 });
+  });
+
+  it('answers with no fix rather than throwing when the device cannot produce one', async () => {
+    native.getCurrentPositionAsync.mockRejectedValue(new Error('Location request failed'));
+    await expect(deviceLocation.readPreciseFix()).resolves.toBeNull();
+  });
+
+  /**
+   * **A tap is a moment**: the arrival is dated when it reaches the backend, so a GPS that never
+   * settles indoors must not hold the tap — it answers no fix, and the player is told to try again.
+   */
+  it('answers with no fix when the device takes longer than a tap can wait', async () => {
+    jest.useFakeTimers();
+    try {
+      native.getCurrentPositionAsync.mockReturnValue(new Promise(() => undefined));
+      const reading = deviceLocation.readPreciseFix();
+
+      jest.advanceTimersByTime(PRECISE_FIX_WITHIN_MS);
+      await expect(reading).resolves.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+/**
  * A background location permission turns a location into a movement trail, which is a
  * different privacy class from the one this app asked the player about. There is no
  * product decision behind it, so there is no code that could take one by accident.
@@ -104,6 +147,7 @@ describe('foreground only', () => {
     await deviceLocation.getPermission();
     await deviceLocation.requestPermission();
     await deviceLocation.readFix();
+    await deviceLocation.readPreciseFix();
 
     expect(native.getBackgroundPermissionsAsync).not.toHaveBeenCalled();
     expect(native.requestBackgroundPermissionsAsync).not.toHaveBeenCalled();

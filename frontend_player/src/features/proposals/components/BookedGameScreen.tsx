@@ -77,7 +77,10 @@
  *
  * The result states are unchanged from today (§14.1), so once the hour has come the details offer
  * today's act — *We played*, or *Confirm the result* once a score is on the table — and it opens
- * today's game screen over these details, where the result is told and agreed.
+ * today's game screen over these details, where the result is told and agreed. **In the first half
+ * hour the door is *Who's here*** (#658): the same screen, where a player at the court says who
+ * isn't here yet and an awaited player says they are; and while a late *I was there* waits on the
+ * reader, *Say who was there*.
  *
  * ## Opening it is what makes a game not *new*
  *
@@ -96,7 +99,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { OPEN_THE_CHAT, useBookingRoom } from '@/features/conversations/types';
-import { GameForecast } from '@/features/games/types';
+import { GameForecast, tapsAreOpen } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { showToast } from '@/shared/store/toast.store';
@@ -203,8 +206,10 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   );
 
   // The money row turns to *Paid* by itself at the cut-off, *held from* to *held on your card* at a
-  // checked share's holding time, and *answers by* leaves at the club's deadline.
-  const now = useReadClock(game.readAt, receivedAt, lineCanRunOut(game));
+  // checked share's holding time, and *answers by* leaves at the club's deadline — and the door is
+  // *Who's here* until the first half hour ends (#658), so it ticks through that too.
+  const readAtTheCourt = game.status === 'NEEDS_RESULT' && tapsAreOpen(game.startsAt, game.readAt);
+  const now = useReadClock(game.readAt, receivedAt, lineCanRunOut(game) || readAtTheCourt);
   const leaving = leavingAt(game, now);
 
   const { rescue } = game;
@@ -230,7 +235,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
 
   // Neither Chat nor Leave for a rescue seen from outside (A4.3): the reader is not in the game.
   const chat = rescue === undefined && chatIsOpen(game) ? room.conversationId : undefined;
-  const act = resultActOf(game);
+  const act = resultActOf(game, { atTheCourt: tapsAreOpen(game.startsAt, now) });
   // A rescue's own seat — what I'm in takes, and what a refused rescuer's confirmation is for.
   const seat = yesOnRescue({ bookingId: game.bookingId, club: game.where, sides: game.sides });
   const leaveHere = () => {

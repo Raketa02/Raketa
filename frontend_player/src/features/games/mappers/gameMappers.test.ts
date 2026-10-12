@@ -10,7 +10,14 @@
 
 import type { Wire } from '@/test-support/transport';
 
-import { toGame, toGames, toStateResultRequest } from './gameMappers';
+import {
+  toArrivalRequest,
+  toGame,
+  toGames,
+  toNotHereYetRequest,
+  toPresenceConfirmationRequest,
+  toStateResultRequest,
+} from './gameMappers';
 
 const READ_AT = '2026-09-05T09:00:00Z';
 
@@ -27,7 +34,7 @@ function wireGame(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: 'them' },
     ],
     proposals: [],
-    no_shows: [],
+    attendance: [],
     ...over,
   };
 }
@@ -253,51 +260,102 @@ describe('a code this build has never seen', () => {
   });
 
   /**
-   * **A no-show report, and what became of it** (#560; the backend's #547) — who, by id and whole
-   * name, when it was made, the end of their day to dispute it, and when they did. Who reported
-   * them is on no wire: the report is the game's.
+   * **Who somebody said was not here yet, and what became of it** (#658; the backend's #657) — by id
+   * and whole name, the state, and every instant the backend folded it with. Who tapped is on no
+   * wire: the tap is the game's.
    */
-  it('reads every no-show report — a lost name and an undisputed report left absent', () => {
+  it('reads every attendance row — a lost name and every act not made left absent', () => {
     const game = toGame(
       wireGame({
-        standing: 'NO_SHOW_REPORTED',
+        standing: 'DIDNT_COME',
         entry_closes_at: null,
-        no_shows: [
+        attendance: [
           {
             player_id: 'them',
-            name: 'Kuba Nowak',
-            reported_at: '2026-09-04T20:00:00Z',
-            dispute_by: '2026-09-05T20:00:00Z',
-            disputed_at: '2026-09-05T08:00:00Z',
+            name: 'Oscar Nowak',
+            state: 'CONFIRMED',
+            noted_at: '2026-09-04T18:10:00Z',
+            arrive_by: '2026-09-04T18:30:00Z',
+            arrived_at: null,
+            claim_by: '2026-09-05T18:30:00Z',
+            claimed_at: '2026-09-05T07:00:00Z',
+            confirmed_at: '2026-09-05T07:30:00Z',
           },
           {
             player_id: 'gone',
             name: null,
-            reported_at: '2026-09-04T20:05:00Z',
-            dispute_by: '2026-09-05T20:05:00Z',
-            disputed_at: null,
+            state: 'DIDNT_COME',
+            noted_at: '2026-09-04T18:12:00Z',
+            arrive_by: '2026-09-04T18:30:00Z',
+            arrived_at: null,
+            claim_by: '2026-09-05T18:30:00Z',
+            claimed_at: null,
+            confirmed_at: null,
           },
         ],
       }),
       READ_AT,
     );
 
-    expect(game?.standing).toBe('NO_SHOW_REPORTED');
-    expect(game?.noShows).toEqual([
+    expect(game?.standing).toBe('DIDNT_COME');
+    expect(game?.attendance).toEqual([
       {
         playerId: 'them',
-        name: 'Kuba Nowak',
-        reportedAt: '2026-09-04T20:00:00Z',
-        disputeBy: '2026-09-05T20:00:00Z',
-        disputedAt: '2026-09-05T08:00:00Z',
+        name: 'Oscar Nowak',
+        state: 'CONFIRMED',
+        notedAt: '2026-09-04T18:10:00Z',
+        arriveBy: '2026-09-04T18:30:00Z',
+        claimBy: '2026-09-05T18:30:00Z',
+        claimedAt: '2026-09-05T07:00:00Z',
+        confirmedAt: '2026-09-05T07:30:00Z',
       },
       {
         playerId: 'gone',
-        reportedAt: '2026-09-04T20:05:00Z',
-        disputeBy: '2026-09-05T20:05:00Z',
+        state: 'DIDNT_COME',
+        notedAt: '2026-09-04T18:12:00Z',
+        arriveBy: '2026-09-04T18:30:00Z',
+        claimBy: '2026-09-05T18:30:00Z',
       },
     ]);
-    expect(toGame(wireGame(), READ_AT)?.noShows).toEqual([]);
+    expect(toGame(wireGame(), READ_AT)?.attendance).toEqual([]);
+  });
+
+  /** An old build reading a state the contract grew keeps the row, and says nothing of it. */
+  it('keeps a row whose state it cannot read, with the state absent', () => {
+    const game = toGame(
+      wireGame({
+        attendance: [
+          {
+            player_id: 'them',
+            state: 'SOMETHING_NEW' as Wire['AttendanceState'],
+            noted_at: '2026-09-04T18:10:00Z',
+            arrive_by: '2026-09-04T18:30:00Z',
+            claim_by: '2026-09-05T18:30:00Z',
+          },
+        ],
+      }),
+      READ_AT,
+    );
+
+    expect(game?.attendance[0]).not.toHaveProperty('state');
+  });
+
+  /**
+   * **The fix rides with the tap, and nothing else about the phone** — its accuracy as stated, and
+   * a platform that states none claims no allowance rather than an invented radius.
+   */
+  it('carries the tap’s position, and no allowance where the phone stated no accuracy', () => {
+    const at = { latitude: 52.2297, longitude: 21.0122, accuracyMetres: 14 };
+
+    expect(toNotHereYetRequest('them', at)).toEqual({
+      player_id: 'them',
+      location: { latitude: 52.2297, longitude: 21.0122, accuracy_m: 14 },
+    });
+    expect(toArrivalRequest('me', { ...at, accuracyMetres: null })).toEqual({
+      player_id: 'me',
+      location: { latitude: 52.2297, longitude: 21.0122, accuracy_m: 0 },
+    });
+    expect(toPresenceConfirmationRequest('them')).toEqual({ player_id: 'them' });
   });
 
   it('drops a game whose court it cannot place somebody on', () => {

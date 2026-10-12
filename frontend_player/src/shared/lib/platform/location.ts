@@ -9,9 +9,14 @@
  * auditable (ADR-0008). The linter enforces the boundary.
  *
  * **Foreground only, permanently.** Nothing here asks for, checks, or starts a background
- * location. A position the player hands over once to say where they play is a different
- * thing from a stream of positions collected while they are elsewhere, and the second is
- * not what anybody agreed to. `location.test.ts` asserts the absence.
+ * location. A position the player hands over to say where they play is a different thing
+ * from a stream of positions collected while they are elsewhere, and the second is not what
+ * anybody agreed to. `location.test.ts` asserts the absence.
+ *
+ * **Two uses, and the permission text names both** (ADR-0195 §3): the area a player plays in,
+ * read at a city block and coarsened the moment it is read; and, when they say who's at a game,
+ * one precise fix read at that tap and sent with it, so the backend can tell whether they are at
+ * the club. Neither is a subscription, and neither is kept on the phone.
  */
 
 import * as Location from 'expo-location';
@@ -54,6 +59,12 @@ export interface LocationPort {
    * would have to know.
    */
   readonly readFix: () => Promise<LocationFix | null>;
+  /**
+   * **One precise fix, now — for an attendance tap alone** (#658). The same answer as
+   * {@link readFix}, asked at the accuracy the club's 300 m needs. Read in the foreground at the
+   * moment of the tap and handed to the request; the caller keeps nothing.
+   */
+  readonly readPreciseFix: () => Promise<LocationFix | null>;
 }
 
 /**
@@ -65,6 +76,45 @@ export interface LocationPort {
  */
 const ACCURACY = Location.Accuracy.Balanced;
 
+/**
+ * `High` is the GPS fix, about ten metres outdoors: *at the club* is within 300 m of its point, and
+ * a city block's answer could put a player in the car park on the wrong side of that line. Asked
+ * once per tap, which is the only battery it costs.
+ */
+const PRECISE = Location.Accuracy.High;
+
+/**
+ * **How long a tap waits for its fix** — fifteen seconds, then no fix. A tap is a moment: the
+ * backend dates an arrival when it lands, so a GPS that never settles indoors must not hold the
+ * press, and *try again in a moment* is the honest answer.
+ */
+export const PRECISE_FIX_WITHIN_MS = 15_000;
+
+/** `reading`, or `null` once `ms` have passed without it. */
+function within(ms: number, reading: Promise<LocationFix | null>): Promise<LocationFix | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    void reading.then((fix) => {
+      clearTimeout(timer);
+      resolve(fix);
+    });
+  });
+}
+
+/** One fix at `accuracy`, or `null` for every way the device could fail to produce one. */
+async function oneFix(accuracy: Location.Accuracy): Promise<LocationFix | null> {
+  try {
+    const position = await Location.getCurrentPositionAsync({ accuracy });
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracyMetres: position.coords.accuracy,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const deviceLocation: LocationPort = {
   async getPermission() {
     return permissionStateOf(await Location.getForegroundPermissionsAsync());
@@ -74,16 +124,7 @@ export const deviceLocation: LocationPort = {
     return permissionStateOf(await Location.requestForegroundPermissionsAsync());
   },
 
-  async readFix() {
-    try {
-      const position = await Location.getCurrentPositionAsync({ accuracy: ACCURACY });
-      return {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracyMetres: position.coords.accuracy,
-      };
-    } catch {
-      return null;
-    }
-  },
+  readFix: () => oneFix(ACCURACY),
+
+  readPreciseFix: () => within(PRECISE_FIX_WITHIN_MS, oneFix(PRECISE)),
 };

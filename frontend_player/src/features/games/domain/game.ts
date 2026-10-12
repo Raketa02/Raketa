@@ -41,7 +41,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { GameKind, GameSide, GameStanding, Outcome } from './vocabulary';
+import type { AttendanceState, GameKind, GameSide, GameStanding, Outcome } from './vocabulary';
 
 /**
  * The four sports, as this feature needs them: a score's shape is the sport's.
@@ -131,23 +131,37 @@ export interface CalledOffBy {
 }
 
 /**
- * **A no-show report** — a player on a booked game marked as not coming by somebody who came
- * ([#560](https://github.com/Raketa02/Raketa/issues/560); the Games & Fill in mechanics §15.3), and
- * what became of it. **Who made it is on no wire**: the report is the game's, said by the people
- * who came, and a name on it would be the platform pointing at one of them.
+ * **One player somebody on a booked game's court said was not here yet**, and what became of it
+ * (#657; ADR-0195 §3). **Who tapped is on no wire**: the tap is the game's, said by somebody at the
+ * club, and a name on it would be the platform pointing at one of the people who came. Nobody is
+ * here who was not tapped — everybody who arrives on time does nothing at all.
+ *
+ * Every instant is the backend's, and the state is its fold against the list's `readAt`.
  */
-export interface NoShowReport {
+export interface Attendance {
   readonly playerId: string;
   /** The whole name. Absent where `users` no longer has the account. */
   readonly name?: string;
-  readonly reportedAt: string;
   /**
-   * The end of their day to say they came — 24 hours from the report, the backend's instant.
-   * **Nothing happens at it**: an undisputed report simply stands from here on.
+   * What became of them. **Absent when this build cannot read the code**: the row says nothing
+   * and offers nothing, and the rest of the block stands.
    */
-  readonly disputeBy: string;
-  /** When they said they came. A disputed report falls and is on nobody's record. */
-  readonly disputedAt?: string;
+  readonly state?: AttendanceState;
+  /** When somebody at the club first said they were not here. */
+  readonly notedAt: string;
+  /**
+   * The end of the first half hour — an arrival is taken until it and never after. **Nothing
+   * happens at it**: a player still awaited simply reads *Didn't come* from here on.
+   */
+  readonly arriveBy: string;
+  /** The arrival — the first *I'm here* or *they're here*. Absent until one. */
+  readonly arrivedAt?: string;
+  /** The end of the day after `arriveBy` in which *I was there* may be said and confirmed. */
+  readonly claimBy: string;
+  /** When they said *I was there*. */
+  readonly claimedAt?: string;
+  /** When somebody else on the court said *yes, they were here*. Who did is on no wire. */
+  readonly confirmedAt?: string;
 }
 
 export interface Game {
@@ -207,10 +221,11 @@ export interface Game {
    */
   readonly proposals: readonly StandingProposal[];
   /**
-   * Everybody reported as not coming to this **booked** game, in the court's order — empty on every
-   * other game. A report is the game's entry: no score goes on the table beside one.
+   * Everybody somebody on the court said was not here yet, in the court's order (#657) — **empty on
+   * an ordinary game**, where everybody arrived on time and nobody tapped anything, and on every
+   * game that was not booked.
    */
-  readonly noShows: readonly NoShowReport[];
+  readonly attendance: readonly Attendance[];
   /** The instant this game's standing and every deadline on it were folded against. */
   readonly readAt: string;
 }

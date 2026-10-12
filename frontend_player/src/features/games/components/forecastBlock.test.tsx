@@ -92,7 +92,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     entry_closes_at: '2026-09-20T09:00:00Z',
     seats: SINGLES_SEATS,
     proposals: [],
-    no_shows: [],
+    attendance: [],
     ...over,
   };
 }

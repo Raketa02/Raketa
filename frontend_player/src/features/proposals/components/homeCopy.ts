@@ -112,10 +112,12 @@ export const HOME_GAME_COPY = {
     /** *Uncounted · a seat was empty* (§14.1): no Level moved, and nobody who stayed is marked. */
     seatEmpty: 'A seat was empty',
     noLevelMoved: 'no Level moved',
-    /** *Uncounted* because somebody didn't come (#560) — to the player marked, and to the rest. */
-    youWereMarked: 'You were marked as not coming',
-    sayIfYouWere: 'say so if you were there',
+    /**
+     * *Uncounted* because somebody didn't come (#658) — and, while a late *I was there* waits on the
+     * reader, theirs to say or somebody else's to confirm, what to do about it.
+     */
     somebodyDidNotCome: 'Somebody didn’t come',
+    sayWhoWasThere: 'say who was there',
   },
   details: {
     back: 'Back',
@@ -142,12 +144,17 @@ export const HOME_GAME_COPY = {
     nothingWasTaken: 'nothing was taken',
     /** Today's result act, once the hour has come — the button under the game card. */
     resultAct: {
+      /** The first half hour's door (#658): who isn't here yet, and *I'm here*. */
+      'whos-here': 'Who’s here',
       'we-played': WE_PLAYED,
       /** A For fun game's door (#656): a score may be added, and nobody is asked for one. */
       'add-score': 'Add the score',
       confirm: 'Confirm the result',
-      /** The marked player's door to their dispute (#560), named for what they go there to do. */
-      dispute: 'Say you were there',
+      /**
+       * The late claim's door (#658), named for what both its readers go there to do — the absent
+       * player to say *I was there*, a courtmate to confirm it.
+       */
+      'who-was-there': 'Say who was there',
     } satisfies Readonly<Record<ResultAct, string>>,
     reading: 'Reading the game',
     gone: 'This game isn’t one of yours any more.',

@@ -7,8 +7,8 @@
  * | `useGame` | one game **out of that list**, because there is no `GET /games/{id}` |
  * | `useStateResult` | `POST /result` — the entry, the correction and the counter |
  * | `useAcceptResult` | `POST /result/acceptance` — from across the net, one is enough |
- * | `useReportNoShow` | `POST /no-shows` — *Kuba didn't come*, on a booked game (#560) |
- * | `useDisputeNoShow` | `POST /no-shows/dispute` — *I was there*, the reported player's (#560) |
+ *
+ * Who turned up at a booked game's court is `useAttendance.ts`'s (#658).
  *
  * ## Both writes invalidate and neither is optimistic
  *
@@ -38,7 +38,6 @@ import type { AppError } from '@/shared/errors';
 
 import type { Game } from '../domain/game';
 import { acceptResult } from '../use-cases/acceptResult';
-import { disputeNoShow, reportNoShow, type NoShowToReport } from '../use-cases/noShows';
 import { readGames } from '../use-cases/readGames';
 import { stateResult, type StatedResult } from '../use-cases/stateResult';
 
@@ -46,7 +45,7 @@ import { gameKeys } from './gameKeys';
 
 /**
  * **What a composer re-reads once a write lands** — a booked game's Home and details, which this
- * feature cannot name (#560). Run from the mutation rather than from the press, so a write that
+ * feature cannot name (#560, #658). Run from the mutation rather than from the press, so a write that
  * waited out a lost connection still re-reads them after the screen that sent it has gone.
  */
 export interface AfterAWrite {
@@ -81,64 +80,29 @@ export function useGame(gameId: string | undefined) {
   };
 }
 
-/** *This is the score* — the entry, the correction and the counter, which are one request. */
-export function useStateResult({ reread }: AfterAWrite = {}) {
+/**
+ * **What every write on a game does once it lands** — the list is out of date, and so are the
+ * booking's reads the composer handed in. One function for the result's writes and attendance's
+ * (`useAttendance.ts`), so a seventh write cannot forget the booking.
+ */
+export function useAfterAWrite({ reread }: AfterAWrite = {}): () => void {
   const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries({ queryKey: gameKeys.list() });
+    reread?.();
+  };
+}
 
-  return useMutation<void, AppError, StatedResult>({
-    mutationFn: stateResult,
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: gameKeys.list() });
-      reread?.();
-    },
-  });
+/** *This is the score* — the entry, the correction and the counter, which are one request. */
+export function useStateResult(after: AfterAWrite = {}) {
+  const onSuccess = useAfterAWrite(after);
+
+  return useMutation<void, AppError, StatedResult>({ mutationFn: stateResult, onSuccess });
 }
 
 /** *That is what happened* — the result at once (#654), so the next read is the game settled. */
-export function useAcceptResult({ reread }: AfterAWrite = {}) {
-  const client = useQueryClient();
+export function useAcceptResult(after: AfterAWrite = {}) {
+  const onSuccess = useAfterAWrite(after);
 
-  return useMutation<void, AppError, string>({
-    mutationFn: acceptResult,
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: gameKeys.list() });
-      reread?.();
-    },
-  });
-}
-
-/**
- * ***Kuba didn't come*** — a no-show report (#560). Invalidates and is never optimistic, as the
- * result's writes are: what the game becomes — the report waiting out its day — is the server's
- * fold. It pauses offline like them too: the reported player's day runs from the report landing,
- * so nothing about it is fixed by the moment it is tapped.
- */
-export function useReportNoShow({ reread }: AfterAWrite = {}) {
-  const client = useQueryClient();
-
-  return useMutation<void, AppError, NoShowToReport>({
-    mutationFn: reportNoShow,
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: gameKeys.list() });
-      reread?.();
-    },
-  });
-}
-
-/**
- * ***I was there*** — the reported player's dispute (#560). The same posture: invalidate, never
- * optimistic, pause offline. **It does carry a deadline** — the report's day — and a dispute queued
- * past it is refused by name (`the_dispute_window_has_closed`) and said so, rather than sent
- * early by a rule this side would have to restate.
- */
-export function useDisputeNoShow({ reread }: AfterAWrite = {}) {
-  const client = useQueryClient();
-
-  return useMutation<void, AppError, string>({
-    mutationFn: disputeNoShow,
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: gameKeys.list() });
-      reread?.();
-    },
-  });
+  return useMutation<void, AppError, string>({ mutationFn: acceptResult, onSuccess });
 }

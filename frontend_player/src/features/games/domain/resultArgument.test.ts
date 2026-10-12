@@ -14,7 +14,7 @@
  * `CONFIRMED` and there is no grace in which anything is still offered.
  */
 
-import type { Game, NoShowReport, StandingProposal } from './game';
+import type { Attendance, Game, StandingProposal } from './game';
 import { actsOffered, editingAct, resultArgument } from './resultArgument';
 
 const ME = 'me-1111-4444-8888-000000000001';
@@ -61,7 +61,7 @@ function game(over: Partial<Game> = {}): Game {
     plannedAt: '2026-09-01T18:00:00Z',
     entryClosesAt: '2026-09-09T18:00:00Z',
     proposals: [],
-    noShows: [],
+    attendance: [],
     readAt: '2026-09-05T09:00:00Z',
     ...over,
   };
@@ -317,16 +317,6 @@ describe('the ends', () => {
     expect(argument).toEqual({ kind: 'disputed' });
     expect(actsOffered(argument)).toEqual([]);
   });
-
-  it('leaves an unscored game alone — a settled result is final, and so is no result', () => {
-    const argument = resultArgument(
-      game({ standing: 'UNSCORED', playedAt: '2026-09-04T20:12:00Z' }),
-      ME,
-    );
-
-    expect(argument).toEqual({ kind: 'unscored' });
-    expect(actsOffered(argument)).toEqual([]);
-  });
 });
 
 /**
@@ -429,99 +419,121 @@ describe('a state this build cannot name', () => {
 });
 
 /**
- * **Somebody didn't come** ([#560](https://github.com/Raketa02/Raketa/issues/560); the Games & Fill
- * in mechanics §15.3). A report has a day: while one runs the game waits, and the player it names
- * may say they came — the one act this arm offers, and only to them, only inside their own day,
- * measured against the instant the list was read. Once every report has had its day, the ones
- * nobody disputed are who did not come.
+ * **Who turned up, caught at the court** ([#658](https://github.com/Raketa02/Raketa/issues/658);
+ * ADR-0195 §3). While somebody tapped *isn't here yet* is awaited no score is taken, and once the
+ * half hour has run with them not arrived the game is one somebody Didn't come to. Neither arm
+ * offers a result act: the taps are the attendance block's (`attendance.ts`).
  */
-describe('a no-show report', () => {
-  /** A report made last night, whose day runs to tonight — named as the seat names them. */
-  function report(playerId: string, over: Partial<NoShowReport> = {}): NoShowReport {
+describe('attendance', () => {
+  const OPPONENT_2 = 'opp2-1111-4444-8888-00000004';
+
+  function row(playerId: string, over: Partial<Attendance> = {}): Attendance {
     const name = game().seats.find((seat) => seat.playerId === playerId)?.name;
     return {
       playerId,
       ...(name === undefined ? {} : { name }),
-      reportedAt: '2026-09-04T20:00:00Z',
-      disputeBy: '2026-09-05T20:00:00Z',
+      state: 'WAITING',
+      notedAt: '2026-09-04T18:05:00Z',
+      arriveBy: '2026-09-04T18:30:00Z',
+      claimBy: '2026-09-05T18:30:00Z',
       ...over,
     };
   }
 
-  const reported = (...noShows: NoShowReport[]) =>
-    game({ standing: 'NO_SHOW_REPORTED', entryClosesAt: undefined, noShows });
+  it('names who is awaited to everybody else, and who is waiting to the player awaited', () => {
+    const awaited = game({ standing: 'NOT_HERE_YET', attendance: [row(OPPONENT)] });
 
-  it('offers the dispute to the player it names, inside their day', () => {
-    const argument = resultArgument(reported(report(ME)), ME);
-
-    expect(argument).toEqual({
-      kind: 'no-show-reported',
-      yours: { who: { kind: 'you' }, disputeBy: '2026-09-05T20:00:00Z', state: 'open' },
-      others: [],
+    expect(resultArgument(awaited, PARTNER)).toEqual({
+      kind: 'not-here-yet',
+      awaited: [{ kind: 'player', name: 'tomek.p' }],
+      here: [
+        { kind: 'player', name: 'me_' },
+        { kind: 'player', name: 'marekb' },
+      ],
+      yours: false,
+      arriveBy: '2026-09-04T18:30:00Z',
     });
-    expect(actsOffered(argument)).toEqual(['dispute']);
+    expect(resultArgument(awaited, OPPONENT)).toMatchObject({
+      kind: 'not-here-yet',
+      awaited: [{ kind: 'you' }],
+      here: [
+        { kind: 'player', name: 'me_' },
+        { kind: 'player', name: 'kasia_w' },
+        { kind: 'player', name: 'marekb' },
+      ],
+      yours: true,
+    });
+    expect(actsOffered(resultArgument(awaited, OPPONENT))).toEqual([]);
   });
 
-  it('names who was reported to everybody else, and offers them nothing to answer', () => {
-    const argument = resultArgument(reported(report(OPPONENT)), PARTNER);
+  it('leaves a second absentee out of who is waiting', () => {
+    const two = game({
+      standing: 'NOT_HERE_YET',
+      attendance: [row(OPPONENT), row(OPPONENT_2)],
+    });
+
+    expect(resultArgument(two, ME)).toMatchObject({
+      awaited: [
+        { kind: 'player', name: 'tomek.p' },
+        { kind: 'player', name: 'marekb' },
+      ],
+      here: [{ kind: 'player', name: 'kasia_w' }],
+    });
+  });
+
+  it('names who didn’t come — a claim still waiting among them — and offers nothing', () => {
+    const argument = resultArgument(
+      game({
+        standing: 'DIDNT_COME',
+        entryClosesAt: undefined,
+        readAt: '2026-09-05T08:00:00Z',
+        attendance: [
+          row(OPPONENT, { state: 'DIDNT_COME' }),
+          row(OPPONENT_2, { state: 'CLAIMED', claimedAt: '2026-09-05T07:00:00Z' }),
+        ],
+      }),
+      ME,
+    );
 
     expect(argument).toEqual({
-      kind: 'no-show-reported',
-      others: [
-        {
-          who: { kind: 'player', name: 'tomek.p' },
-          disputeBy: '2026-09-05T20:00:00Z',
-          state: 'open',
-        },
+      kind: 'didnt-come',
+      absent: [
+        { kind: 'player', name: 'tomek.p' },
+        { kind: 'player', name: 'marekb' },
       ],
     });
     expect(actsOffered(argument)).toEqual([]);
   });
 
-  it('offers no second dispute once the player has said they came', () => {
-    const argument = resultArgument(
-      reported(report(ME, { disputedAt: '2026-09-05T08:00:00Z' }), report(OPPONENT)),
-      ME,
-    );
+  it('tells the player who didn’t come whether they may still say they were there', () => {
+    const didntCome = (over: Partial<Attendance>, readAt = '2026-09-05T08:00:00Z') =>
+      resultArgument(
+        game({
+          standing: 'DIDNT_COME',
+          entryClosesAt: undefined,
+          readAt,
+          attendance: [row(ME, { state: 'DIDNT_COME', ...over })],
+        }),
+        ME,
+      );
 
-    expect(argument).toMatchObject({
-      kind: 'no-show-reported',
-      yours: { who: { kind: 'you' }, state: 'disputed' },
-      others: [{ who: { kind: 'player', name: 'tomek.p' }, state: 'open' }],
+    expect(didntCome({})).toEqual({
+      kind: 'didnt-come',
+      absent: [{ kind: 'you' }],
+      yours: { state: 'may-claim', claimBy: '2026-09-05T18:30:00Z' },
     });
-    expect(actsOffered(argument)).toEqual([]);
+    expect(didntCome({ state: 'CLAIMED', claimedAt: '2026-09-05T07:00:00Z' })).toMatchObject({
+      yours: { state: 'claimed' },
+    });
+    expect(didntCome({}, '2026-09-05T18:30:00Z')).toMatchObject({ yours: { state: 'final' } });
   });
 
-  /** Another report's day can keep the game waiting after the reader's own day has ended. */
-  it('offers no dispute once the reader’s own day has passed, though another still runs', () => {
-    const argument = resultArgument(
-      reported(
-        report(ME, { reportedAt: '2026-09-04T08:00:00Z', disputeBy: '2026-09-05T08:00:00Z' }),
-        report(OPPONENT),
-      ),
-      ME,
-    );
-
-    expect(argument).toMatchObject({
-      kind: 'no-show-reported',
-      yours: { state: 'stood' },
-      others: [{ state: 'open' }],
+  it('takes a late arrival as an ordinary game — the standing says so, not the rows', () => {
+    const late = game({
+      attendance: [row(OPPONENT, { state: 'CAME_LATE', arrivedAt: '2026-09-04T18:20:00Z' })],
     });
-    expect(actsOffered(argument)).toEqual([]);
-  });
 
-  it('ends naming who did not come — the reports nobody disputed — and offers nothing', () => {
-    const argument = resultArgument(
-      game({
-        standing: 'NO_SHOW',
-        entryClosesAt: undefined,
-        noShows: [report(ME), report(OPPONENT, { disputedAt: '2026-09-05T08:00:00Z' })],
-        readAt: '2026-09-06T09:00:00Z',
-      }),
-      PARTNER,
-    );
-
-    expect(argument).toEqual({ kind: 'no-show', didNotCome: [{ kind: 'player', name: 'me_' }] });
-    expect(actsOffered(argument)).toEqual([]);
+    expect(resultArgument(late, ME)).toMatchObject({ kind: 'awaiting-entry' });
+    expect(actsOffered(resultArgument(late, ME))).toEqual(['enter']);
   });
 });

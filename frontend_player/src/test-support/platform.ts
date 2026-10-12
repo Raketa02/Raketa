@@ -85,6 +85,11 @@ export interface FakeLocation extends LocationPort, FakePermission {
   fix: LocationFix | null;
   /** How many times a fix was asked for, so a test can prove it was asked once. */
   readonly reads: number;
+  /**
+   * How many times a **precise** fix was asked for — an attendance tap's (#658), counted apart so a
+   * test can prove a tap reads once and that the area's own read was never one of them.
+   */
+  readonly preciseReads: number;
 }
 
 export interface FakeImagePicking extends ImagePickingPort, FakePermission {
@@ -145,6 +150,7 @@ export function fakeLocation(
   initial: Partial<Pick<FakeLocation, 'state' | 'answer' | 'fix'>> = {},
 ): FakeLocation {
   let reads = 0;
+  let preciseReads = 0;
 
   const fake: FakeLocation = {
     state: initial.state ?? 'undetermined',
@@ -157,12 +163,20 @@ export function fakeLocation(
     get reads() {
       return reads;
     },
+    get preciseReads() {
+      return preciseReads;
+    },
 
     getPermission: async () => fake.state,
     requestPermission: async () => settle(fake),
 
     readFix: async () => {
       reads += 1;
+      return fake.state === 'granted' ? fake.fix : null;
+    },
+    // The same position, asked for sharper: a test places the phone at the club or away with `fix`.
+    readPreciseFix: async () => {
+      preciseReads += 1;
       return fake.state === 'granted' ? fake.fix : null;
     },
   };

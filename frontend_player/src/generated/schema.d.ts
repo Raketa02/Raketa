@@ -1026,7 +1026,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/games/{game_id}/no-shows": {
+    "/api/v1/games/{game_id}/attendance/not-here-yet": {
         parameters: {
             query?: never;
             header?: never;
@@ -1036,19 +1036,19 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Say somebody didn't come
-         * @description ***Kuba didn't come*** — on a **booked** game whose hour has come, where you would otherwise enter the result (#547). Said by somebody who came, about somebody else on the court; a second report of the same player answers the same and writes nothing, and each player who did not come is reported on their own.
+         * Say somebody isn't here yet
+         * @description ***Oscar isn't here yet*** — on a **booked** game, from its start until 30 minutes after it, about somebody else on the court, partner included (#657). **Made at the club**: `location` is the fix the phone read at the tap, measured against the club's map point and dropped — only *at the club* is kept. It costs you nothing, and saying it of somebody already awaited answers the same and writes nothing.
          *
-         *     **The game does not count** from the report on, and nobody's Level moves. The reported player has **24 hours to dispute it** (`no_shows[].dispute_by`); after that it stands — the strongest mark on a record — with nothing written at that moment. **Nobody arbitrates a dispute**: the report falls and is on nobody's record.
+         *     Their **arrival** — their own *I'm here*, or anybody's *they're here* — decides what it was: **on time** within 10 minutes of the start (nothing is recorded), **Came late** up to 30, and **Didn't come** with no arrival by then (`attendance[].arrive_by`): the game takes no score and never counts.
          */
-        post: operations["report_a_no_show_api_v1_games__game_id__no_shows_post"];
+        post: operations["note_absent_api_v1_games__game_id__attendance_not_here_yet_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/games/{game_id}/no-shows/dispute": {
+    "/api/v1/games/{game_id}/attendance/arrival": {
         parameters: {
             query?: never;
             header?: never;
@@ -1058,10 +1058,50 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Say you came
-         * @description **You were reported as not coming, and you did** (#547). Inside 24 hours of the report. The report falls, nothing goes on your record, and the game still does not count: nobody arbitrates which of you is right. A second dispute answers the same and writes nothing.
+         * Say you're here, or they're here
+         * @description ***I'm here*** with your own id, ***they're here*** with a courtmate's — about somebody tapped *isn't here yet*, from the club, before 30 minutes after the start (#657). **The first arrival is the one that counts**, and its moment decides: on time within 10 minutes of the start, Came late after. *They're here* is checked at the club too.
          */
-        post: operations["dispute_a_no_show_api_v1_games__game_id__no_shows_dispute_post"];
+        post: operations["note_arrival_api_v1_games__game_id__attendance_arrival_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/attendance/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say you were there
+         * @description ***I was there*** — you Didn't come, and your phone died at the court (#657). Within a day of the tap window closing (`attendance[].claim_by`), from wherever you are: **no location is asked**, because what proves it is somebody else on the court confirming it. Until they do, you still Didn't come. A second claim answers the same and writes nothing.
+         */
+        post: operations["claim_presence_api_v1_games__game_id__attendance_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/attendance/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say they were here
+         * @description ***Yes, they were here*** — about somebody else's *I was there*, inside the same day (#657). **It turns Didn't come into Came late**, because the tap still proves they weren't there when it was made, and the game carries on as usual — a score, and the Level with it. In singles, the one who can confirm is the opponent who tapped. A second confirmation answers the same and writes nothing.
+         */
+        post: operations["confirm_presence_api_v1_games__game_id__attendance_confirmation_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2390,6 +2430,19 @@ export interface components {
             ratings?: components["schemas"]["StarsGivenSchema"][];
         };
         /**
+         * ArrivalRequest
+         * @description *I'm here* — your own id — or *they're here*, somebody else's.
+         */
+        ArrivalRequest: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Who has arrived: yourself for *I'm here*, a courtmate for *they're here*.
+             */
+            player_id: string;
+            location: components["schemas"]["LocationFixSchema"];
+        };
+        /**
          * AssessmentStepResponse
          * @description The server-driven step: at most one of `question` / `result` is set, and
          *     `transcript` is everything already answered behind it. Neither means the run
@@ -2421,6 +2474,68 @@ export interface components {
             question?: components["schemas"]["QuestionResponse"] | null;
             result?: components["schemas"]["ResultResponse"] | null;
         };
+        /**
+         * AttendanceSchema
+         * @description One player somebody on the court said was not here yet, and what became
+         *     of it (#657; ``docs/adr/0195`` §3). **Folded on every read against
+         *     `read_at`**, never stored. **Who tapped is not here**: the tap is the game's,
+         *     and a name on it would be the platform pointing at one of the people who
+         *     came. Nobody is ever in this list who was not tapped: everybody who arrives
+         *     on time does nothing at all.
+         */
+        AttendanceSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account.
+             */
+            name?: string | null;
+            /** @description `WAITING` — tapped *isn't here yet*, not arrived, and `arrive_by` still ahead. `ON_TIME` — arrived within ten minutes of the start: nothing is recorded, and the tap vanishes. `CAME_LATE` — arrived ten to thirty minutes after it. `DIDNT_COME` — no arrival by `arrive_by`: the game takes no score and never counts; provisional until `claim_by`, final after it. `CLAIMED` — said *I was there*, waiting for somebody else on the court to confirm it before `claim_by`; still *Didn't come* until then. `CONFIRMED` — *I was there*, confirmed: **Came late**, and the game carries on. */
+            state: components["schemas"]["AttendanceState"];
+            /**
+             * Noted At
+             * Format: date-time
+             * @description When somebody at the club first said they weren't here.
+             */
+            noted_at: string;
+            /**
+             * Arrive By
+             * Format: date-time
+             * @description The tap window's end — thirty minutes after the start. An arrival is taken until this moment and never after; **nothing happens at it** — a player still awaited simply reads `DIDNT_COME` from here on.
+             */
+            arrive_by: string;
+            /**
+             * Arrived At
+             * @description **The arrival**: the first *I'm here* or *they're here*, made at the club. ``null`` until one.
+             */
+            arrived_at?: string | null;
+            /**
+             * Claim By
+             * Format: date-time
+             * @description The end of the day after `arrive_by` in which *I was there* may be said and confirmed. From here on an unconfirmed *Didn't come* is final.
+             */
+            claim_by: string;
+            /**
+             * Claimed At
+             * @description When they said *I was there*, or ``null``.
+             */
+            claimed_at?: string | null;
+            /**
+             * Confirmed At
+             * @description When somebody else on the court said *yes, they were here*, or ``null``. Who did is not on the wire.
+             */
+            confirmed_at?: string | null;
+        };
+        /**
+         * AttendanceState
+         * @description What became of one player somebody said was not here yet.
+         * @enum {string}
+         */
+        AttendanceState: "WAITING" | "ON_TIME" | "CAME_LATE" | "DIDNT_COME" | "CLAIMED" | "CONFIRMED";
         /** BandResponse */
         BandResponse: {
             /** Name */
@@ -2643,7 +2758,7 @@ export interface components {
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why the club cancelled a `CANCELLED_BY_THE_CLUB` game — `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every other game. */
             club_cancel_reason: components["schemas"]["ClubCancelReason"] | null;
-            /** @description Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score — `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. `NO_SHOW` — somebody who came reported a player who did not (#547): the reported player has a day to dispute it (`GET /games` — `no_shows`), after which it stands; the game does not count either way. A report every reported player disputed is an ordinary `UNCOUNTED`, with no reason: nobody arbitrated. */
+            /** @description Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score — `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. `DIDNT_COME` — somebody was tapped *isn't here yet* at the court and never arrived (#657; `GET /games` — `attendance`): the game takes no score and never counts. For a day it is provisional — their *I was there*, confirmed by somebody else on the court, makes them Came late and the game carries on. */
             uncounted_reason: components["schemas"]["UncountedReason"] | null;
             /**
              * Open Seats
@@ -3905,10 +4020,10 @@ export interface components {
              */
             proposals: components["schemas"]["StandingProposalSchema"][];
             /**
-             * No Shows
-             * @description Everybody reported as not coming to this **booked** game, in the court's order (#547). Empty on every other game. A report is the game's entry: no score is on the table beside one, and **the game does not count** whatever it comes to.
+             * Attendance
+             * @description Everybody somebody on the court said was not here yet, in the court's order (#657) — **empty on an ordinary game**, where everybody arrived on time and nobody tapped anything. While anybody is `WAITING` the game is `NOT_HERE_YET`; anybody `DIDNT_COME` or `CLAIMED` makes it `DIDNT_COME`, and no score is taken beside either.
              */
-            no_shows: components["schemas"]["NoShowSchema"][];
+            attendance: components["schemas"]["AttendanceSchema"][];
         };
         /**
          * GameSide
@@ -3918,10 +4033,10 @@ export interface components {
         GameSide: "A" | "B";
         /**
          * GameStanding
-         * @description The ten standings, as codes. A client's words are the client's own.
+         * @description The nine standings, as codes. A client's words are the client's own.
          * @enum {string}
          */
-        GameStanding: "AWAITING_ENTRY" | "PLAYED_NO_SCORE" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "DISPUTED" | "CALLED_OFF" | "STARTED_SHORT" | "NO_SHOW_REPORTED" | "NO_SHOW";
+        GameStanding: "AWAITING_ENTRY" | "PLAYED_NO_SCORE" | "AWAITING_ANSWER" | "CONFIRMED" | "DISPUTED" | "CALLED_OFF" | "STARTED_SHORT" | "NOT_HERE_YET" | "DIDNT_COME";
         /**
          * GamesAndMoneyRequest
          * @description Both values, as the screen saves them on every tap. **Types only**: a
@@ -4388,7 +4503,7 @@ export interface components {
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why the club cancelled a `CANCELLED_BY_THE_CLUB` game — `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every other game. */
             club_cancel_reason: components["schemas"]["ClubCancelReason"] | null;
-            /** @description Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score — `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. `NO_SHOW` — somebody who came reported a player who did not (#547): the reported player has a day to dispute it (`GET /games` — `no_shows`), after which it stands; the game does not count either way. A report every reported player disputed is an ordinary `UNCOUNTED`, with no reason: nobody arbitrated. */
+            /** @description Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score — `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. `DIDNT_COME` — somebody was tapped *isn't here yet* at the court and never arrived (#657; `GET /games` — `attendance`): the game takes no score and never counts. For a day it is provisional — their *I was there*, confirmed by somebody else on the court, makes them Came late and the game carries on. */
             uncounted_reason: components["schemas"]["UncountedReason"] | null;
             /**
              * Open Seats
@@ -4460,7 +4575,7 @@ export interface components {
             needing_you: number;
             /**
              * Games
-             * @description The reader's booked games — and their games an On request club has, or had, to answer — **soonest first**, and only what Home draws: **every live game** (waiting for the club, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`) — so an *uncounted* one whose report of not coming they may still dispute is sent while they may. Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here.
+             * @description The reader's booked games — and their games an On request club has, or had, to answer — **soonest first**, and only what Home draws: **every live game** (waiting for the club, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`). Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here.
              */
             games: components["schemas"]["HomeGameSchema"][];
         };
@@ -4818,6 +4933,24 @@ export interface components {
             /** Longitude */
             longitude: number;
         };
+        /**
+         * LocationFixSchema
+         * @description **One precise fix, read by the phone at the moment of the tap** and sent
+         *     with it (#657; ``docs/adr/0195`` §3). It is measured against the club's map
+         *     point and dropped: **the backend keeps only whether it was at the club**,
+         *     never the position.
+         */
+        LocationFixSchema: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /**
+             * Accuracy M
+             * @description The fix's own stated accuracy, in metres — the radius the phone says the true position lies within. Allowed for up to 200 m.
+             */
+            accuracy_m: number;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -5054,39 +5187,17 @@ export interface components {
             password: string;
         };
         /**
-         * NoShowSchema
-         * @description A player reported as not coming to this booked game (#547; the
-         *     mechanics §15.3) — and what became of it. **Who reported them is not
-         *     here**: the report is the game's, said by the people who came, and a name
-         *     on it would be the platform pointing at one of them.
+         * NotHereYetRequest
+         * @description *Oscar isn't here yet.*
          */
-        NoShowSchema: {
+        NotHereYetRequest: {
             /**
              * Player Id
              * Format: uuid
+             * @description Who isn't here yet — somebody else on the game's court.
              */
             player_id: string;
-            /**
-             * Name
-             * @description Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account.
-             */
-            name?: string | null;
-            /**
-             * Reported At
-             * Format: date-time
-             */
-            reported_at: string;
-            /**
-             * Dispute By
-             * Format: date-time
-             * @description The end of their day to say they came — 24 hours from the report. **Nothing happens at this moment**: an undisputed report simply stands from here on, and the game reads `NO_SHOW` once every report has had its day.
-             */
-            dispute_by: string;
-            /**
-             * Disputed At
-             * @description When they disputed it. **Nobody arbitrates**: a disputed report falls and is on nobody's record; a game whose every report was disputed is `UNSCORED`.
-             */
-            disputed_at?: string | null;
+            location: components["schemas"]["LocationFixSchema"];
         };
         /**
          * NoticeKind
@@ -6138,6 +6249,18 @@ export interface components {
             posts: components["schemas"]["PostStillFillingSchema"][];
         };
         /**
+         * PresenceConfirmationRequest
+         * @description *Yes, they were here.*
+         */
+        PresenceConfirmationRequest: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Whose *I was there* this confirms — somebody else's.
+             */
+            player_id: string;
+        };
+        /**
          * ProfilePhotoResource
          * @description One of the owner's photographs, and what the on-court check said about it.
          *
@@ -6564,18 +6687,6 @@ export interface components {
          * @enum {string}
          */
         ReliabilityStrand: "SHOWS_UP" | "ANSWERS_CHALLENGES" | "ANSWERS_RESULTS" | "KEEPS_PLANS" | "SETTLES_UP" | "SPORTSMANSHIP";
-        /**
-         * ReportANoShowRequest
-         * @description *Kuba didn't come.*
-         */
-        ReportANoShowRequest: {
-            /**
-             * Player Id
-             * Format: uuid
-             * @description Who did not come — somebody else on the game's court.
-             */
-            player_id: string;
-        };
         /**
          * RescueOfferSchema
          * @description The open seat, offered to a reader not on the game (#545).
@@ -7301,7 +7412,7 @@ export interface components {
          * @description Why a game ended uncounted without anybody disagreeing about a score.
          * @enum {string}
          */
-        UncountedReason: "SEAT_EMPTY" | "NO_SHOW";
+        UncountedReason: "SEAT_EMPTY" | "DIDNT_COME";
         /**
          * UserCreateRequest
          * @description Sign-up: credentials and the attestation, and nothing about who you are.
@@ -9451,7 +9562,9 @@ export interface operations {
              *
              *     `the_game_started_short` — a booked game whose hour came with a seat open: somebody left after the club's cut-off and nobody took the seat. It ends uncounted (`standing` `STARTED_SHORT`), and nothing about it can be recorded.
              *
-             *     `a_no_show_is_reported` — somebody was reported as not coming to this booked game and their day to dispute it runs (`no_shows`): the game does not count, so there is no score to enter.
+             *     `somebody_is_not_here_yet` — somebody was tapped *isn't here yet* and is still awaited (`attendance`): the score waits until they arrive or the first 30 minutes are over.
+             *
+             *     `somebody_did_not_come` — somebody Didn't come (`attendance`): the game takes no score and never counts, unless their *I was there* is confirmed.
              */
             409: {
                 headers: {
@@ -9527,7 +9640,7 @@ export interface operations {
             };
         };
     };
-    report_a_no_show_api_v1_games__game_id__no_shows_post: {
+    note_absent_api_v1_games__game_id__attendance_not_here_yet_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9538,11 +9651,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReportANoShowRequest"];
+                "application/json": components["schemas"]["NotHereYetRequest"];
             };
         };
         responses: {
-            /** @description The game as it stands with your report on it. */
+            /** @description The game as it stands with them awaited. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9552,9 +9665,9 @@ export interface operations {
                 };
             };
             /**
-             * @description `not_on_this_court` — that player was not on this game.
+             * @description `not_on_this_court` — that player isn't on this game.
              *
-             *     `you_cannot_report_yourself` — you are the one person your report proves came.
+             *     `not_about_yourself` — *isn't here yet* is never said of yourself: the tap is the proof that you are.
              */
             400: {
                 headers: {
@@ -9574,17 +9687,19 @@ export interface operations {
                 };
             };
             /**
-             * @description Everything above, plus:
+             * @description `not_at_the_club` — the fix sent with the tap is not within 300 m of the club's map point, allowing for its own accuracy up to 200 m: *You can say so only from Ogrody 33.*
              *
-             *     `no_shows_are_for_booked_games` — only a game booked on a court has an hour somebody could fail to come to.
+             *     `the_game_has_not_started`, `the_tap_window_has_closed` — a tap is taken from the game's start until 30 minutes after it, and never outside.
              *
-             *     `the_game_has_not_started` — its hour has not come yet.
+             *     `already_arrived` — their arrival is already noted; the first one counts.
              *
-             *     `a_result_is_entered` — somebody already said you played, with a score; answer the score instead.
+             *     `you_are_not_here_yourself` — you are tapped and awaited yourself, so you can't say who else is here.
              *
-             *     `you_were_reported_as_a_no_show` — you were reported yourself; dispute it instead.
+             *     `nobody_said_they_were_not_here` — an arrival of somebody nobody tapped: everybody who arrives on time does nothing.
              *
-             *     `the_game_was_called_off`, `the_game_started_short` — there was no game to come to.
+             *     `the_result_is_settled` — the result is already final. A score still waiting for its answer stops no tap: it waits with the game, and counts for nothing if somebody never comes.
+             *
+             *     `attendance_is_for_booked_games`, `the_game_was_called_off`, `the_game_started_short` — there was no game to come to.
              */
             409: {
                 headers: {
@@ -9605,7 +9720,7 @@ export interface operations {
             };
         };
     };
-    dispute_a_no_show_api_v1_games__game_id__no_shows_dispute_post: {
+    note_arrival_api_v1_games__game_id__attendance_arrival_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9614,15 +9729,32 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrivalRequest"];
+            };
+        };
         responses: {
-            /** @description The game as it stands with your dispute recorded. */
+            /** @description The game as it stands with their arrival noted. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["GameSchema"];
+                };
+            };
+            /**
+             * @description `not_on_this_court` — that player isn't on this game.
+             *
+             *     `not_about_yourself` — *isn't here yet* is never said of yourself: the tap is the proof that you are.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
@@ -9635,9 +9767,175 @@ export interface operations {
                 };
             };
             /**
-             * @description `nobody_reported_you` — there is nothing of yours to dispute.
+             * @description `not_at_the_club` — the fix sent with the tap is not within 300 m of the club's map point, allowing for its own accuracy up to 200 m: *You can say so only from Ogrody 33.*
              *
-             *     `the_dispute_window_has_closed` — your day to say you came has passed: the report stands.
+             *     `the_game_has_not_started`, `the_tap_window_has_closed` — a tap is taken from the game's start until 30 minutes after it, and never outside.
+             *
+             *     `already_arrived` — their arrival is already noted; the first one counts.
+             *
+             *     `you_are_not_here_yourself` — you are tapped and awaited yourself, so you can't say who else is here.
+             *
+             *     `nobody_said_they_were_not_here` — an arrival of somebody nobody tapped: everybody who arrives on time does nothing.
+             *
+             *     `the_result_is_settled` — the result is already final. A score still waiting for its answer stops no tap: it waits with the game, and counts for nothing if somebody never comes.
+             *
+             *     `attendance_is_for_booked_games`, `the_game_was_called_off`, `the_game_started_short` — there was no game to come to.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_presence_api_v1_games__game_id__attendance_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The game as it stands with your claim. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameSchema"];
+                };
+            };
+            /**
+             * @description `not_on_this_court` — that player isn't on this game.
+             *
+             *     `not_about_yourself` — *isn't here yet* is never said of yourself: the tap is the proof that you are.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `the_tap_window_is_open` — the first 30 minutes are not over: tap *I'm here* at the club instead.
+             *
+             *     `the_late_claim_has_closed` — the day after the tap window (`attendance[].claim_by`) is over: *Didn't come* is final.
+             *
+             *     `nobody_said_they_were_not_here` — nobody tapped you.
+             *
+             *     `already_arrived` — your arrival is already noted.
+             *
+             *     `nothing_to_confirm` — they haven't said *I was there*.
+             *
+             *     `you_are_not_here_yourself` — you Didn't come yourself, so you can't vouch for anybody.
+             *
+             *     `attendance_is_for_booked_games` — a game with no hour.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_presence_api_v1_games__game_id__attendance_confirmation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresenceConfirmationRequest"];
+            };
+        };
+        responses: {
+            /** @description The game as it stands with your confirmation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameSchema"];
+                };
+            };
+            /**
+             * @description `not_on_this_court` — that player isn't on this game.
+             *
+             *     `not_about_yourself` — *isn't here yet* is never said of yourself: the tap is the proof that you are.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `the_tap_window_is_open` — the first 30 minutes are not over: tap *I'm here* at the club instead.
+             *
+             *     `the_late_claim_has_closed` — the day after the tap window (`attendance[].claim_by`) is over: *Didn't come* is final.
+             *
+             *     `nobody_said_they_were_not_here` — nobody tapped you.
+             *
+             *     `already_arrived` — your arrival is already noted.
+             *
+             *     `nothing_to_confirm` — they haven't said *I was there*.
+             *
+             *     `you_are_not_here_yourself` — you Didn't come yourself, so you can't vouch for anybody.
+             *
+             *     `attendance_is_for_booked_games` — a game with no hour.
              */
             409: {
                 headers: {

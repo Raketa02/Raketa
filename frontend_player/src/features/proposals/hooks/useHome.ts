@@ -177,8 +177,8 @@ export function useOpenedGames(): {
 
 /**
  * **Read a booked game's reads again** — Home (its status and the bar's badge) and the game in
- * detail — once an act on its Game has landed on the result screen: a score entered, agreed, a
- * player marked as not coming or a mark disputed (#560). `games` invalidates its own list; these
+ * detail — once an act on its Game has landed on the result screen: a score entered or agreed, or
+ * a tap saying who's here (#560, #658). `games` invalidates its own list; these
  * are this feature's, which it cannot name, so the composer hands this in.
  */
 export function useRereadBooking(bookingId: string): () => void {

@@ -84,8 +84,9 @@ export interface HomeGame {
   /** Seats somebody left and nobody has taken yet — *1 seat open* (#544). */
   readonly openSeats: number;
   /**
-   * A result to enter, a score waiting on the reader's agreement, a seat open in their game — or a
-   * report of their not coming, theirs to dispute while its day runs (#560).
+   * A result to enter, a score waiting on the reader's agreement, a seat open in their game — or,
+   * at the court (#658), their own *I'm here* while they are awaited, their *I was there* while they
+   * didn't come, or somebody else's *I was there* to confirm.
    */
   readonly needsYou: boolean;
   /** The court hour's start; games are an hour. */
@@ -237,9 +238,9 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * - `calledOff` — why, and *refunded 30 zł* when the shares came back; when none did, *nothing was
  *   taken* or *nobody paid*, by the reason. The club is carried for the reasons that are the club's.
  * - `seatEmpty` — *Uncounted* because its hour came with a seat still open: no Level moved.
- * - `noShow` — *Uncounted* because somebody who came marked a player who did not (#560): to that
- *   player, while they may still say they were there (`yours`, the read's *needs you*), that they
- *   were marked; to everybody else, that somebody didn't come.
+ * - `didntCome` — *Uncounted* because somebody didn't come (#658): while a late *I was there* waits
+ *   on the reader — theirs to say, or somebody else's to confirm (`needsYou`) — that they should say
+ *   who was there; to everybody else, that no Level moved.
  */
 export type MoneyLine =
   | {
@@ -269,7 +270,7 @@ export type MoneyLine =
       readonly refundedGrosze?: number;
     }
   | { readonly kind: 'seatEmpty' }
-  | { readonly kind: 'noShow'; readonly yours: boolean };
+  | { readonly kind: 'didntCome'; readonly needsYou: boolean };
 
 /**
  * **The cut-off, while it is still ahead of `now`** — the instant *free to leave until …* leaves the
@@ -502,8 +503,8 @@ export function moneyLineOf(
       switch (game.uncountedReason) {
         case 'SEAT_EMPTY':
           return { kind: 'seatEmpty' };
-        case 'NO_SHOW':
-          return { kind: 'noShow', yours: youMayDispute(game) };
+        case 'DIDNT_COME':
+          return { kind: 'didntCome', needsYou: attendanceNeedsYou(game) };
         case undefined:
           return undefined;
       }
@@ -601,9 +602,9 @@ export function shownStatus(game: Pick<HomeGame, 'status' | 'kind'>): ShownStatu
  * hour. **The server sends only what Home draws** (#613): live games, games that ended less than a
  * day after their hour, and any game that needs the reader. So this rule is not the shelf: it
  * catches a card that crosses the line while Home is on screen, at that instant rather than at the
- * next read. **One card it still drops that the server sends**: an uncounted game whose reader may
- * dispute a report of their not coming outlives its day by up to another (#560), and is on the
- * badge all that time — what the phone draws for it is story S-33's.
+ * next read. **No card that needs the reader is dropped by it** (#658): a late *I was there* may be
+ * said and confirmed until a day after the first half hour, which is half an hour before this
+ * rule's day after the hour ends.
  *
  * **Measured from the hour's end, the one instant every ending has**: the wire dates no ending of a
  * booking, so a game called off days ahead stays until a day after the hour it was for — the player
@@ -718,31 +719,42 @@ export function courtIsGiven(game: Pick<HomeGame, 'status' | 'fillingAgain'>): b
 
 /**
  * The result act the details lead to — today's game screen, which tells and agrees a result, and
- * where a player marked as not coming says they were there (#560).
+ * says who turned up (#658).
  */
-export type ResultAct = 'we-played' | 'add-score' | 'confirm' | 'dispute';
+export type ResultAct = 'whos-here' | 'we-played' | 'add-score' | 'confirm' | 'who-was-there';
 
 /**
- * **What the details offer once the hour has come** — *We played* while nobody has said, *Confirm
- * the result* once a score is on the table, and to a player marked as not coming, while their day
- * runs, the door to saying they were there — or nothing. **A For fun game asks nothing** (#656):
- * its door is *Add the score*, which a player may take or leave, and none once a score is up. The
- * act is today's screen's; the details are only the door to it.
+ * **What the details offer once the hour has come** — in its **first half hour**, *Who's here*
+ * (#658): the door a player at the court takes to say somebody isn't here yet, and an awaited
+ * player to say they are. After it, *We played* while nobody has said, *Confirm the result* once a
+ * score is on the table, and — while a late *I was there* waits on the reader, theirs to say or
+ * somebody else's to confirm — *Say who was there*; or nothing. **A For fun game asks nothing**
+ * (#656): its door is *Add the score*, which a player may take or leave. The acts are today's
+ * screen's; the details are only the door to it.
+ *
+ * `atTheCourt` is whether the first half hour runs at the read's clock — `games`' rule
+ * (`tapsAreOpen`), asked by the screen that holds the clock.
  */
 export function resultActOf(
   game: Pick<HomeGame, 'status' | 'kind' | 'uncountedReason' | 'needsYou'>,
+  { atTheCourt = false }: { readonly atTheCourt?: boolean } = {},
 ): ResultAct | undefined {
-  if (game.status === 'NEEDS_RESULT') return game.kind === 'forFun' ? 'add-score' : 'we-played';
+  if (game.status === 'NEEDS_RESULT') {
+    if (atTheCourt) return 'whos-here';
+    return game.kind === 'forFun' ? 'add-score' : 'we-played';
+  }
   if (game.status === 'CONFIRM_THE_RESULT') return 'confirm';
-  return youMayDispute(game) ? 'dispute' : undefined;
+  return attendanceNeedsYou(game) ? 'who-was-there' : undefined;
 }
 
 /**
- * **The reader was marked as not coming, and their day to answer runs** (#560) — the read's *needs
- * you* on a game uncounted because somebody didn't come: on an uncounted game nobody disagreed
- * about, a report waiting on the reader is the only thing that needs them. Home's line says it and
- * the details' door opens on it.
+ * **A late *I was there* waits on the reader** (#658) — the read's *needs you* on a game uncounted
+ * because somebody didn't come: on an uncounted game nobody disagreed about, the late claim is the
+ * only thing that needs anybody — the absent player's to say, or a courtmate's to confirm. Home's
+ * line says it and the details' door opens on it; which of the two it is, the screen says.
  */
-function youMayDispute(game: Pick<HomeGame, 'status' | 'uncountedReason' | 'needsYou'>): boolean {
-  return game.status === 'UNCOUNTED' && game.uncountedReason === 'NO_SHOW' && game.needsYou;
+function attendanceNeedsYou(
+  game: Pick<HomeGame, 'status' | 'uncountedReason' | 'needsYou'>,
+): boolean {
+  return game.status === 'UNCOUNTED' && game.uncountedReason === 'DIDNT_COME' && game.needsYou;
 }
