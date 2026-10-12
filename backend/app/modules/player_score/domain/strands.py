@@ -12,7 +12,7 @@ over all of them.
 **The six names, and which of them can be published today.**
 
 +---------------------+-------------------------------------------------------+
-| ``SHOWS_UP``        | live — a game played, or a report of not coming stood  |
+| ``SHOWS_UP``        | live — a game played, or a final Didn't come (#657)    |
 | ``ANSWERS_CHALLENGES`` | stands down — challenges no longer wait (#544)      |
 | ``ANSWERS_RESULTS`` | live — a score answered inside its window, or ignored  |
 | ``KEEPS_PLANS``     | live — a booked game kept, or broken by leaving (#544) |

@@ -10561,7 +10561,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "The reader's booked games \u2014 and their games an On request club has, or had, to answer \u2014 **soonest first**, and only what Home draws: **every live game** (waiting for the club, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`) \u2014 so an *uncounted* one whose report of not coming they may still dispute is sent while they may. Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here."
+            "description": "The reader's booked games \u2014 and their games an On request club has, or had, to answer \u2014 **soonest first**, and only what Home draws: **every live game** (waiting for the club, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`). Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here."
           }
         },
         "type": "object",

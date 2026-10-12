@@ -1245,8 +1245,7 @@ class HomeResponse(BaseModel):
             "**every live game** (waiting for the club, booked, with a seat open, "
             "waiting on its result or on an answer to a score), **every game that "
             "ended less than a day after its hour's end**, and **any game that "
-            "needs the reader** (`needs_you`) — so an *uncounted* one whose "
-            "report of not coming they may still dispute is sent while they may. "
+            "needs the reader** (`needs_you`). "
             "Nothing older is sent; its details (`GET /bookings/{id}`) still read "
             "it. A game a Classic play challenge opened is not here."
         )

@@ -778,12 +778,9 @@ def on_home(game: BookedGame, state: BookedState, *, now: Instant) -> bool:
     """Whether Home sends this card at ``now`` (#613): every live game, an
     ended one until a day after its hour's end — the phone's own rule — and
     **any game that needs the reader**, so the badge never counts a card that
-    was not sent.
-
-    That last clause is the phone's rule in all but one case: an *uncounted*
-    game whose reader may still dispute a report of not coming outlives its
-    day by up to another — sent, and on the badge, after the phone's Home has
-    shelved it (story S-33 owns what the phone draws for it).
+    was not sent. A late *I was there* closes a day after the tap window
+    (#657), before the shelf does, so the last clause sends nothing the
+    phone's own rule would not.
     """
 
     if state.status not in _ENDED or state.needs_you:
@@ -798,7 +795,7 @@ def on_home_since(now: Instant) -> Instant:
 
     Read off how long a booked game needs its players, never written here as a
     number: a game that started earlier is past its result's day and its
-    answer's, its report's dispute, and the phone's shelf, so it is a card
+    answer's, its late claim's (#657), and the phone's shelf, so it is a card
     nobody would see.
     """
 
