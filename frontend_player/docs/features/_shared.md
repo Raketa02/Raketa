@@ -26,8 +26,11 @@ lifecycle wirings and `useOnForeground`, the app's one answer to _did we just co
 `useOnReturn`, the same question asked of a **screen**: the navigator's focus after a blur, which
 is what a pop is, and which neither `AppState` nor a mount reports.
 **Location is foreground only** — nothing asks for, checks or starts a background one — and
-a fix is **coarsened to about a kilometre the moment it is read**, so the precise reading
-never reaches a store, a screen or a crash report.
+it has **two uses, which the permission prompt names**: the area's fix is **coarsened to about a
+kilometre the moment it is read**, and an attendance tap's precise fix (`readPreciseFix`, bounded
+at `PRECISE_FIX_WITHIN_MS`) is read at that tap and handed straight to its request
+([#658](https://github.com/Raketa02/Raketa/issues/658)) — so neither precise reading ever reaches
+a store, a screen or a crash report.
 
 `shared/lib/http` has **three verbs**: `httpRequest` for JSON, `httpUpload` for one file, and
 `httpGetFromFeaturesHost` for the feature-flag datafile (below).

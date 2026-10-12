@@ -1069,3 +1069,31 @@ its _Open game_ `onDark`. The details' door on it is **_Add the score_** (`resul
 `add-score`), not _We played_, onto `games`' result screen, which asks nobody. **Nor is it on
 Home's count**: the backend's `845decf0` made a For fun game whose hour has come `needs_you` false,
 so the tab counts it no more — the phone draws the count it is sent and holds no second one.
+
+**Who's here — the details' door at the court, and Home's line for a game somebody didn't come to**
+([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3; the backend's #657).
+`BookedGameResult` hands `games`' result screen the booking's hour and club beside the re-read
+(`BookedFacts`' `startsAt` and `club`): the first half hour is measured from the one, and _You can
+say so only from Bonarka Arena_ names the other. **In the first half hour the details' door is _Who's
+here_** (`resultActOf`'s `whos-here`, through `games`' `tapsAreOpen` at the read's clock) — for a
+Competitive game and a For fun one alike — onto the screen where a player at the club taps who
+isn't here yet and an awaited player says _I'm here_; the read's clock ticks through the half hour
+so the door turns back to _We played_ or _Add the score_ at its end. A game with a score already on
+the table keeps _Confirm the result_: the screen it opens says who's here too. `UncountedReason`
+swaps `NO_SHOW` for `DIDNT_COME`: Home's card and the details' money row say _Somebody didn't come
+· say who was there_ while the read's _needs you_ says a late _I was there_ waits on the reader —
+theirs to say, or somebody else's to confirm — and _Somebody didn't come · no Level moved_
+otherwise (`MoneyLine`'s `didntCome`), and the details' door is **_Say who was there_**
+(`who-was-there`) on the same condition. `onHome` drops no card that needs the reader any more: the
+late claim's day ends half an hour before Home's day after the hour does. The walk is
+`attendance.test.tsx`, with the fake location port placing the phone at the club or away and the
+fake server judging it by distance, as the backend does. **Not seen on a device.**
+
+**Calls made here, open for the product owner**:
+
+- **One door for the late claim's two readers.** Home's read says only that it needs the reader, not
+  whether they didn't come or somebody else's claim waits on them, so the door is _Say who was
+  there_ for both and the screen says which.
+- **Home's line says _Somebody didn't come_ to the player who didn't**, for the same reason.
+- **_Who's here_ replaces _We played_ for the whole first half hour**, though the grid is on the
+  screen it opens: at 16:10 the court, not the score, is what a player is there for.

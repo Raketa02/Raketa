@@ -435,16 +435,19 @@ glossary's terms; what follows is only how this client draws them.
 
 ### The result argument
 
-Eight client-only concepts, all of them in `features/games/`. The domain terms — Game, Result,
-Score, Proposal, Correction, Counter, Acceptance, Standing — are the **root glossary's** and are
-not restated here; what follows is only what this client had to invent to draw them.
+Nine client-only concepts, all of them in `features/games/`. The domain terms — Game, Result,
+Score, Proposal, Correction, Counter, Acceptance, Standing, and attendance's Isn't here yet,
+Arrival, Came late, Didn't come and I was there — are the **root glossary's** and are not restated
+here; what follows is only what this client had to invent to draw them.
 
 - **Result argument** — **the screen states** a game can be in for the player reading it,
   folded in `domain/resultArgument.ts` from the standing, the scores on the table, the game's
   kind and which seat is theirs: awaiting an entry (_How did it go?_) · our score stands ·
   their score stands (_Is that right?_) · both stand · confirmed · disputed · played · no score ·
-  for fun (_Played_, which asks nothing) · unscored, the endings a booked game adds (called off,
-  started short, the no-show report's two), plus _not yours_ for a link that has gone stale.
+  for fun (_Played_, which asks nothing), the endings a booked game adds (called off, started
+  short) and its two at the court (not here yet, didn't come —
+  [#658](https://github.com/Raketa02/Raketa/issues/658)), plus _not yours_ for a link that has
+  gone stale.
   **An agreement is not one of them** since #654: _That's right_ settles at once, so the next
   read is confirmed ([#656](https://github.com/Raketa02/Raketa/issues/656)). It is what
   decides whether a screen offers a **correction** or a **counter** — the same request and
@@ -456,6 +459,17 @@ not restated here; what follows is only what this client had to invent to draw t
   Correction, Counter and Acceptance. Also avoid "the result state" (there are two
   clocks and neither is a state machine), and naming a screen after the act, since one route
   takes three.
+- **The attendance block** — _Who's here_, then _Who was there_: the rows `attendanceBlock` folds
+  in `domain/attendance.ts` for a booked game's reader
+  ([#658](https://github.com/Raketa02/Raketa/issues/658)) — a tap about each other player in the
+  first half hour (_isn't here yet_, or _is here_ about somebody awaited), a late claim to confirm
+  afterwards, and _came late_ said beside whoever did. **The reader's own act is not a row**: _I'm
+  here_ and _I was there_ are pinned, as the score's send is. The **first half hour** is the one
+  window measured on this side — the booking's `startsAt` plus 30 minutes against `read_at`
+  (`tapsAreOpen`), because nothing on the wire carries it before somebody is tapped; every outcome
+  is the backend's fold. _Avoid_: "check-in" (removed, ADR-0195 §4), and "marking" or "reporting"
+  somebody — #560's no-show report, which this replaced: nobody marks anybody, a tap only says they
+  aren't here yet, and their arrival lifts it.
 - **The score draft** — the grid as it is being typed: one entry per row it draws, each cell
   holding what somebody put there as characters. Characters rather than numbers because `''` and
   `'0'` are different facts — losing a set to love is a result and an unfilled cell is not — and
@@ -764,12 +778,19 @@ it.
   screen must say so and offer the settings page instead of a control that would prompt. _Avoid_: a boolean, "permission denied" for
   both — collapsing them either re-prompts forever or sends an unasked player to Settings.
 - **Location fix** — one position from the device: latitude, longitude, and the accuracy
-  the device itself reports, `null` where it reports none. Read **in the foreground,
-  once**. _Avoid_: "tracking", "background location" — a stream of positions collected
+  the device itself reports, `null` where it reports none. Read **in the foreground, one
+  fix at a time, for two uses and no third** — the permission text names both (ADR-0195 §3).
+  _Avoid_: "tracking", "background location" — a stream of positions collected
   while the player is elsewhere is a movement trail, a different privacy class from the
-  one anybody agreed to, and nothing in this app asks for it. A fix is **coarsened the
-  moment it is read** — the Location area is what the app keeps, and the fix itself does
-  not outlive the function that asked for it. **Read again on a cold start**, and on a return
+  one anybody agreed to, and nothing in this app asks for it. **The area**: a fix is
+  **coarsened the moment it is read** — the Location area is what the app keeps, and the
+  fix itself does not outlive the function that asked for it. **An attendance tap**
+  ([#658](https://github.com/Raketa02/Raketa/issues/658)): when a player says who's at a
+  game, one **precise** fix (`readPreciseFix`) is read at that tap and sent with it, so the
+  backend can tell whether they are at the club — never coarsened, because 300 m is the
+  question, and never kept: it is read inside the write and handed to the request, the
+  backend keeps only _at the club_, and neither the phone nor the server stores the
+  position. **Read again on a cold start**, and on a return
   from the background when the last read is more than a day old, through the same port and
   with the same accuracy, by `useLocationRefresh` — never merely on foreground, and never
   with a prompt: the refresh checks the permission and asks nobody, so a revoked one leaves

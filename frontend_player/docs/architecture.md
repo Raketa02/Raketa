@@ -848,6 +848,11 @@ sessions.
   absence. A background permission is not a stronger foreground one — it collects a
   movement trail while the player is doing something else, which is a different privacy
   class from the one they were asked about.
+- **Location has two uses, and the prompt names both** (ADR-0195 §3): the area a player plays
+  in — one `Balanced` fix, coarsened the moment it is read — and, when they say who's at a
+  game, one precise fix (`readPreciseFix`) read at that tap, sent with it and kept by nobody
+  ([#658](https://github.com/Raketa02/Raketa/issues/658), `games`' `useAttendance`). Neither is
+  a subscription; a third use is a change to the permission text first.
 - **Platform files over scattered branches.** `share.ios.ts` / `share.android.ts` when
   behaviour genuinely differs; not `if (Platform.OS === 'ios')` in twenty components.
 - **Permissions are requested just in time**, when the user understands why, through one
