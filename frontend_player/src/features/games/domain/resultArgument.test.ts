@@ -8,12 +8,13 @@
  * and a counter are the same request and a completely different screen, and a player who spent
  * their side's one turn fixing a typo is the failure the ticket names first.
  *
- * Two of these describe acts the **aggregate refuses**, and they are here rather than left to a
- * red note after the tap: a correction once the other side has answered, and a second agreement
- * from a side that has already made one.
+ * One of these describes an act the **aggregate refuses**, and it is here rather than left to a
+ * red note after the tap: a second score from a side that has already put one up. **An agreement
+ * is not a state any more** (#654): *That's right* settles the result at once, so the next read is
+ * `CONFIRMED` and there is no grace in which anything is still offered.
  */
 
-import type { Acceptance, Game, NoShowReport, StandingProposal } from './game';
+import type { Game, NoShowReport, StandingProposal } from './game';
 import { actsOffered, editingAct, resultArgument } from './resultArgument';
 
 const ME = 'me-1111-4444-8888-000000000001';
@@ -30,7 +31,6 @@ const PROPOSAL: StandingProposal = {
     ],
   },
   answerBy: '2026-09-06T20:12:00Z',
-  settlesAt: '2026-09-06T02:12:00Z',
 };
 
 /** The other side's answer to it — one digit apart, which is what a real disagreement is. */
@@ -44,13 +44,7 @@ const COUNTER: StandingProposal = {
     ],
   },
   answerBy: '2026-09-06T22:00:00Z',
-  settlesAt: '2026-09-06T04:00:00Z',
 };
-
-/** An agreement with one side's score. The accepter is always the other side. */
-function agreed(withSide: 'A' | 'B', by: string = OPPONENT): Acceptance {
-  return { agreedBy: by, ofSide: withSide, settlesAt: '2026-09-06T02:12:00Z' };
-}
 
 function game(over: Partial<Game> = {}): Game {
   return {
@@ -112,10 +106,14 @@ describe('before anybody has said it happened', () => {
     expect(actsOffered(resultArgument(game(), OPPONENT))).toEqual(['enter']);
   });
 
-  it('offers nothing once the window has closed — the game is a ghost and stays one', () => {
-    const argument = resultArgument(game({ standing: 'NEVER_PLAYED' }), ME);
+  /**
+   * **A full game nobody recorded was played** (#655; ADR-0195 §2): the window closing is an end,
+   * not a ghost, and there is nothing left to do about it.
+   */
+  it('offers nothing once the window has closed — played, with no score', () => {
+    const argument = resultArgument(game({ standing: 'PLAYED_NO_SCORE' }), ME);
 
-    expect(argument).toEqual({ kind: 'never-played' });
+    expect(argument).toEqual({ kind: 'played-no-score' });
     expect(actsOffered(argument)).toEqual([]);
   });
 
@@ -216,8 +214,25 @@ describe('one score on the table', () => {
       // Whoever put it up, in the reader's own terms — the person *That's right* settles a
       // score against, which this screen could not name until a seat carried a handle (#319).
       by: { kind: 'player', name: 'me_' },
+      // Either of the two on this side may answer, so *if neither of you answers* is the sentence.
+      withPartner: true,
     });
     expect(actsOffered(argument)).toEqual(['accept', 'counter']);
+  });
+
+  it('asks the reader alone across a singles net', () => {
+    const singles = game({
+      ...played,
+      seats: [
+        { side: 'A', playerId: ME, name: 'me_' },
+        { side: 'B', playerId: OPPONENT, name: 'tomek.p' },
+      ],
+    });
+
+    expect(resultArgument(singles, OPPONENT)).toMatchObject({
+      kind: 'theirs-stands',
+      withPartner: false,
+    });
   });
 });
 
@@ -235,15 +250,27 @@ describe('two scores on the table', () => {
    * ([#317](https://github.com/Raketa02/Raketa/issues/317)).
    */
   it('hands both scores over, the reader’s own named as theirs', () => {
-    expect(resultArgument(game(arguing), ME)).toEqual({
+    expect(resultArgument(game(arguing), ME)).toMatchObject({
       kind: 'both-stand',
       ours: PROPOSAL,
       theirs: COUNTER,
     });
-    expect(resultArgument(game(arguing), OPPONENT)).toEqual({
+    expect(resultArgument(game(arguing), OPPONENT)).toMatchObject({
       kind: 'both-stand',
       ours: COUNTER,
       theirs: PROPOSAL,
+    });
+  });
+
+  /**
+   * **Two scores nobody agrees with settle when the later one's day is up** (#654): the closer
+   * score where both name the same winner, disputed where they don't — the same instant to both
+   * sides, whichever score is theirs.
+   */
+  it('settles when the later of the two scores’ days is up', () => {
+    expect(resultArgument(game(arguing), ME)).toMatchObject({ settlesAt: COUNTER.answerBy });
+    expect(resultArgument(game(arguing), OPPONENT)).toMatchObject({
+      settlesAt: COUNTER.answerBy,
     });
   });
 
@@ -255,78 +282,14 @@ describe('two scores on the table', () => {
   it('offers an agreement with the other side’s score, and never a second one of our own', () => {
     expect(actsOffered(resultArgument(game(arguing), ME))).toEqual(['accept']);
   });
-
-  /**
-   * **Neither side may counter here, and that is the aggregate's cap rather than a rule about
-   * agreements**: each side gets one score and both have used theirs, so `state_result` refuses
-   * with `your_side_has_already_answered`. It is the one thing the `agreed` state has to know
-   * how many scores are up to say correctly.
-   */
-  it('offers nothing once somebody has agreed, whichever score they agreed with', () => {
-    for (const side of ['A', 'B'] as const) {
-      const argument = resultArgument(game({ ...arguing, acceptance: agreed(side) }), ME);
-
-      expect(argument).toMatchObject({ kind: 'agreed', ours: PROPOSAL, theirs: COUNTER });
-      expect(actsOffered(argument)).toEqual([]);
-    }
-  });
-});
-
-describe('an agreement waiting out its grace', () => {
-  const played = {
-    standing: 'AWAITING_ANSWER',
-    playedAt: '2026-09-04T20:12:00Z',
-    entryClosesAt: undefined,
-  } as const;
-
-  /**
-   * `state_result` refuses this with `the_other_side_has_answered`, so the control was a
-   * promise the server breaks — and the screen kept offering it because nothing on the response
-   * said an answer had arrived.
-   */
-  it('takes the correction away from the side whose score was agreed with', () => {
-    const argument = resultArgument(
-      game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') }),
-      ME,
-    );
-
-    expect(argument).toEqual({
-      kind: 'agreed',
-      agreement: {
-        with: 'ours',
-        by: { kind: 'player', name: 'tomek.p' },
-        settlesAt: '2026-09-06T02:12:00Z',
-      },
-      ours: PROPOSAL,
-    });
-    expect(actsOffered(argument)).toEqual([]);
-    expect(editingAct(argument)).toBeUndefined();
-  });
-
-  /**
-   * Inside the grace a disagreement still wins — that is the rule the grace exists for — so the
-   * one control that survives an agreement is the one that beats it.
-   */
-  it('leaves the disagreement standing on the side that agreed, and takes the agreement away', () => {
-    const argument = resultArgument(
-      game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') }),
-      OPPONENT,
-    );
-
-    expect(argument).toEqual({
-      kind: 'agreed',
-      // Read by the opponent, who is the one who agreed: *You agreed with their score*, which
-      // is the same fact from the other end and a different sentence.
-      agreement: { with: 'theirs', by: { kind: 'you' }, settlesAt: '2026-09-06T02:12:00Z' },
-      theirs: PROPOSAL,
-    });
-    expect(actsOffered(argument)).toEqual(['counter']);
-    expect(editingAct(argument)).toBe('counter');
-  });
 });
 
 describe('the ends', () => {
-  it('confirms with the agreed score and what it says about you', () => {
+  /**
+   * **However it settled** — a *That's right*, silence, or the closer of two scores naming the same
+   * winner (#654): the wire does not say which, so neither does the argument.
+   */
+  it('confirms with the score that stands and what it says about you', () => {
     const argument = resultArgument(
       game({
         standing: 'CONFIRMED',
@@ -341,6 +304,20 @@ describe('the ends', () => {
     expect(actsOffered(argument)).toEqual([]);
   });
 
+  /**
+   * **Two scores naming different winners** (#654; ADR-0195 §5): no Level moves, nobody decides who
+   * won, and there is nothing left to do — neither score travels any more.
+   */
+  it('ends disputed, with nothing to offer', () => {
+    const argument = resultArgument(
+      game({ standing: 'DISPUTED', playedAt: '2026-09-04T20:12:00Z' }),
+      ME,
+    );
+
+    expect(argument).toEqual({ kind: 'disputed' });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+
   it('leaves an unscored game alone — a settled result is final, and so is no result', () => {
     const argument = resultArgument(
       game({ standing: 'UNSCORED', playedAt: '2026-09-04T20:12:00Z' }),
@@ -349,6 +326,60 @@ describe('the ends', () => {
 
     expect(argument).toEqual({ kind: 'unscored' });
     expect(actsOffered(argument)).toEqual([]);
+  });
+});
+
+/**
+ * **For fun asks nothing** (#654; the Games & Fill in mechanics §15.2): it reads *Played*, and a
+ * score can be added that stands the moment it is put up — nobody answers it, so there is no
+ * standing proposal and no waiting arm.
+ */
+describe('a For fun game', () => {
+  const forFun = { kind: 'FRIENDLY' } as const;
+
+  it('reads played with nothing on it, and still takes a score', () => {
+    const argument = resultArgument(game(forFun), ME);
+
+    expect(argument).toEqual({ kind: 'for-fun', seatOpen: false });
+    expect(actsOffered(argument)).toEqual(['enter']);
+    expect(editingAct(argument)).toBe('enter');
+  });
+
+  it('reads played with its score once one is up, and asks nothing more', () => {
+    const argument = resultArgument(
+      game({
+        ...forFun,
+        standing: 'CONFIRMED',
+        playedAt: '2026-09-04T20:12:00Z',
+        entryClosesAt: undefined,
+        score: PROPOSAL.score,
+        outcome: 'WIN',
+      }),
+      OPPONENT,
+    );
+
+    expect(argument).toEqual({
+      kind: 'for-fun',
+      score: PROPOSAL.score,
+      outcome: 'WIN',
+      seatOpen: false,
+    });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+
+  it('takes no score while a seat somebody left is open', () => {
+    const short = game({
+      ...forFun,
+      seats: [{ side: 'A', playerId: ME, name: 'me_' }, { side: 'B' }],
+    });
+
+    expect(actsOffered(resultArgument(short, ME))).toEqual([]);
+  });
+
+  it('ends as any full game nobody recorded does', () => {
+    expect(resultArgument(game({ ...forFun, standing: 'PLAYED_NO_SCORE' }), ME)).toEqual({
+      kind: 'played-no-score',
+    });
   });
 });
 

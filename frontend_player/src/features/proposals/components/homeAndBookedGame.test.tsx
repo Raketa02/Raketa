@@ -245,6 +245,8 @@ describe('Home — a booked game’s card (A8)', () => {
     ['NEEDS_RESULT', { needs_you: true }, undefined],
     ['CONFIRM_THE_RESULT', {}, undefined],
     ['COUNTED', {}, undefined],
+    // A full game nobody recorded (#655) — *Never played* and its line are gone.
+    ['PLAYED_NO_SCORE', { money: takenMoney() }, undefined],
     [
       'UNCOUNTED',
       { uncounted_reason: 'SEAT_EMPTY', money: takenMoney() },
@@ -298,6 +300,19 @@ describe('Home — a booked game’s card (A8)', () => {
       expect(within(drawn).getByText(line)).toBeTruthy();
     }
   });
+
+  /** **For fun asks nothing** (#656): its card reads *Played* after the hour — scored or not. */
+  it.each<Wire['HomeStatus']>(['NEEDS_RESULT', 'COUNTED'])(
+    'draws a For fun game’s %s as Played',
+    async (status) => {
+      stubHomeGames(transport, [homeGame({ kind: 'FOR_FUN', status, money: takenMoney() })]);
+      await launchSignedIn();
+
+      const drawn = await card();
+      expect(within(drawn).getByText(HOME.status.PLAYED)).toBeTruthy();
+      expect(within(drawn).queryByText(HOME.status[status])).toBeNull();
+    },
+  );
 
   it('names no court on a game waiting for the club, which has no Game yet', async () => {
     stubHomeGames(transport, [
@@ -864,6 +879,40 @@ describe('a booked game’s details (A4.1)', () => {
     expect(await screen.findByText('Send this score')).toBeTruthy();
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+  });
+
+  /**
+   * **A full game nobody recorded reads Played · no score** (#655, #656) — on the details' tag and
+   * its second line, with no door to a result nobody is asked for.
+   */
+  it('says Played · no score on a full game nobody recorded, and asks for nothing', async () => {
+    await openDetails(bookingDetails({ status: 'PLAYED_NO_SCORE', money: takenMoney() }));
+
+    expect(await screen.findByRole('header', { name: 'Played · no score' })).toBeTruthy();
+    expect(screen.getByText('Padel · played · no score')).toBeTruthy();
+    expect(screen.queryByText(/Never played|never played/)).toBeNull();
+    expect(screen.queryByRole('button', { name: DETAILS.resultAct['we-played'] })).toBeNull();
+  });
+
+  /**
+   * **For fun asks nothing** (#656): after its hour a For fun game reads *Played*, not *Needs result*,
+   * and its door adds a score if anybody wants to — onto the result screen, which asks nobody.
+   */
+  it('reads a For fun game Played after its hour, with a score to add if you like', async () => {
+    stubGames(transport, [bookedGameOnTheList({ kind: 'FRIENDLY' })], HOME_READ_AT);
+    await openDetails(bookingDetails({ kind: 'FOR_FUN', status: 'NEEDS_RESULT', needs_you: true }));
+
+    expect(await screen.findByRole('header', { name: 'Played' })).toBeTruthy();
+    expect(screen.getByText('Padel · played')).toBeTruthy();
+    expect(screen.queryByText(/Needs result|needs result/)).toBeNull();
+    expect(screen.queryByRole('button', { name: DETAILS.resultAct['we-played'] })).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: DETAILS.resultAct['add-score'] }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/result`));
+    expect(await screen.findByText('Send this score')).toBeTruthy();
+    expect(screen.getByText('Played')).toBeTruthy();
+    expect(screen.queryByText('How did it go?')).toBeNull();
   });
 
   it('offers no result act before the hour', async () => {

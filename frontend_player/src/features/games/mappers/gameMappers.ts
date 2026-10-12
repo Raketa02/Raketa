@@ -17,9 +17,7 @@
  *   arrive without a redesign that would ship a new client anyway — `wireVocabulary.ts` fails
  *   the build first. A **score** whose side is unreadable goes the same way, for a sharper
  *   reason than a seat's: dropping one of two would leave a lone proposal on screen, which is a
- *   different story about the same game told with no hedge in it. So does an **agreement**
- *   whose side is unreadable — it names the score it settles, and one that names nothing settles
- *   nothing.
+ *   different story about the same game told with no hedge in it.
  *
  * ## `null` is *this response said nothing*, and it collapses to absent
  *
@@ -38,17 +36,9 @@
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 
-import type {
-  Acceptance,
-  Game,
-  GameSeat,
-  NoShowReport,
-  Score,
-  StandingProposal,
-} from '../domain/game';
+import type { Game, GameSeat, NoShowReport, Score, StandingProposal } from '../domain/game';
 import type { GameKind, GameSide, GameStanding, Outcome } from '../domain/vocabulary';
 
-type AcceptanceSchema = components['schemas']['AcceptanceSchema'];
 type GameListResponse = components['schemas']['GameListResponse'];
 type GameSchema = components['schemas']['GameSchema'];
 type NoShowSchema = components['schemas']['NoShowSchema'];
@@ -60,10 +50,11 @@ type StateResultRequest = components['schemas']['StateResultRequest'];
 
 const STANDINGS: Readonly<Record<GameStanding, true>> = {
   AWAITING_ENTRY: true,
-  NEVER_PLAYED: true,
+  PLAYED_NO_SCORE: true,
   AWAITING_ANSWER: true,
   CONFIRMED: true,
   UNSCORED: true,
+  DISPUTED: true,
   CALLED_OFF: true,
   STARTED_SHORT: true,
   NO_SHOW_REPORTED: true,
@@ -124,23 +115,7 @@ function toStandingProposal(wire: StandingProposalSchema): StandingProposal | un
     proposedBy: wire.proposed_by,
     score: toScore(wire.score),
     answerBy: wire.answer_by,
-    settlesAt: wire.settles_at,
   };
-}
-
-/**
- * An agreement, or nothing when the side whose score it settles is not one this build can read.
- *
- * **Three of the wire's four fields**, on the rule {@link toStandingProposal} already follows:
- * what a screen reads and nothing else. `agreed_by` is read now that a seat carries a handle to
- * name it with; `agreed_at` still is not, because it answers *when did they answer* for screens
- * that never have to ask.
- */
-function toAcceptance(wire: AcceptanceSchema): Acceptance | undefined {
-  const ofSide = member(SIDES, wire.of_side);
-  return ofSide === undefined
-    ? undefined
-    : { agreedBy: wire.agreed_by, ofSide, settlesAt: wire.settles_at };
 }
 
 /** A no-show report, every `null` an absent field — a lost name, a report nobody disputed. */
@@ -164,12 +139,6 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
 
   const proposals = wire.proposals.map(toStandingProposal);
   if (proposals.some((proposal) => proposal === undefined)) return undefined;
-
-  // The two absences do not collapse into one here, unlike everywhere else in this file: `null`
-  // is *this response carried no agreement*, and `undefined` back from the mapper is an
-  // agreement naming a side with no place on this court, which takes the game with it.
-  const acceptance = wire.acceptance == null ? undefined : toAcceptance(wire.acceptance);
-  if (wire.acceptance != null && acceptance === undefined) return undefined;
 
   return {
     gameId: wire.game_id,
@@ -195,7 +164,6 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     score: wire.score == null ? undefined : toScore(wire.score),
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
     proposals: proposals.filter((one): one is StandingProposal => one !== undefined),
-    acceptance,
     noShows: wire.no_shows.map(toNoShowReport),
     readAt,
   };

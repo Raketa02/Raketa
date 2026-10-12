@@ -8,19 +8,20 @@
  * different news, and *"a player will spend an attempt fixing a typo"* unless the difference is
  * visible before the tap.
  *
- * Eight states, folded from the standing, the scores on the table, whether anybody has agreed,
- * and which seat is yours.
+ * Folded from the standing, the scores on the table, the game's kind and which seat is yours.
  *
  * | Standing | On the table | The screen |
  * | --- | --- | --- |
- * | `AWAITING_ENTRY` | — | the entry, and when it stops being sayable |
- * | `NEVER_PLAYED` | — | a ghost: nothing to do, and nobody marked for it |
- * | `CALLED_OFF` | — | the fourth end (ADR-0163): somebody ended it — a departure or a press, and the screen says who (ADR-0172) — and nobody is marked for it |
- * | `AWAITING_ANSWER` | your score | free correction, and the hour silence agrees |
- * | `AWAITING_ANSWER` | their score | agree, or disagree **with a score** |
- * | `AWAITING_ANSWER` | both scores | both of them, and the agreement that ends the argument |
- * | `AWAITING_ANSWER` | an agreement | who agreed, when it settles, and what is left to do |
- * | `CONFIRMED` | — | the agreed score, and what it said about you |
+ * | `AWAITING_ENTRY` | — | *How did it go?*: the entry, and when it stops being sayable |
+ * | `AWAITING_ENTRY`, For fun | — | *Played*, and a score may be added — nobody is asked (#654) |
+ * | `PLAYED_NO_SCORE` | — | a full game nobody recorded: played, for everybody (#655) |
+ * | `CALLED_OFF` | — | the fourth end (ADR-0163): who left, or the hour (ADR-0172, ADR-0175) |
+ * | `AWAITING_ANSWER` | your score | free correction, and when silence makes it the result |
+ * | `AWAITING_ANSWER` | their score | *Is that right?*: agree, or disagree **with a score** |
+ * | `AWAITING_ANSWER` | both scores | both of them, the agreement, and when they settle without one |
+ * | `CONFIRMED` | — | the score that stands, and what it said about you |
+ * | `CONFIRMED`, For fun | — | *Played*, with its score |
+ * | `DISPUTED` | — | two scores named different winners: no Level moved (#654) |
  * | `UNSCORED` | — | an evening, not evidence |
  * | `STARTED_SHORT` | — | a booked game whose hour came with a seat open: no result |
  * | `NO_SHOW_REPORTED` | a report | who was marked as not coming, and the dispute for them (#560) |
@@ -34,32 +35,28 @@
  * spelling ([#317](https://github.com/Raketa02/Raketa/issues/317)) — so the standing had to tell
  * them apart, and now it only says the argument is still live at all.
  *
- * ## An agreement is a **state**, and not a flag riding on three of them
+ * ## An agreement is not a state — it is the end
  *
- * Somebody agreeing settles nothing for the length of the grace, and the standing goes on
- * reading `AWAITING_ANSWER` throughout — but everything a screen says about the game changes:
- * two of the acts stop being legal, and **both were being offered because nothing on the wire
- * said anybody had answered.** A correction is refused with `the_other_side_has_answered`, and a
- * second agreement from the same side with `the_result_is_already_accepted`.
+ * Until #654 an agreement waited six hours from the score before it settled anything, and a
+ * counter inside that grace won, so it was an arm of its own (`agreed`) that took the correction
+ * away and left the disagreement standing. **That's right now settles the result at once and
+ * closes the game** (ADR-0195 §5): the next read is `CONFIRMED`, the wire carries no agreement to
+ * fold, and the arm, its clock and its two refusals went with the grace.
  *
- * So it is `agreed`, an arm of its own, rather than an optional field on the three states it can
- * happen in. Carried as a field it was a state every renderer had to remember to pre-empt its
- * own `switch` with, and the one that forgot said something false — which is how the body came
- * to promise *anybody can still put a different score up* over a disagreement in which each side
- * had already used its one turn.
+ * ## For fun asks nothing
  *
- * It **keeps both proposals**, because what is left to do is read off them and off nothing else:
- * inside the grace a counter still beats an agreement — the whole reason the grace exists — and
- * the side that may make one is the side that has not spoken. Two scores standing means neither
- * can, which is the aggregate's one-per-side cap rather than a rule invented here.
+ * A friendly's first score is its result the moment it is put up, and nobody is asked to agree
+ * (#654). So it never reaches the three waiting arms, and before and after its score it is one
+ * arm, `for-fun`, which reads *Played* — the score, when there is one, is a fact about the evening
+ * rather than the end of a question. Its other ends are everybody's.
  *
- * ## Somebody did each of these things, and two of the eight say who
+ * ## Somebody did each of these things, and two of them say who
  *
  * A seat carries a handle ([ADR-0141](../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)),
- * so *the other side put a score up* and *the other side agreed* can name the person they are
- * about. Two states and no more: an entry, a correction and a disagreement are acts of a
- * **side** — a score is one side's claim and the aggregate caps it per side, not per person —
- * and naming whoever typed one would attribute a side's turn to a teammate.
+ * so *the other side put a score up* can name the person it is about, and so can a departure that
+ * called a game off. An entry, a correction and a disagreement are acts of a **side** — a score
+ * is one side's claim and the aggregate caps it per side, not per person — and naming whoever
+ * typed one would attribute a side's turn to a teammate.
  *
  * Whoever a sentence names is a {@link NamedPlayer} rather than a string, on
  * `challengePresentation`'s precedent: *you*, *a player*, and a seat the record can no longer
@@ -68,14 +65,13 @@
  *
  * **Nothing here folds a standing.** The standing is *derived from the record and the clock*,
  * and `read_at` is what every duration on these screens is measured from; a client that decided
- * *the grace has passed* would be the second place that answer lives.
+ * *the answer window has passed* would be the second place that answer lives.
  */
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
 import {
   openSeats,
-  type Acceptance,
   type CalledOffBy,
   type Game,
   type NoShowReport,
@@ -126,23 +122,6 @@ export interface ScoresOnTable {
   readonly theirs?: StandingProposal;
 }
 
-/**
- * An agreement that has not settled yet, **from the reader's side of the net**.
- *
- * The wire names the side whose score was agreed with. Which of the two people that is news for
- * is the same join this file does for a proposal, done once here so that no screen repeats it:
- * *they agreed with your score* and *your side agreed with theirs* are the two sentences, and
- * they are opposite halves of one fact.
- */
-export interface StandingAgreement {
-  /** Whose score was agreed with. */
-  readonly with: 'ours' | 'theirs';
-  /** Who agreed. **You**, on your own side's agreement in a doubles game, or the person. */
-  readonly by: NamedPlayer;
-  /** When it becomes the result — measured from the **score**, never from anybody's tap. */
-  readonly settlesAt: string;
-}
-
 export type ResultArgument =
   /** No seat of this game is yours. The client half of `you_were_not_on_this_court`. */
   | { readonly kind: 'not-yours' }
@@ -163,9 +142,10 @@ export type ResultArgument =
    * result on a short court and a game with a gap in it is not one anybody could have played.
    */
   | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string; readonly seatOpen: boolean }
-  | { readonly kind: 'never-played' }
+  /** A full game nobody recorded, whose entry window has closed: played, with no score (#655). */
+  | { readonly kind: 'played-no-score' }
   /**
-   * Called off while a seat was open — an ending like the ghost's with nobody marked.
+   * Called off while a seat was open — an ending with nobody marked for it.
    * **`ending` says how it ended, and by whom where anybody's act did**
    * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
    * §4, §8; [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
@@ -174,24 +154,47 @@ export type ResultArgument =
    */
   | { readonly kind: 'called-off'; readonly ending: CalledOffEnding }
   | { readonly kind: 'ours-stands'; readonly proposal: StandingProposal }
-  /** `by` is whoever on the other side put it up — the one person a screen here can name. */
+  /**
+   * *Is that right?* — `by` is whoever on the other side put it up, the one person a screen here
+   * can name. **`withPartner` is whether somebody else on the reader's side may answer it too**: in
+   * doubles one *That's right* from either of the two settles it, so silence is *neither of you*
+   * answering, and in singles it is the reader alone.
+   */
   | {
       readonly kind: 'theirs-stands';
       readonly proposal: StandingProposal;
       readonly by: NamedPlayer;
+      readonly withPartner: boolean;
     }
+  /**
+   * Both sides put a score up, neither has agreed with the other's, and **`settlesAt` is when the
+   * game settles without an agreement**: the later of the two scores' days (#654) — counted with
+   * the closer score if both name the same winner, disputed if they name different ones.
+   */
   | {
       readonly kind: 'both-stand';
       readonly ours: StandingProposal;
       readonly theirs: StandingProposal;
+      readonly settlesAt: string;
     }
   /**
-   * Somebody has agreed and the grace has not run out. **It replaces whichever of the three it
-   * happened in**, and keeps their scores: what is still legal here is read off which of them
-   * stands, and every sentence off which side agreed.
+   * The score that stands — agreed with, settled by silence, or the closer of two naming one winner.
+   * The wire does not say which, so nothing drawn from this arm may either.
    */
-  | ({ readonly kind: 'agreed'; readonly agreement: StandingAgreement } & ScoresOnTable)
   | { readonly kind: 'confirmed'; readonly score?: Score; readonly outcome?: Outcome }
+  /** Two scores named different winners, and neither side agreed with the other's (#654). */
+  | { readonly kind: 'disputed' }
+  /**
+   * **A For fun game, which asks nothing** (#654): played, before a score and after one. `score` and
+   * `outcome` are there once somebody has put a score up, which stands at once; until then one may
+   * be added, except across an open seat — `seatOpen`, the entry arm's rule.
+   */
+  | {
+      readonly kind: 'for-fun';
+      readonly score?: Score;
+      readonly outcome?: Outcome;
+      readonly seatOpen: boolean;
+    }
   | { readonly kind: 'unscored' }
   /** A booked game whose hour came with a seat still open: it takes no result (#544). */
   | { readonly kind: 'started-short' }
@@ -332,19 +335,26 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
 
   if (game.standing === undefined) return { kind: 'unreadable' };
 
+  const seatOpen = openSeats(game.seats).length > 0;
+  // A friendly's score stands the moment it is put up and asks nobody (#654), so before it and
+  // after it the game is one arm. A kind this build cannot read is drawn as a counted game's.
+  const forFun = game.kind === 'FRIENDLY';
+
   switch (game.standing) {
     case 'AWAITING_ENTRY':
-      return {
-        kind: 'awaiting-entry',
-        entryClosesAt: game.entryClosesAt,
-        seatOpen: openSeats(game.seats).length > 0,
-      };
-    case 'NEVER_PLAYED':
-      return { kind: 'never-played' };
+      return forFun
+        ? { kind: 'for-fun', seatOpen }
+        : { kind: 'awaiting-entry', entryClosesAt: game.entryClosesAt, seatOpen };
+    case 'PLAYED_NO_SCORE':
+      return { kind: 'played-no-score' };
     case 'CALLED_OFF':
       return { kind: 'called-off', ending: calledOffEnding(game, playerId) };
     case 'CONFIRMED':
-      return { kind: 'confirmed', score: game.score, outcome: game.outcome };
+      return forFun
+        ? { kind: 'for-fun', score: game.score, outcome: game.outcome, seatOpen }
+        : { kind: 'confirmed', score: game.score, outcome: game.outcome };
+    case 'DISPUTED':
+      return { kind: 'disputed' };
     case 'UNSCORED':
       return { kind: 'unscored' };
     case 'STARTED_SHORT':
@@ -361,25 +371,22 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
     case 'AWAITING_ANSWER': {
       const ours = game.proposals.find((one) => one.side === side);
       const theirs = game.proposals.find((one) => one.side !== side);
-      const agreement = agreementFrom(game, playerId, side);
 
       if (ours === undefined) {
         // An answer awaited with nothing on the table at all — the case the standing's own fold
         // states rather than leaves to a `max()` over an empty sequence, and the aggregate
         // cannot produce it.
         if (theirs === undefined) return { kind: 'unreadable' };
-        return agreement === undefined
-          ? {
-              kind: 'theirs-stands',
-              proposal: theirs,
-              by: whoIs(game, playerId, theirs.proposedBy),
-            }
-          : { kind: 'agreed', agreement, theirs };
+        return {
+          kind: 'theirs-stands',
+          proposal: theirs,
+          by: whoIs(game, playerId, theirs.proposedBy),
+          withPartner: courtSizes(game, side).ours > 1,
+        };
       }
-      if (agreement !== undefined) return { kind: 'agreed', agreement, ours, theirs };
       return theirs === undefined
         ? { kind: 'ours-stands', proposal: ours }
-        : { kind: 'both-stand', ours, theirs };
+        : { kind: 'both-stand', ours, theirs, settlesAt: laterOf(ours.answerBy, theirs.answerBy) };
     }
   }
 }
@@ -413,19 +420,12 @@ function markOf(report: NoShowReport, reader: string, readAt: string): NoShowMar
   return { who: namedFrom(report, reader), disputeBy: report.disputeBy, state };
 }
 
-/** An agreement in the reader's own terms, and `undefined` where none stands. */
-function agreementFrom(
-  game: Game,
-  playerId: string,
-  side: GameSide,
-): StandingAgreement | undefined {
-  const acceptance: Acceptance | undefined = game.acceptance;
-  if (acceptance === undefined) return undefined;
-  return {
-    with: acceptance.ofSide === side ? 'ours' : 'theirs',
-    by: whoIs(game, playerId, acceptance.agreedBy),
-    settlesAt: acceptance.settlesAt,
-  };
+/**
+ * The later of two of the backend's instants — when two scores nobody agreed with settle (#654).
+ * Compared as instants rather than as strings, so a server that spells an offset is still right.
+ */
+function laterOf(one: string, other: string): string {
+  return Date.parse(other) > Date.parse(one) ? other : one;
 }
 
 /**
@@ -442,7 +442,6 @@ export function scoresOnTable(argument: ResultArgument): ScoresOnTable {
     case 'theirs-stands':
       return { theirs: argument.proposal };
     case 'both-stand':
-    case 'agreed':
       return { ours: argument.ours, theirs: argument.theirs };
     default:
       return {};
@@ -457,9 +456,8 @@ export function scoresOnTable(argument: ResultArgument): ScoresOnTable {
  * That is a rule about the state rather than about the screen, so it lives here beside the one
  * that says which controls exist at all.
  *
- * **Read off {@link actsOffered}**, because at most one of the three ever stands beside the
- * agreement — so the two cannot disagree about a state, and the rule that an agreement takes the
- * correction away is written once.
+ * **Read off {@link actsOffered}**, because at most one of the three is ever offered — so the two
+ * cannot disagree about a state.
  */
 export function editingAct(argument: ResultArgument): EditingAct | undefined {
   return actsOffered(argument).find(
@@ -477,33 +475,31 @@ export function editingAct(argument: ResultArgument): EditingAct | undefined {
 export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
   switch (argument.kind) {
     case 'awaiting-entry':
-      // *We played* is withheld while a seat is open (#411 rule 5): the seat stays open until it
-      // is filled, the game is called off, or the window closes into *Never played*.
+      // *We played* is withheld while a seat is open (#411 rule 5): the server refuses a result on
+      // a short court, and a booked game whose hour comes with one open started short.
       return argument.seatOpen ? [] : ['enter'];
+    case 'for-fun':
+      // A score may be added for fun until there is one — it stands at once, so there is never a
+      // second — and on the same court rule as the entry.
+      return argument.score === undefined && !argument.seatOpen ? ['enter'] : [];
     case 'ours-stands':
       return ['correct'];
     case 'theirs-stands':
       return ['accept', 'counter'];
     case 'both-stand':
-      // Either side may agree with the other's, and that is the only end short of the game going
-      // unscored. Never a counter — this side has had its one turn, which is what bounds the
-      // argument to two rounds.
+      // Either side may agree with the other's, which settles it at once. Never a counter — this
+      // side has had its one turn, which is what bounds the argument to two rounds.
       return ['accept'];
-    case 'agreed':
-      // Correcting is refused with `the_other_side_has_answered` and a second agreement with
-      // `the_result_is_already_accepted`, so both controls go. What is left is the disagreement,
-      // and only the side that has not spoken may make one — two scores standing means neither
-      // can, which is the aggregate's cap rather than a rule invented here.
-      return argument.ours === undefined ? ['counter'] : [];
     case 'no-show-reported':
       // *I was there* — the reported player's alone, inside their own day (#560). Nobody else
       // answers a report: the platform does not arbitrate, and a dispute falls the report whole.
       return argument.yours?.state === 'open' ? ['dispute'] : [];
     case 'not-yours':
     case 'unreadable':
-    case 'never-played':
+    case 'played-no-score':
     case 'called-off':
     case 'confirmed':
+    case 'disputed':
     case 'unscored':
     case 'started-short':
     case 'no-show':

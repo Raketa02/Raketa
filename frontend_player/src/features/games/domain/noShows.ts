@@ -5,7 +5,8 @@
  *
  * A row per other player on the court, in its order, and **every row can be marked**: nobody at the
  * club checks anybody in (ADR-0195), so nothing on the court is evidence that somebody came. The
- * rows are offered where the entry is — nobody has said the game happened, the court is whole — and
+ * rows are offered where the entry is — nobody has said the game happened, the court is whole, on a
+ * For fun game as on a counted one — and
  * go on being offered while a report's day runs, so the second player who did not come to a doubles
  * game can be marked after the first. **They go for a player who was marked themselves**: their
  * answer is the dispute, and the backend refuses them a report (`you_were_reported_as_a_no_show`).
@@ -19,7 +20,7 @@
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
 import type { Game } from './game';
-import { resultArgument, whoIs } from './resultArgument';
+import { actsOffered, resultArgument, whoIs } from './resultArgument';
 
 /** One other player on the court, as the *didn't come* block draws them. */
 export interface NoShowRow {
@@ -31,8 +32,10 @@ export interface NoShowRow {
 /** **The rows of the block, or none where it is not drawn.** */
 export function noShowRows(game: Game, reader: string): readonly NoShowRow[] {
   const argument = resultArgument(game, reader);
+  // Wherever a first score may go in — a For fun game's too, which asks nothing about its score but
+  // can still have somebody not come (#654) — and while a report's day runs.
   const offered =
-    (argument.kind === 'awaiting-entry' && !argument.seatOpen) ||
+    actsOffered(argument).includes('enter') ||
     (argument.kind === 'no-show-reported' && argument.yours === undefined);
   if (!offered) return [];
 

@@ -112,6 +112,7 @@ import {
   lineCanRunOut,
   paymentWindowAt,
   resultActOf,
+  shownStatus,
   type BookedGame,
 } from '../domain/home';
 import { gameDayOf } from '../domain/when';
@@ -207,7 +208,8 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const leaving = leavingAt(game, now);
 
   const { rescue } = game;
-  const ink = STATUS_INK[game.status];
+  const status = shownStatus(game);
+  const ink = STATUS_INK[status];
   const seats = courtSeatCount(game.sport);
   const { top, bottom } = rowsOf(game, seats / 2);
   const day = gameDayOf(game.startsAt, now);
@@ -244,7 +246,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           backLabel={COPY.back}
           lead={<OthersFaces people={peopleOn(game)} />}
           title={othersTitle(game)}
-          subline={statusSubline(game.sport, game.status)}
+          subline={statusSubline(game.sport, status)}
           {...(chat === undefined
             ? {}
             : {
@@ -263,7 +265,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           <View style={s.game}>
             <GameGround />
             <View accessible accessibilityRole="header">
-              <CardTag label={statusWord(game.status)} tone="grey" dot={ink} />
+              <CardTag label={statusWord(status)} tone="grey" dot={ink} />
             </View>
 
             <GameTiles

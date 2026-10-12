@@ -64,8 +64,8 @@ export type PaymentRefusal = 'AUTHENTICATION_REQUIRED' | 'DECLINED' | 'TERMS_NEE
  * **What a game on Home is, right now** (the mechanics §14.1; #542, #556) — one status per card,
  * folded by the server at its `read_at` from the booking, its Game's result and the clock. The
  * wire's own spelling, because the copy is keyed by it: *Waiting for the club*, *Waiting for one
- * payment* (#625, #626), *Booked*, *Seat open*, the five result states as today's cards name them,
- * and *Called off*.
+ * payment* (#625, #626), *Booked*, *Seat open*, the five result states — *Played · no score* in
+ * *Never played*'s place since #655 — and *Called off*.
  */
 export type HomeStatus =
   | 'WAITING_FOR_THE_CLUB'
@@ -76,7 +76,8 @@ export type HomeStatus =
   | 'CONFIRM_THE_RESULT'
   | 'COUNTED'
   | 'UNCOUNTED'
-  | 'NEVER_PLAYED'
+  /** Full at its hour, and nobody recorded it before the entry window closed: played (#655). */
+  | 'PLAYED_NO_SCORE'
   | 'CALLED_OFF';
 
 /**

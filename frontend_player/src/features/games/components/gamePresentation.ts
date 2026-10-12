@@ -12,21 +12,25 @@
  *
  * ## Four sentences carry unusual weight, and the ticket names all four
  *
- * - **Silence confirming has to be visible before it happens**, or silence is a trap rather
- *   than a default. So the standing line of a game with a score on the table *always* names the
- *   duration and what happens at the end of it, on the row as well as on the screen — it is not
- *   a footnote a player reaches by tapping.
- * - **An unscored game reads as an evening, not an error.** Nothing about it is a failure and
- *   nobody is at fault: it says these people played, it is in the count of how much somebody has
- *   played, and it moves nobody's Level. There is no red, no *could not*, and no *unfortunately*.
+ * - **When silence makes a score the result is said before it happens**, and so is that saying
+ *   nothing costs nothing ([#656](https://github.com/Raketa02/Raketa/issues/656), F-RESULT-35.1).
+ *   The standing line of a game with a score on the table names **the moment** — *at 20:30 on
+ *   Wednesday*, on the club's clock — and the clock block under it the duration. It is not a
+ *   footnote a player reaches by tapping. The screen said *there is no penalty* over a silence
+ *   that cost a miss until ADR-0195 made silence free; it says *saying nothing costs nothing*
+ *   now, and talks about penalties nowhere.
+ * - **A game with no score reads as an evening, not an error** — a full game nobody recorded
+ *   (*Played · no score*, #655), two scores naming different winners (*Disputed*, #654), and the
+ *   game everybody marked said they came to. Each says why it took no score, over the facts all
+ *   three share: these people played, it is in the count of how much somebody has played, and
+ *   it moves nobody's Level. There is no red, no *could not*, and no *unfortunately*.
  * - **A correction is not a second proposal**, and the screen says which one it is offering
  *   before the tap. *"A player will spend an attempt fixing a typo"* is the failure this whole
  *   deck exists to prevent.
- * - **Nobody is penalised for any of it** — ADR-0049, carried whole by
- *   [ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §5.
- *   Not the silent loser, not the four who all went home, not the
- *   side whose counter went unaccepted. Every sentence here that could be read as a reproach
- *   says so out loud.
+ * - **Nobody is penalised for not answering** — ADR-0049, carried whole by
+ *   [ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §5
+ *   and made true of the record by ADR-0195. Not the silent loser, not the four who all went
+ *   home. Every sentence here that could be read as a reproach says so out loud.
  *
  * ## A person is named where a person acted, and a side where a side did
  *
@@ -49,8 +53,10 @@
  * than a first draft: **propose a modification** is the product's word for a counter and *dispute*
  * is not, the entry's send is *send this score*, and a correction is *change what I entered* —
  * which says, in the control's own name, the thing the ticket says a player must not have to
- * learn the hard way. What is rewritten is only what the model moved: there are no absolute
- * times here because this platform has no calendar. The prototype's names came **back** — a seat
+ * learn the hard way. What is rewritten is only what the model moved. The prototype quoted an
+ * absolute time beside every duration and this deck once deleted it, because nothing had a
+ * calendar; **a booked game has one**, so the moment a score settles is named again, on the club's
+ * clock (#656). The prototype's names came **back** — a seat
  * carries a handle now — under the rule two sections up, which is narrower than the prototype's:
  * a person where a person acted, a side where a side did.
  *
@@ -62,13 +68,15 @@
  * which is the same fact in the register a listener gets.
  */
 
+import { platformClock, platformDay, weekdayOf } from '@/shared/date/platformZone';
 import { counted } from '@/shared/formatting/counted';
 import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { sentenceList } from '@/shared/formatting/sentenceList';
+import { dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { Game, GameSeat } from '../domain/game';
+import type { Game, GameSeat, Score } from '../domain/game';
 import { sidesForReader } from '../domain/pairing';
 import { othersOn, type CalledOffEnding, type ResultArgument } from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
@@ -86,9 +94,9 @@ import { durationLeft, durationSince } from '@/shared/formatting/durations';
  * The eyebrow at the head of the screen: the sport, **who you played**, and how
  * long ago it was arranged.
  *
- * **A duration and never a date**, because this platform has no calendar to print one against —
- * the grid is *an ordinary week*, a `Window` is a label on a search rather than a proposed time,
- * and there is no date picker anywhere in this app. That duration used to be the *only* thing
+ * **A duration and never a date** — written when nothing in this app had a calendar to print one
+ * against. A booked game has one now, and its details print the day; this eyebrow keeps the
+ * duration because it is the one line every game state carries alike. That duration used to be the *only* thing
  * telling two padel games apart, which made three games in a week three near-identical rows
  * ([#319](https://github.com/Raketa02/Raketa/issues/319)); the handles are what tell them apart
  * now, and the duration goes on saying which was longest ago.
@@ -175,41 +183,36 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
       return OUT_OF_DATE_GAP;
     case 'awaiting-entry':
       return argument.entryClosesAt === undefined
-        ? 'Nobody has said this one happened yet.'
-        : `Nobody has said this one happened yet — ${durationLeft(argument.entryClosesAt, readAt)} left to say you played.`;
-    case 'never-played':
-      return 'Nobody said this one happened before the window closed, so nothing was recorded.';
+        ? 'No score yet.'
+        : `No score yet — ${durationLeft(argument.entryClosesAt, readAt)} left to put one up.`;
+    case 'for-fun':
+      // Nothing is asked, so the line is a statement: no question mark, no deadline (#654).
+      return argument.score === undefined
+        ? 'Played for fun. Nobody is asked anything.'
+        : 'Played for fun.';
+    case 'played-no-score':
+      return 'Nobody put a score up, so it counts as played.';
     case 'called-off':
       // The gloss on the card's tag and the standing line alike — one word for this ending
       // everywhere (ADR-0172 §8). Who and how are the heading's and the body's, not this line's.
       return 'Called off';
     case 'ours-stands':
-      return `Your side's score is on the table. If nobody answers within ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
+      return `Your side’s score is up. If nobody answers, it becomes the result${settlesWhen(argument.proposal.answerBy, readAt)}.`;
     case 'theirs-stands':
-      // **The one sentence on these screens that was addressed to nobody.** *That's right*
-      // settles a score against a person, and until a seat carried a handle the screen could
-      // not say which (#319).
-      return `${playerName(argument.by)} put a score up. If you say nothing for ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
+      // **The moment, and who it waits on** (#656): *if neither he nor Paula answers, 6–4 6–3
+      // becomes the result at 20:30 on Wednesday*. The person who put it up is named, because
+      // *That's right* settles a score against a person (#319).
+      return `${playerName(argument.by)} put a score up. If ${argument.withPartner ? 'neither of you answers' : 'you don’t answer'}, it becomes the result${settlesWhen(argument.proposal.answerBy, readAt)}.`;
     case 'both-stand':
-      return "Both sides wrote a score down and they don't match.";
-    case 'agreed': {
-      // The side it is news for is the only thing that differs, and it is the whole of why this
-      // is on the standing line: the line is **the row's sentence too**, so the person whose
-      // score was agreed with reads it without opening anything.
-      // *You* on your own tap, and your partner by name on theirs — the second is the whole
-      // reason the accepter travels: in a doubles game *your side agreed* is news about somebody
-      // the reader did not watch do it.
-      const agreed = playerName(argument.agreement.by);
-      const who =
-        argument.agreement.with === 'ours'
-          ? `${agreed} agreed with your score.`
-          : `${agreed} agreed with their score.`;
-      return `${who} It becomes the result in ${durationLeft(argument.agreement.settlesAt, readAt)}.`;
-    }
+      return `Both sides put a score up, and they don’t match. Unless one side agrees with the other’s, it settles${settlesWhen(argument.settlesAt, readAt)}.`;
     case 'confirmed':
-      return 'Agreed.';
+      // Agreed with, settled by silence, or the closer of two scores naming one winner (#654) — the
+      // wire does not say which, so the line says what is true of all three.
+      return 'Counted.';
+    case 'disputed':
+      return 'The two scores named different winners.';
     case 'unscored':
-      return 'Nobody agreed a score.';
+      return 'No score was taken.';
     case 'started-short':
       return SEAT_WAS_EMPTY;
     case 'no-show-reported': {
@@ -237,6 +240,22 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
 }
 
 /**
+ * *at 20:30 on Wednesday* · *at 20:30 today* — **the moment a score settles, on the club's clock**,
+ * with the space that joins it to the sentence (#656). A booked game has a calendar, so the moment
+ * is named as the story names it rather than only counted down to; it is the platform zone's clock
+ * that every booked hour in this app is drawn on, so two people on one court read one moment.
+ * **An instant that cannot be read drops the clause** — the clock block under the line still
+ * carries the duration — rather than inventing a day.
+ */
+function settlesWhen(at: string, readAt: string): string {
+  const day = platformDay(at);
+  const clock = platformClock(at);
+  const weekday = day === undefined ? undefined : weekdayOf(day);
+  if (day === undefined || clock === undefined || weekday === undefined) return '';
+  return day === platformDay(readAt) ? ` at ${clock} today` : ` at ${clock} on ${dayName(weekday)}`;
+}
+
+/**
  * **Everybody else's report, one line each** (#560) — what became of it: their day still running,
  * and how long it has; said they were there; or the day over and nobody said so. The reader's own
  * report is the standing line's and the clock's, so it is not repeated here.
@@ -260,12 +279,6 @@ export function reportLines(argument: ResultArgument, readAt: string): readonly 
 const SEAT_WAS_EMPTY = 'A seat was empty.';
 
 /**
- * **The ghost's body** — nothing anybody is measured on moves (ADR-0163 §3) — said of a game that
- * never happened.
- */
-const NOBODY_IS_MARKED_FOR_THAT = 'Nobody is marked for that. Not you, not any of the others.';
-
-/**
  * **The ending block's one heading** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
  * §8, [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
  * §3): both ways a game is called off are a shortage — a departure emptied the court, or the
@@ -277,9 +290,8 @@ export const CALLED_OFF_FOR_LACK_OF_PLAYERS = 'The game was called off for lack 
 
 /**
  * The ending's body: a departure names who left and says the shape of the game it ended; the
- * hour says nobody filled the seat and the same shape. Both end with the ghost's own fact about
- * the strands — the same fact about the same people (ADR-0163 §3), because a call-off is neither
- * an evening nor a game that never happened.
+ * hour says nobody filled the seat and the same shape. Both end with the fact that nobody is
+ * marked for it (ADR-0163 §3), because a call-off is not an evening: nobody played.
  */
 function calledOffBody(ending: CalledOffEnding): string {
   if (ending.how === 'the-hour') {
@@ -295,8 +307,9 @@ function calledOffBody(ending: CalledOffEnding): string {
 }
 
 /**
- * The screen's own title — **variant C's, unchanged**, plus the three states the prototype's
- * five screens did not have to name.
+ * The screen's own title — **variant C's**, plus the states the prototype's five screens did not
+ * have to name. *How did it go?* and *Is that right?* are the two questions §15.2 asks after the
+ * hour, and the For fun game, which asks none, reads *Played* (#656).
  */
 export function resultTitle(argument: ResultArgument): string {
   switch (argument.kind) {
@@ -305,9 +318,11 @@ export function resultTitle(argument: ResultArgument): string {
     case 'unreadable':
       return 'This game';
     case 'awaiting-entry':
-      return 'The score';
-    case 'never-played':
-      return 'It never happened';
+      return 'How did it go?';
+    case 'for-fun':
+      return 'Played';
+    case 'played-no-score':
+      return 'Played · no score';
     case 'called-off':
       return CALLED_OFF_FOR_LACK_OF_PLAYERS;
     case 'ours-stands':
@@ -316,12 +331,10 @@ export function resultTitle(argument: ResultArgument): string {
       return 'Is that right?';
     case 'both-stand':
       return 'Two scores';
-    case 'agreed':
-      // Not *Sent — waiting* and not *Two scores*: both are titles about an open question, and
-      // the question has been answered. What is left is the grace running out.
-      return 'Agreed — settling';
     case 'confirmed':
       return 'The result';
+    case 'disputed':
+      return 'Disputed';
     case 'unscored':
     case 'started-short':
     case 'no-show':
@@ -344,37 +357,37 @@ export function resultTitle(argument: ResultArgument): string {
  * **The clock, as the prototype drew it**: a figure big enough to read at arm's length, and one
  * sentence saying what happens when it runs out.
  *
- * Variant C's own arrangement, and the whole of *silence confirming has to be visible before it
- * happens* — the two sides read the same fact differently on purpose, which is what the
+ * Variant C's own arrangement, and the half of *when silence makes a score the result is said
+ * before it happens* that the standing line does not carry — the two sides read the same fact
+ * differently on purpose, which is what the
  * prototype recorded as the main thing to react to: *"this stands unless you act"* to one side,
  * *"this stands unless they act"* to the other.
  *
  * The prototype quoted an absolute time beside the duration — *"a countdown alone never says
- * WHEN"* — and that clause is **deleted rather than translated**: there is no calendar anywhere
- * in this product and no date picker in this app, so an absolute time would be the first one and
- * it would be this screen inventing it.
+ * WHEN"*. **The standing line above the clock says when** now that a booked game has a calendar
+ * (#656), so the block keeps the duration alone rather than saying the moment twice.
  */
 export function clockLine(argument: ResultArgument, readAt: string): ClockBlock | undefined {
-  // An agreement moves the clock off the answer window and onto the grace, which is a shorter
-  // span measured from a different moment — the **score**, never anybody's tap. Silence has
-  // stopped being the question, so the sentence under the figure stops naming it.
-  if (argument.kind === 'agreed') {
-    return {
-      figure: durationLeft(argument.agreement.settlesAt, readAt),
-      line: 'until this becomes the result. Nothing more is needed from anybody.',
-    };
-  }
-
   if (argument.kind === 'ours-stands') {
     return {
       figure: durationLeft(argument.proposal.answerBy, readAt),
       line: 'left for the other side to answer. If they say nothing, this becomes the result.',
     };
   }
+  // **Silence is free** (ADR-0195): the side being asked reads, at arm's length, that saying
+  // nothing costs nothing — the sentence F-RESULT-35.1 found missing under a silence that cost a
+  // miss.
   if (argument.kind === 'theirs-stands') {
     return {
       figure: durationLeft(argument.proposal.answerBy, readAt),
-      line: 'until this becomes the result. Nobody has to do anything — silence confirms it.',
+      line: 'until this becomes the result if nobody answers. Saying nothing costs nothing.',
+    };
+  }
+  // Two scores settle without an agreement when the later one's day is up (#654).
+  if (argument.kind === 'both-stand') {
+    return {
+      figure: durationLeft(argument.settlesAt, readAt),
+      line: 'until this settles, if neither side agrees with the other’s score.',
     };
   }
   // The marked player's day, at arm's length — what saying nothing does, before it happens (#560).
@@ -384,12 +397,8 @@ export function clockLine(argument: ResultArgument, readAt: string): ClockBlock 
       line: 'left to say you were there. After that the mark stands.',
     };
   }
-  if (argument.kind === 'awaiting-entry' && argument.entryClosesAt !== undefined) {
-    return {
-      figure: durationLeft(argument.entryClosesAt, readAt),
-      line: 'left to say this game happened. After that it is recorded as one that never did.',
-    };
-  }
+  // Nothing else counts down: the entry's window is its standing line's clause, and the entry arm
+  // draws no clock over the grid it is about.
   return undefined;
 }
 
@@ -400,16 +409,16 @@ export interface ClockBlock {
 }
 
 /**
- * What an unscored game **still is** — variant C's fact list, with the two lines the model
- * changed.
+ * What a game with no score **still is** — variant C's fact list, drawn under every ending that
+ * took none: *Played · no score*, *Disputed* and the evening everybody marked said they came to.
  *
  * The prototype named the other side (*"You have now played with Kuba & Ada"*) and stated the
  * kind as a fact (*"It was a counted match, not a friendly"*); the kind is `worthLine`'s and may
  * be absent, and the naming is the **eyebrow's**, two lines above this list on the same screen.
  * A second copy of the court here would be the same fact twice in one view. What is left is the
- * three that are true of every unscored game and read as an account rather than as an apology.
+ * three that are true of every one of them and read as an account rather than as an apology.
  */
-export const UNSCORED_FACTS: readonly string[] = [
+export const EVENING_FACTS: readonly string[] = [
   'It is in your history, and in how much you have played',
   'You have now played with the people who were on this court',
   'It moved nobody’s Level, and nobody lost anything',
@@ -434,37 +443,40 @@ export function resultBody(
       return booked
         ? 'Putting a score in records how this game went. If somebody didn’t come, say so below instead.'
         : 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
-    case 'never-played':
-      return NOBODY_IS_MARKED_FOR_THAT;
-    // The fourth end is drawn as the ghost is (#419 §3): neither an evening nor a game that never
-    // happened, so nothing anybody is measured on moves (ADR-0163) — and the body says the
-    // ghost's own fact, naming the person where a departure ended it (ADR-0172 §8).
+    case 'for-fun':
+      // A score for fun stands as it is put and is put to nobody (#654), so the body says so before
+      // the send — and says nothing once there is one.
+      if (argument.score !== undefined) return undefined;
+      // Across an open seat nothing may go in, so the body offers nothing either (#411 rule 5).
+      return argument.seatOpen
+        ? 'Nobody is asked anything after a game for fun, and no Level moves.'
+        : 'You can add the score if you like, up to a day after the game. It stands as you put it — nobody is asked to agree, and no Level moves.';
+    case 'played-no-score':
+      // #655: a booked, paid, full court is the evidence that the game was played.
+      return 'The court was booked and full, so this counts as a game played for everybody on it — just with no score.';
+    // The fourth end (#419 §3): not an evening, so nothing anybody is measured on moves
+    // (ADR-0163) — and the body names the person where a departure ended it (ADR-0172 §8).
     case 'called-off':
       return calledOffBody(argument.ending);
     case 'ours-stands':
-      return 'You can change what you entered until they answer, and it does not use your side’s one turn up. If they put something else up instead, only an acceptance settles it.';
+      // Corrections end with the entry window, a day after the hour (#654).
+      return 'You can change what you entered until they answer — up to a day after the game — and it doesn’t use your side’s one turn. If they put a different score up instead, either side can still agree with the other’s.';
     case 'theirs-stands':
-      return 'One tap from either of you settles it now. A modification always carries a score of its own — there is no way to just say no — and agreeing is never how you avoid a penalty, because there is none.';
+      // **It settles now, and says so only because it does** (#654): one *That's right* is the
+      // result at once. What silence does is the standing line's and the clock's.
+      return argument.withPartner
+        ? 'If it’s right, one That’s right from either of you makes it the result now. If it isn’t, put the right score up — there is no way to just say no.'
+        : 'If it’s right, That’s right makes it the result now. If it isn’t, put the right score up — there is no way to just say no.';
     case 'both-stand':
-      // **It names the exit rather than stating an ending.** ADR-0137 §4 has always allowed
-      // either side to accept the other's here, and with both scores on the response the screen
-      // can finally offer it — so the sentence promises the control that is drawn under it, and
-      // goes on saying that the other ending costs nobody anything.
-      return 'Raketa doesn’t decide between them. One of you agreeing with the other’s score is the only thing that gives this game a result; if neither of you does it stays unscored, which takes nothing away from anybody. Nobody is marked for a disagreement, on either side.';
-    case 'agreed':
-      // **The one sentence that has to know how many scores are up.** The grace is a window in
-      // which a disagreement still wins, and saying so over a game where each side has already
-      // used its one turn would promise an act `state_result` refuses with
-      // `your_side_has_already_answered` — the same failure the old `both-stand` copy was
-      // written to avoid, one state along. Which side could make one is the screen's business
-      // and not this sentence's: what differs here is only whether anybody can.
-      return argument.ours !== undefined && argument.theirs !== undefined
-        ? 'Both scores stay up until then, and neither side can put another one there — each side gets one, and both have been used. Nobody is marked either way.'
-        : 'Until then, anybody who played can still put a different score up. That window is what stops somebody quick to their phone from closing the door on a player who has not read the score yet. Nobody is marked either way.';
+      // **It names the exit, and both ways it ends without one** (#654): the closer score where
+      // both name the same winner, no Level where they name different ones.
+      return 'Raketa doesn’t decide between them. If one of you agrees with the other’s score, that settles it at once. If nobody does by then: when both scores name the same winner, the closer one counts; when they name different winners, no Level moves.';
+    case 'disputed':
+      return 'Each side said a different side won, and neither agreed with the other’s score in time. Raketa doesn’t decide who won.';
     case 'unscored':
-      // Variant C's own lead, and the register the ticket asks for: *an evening, not evidence*
-      // — an account of what it still is, never an apology for what it is not.
-      return 'Nobody wrote a score down, so this one counted as an evening. Nobody is marked for it.';
+      // Since #654 two scores never end here: it is the booked game everybody marked as not coming
+      // said they came to (#560), until #657 retires the reports.
+      return 'Somebody was marked as not coming and said they were there, so this game took no score. Raketa doesn’t decide who is right, and nobody is marked for it.';
     case 'started-short':
       // The mechanics §14.1: *it cannot take a result … no levels move, and nothing goes on the
       // record of the players who stayed*.
@@ -495,14 +507,106 @@ export function resultBody(
 }
 
 /**
+ * **Whether this screen says what the evening is worth** — where a score is up or stands, or may
+ * still be added for fun, and nowhere it took none: *its result becomes part of your record* over a
+ * game that reads *no Level moved* would be two claims about one evening. Never on the entry
+ * either, whose sentence about what a score records is its body's.
+ */
+export function saysWhatItIsWorth(argument: ResultArgument): boolean {
+  switch (argument.kind) {
+    case 'ours-stands':
+    case 'theirs-stands':
+    case 'both-stand':
+    case 'confirmed':
+    case 'for-fun':
+      return true;
+    case 'not-yours':
+    case 'unreadable':
+    case 'awaiting-entry':
+    case 'played-no-score':
+    case 'called-off':
+    case 'disputed':
+    case 'unscored':
+    case 'started-short':
+    case 'no-show-reported':
+    case 'no-show':
+      return false;
+  }
+}
+
+/**
+ * **Whether this ending is an evening, not evidence** — the endings that took no score and still
+ * count as played (*Played · no score*, *Disputed*, and the evening everybody marked said they came
+ * to), each drawn over {@link EVENING_FACTS}.
+ */
+export function endsAsAnEvening(argument: ResultArgument): boolean {
+  switch (argument.kind) {
+    case 'played-no-score':
+    case 'disputed':
+    case 'unscored':
+      return true;
+    case 'not-yours':
+    case 'unreadable':
+    case 'awaiting-entry':
+    case 'for-fun':
+    case 'called-off':
+    case 'ours-stands':
+    case 'theirs-stands':
+    case 'both-stand':
+    case 'confirmed':
+    case 'started-short':
+    case 'no-show-reported':
+    case 'no-show':
+      return false;
+  }
+}
+
+/**
+ * **The score that stands, what it is called, and what it said about you** — a counted game's
+ * *result*, or a For fun game's *score* once one is up; nothing on every other state, where a score
+ * is on the table rather than standing, or there is none. Either of the two may be absent where the
+ * wire sent none, and the line the screen draws for each is dropped with it.
+ */
+export function settledScore(
+  argument: ResultArgument,
+): { readonly score?: Score; readonly lead: string; readonly outcome?: string } | undefined {
+  switch (argument.kind) {
+    case 'confirmed':
+      return {
+        score: argument.score,
+        lead: SCORE_LEAD.result,
+        outcome: outcomeLine(argument.outcome),
+      };
+    case 'for-fun':
+      return {
+        score: argument.score,
+        lead: SCORE_LEAD.played,
+        outcome: outcomeLine(argument.outcome),
+      };
+    case 'not-yours':
+    case 'unreadable':
+    case 'awaiting-entry':
+    case 'played-no-score':
+    case 'called-off':
+    case 'ours-stands':
+    case 'theirs-stands':
+    case 'both-stand':
+    case 'disputed':
+    case 'unscored':
+    case 'started-short':
+    case 'no-show-reported':
+    case 'no-show':
+      return undefined;
+  }
+}
+
+/**
  * What this evening is worth — **stamped when it was arranged and never derived at the end.**
  *
- * **It says what is counted and not what that will one day move.** *An agreed score moves both
- * sides' Levels* is the thing everybody assumes this sentence says, and it is a promise this
- * build cannot keep: ADR-0137's own Consequences record that *"the rating context has nothing to
- * subscribe to"*, and reading confirmed results forward is [#304](https://github.com/Raketa02/Raketa/issues/304)'s
- * unbuilt work. So the counted line states the fact — it is evidence and it is on your record —
- * and the friendly line keeps its **negative**, which is true whether or not anything reads it.
+ * **It says what is counted, not how far anybody moves.** Levels do move once a counted result
+ * settles (#654: within a minute), and by how much is the forecast's to say before the game, not
+ * this line's after it. So the counted line states the fact — its result is evidence and it is on
+ * your record — and the friendly line keeps its **negative**, which is true whatever reads it.
  *
  * `undefined` when the kind is a code this build cannot read: the clause is dropped and every
  * other sentence on the screen still stands, which is `the-words.md` §3's split applied to a
@@ -511,7 +615,7 @@ export function resultBody(
 export function worthLine(kind: GameKind | undefined): string | undefined {
   if (kind === undefined) return undefined;
   return kind === 'COUNTED'
-    ? 'This one counts, so an agreed score becomes part of your record.'
+    ? 'This one counts, so its result becomes part of your record.'
     : 'This one is a friendly. The score is for the record, and it is not evidence about how anybody plays.';
 }
 
@@ -619,12 +723,11 @@ export function scoreProblemLine(problem: ScoreProblem, sport: Sport): string {
  * The one refusal that is about the **other** side's score rather than about this draft.
  *
  * A counter is pre-loaded with the score it is answering, because a real disagreement is
- * usually one digit — and an unchanged one sent back would be a second proposal that agrees
- * with the first, which leaves the game unscored between two people who agreed. So it is
- * refused here rather than paid for a day later.
+ * usually one digit — and an unchanged one sent back is the same score twice, which settles a day
+ * later what *That's right* settles now (#654). So it is refused here, pointing at the tap.
  */
 export const COUNTER_IS_THEIR_SCORE =
-  'That is the score they put up. Agree with it rather than sending it back — two matching scores nobody accepts still leave the game unscored.';
+  'That’s the score they put up. If it’s right, agree with it instead.';
 
 /** A score in the reader's own order, as words. The drawing names both sides; so does this. */
 export function spokenScore({ score, sport, mine, sides }: ScoreView): string {
@@ -684,7 +787,10 @@ export const CANCEL_LABEL = 'Leave it as it is';
  * the moment there are two of them and one is yours.
  */
 export const SCORE_LEAD = {
-  agreed: 'The agreed score',
+  /** The score that stands — agreed, settled by silence, or the closer of two (#654). */
+  result: 'The result',
+  /** A For fun game's, which nobody was asked to agree with (#654). */
+  played: 'The score',
   ours: 'Your score',
   theirs: 'Their score',
   only: 'The score on the table',

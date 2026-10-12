@@ -35,9 +35,10 @@
  *
  * **One refusal in this feature is not the aggregate's at all**, and it is `sameScore`'s, at the
  * screen: a counter that is byte-for-byte the score it answers. The server takes it, and what it
- * produces is two matching proposals nobody accepts, which is an **unscored game between two
- * people who agreed**. It is refused because the client is the only party that can see it coming
- * — the counter's grid was pre-loaded, so this is a harm the pre-load created.
+ * produces is two matching proposals nobody accepts, which settle a day later on the score
+ * *That's right* would have settled at once (#654). It is refused because the client is the only
+ * party that can see it coming — the counter's grid was pre-loaded, so this is a waste the
+ * pre-load created.
  *
  * **Refusing here does not make the server's refusal dead copy.** The commit re-validates every
  * rule a picker enforced, and re-sending the identical body would fail identically — the same
@@ -261,7 +262,7 @@ export function readScore(draft: ScoreDraft): ScoreReading {
  *
  * One caller and one reason: a counter is pre-loaded with the score it answers, because a real
  * disagreement is usually one digit — and an **unchanged** one sent back is a second proposal
- * that agrees with the first, which leaves the game unscored between two people who agreed.
+ * that agrees with the first, which settles a day later what *That's right* settles now.
  * Comparing set by set rather than by a joined string, because a score is a list of pairs and a
  * string is a rendering of one.
  */

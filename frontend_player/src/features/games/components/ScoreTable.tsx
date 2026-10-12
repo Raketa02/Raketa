@@ -38,7 +38,7 @@ export interface ScoreTableProps {
   /** Which side of the net is the reader's. The flip into `a`/`b` happens here, once. */
   readonly mine: GameSide;
   readonly sides: SpokenSides;
-  /** What this score **is** — *the agreed score*, *the score on the table*. Spoken first. */
+  /** What this score **is** — *the result*, *the score on the table*. Spoken first. */
   readonly lead: string;
   /**
    * Quiet where this score is context rather than the subject — standing beside a score being

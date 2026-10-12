@@ -32,7 +32,7 @@ function wireGame(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   };
 }
 
-/** One side's score on the table, with the two deadlines the screens read off it. */
+/** One side's score on the table, with the deadline the screens read off it. */
 function wireProposal(side: 'A' | 'B'): Wire['StandingProposalSchema'] {
   return {
     side,
@@ -40,7 +40,6 @@ function wireProposal(side: 'A' | 'B'): Wire['StandingProposalSchema'] {
     score: { sets: [{ a: 4, b: 6 }] },
     proposed_at: '2026-09-04T20:12:00Z',
     answer_by: '2026-09-05T20:12:00Z',
-    settles_at: '2026-09-05T02:12:00Z',
   };
 }
 
@@ -58,7 +57,7 @@ describe('one game off the wire', () => {
     expect(game).toMatchObject({ playedAt: undefined, score: undefined, outcome: undefined });
   });
 
-  it('reads the scores on the table whole, deadlines included', () => {
+  it('reads the scores on the table whole, with when silence makes each the result', () => {
     const game = toGame(
       wireGame({
         standing: 'AWAITING_ANSWER',
@@ -74,7 +73,6 @@ describe('one game off the wire', () => {
         proposedBy: 'them',
         score: { sets: [{ a: 4, b: 6 }] },
         answerBy: '2026-09-05T20:12:00Z',
-        settlesAt: '2026-09-05T02:12:00Z',
       },
     ]);
   });
@@ -97,36 +95,19 @@ describe('one game off the wire', () => {
   });
 
   /**
-   * Two of the wire's four acceptance fields, on the rule the proposal already follows: what a
-   * screen reads and nothing else. `agreed_by` is read now that a seat carries a handle to name
-   * it with; `agreed_at` is not, because no screen has to ask when they answered.
+   * **The two ends #654 and #655 added** (ADR-0195 §2, §5): a full game nobody recorded is played,
+   * and two scores naming different winners are disputed. An agreement is never pending any more —
+   * *That's right* settles at once — so nothing on a game says somebody agreed.
    */
-  it('reads an agreement as the side whose score it settles, and when', () => {
-    const game = toGame(
-      wireGame({
-        standing: 'AWAITING_ANSWER',
-        played_at: '2026-09-04T20:12:00Z',
-        proposals: [wireProposal('A'), wireProposal('B')],
-        acceptance: {
-          agreed_by: 'them',
-          of_side: 'A',
-          agreed_at: '2026-09-04T21:00:00Z',
-          settles_at: '2026-09-05T02:12:00Z',
-        },
-      }),
-      READ_AT,
-    );
+  it.each(['PLAYED_NO_SCORE', 'DISPUTED'] as const)(
+    'reads %s as the standing it is',
+    (standing) => {
+      const game = toGame(wireGame({ standing, entry_closes_at: null }), READ_AT);
 
-    expect(game?.acceptance).toEqual({
-      agreedBy: 'them',
-      ofSide: 'A',
-      settlesAt: '2026-09-05T02:12:00Z',
-    });
-  });
-
-  it('leaves an agreement absent when the response carried none', () => {
-    expect(toGame(wireGame({ acceptance: null }), READ_AT)?.acceptance).toBeUndefined();
-  });
+      expect(game?.standing).toBe(standing);
+      expect(game).not.toHaveProperty('acceptance');
+    },
+  );
 });
 
 describe('a code this build has never seen', () => {
@@ -342,28 +323,6 @@ describe('a code this build has never seen', () => {
           played_at: '2026-09-04T20:12:00Z',
           // @ts-expect-error — a third side is the same redesign, one field over.
           proposals: [wireProposal('A'), { ...wireProposal('B'), side: 'C' }],
-        }),
-      ],
-    });
-
-    expect(games).toEqual([]);
-  });
-
-  it('drops a game whose agreement names a side it cannot read', () => {
-    const games = toGames({
-      read_at: READ_AT,
-      games: [
-        wireGame({
-          standing: 'AWAITING_ANSWER',
-          played_at: '2026-09-04T20:12:00Z',
-          proposals: [wireProposal('A')],
-          acceptance: {
-            agreed_by: 'them',
-            // @ts-expect-error — same redesign; an agreement with nobody settles nothing.
-            of_side: 'C',
-            agreed_at: '2026-09-04T21:00:00Z',
-            settles_at: '2026-09-05T02:12:00Z',
-          },
         }),
       ],
     });

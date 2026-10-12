@@ -18,8 +18,9 @@
  * with the draft. Nothing here needs one: a second identical `POST /result` from the proposing
  * side is a **correction to the same score**, which is free and changes nothing but the day the
  * other side has to answer in, and a second acceptance is refused by name with
- * `the_result_is_already_accepted`. The rule is the mechanism, and a key beside it would be the
- * weaker of two — the same argument `challengesApi` makes about the pair rule.
+ * `the_result_is_settled`, because the first settled the result at once (#654). The rule is the
+ * mechanism, and a key beside it would be the weaker of two — the same argument `challengesApi`
+ * makes about the pair rule.
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -71,8 +72,8 @@ export function postResult(gameId: string, body: StateResultRequest): Promise<Ga
 /**
  * *That is what happened.* **From across the net, and one opponent is enough.**
  *
- * It does not settle the result immediately: the grace runs from the score rather than from
- * this tap, so inside it a disagreement still wins.
+ * It settles the result at once and closes the game (#654): the response is the game
+ * `CONFIRMED`, and no different score is taken after it.
  */
 export function postResultAcceptance(gameId: string): Promise<GameSchema> {
   return httpRequest<GameSchema>({

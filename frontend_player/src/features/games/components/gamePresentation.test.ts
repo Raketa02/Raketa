@@ -1,9 +1,13 @@
 /**
  * The copy deck, and the four sentences the ticket says carry unusual weight.
  *
- * What is asserted is **not the wording** — that is what makes a copy deck a copy deck — but the
- * rules the wording has to keep: silence is named before it happens, an unscored game is never
- * an error, a correction is never called a proposal, and nothing anywhere blames anybody.
+ * Mostly what is asserted is **not the wording** — that is what makes a copy deck a copy deck — but
+ * the rules the wording has to keep: when silence makes a score the result is named before it
+ * happens, and that saying nothing costs nothing; a game with no score is never an error; a
+ * correction is never called a proposal; and nothing anywhere blames anybody. **The sentences
+ * #656 settled are the exception, and are held word for word**: the moment silence settles a score,
+ * the titles of the questions and the endings, and *Counted.* — the words the ticket's own
+ * acceptance criteria quote, which is what a story walk reads them against.
  */
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
@@ -15,7 +19,7 @@ import {
   COUNTER_IS_THEIR_SCORE,
   COUNTER_LABEL,
   CORRECT_LABEL,
-  UNSCORED_FACTS,
+  EVENING_FACTS,
   barLabels,
   clockLine,
   courtLine,
@@ -36,6 +40,7 @@ import {
   worthLine,
 } from './gamePresentation';
 
+/** Saturday 5 September, 11:00 in Kraków. */
 const READ_AT = '2026-09-05T09:00:00Z';
 
 const GAME: Game = {
@@ -66,8 +71,8 @@ const PROPOSAL = {
       { a: 6, b: 2 },
     ],
   },
+  // Sunday, 10:00 in Kraków — 23 hours after the read.
   answerBy: '2026-09-06T08:00:00Z',
-  settlesAt: '2026-09-05T15:00:00Z',
 } as const;
 
 /** The other side's answer to it, which is what makes the argument two scores rather than one. */
@@ -80,50 +85,94 @@ const COUNTER = {
       { a: 4, b: 6 },
     ],
   },
+  // Sunday, 12:00 in Kraków — the later of the two, so the moment the disagreement settles.
   answerBy: '2026-09-06T10:00:00Z',
-  settlesAt: '2026-09-05T17:00:00Z',
 } as const;
 
 /** The disagreement, read from the side that put `PROPOSAL` up. */
-const ARGUING: ResultArgument = { kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER };
-
-/** One agreement, as the two sides read it — six hours from `READ_AT`, measured from the score. */
-const AGREED_WITH_OURS: ResultArgument = {
-  kind: 'agreed',
-  agreement: { with: 'ours', by: THEM, settlesAt: '2026-09-05T15:00:00Z' },
+const ARGUING: ResultArgument = {
+  kind: 'both-stand',
   ours: PROPOSAL,
-};
-
-const AGREED_WITH_THEIRS: ResultArgument = {
-  kind: 'agreed',
-  agreement: { with: 'theirs', by: YOU, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: COUNTER,
+  settlesAt: COUNTER.answerBy,
 };
 
-/** The same agreement over a disagreement, where each side has already used its one turn. */
-const AGREED_OVER_BOTH: ResultArgument = { ...AGREED_WITH_OURS, theirs: COUNTER };
+/** *Is that right?*, in doubles and in singles. */
+const ASKED: ResultArgument = {
+  kind: 'theirs-stands',
+  proposal: PROPOSAL,
+  by: THEM,
+  withPartner: true,
+};
+const ASKED_ALONE: ResultArgument = { ...ASKED, withPartner: false };
 
-describe('silence confirming, which has to be visible before it happens', () => {
+describe('when silence makes a score the result, said before it happens', () => {
   /**
-   * The ticket's own words: *"the screen has to say so **before** the clock runs, or silence
-   * becomes a trap rather than a default."* It is in the **standing line**, which is the row's
-   * sentence as well as the screen's, so it cannot be a footnote somebody reaches by tapping.
+   * **The moment, on the club's clock** (#656): *if neither he nor Paula answers, 6–4 6–3 becomes
+   * the result at 20:30 on Wednesday*. It is in the **standing line**, so it is never a footnote
+   * somebody reaches by tapping, and the clock block under it carries the duration.
    */
-  it('names the hour and what happens at the end of it, on the side that put the score up', () => {
-    const line = standingLine({ kind: 'ours-stands', proposal: PROPOSAL }, READ_AT);
-
-    expect(line).toContain('23 hours');
-    expect(line).toContain('stands');
+  it('names the moment on the side that put the score up', () => {
+    expect(standingLine({ kind: 'ours-stands', proposal: PROPOSAL }, READ_AT)).toBe(
+      'Your side’s score is up. If nobody answers, it becomes the result at 10:00 on Sunday.',
+    );
   });
 
-  it('says it to the side that has not answered, which is the side it costs', () => {
-    const line = standingLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT);
-
-    expect(line).toContain('23 hours');
-    expect(line).toContain('stands');
+  it('names it to the side being asked — both of them in doubles, the reader alone in singles', () => {
+    expect(standingLine(ASKED, READ_AT)).toBe(
+      'tomek.p put a score up. If neither of you answers, it becomes the result at 10:00 on Sunday.',
+    );
+    expect(standingLine(ASKED_ALONE, READ_AT)).toBe(
+      'tomek.p put a score up. If you don’t answer, it becomes the result at 10:00 on Sunday.',
+    );
   });
 
-  it('names the entry window too, so a game does not quietly become a ghost', () => {
+  it('says today rather than the day’s name when the moment is on the read’s own day', () => {
+    const today = { ...PROPOSAL, answerBy: '2026-09-05T18:30:00Z' };
+
+    expect(standingLine({ ...ASKED_ALONE, proposal: today }, READ_AT)).toContain('at 20:30 today');
+  });
+
+  it('drops the moment rather than inventing one where it cannot be read', () => {
+    const unreadable = { ...PROPOSAL, answerBy: 'not an instant' };
+
+    expect(standingLine({ kind: 'ours-stands', proposal: unreadable }, READ_AT)).toBe(
+      'Your side’s score is up. If nobody answers, it becomes the result.',
+    );
+  });
+
+  /** **Silence costs nothing** — the sentence the finding was about, said under the clock. */
+  it('says, to the side being asked, that saying nothing costs nothing', () => {
+    expect(clockLine(ASKED, READ_AT)).toEqual({
+      figure: '23 hours',
+      line: 'until this becomes the result if nobody answers. Saying nothing costs nothing.',
+    });
+  });
+
+  /**
+   * F-RESULT-35.1: the screen said *there is no penalty* over a silence that cost a miss. Silence
+   * is free now, and the screen says so in those words rather than talking about penalties.
+   */
+  it('never talks about a penalty, and says a tap settles it now only where it does', () => {
+    const said = [
+      standingLine(ASKED, READ_AT),
+      resultBody(ASKED),
+      clockLine(ASKED, READ_AT)?.line,
+      resultBody(ARGUING),
+      resultBody({ kind: 'ours-stands', proposal: PROPOSAL }),
+    ].join(' ');
+
+    expect(said).not.toMatch(/penalt/i);
+    expect(said).not.toMatch(/settles it now/);
+    expect(resultBody(ASKED)).toContain('makes it the result now');
+  });
+
+  it('says when two scores settle if neither side agrees', () => {
+    expect(standingLine(ARGUING, READ_AT)).toContain('it settles at 12:00 on Sunday');
+    expect(clockLine(ARGUING, READ_AT)?.figure).toBe('25 hours');
+  });
+
+  it('names the entry window too, so the game does not end with nobody having been told', () => {
     const line = standingLine(
       { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
       READ_AT,
@@ -194,37 +243,105 @@ describe('silence confirming, which has to be visible before it happens', () => 
 
   it('drops the clause rather than inventing a deadline when the wire sent none', () => {
     expect(standingLine({ kind: 'awaiting-entry', seatOpen: false }, READ_AT)).toBe(
-      'Nobody has said this one happened yet.',
+      'No score yet.',
     );
+  });
+
+  /** *How did it go?* — the question the hour's end asks a Competitive game's four (§15.2). */
+  it('asks how it went on the entry', () => {
+    expect(resultTitle({ kind: 'awaiting-entry', seatOpen: false })).toBe('How did it go?');
   });
 });
 
-describe('an unscored game reads as an evening, not as an error', () => {
-  const unscored: ResultArgument = { kind: 'unscored' };
+/**
+ * **The endings with no score read as an evening, not as an error** — a full game nobody recorded
+ * (#655), two scores naming different winners (#654), and the game every marked player said they
+ * came to. Each says why there is no score, in plain words, over the facts every one of them shares.
+ */
+describe('a game with no score reads as an evening, not as an error', () => {
+  const endings: readonly ResultArgument[] = [
+    { kind: 'played-no-score' },
+    { kind: 'disputed' },
+    { kind: 'unscored' },
+  ];
 
-  it('says what it still is, and that nobody is marked for it', () => {
-    const body = resultBody(unscored);
-
-    expect(body).toContain('evening');
-    expect(body).toContain('Nobody is marked');
+  it('heads a full game nobody recorded as played, with no score', () => {
+    expect(resultTitle({ kind: 'played-no-score' })).toBe('Played · no score');
+    expect(resultBody({ kind: 'played-no-score' })).toContain('counts as a game played');
   });
 
-  it('lists what it still is, and leaves the naming to the eyebrow above it', () => {
-    expect(UNSCORED_FACTS).toHaveLength(3);
-    expect(UNSCORED_FACTS.join(' ')).toContain('in how much you have played');
-    expect(UNSCORED_FACTS.join(' ')).toContain('nobody lost anything');
+  it('says a disputed game had two winners named, and that nobody decides between them', () => {
+    expect(resultTitle({ kind: 'disputed' })).toBe('Disputed');
+    expect(standingLine({ kind: 'disputed' }, READ_AT)).toBe(
+      'The two scores named different winners.',
+    );
+    expect(resultBody({ kind: 'disputed' })).toContain('doesn’t decide who won');
+  });
+
+  /** The old body said *nobody wrote a score down* — of a game whose two scores had been written. */
+  it('says why the game took no score, and never that nobody wrote one down', () => {
+    for (const ending of endings) {
+      expect(resultBody(ending)).not.toMatch(/wrote a score down/);
+    }
+    expect(resultBody({ kind: 'unscored' })).toContain('said they were there');
+  });
+
+  it('lists what it still is — played, and moving nobody’s Level', () => {
+    expect(EVENING_FACTS).toHaveLength(3);
+    expect(EVENING_FACTS.join(' ')).toContain('in how much you have played');
+    expect(EVENING_FACTS.join(' ')).toContain('moved nobody’s Level');
   });
 
   it('never reads as a failure', () => {
-    const said = `${standingLine(unscored, READ_AT)} ${resultBody(unscored) ?? ''}`;
+    for (const ending of endings) {
+      const said = `${resultTitle(ending)} ${standingLine(ending, READ_AT)} ${resultBody(ending) ?? ''}`;
 
-    expect(said).not.toMatch(/failed|error|sorry|unfortunately|could not|couldn’t/i);
+      expect(said).not.toMatch(/failed|error|sorry|unfortunately|could not|couldn’t|never/i);
+    }
+  });
+});
+
+/**
+ * **For fun asks nothing** (#654; the mechanics §15.2): it reads *Played*, and a score can be
+ * added that stands as it is put — nobody is asked to agree, and no Level moves.
+ */
+describe('a For fun game', () => {
+  it('reads played, before a score and after one', () => {
+    expect(resultTitle({ kind: 'for-fun', seatOpen: false })).toBe('Played');
+    expect(resultTitle({ kind: 'for-fun', score: PROPOSAL.score, seatOpen: false })).toBe('Played');
+  });
+
+  it('says a score may be added, that nobody is asked to agree, and that no Level moves', () => {
+    const body = resultBody({ kind: 'for-fun', seatOpen: false }) ?? '';
+
+    expect(body).toContain('nobody is asked to agree');
+    expect(body).toContain('no Level moves');
+    // Until when — the entry window's day after the game, the same last day a correction has.
+    expect(body).toContain('up to a day after the game');
+    expect(standingLine({ kind: 'for-fun', seatOpen: false }, READ_AT)).not.toMatch(/\?/);
+  });
+
+  it('offers no score across an open seat, and says so by not offering one', () => {
+    expect(resultBody({ kind: 'for-fun', seatOpen: true })).not.toContain('add the score');
+  });
+
+  it('asks nothing once its score is up, and has no clock', () => {
+    const scored = { kind: 'for-fun', score: PROPOSAL.score, seatOpen: false } as const;
+
+    expect(resultBody(scored)).toBeUndefined();
+    expect(clockLine(scored, READ_AT)).toBeUndefined();
+    expect(clockLine({ kind: 'for-fun', seatOpen: false }, READ_AT)).toBeUndefined();
   });
 });
 
 describe('nobody is penalised, which is a sentence and not an omission', () => {
-  it('says so on the game that never happened', () => {
-    expect(resultBody({ kind: 'never-played' })).toContain('Nobody is marked');
+  /**
+   * *Never played* said *Nobody is marked for that* over a record that marked all four (#656), so
+   * its ending says what the game **is** — played — and leaves the record to the record.
+   */
+  it('says a full game nobody recorded was played, and nothing about marks', () => {
+    expect(resultBody({ kind: 'played-no-score' })).toContain('played for everybody');
+    expect(resultBody({ kind: 'played-no-score' })).not.toContain('marked');
   });
 
   /**
@@ -237,22 +354,17 @@ describe('nobody is penalised, which is a sentence and not an omission', () => {
     expect(resultBody({ kind: 'called-off', ending })).toContain('Nobody is marked');
   });
 
-  it('says so on the disagreement, on both sides of it', () => {
-    expect(resultBody(ARGUING)).toContain('Nobody is marked');
-  });
-
   it('says so where agreeing might otherwise look like the safe move', () => {
-    expect(resultBody({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM })).toContain(
-      'there is none',
-    );
+    expect(clockLine(ASKED, READ_AT)?.line).toContain('Saying nothing costs nothing');
   });
 });
 
 describe('a correction is not a second proposal, and the words never call it one', () => {
-  it('says it does not use the side’s one turn up', () => {
+  it('says it does not use the side’s one turn, and that it has a last day', () => {
     const body = resultBody({ kind: 'ours-stands', proposal: PROPOSAL });
 
-    expect(body).toContain('does not use your side’s one turn up');
+    expect(body).toContain('doesn’t use your side’s one turn');
+    expect(body).toContain('a day after the game');
   });
 
   /**
@@ -274,39 +386,48 @@ describe('the clock, which is how silence is made visible', () => {
    * thing to react to: *this stands unless you act* to one of them, *this stands unless they
    * act* to the other.
    */
-  it('tells the waiting side they are waiting, and the asked side that silence confirms', () => {
+  it('tells the waiting side they are waiting, and the asked side that silence is free', () => {
     expect(clockLine({ kind: 'ours-stands', proposal: PROPOSAL }, READ_AT)).toEqual({
       figure: '23 hours',
       line: 'left for the other side to answer. If they say nothing, this becomes the result.',
     });
-    expect(
-      clockLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT)?.line,
-    ).toContain('silence confirms it');
+    expect(clockLine(ASKED, READ_AT)?.line).toContain('Saying nothing costs nothing');
   });
 
-  it('runs on the entry window too, so a game does not quietly become a ghost', () => {
-    expect(
-      clockLine(
-        { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
-        READ_AT,
-      )?.figure,
-    ).toBe('3 days');
-  });
-
-  /**
-   * The prototype quoted an absolute time beside the duration — *"a countdown alone never says
-   * WHEN"*. It is deleted rather than translated: this platform has no calendar, and an absolute
-   * time here would be the first one in the app.
-   */
-  it('quotes no clock time and no date, because there is no calendar to print one against', () => {
-    const clock = clockLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT);
+  /** The standing line names the moment; the clock is the duration under it, never both twice. */
+  it('draws the duration, and leaves the moment to the line above it', () => {
+    const clock = clockLine(ASKED, READ_AT);
 
     expect(`${clock?.figure ?? ''} ${clock?.line ?? ''}`).not.toMatch(/\d{1,2}:\d{2}|Sunday/);
   });
 
-  it('has nothing to say about a game that has ended', () => {
+  it('has nothing to say about a game that has ended, or one nobody has scored yet', () => {
     expect(clockLine({ kind: 'unscored' }, READ_AT)).toBeUndefined();
     expect(clockLine({ kind: 'confirmed' }, READ_AT)).toBeUndefined();
+    expect(clockLine({ kind: 'disputed' }, READ_AT)).toBeUndefined();
+    expect(clockLine({ kind: 'played-no-score' }, READ_AT)).toBeUndefined();
+    expect(
+      clockLine(
+        { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
+        READ_AT,
+      ),
+    ).toBeUndefined();
+  });
+});
+
+/**
+ * **However a result settled, it reads counted** (#654): an agreement, silence and the closer of two
+ * scores naming one winner all end `CONFIRMED`, and the wire does not say which — so nothing calls
+ * the score *agreed*.
+ */
+describe('a confirmed result', () => {
+  it('reads counted, never agreed', () => {
+    const confirmed = { kind: 'confirmed', score: PROPOSAL.score } as const;
+
+    expect(standingLine(confirmed, READ_AT)).toBe('Counted.');
+    expect(`${standingLine(confirmed, READ_AT)} ${worthLine('COUNTED') ?? ''}`).not.toMatch(
+      /agreed/i,
+    );
   });
 });
 
@@ -351,8 +472,7 @@ describe('what the grid declines, said to a player', () => {
   });
 
   it('tells somebody to agree rather than to send the same score back', () => {
-    expect(COUNTER_IS_THEIR_SCORE).toContain('Agree with it');
-    expect(COUNTER_IS_THEIR_SCORE).toContain('unscored');
+    expect(COUNTER_IS_THEIR_SCORE).toContain('agree with it');
   });
 });
 
@@ -373,72 +493,18 @@ describe('a disagreement names its way out, and never only its ending', () => {
    * The paragraph used to state the ending and promise no control, because the wire returned
    * neither score and *"the client could offer the act only by asking somebody to agree with a
    * score it cannot show them"* ([#317](https://github.com/Raketa02/Raketa/issues/317)). Both
-   * scores travel now, so it names the exit — and goes on saying the other ending is free.
+   * scores travel, so it names the exit — and since #654, what happens if nobody takes it.
    */
-  it('names the agreement that ends it, and keeps going unscored costless', () => {
-    const body = resultBody(ARGUING);
+  it('names the agreement that ends it at once, and the two ways it settles without one', () => {
+    const body = resultBody(ARGUING) ?? '';
 
-    expect(body).toContain('agreeing with the other’s score');
-    expect(body).toContain('unscored');
-    expect(body).toContain('Nobody is marked');
+    expect(body).toContain('agrees with the other’s score, that settles it at once');
+    expect(body).toContain('the closer one counts');
+    expect(body).toContain('no Level moves');
   });
 
   it('still refuses to pick between them, which is the thing the platform does not do', () => {
     expect(resultBody(ARGUING)).toContain('doesn’t decide between them');
-  });
-});
-
-describe('an agreement, which the proposing side could not see at all', () => {
-  /**
-   * The side that put the score up was being told *if nobody answers within N, this stands*
-   * for the whole grace after somebody already had. It is the standing line rather than a note
-   * because the standing line is **the row's sentence too**, so the news reaches Now.
-   */
-  it('tells the proposing side their score was agreed, instead of waiting on silence', () => {
-    const line = standingLine(AGREED_WITH_OURS, READ_AT);
-
-    expect(line).toContain('agreed with your score');
-    expect(line).toContain('6 hours');
-    expect(line).not.toContain('nobody answers');
-  });
-
-  it('tells the side that agreed the same fact from their end', () => {
-    const line = standingLine(AGREED_WITH_THEIRS, READ_AT);
-
-    expect(line).toContain('You agreed with their score');
-    expect(line).toContain('6 hours');
-  });
-
-  /**
-   * The grace runs from the **score** and the answer window from the same moment, so the two
-   * are different spans: a clock still counting the answer window would be counting a question
-   * nobody is being asked any more.
-   */
-  it('moves the clock off the answer window and onto the grace', () => {
-    const clock = clockLine(AGREED_WITH_OURS, READ_AT);
-
-    expect(clock?.figure).toBe('6 hours');
-    expect(clock?.line).not.toContain('silence');
-  });
-
-  /** Inside the grace nothing has settled, and the body is that rule rather than a repetition. */
-  it('says a different score can still go up, which is what the wait is for', () => {
-    expect(resultBody(AGREED_WITH_OURS)).toContain('can still put a different score up');
-    expect(resultBody(AGREED_WITH_THEIRS)).toContain('can still put a different score up');
-  });
-
-  /**
-   * **The one sentence that has to count the scores.** Over a disagreement each side has already
-   * used its one turn, so promising a different score could still go up would promise an act
-   * `state_result` refuses with `your_side_has_already_answered` — the same failure the old
-   * `both-stand` copy was written to avoid, one state along.
-   */
-  it('never promises a score nobody may send, over an argument already down to one exit', () => {
-    const body = resultBody(AGREED_OVER_BOTH);
-
-    expect(body).not.toContain('can still put a different score up');
-    expect(body).toContain('each side gets one');
-    expect(body).toContain('Nobody is marked');
   });
 });
 
@@ -529,14 +595,7 @@ describe('who a sentence names, and who it deliberately does not', () => {
    * screen could not say which — the second of #319's two costs.
    */
   it('names whoever on the other side put the score up', () => {
-    const line = standingLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT);
-
-    expect(line).toContain('tomek.p put a score up');
-  });
-
-  it('names the person who agreed, and says You where that person is the reader', () => {
-    expect(standingLine(AGREED_WITH_OURS, READ_AT)).toContain('tomek.p agreed with your score');
-    expect(standingLine(AGREED_WITH_THEIRS, READ_AT)).toContain('You agreed with their score');
+    expect(standingLine(ASKED, READ_AT)).toContain('tomek.p put a score up');
   });
 
   /**

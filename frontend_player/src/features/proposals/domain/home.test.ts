@@ -17,6 +17,7 @@ import {
   paymentWindowAt,
   resultActOf,
   shareAt,
+  shownStatus,
   stakeOnTheDetails,
   type BookedMoney,
   type HomeGame,
@@ -442,7 +443,7 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     'CONFIRM_THE_RESULT',
     'COUNTED',
     'UNCOUNTED',
-    'NEVER_PLAYED',
+    'PLAYED_NO_SCORE',
   ])('draws no money line on %s — the result states are as today', (status) => {
     expect(moneyLineOf(game({ status }), BEFORE_CUT_OFF)).toBeUndefined();
   });
@@ -462,7 +463,7 @@ describe('onHome — how long an ended game keeps its card', () => {
     expect(onHome(game({ status }), hourEnds + 30 * ENDED_HOME_SHELF_LIFE_MS)).toBe(true);
   });
 
-  it.each<HomeStatus>(['COUNTED', 'UNCOUNTED', 'NEVER_PLAYED', 'CALLED_OFF'])(
+  it.each<HomeStatus>(['COUNTED', 'UNCOUNTED', 'PLAYED_NO_SCORE', 'CALLED_OFF'])(
     'keeps an ended %s card for a day after its hour, and not a moment more',
     (status) => {
       expect(onHome(game({ status }), hourEnds + ENDED_HOME_SHELF_LIFE_MS - 1)).toBe(true);
@@ -663,7 +664,7 @@ describe('chatIsOpen — the room lives its own life once booked, and closes as 
     // 48 hours after *we played*: a counted game's room can outlive the result by a day or two.
     ['COUNTED', true],
     ['UNCOUNTED', true],
-    ['NEVER_PLAYED', true],
+    ['PLAYED_NO_SCORE', true],
     ['CALLED_OFF', false],
   ])('%s → %s', (status, open) => {
     expect(chatIsOpen({ status })).toBe(open);
@@ -750,6 +751,12 @@ describe('resultActOf — the result, reached from the details as today', () => 
     expect(resultActOf(game({ status: 'CONFIRM_THE_RESULT' }))).toBe('confirm');
   });
 
+  /** **For fun asks nothing** (#656): the door is to add a score if you like, not to say you played. */
+  it('offers a For fun game a score to add, and nothing once it has one', () => {
+    expect(resultActOf(game({ kind: 'forFun', status: 'NEEDS_RESULT' }))).toBe('add-score');
+    expect(resultActOf(game({ kind: 'forFun', status: 'COUNTED' }))).toBeUndefined();
+  });
+
   /** The marked player's day to dispute it (#560) — the read's *needs you*, and theirs alone. */
   it('opens the dispute to the player marked as not coming, while it needs them', () => {
     const noShow = { status: 'UNCOUNTED', uncountedReason: 'NO_SHOW' } as const;
@@ -763,10 +770,27 @@ describe('resultActOf — the result, reached from the details as today', () => 
     'SEAT_OPEN',
     'COUNTED',
     'UNCOUNTED',
-    'NEVER_PLAYED',
+    'PLAYED_NO_SCORE',
     'CALLED_OFF',
   ])('offers nothing on %s', (status) => {
     expect(resultActOf(game({ status }))).toBeUndefined();
+  });
+});
+
+/**
+ * **What a booked game's tag says** (#656): the wire's status, except that a For fun game after its
+ * hour reads *Played* — it asks nobody for a result, and a score on it counts nothing.
+ */
+describe('shownStatus — a For fun game reads Played', () => {
+  it.each<HomeStatus>(['NEEDS_RESULT', 'COUNTED'])('reads a For fun %s as Played', (status) => {
+    expect(shownStatus({ kind: 'forFun', status })).toBe('PLAYED');
+  });
+
+  it('leaves every other status as the wire says it — a Competitive game’s, and a For fun ending', () => {
+    expect(shownStatus({ kind: 'competitive', status: 'NEEDS_RESULT' })).toBe('NEEDS_RESULT');
+    expect(shownStatus({ kind: 'competitive', status: 'COUNTED' })).toBe('COUNTED');
+    expect(shownStatus({ kind: 'forFun', status: 'PLAYED_NO_SCORE' })).toBe('PLAYED_NO_SCORE');
+    expect(shownStatus({ kind: 'forFun', status: 'BOOKED' })).toBe('BOOKED');
   });
 });
 

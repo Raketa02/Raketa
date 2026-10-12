@@ -8,16 +8,16 @@
  * a cost against a card, and Now carries a **list** here. What the route buys is what the
  * prototype said only it could buy — room to name both sides of every score, room to show a
  * counter and the score it answers **side by side**, and room for the consequence as a sentence
- * rather than a fact line, which is the whole of *silence confirming has to be visible before it
- * happens*.
+ * rather than a fact line, which is the whole of *when silence makes a score the result is said
+ * before it happens* (#656).
  *
  * **The layout is that variant's, and so is most of the copy**: the clock block, the *still on
- * the table* / *yours* pair over the counter's grid, the two-button footer, and the fact list an
- * unscored evening ends on. What is rewritten is only what the model moved — there are no
- * absolute times, because this platform has no calendar. Names came back with the handle on a
- * seat, under `gamePresentation`'s rule: a person where a person acted, a side where a side did.
+ * the table* / *yours* pair over the counter's grid, the two-button footer, and the fact list a
+ * game with no score ends on. What is rewritten is only what the model moved. Names came back
+ * with the handle on a seat, under `gamePresentation`'s rule: a person where a person acted, a
+ * side where a side did.
  *
- * ## One screen, seven states, and the state is derived
+ * ## One screen, every state, and the state is derived
  *
  * `domain/resultArgument.ts` decides which; nothing here reads a standing directly. That matters
  * most at the two states that look alike and are not: **a correction and a counter are the same
@@ -65,8 +65,15 @@
  *
  * A standing is folded from the record and the clock, so the only client that can be right about
  * what a game becomes is one that asks. And neither act carries a deadline the player chose — a
- * proposal's day starts whenever it lands, and an acceptance's grace runs from the score — so
+ * proposal's day starts whenever it lands, and an agreement settles whenever it lands (#654) — so
  * both take the app's queue, and the sentence beside a paused control says it will resume.
+ *
+ * ## For fun asks nothing, and a score may still go in
+ *
+ * A friendly reads *Played* before its score and after it ([#656](https://github.com/Raketa02/Raketa/issues/656)):
+ * nobody is asked to agree, so there is no *Is that right?*, no clock and nothing pinned once a
+ * score is up. Until one is, the grid is the screen under that heading, as on the entry, because
+ * the one way here is a door named *Add the score*.
  *
  * ## The plan arms are a slot, and this screen knows nothing about what fills it
  *
@@ -194,17 +201,19 @@ import {
   SCORE_LEAD,
   SENDING_LABEL,
   STILL_ON_THE_TABLE,
-  UNSCORED_FACTS,
+  EVENING_FACTS,
   YOURS,
   clockLine,
   courtLine,
+  endsAsAnEvening,
   formatEyebrow,
   gameEyebrow,
-  outcomeLine,
   reportLines,
   resultBody,
   resultTitle,
+  saysWhatItIsWorth,
   scoreProblemLine,
+  settledScore,
   sideLabels,
   standingLine,
   submitLabel,
@@ -416,7 +425,7 @@ function Argument({
    * drawn; where it opened over the plan there is, so `Leave it as it is` puts it back — which is
    * the rule this screen already applies to a correction and a counter.
    */
-  const gridIsTheScreen = entering && entryLead === 'the-score';
+  const gridIsTheScreen = entering && (entryLead === 'the-score' || argument.kind === 'for-fun');
   const open = draft ?? (gridIsTheScreen ? emptyDraft(game.sport) : undefined);
   // The two scores on the table, and every control hangs off one of them rather than off the
   // state's name: an agreement is with `theirs`, a correction is of `ours`, and a counter
@@ -442,8 +451,8 @@ function Argument({
       return;
     }
     // The one refusal that is about the other side's score rather than this draft. A counter
-    // that agrees with what it answers is a second proposal nobody will accept, and it ends the
-    // game unscored between two people who agreed.
+    // that agrees with what it answers is the same score twice, which settles a day later what
+    // *That's right* settles now (#654).
     if (
       act === 'counter' &&
       theirScore !== undefined &&
@@ -480,9 +489,10 @@ function Argument({
    * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.3), and
    * the checklist is inside the slot. That is a statement about **where one sentence is printed**
    * and not about what fills the slot: this screen still holds no plan, and what it is avoiding is
-   * printing `worthLine` twice in one view.
+   * printing `worthLine` twice in one view. **And it is said only where a score is up or stands**:
+   * over an ending that took none it would be a second claim about the same evening.
    */
-  const worth = entryArm ? undefined : worthLine(game.kind);
+  const worth = saysWhatItIsWorth(argument) ? worthLine(game.kind) : undefined;
   /**
    * **The plan lead's two doors are in the scroll while the grid is closed**, and three things
    * follow from that one state: nothing is pinned, the doors are drawn, and the sentence about
@@ -498,11 +508,11 @@ function Argument({
     : resultBody(argument, { booked: booked !== undefined });
   /** Everybody else's report, one line each, while a report's day runs (#560). */
   const reports = reportLines(argument, game.readAt);
-  const outcome = argument.kind === 'confirmed' ? outcomeLine(argument.outcome) : undefined;
-  // The entry window is the standing line's clause on all four entry arms, so the block never
-  // draws over one: a 40pt figure counting down to *recorded as one that never happened* is not
-  // what a game six days away is about, and on the score-led arm the grid is over it anyway.
-  const clock = open === undefined && !entryArm ? clockLine(argument, game.readAt) : undefined;
+  /** The score that stands — a counted result, or a For fun game's — and what it said about you. */
+  const settled = settledScore(argument);
+  // The clock stands down while a score is being typed; which arms count down at all is
+  // `clockLine`'s, and the entry's window is its standing line's clause rather than a clock.
+  const clock = open === undefined ? clockLine(argument, game.readAt) : undefined;
   const sending = state.isPending && !state.isPaused;
   // The acts here run one at a time by construction — the grid is open or it is not, the sheet is
   // up or it is not, and a report takes the score away — so one sentence rather than four identical
@@ -653,7 +663,7 @@ function Argument({
 
           {rule === undefined ? null : <Text style={s.body}>{rule}</Text>}
           {worth === undefined ? null : <Text style={s.body}>{worth}</Text>}
-          {outcome === undefined ? null : <Text style={s.outcome}>{outcome}</Text>}
+          {settled?.outcome === undefined ? null : <Text style={s.outcome}>{settled.outcome}</Text>}
           {ours === 0 || shape === undefined ? null : <Text style={s.body}>{shape}</Text>}
 
           {reports.length === 0 ? null : (
@@ -667,9 +677,9 @@ function Argument({
             </View>
           )}
 
-          {argument.kind === 'unscored' ? (
+          {endsAsAnEvening(argument) ? (
             <View style={s.facts}>
-              {UNSCORED_FACTS.map((fact) => (
+              {EVENING_FACTS.map((fact) => (
                 <View key={fact} style={s.factRow}>
                   <View style={s.factDot} />
                   <Text style={s.factText}>{fact}</Text>
@@ -678,17 +688,17 @@ function Argument({
             </View>
           ) : null}
 
-          {argument.kind === 'confirmed' && argument.score !== undefined ? (
+          {settled?.score === undefined ? null : (
             <View style={s.block}>
               <ScoreTable
-                score={argument.score}
+                score={settled.score}
                 sport={game.sport}
                 mine={side}
                 sides={sides}
-                lead={SCORE_LEAD.agreed}
+                lead={settled.lead}
               />
             </View>
-          ) : null}
+          )}
 
           {/* Our own score, quiet wherever it is context rather than the subject: beside the other
               side's on a disagreement, and beside the grid while it is being corrected. */}
@@ -724,8 +734,8 @@ function Argument({
             </View>
           )}
 
-          {/* The clock, big enough to read at arm's length. It is the whole of *silence confirming
-              is visible before it happens*, and it stands down while a score is being typed. */}
+          {/* The clock, big enough to read at arm's length: how long until silence makes a score the
+              result, under the line that names the moment. It stands down while a score is typed. */}
           {clock === undefined ? null : (
             <View style={s.clock} accessible accessibilityLabel={`${clock.figure} ${clock.line}`}>
               <Text style={s.clockFigure}>{clock.figure}</Text>
@@ -771,10 +781,10 @@ function Argument({
               came of it, which is this screen and not a row in a list.
 
               It is handed the game and asks nothing about the state: *whether* a card is open is the
-              server's answer, and it is open only once the result has settled and only between the
-              day after and a week later. So it draws on `confirmed` and `unscored` and on nothing
-              else — which is also every state where `actsOffered` is empty, so the card's own send is
-              never a second control beside a pinned one. Nothing here re-derives any of that: a
+              server's answer, and it is open only once the game has settled and only between the
+              day after and a week later. So it draws on the endings and on nothing else — which is
+              also every state where `actsOffered` is empty, so the card's own send is never a second
+              control beside a pinned one. Nothing here re-derives any of that: a
               second spelling of that window would eventually disagree with the one the send is judged
               against, and it would disagree silently. */}
           <StarCardSection court={game} />

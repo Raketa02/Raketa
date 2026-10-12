@@ -5,21 +5,24 @@
  * route was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)); the screen is the same
  * one, on its score lead.
  *
- * Four of the ticket's acceptance criteria are assertions in this file and not opinions
- * anywhere else — a player can enter, correct, agree and disagree; every refusal the aggregate
- * makes has a screen state; silence confirming is visible **before** it happens; and an unscored
- * game reads as an evening rather than as an error. The fifth is a compile error and a lint
- * rule, which is where label coverage belongs.
+ * The tickets' acceptance criteria are assertions in this file and not opinions anywhere else —
+ * a player can enter, correct, agree and disagree; every refusal the aggregate makes has a screen
+ * state; *Is that right?* says when silence makes the score the result and that silence costs
+ * nothing, *That's right* reads settled at once, For fun asks nothing, and a game with no score —
+ * *Played · no score*, *Disputed* — reads as an evening rather than as an error (#656). Label
+ * coverage is a compile error and a lint rule, which is where it belongs.
  *
  * The suite asserts against the **copy deck** rather than against strings, because the wording
- * is the deck's to change and the rules are not.
+ * is the deck's to change and the rules are not — **except the sentences #656 settled**, which it
+ * holds word for word as the server's answers produce them: *How did it go?*, *Is that right?* and
+ * the moment silence settles a score, *Played*, *Played · no score*, *Disputed*, *Counted.*, and
+ * the two new refusals. Those are what the ticket asks the screens to prove.
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { AppError } from '@/shared/errors';
 
-import type { ResultArgument } from '../domain/resultArgument';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
@@ -48,8 +51,8 @@ import {
   CORRECT_LABEL,
   ENTER_LABEL,
   NOT_YOURS_LINE,
+  EVENING_FACTS,
   STILL_ON_THE_TABLE,
-  UNSCORED_FACTS,
   YOURS,
   clockLine,
   resultBody,
@@ -65,6 +68,7 @@ const BOOKING_ID = 'cccccccc-0000-4000-8000-000000000003';
 const RESULT_PATH = `${GAMES_PATH}/${GAME_ID}/result`;
 const ACCEPTANCE_PATH = `${RESULT_PATH}/acceptance`;
 
+/** Saturday 5 September, 11:00 in Kraków. */
 const READ_AT = '2026-09-05T09:00:00Z';
 const ME = GATE_USER.id;
 const OPPONENT = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -99,7 +103,7 @@ const SCORE: Wire['ScoreSchema'] = {
   ],
 };
 
-/** A score on the table from one side, with the two deadlines the screens read. */
+/** A score on the table from one side, and when silence makes it the result: Sunday, 10:00. */
 function proposal(side: 'A' | 'B'): Wire['StandingProposalSchema'] {
   return {
     side,
@@ -107,7 +111,6 @@ function proposal(side: 'A' | 'B'): Wire['StandingProposalSchema'] {
     score: SCORE,
     proposed_at: '2026-09-04T20:00:00Z',
     answer_by: '2026-09-06T08:00:00Z',
-    settles_at: '2026-09-05T15:00:00Z',
   };
 }
 
@@ -140,20 +143,25 @@ function disagreement(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'
   });
 }
 
-/** A played game with one score up and an agreement waiting out its grace. */
-function agreedWith(side: 'A' | 'B'): Wire['GameSchema'] {
+/** A result that stands — agreed with, settled by silence, or the closer of two (#654). */
+function settled(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return game({
-    standing: 'AWAITING_ANSWER',
+    standing: 'CONFIRMED',
     played_at: '2026-09-04T20:00:00Z',
     entry_closes_at: null,
-    proposals: [proposal(side)],
-    acceptance: {
-      agreed_by: side === 'A' ? OPPONENT : ME,
-      of_side: side,
-      agreed_at: '2026-09-04T21:00:00Z',
-      settles_at: '2026-09-05T15:00:00Z',
-    },
+    score: SCORE,
+    outcome: 'WIN',
+    ...over,
   });
+}
+
+/** Everything the screen says, joined — for the sentences it must never say anywhere. */
+function everythingSaid(): string {
+  return screen
+    .queryAllByText(/./)
+    .map((node) => (node.props as { children?: unknown }).children)
+    .filter((text): text is string => typeof text === 'string')
+    .join(' ');
 }
 
 /** One rating, because the entry gate sends an unrated player to onboarding rather than Now. */
@@ -209,9 +217,10 @@ async function openGame(served: Wire['GameSchema']) {
  * there is nothing behind the grid and no cancel is drawn.
  */
 describe('the grid on an entry arm', () => {
-  it('is the screen itself, so nothing closes it', async () => {
+  it('is the screen itself under How did it go?, so nothing closes it', async () => {
     await openGame(game());
 
+    expect(screen.getByText('How did it go?')).toBeTruthy();
     expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
     expect(screen.queryByText(WE_PLAYED)).toBeNull();
     expect(screen.queryByText(CANCEL_LABEL)).toBeNull();
@@ -299,11 +308,15 @@ describe('entering a result', () => {
 });
 
 describe('correcting your own side’s score', () => {
-  it('offers a change rather than a second turn, and says silence will confirm it', async () => {
+  it('offers a change rather than a second turn, and says when silence makes it the result', async () => {
     await openGame(awaitingAnswer('A'));
 
     expect(screen.getByText(resultTitle({ kind: 'ours-stands', proposal: PROPOSAL }))).toBeTruthy();
-    expect(screen.getByText(/If nobody answers within 23 hours/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Your side’s score is up. If nobody answers, it becomes the result at 10:00 on Sunday.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByText(CORRECT_LABEL)).toBeTruthy();
     // The one thing the screen must never offer the proposing side.
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
@@ -381,26 +394,51 @@ describe('answering the other side’s score', () => {
   });
 
   /**
-   * **The agreement is read back rather than remembered.** It was drawn from `accept.isSuccess`,
-   * so it was visible to the person who tapped, in that mount, and to nobody else — the response
-   * carries it now, and this asserts the re-read rather than the tap.
+   * **Is that right? tells the truth** (#656, F-RESULT-35.1): when silence makes the score the
+   * result — the moment, on the club's clock — and that saying nothing costs nothing. Nothing on it
+   * talks about a penalty.
    */
-  it('agrees across the net, and says when that becomes final', async () => {
+  it('asks Is that right?, saying when silence makes it the result and that silence is free', async () => {
+    await openGame(awaitingAnswer('B'));
+
+    expect(screen.getByText('Is that right?')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'tomek.p put a score up. If you don’t answer, it becomes the result at 10:00 on Sunday.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        '23 hours until this becomes the result if nobody answers. Saying nothing costs nothing.',
+      ),
+    ).toBeTruthy();
+    // The sweep reads the screen's own sentences — the clock's among them — and none is a penalty.
+    expect(everythingSaid()).toContain('Saying nothing costs nothing.');
+    expect(everythingSaid()).not.toMatch(/penalt/i);
+  });
+
+  /**
+   * **That's right settles it at once** (#654): the server answers with the game `CONFIRMED`, and
+   * the screen reads it settled — no *Agreed — settling* wait, no clock, and no different score
+   * offered after it. Read back from the list rather than remembered from the tap.
+   */
+  it('agrees across the net, and the game reads settled at once', async () => {
     transport.on('POST', ACCEPTANCE_PATH, () => {
-      stubGames(transport, [agreedWith('B')], READ_AT);
-      return json(agreedWith('B'));
+      stubGames(transport, [settled({ outcome: 'LOSS' })], READ_AT);
+      return json(settled({ outcome: 'LOSS' }));
     });
     await openGame(awaitingAnswer('B'));
 
     fireEvent.press(screen.getByText(ACCEPT_LABEL));
 
-    await screen.findByText(standingLine(AGREED_WITH_THEIRS, READ_AT));
+    await screen.findByText(resultTitle({ kind: 'confirmed' }));
     expect(transport.requestsTo('POST', ACCEPTANCE_PATH)).toHaveLength(1);
-    // The grace runs from the score, so a disagreement still wins inside it — and the control
-    // for one is still there.
-    expect(screen.getByText(COUNTER_LABEL)).toBeTruthy();
-    // A second agreement is what the aggregate refuses with `the_result_is_already_accepted`.
+    expect(screen.getByText(standingLine({ kind: 'confirmed' }, READ_AT))).toBeTruthy();
+    expect(screen.getByText('You lost.')).toBeTruthy();
+    expect(screen.queryByText(/settling/)).toBeNull();
+    expect(screen.queryByText(COUNTER_LABEL)).toBeNull();
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
+    expect(screen.queryByLabelText(/until this becomes the result/)).toBeNull();
   });
 
   it('disagrees with a score, because there is no rejection without one', async () => {
@@ -429,8 +467,8 @@ describe('answering the other side’s score', () => {
 
   /**
    * The trap the pre-load creates: an unchanged counter is a second proposal that **agrees**
-   * with the first, and two matching scores nobody accepts still leave the game unscored. It is
-   * refused here rather than paid for a day later.
+   * with the first, which settles a day later what *That's right* settles now. It is refused
+   * here, pointing at the tap.
    */
   it('refuses a counter that is the score it is answering', async () => {
     await openGame(awaitingAnswer('B'));
@@ -505,14 +543,50 @@ describe('the score-entry instrument, which is the prototype’s', () => {
 });
 
 describe('the ends', () => {
-  it('reads an unscored game as an evening and offers nothing', async () => {
+  /**
+   * **A full game nobody recorded was played** (#655): *Played · no score*, why, and the facts every
+   * evening with no score shares — nothing to press, and no *Never played*.
+   */
+  it('reads a full game nobody recorded as played, with no score, and offers nothing', async () => {
+    await openGame(game({ standing: 'PLAYED_NO_SCORE', entry_closes_at: null }));
+
+    expect(screen.getByText('Played · no score')).toBeTruthy();
+    expect(screen.getByText(resultBody({ kind: 'played-no-score' })!)).toBeTruthy();
+    for (const fact of EVENING_FACTS) expect(screen.getByText(fact)).toBeTruthy();
+    expect(screen.queryByText(/Never played|never happened|Nobody is marked/)).toBeNull();
+    expect(screen.queryByText(ENTER_LABEL)).toBeNull();
+  });
+
+  /**
+   * **Two scores naming different winners** (#654): disputed, that no Level moved, and why — in
+   * plain words, with nothing to press.
+   */
+  it('reads a disputed game as no Level moved, and why', async () => {
+    await openGame(
+      game({ standing: 'DISPUTED', played_at: '2026-09-04T20:00:00Z', entry_closes_at: null }),
+    );
+
+    expect(screen.getByText('Disputed')).toBeTruthy();
+    expect(screen.getByText('The two scores named different winners.')).toBeTruthy();
+    expect(screen.getByText(resultBody({ kind: 'disputed' })!)).toBeTruthy();
+    expect(screen.getByText('It moved nobody’s Level, and nobody lost anything')).toBeTruthy();
+    expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
+    expect(screen.queryByText(/wrote a score down/)).toBeNull();
+  });
+
+  /**
+   * Since #654 two scores never end here: it is the game everybody marked said they came to, and
+   * the body says so rather than that nobody wrote a score down.
+   */
+  it('reads an unscored game as an evening, says why, and offers nothing', async () => {
     await openGame(
       game({ standing: 'UNSCORED', played_at: '2026-09-04T20:00:00Z', entry_closes_at: null }),
     );
 
     expect(screen.getByText(resultBody({ kind: 'unscored' })!)).toBeTruthy();
     // Variant C's fact list: an account of what the evening still is, not an apology.
-    for (const fact of UNSCORED_FACTS) expect(screen.getByText(fact)).toBeTruthy();
+    for (const fact of EVENING_FACTS) expect(screen.getByText(fact)).toBeTruthy();
+    expect(screen.queryByText(/wrote a score down/)).toBeNull();
     expect(screen.queryByText(ENTER_LABEL)).toBeNull();
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
   });
@@ -620,20 +694,69 @@ describe('the ends', () => {
     });
   });
 
-  it('draws a confirmed result with both sides named, and nothing to press', async () => {
-    await openGame(
-      game({
-        standing: 'CONFIRMED',
-        played_at: '2026-09-04T20:00:00Z',
-        entry_closes_at: null,
-        score: SCORE,
-        outcome: 'WIN',
-      }),
-    );
+  /**
+   * **However it settled, it reads counted** (#654): a game counted with the closer of two scores
+   * naming one winner arrives as any confirmed one does, and nothing on it says *agreed*.
+   */
+  it('draws a counted result with both sides named, and nothing to press', async () => {
+    await openGame(settled());
 
-    expect(screen.getByLabelText(/^The agreed score\. Set 1, You 6, Them 4/)).toBeTruthy();
+    expect(screen.getByText('The result')).toBeTruthy();
+    expect(screen.getByText('Counted.')).toBeTruthy();
+    expect(screen.getByLabelText(/^The result\. Set 1, You 6, Them 4/)).toBeTruthy();
     expect(screen.getByText('You won.')).toBeTruthy();
+    expect(screen.queryByText(/agreed/i)).toBeNull();
     expect(screen.queryByText(ENTER_LABEL)).toBeNull();
+    expect(screen.queryByText(CORRECT_LABEL)).toBeNull();
+  });
+});
+
+/**
+ * **For fun asks nothing** (#654, #656): no *Is that right?*, no clock and no answer asked of
+ * anybody. It reads *Played*, and a score can still be added — it stands the moment it goes in.
+ */
+describe('a For fun game', () => {
+  it('reads Played, asks nothing, and still takes a score', async () => {
+    transport.on('POST', RESULT_PATH, () => {
+      const scored = settled({ kind: 'FRIENDLY' });
+      stubGames(transport, [scored], READ_AT);
+      return json(scored);
+    });
+    await openGame(game({ kind: 'FRIENDLY' }));
+
+    expect(screen.getByText('Played')).toBeTruthy();
+    expect(screen.getByText(resultBody({ kind: 'for-fun', seatOpen: false })!)).toBeTruthy();
+    expect(screen.queryByText('How did it go?')).toBeNull();
+
+    fillIn(
+      [
+        ['6', '4'],
+        ['6', '2'],
+      ],
+      ['You', 'Them'],
+    );
+    fireEvent.press(screen.getByText(ENTER_LABEL));
+
+    await waitFor(() => expect(bodies(RESULT_PATH)).toEqual([{ score: SCORE }]));
+    // The score stands at once: nobody is asked about it, so nothing waits and nothing counts down.
+    expect(await screen.findByLabelText(/^The score\. Set 1, You 6, Them 4/)).toBeTruthy();
+    expect(screen.getByText('Played')).toBeTruthy();
+    expect(screen.queryByText('Is that right?')).toBeNull();
+    expect(screen.queryByText(/Sent — waiting/)).toBeNull();
+    expect(screen.queryByLabelText(/until this becomes the result/)).toBeNull();
+    expect(screen.queryByText(ENTER_LABEL)).toBeNull();
+  });
+
+  it('reads Played with its score, and offers nothing to anybody', async () => {
+    await openGame(settled({ kind: 'FRIENDLY', outcome: 'LOSS' }));
+
+    expect(screen.getByText('Played')).toBeTruthy();
+    expect(screen.getByText('Played for fun.')).toBeTruthy();
+    expect(screen.getByLabelText(/^The score\. Set 1, You 6, Them 4/)).toBeTruthy();
+    expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
+    expect(screen.queryByText(COUNTER_LABEL)).toBeNull();
+    expect(screen.queryByText(CORRECT_LABEL)).toBeNull();
+    expect(screen.queryByText('Counted.')).toBeNull();
   });
 });
 
@@ -655,8 +778,8 @@ describe('a disagreement, which used to cross with neither score on it', () => {
   });
 
   /**
-   * ADR-0137 §4's only end short of the game going unscored, offered at last — and **named for
-   * the score it agrees with**, because *That's right* is true of every game ever played.
+   * ADR-0137 §4's exit, settling it at once since #654 — and **named for the score it agrees
+   * with**, because *That's right* is true of every game ever played.
    */
   it('offers agreeing with the other side’s score, and never a second one of our own', async () => {
     transport.on('POST', ACCEPTANCE_PATH, () => json(disagreement()));
@@ -681,43 +804,79 @@ describe('a disagreement, which used to cross with neither score on it', () => {
     // disagreement's own paragraph is the one on screen. `gamePresentation.test.ts` is where
     // what that paragraph has to say is held.
     expect(
-      screen.getByText(resultBody({ kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER })!),
+      screen.getByText(
+        resultBody({
+          kind: 'both-stand',
+          ours: PROPOSAL,
+          theirs: COUNTER,
+          settlesAt: PROPOSAL.answerBy,
+        })!,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('says when the two settle if neither side agrees', async () => {
+    await openGame(disagreement());
+
+    expect(
+      screen.getByText(/Unless one side agrees with the other’s, it settles at 10:00 on Sunday\./),
     ).toBeTruthy();
   });
 });
 
-describe('an agreement, which the side it protects could not see', () => {
-  /**
-   * The proposing side went on being told silence would confirm their score for the whole grace
-   * after somebody had already agreed with it, and went on being offered a correction
-   * `state_result` refuses with `the_other_side_has_answered`.
-   */
-  it('tells the proposing side their score was agreed, and stops offering the correction', async () => {
-    await openGame(agreedWith('A'));
+/**
+ * **The side whose score was agreed with reads it counted** — the next read after a *That's right*
+ * is `CONFIRMED` (#654), so there is no grace to wait out on either side, and no correction left.
+ */
+describe('an agreement, read by the side that put the score up', () => {
+  it('reads the game counted, with nothing left to change and no clock', async () => {
+    await openGame(settled());
 
-    expect(screen.getByText(standingLine(AGREED_WITH_OURS, READ_AT))).toBeTruthy();
-    expect(screen.queryByText(/If nobody answers within/)).toBeNull();
+    expect(screen.getByText(standingLine({ kind: 'confirmed' }, READ_AT))).toBeTruthy();
+    expect(screen.queryByText(/If nobody answers/)).toBeNull();
     expect(screen.queryByText(CORRECT_LABEL)).toBeNull();
-  });
-
-  /**
-   * The grace and the answer window run from the same moment and are different spans, so a clock
-   * still counting the answer window would be counting a question nobody is being asked.
-   */
-  it('counts down to the moment it settles, not to a question already answered', async () => {
-    await openGame(agreedWith('A'));
-
-    const clock = clockLine(AGREED_WITH_OURS, READ_AT)!;
-
-    expect(clock.figure).toBe('6 hours');
-    expect(screen.getByLabelText(`${clock.figure} ${clock.line}`)).toBeTruthy();
+    expect(screen.queryByLabelText(/hours? /)).toBeNull();
   });
 });
 
 describe('what the aggregate refuses, on screen', () => {
+  /** No score before the hour (#654), said as a plain sentence about the game rather than a code. */
+  it('says a game that has not started takes no score yet', async () => {
+    transport.on('POST', RESULT_PATH, () => errorResponse(409, 'the_game_has_not_started'));
+    await openGame(game());
+
+    fillIn([['6', '4']], ['You', 'Them']);
+    fireEvent.press(screen.getByText(ENTER_LABEL));
+
+    await screen.findByText(
+      'This game hasn’t started yet, so there’s no score to put up. It can go in once the hour has begun.',
+    );
+  });
+
+  /** A correction after the entry window (#654) — and the race where the other side answered. */
+  it.each(['corrections_have_closed', 'your_side_has_already_answered'])(
+    'says why a correction was refused with %s',
+    async (code) => {
+      transport.on('POST', RESULT_PATH, () => errorResponse(409, code));
+      await openGame(awaitingAnswer('A'));
+
+      fireEvent.press(screen.getByText(CORRECT_LABEL));
+      fireEvent.press(screen.getByLabelText('Set 2, Them, 2'));
+      fireEvent.press(screen.getByLabelText('Rub out'));
+      type('3');
+      fireEvent.press(screen.getByText(submitLabel('correct')));
+
+      await screen.findByText(gameErrorMessage(refusal(code)));
+    },
+  );
+
+  it('says the time to correct has passed in a plain sentence', () => {
+    expect(gameErrorMessage(refusal('corrections_have_closed'))).toBe(
+      'It’s too late to change this score — that closed a day after the game. It still stands as it is.',
+    );
+  });
+
   it.each([
-    ['the_other_side_has_answered', 409],
-    ['your_side_has_already_answered', 409],
     ['the_entry_window_has_closed', 409],
     ['a_score_must_name_a_winner', 400],
   ])('says what happened when it refuses with %s', async (code, status) => {
@@ -762,7 +921,6 @@ const PROPOSAL = {
     ],
   },
   answerBy: '2026-09-06T08:00:00Z',
-  settlesAt: '2026-09-05T15:00:00Z',
 } as const;
 
 /** The other side's score, as the domain reads it. Only its figures reach any assertion here. */
@@ -776,22 +934,4 @@ const COUNTER = {
     ],
   },
   answerBy: '2026-09-06T08:00:00Z',
-  settlesAt: '2026-09-05T15:00:00Z',
 } as const;
-
-/** One agreement, as the two sides read it. Six hours from `READ_AT`, measured from the score. */
-const AGREED_WITH_OURS: ResultArgument = {
-  kind: 'agreed',
-  agreement: {
-    with: 'ours',
-    by: { kind: 'player', name: 'tomek.p' },
-    settlesAt: '2026-09-05T15:00:00Z',
-  },
-  ours: PROPOSAL,
-};
-
-const AGREED_WITH_THEIRS: ResultArgument = {
-  kind: 'agreed',
-  agreement: { with: 'theirs', by: { kind: 'you' }, settlesAt: '2026-09-05T15:00:00Z' },
-  theirs: PROPOSAL,
-};

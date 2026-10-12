@@ -35,7 +35,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DarkCard, Button, theme } from '@/shared/ui';
 
 import { peopleOn } from '../domain/deck';
-import { moneyLineOf, type HomeGame } from '../domain/home';
+import { moneyLineOf, shownStatus, type HomeGame } from '../domain/home';
 import { gameDayOf } from '../domain/when';
 
 import { CardTag } from './CardTag';
@@ -73,7 +73,8 @@ export interface HomeGameCardProps {
 }
 
 export function HomeGameCard({ game, now, fresh, onChat, width, onOpen }: HomeGameCardProps) {
-  const ink = STATUS_INK[game.status];
+  const status = shownStatus(game);
+  const ink = STATUS_INK[status];
   const line = moneyLineOf(game, now);
 
   const day = gameDayOf(game.startsAt, now);
@@ -99,7 +100,7 @@ export function HomeGameCard({ game, now, fresh, onChat, width, onOpen }: HomeGa
         testID={`home-game-${game.bookingId}`}
       >
         <View style={s.header}>
-          <CardTag label={statusWord(game.status)} tone="grey" dot={ink} />
+          <CardTag label={statusWord(status)} tone="grey" dot={ink} />
           {fresh ? <CardTag label={COPY.new} tone="volt" /> : null}
           <Text style={s.sport} numberOfLines={1}>
             {sportWords(game.sport, game.kind)}
@@ -119,7 +120,7 @@ export function HomeGameCard({ game, now, fresh, onChat, width, onOpen }: HomeGa
       <View style={s.footer}>
         <Button
           label={COPY.openGame}
-          variant={OPEN_GAME_VARIANT[game.status]}
+          variant={OPEN_GAME_VARIANT[status]}
           size="lg"
           onPress={onOpen}
           style={s.door}

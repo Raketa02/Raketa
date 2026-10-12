@@ -16,6 +16,7 @@
 
 import { ConversationScreen, useBookingRoom } from '@/features/conversations/types';
 
+import { shownStatus } from '../domain/home';
 import { bookingReadState, useBooking } from '../hooks/useHome';
 
 import { BookingAbsent } from './BookingAbsent';
@@ -37,7 +38,7 @@ export function BookedGameChat({ bookingId }: BookedGameChatProps) {
     return (
       <ConversationScreen
         conversationId={room.conversationId}
-        gameState={COPY.statusInLine[game.status]}
+        gameState={COPY.statusInLine[shownStatus(game)]}
       />
     );
   }

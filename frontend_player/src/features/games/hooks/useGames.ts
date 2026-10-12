@@ -14,7 +14,8 @@
  *
  * A standing is *derived from the record and the clock*, so the only client that can be right
  * about what a game becomes is one that asks. An optimistic entry would have to fold
- * `AWAITING_ANSWER`, a deadline and a grace on this side — a second implementation of the rule
+ * `AWAITING_ANSWER` and a deadline on this side — or, on a For fun game, `CONFIRMED` at once
+ * (#654) — a second implementation of the rule
  * ADR-0137 §2 put in exactly one place — and it would be wrong the first time the clock
  * disagreed. The answer is dropped for the reason the use-cases give, and the list is
  * invalidated: the next read is one fold, over everything, against one `read_at`.
@@ -25,8 +26,9 @@
  * challenge's answer window is derived **at send**, so a tap deferred to the next reconnect asks
  * four people at a moment nobody picked. Neither of these does. A proposal's day starts whenever
  * the proposal lands and is the same twenty-four hours for the other side however late it is,
- * and an acceptance's grace runs from the **score** rather than from the tap, so a queued one
- * settles exactly the moment it would have. Both therefore **pause** like everything else in the
+ * and an acceptance settles whenever it lands (#654) — later than the tap only by the queue, and
+ * refused by name if silence or the other side settled the game first. Both therefore **pause**
+ * like everything else in the
  * app, and the screen renders `offlineMessage('resumes')` at the control that is waiting.
  */
 
@@ -92,7 +94,7 @@ export function useStateResult({ reread }: AfterAWrite = {}) {
   });
 }
 
-/** *That is what happened* — and it goes on offering the disagreement until the grace passes. */
+/** *That is what happened* — the result at once (#654), so the next read is the game settled. */
 export function useAcceptResult({ reread }: AfterAWrite = {}) {
   const client = useQueryClient();
 

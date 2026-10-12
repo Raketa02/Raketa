@@ -11,13 +11,16 @@
 
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
-import type { ResultAct } from '../domain/home';
-import type { CalledOffReason, ClubCancelReason, HomeStatus } from '../domain/vocabulary';
+import type { ResultAct, ShownStatus } from '../domain/home';
+import type { CalledOffReason, ClubCancelReason } from '../domain/vocabulary';
 
 export const HOME_GAME_COPY = {
   /** The heading over Home's rail, before its count — `homePresentation.gamesHeading`. */
   heading: 'Your games',
-  /** The status tag on a card and on the details — the mechanics §14.1's names. */
+  /**
+   * The status tag on a card and on the details — the mechanics §14.1's names, *Played · no score*
+   * in *Never played*'s place (#655), and *Played* for a For fun game after its hour (#656).
+   */
   status: {
     WAITING_FOR_THE_CLUB: 'Waiting for the club',
     WAITING_FOR_A_PAYMENT: 'Waiting for one payment',
@@ -27,9 +30,10 @@ export const HOME_GAME_COPY = {
     CONFIRM_THE_RESULT: 'Confirm the result',
     COUNTED: 'Counted',
     UNCOUNTED: 'Uncounted',
-    NEVER_PLAYED: 'Never played',
+    PLAYED_NO_SCORE: 'Played · no score',
+    PLAYED: 'Played',
     CALLED_OFF: 'Called off',
-  } satisfies Readonly<Record<HomeStatus, string>>,
+  } satisfies Readonly<Record<ShownStatus, string>>,
   /** The same words mid-line — the details' second line, *Padel · booked*, and the room's. */
   statusInLine: {
     WAITING_FOR_THE_CLUB: 'waiting for the club',
@@ -40,9 +44,10 @@ export const HOME_GAME_COPY = {
     CONFIRM_THE_RESULT: 'confirm the result',
     COUNTED: 'counted',
     UNCOUNTED: 'uncounted',
-    NEVER_PLAYED: 'never played',
+    PLAYED_NO_SCORE: 'played · no score',
+    PLAYED: 'played',
     CALLED_OFF: 'called off',
-  } satisfies Readonly<Record<HomeStatus, string>>,
+  } satisfies Readonly<Record<ShownStatus, string>>,
   /** A game that filled since the player last looked, until its details are opened. */
   new: 'New',
   newSpoken: 'new',
@@ -138,6 +143,8 @@ export const HOME_GAME_COPY = {
     /** Today's result act, once the hour has come — the button under the game card. */
     resultAct: {
       'we-played': WE_PLAYED,
+      /** A For fun game's door (#656): a score may be added, and nobody is asked for one. */
+      'add-score': 'Add the score',
       confirm: 'Confirm the result',
       /** The marked player's door to their dispute (#560), named for what they go there to do. */
       dispute: 'Say you were there',

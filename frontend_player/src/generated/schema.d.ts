@@ -931,9 +931,9 @@ export interface paths {
         };
         /**
          * Your games
-         * @description **Arranged, played and finished in one list.** A game awaiting an entry, one awaiting an answer and one that never happened are one thing at three moments of its life.
+         * @description **Arranged, played and finished in one list.** A game awaiting an entry, one awaiting an answer and one that is over are one thing at three moments of its life.
          *
-         *     **The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it — nothing sweeps it, because there is nothing for a sweep to correct.
+         *     **The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a full game whose entry window ran out with nobody recording it reads `PLAYED_NO_SCORE` whether or not anything has swept it — nothing sweeps it, because there is nothing for a sweep to correct.
          *
          *     **`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.
          */
@@ -989,9 +989,11 @@ export interface paths {
          *     - your own side's score on the table, unanswered → a **correction**, free, and not a second turn. Any of your side may make it, not only whoever typed first.
          *     - the other side's score on the table → your side's **one** disagreement, and it carries a score because there is no bare rejection.
          *
-         *     **A lone score is confirmed by silence** when its 24 hours run out, and the game counts. **Two scores nobody accepts leave the game unscored** — which still counts as an evening you played and moves nobody's Level.
+         *     **No score is taken before the game's hour**, and a correction is refused once the entry window has closed.
          *
-         *     **Nobody is penalised for any of this.** Not for saying nothing, not for disagreeing, not for a disagreement the other side ignored.
+         *     **A lone score is settled by silence** when its 24 hours (`proposals[].answer_by`) run out, and the game counts. **Two scores nobody agrees with settle when the later one's 24 hours run out**: naming the same winner, the game counts with the **closer** score — the smaller margin in games, and on a tie the first put up; naming different winners, it ends `DISPUTED` and moves nobody's Level.
+         *
+         *     **A For fun game asks nobody**: its score is the result the moment it is put up (`CONFIRMED`), with no answer window, and no Level moves.
          */
         post: operations["state_result_api_v1_games__game_id__result_post"];
         delete?: never;
@@ -1011,11 +1013,11 @@ export interface paths {
         put?: never;
         /**
          * Agree with the result
-         * @description **One opponent suffices.** The person across the net is the whole of the evidence that a score was real.
+         * @description ***That's right.*** **One opponent suffices**: the person across the net is the whole of the evidence that a score was real.
          *
-         *     **It does not settle the result immediately.** The grace runs from the *score*, not from your tap, and inside it a disagreement still wins — so a partner who is quick to their phone cannot close the door on an opponent who has not read it yet. `acceptance.settles_at` is when it becomes final, and it is on the response the **proposing** side reads too — a score that has been agreed is no longer a score waiting on silence.
+         *     **It settles the result at once and closes the game** (`standing` `CONFIRMED`, the agreed score on `score`). No different score is taken after it, so in doubles the first agreement from the other side is the one that counts. On a Competitive game the Levels move within a minute.
          *
-         *     **Saying nothing does the same thing**, a day later. Accepting is how you make it true sooner, and it is never how you avoid a penalty — there is none.
+         *     **Saying nothing settles it too**, once the score's 24 hours (`proposals[].answer_by`) run out.
          */
         post: operations["accept_result_api_v1_games__game_id__result_acceptance_post"];
         delete?: never;
@@ -2214,37 +2216,6 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * AcceptanceSchema
-         * @description Somebody agreed with the other side's score, and it has not settled yet.
-         *
-         *     **Present only while the grace runs.** Once it has passed the game is
-         *     confirmed and the agreed score is on `score`; inside it nothing has settled,
-         *     a disagreement still wins, and the proposing side is no longer waiting on
-         *     silence — which is a different sentence on their screen and a correction the
-         *     aggregate will now refuse.
-         */
-        AcceptanceSchema: {
-            /**
-             * Agreed By
-             * Format: uuid
-             */
-            agreed_by: string;
-            /** @description Whose score was agreed with. **Always the accepter's opposite** — a teammate agreeing with a teammate proves nothing — so this names the score and, with it, which of the two people this is news for. */
-            of_side: components["schemas"]["GameSide"];
-            /**
-             * Agreed At
-             * Format: date-time
-             * @description When they agreed. On the wire because *a second ago* and *five hours ago* are the same refusal to a client that cannot see it, and the sentence a player reads has to be able to say which.
-             */
-            agreed_at: string;
-            /**
-             * Settles At
-             * Format: date-time
-             * @description When this agreement becomes final. Measured from the **score**, not from the tap: the person the grace protects is the opponent who has not read the score yet, and their clock started when it was put in front of them.
-             */
-            settles_at: string;
-        };
-        /**
          * AccountProfilesSchema
          * @description Which profiles this account holds (``docs/adr/0185`` §2) — what the
          *     entry gate reads first. *Profile* is the switcher's word.
@@ -2666,7 +2637,7 @@ export interface components {
              * @description The instant the status and money line were folded against.
              */
             read_at: string;
-            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) — a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (`club_confirms`), else *1 seat open · books when it's full · nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. **`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) — full, and one player's share was refused when it filled or when its On request club said yes: *Waiting for one payment · until `payment_due_by` · Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* — *Fix your card by …* before the cut-off (`time_to`, #638) — beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` — and so is a game one of the others left meanwhile. */
+            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed: two scores named different winners (no `uncounted_reason`), or one of the reasons `uncounted_reason` names. `PLAYED_NO_SCORE` — full at its hour, and nobody recorded it before the entry window closed: played for everybody on it, and no Level moves. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) — a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (`club_confirms`), else *1 seat open · books when it's full · nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. **`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) — full, and one player's share was refused when it filled or when its On request club said yes: *Waiting for one payment · until `payment_due_by` · Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* — *Fix your card by …* before the cut-off (`time_to`, #638) — beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` — and so is a game one of the others left meanwhile. */
             status: components["schemas"]["HomeStatus"];
             /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it: *Kazimierz Padel said no*. `NO_ANSWER` — the club did not answer in time: *Kazimierz Padel didn't answer in time*. In both nobody paid, and the players get a new card first. (A seat opening while it waited takes the request back instead: the game is `SEAT_OPEN` with `filling_again` for the people still In.) `BOOK_BY_PASSED` — a game that went back to filling reached its book-by before it was full again, or a seat opened after its book-by while the club decided (a player left, their week filled, or two stopped fitting): nobody paid. `COURT_HOUR_LOST` — a game that went back to filling lost its court to another game before it was full again — or, at a club that books at once, before the payment it waited for came in: nobody paid, and its players are dealt a new card first. `PAYMENT_NOT_IN_TIME` — a payment the game waited for did not come in time and it could no longer fill: the book-by had come (#625, #626). Nobody paid. `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
@@ -3692,9 +3663,9 @@ export interface components {
          * @description Your games, newest arrangement first.
          *
          *     **One list and not several.** A game awaiting an entry, one awaiting an
-         *     answer and one that never happened are one thing at three moments of its
-         *     life, and splitting them would make the client's shelves the platform's
-         *     opinion about which of them matters.
+         *     answer and one that is over are one thing at three moments of its life,
+         *     and splitting them would make the client's shelves the platform's opinion
+         *     about which of them matters.
          *
          *     ``read_at`` is the instant every standing and deadline here was folded
          *     against. It travels so a client's countdowns and the standings beside them
@@ -3909,7 +3880,7 @@ export interface components {
             played_at?: string | null;
             /**
              * Entry Closes At
-             * @description When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened, and ``null`` on a game that was called off — the window no longer matters, and a card that shelved itself by it would stay for eight days.
+             * @description When *we played* stops being sayable, and a full game nobody recorded reads `PLAYED_NO_SCORE`. ``null`` once somebody has said it happened, and ``null`` on a game that was called off — the window no longer matters, and a card that shelved itself by it would stay for eight days.
              */
             entry_closes_at?: string | null;
             /**
@@ -3924,17 +3895,15 @@ export interface components {
              * @description The court, in the order the booking handed it over
              */
             seats: components["schemas"]["SeatingSchema"][];
-            /** @description The agreed score. ``null`` until something settles on one — including while a lone score is still waiting, because a score nobody has answered yet is not the result. */
+            /** @description The agreed score. ``null`` until something settles on one — including while a lone score is still waiting, because a score nobody has answered yet is not the result, and on a `DISPUTED` game, whose two scores named different winners. Two scores naming the same winner settle on the **closer**: the smaller margin in games, and on a tie the first put up. */
             score?: components["schemas"]["ScoreSchema"] | null;
             /** @description Win or loss **for you**. ``null`` for every standing but a confirmed one: a game nobody scored moves nobody's Level and has no outcome to give anybody. */
             outcome?: components["schemas"]["Outcome"] | null;
             /**
              * Proposals
-             * @description The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` — a confirmed score is `score` and an unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's.
+             * @description The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` — a confirmed score is `score`, and a disputed or unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's. Always empty on a For fun game, whose score is the result the moment it is put up: it asks nobody.
              */
             proposals: components["schemas"]["StandingProposalSchema"][];
-            /** @description The agreement that is waiting out its grace, and `null` when none is. **A counter voids one**, so this is what still stands rather than what was once recorded. */
-            acceptance?: components["schemas"]["AcceptanceSchema"] | null;
             /**
              * No Shows
              * @description Everybody reported as not coming to this **booked** game, in the court's order (#547). Empty on every other game. A report is the game's entry: no score is on the table beside one, and **the game does not count** whatever it comes to.
@@ -3949,10 +3918,10 @@ export interface components {
         GameSide: "A" | "B";
         /**
          * GameStanding
-         * @description The nine standings, as codes. A client's words are the client's own.
+         * @description The ten standings, as codes. A client's words are the client's own.
          * @enum {string}
          */
-        GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "CALLED_OFF" | "STARTED_SHORT" | "NO_SHOW_REPORTED" | "NO_SHOW";
+        GameStanding: "AWAITING_ENTRY" | "PLAYED_NO_SCORE" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "DISPUTED" | "CALLED_OFF" | "STARTED_SHORT" | "NO_SHOW_REPORTED" | "NO_SHOW";
         /**
          * GamesAndMoneyRequest
          * @description Both values, as the screen saves them on every tap. **Types only**: a
@@ -4413,7 +4382,7 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) — a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (`club_confirms`), else *1 seat open · books when it's full · nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. **`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) — full, and one player's share was refused when it filled or when its On request club said yes: *Waiting for one payment · until `payment_due_by` · Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* — *Fix your card by …* before the cut-off (`time_to`, #638) — beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` — and so is a game one of the others left meanwhile. */
+            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed: two scores named different winners (no `uncounted_reason`), or one of the reasons `uncounted_reason` names. `PLAYED_NO_SCORE` — full at its hour, and nobody recorded it before the entry window closed: played for everybody on it, and no Level moves. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) — a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (`club_confirms`), else *1 seat open · books when it's full · nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. **`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) — full, and one player's share was refused when it filled or when its On request club said yes: *Waiting for one payment · until `payment_due_by` · Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* — *Fix your card by …* before the cut-off (`time_to`, #638) — beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` — and so is a game one of the others left meanwhile. */
             status: components["schemas"]["HomeStatus"];
             /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it: *Kazimierz Padel said no*. `NO_ANSWER` — the club did not answer in time: *Kazimierz Padel didn't answer in time*. In both nobody paid, and the players get a new card first. (A seat opening while it waited takes the request back instead: the game is `SEAT_OPEN` with `filling_again` for the people still In.) `BOOK_BY_PASSED` — a game that went back to filling reached its book-by before it was full again, or a seat opened after its book-by while the club decided (a player left, their week filled, or two stopped fitting): nobody paid. `COURT_HOUR_LOST` — a game that went back to filling lost its court to another game before it was full again — or, at a club that books at once, before the payment it waited for came in: nobody paid, and its players are dealt a new card first. `PAYMENT_NOT_IN_TIME` — a payment the game waited for did not come in time and it could no longer fill: the book-by had come (#625, #626). Nobody paid. `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
@@ -4500,7 +4469,7 @@ export interface components {
          * @description What a game on Home is, right now (the mechanics §14.1).
          * @enum {string}
          */
-        HomeStatus: "WAITING_FOR_THE_CLUB" | "WAITING_FOR_A_PAYMENT" | "BOOKED" | "SEAT_OPEN" | "NEEDS_RESULT" | "CONFIRM_THE_RESULT" | "COUNTED" | "UNCOUNTED" | "NEVER_PLAYED" | "CALLED_OFF";
+        HomeStatus: "WAITING_FOR_THE_CLUB" | "WAITING_FOR_A_PAYMENT" | "BOOKED" | "SEAT_OPEN" | "NEEDS_RESULT" | "CONFIRM_THE_RESULT" | "COUNTED" | "UNCOUNTED" | "PLAYED_NO_SCORE" | "CALLED_OFF";
         /**
          * InProgressAssessmentResponse
          * @description One unfinished run: which assessment, and which sport it is for.
@@ -7126,10 +7095,11 @@ export interface components {
          * @description One side's score, on the table and not yet settled on.
          *
          *     **At most one per side**, which is what bounds an argument to two rounds. Two
-         *     of them is the disagreement this platform does not resolve — and it does not
-         *     resolve it by *arbitrating*, not by hiding it: both scores travel, either
-         *     side may agree with the other's, and that is the only end short of the game
-         *     going unscored.
+         *     of them is a disagreement this platform does not arbitrate, and does not
+         *     hide: both scores travel, and either side may agree with the other's. If
+         *     neither does, the game settles when the later score's `answer_by` comes —
+         *     with the closer score if both name the same winner, and `DISPUTED` if they
+         *     name different winners.
          */
         StandingProposalSchema: {
             /** @description Which side put this score on the table */
@@ -7148,15 +7118,9 @@ export interface components {
             /**
              * Answer By
              * Format: date-time
-             * @description When the other side's silence becomes agreement. **Nothing happens at this moment** — no job runs and nothing is written; the game simply reads as confirmed from here on.
+             * @description When the other side's silence makes this score the result: 24 hours after it was put up, or after its last correction. **Nothing happens at this moment** — no job runs and nothing is written; the game simply reads as settled from here on. With two scores on the table, the later one's `answer_by` is when the game settles. *That's right* settles it at once, before this.
              */
             answer_by: string;
-            /**
-             * Settles At
-             * Format: date-time
-             * @description When an acceptance of this score would become final. Earlier than `answer_by`, and it is the grace an opponent who has not read the score yet is given: inside it a disagreement still wins.
-             */
-            settles_at: string;
         };
         /**
          * StarsGivenSchema
@@ -9475,9 +9439,11 @@ export interface operations {
             /**
              * @description Everything above, plus:
              *
-             *     `your_side_has_already_answered` — one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.
+             *     `the_game_has_not_started` — no score is taken before the game's hour: nothing can have happened yet.
              *
-             *     `the_other_side_has_answered` — correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.
+             *     `your_side_has_already_answered` — one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement. A correction after the other side has put its own score up is the same refusal.
+             *
+             *     `corrections_have_closed` — the entry window has closed (24 hours after the hour ended), and with it the time to correct your side's score. It still stands, and its answer window still runs.
              *
              *     `the_court_has_an_open_seat` — somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.
              *
@@ -9541,8 +9507,6 @@ export interface operations {
              *     `nobody_has_proposed_a_result` — there is nothing from the other side to accept.
              *
              *     `accepting_your_own_sides_result` — **only the other side can accept**, because a teammate agreeing with a teammate proves nothing.
-             *
-             *     `the_result_is_already_accepted` — your side has already agreed to this one.
              */
             409: {
                 headers: {

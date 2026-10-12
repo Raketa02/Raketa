@@ -451,7 +451,6 @@ describe('an act on a booked game’s result', () => {
       },
       proposed_at: '2026-10-03T15:30:00Z',
       answer_by: '2026-10-04T15:30:00Z',
-      settles_at: '2026-10-03T21:30:00Z',
     };
     stubGames(
       transport,

@@ -21,6 +21,7 @@ import {
   moneyLineOf,
   paymentOf,
   shareAt,
+  shownStatus,
   stakeOnTheDetails,
   type BookedGame,
   type HomeGame,
@@ -28,12 +29,12 @@ import {
   type Leaving,
   type MoneyLine,
   type ShareAt,
+  type ShownStatus,
 } from '../domain/home';
 import type {
   CalledOffReason,
   ClubCancelReason,
   GameKind,
-  HomeStatus,
   LeavingKind,
   ProposalStatus,
 } from '../domain/vocabulary';
@@ -75,10 +76,11 @@ export function gamesHeading(count: number): string {
  * **The status's colour** — the tag's dot and the facts' accent line (A4.1, A8): *Waiting for the
  * club*, *Waiting for one payment* and *Seat open* amber, *Booked* mint, *Called off* red, and the
  * result states as the old loop's cards drew them (needs a result and confirm amber, counted mint,
- * the other two ends hairline). On the dark card the amber is `arranging` and the red `gameRed`,
- * each the shade that carries on that ground.
+ * the other two ends hairline — *Played · no score* where *Never played* was, #655). A For fun
+ * game's *Played* is settled, so mint (#656). On the dark card the amber is `arranging` and the red
+ * `gameRed`, each the shade that carries on that ground.
  */
-export const STATUS_INK: Readonly<Record<HomeStatus, string>> = {
+export const STATUS_INK: Readonly<Record<ShownStatus, string>> = {
   WAITING_FOR_THE_CLUB: theme.color.arranging,
   WAITING_FOR_A_PAYMENT: theme.color.arranging,
   BOOKED: theme.color.mint,
@@ -87,7 +89,8 @@ export const STATUS_INK: Readonly<Record<HomeStatus, string>> = {
   CONFIRM_THE_RESULT: theme.color.arranging,
   COUNTED: theme.color.mint,
   UNCOUNTED: theme.color.onDarkHair,
-  NEVER_PLAYED: theme.color.onDarkHair,
+  PLAYED_NO_SCORE: theme.color.onDarkHair,
+  PLAYED: theme.color.mint,
   CALLED_OFF: theme.color.gameRed,
 };
 
@@ -111,9 +114,9 @@ export const PROPOSAL_STATUS_INK: Readonly<Record<ProposalStatus, string>> = {
 /**
  * **A Home card's *Open game*** — the settled fill on every game still ahead of its end, the
  * on-dark one on an ending: the Classic card's own two (`ACCENT`), so one rail does not draw two
- * languages of button.
+ * languages of button. A For fun game's *Played* asks nothing more of anybody, so it reads as one.
  */
-export const OPEN_GAME_VARIANT: Readonly<Record<HomeStatus, ButtonVariant>> = {
+export const OPEN_GAME_VARIANT: Readonly<Record<ShownStatus, ButtonVariant>> = {
   WAITING_FOR_THE_CLUB: 'settled',
   WAITING_FOR_A_PAYMENT: 'settled',
   BOOKED: 'settled',
@@ -122,12 +125,13 @@ export const OPEN_GAME_VARIANT: Readonly<Record<HomeStatus, ButtonVariant>> = {
   CONFIRM_THE_RESULT: 'settled',
   COUNTED: 'onDark',
   UNCOUNTED: 'onDark',
-  NEVER_PLAYED: 'onDark',
+  PLAYED_NO_SCORE: 'onDark',
+  PLAYED: 'onDark',
   CALLED_OFF: 'onDark',
 };
 
-/** *Booked* · *Waiting for the club* · … — the status tag's word. */
-export function statusWord(status: HomeStatus): string {
+/** *Booked* · *Waiting for the club* · *Played* · … — the status tag's word. */
+export function statusWord(status: ShownStatus): string {
   return COPY.status[status];
 }
 
@@ -301,7 +305,7 @@ export function sportWords(sport: Sport, kind: GameKind): string {
 }
 
 /** *Padel · booked* — the details' second line: the sport, and the status in lower case. */
-export function statusSubline(sport: Sport, status: HomeStatus): string {
+export function statusSubline(sport: Sport, status: ShownStatus): string {
   return `${sportLabel(sport)}${LINE_JOIN}${COPY.statusInLine[status]}`;
 }
 
@@ -465,12 +469,13 @@ export function homeCardLabel({
   readonly money: MoneyLine | undefined;
 }): string {
   const time = timeWords(game.startsAt);
+  const status = statusWord(shownStatus(game));
   const where =
     courtIsGiven(game) && game.courtName !== undefined
       ? `${clubName(game)}${SPOKEN_JOIN}${game.courtName}`
       : clubName(game);
   return [
-    fresh ? `${statusWord(game.status)}${SPOKEN_JOIN}${COPY.newSpoken}` : statusWord(game.status),
+    fresh ? `${status}${SPOKEN_JOIN}${COPY.newSpoken}` : status,
     sportParts(game.sport, game.kind).join(SPOKEN_JOIN),
     where,
     [...(day === undefined ? [] : [gameDayWords(day)]), `${time.from} ${time.until}`].join(

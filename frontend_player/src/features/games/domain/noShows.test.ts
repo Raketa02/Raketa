@@ -77,8 +77,22 @@ describe('the didn’t-come rows where a booked game’s result is entered', () 
 
     expect(noShowRows(game({ ...played, standing: 'AWAITING_ANSWER' }), ME)).toEqual([]);
     expect(noShowRows(game({ ...played, standing: 'CONFIRMED' }), ME)).toEqual([]);
-    expect(noShowRows(game({ standing: 'NEVER_PLAYED' }), ME)).toEqual([]);
+    expect(noShowRows(game({ standing: 'PLAYED_NO_SCORE' }), ME)).toEqual([]);
     expect(noShowRows(game({ standing: 'NO_SHOW', noShows: [report(KUBA)] }), ME)).toEqual([]);
+  });
+
+  /**
+   * **A For fun game asks nothing about its score** (#654), and somebody can still not come to it:
+   * the rows are offered there too until its score is up, until attendance replaces them (#658).
+   */
+  it('lists the others on a For fun game too, until its score is up', () => {
+    expect(noShowRows(game({ kind: 'FRIENDLY' }), ME).map((row) => row.playerId)).toContain(KUBA);
+    expect(
+      noShowRows(
+        game({ kind: 'FRIENDLY', standing: 'CONFIRMED', score: { sets: [{ a: 6, b: 4 }] } }),
+        ME,
+      ),
+    ).toEqual([]);
   });
 
   it('lists nobody on a court with a seat open, nor for somebody not on it', () => {

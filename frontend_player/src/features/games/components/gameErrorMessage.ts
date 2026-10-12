@@ -9,10 +9,10 @@
  * ## Every refusal the aggregate makes has a sentence here
  *
  * That is the ticket's own acceptance criterion, and it is why this table is longer than the
- * screens' own reachable states: five of these are races rather than mistakes — the other side
- * answered while a correction was being typed, a partner accepted while a counter was open, the
- * entry window closed between the list being read and the tap. A race has to say what happened
- * and never that the player did something wrong.
+ * screens' own reachable states: several of these are races rather than mistakes — the other side
+ * put a score up while a correction was being typed, somebody said *That's right* while a counter
+ * was open, the entry window closed between the list being read and the tap. A race has to say
+ * what happened and never that the player did something wrong.
  *
  * ## Three of them are refusals about a score this app already refuses
  *
@@ -33,32 +33,34 @@ import { codeMessage, offlineMessage, type AppError } from '@/shared/errors';
 
 const BY_CODE: Readonly<Record<string, string>> = {
   you_were_not_on_this_court: 'No game of yours has this address.',
-  /** A `409`: the game already reads as never played to everybody who has looked at it. */
-  the_entry_window_has_closed:
-    'The window for saying this one happened has closed, so it stays unrecorded. Nobody is marked for that.',
-  /** A settled result is final — and *settled* includes the game that produced no result. */
-  the_result_is_settled: 'This game is settled now, so nothing more can be changed about it.',
-  /** The cap that bounds the argument to two rounds, and makes silence safe to read. */
-  your_side_has_already_answered:
-    'Your side has already put a score on the table, and each side gets one.',
   /**
-   * A correction that arrived after the other side responded. It is a race, not a mistake — and
-   * it can now **say when**, which it could not before the response carried an acceptance: the
-   * answer may have landed a second ago or five hours ago inside the grace, and this sentence
-   * had to be vague about which.
-   *
-   * What makes it sayable is not a field but the **control's own absence**. An agreement on the
-   * response takes the correction away (`domain/resultArgument.ts`), so the only way to reach this
-   * refusal is an answer that arrived after the list this screen is drawn from was read. The
-   * acceptance's own `agreed_at` cannot be quoted here and never could be — at the moment of the
-   * refusal there is no acceptance on this side to read it off.
+   * A `409`: the window for a first score closed, and a full game nobody recorded reads *Played · no
+   * score* to everybody who has looked at it (#655).
    */
-  the_other_side_has_answered:
-    'The other side answered while this screen was open, so this score cannot be changed any more.',
+  the_entry_window_has_closed:
+    'The time to put a score up has passed, so this game counts as played, with no score.',
+  /**
+   * A `409` on a correction once the entry window has closed, a day after the hour (#654). The score
+   * still stands, and the other side's day to answer it still runs.
+   */
+  corrections_have_closed:
+    'It’s too late to change this score — that closed a day after the game. It still stands as it is.',
+  /**
+   * A settled result is final — and since #654 *That's right* settles one at once, so this is also
+   * the race in which somebody agreed while this screen was open.
+   */
+  the_result_is_settled: 'This game is settled now, so nothing more can be changed about it.',
+  /**
+   * The cap that bounds the argument to two rounds, and makes silence safe to read. A correction
+   * after the other side put its own score up is the same refusal (#654). With both scores up this
+   * screen offers neither a correction nor a counter, so it is reached only by a race — the other
+   * side's score, or a partner's counter, landing while the grid was open.
+   */
+  your_side_has_already_answered:
+    'Both sides have a score up now, and each side gets one — so this one can’t go in.',
   nobody_has_proposed_a_result: 'There is no score from the other side to agree with.',
   /** A teammate agreeing with a teammate proves nothing, so only the other side may. */
   accepting_your_own_sides_result: 'Only the other side can agree with a score.',
-  the_result_is_already_accepted: 'Your side has already agreed to this score.',
   a_result_must_carry_a_score: 'A score has to go with this — there is no bare disagreement.',
   a_score_must_name_a_winner: 'A score has to name a winner.',
   a_score_is_not_this_shape: 'That is not the shape of a score.',
@@ -74,7 +76,9 @@ const BY_CODE: Readonly<Record<string, string>> = {
   not_on_this_court: 'That player isn’t on this game.',
   you_cannot_report_yourself: 'You can’t mark yourself as not coming.',
   no_shows_are_for_booked_games: 'Only a game booked on a court can have somebody not come.',
-  the_game_has_not_started: 'The game hasn’t started yet.',
+  /** No score before the hour (#654) — and no mark either, which `MARK_BY_CODE` says. */
+  the_game_has_not_started:
+    'This game hasn’t started yet, so there’s no score to put up. It can go in once the hour has begun.',
   a_result_is_entered:
     'A score went in while this screen was open, so the game happened — answer the score instead.',
   you_were_reported_as_a_no_show:
@@ -103,6 +107,7 @@ export function gameErrorMessage(error: AppError): string {
  * (`domain/noShows.ts`), and the window behind them is not on the wire once a report is made.
  */
 const MARK_BY_CODE: Readonly<Record<string, string>> = {
+  the_game_has_not_started: 'The game hasn’t started yet.',
   the_entry_window_has_closed: 'It’s too late to mark anybody else on this game.',
   the_result_is_settled: 'This game is settled now, so nobody else can be marked.',
 };

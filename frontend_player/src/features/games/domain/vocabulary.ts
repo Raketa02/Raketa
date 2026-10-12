@@ -1,7 +1,7 @@
 /**
  * The words `games` is spoken to this app in — **codes, and never sentences**.
  *
- * Six of them are a standing, two are what kind of evening it was, two are a side of the net
+ * Ten of them are a standing, two are what kind of evening it was, two are a side of the net
  * and two are what a confirmed result says about you. Every one is the backend's own vocabulary
  * ([ADR-0022](../../../../../docs/adr/0022-kernel-negative-space-and-constant-homes.md)), and
  * the words for them are this feature's — `components/gamePresentation.ts` and nowhere else.
@@ -17,23 +17,41 @@
 /**
  * What a game is at the instant it was read.
  *
- * **Derived from the record and the clock and never stored**, which is why there are six of
- * them and not a status column: a game whose entry window ran out reads as never played whether
- * or not anything has swept it, *because nothing sweeps it*
- * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §2).
- * Four are ends and two are waits, and the client may not fold a seventh. **`CALLED_OFF` is the
- * fourth end** ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)):
- * an act rather than a fold — somebody ended a game a seat had been left on — and neither an
- * evening nor a ghost, so nothing anybody is measured on moves. Its card and its shelf life are
- * [#419](https://github.com/Raketa02/Raketa/issues/419)'s; what is here is the word the contract
- * demands.
+ * **Derived from the record and the clock and never stored**, which is why there are ten of them
+ * and not a status column: a full game whose entry window ran out with nobody recording it reads
+ * `PLAYED_NO_SCORE` whether or not anything has swept it, *because nothing sweeps it*
+ * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §2,
+ * as amended by ADR-0195). Two are waits and the rest are ends, and the client may not fold
+ * another. **`CALLED_OFF` is an act rather than a fold**
+ * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): somebody
+ * ended a game a seat had been left on, and it is not an evening, so nothing anybody is measured
+ * on moves.
  */
 export type GameStanding =
   | 'AWAITING_ENTRY'
-  | 'NEVER_PLAYED'
+  /**
+   * A **full** booked game whose entry window closed with no score and nobody marked as not coming
+   * (#655; ADR-0195 §2): played, for everybody on it, and no Level moves. It replaced *Never
+   * played* — a booked, paid, full court is the evidence that it was played.
+   */
+  | 'PLAYED_NO_SCORE'
   | 'AWAITING_ANSWER'
+  /**
+   * The result stands: agreed with by a *That's right*, settled by silence, or — two scores naming
+   * the same winner — counted with the closer of them (#654). The wire does not say which, so no
+   * sentence here does either.
+   */
   | 'CONFIRMED'
+  /**
+   * A booked game whose every no-show report was disputed. Since #654 two scores never end here
+   * (they end `CONFIRMED` or `DISPUTED`), and #657 retires the reports, which leaves it no case.
+   */
   | 'UNSCORED'
+  /**
+   * Two scores named **different winners** and neither side agreed with the other's before the later
+   * one's answer window closed (#654; ADR-0195 §5): no Level moves. Raketa does not decide who won.
+   */
+  | 'DISPUTED'
   | 'CALLED_OFF'
   /**
    * A booked game whose hour came with a seat still open (#544): somebody left after the club's
@@ -58,7 +76,9 @@ export type GameStanding =
  *
  * **Stamped when the game was arranged and never derived at the end.** A game nobody scored
  * stays `COUNTED`, because *a friendly is a thing people choose* — the whole of ADR-0049's
- * fourth rejected option, and the reason one word never grows two meanings here.
+ * fourth rejected option, and the reason one word never grows two meanings here. A `FRIENDLY` is
+ * the game the app calls **For fun**, and since #654 it asks nobody anything: its first score is
+ * the result the moment it is put up.
  */
 export type GameKind = 'COUNTED' | 'FRIENDLY';
 

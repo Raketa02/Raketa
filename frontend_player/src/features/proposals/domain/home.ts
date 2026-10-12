@@ -510,7 +510,7 @@ export function moneyLineOf(
     case 'NEEDS_RESULT':
     case 'CONFIRM_THE_RESULT':
     case 'COUNTED':
-    case 'NEVER_PLAYED':
+    case 'PLAYED_NO_SCORE':
       return undefined;
   }
 }
@@ -576,10 +576,25 @@ const STATUS: Readonly<
   CONFIRM_THE_RESULT: { ended: false, fresh: false, room: true, court: true },
   COUNTED: { ended: true, fresh: false, room: true, court: true },
   UNCOUNTED: { ended: true, fresh: false, room: true, court: true },
-  NEVER_PLAYED: { ended: true, fresh: false, room: true, court: true },
+  PLAYED_NO_SCORE: { ended: true, fresh: false, room: true, court: true },
   CALLED_OFF: { ended: true, fresh: false, room: false, court: true },
   FILLING_AGAIN: { ended: false, fresh: false, room: false, court: false },
 };
+
+/**
+ * **What a booked game's tag says** — its status as Home, the details and the room name it.
+ *
+ * The wire's, with one more: **a For fun game after its hour reads *Played*** (#656; the mechanics
+ * §15.2). It asks nobody for a result — no *Needs result* — and a score put up on it stands at once
+ * and counts nothing, so *Counted* would be the wrong word for it too. Its ending with no score is
+ * everybody's *Played · no score*.
+ */
+export type ShownStatus = HomeStatus | 'PLAYED';
+
+export function shownStatus(game: Pick<HomeGame, 'status' | 'kind'>): ShownStatus {
+  const played = game.status === 'NEEDS_RESULT' || game.status === 'COUNTED';
+  return game.kind === 'forFun' && played ? 'PLAYED' : game.status;
+}
 
 /**
  * **Whether a game is on Home at `now`** — every live game, and an ended one until a day after its
@@ -705,18 +720,19 @@ export function courtIsGiven(game: Pick<HomeGame, 'status' | 'fillingAgain'>): b
  * The result act the details lead to — today's game screen, which tells and agrees a result, and
  * where a player marked as not coming says they were there (#560).
  */
-export type ResultAct = 'we-played' | 'confirm' | 'dispute';
+export type ResultAct = 'we-played' | 'add-score' | 'confirm' | 'dispute';
 
 /**
  * **What the details offer once the hour has come** — *We played* while nobody has said, *Confirm
  * the result* once a score is on the table, and to a player marked as not coming, while their day
- * runs, the door to saying they were there — or nothing. The result states are unchanged from
- * today (§14.1), so the act is today's screen's; the details are only the door to it.
+ * runs, the door to saying they were there — or nothing. **A For fun game asks nothing** (#656):
+ * its door is *Add the score*, which a player may take or leave, and none once a score is up. The
+ * act is today's screen's; the details are only the door to it.
  */
 export function resultActOf(
-  game: Pick<HomeGame, 'status' | 'uncountedReason' | 'needsYou'>,
+  game: Pick<HomeGame, 'status' | 'kind' | 'uncountedReason' | 'needsYou'>,
 ): ResultAct | undefined {
-  if (game.status === 'NEEDS_RESULT') return 'we-played';
+  if (game.status === 'NEEDS_RESULT') return game.kind === 'forFun' ? 'add-score' : 'we-played';
   if (game.status === 'CONFIRM_THE_RESULT') return 'confirm';
   return youMayDispute(game) ? 'dispute' : undefined;
 }
