@@ -30,6 +30,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { offlineMessage } from '@/shared/errors';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
+import { useOnReturn } from '@/shared/lib/platform';
 import { Card, Note, theme } from '@/shared/ui';
 
 import type { LiveYes } from '../domain/liveYes';
@@ -50,6 +51,9 @@ import { ReadFailed } from './ReadFailed';
 export function LiveYeses() {
   const router = useRouter();
   const read = useLiveYeses();
+  // A game can fill by somebody else's yes, which no action of this player's would re-read: coming
+  // back to the list is when it is read again.
+  useOnReturn(() => void read.refetch());
   const list = read.data;
 
   if (list === undefined) {

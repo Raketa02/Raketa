@@ -36,9 +36,12 @@ export function useHome() {
  * with every other notice.
  */
 export function rereadHome(client: QueryClient) {
+  // The live yeses too: a game a notice says filled may have been filled by somebody else's yes, and
+  // the player's own list would still show it until they left and came back.
   return Promise.all([
     client.invalidateQueries({ queryKey: proposalKeys.home() }),
     client.invalidateQueries({ queryKey: proposalKeys.paymentsToConfirm() }),
+    client.invalidateQueries({ queryKey: proposalKeys.liveYeses() }),
   ]);
 }
 
