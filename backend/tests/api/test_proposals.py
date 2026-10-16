@@ -137,6 +137,8 @@ async def test_a_yes_lands_on_the_game_and_in_the_player_s_live_yeses(
                 # The release time: the start less the club's release lead,
                 # a day here.
                 "book_by": "2026-10-09T15:00:00Z",
+                # Every free padel court at the club and hour is indoor.
+                "indoor": True,
             }
         ],
     }

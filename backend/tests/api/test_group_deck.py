@@ -61,6 +61,7 @@ from tests.api.proposals_world import (
     a_group,
     a_member,
     every_hour_of_the_week,
+    live_yeses,
     makes,
     says_no,
     says_yes,
@@ -320,6 +321,54 @@ async def test_a_card_says_its_kind_of_court_only_when_that_is_certain(
     [card] = (await deck_of(client, ola, group))["cards"]
     assert card["indoor"] is False
     assert (await proposal_of(client, ola, proposal))["indoor"] is False
+
+
+async def test_my_yes_says_its_kind_of_court_on_my_live_yeses(
+    client, session_factory, clock, crowd
+):
+    """A yes says the kind of court the same way the card does (#706; Q122):
+    *indoor* at a club whose padel courts are all indoor, nothing once an
+    outdoor one is free at the hour too, *outdoor* once only outdoor courts
+    are — read off the same free courts, through ``GET /players/me/live-yeses``."""
+
+    ola, kuba, ewa, tomek = crowd[:4]
+    club_id, desk = await a_club_and_its_desk(client, name="Kazimierz Padel")
+    group = await a_group(client, ola, club_id, kuba, ewa, tomek)
+    proposal = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club_id,
+        versions=((ola, kuba, ewa, tomek),),
+    )
+    assert (await says_yes(client, ola, proposal)).status_code == 200
+
+    assert await live_yes_indoor(client, ola, proposal) is True
+
+    outdoor = await adds_a_court(
+        client, desk, name="Court 4", sport="PADEL", indoor=False
+    )
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
+    assert await live_yes_indoor(client, ola, proposal) is None
+
+    courts = (await client.get("/api/v1/club/courts", headers=desk)).json()["courts"]
+    court_1 = next(one for one in courts if one["name"] == "Court 1")
+    off = await client.put(
+        court_path(court_1["id"]),
+        json={"name": "Court 1", "sport": "PADEL", "indoor": True, "offered": False},
+        headers=desk,
+    )
+    assert off.status_code == 200, off.text
+    assert await live_yes_indoor(client, ola, proposal) is False
+
+
+async def live_yes_indoor(client, player: dict, proposal_id) -> bool | None:
+    [yes] = [
+        row
+        for row in (await live_yeses(client, player))["yeses"]
+        if row["proposal_id"] == str(proposal_id)
+    ]
+    return yes["indoor"]
 
 
 async def proposal_of(client, player: dict, proposal_id) -> dict:

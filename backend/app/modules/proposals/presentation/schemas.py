@@ -241,6 +241,15 @@ class LiveYesSchema(BaseModel):
     book_by: datetime = Field(
         description="The latest moment the game can fill; past it the yes lapses."
     )
+    indoor: bool | None = Field(
+        description=(
+            "The kind of court the game promises — `true` *Indoor*, `false` "
+            "*Outdoor* — when every free court it could be booked on is of "
+            "that kind; `null` when they are mixed, which promises neither "
+            "(Q122). The same rule as the deck card's `indoor`. Shown, never "
+            "chosen by."
+        )
+    )
 
     @classmethod
     def from_named(cls, named: NamedLiveYes) -> "LiveYesSchema":
@@ -254,6 +263,7 @@ class LiveYesSchema(BaseModel):
             club=LiveYesClubSchema(id=yes.club_id, name=named.club_name),
             share_grosze=yes.share_grosze,
             book_by=yes.book_by,
+            indoor=named.indoor,
         )
 
 

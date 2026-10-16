@@ -11018,6 +11018,18 @@
             "format": "date-time",
             "title": "Book By",
             "description": "The latest moment the game can fill; past it the yes lapses."
+          },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The kind of court the game promises \u2014 `true` *Indoor*, `false` *Outdoor* \u2014 when every free court it could be booked on is of that kind; `null` when they are mixed, which promises neither (Q122). The same rule as the deck card's `indoor`. Shown, never chosen by."
           }
         },
         "type": "object",
@@ -11029,7 +11041,8 @@
           "starts_at",
           "club",
           "share_grosze",
-          "book_by"
+          "book_by",
+          "indoor"
         ],
         "title": "LiveYesSchema",
         "description": "One yes on a game that has not filled."

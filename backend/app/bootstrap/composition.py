@@ -123,6 +123,7 @@ from app.modules.proposals.application.booking_details import ReadBookingDetails
 from app.modules.proposals.application.expire_proposals import ExpireProposals
 from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.home import ReadHome
+from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
 from app.modules.proposals.application.rescues import (
     SayNoToARescue,
@@ -1307,6 +1308,17 @@ def build_court_kinds(
 
 def build_proposal_club_names(session: AsyncSession) -> ProposalClubNames:
     return DirectoryClubNames(build_club_directory(session))
+
+
+def build_read_live_yeses(session: AsyncSession, *, clock: Clock) -> ReadLiveYeses:
+    """A player's live yeses, each with the kind of court it promises — the
+    deck's own free-court read (#706)."""
+    return ReadLiveYeses(
+        directory=build_proposal_directory(session),
+        clubs=build_proposal_club_names(session),
+        kinds=build_court_kinds(session),
+        clock=clock,
+    )
 
 
 def build_saved_methods(

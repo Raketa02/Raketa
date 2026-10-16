@@ -34,6 +34,7 @@ from app.bootstrap.composition import (
     build_post_a_game,
     build_proposal_club_names,
     build_proposal_directory,
+    build_read_live_yeses,
     build_proposal_repository,
     build_read_booking_details,
     build_read_fill_in,
@@ -159,10 +160,8 @@ def get_withdraw_yes(db: DbSession, clock: ClockDep) -> WithdrawYes:
 WithdrawYesDep = Annotated[WithdrawYes, Depends(get_withdraw_yes)]
 
 
-def get_read_live_yeses(
-    directory: ProposalDirectoryDep, clubs: ProposalClubNamesDep, clock: ClockDep
-) -> ReadLiveYeses:
-    return ReadLiveYeses(directory=directory, clubs=clubs, clock=clock)
+def get_read_live_yeses(db: DbSession, clock: ClockDep) -> ReadLiveYeses:
+    return build_read_live_yeses(db, clock=clock)
 
 
 ReadLiveYesesDep = Annotated[ReadLiveYeses, Depends(get_read_live_yeses)]
