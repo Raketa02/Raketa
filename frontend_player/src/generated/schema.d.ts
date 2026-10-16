@@ -4897,6 +4897,11 @@ export interface components {
              * @description The latest moment the game can fill; past it the yes lapses.
              */
             book_by: string;
+            /**
+             * Indoor
+             * @description The kind of court the game promises — `true` *Indoor*, `false` *Outdoor* — when every free court it could be booked on is of that kind; `null` when they are mixed, which promises neither (Q122). The same rule as the deck card's `indoor`. Shown, never chosen by.
+             */
+            indoor: boolean | null;
         };
         /**
          * LiveYesesResponse
