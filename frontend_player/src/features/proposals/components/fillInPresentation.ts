@@ -58,9 +58,9 @@ export function seatWhen(offer: RescueOffer): string {
     : COPY.offeredUntilTheStart;
 }
 
-/** *book by Sat 13:00* · *waiting for the club* — the bold half of a yes's subtitle. */
-export function yesWhen(yes: Pick<LiveYes, 'deadline'>, waiting: boolean): string {
-  return waiting ? COPY.waitingForTheClub : `${COPY.bookBy} ${shortMoment(yes.deadline)}`;
+/** *book by Sat 13:00* — the bold half of a yes's subtitle. */
+export function yesWhen(yes: Pick<LiveYes, 'deadline'>): string {
+  return `${COPY.bookBy} ${shortMoment(yes.deadline)}`;
 }
 
 /**
@@ -78,6 +78,6 @@ export function seatRowLabel(row: SeatToFill, day: GameDay | undefined): string 
 }
 
 /** **A You're In row's door, spoken** — *Padel · Saturday 15:00, Bonarka Arena, book by Sat 13:00*. */
-export function yesRowLabel(yes: LiveYes, day: GameDay | undefined, waiting: boolean): string {
-  return [rowTitle(yes, day), clubName(yes), yesWhen(yes, waiting)].join(SPOKEN_JOIN);
+export function yesRowLabel(yes: LiveYes, day: GameDay | undefined): string {
+  return [rowTitle(yes, day), clubName(yes), yesWhen(yes)].join(SPOKEN_JOIN);
 }

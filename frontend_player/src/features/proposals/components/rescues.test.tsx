@@ -125,7 +125,6 @@ const taken = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
   proposal_id: card.proposal_id,
   open_seats: 0,
   booked: { booking_id: card.proposal_id, game_id: GAME_ID },
-  waiting_for_the_club: false,
   your_payment: null,
 });
 
@@ -482,7 +481,6 @@ describe('a rescuer whose card is refused keeps the seat for 30 minutes (#640, #
     proposal_id: card.proposal_id,
     open_seats: 1,
     booked: null,
-    waiting_for_the_club: false,
     your_payment: {
       seat_charge_id: SEAT_CHARGE,
       refusal: 'AUTHENTICATION_REQUIRED',

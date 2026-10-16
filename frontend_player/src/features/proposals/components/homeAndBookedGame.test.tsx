@@ -27,7 +27,6 @@ import {
   BOOKED_GAME,
   BOOKED_ROOM,
   BOOKING,
-  CLUB_ANSWERS_BY,
   HOME_READ_AT,
   INES,
   PIOTR,
@@ -43,7 +42,7 @@ import {
   takenMoney,
   unheldMoney,
 } from '@/test-support/home';
-import { deckCard, proposalDetails, stubProposal, yesPath } from '@/test-support/groupDeck';
+import { yesPath } from '@/test-support/groupDeck';
 import {
   CONVERSATIONS_PATH,
   GAMES_PATH,
@@ -73,7 +72,6 @@ import { proposalKeys } from '../hooks/proposalKeys';
 import { FILL_COPY } from './fillCopy';
 import { HOME_GAME_COPY } from './homeCopy';
 import { LEAVE_THE_GAME } from './leaveSheetCopy';
-import { gameRoute } from './proposalRoutes';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const HOME = HOME_GAME_COPY;
@@ -112,9 +110,7 @@ const card = () => screen.findByTestId(`home-game-${BOOKING}`);
 
 /** A Game no booking stands for — what the old loop left on `GET /games`. */
 const OLD_LOOP_GAME = '3f2b8c1e-0000-4000-8000-0000000000f1';
-/** The group a game's details are pushed under — the deck's crew. */
-const GROUP_OF_THE_DECK = 'a0000000-0000-4000-8000-000000000005';
-/** A second booking, still waiting for its club. */
+/** A second booking, still waiting for one payment. */
 const SECOND_BOOKING = '3f2b8c1e-0000-4000-8000-0000000000b2';
 /** A room filed under the second booking. */
 const SECOND_ROOM = '3f2b8c1e-0000-4000-8000-0000000000c2';
@@ -122,15 +118,23 @@ const SECOND_ROOM = '3f2b8c1e-0000-4000-8000-0000000000c2';
 const HOUR = 60 * 60 * 1000;
 
 /**
- * **Story S-01A's waiting game** — full, at an On request club with an hour to answer, read at
- * 10:00: nobody has paid, there is no Game and no court yet, and the club answers by 11:00.
+ * **Story S-01E's game** (ADR-0196, #676) — Paula's yes completed Marta's game at Kazimierz Padel,
+ * and no club confirms a game: booked at once on Court 3, each player's 25 zł held until the club's
+ * cut-off.
  */
-const waitingForKazimierz = {
-  status: 'WAITING_FOR_THE_CLUB',
+const bookedAtKazimierz = {
+  status: 'BOOKED',
+  court_name: 'Court 3',
+  money: bookedMoney({ share_grosze: 2500 }),
+} as const;
+
+/** **A full game waiting for one payment** (#625): nobody has paid, no Game and no court yet. */
+const waitingForAPayment = {
+  status: 'WAITING_FOR_A_PAYMENT',
   game_id: null,
   court_name: null,
+  indoor: null,
   money: unheldMoney({ share_grosze: 2500 }),
-  answer_by: CLUB_ANSWERS_BY,
 } as const;
 const KAZIMIERZ = 'Kazimierz Padel';
 
@@ -140,16 +144,16 @@ const WHERE_KAZIMIERZ = { where: { ...bookingDetails().where, name: KAZIMIERZ } 
 
 /**
  * **Story S-01B's fallen-back game** (#624, Q106) — Oscar left Friday's game at Kazimierz Padel while
- * the club decided. Marta and the two others still In, one seat open, nobody paid, no Game and no
- * court; full again, the club is asked again.
+ * one payment was awaited. Marta and the two others still In, one seat open, nobody paid, no Game
+ * and no court; full again, it books at once.
  */
 const fillingAgainAtKazimierz = {
   status: 'SEAT_OPEN',
   game_id: null,
   court_name: null,
+  indoor: null,
   open_seats: 1,
   filling_again: true,
-  club_confirms: true,
   sides: { ...bookedSides(), theirs: bookedSides().theirs.slice(0, 1) },
   money: unheldMoney({ share_grosze: 2500 }),
 } as const;
@@ -224,13 +228,9 @@ describe('Home — a booked game’s card (A8)', () => {
 
   it.each<[Wire['HomeStatus'], Partial<Wire['HomeGameSchema']>, string | undefined]>([
     [
-      'WAITING_FOR_THE_CLUB',
-      {
-        game_id: null,
-        court_name: null,
-        money: unheldMoney(),
-      },
-      'Nobody pays until Bonarka Arena confirms',
+      'WAITING_FOR_A_PAYMENT',
+      { game_id: null, court_name: null, indoor: null, money: unheldMoney() },
+      'Waiting for one payment · Nobody pays until it’s in',
     ],
     [
       'SEAT_OPEN',
@@ -272,21 +272,8 @@ describe('Home — a booked game’s card (A8)', () => {
     ],
     [
       'CALLED_OFF',
-      {
-        called_off_reason: 'REFUSED',
-        game_id: null,
-        money: unheldMoney(),
-      },
-      'Bonarka Arena said no · Nobody paid — you’ll get a new card first',
-    ],
-    [
-      'CALLED_OFF',
-      {
-        called_off_reason: 'NO_ANSWER',
-        game_id: null,
-        money: unheldMoney(),
-      },
-      'Bonarka Arena didn’t answer in time · Nobody paid — you’ll get a new card first',
+      { called_off_reason: 'PAYMENT_NOT_IN_TIME', game_id: null, money: unheldMoney() },
+      'A payment didn’t go through in time · Nobody paid',
     ],
   ])('draws %s with its line', async (status, extra, line) => {
     stubHomeGames(transport, [homeGame({ status, ...extra })]);
@@ -314,15 +301,8 @@ describe('Home — a booked game’s card (A8)', () => {
     },
   );
 
-  it('names no court on a game waiting for the club, which has no Game yet', async () => {
-    stubHomeGames(transport, [
-      homeGame({
-        status: 'WAITING_FOR_THE_CLUB',
-        game_id: null,
-        court_name: null,
-        money: unheldMoney(),
-      }),
-    ]);
+  it('names no court on a game waiting for one payment, which has no Game yet', async () => {
+    stubHomeGames(transport, [homeGame({ ...waitingForAPayment })]);
     await launchSignedIn();
 
     const drawn = await card();
@@ -330,26 +310,17 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(within(drawn).queryByText(/Court/)).toBeNull();
   });
 
-  it('says when the club answers, and drops it once that has passed (Q98)', async () => {
-    const home = homeGame({ ...waitingForKazimierz });
-    stubHomeGames(transport, [{ ...home, club: { ...home.club, name: KAZIMIERZ } }]);
+  /** No club confirms a game (ADR-0196, #676): a full game at Kazimierz Padel is simply booked. */
+  it('reads a full game at Kazimierz Padel as booked, its 25 zł held — nothing waits for the club', async () => {
+    stubHomeGames(transport, [homeGame({ ...bookedAtKazimierz, ...AT_KAZIMIERZ })]);
     await launchSignedIn();
 
     const drawn = await card();
-    expect(
-      within(drawn).getByText('Kazimierz Padel answers by 11:00 · Nobody pays until it confirms'),
-    ).toBeTruthy();
-    // Said as part of the line, its dots commas.
-    expect(
-      screen.getByLabelText(/Kazimierz Padel answers by 11:00, Nobody pays until it confirms\./),
-    ).toBeTruthy();
-
-    // The read's clock runs on while the deadline is ahead, so the clause leaves by itself.
-    act(() => jest.advanceTimersByTime(HOUR));
-    expect(
-      await within(await card()).findByText('Nobody pays until Kazimierz Padel confirms'),
-    ).toBeTruthy();
-    expect(screen.queryByText(/answers by/)).toBeNull();
+    expect(within(drawn).getByText(HOME.status.BOOKED)).toBeTruthy();
+    expect(within(drawn).getByText(KAZIMIERZ)).toBeTruthy();
+    expect(within(drawn).getByText('25 zł · free to leave until Fri 16:00')).toBeTruthy();
+    expect(screen.getByLabelText(/^Booked, new\. Padel\. Kazimierz Padel, Court 3\./)).toBeTruthy();
+    expect(screen.queryByText(/answers by|confirms|Nobody pays|waiting for the club/i)).toBeNull();
   });
 
   it('is new until its details are opened, and stays opened', async () => {
@@ -453,9 +424,9 @@ describe('Home — a booked game’s card (A8)', () => {
   });
 
   it.each<[string, Partial<Wire['HomeGameSchema']>]>([
-    ['waiting for the club', waitingForKazimierz],
+    ['waiting for one payment', waitingForAPayment],
     ['called off', { status: 'CALLED_OFF', called_off_reason: 'SHORT_AT_THE_CUT_OFF' }],
-    // The chat opens when the game is booked (Q106), as on Waiting for the club.
+    // The chat opens when the game is booked (Q106), as on Waiting for one payment.
     ['gone back to filling', fillingAgainAtKazimierz],
   ])('has no bubble on a game %s, whatever the list still holds', async (_, extra) => {
     stubHomeGames(transport, [homeGame(), homeGame({ booking_id: SECOND_BOOKING, ...extra })]);
@@ -502,7 +473,7 @@ describe('Home — a booked game’s card (A8)', () => {
   it('pages through two booked games, one card at a time, with the dots', async () => {
     stubHomeGames(transport, [
       homeGame(),
-      homeGame({ booking_id: SECOND_BOOKING, game_id: null, status: 'WAITING_FOR_THE_CLUB' }),
+      homeGame({ booking_id: SECOND_BOOKING, ...waitingForAPayment }),
     ]);
     await launchSignedIn();
 
@@ -599,35 +570,24 @@ describe('Home — a booked game’s card (A8)', () => {
 
 /**
  * **A full game that falls back stays on Home** (#629; the mechanics Q106; story S-01B's
- * F-HOME-10.1, F-REQUEST-31.1): Oscar left Friday's 19:00 at Kazimierz Padel while the club decided,
- * and the game stays on Marta's Home as *Seat open* rather than vanishing.
+ * F-HOME-10.1, F-REQUEST-31.1): Oscar left Friday's 19:00 at Kazimierz Padel while one payment was
+ * awaited, and the game stays on Marta's Home as *Seat open* rather than vanishing.
  */
 describe('Home — a full game gone back to filling (Q106)', () => {
-  it('stays as Seat open, the club asked again when it is full, nobody paid', async () => {
+  it('stays as Seat open, booked when it is full, nobody paid', async () => {
     stubHomeGames(transport, [homeGame({ ...fillingAgainAtKazimierz, ...AT_KAZIMIERZ })]);
     await launchSignedIn();
 
     const drawn = await card();
     expect(within(drawn).getByText(HOME.status.SEAT_OPEN)).toBeTruthy();
     expect(
-      within(drawn).getByText(
-        '1 seat open · Kazimierz Padel is asked again when it’s full · nobody paid',
-      ),
+      within(drawn).getByText('1 seat open · books when it’s full · nobody paid'),
     ).toBeTruthy();
     // No court until it is booked, and not *new*: it is not full any more.
     expect(within(drawn).queryByText(/Court/)).toBeNull();
     expect(within(drawn).queryByText(HOME.new)).toBeNull();
     expect(
       screen.getByLabelText(/^Seat open\. Padel\. Kazimierz Padel\. .*nobody paid\.$/),
-    ).toBeTruthy();
-  });
-
-  it('books when it is full at a club that books at once', async () => {
-    stubHomeGames(transport, [homeGame({ ...fillingAgainAtKazimierz, club_confirms: false })]);
-    await launchSignedIn();
-
-    expect(
-      within(await card()).getByText('1 seat open · books when it’s full · nobody paid'),
     ).toBeTruthy();
   });
 
@@ -648,10 +608,10 @@ describe('Home — a full game gone back to filling (Q106)', () => {
 
   it.each<[string, Partial<Wire['HomeGameSchema']>, string, string]>([
     [
-      'Waiting for the club once it is full again',
-      { ...waitingForKazimierz },
-      HOME.status.WAITING_FOR_THE_CLUB,
-      'Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
+      'Booked once it is full again',
+      { ...bookedAtKazimierz },
+      HOME.status.BOOKED,
+      '25 zł · free to leave until Fri 16:00',
     ],
     [
       'Called off once its last moment to book passes first',
@@ -933,26 +893,19 @@ describe('a booked game’s details (A4.1)', () => {
     expect(await screen.findByText(DETAILS.gone)).toBeTruthy();
   });
 
-  it('says under the share when the club answers, until that has passed (Q98)', async () => {
-    const details = bookingDetails({
-      ...waitingForKazimierz,
-      leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
-    });
-    await openDetails({ ...details, where: { ...details.where, name: KAZIMIERZ } });
+  /** No club confirms a game (ADR-0196, #676): Marta's game at Kazimierz Padel is booked in full. */
+  it('reads a full game at Kazimierz Padel as booked in detail, its 25 zł held on the card', async () => {
+    await openDetails(bookingDetails({ ...bookedAtKazimierz, ...WHERE_KAZIMIERZ }));
 
+    expect(await screen.findByRole('header', { name: HOME.status.BOOKED })).toBeTruthy();
+    expect(screen.getByText('Padel · booked')).toBeTruthy();
+    expect(screen.getByLabelText('Where, Kazimierz Padel, Court 3 · 3,1 km')).toBeTruthy();
     expect(
-      await screen.findByLabelText(
-        'Your share, 25 zł, Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
+      screen.getByLabelText(
+        'Your share, 25 zł, Held on your card · taken Fri 16:00 · free to leave until then',
       ),
     ).toBeTruthy();
-    // On a line of its own under the share, as Home's card draws it — not run on after 25 zł.
-    expect(screen.queryByText(/25 zł.*answers by/)).toBeNull();
-
-    act(() => jest.advanceTimersByTime(HOUR));
-    expect(
-      await screen.findByLabelText('Your share, 25 zł, Nobody pays until Kazimierz Padel confirms'),
-    ).toBeTruthy();
-    expect(screen.queryByText(/answers by/)).toBeNull();
+    expect(screen.queryByText(/answers by|confirms|Nobody pays|waiting for the club/i)).toBeNull();
   });
 });
 
@@ -979,9 +932,7 @@ describe('a full game gone back to filling, in detail (Q106)', () => {
     expect(screen.getByTestId('game-tile-empty')).toBeTruthy();
     expect(screen.getByLabelText('Where, Kazimierz Padel, 3,1 km')).toBeTruthy();
     expect(
-      screen.getByLabelText(
-        'Your share, 25 zł, 1 seat open · Kazimierz Padel is asked again when it’s full · nobody paid',
-      ),
+      screen.getByLabelText('Your share, 25 zł, 1 seat open · books when it’s full · nobody paid'),
     ).toBeTruthy();
     // The chat opens when the game is booked — though the rooms list still holds one.
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
@@ -1044,94 +995,6 @@ describe('a full game gone back to filling, in detail (Q106)', () => {
   });
 });
 
-/**
- * **The club's no and its silence, told apart** (#629; the mechanics Q105; story S-01E's
- * F-REQUEST-23.1): in the notice's and the email's words on Home's card, on the booked details and
- * on the filling details a notice opens — never *couldn't take it* for both.
- */
-describe('the club’s no and its silence (Q105)', () => {
-  const turnedDown = (reason: 'REFUSED' | 'NO_ANSWER') =>
-    ({
-      status: 'CALLED_OFF',
-      called_off_reason: reason,
-      game_id: null,
-      court_name: null,
-      money: unheldMoney({ share_grosze: 2500 }),
-    }) as const;
-
-  it.each<[string, 'REFUSED' | 'NO_ANSWER']>([
-    ['Kazimierz Padel said no', 'REFUSED'],
-    ['Kazimierz Padel didn’t answer in time', 'NO_ANSWER'],
-  ])('says “%s” on the booked details’ money row', async (words, reason) => {
-    await openDetails(
-      bookingDetails({
-        ...turnedDown(reason),
-        ...WHERE_KAZIMIERZ,
-        shows_forecast: false,
-        leaving: null,
-      }),
-      [],
-    );
-
-    expect(
-      await screen.findByLabelText(
-        `Your share, 25 zł, ${words} · nobody paid — you’ll get a new card first`,
-      ),
-    ).toBeTruthy();
-  });
-
-  it.each<[string, 'REFUSED' | 'NO_ANSWER']>([
-    ['Kazimierz Padel said no', 'REFUSED'],
-    ['Kazimierz Padel didn’t answer in time', 'NO_ANSWER'],
-  ])('says “%s” on the details of the game a notice opens', async (words, reason) => {
-    const game = deckCard({
-      proposal_id: BOOKING,
-      club: { id: 'b0000000-0000-4000-8000-000000000001', name: KAZIMIERZ },
-      club_confirms: true,
-    });
-    stubProposal(
-      transport,
-      BOOKING,
-      proposalDetails(game, { status: 'TURNED_DOWN', actions: [], in_count: 4 }),
-    );
-    stubBooking(
-      transport,
-      bookingDetails({ ...turnedDown(reason), ...WHERE_KAZIMIERZ, leaving: null }),
-    );
-    stubHomeGames(transport, []);
-    await launchSignedIn();
-
-    act(() => router.push(gameRoute(GROUP_OF_THE_DECK, BOOKING, 'padel', 'competitive')));
-
-    expect(await screen.findByRole('header', { name: words })).toBeTruthy();
-    expect(screen.getByText('Padel · called off')).toBeTruthy();
-    expect(screen.queryByText(/couldn’t take it/)).toBeNull();
-  });
-
-  it('says only that it was called off while the booking cannot be read', async () => {
-    stubProposal(
-      transport,
-      BOOKING,
-      proposalDetails(deckCard({ proposal_id: BOOKING }), {
-        status: 'TURNED_DOWN',
-        actions: [],
-        in_count: 4,
-      }),
-    );
-    transport.on('GET', bookingPath(BOOKING), () => errorResponse(404, 'booking_not_found'));
-    stubHomeGames(transport, []);
-    await launchSignedIn();
-
-    act(() => router.push(gameRoute(GROUP_OF_THE_DECK, BOOKING, 'padel', 'competitive')));
-
-    expect(await screen.findByRole('header', { name: HOME.status.CALLED_OFF })).toBeTruthy();
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', bookingPath(BOOKING)).length).toBeGreaterThan(0),
-    );
-    expect(screen.getByRole('header', { name: HOME.status.CALLED_OFF })).toBeTruthy();
-  });
-});
-
 // ---------------------------------------------------------------------------
 // The chat
 // ---------------------------------------------------------------------------
@@ -1156,19 +1019,17 @@ describe('the chat — from the details (A4.4)', () => {
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 
-  it('names no court while the game waits for the club, and has no Chat', async () => {
+  it('names no court while the game waits for one payment, and has no Chat', async () => {
     await openDetails(
       bookingDetails({
-        status: 'WAITING_FOR_THE_CLUB',
-        game_id: null,
-        court_name: null,
+        ...waitingForAPayment,
         money: unheldMoney(),
-        leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
+        leaving: { kind: 'WHILE_WAITING_FOR_A_PAYMENT', refund_grosze: 0, card_fee_grosze: 0 },
       }),
       [bookedRoomRow()],
     );
 
-    await screen.findByText('Padel · waiting for the club');
+    await screen.findByText('Padel · waiting for one payment');
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
     expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
   });

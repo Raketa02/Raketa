@@ -9,11 +9,11 @@
  * reader's, so the booking is read again and the details draw what it is now.
  *
  * **What leaving changes, re-read**: Home (the game leaves the leaver's), the receipts (a refund),
- * the live yeses (leaving while the club decides withdraws the yes), every deck and Fill in (the seat
- * is offered — and a game waiting is filling again, *Seat open* on the others' Home), the details of
- * any game still filling and the games list (the leaver is off the Game). **Not the booking
- * itself**: it answers `booking_not_found` to the leaver at once, and the details screen is on its
- * way back to Home as the reply lands.
+ * the live yeses (leaving while one payment is awaited withdraws the yes), every deck and Fill in
+ * (the seat is offered — and a game waiting is filling again, *Seat open* on the others' Home), the
+ * details of any game still filling and the games list (the leaver is off the Game). **Not the
+ * booking itself**: it answers `booking_not_found` to the leaver at once, and the details screen is
+ * on its way back to Home as the reply lands.
  */
 
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';

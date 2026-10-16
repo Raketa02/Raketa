@@ -42,9 +42,9 @@
  *   *It's a game!* covers the phone. *Open game* opens it from Home; *Later* leaves the player where
  *   they are.
  * - **Booked on a confirmed payment** (#625, #626; Q110) — a payment in time, or a payment that is
- *   the yes again: *It's a game!* for the player whose payment completed the game, at either kind of
- *   club (§12.2: *you see It's a game!*); the others are told *booked · 40 zł held*, or the club's yes.
- *   A *TO CONFIRM* row holds no card, so its faces are read off the booking.
+ *   the yes again: *It's a game!* for the player whose payment completed the game (§12.2: *you see
+ *   It's a game!*); the others are told *booked · 40 zł held*. A *TO CONFIRM* row holds no card, so
+ *   its faces are read off the booking.
  * - **A share to confirm** — *Your payment didn't go through — confirm it to keep your seat*, and
  *   the confirmation opens on that payment, naming the player's time to pay (Q109). Before the club's
  *   cut-off it is their time to fix the card (Q113): *Your card didn't go through — fix it to keep
@@ -53,25 +53,16 @@
  *   CONFIRM* (`confirm`).
  * - **No method** — the setup, and the yes again once saved. **Terms needed** — a toast naming You ›
  *   Payments, where they are accepted.
- * - **Sent to the club** — the yes filled a game an On request club confirms (#543): nobody paid,
- *   and the game is on Home *waiting for the club*. It is *It's a game!* all the same (Q103) — the
- *   players are matched — with one line under the word: *Kazimierz Padel answers by 21:15 · Nobody
- *   pays until it confirms*. *Open game* opens it from Home, as a booked game. The club's yes is told
- *   by its notice, *Kazimierz Padel confirmed your game*, never by a second *It's a game!*.
- * - **Waiting for one payment** — the yes filled the game at a club that books at once and somebody
- *   else's share was refused (#625; Q110): nobody paid, and the game is on Home *waiting for one
- *   payment*. *It's a game!*, with *Waiting for one payment · until 14:40 · Nobody pays until it's
+ * - **Waiting for one payment** — the yes filled the game and somebody else's share was refused
+ *   (#625; Q110): nobody paid, and the game is on Home *waiting for one payment*. *It's a game!*, with *Waiting for one payment · until 14:40 · Nobody pays until it's
  *   in* under the word — the time is the answer's, so nothing is read for it. A refusal of the
  *   player's own is no screen: their sheet, naming their time.
  * - **A vote** — nothing: seats are still open.
  *
  * **A rescue joined from a *Seats to fill* row** (#557) holds no sides — the row lists the players,
  * not which side the open seat is on — so *It's a game!* observes the booking's read, the seat now
- * taken, and draws its sides once it lands (`ItsAGameBooked`); a read that fails says *It's a game!* in
- * a toast, as a confirmation does. **A game sent to its club** names no deadline in the answer, so
- * the screen waits for the booking's read in the same way (`ItsAGameAtTheClub`) — one made since the yes, never an older
- * request's — and draws the line from it; a read that fails, or cannot be made offline, still draws
- * the screen, its line *Nobody pays until Kazimierz Padel confirms*.
+ * taken, and draws its sides once it lands (`ItsAGameFor`); a read that fails says *It's a game!* in
+ * a toast, as a confirmation does.
  *
  * A delayed yes refused for a game that is gone — full, over, no longer the player's — leaves the
  * details it was said on, as the details' own refusal does.
@@ -93,7 +84,6 @@ import {
   confirmationOf,
   fillOutcome,
   fillRefusal,
-  itsAGameWaiting,
   seatAtStake,
   undoSecondsLeft,
   waitsForUndo,
@@ -110,7 +100,7 @@ import {
 import { paymentWindowAt } from '../domain/home';
 import { rereadAfterFill, useBookingYes, useConfirmPaymentYes } from '../hooks/useFillWrites';
 import { dropCard } from '../hooks/useGroupDeck';
-import { useBooking, useBookingSinceMount } from '../hooks/useHome';
+import { useBooking } from '../hooks/useHome';
 import { useLatest } from '../hooks/useLatest';
 
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
@@ -124,18 +114,14 @@ interface Counting extends BookAsk {
 }
 
 /**
- * **What *It's a game!* is raised for** — a game booked; one sent to its club, which has still to say
- * yes (Q103); or one waiting for one payment (Q110): the booking, the sides the yes held if it held
- * any, and what is still missing — the club the card named, or until when.
+ * **What *It's a game!* is raised for** — a game booked, or one waiting for one payment (Q110): the
+ * booking, the sides the yes held if it held any, and for the second until when.
  */
-type Celebrating = {
+interface Celebrating {
   readonly bookingId: string;
   readonly sides?: DeckCard['sides'];
-} & (
-  | { readonly kind: 'booked' }
-  | { readonly kind: 'atTheClub'; readonly club?: string }
-  | { readonly kind: 'paymentAwaited'; readonly missing: ItsAGamePaymentAwaited }
-);
+  readonly missing?: ItsAGamePaymentAwaited;
+}
 
 export interface FillProviderProps {
   /** How far above the bottom inset the toast sits — the bar's height while the bar is drawn. */
@@ -154,10 +140,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   const [, setTick] = useState(0);
   const [settingUp, setSettingUp] = useState<{ readonly then?: () => void } | null>(null);
   const [confirming, setConfirming] = useState<ConfirmAsk | null>(null);
-  /**
-   * *It's a game!* up — with the sides the yes held, or read off the booking when it held none; and,
-   * for a game sent to its club, the club the card named (Q103).
-   */
+  /** *It's a game!* up — with the sides the yes held, or read off the booking when it held none. */
   const [celebrating, setCelebrating] = useState<Celebrating | null>(null);
 
   const book = useCallback<Fill['book']>((ask) => {
@@ -177,20 +160,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         ask.leave?.();
         // A Seats to fill row, or a TO CONFIRM row, holds no sides: the overlay reads them off the
         // booking.
-        setCelebrating({ kind: 'booked', bookingId: outcome.bookingId, ...held });
-        return;
-      }
-      case 'waiting': {
-        // The game is on Home now, waiting for the club; nothing was charged (#543). The players
-        // are matched all the same (Q103): It's a game!, its line read off the booking.
-        void rereadAfterFill(client);
-        const club = ask.card?.club?.name;
-        setCelebrating({
-          kind: 'atTheClub',
-          bookingId: outcome.bookingId,
-          ...held,
-          ...(club === undefined ? {} : { club }),
-        });
+        setCelebrating({ bookingId: outcome.bookingId, ...held });
         return;
       }
       case 'paymentAwaited':
@@ -198,7 +168,6 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         // are matched (Q110): It's a game!, with until when — the answer's own time.
         void rereadAfterFill(client);
         setCelebrating({
-          kind: 'paymentAwaited',
           bookingId: outcome.bookingId,
           ...held,
           missing: aPaymentAwaited(outcome.until, Date.now()),
@@ -353,7 +322,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
 
       {celebrating === null ? null : (
         <ItsAGameFor
-          celebrating={celebrating}
+          {...celebrating}
           onLater={() => setCelebrating(null)}
           onOpenGame={() => {
             setCelebrating(null);
@@ -376,43 +345,21 @@ interface ItsAGameDoors {
   readonly onUnreadable: () => void;
 }
 
-/** ***It's a game!* for one booking** — booked, waiting for one payment, or sent to its club. */
-function ItsAGameFor({
-  celebrating,
-  ...doors
-}: ItsAGameDoors & { readonly celebrating: Celebrating }) {
-  const { bookingId, sides } = celebrating;
-  return celebrating.kind === 'atTheClub' ? (
-    <ItsAGameAtTheClub bookingId={bookingId} sides={sides} club={celebrating.club} {...doors} />
-  ) : (
-    <ItsAGameBooked
-      bookingId={bookingId}
-      sides={sides}
-      {...(celebrating.kind === 'paymentAwaited' ? { missing: celebrating.missing } : {})}
-      {...doors}
-    />
-  );
-}
-
 /**
- * **A game booked, or waiting for one payment** — drawn from the sides the yes held, or, for a
- * *Seats to fill* row's join, from the booking's own read (`useBooking`), observed for as long as the
- * overlay waits for it: nothing is drawn until it lands, and a booking that cannot be read — refused,
- * or in a sport this build cannot name — says *It's a game!* in a toast instead. A game waiting for
- * one payment carries its line, whose time is the answer's (Q110).
+ * ***It's a game!* for one booking** — booked, or waiting for one payment — drawn from the sides the
+ * yes held, or, for a *Seats to fill* row's join, from the booking's own read (`useBooking`),
+ * observed for as long as the overlay waits for it: nothing is drawn until it lands, and a booking
+ * that cannot be read — refused, or in a sport this build cannot name — says *It's a game!* in a
+ * toast instead. A game waiting for one payment carries its line, whose time is the answer's (Q110).
  */
-function ItsAGameBooked({
+function ItsAGameFor({
   bookingId,
   sides,
   missing,
   onLater,
   onOpenGame,
   onUnreadable,
-}: ItsAGameDoors & {
-  readonly bookingId: string;
-  readonly sides: DeckCard['sides'] | undefined;
-  readonly missing?: ItsAGamePaymentAwaited;
-}) {
+}: ItsAGameDoors & Celebrating) {
   const read = useBooking(bookingId, { enabled: sides === undefined });
   const drawn = sides ?? read.data?.sides;
   const unreadable = sides === undefined && (read.data === null || read.isError);
@@ -421,41 +368,6 @@ function ItsAGameBooked({
   if (drawn === undefined) return null;
   return (
     <ItsAGame card={{ sides: drawn }} missing={missing} onLater={onLater} onOpenGame={onOpenGame} />
-  );
-}
-
-/**
- * **A game sent to its club** (Q103) — read too, for the line under the word: the club's deadline is
- * the booking's, and only a read made since the yes gives it (`useBookingSinceMount`). The screen
- * comes once that read lands, or once it cannot — refused, or held offline — its line then saying
- * only that nobody pays until the club confirms. A yes that held no sides draws them off the same
- * read, and says *It's a game!* in a toast when it cannot.
- */
-function ItsAGameAtTheClub({
-  bookingId,
-  sides,
-  club,
-  onLater,
-  onOpenGame,
-  onUnreadable,
-}: ItsAGameDoors & {
-  readonly bookingId: string;
-  readonly sides: DeckCard['sides'] | undefined;
-  readonly club: string | undefined;
-}) {
-  const read = useBookingSinceMount(bookingId);
-  const drawn = sides ?? read.booking?.sides;
-  const unreadable = sides === undefined && (read.failed || read.booking === null);
-  useWhenUnreadable(unreadable, onUnreadable);
-
-  if (drawn === undefined || !read.settled) return null;
-  return (
-    <ItsAGame
-      card={{ sides: drawn }}
-      missing={itsAGameWaiting(club, read.booking ?? undefined)}
-      onLater={onLater}
-      onOpenGame={onOpenGame}
-    />
   );
 }
 

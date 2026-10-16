@@ -21,7 +21,6 @@ export function toYesAnswer(wire: Schemas['YesAnswerResponse']): YesAnswer {
     proposalId: wire.proposal_id,
     openSeats: wire.open_seats,
     booked: booked === null ? null : { bookingId: booked.booking_id, gameId: booked.game_id },
-    waitingForTheClub: wire.waiting_for_the_club,
     yourPayment: refused === null ? null : toYourPayment(refused),
     ...(awaited === null ? {} : { paymentAwaitedUntil: awaited }),
   };

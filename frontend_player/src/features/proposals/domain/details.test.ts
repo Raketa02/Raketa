@@ -32,7 +32,6 @@ function details(extra: Partial<ProposalDetails> = {}): ProposalDetails {
     shareGrosze: 3200,
     deadline: '2026-10-02T11:00:00Z',
     noFreeCancellation: false,
-    clubConfirms: false,
     sides: {
       yours: [person('me', { isYou: true }), person('zofia', { isIn: true })],
       theirs: [person('ania', { isIn: true }), person('ewa')],
@@ -72,14 +71,13 @@ describe('completesTheGame — You complete it', () => {
 });
 
 describe('yesOnDetails — what the fill holds for a yes said here', () => {
-  it('carries the id, the card’s type, the court, the sides and the club', () => {
-    const shown = details({ inCount: 3, clubConfirms: true });
+  it('carries the id, the card’s type, the court and the sides', () => {
+    const shown = details({ inCount: 3 });
     expect(yesOnDetails(shown)).toEqual({
       proposalId: 'p-1',
       type: 'PICKED_FOR_YOU',
       court: 'BOOK_IT_NOW',
       sides: shown.sides,
-      club: { id: 'club-1', name: 'Bonarka Arena' },
     });
   });
 });
@@ -130,9 +128,8 @@ describe('paymentDueOf — the times to pay the money row names (Q111)', () => {
 });
 
 describe('detailsCanRunOut — a deadline the money row names that leaves by itself', () => {
-  it('runs while the club’s deadline, a time to pay, or the reader’s own time is there to pass', () => {
+  it('runs while a time to pay, or the reader’s own time, is there to pass', () => {
     expect(detailsCanRunOut(details())).toBe(false);
-    expect(detailsCanRunOut(details({ answerBy: '2026-09-30T09:00:00Z' }))).toBe(true);
     expect(detailsCanRunOut(details({ paymentDueBy: TWENTY_TO_THREE }))).toBe(true);
     expect(detailsCanRunOut(details({ yourPayment: yours }))).toBe(true);
   });

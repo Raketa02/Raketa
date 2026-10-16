@@ -84,8 +84,8 @@ export function useConfirmPaymentYes(handlers: FillHandlers<ConfirmAsk>) {
  * **What a booked game changes, re-read** (the mechanics §11.5): every version and card of it leaves
  * every deck, the players' other yeses at that hour are withdrawn and a capped week's paused — so
  * every deck, every Fill in and the live yeses — and the game is in Home (its booking, #556, and its
- * Game), its details read again, and a receipt in Payments. A game sent to the club (#543) re-reads
- * the same: it is on Home, waiting.
+ * Game), its details read again, and a receipt in Payments. A game waiting for one payment (#625)
+ * re-reads the same: it is on Home, waiting.
  */
 export function rereadAfterFill(client: QueryClient) {
   return Promise.all([

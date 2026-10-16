@@ -89,41 +89,26 @@ export const PROPOSALS_COPY = {
     gone: 'This game isn’t dealt to you any more.',
     /**
      * **Where a game still filling stands** (#542, #557) — its details' status tag. *Filling* carries
-     * its count (`fillingStatus`); the rest are the four ways it ended unfilled, booked, and the
-     * club's turn. A game its club turned down says which answer it was once its booking is read
-     * (`clubsAnswer`, Q105) — *Called off*, Home's word for it, until then.
+     * its count (`fillingStatus`); the rest are a payment awaited, booked, and the three ways it
+     * ended unfilled.
      */
     status: {
       FILLING: 'Filling',
-      WAITING_FOR_THE_CLUB: 'Waiting for the club',
       WAITING_FOR_A_PAYMENT: 'Waiting for one payment',
       FILLED: 'Booked',
       EXPIRED: 'Didn’t fill in time',
       WITHDRAWN: 'Taken back',
       COURT_HOUR_LOST: 'No court left at that hour',
-      TURNED_DOWN: 'Called off',
     } satisfies Readonly<Record<ProposalStatus, string>>,
     /** The same, mid-line — the header's second line, *Padel · filling*. */
     statusInLine: {
       FILLING: 'filling',
-      WAITING_FOR_THE_CLUB: 'waiting for the club',
       WAITING_FOR_A_PAYMENT: 'waiting for one payment',
       FILLED: 'booked',
       EXPIRED: 'didn’t fill',
       WITHDRAWN: 'taken back',
       COURT_HOUR_LOST: 'no court left',
-      TURNED_DOWN: 'called off',
     } satisfies Readonly<Record<ProposalStatus, string>>,
-    /** The line under the share while an On request club decides (A4.2) — Home's words. */
-    nobodyPaysUntil: 'Nobody pays until',
-    confirms: 'confirms',
-    theClub: 'the club',
-    /** After *Bonarka Arena answers by 20:45 ·* — the club named once already, as on Home (Q98). */
-    nobodyPaysUntilItConfirms: 'Nobody pays until it confirms',
-    /** *Bonarka Arena answers by 20:45* — the club's deadline to say yes (Q98), and Home's too. */
-    answersBy: 'answers by',
-    /** *The club* at the head of that clause, for a club the read no longer names. */
-    theClubLead: 'The club',
     /**
      * *Waiting for one payment · until 14:40 · Nobody pays until it's in* (Q110, Q111) — one player's
      * share was refused and their time to pay runs, never whose: Home's line, the details' and *It's a

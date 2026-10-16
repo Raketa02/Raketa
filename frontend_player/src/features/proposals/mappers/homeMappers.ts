@@ -58,14 +58,6 @@ function toMoney(wire: Schemas['BookedMoneySchema']): BookedMoney {
 }
 
 /**
- * **When the club answers** (#614) — absent for a `null`, and for the field missing altogether:
- * a server older than it sends none, and the line then reads as it did before.
- */
-export function toAnswerBy(wire: string | null | undefined): { readonly answerBy?: string } {
-  return wire === null || wire === undefined ? {} : { answerBy: wire };
-}
-
-/**
  * **When the payment a game waits for is due** (#625, #626) — on Home, a booked game's details and a
  * game still filling's. Nothing for a `null`, and nothing from a server older than it.
  */
@@ -91,14 +83,14 @@ function toTimeTo(wire: { readonly time_to?: TimeTo | null }): Pick<HomeGame, 't
 }
 
 /**
- * **A full game gone back to filling** (#624) — and which way its line ends. Nothing for a booked
- * game, and nothing from a server older than it, which sends neither field.
+ * **A full game gone back to filling** (#624) — nothing for a booked game, and nothing from a server
+ * older than it, which sends no such field.
  */
 function toFillingAgain(
-  wire: Pick<Schemas['HomeGameSchema'], 'filling_again' | 'club_confirms'>,
+  wire: Pick<Schemas['HomeGameSchema'], 'filling_again'>,
 ): Pick<HomeGame, 'fillingAgain'> {
   const fillingAgain: boolean | undefined = wire.filling_again;
-  return fillingAgain === true ? { fillingAgain: { clubConfirms: wire.club_confirms } } : {};
+  return fillingAgain === true ? { fillingAgain } : {};
 }
 
 /** What Home and the details share of a booked game — every nullable read as an absent field. */
@@ -120,7 +112,6 @@ function toBooking(
     ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
     sides: toSides(wire.sides),
     money: toMoney(wire.money),
-    ...toAnswerBy(wire.answer_by),
     ...toFillingAgain(wire),
     ...toPaymentDueBy(wire),
     ...toYourPaymentDueBy(wire),
@@ -131,7 +122,7 @@ function toBooking(
 /**
  * What leaving costs. After the cut-off the read quotes the refund if the seat is taken and the fee
  * kept, to the grosz (#641), or neither while the fee is not yet known. The noughts the read sends
- * while the club decides are no quote: nobody has paid.
+ * while one payment is awaited are no quote: nobody has paid.
  */
 function toLeaving(wire: Schemas['LeavingSchema']): Leaving {
   const { kind, refund_grosze: back, card_fee_grosze: kept } = wire;

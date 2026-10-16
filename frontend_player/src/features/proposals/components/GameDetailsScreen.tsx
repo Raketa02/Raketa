@@ -12,9 +12,9 @@
  * │ ▎WHERE  Bonarka Arena  3,1 km               │   the club and its distance, never a court number
  * │ ▎DAY    Saturday 3 Oct                      │
  * │ ▎TIME   16:00  until 17:00                  │
- * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while the club decides, on a line under
- * └─────────────────────────────────────────────┘     the share: Bonarka answers by 20:45 · Nobody
- *                                                     pays until it confirms
+ * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while one payment is awaited, on a line
+ * └─────────────────────────────────────────────┘     under the share: Waiting for one payment ·
+ *                                                     until 14:40 · Nobody pays until it's in
  * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
  * ┌ Slim overlap … the grid ────────────────────┐
  * Your yes costs nothing until everybody is in. …
@@ -25,14 +25,11 @@
  *
  * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides and their forecast, the
  * club and its distance, the share and the book-by, the overlap, the status — *Filling · 2 of 4
- * in*, *Waiting for the club* in amber, booked, or how it ended unfilled — and **`actions`, what the
- * reader may do now**, in the screen's order. *Waiting for one payment* (#625, #626; Q111) is in
- * amber too, with *Waiting for one payment · until 14:40 · Nobody pays until it's in* under the
- * share — and to the payer *Confirm your payment by 14:40*, their own time, under it while it runs,
- * there and on a game gone back to filling meanwhile. **One status it cannot word alone**: a game its club
- * turned down names one status for the club's no and its silence, so its booking — the same id —
- * is read for which (`clubsAnswer`, Q105): *Kazimierz Padel said no* or *… didn't answer in time*,
- * and *Called off* until that read says. Nothing about the game is kept by the screen: every
+ * in*, *Waiting for one payment* in amber, booked, or how it ended unfilled — and **`actions`, what
+ * the reader may do now**, in the screen's order. *Waiting for one payment* (#625, #626; Q111)
+ * carries *Waiting for one payment · until 14:40 · Nobody pays until it's in* under the share — and
+ * to the payer *Confirm your payment by 14:40*, their own time, under it while it runs, there and on
+ * a game gone back to filling meanwhile. Nothing about the game is kept by the screen: every
  * answer re-reads the details (`reread`), and each button is busy until the read has landed — so a
  * yes said here is drawn as the server has it, your tile In and *Withdraw* in place of the answers,
  * and a withdraw puts them back. A reader still deciding sees their own card as the deck deals it; a
@@ -49,9 +46,9 @@
  *   What the last seat does is the deck's own rule read off the seats and the In count
  *   (`courtOfDetails`), because the details carry no court state.
  * - **Withdraw** while the reader is In — free and silent.
- * - **Leave the game** in its place while an On request club decides (A4.2, #543): the sheet says
- *   nobody has paid and leaving withdraws the yes, and it is sent as the withdrawal, which calls off
- *   the request to the club (`LeaveTheGame`, the booked game's door).
+ * - **Leave the game** in its place while the full game waits for one payment (#625): the sheet says
+ *   nobody has paid and leaving withdraws the yes, and it is sent as the withdrawal, which puts the
+ *   game back to filling (`LeaveTheGame`, the booked game's door).
  * - **Confirm your payment** while the reader's seat waits on a refused share (#541): the fill's
  *   confirmation, on the payment the read names, naming their time to pay while it runs (Q109).
  *
@@ -92,13 +89,13 @@ import {
   yesOnDetails,
   type ProposalDetails,
 } from '../domain/details';
-import { LEAVING_WHILE_WAITING, answerByAhead, paymentWindowAt } from '../domain/home';
+import { LEAVING_WHILE_WAITING, paymentWindowAt } from '../domain/home';
 import type { GameKind } from '../domain/vocabulary';
 import { gameDayOf, weekdayAt } from '../domain/when';
 import { useFillYes } from '../hooks/useFillYes';
 import { useAnswerCard, useWithdrawYes } from '../hooks/useGroupDeck';
 import { useLatest } from '../hooks/useLatest';
-import { useBooking, useReadClock } from '../hooks/useHome';
+import { useReadClock } from '../hooks/useHome';
 import { useLeaveWhileWaiting, useProposal } from '../hooks/useProposal';
 
 import {
@@ -114,7 +111,7 @@ import {
   timeWords,
 } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { PROPOSAL_STATUS_INK, clubsAnswer } from './homePresentation';
+import { PROPOSAL_STATUS_INK } from './homePresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { CardTag } from './CardTag';
 import { GameFacts, type FactWords } from './GameFacts';
@@ -216,10 +213,6 @@ function Details({
   );
   const withdraw = useWithdrawYes(groupId, refused);
   const leaveWaiting = useLeaveWhileWaiting(groupId, proposalId);
-  // The club's no and its silence are one status here, and two on the booking (Q105).
-  const turnedDown = details.status === 'TURNED_DOWN';
-  const booking = useBooking(proposalId, { enabled: turnedDown }).data ?? undefined;
-  const answered = turnedDown && booking !== undefined ? clubsAnswer(booking) : undefined;
 
   /** This game's yes is counting down behind *Undo*. */
   const counting = fill.counting === proposalId;
@@ -249,9 +242,8 @@ function Details({
   };
   const sayNo = () => answer.mutate({ proposalId, said: 'no' }, { onSuccess: () => router.back() });
 
-  // The read's clock — running while the club's deadline or a time to pay is ahead, so *answers by
-  // …* and *until …* leave the money row by themselves; otherwise standing at the read, since
-  // nothing else here runs out.
+  // The read's clock — running while a time to pay is ahead, so *until …* leaves the money row by
+  // itself; otherwise standing at the read, since nothing else here runs out.
   const at = useReadClock(details.readAt, receivedAt, detailsCanRunOut(details));
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(details, seats / 2);
@@ -272,7 +264,7 @@ function Details({
             <GameGround />
             <View accessible accessibilityRole="header">
               <CardTag
-                label={answered ?? detailsStatus(details.status, details.inCount, details.seats)}
+                label={detailsStatus(details.status, details.inCount, details.seats)}
                 tone="grey"
                 dot={PROPOSAL_STATUS_INK[details.status]}
               />
@@ -388,7 +380,6 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
     details.status,
     card,
     weekdayAt(details.deadline),
-    answerByAhead(details, at),
     paymentDueOf(details, at),
   );
   const facts: readonly FactWords[] = [

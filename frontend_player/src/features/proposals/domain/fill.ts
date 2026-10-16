@@ -13,14 +13,7 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard, DeckPerson } from './deck';
-import {
-  answerByAhead,
-  deadlineOf,
-  type AnswerBy,
-  type BookedGame,
-  type Deadline,
-  type SeatAtStake,
-} from './home';
+import { deadlineOf, type Deadline, type SeatAtStake } from './home';
 import type { LiveYes } from './liveYes';
 import type { GameKind, PaymentRefusal, TimeTo } from './vocabulary';
 
@@ -32,8 +25,6 @@ import type { GameKind, PaymentRefusal, TimeTo } from './vocabulary';
  */
 export interface YesOn extends Pick<DeckCard, 'proposalId' | 'type' | 'court'> {
   readonly sides?: DeckCard['sides'];
-  /** The club — named when a yes sends the game to an On request club to confirm. */
-  readonly club?: DeckCard['club'];
 }
 
 /** **The deck a card was dealt in** — a group's, for one sport and one kind: what an answer re-reads. */
@@ -52,10 +43,8 @@ export const UNDO_WINDOW_MS = 10_000;
 
 /**
  * **Whether a yes on this card waits behind *Undo*** — a yes on *Book it now*, which fills the game
- * and charges everyone, and **every** rescue join, which pays at once (Q74). At an On request club
- * a *Book it now* yes waits too: at zero the game goes to the club, and the charge follows its
- * confirmation (A2.4). Any other yes is a free vote, sent at once and withdrawn free from *You're
- * In*.
+ * and charges everyone, and **every** rescue join, which pays at once (Q74). Any other yes is a
+ * free vote, sent at once and withdrawn free from *You're In*.
  */
 export function waitsForUndo(card: Pick<DeckCard, 'type' | 'court'>): boolean {
   return isRescue(card) || card.court === 'BOOK_IT_NOW';
@@ -85,14 +74,12 @@ export function seatAtStake(card: Pick<YesOn, 'type'> | undefined): SeatAtStake 
  */
 export function yesOnRescue(rescue: {
   readonly bookingId: string;
-  readonly club: DeckCard['club'];
   readonly sides?: DeckCard['sides'];
 }): YesOn {
   return {
     proposalId: rescue.bookingId,
     type: 'SEAT_OPEN',
     court: 'BOOKED',
-    club: rescue.club,
     ...(rescue.sides === undefined ? {} : { sides: rescue.sides }),
   };
 }
@@ -117,8 +104,7 @@ export interface Booked {
 }
 
 /**
- * This player's share, refused when the game filled, when its club said yes, or when they went for
- * a rescue's seat: nobody paid, and the seat is theirs alone for their time (Q109, #640) — open to
+ * This player's share, refused when the game filled, or when they went for a rescue's seat: nobody paid, and the seat is theirs alone for their time (Q109, #640) — open to
  * others too once it ran out.
  */
 export interface YourPayment {
@@ -144,8 +130,6 @@ export interface YesAnswer {
   readonly openSeats: number;
   /** This yes booked the game. */
   readonly booked: Booked | null;
-  /** This yes filled a game an On request club has still to confirm: nobody paid yet (#543). */
-  readonly waitingForTheClub: boolean;
   /** This player's share could not be held. */
   readonly yourPayment: YourPayment | null;
   /**
@@ -166,11 +150,6 @@ export interface YesAnswer {
  *   refusal of the player's own is no screen, only their sheet (Q110).
  * - `setUp` — no method at the fill: save one, and the yes again.
  * - `termsAgain` — the card's brand changed; its terms are accepted again on You › Payments.
- * - `waiting` — this yes filled a game an On request club has still to confirm (#543): nobody paid,
- *   and the game is on Home *waiting for the club*, by the booking's id — the proposal's own. It is
- *   *It's a game!* all the same, for this player alone: it marks the players matched, not only
- *   booked (Q103), and says what is still missing. The charge follows the club's yes, which is told
- *   by a notice and never by a second *It's a game!*.
  * - `paymentAwaited` — this yes filled the game and somebody else's share was refused (#625; Q110): nobody
  *   paid, and the game is on Home *waiting for one payment* until `until`, by the booking's id — the
  *   proposal's own. *It's a game!*, for this player alone, with what is still missing. When the
@@ -179,7 +158,6 @@ export interface YesAnswer {
  */
 export type FillOutcome =
   | { readonly kind: 'booked'; readonly bookingId: string }
-  | { readonly kind: 'waiting'; readonly bookingId: string }
   | { readonly kind: 'paymentAwaited'; readonly bookingId: string; readonly until: string }
   | ({ readonly kind: 'confirm' } & Confirmation)
   | { readonly kind: 'setUp' }
@@ -209,7 +187,6 @@ export function fillRefusal(
 
 export function fillOutcome(answer: YesAnswer): FillOutcome {
   if (answer.booked !== null) return { kind: 'booked', bookingId: answer.booked.bookingId };
-  if (answer.waitingForTheClub) return { kind: 'waiting', bookingId: answer.proposalId };
   const refused = answer.yourPayment;
   if (refused === null) {
     const until = answer.paymentAwaitedUntil;
@@ -311,50 +288,16 @@ function faceOf(person: DeckPerson): Face {
 }
 
 /**
- * **What *It's a game!* says is still missing**, in one line under the word — the club's yes
- * (Q103), or one payment (Q110). Nothing is missing at a club that books at once when every share
- * held, and there is no line.
- */
-export type StillMissing = ItsAGameWaiting | ItsAGamePaymentAwaited;
-
-/**
- * **What *It's a game!* says is still missing at a club that confirms** (Q103) — the club, and when
- * it must answer: *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*. The answer to
- * the yes names no deadline, so it is the booking's read (`GET /bookings/{id}`, the one Home's card
- * opens), folded as Home folds it (`answerByAhead`): on the read's clock, the hour alone when it
- * falls that day, and nothing once it has gone. With no read — refused, or a sport this build cannot
- * name — the club the card named, and no deadline: *Nobody pays until Kazimierz Padel confirms*.
- */
-export interface ItsAGameWaiting {
-  readonly of: 'theClub';
-  readonly club?: string;
-  readonly answerBy?: AnswerBy;
-}
-
-export function itsAGameWaiting(
-  club: string | undefined,
-  read: Pick<BookedGame, 'readAt' | 'where' | 'answerBy'> | undefined,
-): ItsAGameWaiting {
-  const name = read?.where.name ?? club;
-  const by = read === undefined ? undefined : answerByAhead(read, Date.parse(read.readAt));
-  return {
-    of: 'theClub',
-    ...(name === undefined ? {} : { club: name }),
-    ...(by === undefined ? {} : { answerBy: by }),
-  };
-}
-
-/**
- * **What *It's a game!* says is still missing while one payment is** (Q110) — until when: *Waiting
- * for one payment · until 14:40 · Nobody pays until it's in*. Never whose. The answer to the yes
- * names the time (`paymentAwaitedUntil`), so nothing is read; it is written as Home writes it, the
- * hour alone when it falls on `now`'s day.
+ * **What *It's a game!* says is still missing**, in one line under the word — one payment (Q110),
+ * and until when: *Waiting for one payment · until 14:40 · Nobody pays until it's in*. Never whose.
+ * Nothing is missing when every share held, and there is no line: a full game books at once at
+ * every club (ADR-0196, #676). The answer to the yes names the time (`paymentAwaitedUntil`), so
+ * nothing is read; it is written as Home writes it, the hour alone when it falls on `now`'s day.
  */
 export interface ItsAGamePaymentAwaited {
-  readonly of: 'aPayment';
   readonly until: Deadline;
 }
 
 export function aPaymentAwaited(until: string, now: number): ItsAGamePaymentAwaited {
-  return { of: 'aPayment', until: deadlineOf(until, now) };
+  return { until: deadlineOf(until, now) };
 }

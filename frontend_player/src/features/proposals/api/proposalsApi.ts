@@ -206,9 +206,9 @@ export function postRescueNo(bookingId: string): Promise<void> {
 
 /**
  * **Leave the game** (#544) — nothing taken before the club's cut-off, the hold on the card let go
- * (#637); refunded less the fee kept only when somebody takes the seat after it; and the yes and the
- * request withdrawn while an On request club decides. `game_has_started` and `booking_is_called_off` (409) where there is nothing to
- * leave. Not retried: it moves money.
+ * (#637); refunded less the fee kept only when somebody takes the seat after it; and the yes
+ * withdrawn while one payment is awaited (#625). `game_has_started` and `booking_is_called_off` (409)
+ * where there is nothing to leave. Not retried: it moves money.
  */
 export function postDeparture(bookingId: string): Promise<Schemas['DepartureResponse']> {
   return httpRequest({

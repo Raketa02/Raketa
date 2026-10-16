@@ -6,20 +6,19 @@
  * ```
  * ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   mint, 1.5pt
  * ┃ Padel · Saturday 15:00                    ┃   the title — and the door to the details
- * ┃ Bonarka Arena · book by Sat 13:00         ┃   or, amber, *waiting for the club*
+ * ┃ Bonarka Arena · book by Sat 13:00         ┃
  * ┃ [TK] [  ] [  ] [  ]            [ Withdraw ] ┃   everybody In, then the open seats dashed
  * ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  * ```
  *
  * **The row is the live yes, and its squares are the game's read** (`useProposal`): the live yes
  * says the game, the club and the book-by; who is In — the reader among them — how many seats are
- * open, whether an On request club is deciding and whether the reader may withdraw are the game's
- * details, read for the row. Until they land the row draws what the yes says, with no squares and
- * no *Withdraw*: ***Withdraw*** is free and silent, and **hidden while the club decides** (A3.2) —
- * the details' own `actions` say which (`mayWithdraw`), and a withdrawal while the club decides
- * would call the request off with no sheet in front of it. Leaving then happens from the details.
- * **One read a row**: the live yes carries neither who is In nor the club's turn (owed to the
- * backend's live-yes read).
+ * open and whether the reader may withdraw are the game's details, read for the row. Until they
+ * land the row draws what the yes says, with no squares and no *Withdraw*: ***Withdraw*** is free
+ * and silent, and **hidden while the full game waits for one payment** (A3.2, #625) — the details'
+ * own `actions` say which (`mayWithdraw`), and a withdrawal then would leave the game with no sheet
+ * in front of it. Leaving then happens from the details. **One read a row**: the live yes does not
+ * carry who is In (owed to the backend's live-yes read).
  */
 
 import { View } from 'react-native';
@@ -56,16 +55,14 @@ export function YoureInRow({ yes, now, onOpen, onHold }: YoureInRowProps) {
   );
 
   const day = gameDayOf(yes.startsAt, now);
-  const waiting = details?.status === 'WAITING_FOR_THE_CLUB';
 
   return (
     <FillInRow
       frame="yours"
-      label={yesRowLabel(yes, day, waiting)}
+      label={yesRowLabel(yes, day)}
       title={rowTitle(yes, day)}
       club={clubName(yes)}
-      when={yesWhen(yes, waiting)}
-      waiting={waiting}
+      when={yesWhen(yes)}
       onOpen={onOpen}
       testID={`youre-in-${yes.proposalId}`}
     >

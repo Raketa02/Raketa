@@ -5,8 +5,7 @@
  * details, and the foot under it, the squares left and the act right.
  *
  * *Seats to fill* is framed in `coral` and *You're In* in `mint`: a rescue is the group's one
- * emergency, the rescue ribbon's meaning (§1.2), and a yes standing is settled (1.3). The *when*
- * is amber while an On request club decides.
+ * emergency, the rescue ribbon's meaning (§1.2), and a yes standing is settled (1.3).
  */
 
 import type { ReactNode } from 'react';
@@ -23,10 +22,8 @@ export interface FillInRowProps {
   readonly label: string;
   readonly title: string;
   readonly club: string;
-  /** *fills by Fri 16:00* · *book by Sat 13:00* · *waiting for the club*, drawn bold. */
+  /** *fills by Fri 16:00* · *book by Sat 13:00*, drawn bold. */
   readonly when: string;
-  /** The *when* is the club deciding — amber. */
-  readonly waiting?: boolean;
   readonly onOpen: () => void;
   /** The squares, and the row's act. */
   readonly children: ReactNode;
@@ -39,7 +36,6 @@ export function FillInRow({
   title,
   club,
   when,
-  waiting = false,
   onOpen,
   children,
   testID,
@@ -57,7 +53,7 @@ export function FillInRow({
         <Text style={s.sub}>
           {club}
           {LINE_JOIN}
-          <Text style={[s.when, waiting ? s.waiting : undefined]}>{when}</Text>
+          <Text style={s.when}>{when}</Text>
         </Text>
       </Pressable>
       <View style={s.foot}>{children}</View>
@@ -77,8 +73,6 @@ const s = StyleSheet.create({
   title: { ...theme.type.h2, color: theme.color.ink },
   sub: { ...theme.type.rlLabel, color: theme.color.muted },
   when: { ...theme.type.rlValue, color: theme.color.ink },
-  // Amber, the colour of *watch this — not yet wrong*: the club has still to say.
-  waiting: { color: theme.color.amber },
   foot: {
     flexDirection: 'row',
     alignItems: 'center',

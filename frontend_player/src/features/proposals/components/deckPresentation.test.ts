@@ -10,7 +10,6 @@ import { rowsOf, type DeckCard, type DeckPerson } from '../domain/deck';
 
 import {
   answerLabels,
-  answersByWords,
   barLabels,
   capLine,
   countdownWords,
@@ -165,54 +164,43 @@ describe('a game’s details', () => {
     expect(shareAside('2026-10-02T11:00:00Z', 5)).toBe('if it fills · book by Fri 13:00');
   });
 
-  /** Q98: when the club answers — the hour alone on the read's day, else the weekday with it. */
-  it('says when the club answers, and under the share while the game waits for it', () => {
-    // 11:00 on Wednesday 30 September, and 00:15 on Sunday 4 October, in Warsaw.
-    const today = { at: '2026-09-30T09:00:00Z', today: true };
-    const sunday = { at: '2026-10-03T22:15:00Z', today: false };
-    expect(answersByWords('Kazimierz Padel', today)).toBe('Kazimierz Padel answers by 11:00');
-    expect(answersByWords(undefined, sunday)).toBe('The club answers by Sun 00:15');
-
-    const card = { deadline: '2026-10-02T11:00:00Z', club: { id: 'c-1', name: 'Kazimierz Padel' } };
-    expect(detailsShareWords('WAITING_FOR_THE_CLUB', card, 5, today)).toEqual({
-      below: 'Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
-    });
-    expect(detailsShareWords('WAITING_FOR_THE_CLUB', card, 5, undefined)).toEqual({
-      below: 'Nobody pays until Kazimierz Padel confirms',
-    });
-    expect(detailsShareWords('FILLING', card, 5, undefined)).toEqual({
+  it('says the book-by beside the share while the game fills, and nothing once it is over', () => {
+    const card = { deadline: '2026-10-02T11:00:00Z' };
+    expect(detailsShareWords('FILLING', card, 5)).toEqual({
       aside: 'if it fills · book by Fri 13:00',
     });
-    expect(detailsShareWords('FILLED', card, 5, undefined)).toEqual({});
+    for (const status of ['FILLED', 'EXPIRED', 'WITHDRAWN', 'COURT_HOUR_LOST'] as const) {
+      expect(detailsShareWords(status, card, 5)).toEqual({});
+    }
   });
 
   /** Q111: one payment awaited — until when under the share; the payer reads their own time. */
   it('says under the share that the game waits for one payment, and the payer’s own time', () => {
     // 14:40 on Tuesday 6 October in Warsaw.
     const twentyToThree = { at: '2026-10-06T12:40:00Z', today: true };
-    const card = { deadline: '2026-10-06T15:00:00Z', club: { id: 'c-1', name: 'Bonarka Arena' } };
-    expect(
-      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, { dueBy: twentyToThree }),
-    ).toEqual({ below: 'Waiting for one payment · until 14:40 · Nobody pays until it’s in' });
-    expect(detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined)).toEqual({
+    const card = { deadline: '2026-10-06T15:00:00Z' };
+    expect(detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, { dueBy: twentyToThree })).toEqual({
+      below: 'Waiting for one payment · until 14:40 · Nobody pays until it’s in',
+    });
+    expect(detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2)).toEqual({
       below: 'Waiting for one payment · Nobody pays until it’s in',
     });
     expect(
-      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, {
+      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, {
         dueBy: twentyToThree,
         yours: { by: twentyToThree, window: 'PAY' },
       }),
     ).toEqual({ below: 'Confirm your payment by 14:40' });
     // Before the cut-off it is their time to fix the card (#638; Q113).
     expect(
-      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, {
+      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, {
         dueBy: twentyToThree,
         yours: { by: twentyToThree, window: 'FIX_THE_CARD' },
       }),
     ).toEqual({ below: 'Fix your card by 14:40' });
     // Gone back to filling while the payer's time runs on (#625): the book-by, and their time.
     expect(
-      detailsShareWords('FILLING', card, 2, undefined, {
+      detailsShareWords('FILLING', card, 2, {
         yours: { by: twentyToThree, window: 'UNNAMED' },
       }),
     ).toEqual({

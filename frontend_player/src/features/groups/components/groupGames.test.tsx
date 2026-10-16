@@ -416,20 +416,6 @@ describe('the card', () => {
     release(tile(KAROL().player_id));
   });
 
-  it('prices no stamp at an On request club, where the charge waits for the club', async () => {
-    await openGames(
-      groupDeck({
-        cards: [
-          deckCard({ court: 'BOOK_IT_NOW', club_confirms: true, open_seats_after_your_yes: 0 }),
-        ],
-      }),
-    );
-
-    await screen.findByLabelText(COPY.details);
-    expect(screen.getByText('I’m in', HIDDEN_TOO)).toBeTruthy();
-    expect(screen.queryByText(/I’m in · /, HIDDEN_TOO)).toBeNull();
-  });
-
   it('prices no stamp on a free vote', async () => {
     await openGames(groupDeck({ cards: [deckCard()] }));
 
@@ -717,7 +703,7 @@ describe('the game’s details', () => {
     );
     transport.on('POST', yesPath(shown.proposal_id), () => {
       dealt = [];
-      return json({ proposal_id: shown.proposal_id, open_seats: 2, waiting_for_the_club: false });
+      return json({ proposal_id: shown.proposal_id, open_seats: 2 });
     });
     transport.on('DELETE', yesPath(shown.proposal_id), () => {
       dealt = [shown];

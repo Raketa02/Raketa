@@ -184,7 +184,7 @@ const color = {
    *  `night`'s family (194°) at a lower saturation. What sits on them, computed: `volt` 9,30 on
    *  the centre and 12,59 on the edge; white 11,66 / 15,78; white on `onDarkFill` over the
    *  centre 6,94 (the *Later* label); `onDarkTiny` over the centre 6,34 and the edge 7,98 (the
-   *  line under the word at a club that confirms, #628); `onDarkEyebrow` over the centre 4,41,
+   *  line under the word while one payment is awaited, #630); `onDarkEyebrow` over the centre 4,41,
    *  which is under AA and is carried by a word — `vs` — that is decorative and never spoken.
    *  Derived in yesGround.test.ts. */
   yesGroundCentre: '#203C48',

@@ -21,7 +21,7 @@
  *
  * And, for a block only, **what its withdrawal moved** (ADR-0193 §4): the reader's yeses where the
  * other person is In are taken back — the live yeses, a game still filling in detail — and a game
- * waiting for its club drops back to filling as though the reader left it, which Home and that
+ * waiting for one payment drops back to filling as though the reader left it, which Home and that
  * booking's own read draw. The same reads leaving a booking re-reads, because it is the same
  * departure. An unblock brings no yes back, so it re-reads none of them.
  *

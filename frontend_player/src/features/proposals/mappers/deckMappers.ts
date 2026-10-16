@@ -135,7 +135,6 @@ export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefine
     court: wire.court,
     ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
     noFreeCancellation: wire.no_free_cancellation,
-    clubConfirms: wire.club_confirms,
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),
     overlap,

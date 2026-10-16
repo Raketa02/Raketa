@@ -1,7 +1,7 @@
 /**
  * ***Leave the game*, walked** — from a booked game's details, before the club's cut-off, after it,
- * and while an On request club decides ([#557](https://github.com/Raketa02/Raketa/issues/557); the
- * screens A4.1, A4.2, details 10; the mechanics §12.3, §13; the backend's #543, #544).
+ * and while a full game waits for one payment ([#557](https://github.com/Raketa02/Raketa/issues/557);
+ * the screens A4.1, A4.2, details 10; the mechanics §12.3, §13; the backend's #544, #625).
  *
  * The real route tree from Home: *Open game* on the card, *Leave the game* under the details with
  * the line saying what it costs now, today's *Before you leave* sheet with the new words, and back to
@@ -245,20 +245,21 @@ describe('after the cut-off (§12.3)', () => {
   });
 });
 
-describe('while an On request club decides (A4.2, §13)', () => {
+describe('while one payment is awaited (#625, §13)', () => {
   const waiting = () =>
     bookingDetails({
-      status: 'WAITING_FOR_THE_CLUB',
+      status: 'WAITING_FOR_A_PAYMENT',
       game_id: null,
       court_name: null,
+      indoor: null,
       money: unheldMoney(),
-      leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
+      leaving: { kind: 'WHILE_WAITING_FOR_A_PAYMENT', refund_grosze: 0, card_fee_grosze: 0 },
     });
 
   it('says nobody has paid, and leaving withdraws the yes', async () => {
     await openDetails(waiting());
 
-    expect(screen.getByText('Waiting for the club')).toBeTruthy();
+    expect(screen.getByText('Waiting for one payment')).toBeTruthy();
     expect(screen.getByText(HOME.leave.nobodyPaidYet)).toBeTruthy();
 
     leave();

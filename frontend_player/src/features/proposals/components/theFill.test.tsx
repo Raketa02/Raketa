@@ -16,7 +16,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { gameKeys } from '@/features/games/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
-import { FILL_COPY, LEAVE_THE_GAME, PROPOSALS_COPY } from '@/features/proposals/types';
+import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -37,7 +37,7 @@ import {
   youTile,
   ZOFIA,
 } from '@/test-support/groupDeck';
-import { bookingDetails, stubBooking, unheldMoney } from '@/test-support/home';
+import { bookingDetails, stubBooking } from '@/test-support/home';
 import {
   HOME_PATH,
   PAYMENTS_TO_CONFIRM_PATH,
@@ -55,7 +55,6 @@ import {
   stubPayments,
   stubProfileOptions,
   stubProfileSurface,
-  stubNotices,
   stubShare,
 } from '@/test-support/onboardingRouter';
 import {
@@ -71,13 +70,9 @@ import {
   errorResponse,
   installTransport,
   json,
-  noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
-
-import { proposalKeys } from '../hooks/proposalKeys';
-import { toBookedGame } from '../mappers/homeMappers';
 
 const COPY = PROPOSALS_COPY;
 const FILL = FILL_COPY;
@@ -85,7 +80,6 @@ const FILL = FILL_COPY;
 /** Past the card's flight, so the stage has told the deck it has gone. */
 const PAST_THE_FLIGHT = 400;
 const SECOND = 1_000;
-const HOUR = 3_600 * SECOND;
 
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
@@ -146,14 +140,12 @@ const counted = (card: Wire['DeckCardSchema'], open = 2): Wire['YesAnswerRespons
   proposal_id: card.proposal_id,
   open_seats: open,
   booked: null,
-  waiting_for_the_club: false,
   your_payment: null,
 });
 const booked = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
   proposal_id: card.proposal_id,
   open_seats: 0,
   booked: { booking_id: card.proposal_id, game_id: GAME_ID },
-  waiting_for_the_club: false,
   your_payment: null,
 });
 const refused = (
@@ -163,7 +155,6 @@ const refused = (
   proposal_id: card.proposal_id,
   open_seats: 1,
   booked: null,
-  waiting_for_the_club: false,
   your_payment: { seat_charge_id: SEAT_CHARGE, refusal },
 });
 
@@ -363,8 +354,9 @@ describe('It’s a game! — for the player whose yes filled the game (§11.3)',
 
     expect(await screen.findByRole('header', { name: sentence })).toBeTruthy();
     expect(screen.getByText(FILL.itsAGame.word)).toBeTruthy();
-    // Booked and paid at once: nothing is still missing, so no line under the word (Q103).
-    expect(screen.queryByText(/Nobody pays/)).toBeNull();
+    // Booked and held at once — at every club, none confirms a game (#676): nothing is still
+    // missing, so no line under the word (Q103), and no club's *answers by*.
+    expect(screen.queryByText(/Nobody pays|answers by/)).toBeNull();
     expect(screen.getByTestId('yes-tile-photo')).toBeTruthy();
     expect(screen.getAllByTestId('yes-tile-poster')).toHaveLength(3);
     expect(screen.getByRole('button', { name: FILL.itsAGame.open })).toBeTruthy();
@@ -745,281 +737,6 @@ describe('I’m in on a game’s details', () => {
 
     await waitFor(() => expect(toasts()).toEqual([[COPY.refused.proposal_is_full, 'bad']]));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
-  });
-});
-
-// ---------------------------------------------------------------------------
-// On request — the club confirms (#543)
-// ---------------------------------------------------------------------------
-
-describe('at an On request club the full game goes to the club (A2.4, §11)', () => {
-  const sentToTheClub = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
-    proposal_id: card.proposal_id,
-    open_seats: 0,
-    booked: null,
-    waiting_for_the_club: true,
-    your_payment: null,
-  });
-
-  /**
-   * The booking the yes sent to the club, as `GET /bookings/{id}` reads it from then on: nobody has
-   * paid, no Game and no court, and the club answers by 11:00 — an hour after the deck's read.
-   */
-  const waitingBooking = (
-    card: Wire['DeckCardSchema'],
-    extra: Partial<Wire['BookingDetailsResponse']> = {},
-  ) =>
-    bookingDetails({
-      booking_id: card.proposal_id,
-      game_id: null,
-      read_at: new Date(DECK_READ_AT).toISOString(),
-      status: 'WAITING_FOR_THE_CLUB',
-      court_name: null,
-      money: unheldMoney(),
-      leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
-      answer_by: new Date(DECK_READ_AT + HOUR).toISOString(),
-      ...extra,
-    });
-  const matched = 'It’s a game! You and Zofia Bielecka against Ania Kowalska and Ewa Majewska';
-
-  // Q103: It's a game! marks the four matched, not only booked — in place of the toast.
-  it('counts ten seconds, sends the yes, and ends on It’s a game! with when the club answers — no toast', async () => {
-    const card = bookItNow({ club_confirms: true });
-    stubBooking(transport, waitingBooking(card));
-    await openGames([card], sentToTheClub);
-    const home = transport.requestsTo('GET', HOME_PATH).length;
-
-    sayYes();
-    expect(screen.getByText('Booking in 10 s')).toBeTruthy();
-    theRestOfTheTenSeconds();
-
-    await waitFor(() => expect(yeses(card)).toHaveLength(1));
-    expect(
-      await screen.findByRole('header', {
-        name: `${matched}. Bonarka Arena answers by 11:00. Nobody pays until it confirms`,
-      }),
-    ).toBeTruthy();
-    expect(screen.getByText(FILL.itsAGame.word)).toBeTruthy();
-    expect(
-      screen.getByText('Bonarka Arena answers by 11:00 · Nobody pays until it confirms'),
-    ).toBeTruthy();
-    expect(screen.getByRole('button', { name: FILL.itsAGame.open })).toBeTruthy();
-    expect(screen.getByRole('button', { name: FILL.itsAGame.later })).toBeTruthy();
-    expect(toasts()).toEqual([]);
-    // The game is on Home now, waiting for the club — Home's own read, held by the shell.
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(home),
-    );
-  });
-
-  it('Open game opens the game waiting for its club over Home', async () => {
-    const card = bookItNow({ club_confirms: true });
-    stubBooking(transport, waitingBooking(card));
-    await openGames([card], sentToTheClub);
-    sayYes();
-    theRestOfTheTenSeconds();
-
-    fireEvent.press(await screen.findByRole('button', { name: FILL.itsAGame.open }));
-
-    await waitFor(() => expect(screen).toHavePathname(`/booking/${card.proposal_id}`));
-    expect(screen.queryByTestId('its-a-game')).toBeNull();
-    act(() => router.back());
-    await waitFor(() => expect(screen).toHavePathname('/'));
-  });
-
-  it('still comes when the booking cannot be read — saying only that nobody pays until it confirms', async () => {
-    const card = bookItNow({ club_confirms: true });
-    transport.on('GET', `/api/v1/bookings/${card.proposal_id}`, () =>
-      errorResponse(404, 'booking_not_found'),
-    );
-    await openGames([card], sentToTheClub);
-
-    sayYes();
-    theRestOfTheTenSeconds();
-
-    expect(
-      await screen.findByRole('header', {
-        name: `${matched}. Nobody pays until Bonarka Arena confirms`,
-      }),
-    ).toBeTruthy();
-    expect(screen.queryByText(/answers by/)).toBeNull();
-    expect(toasts()).toEqual([]);
-  });
-
-  /**
-   * The game went to the club once before — a seat opened and it filled again — and its booking was
-   * read then, with that request's deadline. A read since this yes that fails leaves that one in the
-   * cache: the line must not say it.
-   */
-  it('never says an earlier request’s deadline — a read since the yes that fails names none', async () => {
-    const card = bookItNow({ club_confirms: true });
-    transport.on('GET', `/api/v1/bookings/${card.proposal_id}`, () =>
-      errorResponse(404, 'booking_not_found'),
-    );
-    await openGames([card], sentToTheClub);
-    const earlier = toBookedGame(
-      waitingBooking(card, { answer_by: new Date(DECK_READ_AT + HOUR / 2).toISOString() }),
-    );
-    queryClient
-      .getQueryCache()
-      .build(queryClient, { queryKey: proposalKeys.booking(card.proposal_id), gcTime: Infinity })
-      .setData(earlier);
-
-    sayYes();
-    theRestOfTheTenSeconds();
-
-    expect(
-      await screen.findByRole('header', {
-        name: `${matched}. Nobody pays until Bonarka Arena confirms`,
-      }),
-    ).toBeTruthy();
-    expect(screen.queryByText(/answers by/)).toBeNull();
-  });
-
-  // Q103: the club's yes is one notice to all four — never a second It's a game!.
-  it('the club’s yes, later, is its notice — no second It’s a game!', async () => {
-    const card = bookItNow({ club_confirms: true });
-    stubBooking(transport, waitingBooking(card));
-    await openGames([card], sentToTheClub);
-    sayYes();
-    theRestOfTheTenSeconds();
-    fireEvent.press(await screen.findByRole('button', { name: FILL.itsAGame.later }));
-    await waitFor(() => expect(screen.queryByTestId('its-a-game')).toBeNull());
-
-    stubBooking(transport, bookingDetails({ booking_id: card.proposal_id, game_id: GAME_ID }));
-    stubNotices(transport, [
-      {
-        notice_id: 'd0000000-0000-4000-8000-000000000001',
-        kind: 'CLUB_CONFIRMED',
-        title: 'Bonarka Arena confirmed your game · 32 zł held',
-        body: 'Padel · Sat 16:00 — it’s a game. 32 zł is held on your card and taken at the club’s cut-off, Fri 16:00.',
-        given_at: new Date(DECK_READ_AT + 10 * 60 * SECOND).toISOString(),
-        opens: 'BOOKING',
-        game_id: card.proposal_id,
-        pool_id: CREW.id,
-        sport: 'PADEL',
-        game_kind: 'COMPETITIVE',
-        gathered: 0,
-        new: true,
-        your_own: false,
-      },
-    ]);
-    await act(async () => jest.advanceTimersByTime(60 * SECOND));
-
-    // The words are the server's (Q113): the share held, never *you paid*, before the cut-off.
-    expect(await screen.findByText('Bonarka Arena confirmed your game · 32 zł held')).toBeTruthy();
-    expect(screen.queryByText(/you paid/)).toBeNull();
-    expect(screen.queryByTestId('its-a-game')).toBeNull();
-    expect(screen.queryByText(FILL.itsAGame.word)).toBeNull();
-  });
-
-  it('draws the waiting game’s details: no court, nobody pays yet, and Leave the game in place of Withdraw', async () => {
-    const card = bookItNow({
-      club_confirms: true,
-      in_count: 4,
-      sides: {
-        yours: [youTile({ is_in: true }), ZOFIA({ is_in: true })],
-        theirs: [ANIA({ is_in: true }), EWA({ is_in: true })],
-      },
-    });
-    let waiting = true;
-    stubProposal(transport, card.proposal_id, () =>
-      waiting
-        ? proposalDetails(card, { status: 'WAITING_FOR_THE_CLUB', actions: ['LEAVE'] })
-        : proposalDetails(card, {
-            in_count: 3,
-            actions: ['YES', 'NO'],
-            sides: {
-              yours: [youTile(), ZOFIA({ is_in: true })],
-              theirs: [ANIA({ is_in: true }), EWA({ is_in: true })],
-            },
-          }),
-    );
-    transport.on('DELETE', yesPath(card.proposal_id), () => {
-      waiting = false;
-      return noContent();
-    });
-    await openGames([]);
-    act(() =>
-      router.push({
-        pathname: '/play/group/[groupId]/game/[proposalId]',
-        params: {
-          groupId: CREW.id,
-          proposalId: card.proposal_id,
-          sport: 'padel',
-          kind: 'competitive',
-        },
-      }),
-    );
-
-    expect(await screen.findByText('Waiting for the club')).toBeTruthy();
-    expect(screen.getByText('Padel · waiting for the club')).toBeTruthy();
-    expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
-    expect(
-      screen.getByLabelText('Your share, 32 zł, Nobody pays until Bonarka Arena confirms'),
-    ).toBeTruthy();
-    expect(screen.queryByRole('button', { name: COPY.game.withdraw })).toBeNull();
-    expect(screen.queryByText(COPY.game.whatAYesMeans)).toBeNull();
-
-    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
-    expect(await screen.findByText('Leaving withdraws your yes.')).toBeTruthy();
-    const acts = screen.getAllByRole('button', { name: LEAVE_THE_GAME });
-    fireEvent.press(acts[acts.length - 1]!);
-
-    await waitFor(() =>
-      expect(transport.requestsTo('DELETE', yesPath(card.proposal_id))).toHaveLength(1),
-    );
-    await waitFor(() =>
-      expect(toasts()).toContainEqual(['You left the game. Your yes is withdrawn.', 'ok']),
-    );
-    // Read again: the game is filling once more, and the reader may say yes again.
-    expect(await screen.findByText('Filling · 3 of 4 in')).toBeTruthy();
-    expect(screen.getByRole('button', { name: COPY.yes })).toBeTruthy();
-  });
-});
-
-describe('a game waiting for its club says when the club answers (Q98)', () => {
-  it('draws the deadline under the share, until it has passed', async () => {
-    const card = bookItNow({
-      club_confirms: true,
-      club: { ...bookItNow().club, name: 'Kazimierz Padel' },
-    });
-    stubProposal(transport, card.proposal_id, () =>
-      proposalDetails(card, {
-        status: 'WAITING_FOR_THE_CLUB',
-        actions: ['LEAVE'],
-        share_grosze: 2500,
-        // 11:00 in Warsaw, an hour after the read.
-        answer_by: new Date(DECK_READ_AT + HOUR).toISOString(),
-      }),
-    );
-    await openGames([]);
-    act(() =>
-      router.push({
-        pathname: '/play/group/[groupId]/game/[proposalId]',
-        params: {
-          groupId: CREW.id,
-          proposalId: card.proposal_id,
-          sport: 'padel',
-          kind: 'competitive',
-        },
-      }),
-    );
-
-    expect(
-      await screen.findByLabelText(
-        'Your share, 25 zł, Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
-      ),
-    ).toBeTruthy();
-    // On a line of its own under the share, as Home's card draws it — not run on after 25 zł.
-    expect(screen.queryByText(/25 zł.*answers by/)).toBeNull();
-
-    // The details' clock runs on while the deadline is ahead, so the clause leaves by itself.
-    act(() => jest.advanceTimersByTime(HOUR));
-    expect(
-      await screen.findByLabelText('Your share, 25 zł, Nobody pays until Kazimierz Padel confirms'),
-    ).toBeTruthy();
-    expect(screen.queryByText(/answers by/)).toBeNull();
   });
 });
 

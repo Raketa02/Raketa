@@ -41,14 +41,12 @@ import type {
 import type { GameDay } from '../domain/when';
 
 import {
-  answersByWords,
   clubName,
   gameDayWords,
   LINE_JOIN,
   paymentAwaitedClauses,
   shortMoment,
   timeWords,
-  waitingWords,
   yourPaymentWords,
 } from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
@@ -73,15 +71,14 @@ export function gamesHeading(count: number): string {
 }
 
 /**
- * **The status's colour** — the tag's dot and the facts' accent line (A4.1, A8): *Waiting for the
- * club*, *Waiting for one payment* and *Seat open* amber, *Booked* mint, *Called off* red, and the
+ * **The status's colour** — the tag's dot and the facts' accent line (A4.1, A8): *Waiting for one
+ * payment* and *Seat open* amber, *Booked* mint, *Called off* red, and the
  * result states as the old loop's cards drew them (needs a result and confirm amber, counted mint,
  * the other two ends hairline — *Played · no score* where *Never played* was, #655). A For fun
  * game's *Played* is settled, so mint (#656). On the dark card the amber is `arranging` and the red
  * `gameRed`, each the shade that carries on that ground.
  */
 export const STATUS_INK: Readonly<Record<ShownStatus, string>> = {
-  WAITING_FOR_THE_CLUB: theme.color.arranging,
   WAITING_FOR_A_PAYMENT: theme.color.arranging,
   BOOKED: theme.color.mint,
   SEAT_OPEN: theme.color.arranging,
@@ -96,19 +93,17 @@ export const STATUS_INK: Readonly<Record<ShownStatus, string>> = {
 
 /**
  * **A game still filling's status, coloured** — its details' dot and accent line: the stage still
- * being arranged while it fills, while its club decides and while one payment is awaited
- * (`arranging`), mint once booked, red when the club turned it down, the hairline on the three ways
- * it ended unfilled — the colours above, for the same facts on a game that has not filled.
+ * being arranged while it fills and while one payment is awaited (`arranging`), mint once booked,
+ * the hairline on the three ways it ended unfilled — the colours above, for the same facts on a game
+ * that has not filled.
  */
 export const PROPOSAL_STATUS_INK: Readonly<Record<ProposalStatus, string>> = {
   FILLING: theme.color.arranging,
-  WAITING_FOR_THE_CLUB: theme.color.arranging,
   WAITING_FOR_A_PAYMENT: theme.color.arranging,
   FILLED: theme.color.mint,
   EXPIRED: theme.color.onDarkHair,
   WITHDRAWN: theme.color.onDarkHair,
   COURT_HOUR_LOST: theme.color.onDarkHair,
-  TURNED_DOWN: theme.color.gameRed,
 };
 
 /**
@@ -117,7 +112,6 @@ export const PROPOSAL_STATUS_INK: Readonly<Record<ProposalStatus, string>> = {
  * languages of button. A For fun game's *Played* asks nothing more of anybody, so it reads as one.
  */
 export const OPEN_GAME_VARIANT: Readonly<Record<ShownStatus, ButtonVariant>> = {
-  WAITING_FOR_THE_CLUB: 'settled',
   WAITING_FOR_A_PAYMENT: 'settled',
   BOOKED: 'settled',
   SEAT_OPEN: 'settled',
@@ -130,7 +124,7 @@ export const OPEN_GAME_VARIANT: Readonly<Record<ShownStatus, ButtonVariant>> = {
   CALLED_OFF: 'onDark',
 };
 
-/** *Booked* · *Waiting for the club* · *Played* · … — the status tag's word. */
+/** *Booked* · *Waiting for one payment* · *Played* · … — the status tag's word. */
 export function statusWord(status: ShownStatus): string {
   return COPY.status[status];
 }
@@ -153,10 +147,6 @@ function moneyParts(line: MoneyLine): readonly string[] {
           : [`${money.freeToLeaveUntil} ${shortMoment(line.freeToLeaveUntil)}`]),
       ];
     }
-    case 'waiting':
-      return line.answerBy === undefined
-        ? [`${money.nobodyPaysUntil} ${line.club ?? money.theClub} ${money.confirms}`]
-        : [answersByWords(line.club, line.answerBy), money.nobodyPaysUntilItConfirms];
     case 'seatOpen': {
       const open = counted(line.seats, money.seatOpen, money.seatsOpen);
       return line.fillsBy === undefined
@@ -166,9 +156,7 @@ function moneyParts(line: MoneyLine): readonly string[] {
     case 'fillingAgain':
       return [
         counted(line.seats, money.seatOpen, money.seatsOpen),
-        line.clubConfirms
-          ? `${line.club ?? money.theClub} ${money.askedAgain}`
-          : money.booksWhenFull,
+        money.booksWhenFull,
         money.nobodyPaidInLine,
       ];
     case 'paymentAwaited':
@@ -190,21 +178,15 @@ function moneyParts(line: MoneyLine): readonly string[] {
 }
 
 /**
- * **What each reason a game is off says of the club** — `ofTheClub`, said with the club's name
- * before it (the rest are said of the game); `answer`, the club's answer to a request — its no or
- * its silence — told in the notice's and the email's words, a new card promised first (Q105). A
- * `Record`, so a reason the wire adds is placed here before it can be drawn.
+ * **Whether a reason a game is off is said of the club** — with the club's name before it; the rest
+ * are said of the game. A `Record`, so a reason the wire adds is placed here before it can be drawn.
  */
-const SAID_OF_THE_CLUB: Readonly<
-  Record<CalledOffReason, { readonly ofTheClub: boolean; readonly answer: boolean }>
-> = {
-  REFUSED: { ofTheClub: true, answer: true },
-  NO_ANSWER: { ofTheClub: true, answer: true },
-  CANCELLED_BY_THE_CLUB: { ofTheClub: true, answer: false },
-  SHORT_AT_THE_CUT_OFF: { ofTheClub: false, answer: false },
-  BOOK_BY_PASSED: { ofTheClub: false, answer: false },
-  COURT_HOUR_LOST: { ofTheClub: false, answer: false },
-  PAYMENT_NOT_IN_TIME: { ofTheClub: false, answer: false },
+const SAID_OF_THE_CLUB: Readonly<Record<CalledOffReason, boolean>> = {
+  CANCELLED_BY_THE_CLUB: true,
+  SHORT_AT_THE_CUT_OFF: false,
+  BOOK_BY_PASSED: false,
+  COURT_HOUR_LOST: false,
+  PAYMENT_NOT_IN_TIME: false,
 };
 
 /**
@@ -216,35 +198,25 @@ const SAID_OF_THE_CLUB: Readonly<
 const HOLDS_LET_GO: Readonly<Record<CalledOffReason, boolean>> = {
   SHORT_AT_THE_CUT_OFF: true,
   CANCELLED_BY_THE_CLUB: true,
-  REFUSED: false,
-  NO_ANSWER: false,
   BOOK_BY_PASSED: false,
   COURT_HOUR_LOST: false,
   PAYMENT_NOT_IN_TIME: false,
 };
 
 /**
- * *Nothing was taken* where the holds were let go; else *Nobody paid*, and after the club's no or its
- * silence *— you'll get a new card first* (Q105, the screens A8): a game off with nothing given back,
- * in the card's words or the details', whichever `words` are handed in.
+ * *Nothing was taken* where the holds were let go; else *Nobody paid* (the screens A8): a game off
+ * with nothing given back, in the card's words or the details', whichever `words` are handed in.
  */
 function nothingCameBack(
   reason: CalledOffReason | undefined,
-  words: {
-    readonly nothingWasTaken: string;
-    readonly nobodyPaid: string;
-    readonly nobodyPaidNewCardFirst: string;
-  },
+  words: { readonly nothingWasTaken: string; readonly nobodyPaid: string },
 ): string {
-  if (reason === undefined) return words.nobodyPaid;
-  if (HOLDS_LET_GO[reason]) return words.nothingWasTaken;
-  return SAID_OF_THE_CLUB[reason].answer ? words.nobodyPaidNewCardFirst : words.nobodyPaid;
+  return reason !== undefined && HOLDS_LET_GO[reason] ? words.nothingWasTaken : words.nobodyPaid;
 }
 
 /**
- * *A seat was still empty at the cut-off* · *Kazimierz Padel said no* · *Bonarka Arena cancelled it
- * because of the weather* — why a game is off: the club named for the three that are the club's,
- * with its own reason after a cancel (#547); its no and its silence in the notice's words (Q105).
+ * *A seat was still empty at the cut-off* · *Bonarka Arena cancelled it because of the weather* —
+ * why a game is off: the club named for its cancel, with its own reason after it (#547).
  */
 function calledOffWhy({
   reason,
@@ -256,7 +228,7 @@ function calledOffWhy({
   readonly clubCancelReason?: ClubCancelReason;
 }): string {
   const why = COPY.money.calledOff[reason];
-  if (!SAID_OF_THE_CLUB[reason].ofTheClub) return why;
+  if (!SAID_OF_THE_CLUB[reason]) return why;
   const clause =
     reason === 'CANCELLED_BY_THE_CLUB' && clubCancelReason !== undefined
       ? COPY.money.clubCancelled[clubCancelReason]
@@ -265,23 +237,8 @@ function calledOffWhy({
 }
 
 /**
- * ***Kazimierz Padel said no*** · ***… didn't answer in time*** — **the club's answer to a game it
- * turned down** (Q105), off its booking's reason: the filling details' tag, which their own read
- * cannot say, since it names one status for both. Nothing for any other ending.
- */
-export function clubsAnswer(
-  booking: Pick<BookedGame, 'calledOffReason' | 'where'>,
-): string | undefined {
-  const reason = booking.calledOffReason;
-  if (reason === undefined || !SAID_OF_THE_CLUB[reason].answer) return undefined;
-  const club = booking.where.name;
-  return calledOffWhy({ reason, ...(club === undefined ? {} : { club }) });
-}
-
-/**
- * **The line under a Home card**: *30 zł · free to leave until Sat 17:00*, *Paid · 30 zł*, *Bonarka
- * answers by 20:45 · Nobody pays until it confirms*, *1 seat open · fills by Sat 17:00 or the game is
- * off and nothing is taken*, *Refunded 30 zł*.
+ * **The line under a Home card**: *30 zł · free to leave until Sat 17:00*, *Paid · 30 zł*, *1 seat
+ * open · fills by Sat 17:00 or the game is off and nothing is taken*, *Refunded 30 zł*.
  */
 export function moneyWords(line: MoneyLine): string {
   return moneyParts(line).join(LINE_JOIN);
@@ -339,9 +296,7 @@ export function bookedTime(
  * user's ruling of 2026-10-10): a booked game says when the share is held and when it is taken
  * (`shareAt`, Q113) — *YOUR SHARE 28 zł* over *Held on your card · taken Sat 10:00 · free to leave
  * until then*, or *Held from Tue 10:00 · taken Sat 10:00* while it is only checked, and *PAID 28 zł*
- * over *Paid* once it is taken; the share nobody pays yet while the
- * club decides, over *Bonarka answers by 20:45 · Nobody
- * pays until it confirms* — the card's own line — until its deadline passes (Q98); the share nobody
+ * over *Paid* once it is taken; the share nobody
  * pays yet over *Waiting for one payment · until 14:40 · Nobody pays until it's in*, or the payer's
  * own *Confirm your payment by 14:40* (Q111) — *Fix your card by 14:40* before the cut-off (Q113),
  * and on a booked game whose holding was refused *Fix your card by 14:40 to keep your seat*, the
@@ -349,7 +304,7 @@ export function bookedTime(
  * player left, one called off or one that started short, the card's own line under the share —
  * *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came back, *A seat
  * was empty* (§14.1). A full game gone back to filling is the share nobody pays over the card's
- * *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (Q106). **A rescue
+ * *1 seat open · books when it's full · nobody paid* (Q106). **A rescue
  * seen from outside** (A4.3) is the share *I'm in* would pay over how long the seat is offered — the
  * *Seats to fill* row's own words — or, while a refused rescuer's seat is kept for them, their time:
  * *Fix your card by 14:40 to take the seat* (#640).
@@ -366,7 +321,6 @@ export function moneyRow(
     | 'uncountedReason'
     | 'needsYou'
     | 'rescue'
-    | 'answerBy'
     | 'fillingAgain'
     | 'paymentDueBy'
     | 'yourPaymentDueBy'
@@ -400,8 +354,6 @@ export function moneyRow(
             ...(why.length === 0 ? {} : { below: why.join(LINE_JOIN) }),
           };
     }
-    case 'waiting':
-      return { label: words.yourShare, value, below: waitingWords(line.club, line.answerBy) };
     case 'yourPayment':
       // With the seat at stake where the tag does not say it (`stakeOnTheDetails`, the screens A4.1).
       return { label: share, value, below: seatKeptBy(line, stakeOnTheDetails(game)) };
@@ -505,8 +457,8 @@ function backIfTaken(opening: string, refund: LateRefund): string {
  * **The line under *Leave the game*** — what leaving costs at this moment, from the read (Q113):
  * *Free to leave now — nothing is taken* before the cut-off; after it *If someone takes your seat,
  * you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*, or only *Your seat is
- * offered to others* while the read quotes no figure (#644); *Nobody has paid yet* while the club
- * decides.
+ * offered to others* while the read quotes no figure (#644); *Nobody has paid yet* while one
+ * payment is awaited.
  */
 export function leavingLine(leaving: Leaving): string {
   const words = COPY.leave;
@@ -517,7 +469,7 @@ export function leavingLine(leaving: Leaving): string {
       return leaving.lateRefund === undefined
         ? words.offered
         : backIfTaken(words.ifSomeoneTakesYourSeat, leaving.lateRefund);
-    case 'WHILE_WAITING_FOR_THE_CLUB':
+    case 'WHILE_WAITING_FOR_A_PAYMENT':
       return words.nobodyPaidYet;
   }
 }
@@ -545,7 +497,7 @@ export function leavingSheetBody(leaving: Leaving): readonly string[] {
           : [`${backIfTaken(words.ifSomeoneTakesIt, leaving.lateRefund)}; ${words.ifNobodyDoes}`]),
         words.onRecordIfNobody,
       ];
-    case 'WHILE_WAITING_FOR_THE_CLUB':
+    case 'WHILE_WAITING_FOR_A_PAYMENT':
       return [`${words.nobodyPaidYet}.`, words.withdrawsYourYes];
   }
 }
@@ -558,7 +510,7 @@ export function leftToast(left: LeavingKind): string {
       return `${words.left} ${words.nothingWasTaken}`;
     case 'AFTER_THE_CUT_OFF':
       return `${words.left} ${words.offered}.`;
-    case 'WHILE_WAITING_FOR_THE_CLUB':
+    case 'WHILE_WAITING_FOR_A_PAYMENT':
       return `${words.left} ${words.yesWithdrawn}`;
   }
 }

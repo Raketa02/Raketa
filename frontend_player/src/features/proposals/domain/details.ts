@@ -49,13 +49,6 @@ export interface ProposalDetails {
   /** The book-by: when the game leaves unfilled. */
   readonly deadline: string;
   readonly noFreeCancellation: boolean;
-  readonly clubConfirms: boolean;
-  /**
-   * **When the On request club must answer** (Q98) — while the game waits for it, and only while
-   * that deadline was ahead at the read; it stands in the money row where the book-by stood.
-   * Absent on every other status, and from an older server.
-   */
-  readonly answerBy?: string;
   /**
    * **When the payment the game waits for is due** (#625, #626) — one player's share was refused and
    * their seat is theirs alone until then: *Waiting for one payment · until 14:40*. Never whose; the
@@ -96,10 +89,6 @@ export function yesOnDetails(details: ProposalDetails): YesOn {
     type: details.type,
     court: courtOfDetails(details),
     sides: details.sides,
-    club: {
-      id: details.where.id,
-      ...(details.where.name === undefined ? {} : { name: details.where.name }),
-    },
   };
 }
 
@@ -128,16 +117,11 @@ export function paymentDueOf(
 }
 
 /**
- * **Whether the money row names a deadline that leaves by itself** — the club's (*answers by*), a
- * time to pay (*until*), or the reader's own: the details' clock ticks while one is there, as Home's
- * does (`lineCanRunOut`).
+ * **Whether the money row names a deadline that leaves by itself** — a time to pay (*until*), or the
+ * reader's own: the details' clock ticks while one is there, as Home's does (`lineCanRunOut`).
  */
 export function detailsCanRunOut(
-  details: Pick<ProposalDetails, 'answerBy' | 'paymentDueBy' | 'yourPayment'>,
+  details: Pick<ProposalDetails, 'paymentDueBy' | 'yourPayment'>,
 ): boolean {
-  return (
-    details.answerBy !== undefined ||
-    details.paymentDueBy !== undefined ||
-    details.yourPayment?.confirmBy !== undefined
-  );
+  return details.paymentDueBy !== undefined || details.yourPayment?.confirmBy !== undefined;
 }

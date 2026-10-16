@@ -27,7 +27,6 @@ describe('a card', () => {
         version_count: 2,
         court: 'BOOK_IT_NOW',
         no_free_cancellation: true,
-        club_confirms: true,
       }),
     );
 
@@ -43,7 +42,6 @@ describe('a card', () => {
       openSeatsAfterYourYes: 3,
       court: 'BOOK_IT_NOW',
       noFreeCancellation: true,
-      clubConfirms: true,
       forecast: { pct: 87, provisional: false },
       overlap: { grade: 'SLIM', game: { day: 6, range: 'AFTERNOON' } },
     });

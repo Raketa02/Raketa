@@ -230,17 +230,14 @@ export function isPickedCourt(
 /**
  * **What a yes on a post already happening is said on** — a *Challenge*, as the post is dealt: a free
  * vote while more than its seat is open, and on its last seat the booking itself, as a card's *Book it
- * now* is — so the fill holds it ten seconds behind *Undo* (`waitsForUndo`), an On request club's
- * included. The sheet carries no court state, so it is read off the seats, the details' own rule.
+ * now* is — so the fill holds it ten seconds behind *Undo* (`waitsForUndo`). The sheet carries no
+ * court state, so it is read off the seats, the details' own rule.
  */
-export function yesOnPost(
-  post: Pick<PostStillFilling, 'proposalId' | 'openSeats' | 'club'>,
-): YesOn {
+export function yesOnPost(post: Pick<PostStillFilling, 'proposalId' | 'openSeats'>): YesOn {
   return {
     proposalId: post.proposalId,
     type: 'CHALLENGE',
     court: post.openSeats === 1 ? 'BOOK_IT_NOW' : 'COURT_AVAILABLE',
-    club: post.club,
   };
 }
 

@@ -37,7 +37,7 @@ import {
 } from '../domain/deck';
 import type { PaymentDue } from '../domain/details';
 import { isRescue } from '../domain/fill';
-import type { AnswerBy, Deadline, YourTime } from '../domain/home';
+import type { Deadline, YourTime } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
@@ -404,32 +404,29 @@ export function othersTitle(card: Pick<DeckCard, 'sides'>): string {
 
 /**
  * **The details' status tag** — *Filling · 2 of 4 in* while the game fills, and otherwise the
- * status's own words: *Waiting for the club*, *Booked*, or how it ended unfilled.
+ * status's own words: *Waiting for one payment*, *Booked*, or how it ended unfilled.
  */
 export function detailsStatus(status: ProposalStatus, inCount: number, seats: number): string {
   return status === 'FILLING' ? fillingStatus(inCount, seats) : COPY.game.status[status];
 }
 
-/** *Padel · filling* · *Padel · waiting for the club* — the header's second line. */
+/** *Padel · filling* · *Padel · waiting for one payment* — the header's second line. */
 export function detailsSubline(sport: Sport, status: ProposalStatus): string {
   return `${sportLabel(sport)}${DOT}${COPY.game.statusInLine[status]}`;
 }
 
 /**
  * **The money row's words on a game still filling** — *if it fills · book by Sat 13:00* beside the
- * share while it fills; under it while its club decides (A4.2), *Bonarka Arena answers by 20:45 ·
- * Nobody pays until it confirms* until that deadline passes (`answerByAhead`, Q98), then *Nobody
- * pays until Bonarka Arena confirms*; while one payment is awaited (Q111), *Waiting for one payment
- * · until 14:40 · Nobody pays until it's in*; and nothing once it is booked or over: the share is the
+ * share while it fills; under it while one payment is awaited (Q111), *Waiting for one payment ·
+ * until 14:40 · Nobody pays until it's in*; and nothing once it is booked or over: the share is the
  * share. **The payer reads their own time under it** while it runs — *Confirm your payment by 14:40*,
  * or *Fix your card by 14:40* before the cut-off (Q113) — on a game waiting for their payment, and on
  * one gone back to filling meanwhile.
  */
 export function detailsShareWords(
   status: ProposalStatus,
-  card: Pick<DeckCard, 'deadline' | 'club'>,
+  card: Pick<DeckCard, 'deadline'>,
   deadlineDay: Weekday | undefined,
-  answerBy: AnswerBy | undefined,
   payment: PaymentDue = {},
 ): Pick<FactWords, 'aside' | 'below'> {
   const yours = payment.yours === undefined ? undefined : yourPaymentWords(payment.yours);
@@ -439,8 +436,6 @@ export function detailsShareWords(
         aside: shareAside(card.deadline, deadlineDay),
         ...(yours === undefined ? {} : { below: yours }),
       };
-    case 'WAITING_FOR_THE_CLUB':
-      return { below: waitingWords(card.club.name, answerBy) };
     case 'WAITING_FOR_A_PAYMENT':
       // The payer reads their own time; everybody else, until when — never whose (Q111).
       return { below: yours ?? paymentAwaitedClauses(payment.dueBy).join(DOT) };
@@ -448,7 +443,6 @@ export function detailsShareWords(
     case 'EXPIRED':
     case 'WITHDRAWN':
     case 'COURT_HOUR_LOST':
-    case 'TURNED_DOWN':
       return {};
   }
 }
@@ -494,15 +488,6 @@ export function deadlineWords(deadline: Deadline): string {
 }
 
 /**
- * *Bonarka Arena answers by 20:45* — **when an On request club must say yes** (Q98; the screens
- * A4.2, A8), written as `deadlineWords` writes it. Said of *the club* for one the read no longer
- * names.
- */
-export function answersByWords(club: string | undefined, answerBy: AnswerBy): string {
-  return `${club ?? COPY.game.theClubLead} ${COPY.game.answersBy} ${deadlineWords(answerBy)}`;
-}
-
-/**
  * *Waiting for one payment · until 14:40 · Nobody pays until it's in* — **a full game waiting for
  * one player's payment** (Q110, Q111), never whose: Home's line, the details' and *It's a game!*'s
  * clauses, each whole. *until* only while the time is ahead.
@@ -521,26 +506,6 @@ export function paymentAwaitedClauses(until: Deadline | undefined): readonly str
  */
 export function yourPaymentWords(time: YourTime): string {
   return `${COPY.game.yourTimeBy[time.window]} ${deadlineWords(time.by)}`;
-}
-
-/**
- * *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* — **the line under the share
- * while an On request club decides**, on a game still filling and on a booked game's details alike
- * (A4.2), the Home card's line word for word (Q98); *Nobody pays until Bonarka Arena confirms* once
- * the deadline has passed (`answerByAhead`).
- */
-export function waitingWords(club: string | undefined, answerBy: AnswerBy | undefined): string {
-  return waitingClauses(club, answerBy).join(DOT);
-}
-
-/** `waitingWords`' clauses, each whole — for a sentence that joins them its own way. */
-export function waitingClauses(
-  club: string | undefined,
-  answerBy: AnswerBy | undefined,
-): readonly string[] {
-  return answerBy === undefined
-    ? [`${COPY.game.nobodyPaysUntil} ${club ?? COPY.game.theClub} ${COPY.game.confirms}`]
-    : [answersByWords(club, answerBy), COPY.game.nobodyPaysUntilItConfirms];
 }
 
 /** *if it fills · book by Sat 13:00* — the money row's aside, off the card's deadline. */

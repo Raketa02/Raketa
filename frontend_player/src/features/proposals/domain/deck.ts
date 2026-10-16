@@ -89,8 +89,6 @@ export interface DeckCard {
   readonly courtName?: string;
   /** The club's cut-off has already passed: *no free cancellation*. */
   readonly noFreeCancellation: boolean;
-  /** An On request club: a full game waits for the club before anybody pays. */
-  readonly clubConfirms: boolean;
   /** The rows are the sides (Q70): the reader's, and the other. A side may be short of a seat. */
   readonly sides: { readonly yours: readonly DeckPerson[]; readonly theirs: readonly DeckPerson[] };
   /** Omitted where the server could not read one — somebody unrated, or nobody facing you yet. */
@@ -250,12 +248,11 @@ const COURT_TAG: Readonly<Record<CourtState, CourtTag>> = {
 
 /**
  * **Whether a yes on this card charges at once** — and so whether the stamp carries the price:
- * *Book it now*, or a rescue (Q72). At an On request club the charge waits for the club, so its
- * *Book it now* charges nobody yet and its stamp carries no price.
+ * *Book it now*, or a rescue (Q72). A full game books at once at every club (ADR-0196, #676), so a
+ * *Book it now* stamp always carries it.
  */
-export function chargesAtOnce(card: Pick<DeckCard, 'type' | 'court' | 'clubConfirms'>): boolean {
-  if (card.type === 'SEAT_OPEN') return true;
-  return card.court === 'BOOK_IT_NOW' && !card.clubConfirms;
+export function chargesAtOnce(card: Pick<DeckCard, 'type' | 'court'>): boolean {
+  return card.type === 'SEAT_OPEN' || card.court === 'BOOK_IT_NOW';
 }
 
 /** Whether the reader is In on the card — never on a card the deck deals, once they said yes here. */

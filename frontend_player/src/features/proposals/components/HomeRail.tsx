@@ -80,8 +80,8 @@ export function HomeRail({ empty }: HomeRailProps) {
   const [current, setCurrent] = useState(0);
 
   const all = home.data?.games ?? [];
-  // The clock runs while a cut-off or a club's deadline is ahead, so *free to leave until …* and
-  // *answers by …* leave the line by themselves.
+  // The clock runs while a cut-off or a time to pay is ahead, so *free to leave until …* and
+  // *until …* leave the line by themselves.
   const ticking = all.some(lineCanRunOut);
   const now = useReadClock(home.data?.readAt, home.dataUpdatedAt, ticking);
   const games = all.filter((game) => onHome(game, now));

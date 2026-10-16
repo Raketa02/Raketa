@@ -230,7 +230,6 @@ describe('a row opens the game’s details', () => {
       return json<Wire['YesAnswerResponse']>({
         proposal_id: yes.proposal_id,
         open_seats: 2,
-        waiting_for_the_club: false,
       });
     });
   }

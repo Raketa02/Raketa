@@ -5,7 +5,7 @@
  * | | |
  * | --- | --- |
  * | `useProposal` | the read — the app's defaults: thirty seconds fresh, read again on focus |
- * | `useLeaveWhileWaiting` | *Leave the game* while an On request club decides — the yes withdrawn |
+ * | `useLeaveWhileWaiting` | *Leave the game* while one payment is awaited — the yes withdrawn |
  *
  * Every answer re-reads it (`reread`), so the details draw the server's view of the game the moment
  * an answer has landed, with no copy of their own held in between.
@@ -33,8 +33,8 @@ export function useProposal(proposalId: string) {
 }
 
 /**
- * **Leave the game while the club decides** (the mechanics §13; #543) — sent as the withdrawal,
- * `DELETE /proposals/{id}/yes`, which also takes back the request to the club: nobody had paid. The
+ * **Leave the game while it waits for one payment** (the mechanics §13; #625) — sent as the
+ * withdrawal, `DELETE /proposals/{id}/yes`: nobody had paid, and the leaver's hold is let go. The
  * game leaves the leaver's Home and stays on the others' as *Seat open*, filling again (Q106), and
  * Home, the decks, the details and the live yeses are read again (`rereadAfterWithdrawing`).
  */
