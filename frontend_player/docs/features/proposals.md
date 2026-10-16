@@ -386,8 +386,15 @@ its booking's (#545): the yes is `POST /bookings/{id}/seats` and the no `POST /b
 reader in the seat that opened as a dashed volt tile** — _You complete it_ over _27 zł · court booked_
 on the last seat, _You?_ over _27 zł_ while more are open (`GameTiles`' `rescue`) — and the court's
 number on the court block (`courtName`). Every rescue join counts its ten seconds (Q74), pays, raises
-_It's a game!_ and lands in Home; **a lost race is `seat_just_taken`: _Someone just took it._**, and
-the card or row goes (`refusalOutcome` lets every rescue refusal go: taken, off, started, not offered).
+_It's a game!_ and lands in Home; **a seat that went while the player reached for it is a sheet they
+must close, not a toast** (`RescueGoneSheet`, the bug report's P1): _This game isn't available_ over
+one line naming why, from `rescueGoneOf` — _Someone just took this seat_ (`seat_just_taken`, a lost
+race), the game started, the seat no longer offered, or the game off: `booking_is_called_off`'s
+`details.reason` tells a seat still empty at the cut-off from the club's cancel, which says the club's
+reason with Home's own clause (_The club cancelled this game because of the weather_) — each ending
+_nothing was charged_. A club cannot close the hour of a booked court or take the court away
+(`court_booked_then`), so those are the only ways a booked game goes. The card or row goes
+(`refusalOutcome` lets every rescue refusal go: taken, off, started, not offered).
 **The fill holds what a yes is said on, not a dealt card** (`YesOn`: the id, the type, the court, the
 sides when the surface has them) — a _Seats to fill_ row holds no sides, since it lists the players
 and not which side the open seat is on, so _It's a game!_ then observes the booking's own read (the

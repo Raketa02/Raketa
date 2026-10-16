@@ -32,6 +32,7 @@ import {
   type DeckPerson,
   type DeckRow,
   type Overlap,
+  type RescueGone,
   type Ribbon,
   type WeekCap,
 } from '../domain/deck';
@@ -42,6 +43,7 @@ import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
 import type { FactWords } from './GameFacts';
+import { HOME_GAME_COPY } from './homeCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = PROPOSALS_COPY;
@@ -403,6 +405,21 @@ export function answerLabels(card: Pick<DeckCard, 'type' | 'shareGrosze' | 'noFr
  */
 export function refusalMessage(error: AppError): string {
   return codeMessage(COPY.refused, error);
+}
+
+/**
+ * **What the sheet of a rescue that went says** — the reason's own line, or for the club's cancel
+ * *The club cancelled this game because of the weather, so nothing was charged.*, with Home's own
+ * clause for the club's reason, and none for *Other*.
+ */
+export function rescueGoneLine({ reason, clubCancelReason }: RescueGone): string {
+  if (reason !== 'CANCELLED_BY_THE_CLUB') return COPY.rescueGone.lines[reason];
+  const words = COPY.rescueGone.clubCancelled;
+  const clause =
+    clubCancelReason === undefined
+      ? undefined
+      : HOME_GAME_COPY.money.clubCancelled[clubCancelReason];
+  return `${[words.opening, ...(clause === undefined ? [] : [clause])].join(' ')}, ${words.closing}`;
 }
 
 // ---------------------------------------------------------------------------

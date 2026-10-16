@@ -11,6 +11,7 @@ import {
   foldOf,
   inAcrossVersions,
   refusalOutcome,
+  rescueGoneOf,
   resolveKind,
   ribbonOf,
   rowsOf,
@@ -362,5 +363,49 @@ describe('the card a notice opened the deck for (#559; the screens A9)', () => {
 
   it('changes nothing when no notice opened the deck', () => {
     expect(withOnTop([first, second], undefined)).toEqual([first, second]);
+  });
+});
+
+describe('why a rescue went, as the join says it (the bug report’s P1 on the rescue swipe)', () => {
+  it('names each refusal the sheet says, and leaves the rest to the toast', () => {
+    expect(rescueGoneOf('seat_just_taken')).toEqual({ reason: 'SEAT_TAKEN' });
+    expect(rescueGoneOf('booking_not_found')).toEqual({ reason: 'BOOKING_GONE' });
+    expect(rescueGoneOf('game_has_started')).toEqual({ reason: 'GAME_STARTED' });
+    expect(rescueGoneOf('rescue_not_offered')).toEqual({ reason: 'NOT_OFFERED' });
+    expect(rescueGoneOf('payment_to_confirm')).toBeUndefined();
+    expect(rescueGoneOf(undefined)).toBeUndefined();
+  });
+
+  it('tells the club’s cancel, with its reason, from a game short at the cut-off', () => {
+    expect(
+      rescueGoneOf('booking_is_called_off', {
+        reason: 'CANCELLED_BY_THE_CLUB',
+        club_cancel_reason: 'REPAIR',
+      }),
+    ).toEqual({ reason: 'CANCELLED_BY_THE_CLUB', clubCancelReason: 'REPAIR' });
+    expect(rescueGoneOf('booking_is_called_off', { reason: 'SHORT_AT_THE_CUT_OFF' })).toEqual({
+      reason: 'SHORT_AT_THE_CUT_OFF',
+    });
+  });
+
+  it('reads the details and never trusts them: what this build cannot name is plain *called off*', () => {
+    expect(rescueGoneOf('booking_is_called_off')).toEqual({ reason: 'CALLED_OFF' });
+    expect(rescueGoneOf('booking_is_called_off', { reason: 'SOMETHING_NEW' })).toEqual({
+      reason: 'CALLED_OFF',
+    });
+    expect(rescueGoneOf('booking_is_called_off', { reason: 3 })).toEqual({ reason: 'CALLED_OFF' });
+    // A club's reason it cannot name is no reason, and a reason never rides on a cut-off.
+    expect(
+      rescueGoneOf('booking_is_called_off', {
+        reason: 'CANCELLED_BY_THE_CLUB',
+        club_cancel_reason: 'HAIL',
+      }),
+    ).toEqual({ reason: 'CANCELLED_BY_THE_CLUB' });
+    expect(
+      rescueGoneOf('booking_is_called_off', {
+        reason: 'SHORT_AT_THE_CUT_OFF',
+        club_cancel_reason: 'WEATHER',
+      }),
+    ).toEqual({ reason: 'SHORT_AT_THE_CUT_OFF' });
   });
 });

@@ -8,6 +8,7 @@
  * with their names, prices and dates read as mock data — none of it is here.
  */
 
+import type { RescueGoneReason } from '../domain/deck';
 import type { PaymentWindow } from '../domain/home';
 import type { ProposalStatus } from '../domain/vocabulary';
 
@@ -152,5 +153,28 @@ export const PROPOSALS_COPY = {
     booking_not_found: 'That game is no longer on.',
     /** #546: joining a post from *Post a game*'s sheet that dealing would not deal them now. */
     post_not_open_to_you: 'That game isn’t open to you now — nothing was recorded.',
+  },
+  /** A rescue refused because its booking, or its seat, went while the player reached for it. */
+  rescueGone: {
+    title: 'This game isn’t available',
+    /**
+     * Keyed by the reason; the club's cancel is a sentence of its own (`rescueGoneLine`), with the
+     * club's reason after it.
+     */
+    lines: {
+      SHORT_AT_THE_CUT_OFF:
+        'A seat was still empty at the club’s cut-off, so this game was called off. Nothing was charged.',
+      CALLED_OFF: 'This game was called off, so nothing was charged.',
+      BOOKING_GONE: 'This game is no longer on, so nothing was charged.',
+      SEAT_TAKEN: 'Someone just took this seat, so nothing was charged.',
+      GAME_STARTED: 'This game has already started, so nothing was charged.',
+      NOT_OFFERED: 'This seat isn’t offered to you any more, so nothing was charged.',
+    } satisfies Readonly<Record<Exclude<RescueGoneReason, 'CANCELLED_BY_THE_CLUB'>, string>>,
+    /** *The club cancelled this game because of the weather, so nothing was charged.* */
+    clubCancelled: {
+      opening: 'The club cancelled this game',
+      closing: 'so nothing was charged.',
+    },
+    close: 'Got it',
   },
 } as const;

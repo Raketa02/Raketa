@@ -333,9 +333,123 @@ describe('taking the seat from the card (A2.4)', () => {
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
     theTenSeconds();
 
-    await waitFor(() => expect(toasts()).toContainEqual(['Someone just took it.', 'bad']));
+    // A rescue whose seat went is said in a sheet the player must close, not a toast they can miss.
+    expect(await screen.findByText('This game isn’t available')).toBeTruthy();
+    expect(screen.getByText('Someone just took this seat, so nothing was charged.')).toBeTruthy();
+    expect(toasts()).not.toContainEqual(['Someone just took it.', 'bad']);
     expect(screen.queryByTestId('its-a-game')).toBeNull();
     expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+  });
+
+  it('says a called-off booking in the sheet, with nothing charged', async () => {
+    const card = rescueCard();
+    await openGames([card], () => errorResponse(409, 'booking_is_called_off'));
+
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+
+    expect(
+      await screen.findByText('This game was called off, so nothing was charged.'),
+    ).toBeTruthy();
+    expect(toasts()).toEqual([]);
+  });
+
+  /** The join refused with `code` and the envelope's `details`, as the route sends them. */
+  const refusedWith =
+    (code: string, details: Readonly<Record<string, string>> | null = null) =>
+    () =>
+      json({ code, message: 'refused', trace_id: 'trace-test', details }, 409);
+
+  const takeTheSeat = () => {
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+  };
+
+  it('names the club’s cancel and its reason, when the join says it', async () => {
+    await openGames(
+      [rescueCard()],
+      refusedWith('booking_is_called_off', {
+        reason: 'CANCELLED_BY_THE_CLUB',
+        club_cancel_reason: 'WEATHER',
+      }),
+    );
+
+    takeTheSeat();
+
+    expect(
+      await screen.findByText(
+        'The club cancelled this game because of the weather, so nothing was charged.',
+      ),
+    ).toBeTruthy();
+    expect(toasts()).toEqual([]);
+  });
+
+  it('says the club cancelled it, and no reason, when the club gave none', async () => {
+    await openGames(
+      [rescueCard()],
+      refusedWith('booking_is_called_off', {
+        reason: 'CANCELLED_BY_THE_CLUB',
+        club_cancel_reason: 'OTHER',
+      }),
+    );
+
+    takeTheSeat();
+
+    expect(
+      await screen.findByText('The club cancelled this game, so nothing was charged.'),
+    ).toBeTruthy();
+  });
+
+  it('names a game called off at the cut-off apart from the club’s cancel', async () => {
+    await openGames(
+      [rescueCard()],
+      refusedWith('booking_is_called_off', { reason: 'SHORT_AT_THE_CUT_OFF' }),
+    );
+
+    takeTheSeat();
+
+    expect(
+      await screen.findByText(
+        'A seat was still empty at the club’s cut-off, so this game was called off. Nothing was charged.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('says a game that has started in the sheet, not a toast', async () => {
+    await openGames([rescueCard()], refusedWith('game_has_started'));
+
+    takeTheSeat();
+
+    expect(
+      await screen.findByText('This game has already started, so nothing was charged.'),
+    ).toBeTruthy();
+    expect(toasts()).toEqual([]);
+  });
+
+  it('says a seat no longer offered in the sheet, not a toast', async () => {
+    await openGames([rescueCard()], refusedWith('rescue_not_offered'));
+
+    takeTheSeat();
+
+    expect(
+      await screen.findByText('This seat isn’t offered to you any more, so nothing was charged.'),
+    ).toBeTruthy();
+    expect(toasts()).toEqual([]);
+  });
+
+  it('stays until the player closes it', async () => {
+    await openGames([rescueCard()], refusedWith('seat_just_taken'));
+    takeTheSeat();
+    expect(await screen.findByText('This game isn’t available')).toBeTruthy();
+
+    // Long past any toast's hold, the sheet is still there.
+    act(() => jest.advanceTimersByTime(30 * SECOND));
+    expect(screen.getByText('This game isn’t available')).toBeTruthy();
+
+    fireEvent.press(screen.getAllByRole('button', { name: COPY.rescueGone.close })[0]!);
+    await waitFor(() => expect(screen.queryByText('This game isn’t available')).toBeNull());
   });
 });
 

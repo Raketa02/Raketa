@@ -367,7 +367,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     await waitFor(() => expect(screen.queryByTestId(`seat-to-fill-${row.booking_id}`)).toBeNull());
   });
 
-  it('says Someone just took it when another join won the race, and the row leaves', async () => {
+  it('says the seat is gone, in the sheet, when another join won the race, and the row leaves', async () => {
     const row = seatToFill();
     let taken = false;
     transport.on('POST', seatsPath(row.booking_id), () => {
@@ -381,7 +381,10 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     );
     act(() => jest.advanceTimersByTime(10 * SECOND));
 
-    await waitFor(() => expect(toasts()).toContainEqual(['Someone just took it.', 'bad']));
+    // A rescue whose seat went is said in the sheet the player must close, as on the deck.
+    expect(await screen.findByText('This game isn’t available')).toBeTruthy();
+    expect(screen.getByText('Someone just took this seat, so nothing was charged.')).toBeTruthy();
+    expect(toasts()).not.toContainEqual(['Someone just took it.', 'bad']);
     expect(screen.queryByTestId('its-a-game')).toBeNull();
     await waitFor(() => expect(screen.queryByTestId(`seat-to-fill-${row.booking_id}`)).toBeNull());
   });

@@ -18,6 +18,7 @@ import type { Weekday } from '@/shared/vocabulary/week';
 
 import type {
   CardType,
+  ClubCancelReason,
   CourtState,
   DayRange,
   GameKind,
@@ -455,4 +456,69 @@ const GONE: ReadonlySet<string> = new Set([
 
 export function refusalOutcome(code: string | undefined): RefusalOutcome {
   return code !== undefined && GONE.has(code) ? 'gone' : 'returns';
+}
+
+/**
+ * **Why a rescue's seat was refused because the game, or the seat on it, is no longer there** —
+ * the reasons the sheet names. Nothing was charged for any of them.
+ *
+ * A booked game keeps its court: a club cannot close the hour of a booked court, remove it or
+ * change its sport (`court_booked_then`, `court_has_bookings`). So a game that is gone was called
+ * off — at its cut-off with a seat still empty, or by its club — and the join says which.
+ * `CALLED_OFF` is a server that does not say.
+ */
+export type RescueGoneReason =
+  | 'SHORT_AT_THE_CUT_OFF'
+  | 'CANCELLED_BY_THE_CLUB'
+  | 'CALLED_OFF'
+  | 'BOOKING_GONE'
+  | 'SEAT_TAKEN'
+  | 'GAME_STARTED'
+  | 'NOT_OFFERED';
+
+export interface RescueGone {
+  readonly reason: RescueGoneReason;
+  /** The club's own reason, on its cancel. */
+  readonly clubCancelReason?: ClubCancelReason;
+}
+
+const RESCUE_GONE: ReadonlyMap<string, RescueGoneReason> = new Map([
+  ['booking_is_called_off', 'CALLED_OFF'],
+  ['booking_not_found', 'BOOKING_GONE'],
+  ['seat_just_taken', 'SEAT_TAKEN'],
+  ['game_has_started', 'GAME_STARTED'],
+  ['rescue_not_offered', 'NOT_OFFERED'],
+]);
+
+/** Why the game is off, as `booking_is_called_off`'s `details.reason` says it. */
+const CALLED_OFF_WHY: readonly RescueGoneReason[] = [
+  'SHORT_AT_THE_CUT_OFF',
+  'CANCELLED_BY_THE_CLUB',
+];
+
+const CLUB_CANCEL_REASONS: readonly ClubCancelReason[] = [
+  'WEATHER',
+  'REPAIR',
+  'DOUBLE_BOOKING',
+  'OTHER',
+];
+
+/**
+ * The reason a refused rescue names, or `undefined` for a refusal the toast says. A called-off
+ * game's `details` are read and never trusted: a reason this build cannot name is the plain
+ * *called off*, and a club's reason it cannot name is no reason.
+ */
+export function rescueGoneOf(
+  code: string | undefined,
+  details?: Readonly<Record<string, unknown>>,
+): RescueGone | undefined {
+  const reason = code === undefined ? undefined : RESCUE_GONE.get(code);
+  if (reason === undefined) return undefined;
+  if (reason !== 'CALLED_OFF') return { reason };
+  const why = CALLED_OFF_WHY.find((known) => known === details?.reason);
+  if (why === undefined) return { reason };
+  const club = CLUB_CANCEL_REASONS.find((known) => known === details?.club_cancel_reason);
+  return why === 'CANCELLED_BY_THE_CLUB' && club !== undefined
+    ? { reason: why, clubCancelReason: club }
+    : { reason: why };
 }

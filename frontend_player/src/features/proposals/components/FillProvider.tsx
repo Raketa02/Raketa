@@ -74,16 +74,18 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PaymentSetupSheet } from '@/features/payments/types';
+import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 import { announce, theme, UndoToast } from '@/shared/ui';
 
-import { refusalOutcome, type DeckCard } from '../domain/deck';
+import { refusalOutcome, rescueGoneOf, type DeckCard, type RescueGone } from '../domain/deck';
 import {
   UNDO_WINDOW_MS,
   aPaymentAwaited,
   confirmationOf,
   fillOutcome,
   fillRefusal,
+  isRescue,
   seatAtStake,
   undoSecondsLeft,
   waitsForUndo,
@@ -105,6 +107,7 @@ import { useLatest } from '../hooks/useLatest';
 
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
 import { refusalMessage } from './deckPresentation';
+import { RescueGoneSheet } from './RescueGoneSheet';
 import { FILL_COPY } from './fillCopy';
 import { bookingAnnouncement, bookingIn, refusedToast } from './fillPresentation';
 import { ItsAGame } from './ItsAGame';
@@ -142,6 +145,8 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   const [confirming, setConfirming] = useState<ConfirmAsk | null>(null);
   /** *It's a game!* up — with the sides the yes held, or read off the booking when it held none. */
   const [celebrating, setCelebrating] = useState<Celebrating | null>(null);
+  /** A rescue whose booking or seat went while it was reached for — the sheet says why. */
+  const [gone, setGone] = useState<RescueGone | undefined>(undefined);
 
   const book = useCallback<Fill['book']>((ask) => {
     const endsAt = Date.now() + UNDO_WINDOW_MS;
@@ -149,6 +154,19 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
     setCounting((running) => running ?? { ...ask, endsAt });
     announce(bookingAnnouncement(undoSecondsLeft(endsAt, Date.now())), 'queued');
   }, []);
+
+  /**
+   * A rescue refused because its booking or its seat went — taken, called off, under way, or no
+   * longer offered to them: a sheet the player must close, in place of a toast they can miss — and
+   * nothing was charged. `true` when it took the refusal.
+   */
+  const sayRescueGone = (error: AppError, ask: FillAsk): boolean => {
+    const reason = rescueGoneOf(error.code, error.details);
+    if (reason === undefined || ask.card === undefined || !isRescue(ask.card)) return false;
+    setGone(reason);
+    if (refusalOutcome(error.code) === 'gone') ask.leave?.();
+    return true;
+  };
 
   /** What a screen, a sheet or the delayed send does next — read off one outcome, in one place. */
   const act = (outcome: FillOutcome, ask: FillAsk, then?: () => void) => {
@@ -209,6 +227,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
     onAnswered: (answer, ask) =>
       latest.current.act(fillOutcome(answer), ask, latest.current.yesAgain(ask)),
     onRefused: (error, ask) => {
+      if (sayRescueGone(error, ask)) return;
       const mended = fillRefusal(error.code, error.details);
       if (mended !== undefined) {
         latest.current.act(mended, ask, latest.current.yesAgain(ask));
@@ -237,6 +256,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
 
   const refused = useCallback<Fill['refused']>(
     (error, ask, retry) => {
+      if (sayRescueGone(error, ask)) return true;
       const mended = fillRefusal(error.code, error.details);
       if (mended === undefined) return false;
       latest.current.act(mended, ask, retry);
@@ -307,6 +327,8 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
           then?.();
         }}
       />
+
+      <RescueGoneSheet gone={gone} onClose={() => setGone(undefined)} />
 
       {confirming === null ? null : (
         <ConfirmPaymentSheet
