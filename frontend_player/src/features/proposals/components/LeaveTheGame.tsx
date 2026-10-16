@@ -4,7 +4,7 @@
  * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A4.1, details 10; the
  * mechanics §13).
  *
- * **What it costs is the read's** (`leaving`, #544): before the club's cut-off nothing is taken and
+ * **What it costs is the read's** (`leaving`, #544; said on the sheet, never under the door): before the club's cut-off nothing is taken and
  * the hold on the card is let go (Q113), after it the share stays taken, and — while a full game
  * waits for one payment — nobody has paid and leaving withdraws the yes. The server folds it on its
  * own clock and quotes the same words the departure answers with; nothing here works out a refund.
@@ -26,7 +26,7 @@
 
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { AppError } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
@@ -36,7 +36,7 @@ import { behindOverlay, Button, theme } from '@/shared/ui';
 import type { Leaving } from '../domain/home';
 import type { LeavingKind } from '../domain/vocabulary';
 
-import { leaveRefusal, leavingLine, leavingSheetBody, leftToast } from './homePresentation';
+import { leaveRefusal, leavingSheetBody, leftToast } from './homePresentation';
 import { LeaveSheet } from './LeaveSheet';
 import { LEAVE_THE_GAME } from './leaveSheetCopy';
 
@@ -75,13 +75,13 @@ export function LeaveTheGame({ leaving, act: leave, afterLeaving }: LeaveTheGame
   return (
     <>
       <View ref={door} style={s.door} {...behindOverlay(open)}>
+        {/* The button alone: what leaving costs is said on the sheet it opens. */}
         <Button
           label={LEAVE_THE_GAME}
           variant="secondary"
           size="lg"
           onPress={() => setOpen(true)}
         />
-        <Text style={s.cost}>{leavingLine(leaving)}</Text>
       </View>
 
       <LeaveSheet
@@ -100,5 +100,4 @@ export function LeaveTheGame({ leaving, act: leave, afterLeaving }: LeaveTheGame
 
 const s = StyleSheet.create({
   door: { gap: theme.space.xs },
-  cost: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

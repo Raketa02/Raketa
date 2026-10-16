@@ -4,14 +4,12 @@ import type { BookedGame, HomeGame } from '../domain/home';
 
 import {
   homeCardLabel,
-  leavingLine,
   leavingSheetBody,
   leftToast,
   moneyRow,
   moneySpoken,
   moneyWords,
   sportWords,
-  statusSubline,
   whereAside,
 } from './homePresentation';
 
@@ -162,17 +160,6 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     expect(moneyWords({ kind: 'didntCome', needsYou: false })).toBe(
       'Somebody didn’t come · no Level moved',
     );
-  });
-});
-
-describe('statusSubline — the details’ second line', () => {
-  it('says a game waiting for one payment, lower case', () => {
-    expect(statusSubline('padel', 'WAITING_FOR_A_PAYMENT')).toBe('Padel · waiting for one payment');
-  });
-
-  it('is the sport and the status, lower case: Padel · booked', () => {
-    expect(statusSubline('padel', 'BOOKED')).toBe('Padel · booked');
-    expect(statusSubline('tennis', 'CALLED_OFF')).toBe('Tennis · called off');
   });
 });
 
@@ -562,11 +549,8 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
  * taken, the hold let go when there is one; after it the share stays taken, and what comes back if
  * the seat is taken is the read's exact figure, or no figure and no clause while it quotes none (#644).
  */
-describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said', () => {
+describe('leavingSheetBody, leftToast — what leaving costs, said', () => {
   it('says leaving is free before the cut-off, and nothing is taken', () => {
-    expect(leavingLine({ kind: 'BEFORE_THE_CUT_OFF' })).toBe(
-      'Free to leave now — nothing is taken',
-    );
     expect(leavingSheetBody({ kind: 'BEFORE_THE_CUT_OFF', letsAHoldGo: true })).toEqual([
       'Nothing is taken: the hold on your card is let go.',
       'Your seat is offered to others.',
@@ -589,9 +573,6 @@ describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said'
       lateRefund: { backGrosze: 3824, keptGrosze: 176 },
     } as const;
 
-    expect(leavingLine(late)).toBe(
-      'If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)',
-    );
     expect(leavingSheetBody(late)).toEqual([
       'Your seat is offered to others.',
       'If someone takes it, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment); if nobody does, you won’t.',
@@ -604,7 +585,6 @@ describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said'
 
   /** The fee kept isn't known yet (#641): no figure and no clause — and never an estimate. */
   it('gives no figure and no clause after the cut-off while the read quotes none', () => {
-    expect(leavingLine({ kind: 'AFTER_THE_CUT_OFF' })).toBe('Your seat is offered to others');
     expect(leavingSheetBody({ kind: 'AFTER_THE_CUT_OFF' })).toEqual([
       'Your seat is offered to others.',
       'On your record if nobody takes it.',
@@ -612,7 +592,6 @@ describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said'
   });
 
   it('says nobody has paid while one payment is awaited, and the yes is withdrawn', () => {
-    expect(leavingLine({ kind: 'WHILE_WAITING_FOR_A_PAYMENT' })).toBe('Nobody has paid yet');
     expect(leavingSheetBody({ kind: 'WHILE_WAITING_FOR_A_PAYMENT' })).toEqual([
       'Nobody has paid yet.',
       'Leaving withdraws your yes.',

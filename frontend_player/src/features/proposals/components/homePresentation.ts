@@ -260,11 +260,6 @@ export function sportWords(sport: Sport, kind: GameKind): string {
   return sportParts(sport, kind).join(LINE_JOIN);
 }
 
-/** *Padel · booked* — the details' second line: the sport, and the status in lower case. */
-export function statusSubline(sport: Sport, status: ShownStatus): string {
-  return `${sportLabel(sport)}${LINE_JOIN}${COPY.statusInLine[status]}`;
-}
-
 /**
  * The court a booked game was given, and its kind in lower case (#677): *Court 2 · indoor*. Nothing
  * while no court is given, and no kind the read does not hold.
@@ -461,27 +456,6 @@ function backIfTaken(opening: string, refund: LateRefund): string {
   const paid = formatZloty(paymentOf(refund));
   const kept = formatZloty(refund.keptGrosze);
   return `${opening} ${back} ${words.back} (${paid} ${words.lessThe} ${kept} ${words.keptOnYourPayment})`;
-}
-
-/**
- * **The line under *Leave the game*** — what leaving costs at this moment, from the read (Q113):
- * *Free to leave now — nothing is taken* before the cut-off; after it *If someone takes your seat,
- * you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*, or only *Your seat is
- * offered to others* while the read quotes no figure (#644); *Nobody has paid yet* while one
- * payment is awaited.
- */
-export function leavingLine(leaving: Leaving): string {
-  const words = COPY.leave;
-  switch (leaving.kind) {
-    case 'BEFORE_THE_CUT_OFF':
-      return words.freeNow;
-    case 'AFTER_THE_CUT_OFF':
-      return leaving.lateRefund === undefined
-        ? words.offered
-        : backIfTaken(words.ifSomeoneTakesYourSeat, leaving.lateRefund);
-    case 'WHILE_WAITING_FOR_A_PAYMENT':
-      return words.nobodyPaidYet;
-  }
 }
 
 /**

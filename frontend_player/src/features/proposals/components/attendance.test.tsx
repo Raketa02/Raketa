@@ -662,7 +662,7 @@ describe('after the half hour', () => {
     await launchSignedIn();
 
     fireEvent.press(await screen.findByRole('button', { name: HOME.openGame }));
-    await screen.findByText('Padel · uncounted');
+    await screen.findByText('Padel');
     expect(
       screen.queryByRole('button', { name: HOME.details.resultAct['who-was-there'] }),
     ).toBeNull();

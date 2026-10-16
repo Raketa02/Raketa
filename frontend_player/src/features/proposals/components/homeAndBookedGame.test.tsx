@@ -342,7 +342,7 @@ describe('Home — a booked game’s card (A8)', () => {
 
     fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
-    await screen.findByText('Padel · booked');
+    await screen.findByText('Padel');
     act(() => router.back());
 
     await waitFor(() => expect(screen).toHavePathname('/'));
@@ -681,7 +681,7 @@ describe('a booked game’s details (A4.1)', () => {
     await openDetails();
 
     expect(await screen.findByText('Piotr Sowa, Inés Díaz, Bartek Lis')).toBeTruthy();
-    expect(screen.getByText('Padel · booked')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
   });
 
@@ -820,7 +820,7 @@ describe('a booked game’s details (A4.1)', () => {
     stubGames(transport, [bookedGameOnTheList()], HOME_READ_AT);
     await openDetails(bookingDetails({ shows_forecast: false }));
 
-    await screen.findByText('Padel · booked');
+    await screen.findByText('Padel');
     expect(screen.queryByRole('header', { name: BALANCE_FORECAST })).toBeNull();
   });
 
@@ -834,7 +834,7 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.queryByText(/desk/i)).toBeNull();
     fireEvent.press(open);
 
-    await screen.findByText('Padel · booked');
+    await screen.findByText('Padel');
     expect(screen.queryByText(/desk/i)).toBeNull();
   });
 
@@ -859,7 +859,7 @@ describe('a booked game’s details (A4.1)', () => {
     await openDetails(bookingDetails({ status: 'PLAYED_NO_SCORE', money: takenMoney() }));
 
     expect(await screen.findByRole('header', { name: 'Played · no score' })).toBeTruthy();
-    expect(screen.getByText('Padel · played · no score')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.queryByText(/Never played|never played/)).toBeNull();
     expect(screen.queryByRole('button', { name: DETAILS.resultAct['we-played'] })).toBeNull();
   });
@@ -873,7 +873,7 @@ describe('a booked game’s details (A4.1)', () => {
     await openDetails(bookingDetails({ kind: 'FOR_FUN', status: 'NEEDS_RESULT', needs_you: true }));
 
     expect(await screen.findByRole('header', { name: 'Played' })).toBeTruthy();
-    expect(screen.getByText('Padel · played')).toBeTruthy();
+    expect(screen.getByText('Padel · For fun')).toBeTruthy();
     expect(screen.queryByText(/Needs result|needs result/)).toBeNull();
     expect(screen.queryByRole('button', { name: DETAILS.resultAct['we-played'] })).toBeNull();
 
@@ -888,7 +888,7 @@ describe('a booked game’s details (A4.1)', () => {
   it('offers no result act before the hour', async () => {
     await openDetails();
 
-    await screen.findByText('Padel · booked');
+    await screen.findByText('Padel');
     expect(screen.queryByRole('button', { name: DETAILS.resultAct['we-played'] })).toBeNull();
     expect(screen.queryByRole('button', { name: DETAILS.resultAct.confirm })).toBeNull();
   });
@@ -908,7 +908,7 @@ describe('a booked game’s details (A4.1)', () => {
     await openDetails(bookingDetails({ ...bookedAtKazimierz, ...WHERE_KAZIMIERZ }));
 
     expect(await screen.findByRole('header', { name: HOME.status.BOOKED })).toBeTruthy();
-    expect(screen.getByText('Padel · booked')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByLabelText('Where, Kazimierz Padel, Court 3 · indoor · 3,1 km')).toBeTruthy();
     expect(
       screen.getByLabelText(
@@ -938,7 +938,7 @@ describe('a full game gone back to filling, in detail (Q106)', () => {
     await openDetails(filling());
 
     expect(await screen.findByRole('header', { name: HOME.status.SEAT_OPEN })).toBeTruthy();
-    expect(screen.getByText('Padel · seat open')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByTestId('game-tile-empty')).toBeTruthy();
     expect(screen.getByLabelText('Where, Kazimierz Padel, 3,1 km')).toBeTruthy();
     expect(
@@ -1039,7 +1039,7 @@ describe('the chat — from the details (A4.4)', () => {
       [bookedRoomRow()],
     );
 
-    await screen.findByText('Padel · waiting for one payment');
+    await screen.findByText('Padel');
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
     expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
   });
@@ -1047,14 +1047,14 @@ describe('the chat — from the details (A4.4)', () => {
   it('keeps Chat past the result while the room lives, and has none once it has closed', async () => {
     await openDetails(bookingDetails({ status: 'COUNTED', shows_forecast: false }));
 
-    await screen.findByText('Padel · counted');
+    await screen.findByText('Padel');
     expect(screen.getByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
   });
 
   it('has no Chat once the room has closed', async () => {
     await openDetails(bookingDetails({ status: 'COUNTED', shows_forecast: false }), []);
 
-    await screen.findByText('Padel · counted');
+    await screen.findByText('Padel');
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
   });
 
@@ -1065,7 +1065,7 @@ describe('the chat — from the details (A4.4)', () => {
     transport.on('GET', CONVERSATIONS_PATH, () => errorResponse(429, 'rate_limited'));
     await launchSignedIn();
     fireEvent.press(await screen.findByRole('button', { name: HOME.openGame }));
-    await screen.findByText('Padel · booked');
+    await screen.findByText('Padel');
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
     act(() => router.push(`/booking/${BOOKING}/chat`));
 
@@ -1102,7 +1102,7 @@ describe('the chat — found by its booking', () => {
 
   it('finds no room filed under another booking, though it names this game', async () => {
     await openDetails(bookingDetails(), [{ ...bookedRoomRow(), booking_id: SECOND_BOOKING }]);
-    await screen.findByText('Padel · booked');
+    await screen.findByText('Padel');
 
     // The list has answered once the chat says it holds no room — then neither door is drawn.
     act(() => router.push(`/booking/${BOOKING}/chat`));

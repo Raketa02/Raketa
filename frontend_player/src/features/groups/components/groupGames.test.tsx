@@ -991,7 +991,7 @@ describe('the game’s details', () => {
     return shown;
   }
 
-  it('opens from the i: the status, who is In, the club, the book-by, the overlap and what a yes means', async () => {
+  it('opens from the i: the status, who is In, the club, the book-by and the share', async () => {
     const shown = await openDetails();
 
     expect(await screen.findByText('Filling · 1 of 4 in')).toBeTruthy();
@@ -1003,9 +1003,41 @@ describe('the game’s details', () => {
     expect(
       screen.getByLabelText('Your share, 32 zł, if it fills · book by Fri 10:00'),
     ).toBeTruthy();
-    expect(screen.getByTestId('overlap-grid')).toBeTruthy();
-    expect(screen.getByText(COPY.game.whatAYesMeans)).toBeTruthy();
     expect(screen.getByText('Karol Tomaszewski, Ania Kowalska, Ewa Majewska')).toBeTruthy();
+  });
+
+  it('draws no paragraph about what a yes costs: the share and its line say it', async () => {
+    await openDetails();
+
+    await screen.findByText('Filling · 1 of 4 in');
+    expect(screen.queryByText(/costs nothing/)).toBeNull();
+  });
+
+  it('draws the overlap once a second player is In', async () => {
+    await openDetails(
+      deckCard({
+        in_count: 2,
+        sides: { yours: [youTile(), KAROL({ is_in: true })], theirs: [ANIA(), EWA()] },
+      }),
+    );
+
+    await screen.findByText('Filling · 2 of 4 in');
+    expect(screen.getByTestId('overlap-grid')).toBeTruthy();
+  });
+
+  it('hides the overlap, and titles the header Only you, when the reader is alone In', async () => {
+    await openDetails(deckCard({ in_count: 1, sides: { yours: [youTile()], theirs: [] } }));
+
+    expect(await screen.findByText('Only you')).toBeTruthy();
+    expect(screen.queryByTestId('overlap-grid')).toBeNull();
+  });
+
+  it('keeps the state out of the header’s subtitle, which says the sport alone', async () => {
+    await openDetails();
+
+    await screen.findByText('Filling · 1 of 4 in');
+    expect(screen.queryByText(/· ?filling$/i)).toBeNull();
+    expect(screen.getAllByText(/^Padel/).length).toBeGreaterThan(0);
   });
 
   it('opens from a press on the card too', async () => {

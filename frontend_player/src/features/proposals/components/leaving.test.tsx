@@ -115,7 +115,8 @@ describe('before the club’s cut-off (§13; Q113)', () => {
   it('says leaving is free under the button, and the sheet that the hold is let go, before anything is sent', async () => {
     await openDetails(bookingDetails());
 
-    expect(screen.getByText('Free to leave now — nothing is taken')).toBeTruthy();
+    // The door is the button and nothing under it: what leaving costs is said on the sheet.
+    expect(screen.queryByText('Free to leave now — nothing is taken')).toBeNull();
 
     leave();
 
@@ -135,7 +136,7 @@ describe('before the club’s cut-off (§13; Q113)', () => {
       }),
     );
 
-    expect(screen.getByText('Free to leave now — nothing is taken')).toBeTruthy();
+    expect(screen.queryByText('Free to leave now — nothing is taken')).toBeNull();
 
     leave();
 
@@ -187,11 +188,7 @@ describe('after the cut-off (§12.3)', () => {
   it('gives the exact refund if the seat is taken, and the fee kept, under the button and on the sheet', async () => {
     await openDetails(late());
 
-    expect(
-      screen.getByText(
-        'If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)',
-      ),
-    ).toBeTruthy();
+    expect(screen.queryByText(/If someone takes your seat, you get/)).toBeNull();
 
     leave();
 
@@ -209,8 +206,6 @@ describe('after the cut-off (§12.3)', () => {
   it('gives no figure and no clause while the read quotes none', async () => {
     await openDetails(late({ refund_grosze: null, card_fee_grosze: null }));
 
-    expect(screen.getByText('Your seat is offered to others')).toBeTruthy();
-
     leave();
 
     expect(await screen.findByText('Your seat is offered to others.')).toBeTruthy();
@@ -219,17 +214,17 @@ describe('after the cut-off (§12.3)', () => {
   });
 
   /** The details' money row turns to *Paid* at the cut-off by itself, and so does what leaving costs. */
-  it('turns from free to not at the cut-off, while the details are on screen', async () => {
+  it('says on the sheet that leaving is free, and not once the cut-off has passed', async () => {
     const ELEVEN = '2026-10-01T09:00:00Z';
     await openDetails(
       bookingDetails({ money: bookedMoney({ free_to_leave_until: ELEVEN, taken_at: ELEVEN }) }),
     );
-    expect(screen.getByText('Free to leave now — nothing is taken')).toBeTruthy();
 
     act(() => jest.advanceTimersByTime(60 * 60 * 1000));
+    leave();
 
-    // With no figure until the read quotes one: the fee is known once the share is taken.
-    expect(await screen.findByText('Your seat is offered to others')).toBeTruthy();
+    expect(await screen.findByText('Your seat is offered to others.')).toBeTruthy();
+    expect(screen.queryByText(/Nothing is taken/)).toBeNull();
     expect(screen.queryByText(/Free to leave/)).toBeNull();
   });
 
@@ -260,7 +255,6 @@ describe('while one payment is awaited (#625, §13)', () => {
     await openDetails(waiting());
 
     expect(screen.getByText('Waiting for one payment')).toBeTruthy();
-    expect(screen.getByText(HOME.leave.nobodyPaidYet)).toBeTruthy();
 
     leave();
 
@@ -314,7 +308,7 @@ describe('no door where there is nothing to leave', () => {
     await launchSignedIn();
     fireEvent.press(await screen.findByRole('button', { name: HOME.openGame }));
 
-    await screen.findByText('Padel · needs result');
+    await screen.findByText('Padel');
     expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
   });
 });

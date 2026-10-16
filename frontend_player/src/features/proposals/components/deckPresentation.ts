@@ -12,7 +12,6 @@
  * - **A counted phrase goes through `counted()`**, so *1 person is In* is never *1 people are In*.
  */
 
-import { sportLabel } from '@/features/onboarding/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
 import { handleStem } from '@/shared/formatting/playerName';
@@ -21,7 +20,6 @@ import { dayDate } from '@/shared/date/calendarDay';
 import { platformClock, platformDay } from '@/shared/date/platformZone';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { balanceWord } from '@/shared/vocabulary/balancePresentation';
-import type { Sport } from '@/shared/vocabulary/sport';
 import type { Weekday } from '@/shared/vocabulary/week';
 
 import {
@@ -445,11 +443,6 @@ export function othersTitle(card: Pick<DeckCard, 'sides'>): string {
  */
 export function detailsStatus(status: ProposalStatus, inCount: number, seats: number): string {
   return status === 'FILLING' ? fillingStatus(inCount, seats) : COPY.game.status[status];
-}
-
-/** *Padel · filling* · *Padel · waiting for one payment* — the header's second line. */
-export function detailsSubline(sport: Sport, status: ProposalStatus): string {
-  return `${sportLabel(sport)}${DOT}${COPY.game.statusInLine[status]}`;
 }
 
 /**

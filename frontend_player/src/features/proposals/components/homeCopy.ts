@@ -154,14 +154,11 @@ export const HOME_GAME_COPY = {
    * refund the read quotes, or no figure and no clause while it quotes none — never an estimate (#644).
    */
   leave: {
-    /** The line under the button before the cut-off. */
-    freeNow: 'Free to leave now — nothing is taken',
     /**
-     * …and after it, with the read's figure: *If someone takes your seat, you get 38,24 zł back (40
-     * zł less the 1,76 zł kept on your payment)*. The sheet's clause opens *If someone takes it*,
-     * after the seat offered, and closes *; if nobody does, you won't.*
+     * The sheet's clause after the cut-off, with the read's figure: *If someone takes it, you get
+     * 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*. It opens after the seat offered,
+     * and closes *; if nobody does, you won't.*
      */
-    ifSomeoneTakesYourSeat: 'If someone takes your seat, you get',
     ifSomeoneTakesIt: 'If someone takes it, you get',
     back: 'back',
     lessThe: 'less the',

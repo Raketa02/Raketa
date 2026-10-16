@@ -4,8 +4,8 @@
  * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557)).
  *
  * ```
- * ‹  [faces]  Karol Tomaszewski, Zofia Bielecka, Ania Kowalska
- *             Padel · filling
+ * ‹  [faces]  Karol Tomaszewski, Zofia Bielecka, Ania Kowalska    — or *Only you*, alone on it
+ *             Padel                                              the sport and kind: the tag is the state
  * ┌ ● Filling · 1 of 4 in ─────────────────────┐   the dark card — the status, the tiles with IN,
  * │ [tile] [tile]  ── KAROL + YOU VS … ──       │   the vs line, and the court on an accent line:
  * │ [tile] [tile]                               │
@@ -16,8 +16,7 @@
  * └─────────────────────────────────────────────┘     under the share: Waiting for one payment ·
  *                                                     until 14:40 · Nobody pays until it's in
  * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
- * ┌ Slim overlap … the grid ────────────────────┐
- * Your yes costs nothing until everybody is in. …
+ * ┌ Slim overlap … the grid ────────────────────┐   once two are In: alone, who is free says nothing
  * [ I'm in ]  [ Not this time ]     — or [ Withdraw ], [ Leave the game ], [ Confirm your payment ]
  * ```
  *
@@ -104,14 +103,13 @@ import {
   detailsDay,
   detailsShareWords,
   detailsStatus,
-  detailsSubline,
   othersTitle,
   refusalMessage,
   shareWords,
   timeWords,
 } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { PROPOSAL_STATUS_INK } from './homePresentation';
+import { PROPOSAL_STATUS_INK, sportWords } from './homePresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { CardTag } from './CardTag';
 import { GameFacts, type FactWords } from './GameFacts';
@@ -256,8 +254,8 @@ function Details({
           onBack={() => router.back()}
           backLabel={COPY.game.back}
           lead={<OthersFaces people={peopleOn(details)} />}
-          title={othersTitle(details)}
-          subline={detailsSubline(sport, details.status)}
+          title={othersTitle(details) || COPY.game.onlyYou}
+          subline={sportWords(sport, kind)}
         />
         <ScrollView contentContainerStyle={s.body}>
           <View style={s.game}>
@@ -290,14 +288,13 @@ function Details({
             />
           )}
 
-          <View style={s.grid}>
-            <GameGround />
-            <OverlapGrid overlap={details.overlap} today={weekdayAt(at)} />
-          </View>
-
-          {details.status === 'FILLING' ? (
-            <Text style={s.meaning}>{COPY.game.whatAYesMeans}</Text>
-          ) : null}
+          {/* Who is free means something once somebody else is In to be free with. */}
+          {details.inCount < 2 ? null : (
+            <View style={s.grid}>
+              <GameGround />
+              <OverlapGrid overlap={details.overlap} today={weekdayAt(at)} />
+            </View>
+          )}
 
           {/* Held while offline, and sent when the connection returns. */}
           {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
@@ -447,6 +444,5 @@ const s = StyleSheet.create({
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },
   grid: { borderRadius: theme.radius.cardDark, overflow: 'hidden', padding: theme.space.md },
-  meaning: { ...theme.type.tiny, color: theme.color.muted },
   answers: { gap: theme.space.sm },
 });

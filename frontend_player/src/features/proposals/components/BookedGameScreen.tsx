@@ -5,7 +5,7 @@
  *
  * ```
  * ‹  [faces]  Piotr Sowa, Inés Díaz, Bartek Lis              [ Chat ]   the top bar (details 7)
- *             Padel · booked
+ *             Padel                                    the sport and kind: the tag is the state
  * ┌ ● Booked ──────────────────────────────────┐   the game card (details 8): the status,
  * │ [You · 2,71 · paid]  [Piotr · 2,95 · paid] │   the tiles with *paid*, the vs line,
  * │ ── YOU + PIOTR VS INÉS + BARTEK ──          │
@@ -132,7 +132,7 @@ import {
   STATUS_INK,
   bookedTime,
   moneyRow,
-  statusSubline,
+  sportWords,
   statusWord,
   whereAside,
 } from './homePresentation';
@@ -246,7 +246,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           backLabel={COPY.back}
           lead={<OthersFaces people={peopleOn(game)} />}
           title={othersTitle(game)}
-          subline={statusSubline(game.sport, status)}
+          subline={sportWords(game.sport, game.kind)}
           {...(chat === undefined
             ? {}
             : {

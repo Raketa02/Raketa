@@ -700,17 +700,14 @@ describe('a payment that did not go through is confirmed on the same payment (§
 
 describe('I’m in on a game’s details', () => {
   /** Q113: the fill holds every share and books the court; the club's cut-off takes them. */
-  it('says a yes costs nothing, and that the last one holds every share until the cut-off', async () => {
+  it('draws no paragraph about what a yes costs on a filling game: the share line says it', async () => {
     const card = bookItNow();
     stubProposal(transport, card.proposal_id, proposalDetails(card));
     await openGames([card]);
     fireEvent.press(screen.getByRole('button', { name: COPY.details }));
 
-    expect(
-      await screen.findByText(
-        'Your yes costs nothing until everybody is in. When the last yes lands, everyone’s share is held and the court is booked; it’s taken at the club’s cut-off.',
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Filling · \d of \d in/)).toBeTruthy();
+    expect(screen.queryByText(/costs nothing until everybody is in/)).toBeNull();
     expect(screen.queryByText(/charged/)).toBeNull();
   });
 

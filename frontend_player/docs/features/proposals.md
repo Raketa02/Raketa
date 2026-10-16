@@ -17,6 +17,13 @@ distance, the status and **what the reader may do now** — see the #557 section
 details found their card by id in the deck's read and kept it once a yes made the deck stop dealing
 it; that memory, and `withYourYes`, went with the move.
 
+**The details say the state once, and only what helps decide** (the bug report's P2s). The header's
+second line is the sport and the kind (`sportWords`) — the status tag on the card is the one place
+the state is said — and its title is _Only you_ when nobody else is on the card, rather than a blank
+beside the faces. **Who is free is drawn once two are In** (`inCount`): alone on a game still filling,
+the overlap has nobody to overlap with. And no paragraph explains what a yes costs: the share and
+its line under it say it, and the first yes's payment setup says the rest.
+
 **Nothing the server decides is re-derived.** The order, the sides, the forecast's figure, the grade
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
 `rowsOf` puts **the side with more people In on top, yours on a tie**, and within a row the people In,
@@ -293,7 +300,8 @@ never flashes. Opening the details — from a card, or _It's a game!_'s _Open ga
 them rather than the Classic game screen — is what marks it.
 
 **The details are one read and nothing re-derived** (`BookedGameScreen`, `/booking/[bookingId]`): the
-top bar (the others' faces, their names whole, _Padel · booked_, **Chat**); the game card — status,
+top bar (the others' faces, their names whole, _Padel_ — the sport and the kind, never the state,
+which is the card's tag alone (the bug report's P2) — **Chat**); the game card — status,
 tiles with _2,71 · paid_ (`GameTiles` draws _paid_ where a filling game says IN), the vs line, WHERE
 with the court and the distance, DAY, TIME to the read's `ends_at`, and the money row
 (`moneyRow`); once the hour has come, today's **We played** / **Confirm the result**, which opens
@@ -898,12 +906,13 @@ takes them, so a leave before it costs nobody a fee and _free_ is true again (Q1
   taken_ where the shares were held and let go (short at the cut-off, or the club's cancel before
   it), _Nobody paid_ where nothing was ever held. _Refunded 28 zł_ stays for a club's cancel after
   the cut-off. _1 seat open · fills by Fri 16:00 or the game is off and nothing is taken._
-- **Leaving before the cut-off**: the line under _Leave the game_ reads _Free to leave now — nothing
-  is taken_. The sheet's first line is _Nothing is taken: the hold on your card is let go._ while the
-  share is held, and _Nothing is taken._ while it is only checked (`leavingAt` folds which on the
-  read's clock). The rest of the sheet is as before. The toast says _You left the game. Nothing was
-  taken._ **At the cut-off the line turns by itself**, as the money row turns to _Paid_: `leavingAt`
-  reads a share taken at `now` as after the cut-off, which the server says once read again.
+- **Leaving before the cut-off**: _Leave the game_ is the button alone — what leaving costs is said
+  on the sheet it opens, never under the door (the bug report's P2). The sheet's first line is
+  _Nothing is taken: the hold on your card is let go._ while the share is held, and _Nothing is
+  taken._ while it is only checked (`leavingAt` folds which on the read's clock). The rest of the
+  sheet is as before. The toast says _You left the game. Nothing was taken._ **At the cut-off the
+  sheet's words turn by themselves**, as the money row turns to _Paid_: `leavingAt` reads a share
+  taken at `now` as after the cut-off, which the server says once read again.
 - **Leaving after the cut-off** kept today's shape with no figure and no estimate — _Refunded only if
   someone takes your seat_ under the button, the terms' own words for the refund on the sheet — until
   #644 gave the read's exact figure (below).
@@ -1035,7 +1044,7 @@ room as before — and offer nothing. **A For fun game after its hour reads _Pla
 result_ and not _Counted_: it asks nobody for a result, and a score on it stands at once and counts
 nothing. That is `shownStatus` in `domain/home.ts` — the wire's status with one more, `PLAYED`, for
 a For fun game the wire calls `NEEDS_RESULT` or `COUNTED` — and every table the tag is drawn from
-(`STATUS_INK`, `OPEN_GAME_VARIANT`, `status`, `statusInLine`) is keyed by it, so the card, the
+(`STATUS_INK`, `OPEN_GAME_VARIANT`, `status`) is keyed by it, so the card, the
 details, the room's line and the card's spoken name say one word. `PLAYED` is `mint`, settled, and
 its _Open game_ `onDark`. The details' door on it is **_Add the score_** (`resultActOf`'s
 `add-score`), not _We played_, onto `games`' result screen, which asks nobody. **Nor is it on

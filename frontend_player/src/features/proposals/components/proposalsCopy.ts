@@ -83,9 +83,8 @@ export const PROPOSALS_COPY = {
     bookBy: 'book by',
     forecast: 'Balance forecast',
     overlap: 'Who is free',
-    /** A game still filling (A4.2): held at the fill, taken at the club's cut-off (Q113). */
-    whatAYesMeans:
-      'Your yes costs nothing until everybody is in. When the last yes lands, everyone’s share is held and the court is booked; it’s taken at the club’s cut-off.',
+    /** The header's title when nobody else is on the card — said, not left blank. */
+    onlyYou: 'Only you',
     withdraw: 'Withdraw',
     gone: 'This game isn’t dealt to you any more.',
     /**
@@ -100,15 +99,6 @@ export const PROPOSALS_COPY = {
       EXPIRED: 'Didn’t fill in time',
       WITHDRAWN: 'Taken back',
       COURT_HOUR_LOST: 'No court left at that hour',
-    } satisfies Readonly<Record<ProposalStatus, string>>,
-    /** The same, mid-line — the header's second line, *Padel · filling*. */
-    statusInLine: {
-      FILLING: 'filling',
-      WAITING_FOR_A_PAYMENT: 'waiting for one payment',
-      FILLED: 'booked',
-      EXPIRED: 'didn’t fill',
-      WITHDRAWN: 'taken back',
-      COURT_HOUR_LOST: 'no court left',
     } satisfies Readonly<Record<ProposalStatus, string>>,
     /**
      * *Waiting for one payment · until 14:40 · Nobody pays until it's in* (Q110, Q111) — one player's

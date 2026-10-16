@@ -450,7 +450,7 @@ describe('Home while one payment is awaited (Q111)', () => {
 
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
     expect(await screen.findByText(HOME.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
-    expect(screen.getByText('Padel · waiting for one payment')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(
       screen.getByLabelText(
         'Your share, 40 zł, Waiting for one payment · until 10:30 · Nobody pays until it’s in',
@@ -518,7 +518,7 @@ describe('Home while one payment is awaited (Q111)', () => {
     );
 
     expect(await screen.findByText(PROPOSALS_COPY.game.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
-    expect(screen.getByText('Padel · waiting for one payment')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByLabelText('Your share, 32 zł, Confirm your payment by 10:30')).toBeTruthy();
     expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
 

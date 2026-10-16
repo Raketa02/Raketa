@@ -473,7 +473,7 @@ describe('the rescue seen from outside (A4.3)', () => {
     await openRescue();
 
     expect(screen.getByText('Seat open')).toBeTruthy();
-    expect(screen.getByText('Padel · seat open')).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, paid')).toBeTruthy();
     expect(screen.getByLabelText('Where, Ogrody 33, Court 6 · 3,1 km')).toBeTruthy();
     // The card's deadline is the cut-off, 21 hours after the read: Thursday 07:00 in Warsaw.
