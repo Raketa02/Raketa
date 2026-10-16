@@ -153,6 +153,7 @@ from app.modules.payments.domain.events import (
 )
 from app.modules.payments.domain.seat_charge import RefundReason
 from app.modules.proposals.domain.events import (
+    ClubCancelled,
     CourtHourLost,
     FellBackToFilling,
     ProposalExpired,
@@ -708,6 +709,36 @@ class TellThePlayers:
                 at=at,
             )
 
+    async def _club_cancelled(
+        self, event: ClubCancelled, *, key: str, at: Instant
+    ) -> None:
+        """**A club's cancel tells the players it never charged** (#711). Every
+        player still in was charged a seat charge, and that charge already tells
+        them what the cancel did to their money — a held share let go, a checked
+        one closed, a paid one refunded — so only a player with **no** charge on
+        the game is told here, and nobody twice. The booking is the proposal's
+        own id (``bookings`` is born under it)."""
+
+        game = await self._games.about(event.proposal_id, at=at)
+        if game is None:
+            return
+        uncharged = [
+            player
+            for player in event.player_ids
+            if not await self._shares.has_a_charge(game.game_id, player)
+        ]
+        await self._tell(
+            uncharged,
+            notice_about(
+                NoticeKind.GAME_CALLED_OFF,
+                game,
+                key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
+                opens=Opens.BOOKING,
+                reason=game.cancel_reason,
+            ),
+            at=at,
+        )
+
     async def _moved(self, event: CourtMoved, *, key: str, at: Instant) -> None:
         """The club's own Move (#671; the mechanics §17.2, Q122): everybody
         with a seat on the booking reads the court it is on now and its kind,
@@ -1059,6 +1090,7 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     SeatLeft: TellThePlayers._left,
     KeptSeatRanOut: TellThePlayers._kept_seat_ran_out,
     CalledOffAtCutOff: TellThePlayers._called_off_short,
+    ClubCancelled: TellThePlayers._club_cancelled,
     CourtMoved: TellThePlayers._moved,
     ProposalExpired: TellThePlayers._expired,
     CourtHourLost: TellThePlayers._court_lost,

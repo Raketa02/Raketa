@@ -664,6 +664,40 @@ async def test_a_player_s_share_of_a_game_is_found_by_the_game(implementation, s
     assert await shares.of_player(new_uuid(), KUBA) is None
 
 
+@pytest.mark.parametrize("implementation", registered(PaidShares))
+async def test_a_player_charged_for_a_game_is_known_whatever_the_charge_s_state(
+    implementation, session
+):
+    """#711: the club's cancel tells the players with **no** charge at all — a
+    held share, a paid one and a player never charged must read differently."""
+
+    shares: PaidShares = implementation.build(session)
+    paid = await _a_paid_share(session, withhold_fee=True)
+    held_game = new_uuid()
+    held = SeatCharge.held(
+        charge_id=new_uuid(),
+        player_id=OLA,
+        game_id=held_game,
+        club_id=new_uuid(),
+        account_id="acct_fake_club",
+        payment=Payment(
+            payment_id="pi_fake_4000g_held",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=40_00,
+        ),
+        sport=Sport.PADEL,
+        starts_at=START,
+        at=NOW,
+    )
+    await build_seat_charge_repository(session, **_store(session)).save(held)
+    await session.commit()
+
+    assert await shares.has_a_charge(paid.game_id, KUBA)
+    assert await shares.has_a_charge(held_game, OLA)
+    assert not await shares.has_a_charge(paid.game_id, OLA)
+    assert not await shares.has_a_charge(new_uuid(), KUBA)
+
+
 # --------------------------------------------------------------------------- #
 # SeatOffers and Names — the questions with nothing to ask about
 # --------------------------------------------------------------------------- #

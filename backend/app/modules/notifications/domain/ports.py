@@ -369,6 +369,12 @@ class PaidShares(Protocol):
         gives them — ``None`` for one who paid none."""
         ...
 
+    async def has_a_charge(self, game_id: UUID, player_id: UUID) -> bool:
+        """Whether this player was ever charged for this game, in whatever state
+        — held, checked, paid or let go. ``False`` only for one never charged
+        (#711): the club's cancel tells those, and nobody else."""
+        ...
+
 
 class SeatOffers(Protocol):
     async def pool_of(self, game_id: UUID) -> tuple[UUID, ...]:

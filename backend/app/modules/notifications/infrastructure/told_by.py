@@ -288,6 +288,12 @@ class SeatChargeShares:
         # A share given back is the one that was paid; there is one at most.
         return _share(paid[-1]) if paid else None
 
+    async def has_a_charge(self, game_id: UUID, player_id: UUID) -> bool:
+        return any(
+            charge.player_id == player_id
+            for charge in await self._charges.of_game(game_id)
+        )
+
 
 def _share(charge: SeatCharge) -> PaidShare:
     given = charge.refund_given
