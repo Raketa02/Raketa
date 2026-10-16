@@ -1310,13 +1310,15 @@ def build_proposal_club_names(session: AsyncSession) -> ProposalClubNames:
     return DirectoryClubNames(build_club_directory(session))
 
 
-def build_read_live_yeses(session: AsyncSession, *, clock: Clock) -> ReadLiveYeses:
+def build_read_live_yeses(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> ReadLiveYeses:
     """A player's live yeses, each with the kind of court it promises — the
     deck's own free-court read (#706)."""
     return ReadLiveYeses(
         directory=build_proposal_directory(session),
         clubs=build_proposal_club_names(session),
-        kinds=build_court_kinds(session),
+        kinds=build_court_kinds(session, runtime=runtime),
         clock=clock,
     )
 

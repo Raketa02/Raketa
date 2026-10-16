@@ -47,8 +47,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   pools, soonest first, each with `indoor` (#706): the deck card's kind of court, read off the
   same `CourtKinds` free-court read at the yes's club, sport and hour — `true` / `false` when
   every free court is of one kind, `null` when they are mixed, so the You're In row can say
-  *Indoor* or *Outdoor* before a yes. A yes needs a saved method (`payment_method_required`); **there is no
-  live-yes cap** (removed 2026-10-05, the mechanics Q97 — games per week and one game per hour
+  *Indoor* or *Outdoor* before a yes. A yes needs a saved method (`payment_method_required`);
+  **there is no live-yes cap** (removed 2026-10-05, the mechanics Q97 — games per week and one game per hour
   already bound what a yes can book).
   **A refused share at the fill holds its seat for its player** (#625, #626): the
   player stays In with `Proposal.paying` until their time to pay ends — the game full to
