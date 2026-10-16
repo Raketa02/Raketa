@@ -140,6 +140,17 @@ export function usePaymentSetup({
   const [termsInForce, setTermsInForce] = useState<string | null>(null);
   /** A press is in flight. A ref, so a press arriving before the busy render is still refused. */
   const pending = useRef(false);
+  /**
+   * Whether the screen is still drawn. The checklist can close under a press in flight — *Keep this
+   * one*, the sheet shut — and an answer that lands after that moves nothing and says nothing.
+   */
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [busy, setBusy] = useState<SetupBusy | null>(null);
   const [failure, setFailure] = useState<SetupFailure | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
@@ -238,11 +249,15 @@ export function usePaymentSetup({
               : ({ kind: 'card', card } as const);
           if (via === null) return;
 
-          const answer = await payments.confirmSetup({
-            publishableKey: opened.publishableKey,
-            clientSecret: secret,
-            with: via,
-          });
+          // The provider answers in four words; a rejection is the same as *failed*, never a crash.
+          const answer = await payments
+            .confirmSetup({
+              publishableKey: opened.publishableKey,
+              clientSecret: secret,
+              with: via,
+            })
+            .catch(() => 'failed' as const);
+          if (!mounted.current) return;
           if (answer !== 'saved') {
             refused(bankRefusal(answer));
             return;
@@ -252,9 +267,9 @@ export function usePaymentSetup({
 
         try {
           await save();
-          onSaved();
+          if (mounted.current) onSaved();
         } catch (error) {
-          refused(setupRefusal(error as AppError));
+          if (mounted.current) refused(setupRefusal(error as AppError));
         }
       }),
     [hold, onSaved, payments, press, refused, save, walletSheetLabel],
@@ -292,6 +307,12 @@ export function usePaymentSetup({
     await press('opening', async () => {
       try {
         const opened = await open();
+        // The fields are drawn after this step opens, so the provider starts first — and a setup
+        // is kept only once it has, so *Continue* again tries the start again rather than skip it.
+        if (!(await payments.prepare(opened.publishableKey))) {
+          setFailure({ kind: 'PROVIDER_NOT_STARTED' });
+          return;
+        }
         hold({ opened });
         setTermsInForce(opened.termsVersion);
         move({ type: 'continued' });
@@ -299,14 +320,18 @@ export function usePaymentSetup({
         setFailure({ kind: 'SAY_SO', error: error as AppError });
       }
     });
-  }, [hold, move, open, press]);
+  }, [hold, move, open, payments, press]);
 
   const saveCard = useCallback(
     () =>
       press('taking', async () => {
         const { opened } = session.current;
         if (opened === null) return;
-        const taking = await payments.takeCard(opened.publishableKey);
+        // The fields are on screen until this answers; a provider that throws is a refusal.
+        const taking = await payments
+          .takeCard(opened.publishableKey)
+          .catch(() => ({ kind: 'refused' as const }));
+        if (!mounted.current) return;
         if (taking.kind === 'refused') {
           setFailure({ kind: 'CARD_REFUSED' });
           return;

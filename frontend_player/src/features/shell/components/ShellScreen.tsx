@@ -102,6 +102,14 @@ export interface ShellScreenProps {
    * land while the keyboard is up. Off everywhere else, where it would do nothing.
    */
   readonly avoidsKeyboard?: boolean;
+  /**
+   * Whether a tap anywhere keeps the keyboard up — **forwarded, not designed.** By default a tap
+   * outside a focused field has the page take the focus back, and React Native does that with a
+   * native blur. On iOS, under the New Architecture, a card field blurred that way traps (#552), so
+   * the payments screen — the one screen with a card field — keeps the field's focus where it is and
+   * lets its own unmount release it. Off everywhere else, which keeps the default.
+   */
+  readonly keepsKeyboardOnTap?: boolean;
   readonly children: ReactNode;
 }
 
@@ -123,6 +131,7 @@ export function ShellScreen({
   onBack,
   onRefresh,
   avoidsKeyboard = false,
+  keepsKeyboardOnTap = false,
   children,
 }: ShellScreenProps) {
   /**
@@ -153,7 +162,9 @@ export function ShellScreen({
   const page = (
     <ScrollView
       contentContainerStyle={[s.content, fill ? s.fill : undefined]}
-      keyboardShouldPersistTaps={avoidsKeyboard ? 'handled' : undefined}
+      keyboardShouldPersistTaps={
+        keepsKeyboardOnTap ? 'always' : avoidsKeyboard ? 'handled' : undefined
+      }
       refreshControl={
         onRefresh === undefined ? undefined : (
           <RefreshControl

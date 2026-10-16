@@ -70,8 +70,9 @@ import {
   isPlatformPaySupported,
   retrievePaymentIntent,
 } from '@stripe/stripe-react-native';
-import type { ComponentType } from 'react';
+import { useEffect, useLayoutEffect, type ComponentType } from 'react';
 import { Linking, Platform, StyleSheet } from 'react-native';
+import TextInputState from 'react-native/Libraries/Components/TextInput/TextInputState';
 
 import { APPLE_PAY_MERCHANT } from '@/shared/config/applePay';
 import { APP_SCHEME } from '@/shared/config/appLinks';
@@ -152,8 +153,15 @@ export interface ConfirmPayment {
  * Stripe, and a test substitutes `fakePayments()` from `src/test-support/platform.ts`.
  */
 export interface PaymentsPort {
-  /** The provider's card fields — number, expiry, CVC. */
+  /** The provider's card fields — number, expiry, CVC. Drawn only after `prepare` said yes. */
   readonly CardFields: ComponentType<CardFieldsProps>;
+  /**
+   * Start the provider with the setup's key before any of its fields are drawn. Android's native
+   * field reads the SDK's configuration when it mounts, and only `initStripe` sets it — a field
+   * mounted first fails with *PaymentConfiguration was not initialized*. `false` when it cannot
+   * start; it never rejects.
+   */
+  readonly prepare: (publishableKey: string) => Promise<boolean>;
   /** The phone's own wallet, or `null` when it cannot pay with one. */
   readonly phoneWallet: () => Promise<PhoneWallet | null>;
   /** Take the card the fields hold, while they are on screen. */
@@ -233,9 +241,46 @@ async function whileTheBankMayReturn<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * The native input the card field registered when it took focus, or `null`. Stripe's field tells
+ * React Native that it is focused, and a focus it registered is what its unmount checks.
+ */
+let focusedCardField: unknown = null;
+
+/** The card field took focus: remember which native input it is. */
+export function rememberCardFocus() {
+  focusedCardField = TextInputState.currentlyFocusedInput();
+}
+
+/**
+ * Forget the card field's focus before its view goes, without a native blur.
+ *
+ * Stripe's field calls `blur()` on its native view when it unmounts while it still counts as the
+ * focused input — and on iOS, under the New Architecture, that call reaches a view that is no longer
+ * there and traps (#552). `Keyboard.dismiss()` would send a native blur too, so it is not used here.
+ * `blurInput` only clears React Native's record, so the unmount finds nothing to blur. The keyboard
+ * goes with the view.
+ */
+export function releaseCardFocus() {
+  const current = TextInputState.currentlyFocusedInput();
+  if (current !== null && current === focusedCardField) TextInputState.blurInput(current);
+  focusedCardField = null;
+}
+
 function StripeCardFields({ onChange, placeholders, accessibilityLabel }: CardFieldsProps) {
+  // Parent cleanups run before the field's own unmount, so the record is cleared first.
+  useLayoutEffect(() => releaseCardFocus, []);
+  // Android's field cannot tell the app what is typed: under the New Architecture it has no event
+  // dispatcher (`getNativeModule(UIManagerModule)` is not allowed), so its change events never
+  // arrive and "complete" would stay false, keeping Save disabled. Stripe still checks the card when
+  // Save takes it, and refuses an incomplete one with the usual sentence — so Android counts the
+  // fields as ready. iOS's field reports its changes and keeps the check.
+  useEffect(() => {
+    if (Platform.OS === 'android') onChange({ complete: true });
+  }, [onChange]);
   return (
     <CardField
+      onFocus={rememberCardFocus}
       postalCodeEnabled={false}
       placeholders={{
         number: placeholders.number,
@@ -253,12 +298,30 @@ function StripeCardFields({ onChange, placeholders, accessibilityLabel }: CardFi
 export const devicePayments: PaymentsPort = {
   CardFields: StripeCardFields,
 
+  async prepare(publishableKey) {
+    // The laptop's provider has no Stripe key, and its fields take no real card — but Android's
+    // native field still reads the SDK's configuration when it mounts, so the placeholder starts it
+    // too (the Change → Continue crash, #552). iOS's field does not, and is left as it was.
+    if (!isStripeKey(publishableKey) && Platform.OS !== 'android') return true;
+    try {
+      await start(publishableKey);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   async phoneWallet() {
     try {
       if (Platform.OS === 'ios') {
         if (APPLE_PAY_MERCHANT === null) return null;
         return (await isPlatformPaySupported()) ? 'APPLE_PAY' : null;
       }
+      // Android's Google Pay check builds the SDK's launcher, which reads the configuration that only
+      // `initStripe` sets; asked before the provider has started, it throws and the app closes (the
+      // Change button on the Payments screen, #552). Until a setup has started Stripe, Google Pay is
+      // not offered — and the next visit, which asks after a start, offers it.
+      if (startedWith === undefined) return null;
       return (await isPlatformPaySupported()) ? 'GOOGLE_PAY' : null;
     } catch {
       return null;
@@ -267,6 +330,8 @@ export const devicePayments: PaymentsPort = {
 
   async takeCard(publishableKey) {
     if (!isStripeKey(publishableKey)) return { kind: 'taken', card: { reference: null } };
+    // The step closes once this answers, and its field unmounts; release the focus before that.
+    releaseCardFocus();
     try {
       await start(publishableKey);
       const { paymentMethod, error } = await createPaymentMethod({ paymentMethodType: 'Card' });

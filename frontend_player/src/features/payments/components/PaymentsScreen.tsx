@@ -91,7 +91,11 @@ export function PaymentsScreen({ toConfirm, liveYeses }: PaymentsScreenProps) {
   const standing = read.data;
 
   return (
-    <ShellScreen eyebrow={YOU_COPY.groups.account} title={PAYMENTS_TITLE} onBack={router.back}>
+    <ShellScreen
+      eyebrow={YOU_COPY.groups.account}
+      title={PAYMENTS_TITLE}
+      onBack={router.back}
+      keepsKeyboardOnTap>
       {standing === undefined ? (
         <ReadStanding
           pending={read.isPending}
