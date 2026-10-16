@@ -34,7 +34,9 @@ export type SetupRefusal =
 export type SetupFailure =
   | Exclude<SetupRefusal, { readonly kind: 'START_OVER' }>
   | { readonly kind: 'SETUP_GONE' }
-  | { readonly kind: 'CARD_REFUSED' };
+  | { readonly kind: 'CARD_REFUSED' }
+  /** The payment provider would not start on this phone, so there are no card fields to show. */
+  | { readonly kind: 'PROVIDER_NOT_STARTED' };
 
 /** Every answer from the bank but *saved* — the provider port's own words for them. */
 export type BankRefusal = 'cancelled' | 'declined' | 'failed';

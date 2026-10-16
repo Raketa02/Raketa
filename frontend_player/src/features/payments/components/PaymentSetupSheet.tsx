@@ -33,7 +33,14 @@ export interface PaymentSetupSheetProps {
 export function PaymentSetupSheet({ visible, onClose, onSaved }: PaymentSetupSheetProps) {
   const words = PAYMENTS_COPY.setupSheet;
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={words.title} closeLabel={words.close}>
+    // The card field is in it: a tap on the sheet keeps the keyboard (`BottomSheet`'s note).
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={words.title}
+      closeLabel={words.close}
+      keepsKeyboardOnTap
+    >
       {visible ? (
         <View style={s.body}>
           <Text style={s.line}>{words.line}</Text>

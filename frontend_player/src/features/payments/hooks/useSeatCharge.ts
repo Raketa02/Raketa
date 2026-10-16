@@ -15,7 +15,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import { usePayments, type PaymentAnswer } from '@/shared/lib/platform';
@@ -24,6 +24,9 @@ import type { ConfirmWithCard, SeatCharge } from '../domain/seatCharge';
 import { readPaymentToConfirm, readSeatCharge } from '../use-cases/seatCharges';
 
 import { paymentKeys } from './paymentKeys';
+
+/** Where a refused share's card fields stand: waiting on Stripe's start, drawn, or not drawn. */
+export type CardFieldsState = 'reading' | 'ready' | 'failed';
 
 export function useSeatCharge(seatChargeId: string) {
   return useQuery<SeatCharge | undefined, AppError>({
@@ -55,4 +58,35 @@ export function useConfirmOnPhone() {
     },
     [payments],
   );
+}
+
+/**
+ * **The card fields of a refused share's confirmation, once Stripe is started** — the fields are a
+ * native view, and Android's reads the SDK's configuration when it mounts (#555; `PaymentsPort`'s
+ * `prepare`). The payment's key is the one its ask names, read here and never kept. `reading` until
+ * the provider is started, `failed` when it is not or the payment no longer waits.
+ */
+export function useCardFieldsReady(seatChargeId: string, enabled: boolean): CardFieldsState {
+  const payments = usePayments();
+  const [state, setState] = useState<CardFieldsState>('reading');
+
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    setState('reading');
+    readPaymentToConfirm(seatChargeId).then(
+      async (ask) => {
+        const started = ask !== null && (await payments.prepare(ask.publishableKey));
+        if (alive) setState(started ? 'ready' : 'failed');
+      },
+      () => {
+        if (alive) setState('failed');
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [enabled, seatChargeId, payments]);
+
+  return state;
 }

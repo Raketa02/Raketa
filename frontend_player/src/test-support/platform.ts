@@ -40,7 +40,7 @@
  * it.
  */
 
-import { createElement, useEffect } from 'react';
+import { createElement, useLayoutEffect } from 'react';
 import { TextInput } from 'react-native';
 
 import type {
@@ -459,6 +459,8 @@ export interface FakePayments extends PaymentsPort {
   walletSheet: 'pays' | 'closes';
   /** Every key the provider was handed, oldest first. */
   readonly keys: readonly string[];
+  /** Every key the provider was started with ahead of its fields, oldest first. */
+  readonly prepared: readonly string[];
   /** Every setup secret the bank was asked with, oldest first — what the terms' answer reached. */
   readonly confirmed: readonly string[];
   /** How many times the bank's own check was drawn. */
@@ -479,6 +481,7 @@ export const TEST_CARDS = {
 
 export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}): FakePayments {
   const keys: string[] = [];
+  const prepared: string[] = [];
   const confirmed: string[] = [];
   const payments: Omit<ConfirmPayment, 'publishableKey'>[] = [];
   let checks = 0;
@@ -488,9 +491,13 @@ export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}
   const complete = () => typed.length === 16;
 
   function CardFields({ onChange, accessibilityLabel }: CardFieldsProps) {
+    // Android's native field reads the SDK's configuration when it mounts, and only `initStripe`
+    // sets it: a field drawn before the provider was started is the crash the phone reported.
+    if (prepared.length === 0) throw new Error('PaymentConfiguration was not initialized');
     // Mounted empty, as Stripe's are: what was typed lives in the view and goes with it, so a card
     // details step opened again after a decline holds nothing.
-    useEffect(() => {
+    // Layout, not passive: a passive effect can run after the suite has typed into the field.
+    useLayoutEffect(() => {
       typed = '';
     }, []);
     return createElement(TextInput, {
@@ -521,6 +528,9 @@ export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}
     get keys() {
       return keys;
     },
+    get prepared() {
+      return prepared;
+    },
     get confirmed() {
       return confirmed;
     },
@@ -532,6 +542,10 @@ export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}
     },
 
     CardFields,
+    prepare: (publishableKey) => {
+      prepared.push(publishableKey);
+      return Promise.resolve(true);
+    },
     phoneWallet: () => Promise.resolve(port.wallet),
     takeCard: (publishableKey) => {
       keys.push(publishableKey);

@@ -72,6 +72,8 @@ export const FILL_COPY = {
     reading: 'Reading your payment…',
     /** A payment this build cannot draw — a sport it does not know. */
     unreadable: 'This payment can’t be shown here. Update Raketa to confirm it.',
+    /** The card fields wait on Stripe's start; when it cannot start, nothing is drawn in its place. */
+    providerNotStarted: 'Card payments couldn’t start on this phone. Try again in a moment.',
     readAgain: 'Try again',
     /** The bank wants the player present. */
     checkLine: {

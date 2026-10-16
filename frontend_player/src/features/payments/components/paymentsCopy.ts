@@ -159,6 +159,7 @@ export const PAYMENTS_COPY = {
   /** What the open step says went wrong — every failure but a refusal the server named itself. */
   failures: {
     CARD_REFUSED: 'Stripe couldn’t take this card. Check the number, the date and the code.',
+    PROVIDER_NOT_STARTED: 'Card payments couldn’t start on this phone. Try again in a moment.',
     BANK_CLOSED: 'The check was closed before your bank finished, so nothing is saved. Try again.',
     CARD_DECLINED: 'Your bank declined this card, so nothing is saved. Try another one.',
     BANK_FAILED: 'We couldn’t hear back from your bank. Try again.',

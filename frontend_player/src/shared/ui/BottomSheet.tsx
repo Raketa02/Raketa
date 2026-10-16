@@ -61,14 +61,7 @@
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import {
-  KeyboardAvoidingView,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { KEYBOARD_AVOIDANCE, dismissKeyboard } from '@/shared/lib/platform/keyboard';
 
@@ -92,6 +85,15 @@ export interface BottomSheetProps {
    * with the close, as every other sheet's does.
    */
   readonly mark?: ReactNode;
+  /**
+   * Whether a tap in the sheet keeps the keyboard up — **forwarded, not designed**, as
+   * `ShellScreen`'s is. By default a tap on the body outside a field takes the focus back, and
+   * React Native does that with a native blur; on iOS, under the New Architecture, Stripe's card
+   * field blurred that way traps and the app closes (#552 — the first-yes sheet's crash). So a
+   * sheet holding the card field keeps the focus where it is, and the field's own unmount, or a way
+   * out of the sheet, releases it. Off everywhere else, which keeps the default.
+   */
+  readonly keepsKeyboardOnTap?: boolean;
   readonly children: ReactNode;
 }
 
@@ -102,6 +104,7 @@ export function BottomSheet({
   closeLabel,
   returnFocusTo,
   mark,
+  keepsKeyboardOnTap = false,
   children,
 }: BottomSheetProps) {
   const reducedMotion = useReducedMotion();
@@ -183,8 +186,9 @@ export function BottomSheet({
           <ScrollView
             style={s.body}
             contentContainerStyle={s.bodyContent}
-            // A tap on a field or a button while the keyboard is up reaches it, not the keyboard.
-            keyboardShouldPersistTaps="handled"
+            // A tap on a field or a button while the keyboard is up reaches it, not the keyboard —
+            // and a sheet with the card field keeps the keyboard on every tap (the prop's note).
+            keyboardShouldPersistTaps={keepsKeyboardOnTap ? 'always' : 'handled'}
           >
             {children}
           </ScrollView>

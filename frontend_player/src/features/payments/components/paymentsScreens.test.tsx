@@ -229,6 +229,33 @@ describe('state A — a numbered checklist, in the order Q82 set', () => {
     expect(shut(PAYMENTS_COPY.continue)).toBe(false);
   });
 
+  it('starts the provider with the setup’s key before the card fields are drawn', async () => {
+    stubTheSetupRoutes();
+    await onPayments('Not set up');
+
+    fireEvent.press(await screen.findByLabelText('Card'));
+    press(PAYMENTS_COPY.continue);
+
+    expect(await screen.findByLabelText(FAKE_CARD_NUMBER)).toBeTruthy();
+    expect(phone.prepared).toEqual(['pk_test_raketa']);
+  });
+
+  it('says the card could not be taken, in the sheet, when the provider throws rather than answers', async () => {
+    stubTheSetupRoutes();
+    await onPayments('Not set up');
+
+    fireEvent.press(await screen.findByLabelText('Card'));
+    press(PAYMENTS_COPY.continue);
+    fireEvent.changeText(await screen.findByLabelText(FAKE_CARD_NUMBER), '4242 4242 4242 4242');
+    Object.assign(phone, { takeCard: () => Promise.reject(new Error('native module went away')) });
+
+    press(PAYMENTS_COPY.saveTheCard);
+
+    expect(await screen.findByText(PAYMENTS_COPY.failures.CARD_REFUSED)).toBeTruthy();
+    expect(screen.getByLabelText(FAKE_CARD_NUMBER)).toBeTruthy();
+    expect(screen.getByLabelText(step(2, 'card', 'open'))).toBeTruthy();
+  });
+
   it('walks a card through the four steps: setup, card, terms, then the bank by itself', async () => {
     stubTheSetupRoutes();
     await onPayments('Not set up');

@@ -15,8 +15,18 @@
  * is nothing to scroll — which is the version of this that looks right in a diff.
  */
 
-import { render, screen, within } from '@testing-library/react-native';
-import { ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
+
+import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform/keyboard';
 
 import { BottomSheet } from './BottomSheet';
 import { theme } from './theme';
@@ -65,5 +75,59 @@ describe('a sheet taller than the screen', () => {
 
     expect(flatten(body().props.contentContainerStyle)?.paddingBottom).toBe(theme.space.xxl);
     expect(flatten(screen.UNSAFE_getByType(ScrollView).props.style)?.paddingBottom).toBeUndefined();
+  });
+});
+
+describe('a sheet with a field in it', () => {
+  it('lifts above the keyboard on iOS, and is left to the window on Android', () => {
+    open(<Text>Card</Text>);
+
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(KEYBOARD_AVOIDANCE);
+  });
+
+  it('dismisses the keyboard before it closes, so no field keeps focus into a closing window', () => {
+    const order: string[] = [];
+    jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => order.push('dismiss'));
+    render(
+      <BottomSheet
+        visible
+        onClose={() => order.push('close')}
+        title="Keep these times?"
+        closeLabel="Close the sheet"
+      >
+        <Text>Card</Text>
+      </BottomSheet>,
+    );
+
+    fireEvent.press(screen.getByRole('button', { name: 'Close the sheet' }));
+
+    expect(order).toEqual(['dismiss', 'close']);
+    jest.restoreAllMocks();
+  });
+});
+
+describe('a sheet with the card field in it', () => {
+  it('lets a tap outside a field take the keyboard, by default', () => {
+    open(<Text>Keep these times?</Text>);
+
+    expect(body().props.keyboardShouldPersistTaps).toBe('handled');
+  });
+
+  it('keeps the keyboard on every tap when asked, so nothing blurs the card field natively', () => {
+    render(
+      <BottomSheet
+        visible
+        onClose={() => undefined}
+        title="Before your first yes"
+        closeLabel="Close"
+        keepsKeyboardOnTap
+      >
+        <Text>Card details</Text>
+      </BottomSheet>,
+    );
+
+    // `handled` blurs the focused field when a tap lands on the sheet's text or blank space — on
+    // iOS a native blur of Stripe's card field closes the app.
+    expect(body().props.keyboardShouldPersistTaps).toBe('always');
   });
 });

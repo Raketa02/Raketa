@@ -95,7 +95,8 @@ export function PaymentsScreen({ toConfirm, liveYeses }: PaymentsScreenProps) {
       eyebrow={YOU_COPY.groups.account}
       title={PAYMENTS_TITLE}
       onBack={router.back}
-      keepsKeyboardOnTap>
+      keepsKeyboardOnTap
+    >
       {standing === undefined ? (
         <ReadStanding
           pending={read.isPending}

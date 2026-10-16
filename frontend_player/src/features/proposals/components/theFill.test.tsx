@@ -12,7 +12,8 @@
  */
 
 import { router } from 'expo-router';
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { ScrollView } from 'react-native';
 
 import { gameKeys } from '@/features/games/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
@@ -479,6 +480,18 @@ describe('a first yes with nothing saved opens the payment setup (§6.1, §12.5)
     expect(await screen.findByText(PAYMENTS_COPY.setupSheet.title)).toBeTruthy();
     expect(screen.getByText(PAYMENTS_COPY.setupSheet.line)).toBeTruthy();
     expect(yeses(vote)).toHaveLength(0);
+  });
+
+  it('keeps the keyboard on a tap anywhere in the sheet, so the card field is never blurred natively', async () => {
+    await openGames([deckCard()]);
+    fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
+
+    const sheet = await screen.findByTestId('bottom-sheet');
+    // A tap on the sheet's words with the card field focused closed the app on iOS (#3 on the
+    // bug list): `handled` sends the field a native blur, and Stripe's field traps on it.
+    expect(within(sheet).UNSAFE_getByType(ScrollView).props.keyboardShouldPersistTaps).toBe(
+      'always',
+    );
   });
 
   it('lands the yes the moment a card is saved', async () => {

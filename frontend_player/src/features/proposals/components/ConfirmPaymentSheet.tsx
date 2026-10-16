@@ -47,7 +47,12 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { confirmsWith, useConfirmOnPhone, useSeatCharge } from '@/features/payments/types';
+import {
+  confirmsWith,
+  useCardFieldsReady,
+  useConfirmOnPhone,
+  useSeatCharge,
+} from '@/features/payments/types';
 import { codeMessage, offlineMessage, recoveryMessage, type AppError } from '@/shared/errors';
 import { usePayments } from '@/shared/lib/platform';
 import { BottomSheet, Button, Note, theme } from '@/shared/ui';
@@ -79,11 +84,13 @@ export function ConfirmPaymentSheet({ onClose, ...confirmation }: ConfirmPayment
   const [openedAt] = useState(Date.now);
   const paymentWindow = paymentWindowAt(confirmation.confirmBy, confirmation.timeTo, openedAt);
   return (
+    // A declined card is typed again here: a tap on the sheet keeps the keyboard (`BottomSheet`'s note).
     <BottomSheet
       visible
       onClose={onClose}
       title={WORDS.title[paymentWindow]}
       closeLabel={WORDS.close}
+      keepsKeyboardOnTap
     >
       <Confirmation {...confirmation} openedAt={openedAt} />
     </BottomSheet>
@@ -106,6 +113,11 @@ function Confirmation({
   const [cardComplete, setCardComplete] = useState(false);
 
   const charge = read.data;
+  // The card fields are drawn only once Stripe is started with this payment's key — see the hook.
+  const fields = useCardFieldsReady(
+    seatChargeId,
+    charge !== undefined && confirmsWith(charge) === 'typed',
+  );
 
   if (charge === undefined) {
     if (read.fetchStatus === 'paused')
@@ -170,12 +182,18 @@ function Confirmation({
         <Text style={s.line}>{WORDS.onlyPlacedAgain}</Text>
       ) : null}
       <Text style={s.line}>{(typed ? WORDS.declinedLine : WORDS.checkLine)[paymentWindow]}</Text>
-      {typed ? (
+      {typed && fields === 'ready' ? (
         <CardFields
           onChange={(entry) => setCardComplete(entry.complete)}
           placeholders={WORDS.cardFields.placeholders}
           accessibilityLabel={WORDS.cardFields.label}
         />
+      ) : null}
+      {typed && fields === 'reading' ? <Text style={s.line}>{WORDS.reading}</Text> : null}
+      {typed && fields === 'failed' ? (
+        <Note variant="coral" accessibilityRole="alert">
+          {WORDS.providerNotStarted}
+        </Note>
       ) : null}
       {failure === null ? null : (
         <Note variant="coral" accessibilityRole="alert">

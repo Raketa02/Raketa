@@ -24,7 +24,13 @@ export { PaymentsScreen, type PaymentsScreenProps } from './components/PaymentsS
  */
 export { PaymentSetupSheet, type PaymentSetupSheetProps } from './components/PaymentSetupSheet';
 export { usePaymentSetupNeeded } from './hooks/usePaymentMethod';
-export { useConfirmOnPhone, useSeatCharge, type PhoneConfirmation } from './hooks/useSeatCharge';
+export {
+  useCardFieldsReady,
+  useConfirmOnPhone,
+  useSeatCharge,
+  type CardFieldsState,
+  type PhoneConfirmation,
+} from './hooks/useSeatCharge';
 export { confirmsWith, type ConfirmWithCard, type SeatCharge } from './domain/seatCharge';
 export { paymentKeys } from './hooks/paymentKeys';
 
