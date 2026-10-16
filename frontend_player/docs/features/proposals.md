@@ -299,6 +299,13 @@ seat is open and has never been opened here; nothing is new until the phone has 
 never flashes. Opening the details — from a card, or _It's a game!_'s _Open game_, which now opens
 them rather than the Classic game screen — is what marks it.
 
+**A called-off card can be removed from Home** (`useDismissedGames`, kept as the opened games are —
+the fifth value of `shared/lib/preferences`, per account and forgotten at sign-out; the bug report's
+P2). Its card carries _Remove from Home_, a 6.1 `secondary`, and no other card does: a called-off
+game is the one card nothing on Home can act on, and it would otherwise stay its day. The removal
+is this phone's alone — the server still sends the card, another phone still draws it, and nobody
+is told.
+
 **The details are one read and nothing re-derived** (`BookedGameScreen`, `/booking/[bookingId]`): the
 top bar (the others' faces, their names whole, _Padel_ — the sport and the kind, never the state,
 which is the card's tag alone (the bug report's P2) — **Chat**); the game card — status,

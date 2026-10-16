@@ -8,8 +8,10 @@
  * own because neither is thin.
  */
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { NoticeBell } from '@/features/notifications/types';
-import { HomeRail, PaymentsToConfirm } from '@/features/proposals/types';
+import { HomeRail, PaymentsToConfirm, rereadHome } from '@/features/proposals/types';
 
 import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
@@ -32,8 +34,13 @@ import { HOME_COPY } from './shellCopy';
  * with nothing on the tab to answer it would be a dead end.
  */
 export function HomeScreen() {
+  const client = useQueryClient();
   return (
-    <ShellScreen title={HOME_COPY.title} right={<NoticeBell />}>
+    <ShellScreen
+      title={HOME_COPY.title}
+      right={<NoticeBell />}
+      onRefresh={() => rereadHome(client)}
+    >
       <PaymentsToConfirm />
       <HomeRail empty={HOME_COPY.empty} />
     </ShellScreen>

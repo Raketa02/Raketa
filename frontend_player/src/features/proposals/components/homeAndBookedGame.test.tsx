@@ -14,6 +14,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
@@ -179,6 +180,44 @@ const CHECKED_UNTIL_ELEVEN = bookedMoney({ share_state: 'CHECKED', held_from: EL
 // ---------------------------------------------------------------------------
 
 describe('Home — a booked game’s card (A8)', () => {
+  it('lets the player remove a called-off game from Home, and offers that on no other card', async () => {
+    stubHomeGames(transport, [
+      homeGame({
+        status: 'CALLED_OFF',
+        called_off_reason: 'CANCELLED_BY_THE_CLUB',
+        money: unheldMoney(),
+      }),
+    ]);
+    await launchSignedIn();
+    await card();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Remove from Home' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText('Bonarka Arena cancelled it · Nothing was taken')).toBeNull(),
+    );
+  });
+
+  it('offers no removal on a game still on', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    await launchSignedIn();
+    await card();
+
+    expect(screen.queryByRole('button', { name: 'Remove from Home' })).toBeNull();
+  });
+
+  it('re-reads Home when the player pulls it down', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    await launchSignedIn();
+    await card();
+    const homeReads = () => transport.requestsTo('GET', HOME_PATH).length;
+    const before = homeReads();
+
+    fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+
+    await waitFor(() => expect(homeReads()).toBeGreaterThan(before));
+  });
+
   it('draws the status, the court, the day and the money line, with Open game', async () => {
     stubHomeGames(transport, [homeGame()]);
     await launchSignedIn();

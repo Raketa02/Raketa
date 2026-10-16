@@ -70,9 +70,22 @@ export interface HomeGameCardProps {
   /** The rail's card width — 7.7's paging geometry, handed down as the Classic card's is. */
   readonly width: number;
   readonly onOpen: () => void;
+  /**
+   * Removes a called-off game from this phone's Home. Offered only on a called-off card — the one
+   * kind nothing else on Home can do anything about.
+   */
+  readonly onDismiss?: () => void;
 }
 
-export function HomeGameCard({ game, now, fresh, onChat, width, onOpen }: HomeGameCardProps) {
+export function HomeGameCard({
+  game,
+  now,
+  fresh,
+  onChat,
+  width,
+  onOpen,
+  onDismiss,
+}: HomeGameCardProps) {
   const status = shownStatus(game);
   const ink = STATUS_INK[status];
   const line = moneyLineOf(game, now);
@@ -127,6 +140,9 @@ export function HomeGameCard({ game, now, fresh, onChat, width, onOpen }: HomeGa
         />
         {onChat === undefined ? null : (
           <ChatDoor onPress={onChat} testID={`home-game-chat-${game.bookingId}`} />
+        )}
+        {status !== 'CALLED_OFF' || onDismiss === undefined ? null : (
+          <Button label={COPY.removeGame} variant="secondary" size="lg" onPress={onDismiss} />
         )}
       </View>
     </DarkCard>

@@ -162,6 +162,10 @@ columns, the booked badge, no old-loop read, the bar standing down in a booked r
 `homeAndBookedGame.test.tsx` (Home booked-only, its pager and badge). **Not seen on a device**: the
 three-column bar at a large text size.
 
+**Home pulls to refresh** (the bug report's P2): the pull re-reads what a notice does —
+`proposals`' `rereadHome`, the games, _TO CONFIRM_ and the live yeses — and `ShellScreen`'s
+`onRefresh` spins until they have landed, refused or not.
+
 **_Finding players_ is three rows** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
 _Your week · Where you play · Who you play with_. _How far to look_ and _Game suggestions_ left
 with the two questions they answered again — the Search radius and the Proposals opt-in, read

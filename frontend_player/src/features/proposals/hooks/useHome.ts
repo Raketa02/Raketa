@@ -17,7 +17,14 @@ import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
 import { openedToKeep, type BookedGame, type Home } from '../domain/home';
-import { keepOpenedGames, readBooking, readHome, readOpenedGames } from '../use-cases/home';
+import {
+  keepDismissedGames,
+  keepOpenedGames,
+  readBooking,
+  readDismissedGames,
+  readHome,
+  readOpenedGames,
+} from '../use-cases/home';
 
 import { proposalKeys } from './proposalKeys';
 import { useDeckClock } from './useDeckClock';
@@ -164,4 +171,57 @@ export function useRereadBooking(bookingId: string): () => void {
     void client.invalidateQueries({ queryKey: proposalKeys.home() });
     void client.invalidateQueries({ queryKey: proposalKeys.booking(bookingId) });
   }, [bookingId, client]);
+}
+
+/**
+ * **The called-off games this phone has removed from Home** (the bug report's P2): a player clears a
+ * stale negative card at once, and it stays cleared on this phone. Kept the way the opened games are
+ * — per account, in the phone's own store, never the server's — so it is nothing the club or the
+ * other players see.
+ */
+export function useDismissedGames(): {
+  readonly dismissed: ReadonlySet<string> | undefined;
+  readonly dismiss: (bookingId: string) => void;
+} {
+  const client = useQueryClient();
+  const [account] = useState(() => client.getQueryData(currentUserQuery().queryKey)?.id);
+
+  const read = useQuery({
+    queryKey: phonePreferenceKeys.one(account ?? '', 'dismissedGames'),
+    queryFn: () => readDismissedGames(account ?? ''),
+    enabled: account !== undefined,
+    networkMode: 'always',
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const dismiss = useCallback(
+    (bookingId: string) => {
+      if (account === undefined) return;
+      const key = phonePreferenceKeys.one(account, 'dismissedGames');
+      // What was kept, from the cache or the phone: writing over a list never read would forget
+      // every game removed before.
+      void client
+        .fetchQuery({
+          queryKey: key,
+          queryFn: () => readDismissedGames(account),
+          staleTime: Infinity,
+        })
+        .then((kept) => {
+          if (kept.includes(bookingId)) return undefined;
+          const next = [...kept, bookingId];
+          client.setQueryData(key, next);
+          return keepDismissedGames(account, next);
+        });
+    },
+    [account, client],
+  );
+
+  return {
+    dismissed: read.data === undefined ? undefined : new Set(read.data),
+    dismiss,
+  };
 }

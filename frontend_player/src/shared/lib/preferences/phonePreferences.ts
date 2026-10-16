@@ -46,7 +46,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * owner's ruling that *new* lives elsewhere — and until it exists this value stands outside the
  * table ADR-0188 §2 accepted.
  */
-export type PhonePreference = 'playSegment' | 'lastSport' | 'lastProfile' | 'openedGames';
+export type PhonePreference =
+  'playSegment' | 'lastSport' | 'lastProfile' | 'openedGames' | 'dismissedGames';
 
 /** Every key this module writes starts with this, and nothing else's does. */
 const PREFIX = 'raketa.phone-preferences.';

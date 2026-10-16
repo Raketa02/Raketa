@@ -54,7 +54,7 @@ import { recoveryMessage } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
 import { chatIsOpen, isNew, lineCanRunOut, onHome } from '../domain/home';
-import { useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
+import { useDismissedGames, useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
 
 import { HomeGameCard } from './HomeGameCard';
 import { gamesHeading } from './homePresentation';
@@ -74,6 +74,7 @@ export function HomeRail({ empty }: HomeRailProps) {
   const home = useHome();
   const rooms = useBookingRooms();
   const { opened, open } = useOpenedGames();
+  const { dismissed, dismiss } = useDismissedGames();
   const { width: screen } = useWindowDimensions();
 
   /** Which card is on screen. Route-local, and the dots' only input. */
@@ -84,7 +85,7 @@ export function HomeRail({ empty }: HomeRailProps) {
   // *until …* leave the line by themselves.
   const ticking = all.some(lineCanRunOut);
   const now = useReadClock(home.data?.readAt, home.dataUpdatedAt, ticking);
-  const games = all.filter((game) => onHome(game, now));
+  const games = all.filter((game) => onHome(game, now) && !dismissed?.has(game.bookingId));
   const failure = home.data === undefined ? home.error : null;
 
   const cardWidth = screen - 2 * theme.size.gutter;
@@ -141,6 +142,7 @@ export function HomeRail({ empty }: HomeRailProps) {
                 }
                 width={cardWidth}
                 onOpen={() => router.push(bookedGameRoute(game.bookingId))}
+                onDismiss={() => dismiss(game.bookingId)}
               />
             ))}
           </ScrollView>

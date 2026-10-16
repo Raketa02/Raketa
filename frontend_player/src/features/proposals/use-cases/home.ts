@@ -40,3 +40,12 @@ export async function readOpenedGames(account: string): Promise<readonly string[
 export function keepOpenedGames(account: string, opened: readonly string[]): Promise<void> {
   return savePhonePreference(account, 'openedGames', JSON.stringify(opened));
 }
+
+/** The called-off games this account has removed from Home on this phone. */
+export async function readDismissedGames(account: string): Promise<readonly string[]> {
+  return openedFrom(await readPhonePreference(account, 'dismissedGames'));
+}
+
+export function keepDismissedGames(account: string, dismissed: readonly string[]): Promise<void> {
+  return savePhonePreference(account, 'dismissedGames', JSON.stringify(dismissed));
+}

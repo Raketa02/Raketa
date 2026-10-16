@@ -50,6 +50,8 @@ export const HOME_GAME_COPY = {
   new: 'New',
   newSpoken: 'new',
   openGame: 'Open game',
+  /** A called-off game's card, removed from this phone's Home (the bug report's P2). */
+  removeGame: 'Remove from Home',
   /** The money line's words (§14.1). */
   money: {
     paid: 'Paid',
