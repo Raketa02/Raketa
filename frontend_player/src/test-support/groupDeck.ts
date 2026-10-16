@@ -307,6 +307,7 @@ export function liveYes(extra: Partial<Wire['LiveYesSchema']> = {}): Wire['LiveY
     club: { id: 'b0000000-0000-4000-8000-000000000001', name: 'Bonarka Arena' },
     share_grosze: 2800,
     book_by: hoursAfterRead(24),
+    indoor: null,
     ...extra,
   };
 }

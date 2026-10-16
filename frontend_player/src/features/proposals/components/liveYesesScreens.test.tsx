@@ -133,6 +133,31 @@ describe('the section on Payments — mock 48', () => {
     expect(screen.getByText('Bonarka Arena')).toBeTruthy();
   });
 
+  it('says the court’s kind under the club — Indoor for true, Outdoor for false, neither for null', async () => {
+    stubLiveYeses(transport, [
+      liveYes({ indoor: true }),
+      liveYes({
+        sport: 'TENNIS',
+        starts_at: '2026-10-04T16:00:00Z',
+        club: { id: 'b0000000-0000-4000-8000-000000000002', name: 'Centrum Ruchu' },
+        indoor: false,
+      }),
+      liveYes({
+        sport: 'SQUASH',
+        starts_at: '2026-10-05T16:00:00Z',
+        club: { id: 'b0000000-0000-4000-8000-000000000003', name: 'Kort Squash' },
+        indoor: null,
+      }),
+    ]);
+    await onPayments();
+
+    expect(await screen.findByText('Bonarka Arena · Indoor')).toBeTruthy();
+    expect(screen.getByText('Centrum Ruchu · Outdoor')).toBeTruthy();
+    expect(screen.getByText('Kort Squash')).toBeTruthy();
+    expect(screen.queryByText('Kort Squash · Indoor')).toBeNull();
+    expect(screen.queryByText('Kort Squash · Outdoor')).toBeNull();
+  });
+
   it('is hidden when there are none', async () => {
     await onPayments();
 

@@ -29,6 +29,7 @@ export function toLiveYes(wire: Schemas['LiveYesSchema']): LiveYes | undefined {
     club: toClub(wire.club),
     shareGrosze: wire.share_grosze,
     deadline: wire.book_by,
+    ...(wire.indoor === null ? {} : { indoor: wire.indoor }),
   };
 }
 

@@ -36,11 +36,11 @@ import type { LiveYes } from '../domain/liveYes';
 import { gameDayOf } from '../domain/when';
 import { useLiveYeses } from '../hooks/useLiveYeses';
 
-import { clubName } from './deckPresentation';
 import {
   LIVE_YES_HINT,
   LIVE_YESES_TITLE,
   liveYesLabel,
+  liveYesPlace,
   liveYesTitle,
   liveYesesHeader,
 } from './liveYesesPresentation';
@@ -120,7 +120,7 @@ function LiveYesRow({
     >
       <View style={s.words}>
         <Text style={s.title}>{liveYesTitle(yes, day)}</Text>
-        <Text style={s.club}>{clubName(yes)}</Text>
+        <Text style={s.club}>{liveYesPlace(yes)}</Text>
       </View>
       <Text style={s.share}>{formatZloty(yes.shareGrosze)}</Text>
     </Pressable>

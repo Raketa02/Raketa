@@ -126,7 +126,9 @@ a sheet (A2.4) — so `payments` importing this feature would point the edge the
 and a method is not removed while a yes needs it), so state A never asks for the list. The head
 counts every yes across sports, with no cap under it — the live-yes cap was removed on 2026-10-05
 (the mechanics Q97); mock 48 drew _1 OF 10_ before that. A row is _Padel ·
-Saturday 15:00_ in the court block's day words, the club under it, the share in grey mono; it opens
+Saturday 15:00_ in the court block's day words, the club under it — with the court's kind after it,
+_Bonarka Arena · Indoor_, once the game promises one (#677; a mixed set of courts says neither) — the
+share in grey mono; it opens
 the game's details for the group, sport and kind the yes was said in. **Hidden when empty and while
 the first read is on its way**; a read that failed says so under the section's name with the retry,
 because a missing list would read as _nothing live_. A yes and a withdraw, wherever said, mark the

@@ -13,7 +13,7 @@ import { platformClock } from '@/shared/date/platformZone';
 import type { LiveYes } from '../domain/liveYes';
 import type { GameDay } from '../domain/when';
 
-import { LINE_JOIN, clubName, gameDayWords, shareWords } from './deckPresentation';
+import { LINE_JOIN, clubName, courtKindWords, gameDayWords, shareWords } from './deckPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 /** The section's name — alone over a read that failed, where there is nothing to count. */
@@ -32,11 +32,21 @@ export function liveYesTitle(yes: LiveYes, day: GameDay | undefined): string {
   return `${sportLabel(yes.sport)}${LINE_JOIN}${when}`;
 }
 
-/** The row, spoken: *Padel · Saturday 15:00, Bonarka Arena, 28 zł if it fills*. */
+/**
+ * *Bonarka Arena · Indoor* — the club under the title, with the court's kind once the game promises
+ * one (#677); a `null` (mixed courts) leaves the kind out, as the deck's card does.
+ */
+export function liveYesPlace(yes: LiveYes): string {
+  return [clubName(yes), courtKindWords(yes.indoor)]
+    .filter((part) => part !== undefined)
+    .join(LINE_JOIN);
+}
+
+/** The row, spoken: *Padel · Saturday 15:00, Bonarka Arena · Indoor, 28 zł if it fills*. */
 export function liveYesLabel(yes: LiveYes, day: GameDay | undefined): string {
   return [
     liveYesTitle(yes, day),
-    clubName(yes),
+    liveYesPlace(yes),
     `${shareWords(yes)} ${PROPOSALS_COPY.game.ifItFills}`,
   ].join(', ');
 }
