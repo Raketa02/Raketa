@@ -227,12 +227,26 @@ class GameHasStarted(ConflictError):
 class BookingIsCalledOff(ConflictError):
     """The game is off — short at its cut-off, or cancelled by its club — so
     there is nothing to leave; everybody still in is refunded, or nobody paid.
-    Nothing was recorded."""
+    Nothing was recorded.
+
+    **A rescue's join says which** (the bug report's P1 on the rescue swipe):
+    ``details.reason`` is ``SHORT_AT_THE_CUT_OFF`` or ``CANCELLED_BY_THE_CLUB``,
+    and the club's own ``details.club_cancel_reason`` beside the second — the
+    one moment a player reaches for a seat on a game that is gone, and the
+    sheet that tells them names why. The other acts that meet it say nothing
+    more."""
 
     code = "booking_is_called_off"
 
-    def __init__(self) -> None:
-        super().__init__("this game is called off")
+    def __init__(
+        self, *, reason: str | None = None, club_cancel_reason: str | None = None
+    ) -> None:
+        details: dict[str, str] = {}
+        if reason is not None:
+            details["reason"] = reason
+        if club_cancel_reason is not None:
+            details["club_cancel_reason"] = club_cancel_reason
+        super().__init__("this game is called off", details=details)
 
 
 class SeatJustTaken(ConflictError):

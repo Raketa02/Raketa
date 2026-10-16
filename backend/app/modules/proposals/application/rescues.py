@@ -428,8 +428,12 @@ class Rescuer:
                     booking_id, keeping=(), of_player=player, at=now
                 )
             return await self._joined(game, player, open_seats=game.open_seats, now=now)
-        if game.called_off_reason(now) is not None:
-            raise BookingIsCalledOff()
+        called_off = game.called_off_reason(now)
+        if called_off is not None:
+            # Said with why: the sheet a refused rescue opens names it.
+            raise BookingIsCalledOff(
+                reason=called_off, club_cancel_reason=game.cancel_reason
+            )
         if now >= game.start:
             raise GameHasStarted()
         if game.keep_to_run_out(player, now=now):

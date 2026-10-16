@@ -75,10 +75,15 @@ def clock(app):
 
 
 @pytest.fixture
-async def club(client) -> str:
-    """Bonarka Arena: one padel court, a 24-hour cut-off."""
+async def club_and_desk(client) -> tuple[str, dict]:
+    """Bonarka Arena: one padel court, a 24-hour cut-off — and its desk."""
 
-    club_id, _desk = await a_club_and_its_desk(client)
+    return await a_club_and_its_desk(client)
+
+
+@pytest.fixture
+async def club(club_and_desk) -> str:
+    club_id, _desk = club_and_desk
     return club_id
 
 
@@ -323,6 +328,30 @@ async def test_a_seat_still_open_at_the_cut_off_leaves_the_board_with_the_game(
     assert (await fill_in(client, zosia, group))["seats_to_fill"] == []
     joined = await joins(client, zosia, booking)
     assert (joined.status_code, joined.json()["code"]) == (409, "booking_is_called_off")
+    # The sheet a refused rescue opens names why (the bug report's P1).
+    assert joined.json()["details"] == {"reason": "SHORT_AT_THE_CUT_OFF"}
+
+
+async def test_a_seat_on_a_game_its_club_cancelled_is_refused_with_the_club_s_reason(
+    client, clock, club_and_desk, booking, crowd
+):
+    _club, desk = club_and_desk
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    cancelled = await client.post(
+        f"/api/v1/club/bookings/{booking}/cancellation",
+        json={"reason": "WEATHER", "anyway": True},
+        headers=desk,
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    joined = await joins(client, zosia, booking)
+
+    assert (joined.status_code, joined.json()["code"]) == (409, "booking_is_called_off")
+    assert joined.json()["details"] == {
+        "reason": "CANCELLED_BY_THE_CLUB",
+        "club_cancel_reason": "WEATHER",
+    }
 
 
 async def test_open_seats_stay_until_the_cut_off_whatever_their_number(
