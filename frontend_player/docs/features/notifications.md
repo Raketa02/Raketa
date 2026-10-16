@@ -46,14 +46,14 @@ writes its answer, a refusal says so under the cards and the three are read agai
 taps are held. The row's line is the chosen ones that are on, short — _You complete it · Challenges ·
 Fill in alerts_ (mock 50) — or _Only the ones always on_.
 
-**The always on are words and a tag, never controls** — twelve since #643. Mock 52 drew seven; the rows are
+**The always on are words and a tag, never controls** — ten since #676. Mock 52 drew seven; the rows are
 A7.2's as [#620](https://github.com/Raketa02/Raketa/issues/620) amends it, a row a line of the
 mechanics §17.2's table, in its order ([#628](https://github.com/Raketa02/Raketa/issues/628)): _It's a
-game! · you paid_ (_· held_ since #642) · _It's a game! · the club answers by …_ · _Waiting for one payment_ · _Fix your card
+game! · you paid_ (_· held_ since #642) · _Waiting for one payment_ · _Fix your card
 by … to keep your seat_ (since #643) · _Confirm your payment by … to keep your seat_ · _Game called off · with the refund_ (_· nothing was taken, or with the refund_ since #642) · _Someone left your game · or
-it's filling again_ · _You've been refunded_ · _The club confirmed / said no / didn't answer in time_ ·
-_Your new game_ · _A game you left_ · _Your post didn't fill_. One row can be several notices — _the
-club confirmed / said no / didn't answer in time_ is three, _A game you left_ two — and a row names a
+it's filling again_ · _You've been refunded_ ·
+_Your new game_ · _A game you left_ · _Your post didn't fill_. One row can be several notices — _A
+game you left_ is two — and a row names a
 notice before the backend gives it: _Waiting for one payment_ comes with #625, _A game you left_ and
 _filling again_ with #623. Each has 6.4's green **on** tag, one element to a listener (_…, always
 on_). The three choices are **switches** (`OnOffChip`): 6.2's pill
@@ -212,10 +212,10 @@ permission is asked, the choices save and the list is read, and nothing is pushe
 17. **The banner still comes down over the open list** for a notice that arrives while it is open,
     as over any screen — the row stands out beneath it too.
 18. **The bell is spoken with the exact number** past 99, where it draws _99+_.
-19. **_It's a game! · answers by_ opens the game's details in its group, under Play**, as the backend
-    sends it (`PROPOSAL`), while Home's card for the same game opens the booked details over Home.
-    Both draw it waiting for the club with _Leave the game_. The phone could open the booking for
-    this kind as it does a Fill in alert, but the backend's call is kept (#628).
+19. **_It's a game! · waiting for one payment_ opens the game's details in its group, under Play**,
+    as the backend sends it (`PROPOSAL`), while Home's card for the same game opens the booked details
+    over Home. Both draw it waiting for one payment with _Leave the game_. The phone could open the
+    booking for this kind as it does a Fill in alert, but the backend's call is kept (#628, #630).
 20. **The always-on rows name notices the backend does not give yet** (_Waiting for one payment_,
     _A game you left_, _or it's filling again_): A7.2 lists the amended table, and #623 and #625 bring
     them.
@@ -228,27 +228,17 @@ the user: `frontend_player/CLAUDE.md` still says six platform ports, and
 `.claude/rules/auth-and-http.md`'s sign-out sequence does not name the phone's removal (Part 5 does). **Nothing here has been seen on a device**, and no push has
 been delivered to one.
 
-**The four matched at a club that confirms are told It's a game!, which opens the game**
-([#628](https://github.com/Raketa02/Raketa/issues/628); the backend's #622; the mechanics Q103). At
-20:15 Paula's yes fills Friday's 19:00 at Kazimierz Padel. The three others are told _It's a game! ·
-Kazimierz Padel answers by 21:15_ / _Padel · Fri 19:00. Nobody pays until it confirms._, and Paula
-sees the screen: at a club that confirms with that line under the word, at a club that books at once
-as before (`proposals.md`). Her own copy is listed already seen, never bannered or counted (Q102,
-#627's `yourOwn`). **Why**: the product owner ruled that _It's a game!_ marks the four being matched,
-not only booked. The notice is `WAITING_FOR_THE_CLUB`, sent as `PROPOSAL`: the game's details in its
-group under Play, which draw it _Waiting for the club_ with _Leave the game_. The club's yes stays one
-notice, _Kazimierz Padel confirmed your game_, which opens the booked game.
-
 **A new card first is told as Your new game, which opens the deck with it on top** (#628; the
-mechanics Q107). If the club says no, the four are told when the card they were promised arrives:
+mechanics Q107, Q123). If a club's cancel calls the game off, the four are told when the card they
+were promised arrives:
 _Your new game · Fri 19:00 at Bonarka Arena_ / _The same players · 40 zł a share — say yes to book
 it._ **Why**: a notice that promises _you'll get a new card first_ is answered when the card comes,
 rather than by a card dealt without a word. The notice is `NEW_GAME`, sent as `DECK`: the group's deck
-in the card's sport and kind, the card on top, as _You complete it_ arrives. **Both open the same way
+in the card's sport and kind, the card on top, as _You complete it_ arrives. **It opens the same way
 from the banner, a row behind the bell and a tapped push** (`useOpenNotice`). The phone adds only the
-two codes (`domain/vocabulary.ts`, held to the wire by `wireVocabulary.ts`); the words and where each
-opens are the backend's, read by the one `targetOf`. Before #628 a build listed both and opened
-neither, and a code this build cannot name still opens nothing.
+code (`domain/vocabulary.ts`, held to the wire by `wireVocabulary.ts`); the words and where it opens
+are the backend's, read by the one `targetOf`. Before #628 a build listed it and opened nothing, and a
+code this build cannot name still opens nothing.
 
 **A time to pay is told by the server, and an arrival re-reads _TO CONFIRM_ too**
 ([#630](https://github.com/Raketa02/Raketa/issues/630); the backend's #625 and #626; the mechanics
@@ -262,7 +252,7 @@ and _TO CONFIRM_ above them. **Why**: the confirm notice puts a row there and th
 takes its time off, and before this only the games were read again — a row could be missing, or keep a
 time that had run out, until the app came back to the foreground.
 
-**Decided, and built since #642 and #643 (below): twelve always on, and the take is quiet**
+**Decided, and built since #642 and #643 (below): twelve always on — ten since #676 — and the take is quiet**
 (the mechanics Q113 and §17.2;
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is now held when its game fills and
 taken at the club's cut-off, and a card refused before the cut-off is fixed, not paid. The first row
@@ -278,8 +268,22 @@ spells the two kinds #638 added, `FIX_YOUR_CARD` and `TIME_TO_FIX_RAN_OUT`, so a
 where the backend says; their row in the settings is #643's.
 
 **Fix your card is always on** ([#643](https://github.com/Raketa02/Raketa/issues/643); the mechanics
-Q113, §17.2; the screens A7.2). The settings list twelve: _Fix your card by … to keep your seat_ sits
+Q113, §17.2; the screens A7.2). The settings listed twelve (ten since #676): _Fix your card by … to keep your seat_ sits
 after _Waiting for one payment_ and before _Confirm your payment by … to keep your seat_, as A7.2
 orders them. **Why**: a card refused before the cut-off is told to its player every way there is, as
 a time to pay is. The notice's words, and _Your time to fix your card ran out_, are the backend's; an
 arrival re-reads _TO CONFIRM_ as any does, so a row loses its time when the time-ran-out notice lands.
+
+**No notice is about a club's answer — no club confirms a game**
+([#676](https://github.com/Raketa02/Raketa/issues/676); the backend's #669;
+[ADR-0196](../../../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+§1, the mechanics Q121; the screens A7.2). Paula's yes completes Marta's Thursday game at Kazimierz
+Padel and it is booked at once, so the four are told _It's a game! · 25 zł held_ like at any club.
+`WAITING_FOR_THE_CLUB` (_It's a game! · Kazimierz Padel answers by 21:15_), `CLUB_CONFIRMED` and
+`CLUB_COULD_NOT_TAKE_IT` (_said no_, _didn't answer in time_) left the wire and `domain/vocabulary.ts`,
+and their two rows left the settings, which list ten. **Why**: every full game books the moment its
+last yes lands, at every club, so there is no answer to wait for or to be told. **The regenerated
+contract also brought `GAME_MOVED`** (#671): `domain/vocabulary.ts` spells it so the agreement holds,
+and `targetOf` opens it where the backend sends it (`BOOKING`, the booked game) — a call, held by one
+mapper test, rather than a notice listed that opens nothing. Its settings row, its screen tests and
+its paragraph here are #677's.

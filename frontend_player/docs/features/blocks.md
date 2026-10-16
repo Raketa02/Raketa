@@ -57,7 +57,7 @@ list has none to re-read), and **every group's deck** — and with it each group
 reads, which sit under the group's root — rather than the one the record was opened from: a block
 keeps the pair off one court in every group they share. A block also re-reads what its withdrawal
 moves (ADR-0193 §4): the live yeses, a game still filling in detail, Home and a booking in detail —
-a game waiting for its club drops back to filling as though the reader left it, so these are the
+a game waiting for one payment drops back to filling as though the reader left it, so these are the
 reads leaving a booking re-reads. An unblock brings no yes back and re-reads none of them. On the
 list, an unblock also takes the row out at once — the answer is certain — and the re-read agrees.
 

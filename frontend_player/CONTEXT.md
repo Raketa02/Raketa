@@ -602,8 +602,9 @@ _Matched!_ — left with the old loop ([#576](https://github.com/Raketa02/Raketa
 ground, the entrance and the tile came to `features/proposals` with the face that stays (#574).
 
 - **It's a game!** — the full-phone screen a yes lands on when it **filled a game** dealt in a
-  group's deck (#555) — booked, or gone to its On request club, with one line under the word for
-  what is still missing (#628, Q103): your side and theirs sliding in to meet with a `vs`
+  group's deck (#555) — booked, or waiting for one payment, with one line under the word for what
+  is still missing then (#630, Q110; no club confirms a game since ADR-0196, #676): your side and
+  theirs sliding in to meet with a `vs`
   between, one lime word, two pills, on the app's one dark ground (`YesGround`), moved once by
   `YesEntrance`. The faces are drawn off **the card the yes was said on**, and the doors are
   _Open game_ (Home laid down, the game pushed over it) and _Later_. Raised by the fill over the

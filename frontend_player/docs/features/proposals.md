@@ -21,7 +21,7 @@ it; that memory, and `withYourYes`, went with the move.
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
 `rowsOf` puts **the side with more people In on top, yours on a tie**, and within a row the people In,
 then you, then the rest — the one rule every mock (2–8, 10) agrees with; `ribbonOf`, `courtTagOf`,
-`chargesAtOnce` (the stamp's price: _Book it now_ unless the club confirms, or a rescue),
+`chargesAtOnce` (the stamp's price: _Book it now_ — always, since #676 — or a rescue),
 `countdownOf` (under 24 h, floored), `standingCards` (a card past its deadline leaves silently), `weekCapOf` (the fortnight's capped weeks) and `refusalOutcome`.
 
 **The kind is the switch's, corrected by the intent.** The group page's Competitive · For fun switch
@@ -148,8 +148,8 @@ and walks to Home inside the ten seconds, and the yes is still theirs. The deck 
 it through `useFill`. It holds four things, each as component state — a card is only ever _held_,
 never copied into a store:
 
-- **The Undo window** (§6.5). A yes `waitsForUndo` — _Book it now_ (an On request club's too: at zero
-  the game goes to the club), and **every** rescue join (Q74) — flies like any other, then counts ten
+- **The Undo window** (§6.5). A yes `waitsForUndo` — _Book it now_, and **every** rescue join (Q74) —
+  flies like any other, then counts ten
   seconds under _Booking in 10 s · Undo_ (shared/ui's `UndoToast`, placed where 9.2 places a toast,
   above the bar). Its card **stays in the deck's read, hidden** while it counts, so _Undo_ deals it
   back exactly where it was; at zero the card leaves the read and the yes is sent **now or not at
@@ -165,7 +165,7 @@ never copied into a store:
 - **Every yes's answer** — the deck's, the details', the delayed send's and the confirmation's — is
   read by `fillOutcome`: **booked** re-reads every deck, the live yeses, Home's games and the
   receipts, sends a details screen still on screen back to the deck, and raises **It's a game!**; a
-  game **sent to its club** raises it too, with its line (#628, below); a **refused share** (the bank's check, a decline) says _Your payment didn't go through — confirm it
+  game **waiting for one payment** raises it too, with its line (#630, below); a **refused share** (the bank's check, a decline) says _Your payment didn't go through — confirm it
   to keep your seat_ and opens the confirmation on it; no method at the fill is the setup and the yes
   again; a new card brand names You › Payments; anything else is a vote. A yes the card called free
   can still be the last — the others got there first — so the deck's plain yes is read too.
@@ -264,7 +264,7 @@ forecast (`games`' `GameForecast`) while the booking says to draw it. The fillin
 bubble too (Q100, below). _Chat_ is drawn while the
 join keyed by the booking finds the room (`conversations`' `useBookingRoom`, by the booking the room
 is filed under since [#577](https://github.com/Raketa02/Raketa/issues/577)) and the status can have
-one (`chatIsOpen`: not while the club decides, not once called off). **The room's own life decides
+one (`chatIsOpen`: not before it is booked, not once called off). **The room's own life decides
 the rest**: it closes as today — 48 hours after _we played_, when the result window closes — so a
 counted game keeps its door for as long as its room does, rather than leaving a room open with no
 way in. It pushes `/booking/[id]/chat` (`BookedGameChat`), which mounts `ConversationScreen` in its
@@ -292,8 +292,6 @@ terminal sentence.
 - **The title names the others whole** (_Piotr Sowa, Inés Díaz, Bartek Lis_), where details 7 draws
   first names: ADR-0171 — a name is said whole, never a first name derived from it — as the filling
   details already do.
-- **_Waiting for the club_ names no court** on the card and the details (A4.2), ahead of #543
-  producing the status.
 - **Booked cards first on the rail**, Classic cards after; one heading counts both.
 - **An ended booking stays a day after its hour**, so a result settled later than that is not drawn
   (the Classic rail's own cost for a score counted by silence).
@@ -314,9 +312,9 @@ form); `CLAUDE.md`'s _three per-account choices_ now reads four (agent config, l
 user). **Nothing here has
 been seen on a device.**
 
-**Fill in, rescues, leaving and On request are this feature's**
+**Fill in, rescues and leaving are this feature's**
 ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3, A4.2, A4.3, A8; mocks 2,
-11–14, details 10; the mechanics §10, §11, §13, §14; the backend's #543, #544, #545). Four reads,
+11–14, details 10; the mechanics §10, §11, §13, §14; the backend's #544, #545). Four reads,
 each the server's whole answer: `GET /pools/{id}/fill-in?sport` (_Seats to fill_ and the tab's
 badge), `GET /proposals/{id}` (a game still filling, in detail), `GET /bookings/{id}` (a booked game —
 now also seen from outside) and the live yeses; and three writes, `POST /bookings/{id}/seats` (take a
@@ -331,12 +329,11 @@ _Padel · Saturday 16:00_ (_· friendly_ for For fun), the club and, bold, _fill
 the cut-off or _offered until the start_ after it — the read says which; the players' posters (a hold
 opens the record), a dashed **?** per open seat, and a volt **I'm in · 27 zł**. _You're In_ is the
 reader's live yeses in this group and sport (`yesesIn`); a row (`YoureInRow`, framed `mint`) is the
-yes's game, club and _book by Sat 13:00_ — or, amber, _waiting for the club_ — with **its squares read
-off the game's own details** (`useProposal`: everybody In, then the open seats dashed) and _Withdraw_
-**only once those details say the reader may** (`mayWithdraw`) — so it is hidden while the club
-decides, when the `actions` hold _Leave_ instead, and before the read lands: a withdrawal while the
-club decides is a departure, and calls the request off with no sheet in front of it. One read a row,
-because the live yes carries neither who is In nor the club's turn.
+yes's game, club and _book by Sat 13:00_ with **its squares read off the game's own details**
+(`useProposal`: everybody In, then the open seats dashed) and _Withdraw_ **only once those details
+say the reader may** (`mayWithdraw`) — so it is hidden while the full game waits for one payment,
+when the `actions` hold _Leave_ instead, and before the read lands: a withdrawal then is a departure,
+with no sheet in front of it. One read a row, because the live yes does not carry who is In.
 Each row's upper block opens its game. Sections only when they have rows; with neither, the group's
 starting card. The tab's badge is the read's `badge`, filed under the group's root
 (`proposalKeys.fillIn`), so every answer in the group and every changed limit re-reads it.
@@ -369,20 +366,20 @@ _new_ marked. A seat gone before the read says _This seat isn't offered to you a
 saying what leaving costs **now** — the read's `leaving`, folded by the server — and today's _Before
 you leave_ sheet (`LeaveSheet`, this feature's since #574) with the §13 words: _You'll be refunded 27,18 zł now (the
 0,82 zł card fee isn't returned)…_ before the cut-off, _…when someone takes it; if nobody does, you
-won't be…_ after it, _Nobody has paid yet. Leaving withdraws your yes._ while the club decides (since
+won't be…_ after it, _Nobody has paid yet. Leaving withdraws your yes._ while one payment is awaited (since
 #642, _Nothing is taken…_ before the cut-off and no figure after it, below). The
 door is `LeaveTheGame`, the group exit's shape: the sheet is the surface while the act is in flight
 and says a refusal in words; success is a toast — with when the refund landed (_BLIK within hours,
 cards up to two weeks_, §12.3) until #642 made it _Nothing was taken._ — and the leaver goes back to
 Home, which no longer holds the game. No
 button where the read gives none (the hour has come, the game is over). **The same door stands on a
-game still filling while its club decides**, sent as the withdrawal (`useLeaveWhileWaiting`, `DELETE
-/proposals/{id}/yes`, which calls off the request).
+full game while it waits for one payment** (#625), sent as the withdrawal (`useLeaveWhileWaiting`,
+`DELETE /proposals/{id}/yes`), and the game fills again.
 
 **The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The status tag — _Filling · 2
-of 4 in_, _Waiting for the club_ amber, _Booked_, or how it ended unfilled — WHERE with the distance
-and no court, the share with _if it fills · book by_ or _nobody pays until Bonarka Arena confirms_,
-the forecast, the grid, the paragraph while it fills, and **the actions the read names, in its order**:
+of 4 in_, _Waiting for one payment_ amber, _Booked_, or how it ended unfilled — WHERE with the distance
+and no court, the share with _if it fills · book by_ or _Waiting for one payment · until 14:40 · Nobody
+pays until it's in_, the forecast, the grid, the paragraph while it fills, and **the actions the read names, in its order**:
 _I'm in_ / _Not this time_, _Withdraw_, _Leave the game_, _Confirm your payment_ (the fill's
 confirmation, on the payment the read names). Nothing about the game is held by the screen: every
 answer re-reads the details (`reread` takes `proposalKeys.proposals()`), each button busy until the
@@ -390,22 +387,13 @@ read lands. **The one fold**: whether a yes from the details books, which a card
 does not — the deck's own rule read off the seats and the In count (`courtOfDetails`: the last seat is
 _Book it now_).
 
-**On request** (#543; A2.4, §11): a _Book it now_ yes at an On request club counts its ten seconds
-like any other; the server answers `waiting_for_the_club`, and the fill reads it as its own outcome
-(`fillOutcome`'s `waiting`) — Home and every deck re-read, and, since #628, _It's a game!_ with when
-the club answers (below). The toast that stood here, _Waiting for Bonarka Arena to confirm — nobody
-pays until it does._, is gone. The charge follows the club's yes, told by the notices (#549). Home
-and the booked details say _Waiting for the club_ with no court; their _Leave the game_ withdraws
-the yes.
-
 **Home's and the details' lines are the read's now** (§14.1): _2 seats open · fills by Fri 16:00 or
 the game is off and everyone is refunded_ (`open_seats`; _…and nothing is taken_ since #642), _1 seat
 open · offered to others · the game goes ahead_ after the cut-off; _Called off_ with why — _A seat was
-still empty at the cut-off_, _Kazimierz Padel said no_, _… didn't answer in time_ (Q105, since #629,
-below) — and what came back (_Refunded 28 zł_, `refunded_grosze`) or _Nobody paid_ (or _Nothing was
+still empty at the cut-off_ — and what came back (_Refunded 28 zł_, `refunded_grosze`) or _Nobody paid_ (or _Nothing was
 taken_, since #642); _Uncounted_ with _A seat was empty · no Level moved_ — on Home's
 card, and under the share on the details' money row (`moneyRow`). A booking
-waiting for its club has no Game yet (`gameId` absent): no room (and `chatIsOpen` keeps its door
+waiting for one payment has no Game yet (`gameId` absent): no room (and `chatIsOpen` keeps its door
 shut, since #577 finds a room by the booking), no forecast, no result, and it is not
 in the Classic half of the badge.
 
@@ -416,19 +404,15 @@ in the Classic half of the badge.
   than from a card, and a failed read says _It's a game!_ in a toast.
 - **_You complete it_ on a rescue's details too**, where A4.3 words the tile _You?_ — the card's own
   rule (A2.3: the last seat completes it), so one seat says one thing on both surfaces.
-- ~~**The On request toast**~~ — **answered** by Q103 (2026-10-09, the product owner): _It's a
-  game!_ with the club's deadline under the word, in its place (#628).
 - **_Leave the game_ and _Withdraw_ are 6.1's `secondary`**, where details 10 and mock 13 draw dark
   red text: the group exit's call (red is _ended badly_, 1.3), and the sheet is what makes it
   deliberate.
-- **The rescue row's coral frame** is the rescue ribbon's meaning (§1.2), and the waiting line's amber
-  is `amber` (_watch this — not yet wrong_).
+- **The rescue row's coral frame** is the rescue ribbon's meaning (§1.2).
 - **Short day names on the rows** (_book by Sat 13:00_, _fills by Fri 16:00_) where mock 13 spells
   _Saturday_ — the money line's and the details' own form.
 - **The leaving toast** says when a refund lands, as §12.3 asks of the moment a refund is issued.
 - **The details' ended statuses' words** (_Didn't fill in time_, _Taken back_, _No court left at that
-  hour_, and since #629 the club's answer read off the booking, _Called off_ until it is) — no mock
-  draws them.
+  hour_) — no mock draws them.
 - **A game the details read as `FILLED`** says _Booked_ and offers nothing: the details have no
   route to Home's screen; Home holds the game.
 - **_Confirm your payment_ on the filling details** — A4.2 lists _I'm in_, _Not this time_,
@@ -438,12 +422,11 @@ in the Classic half of the badge.
   _A seat was empty._): the contract added `STARTED_SHORT`, and a standing with no arm fails the build.
 
 **Owed**: the chat lines _Kuba left — the seat is open_ / _Ola took the seat_ (conversations, with the
-backend's #545 note); the push and in-app notices of the club's answer and of a seat opening (#549,
-#559); _+ Post a game_ enabled (#558, below). **Owed to the backend**: ~~a `called_off_reason` for the
-club's own cancel and for a request called off when a player left it~~ — both came: the club's
-cancel is `CANCELLED_BY_THE_CLUB` (#547), and a request a player left is no longer called off but
-stays on the others' Home as _Seat open_ (#624, #629, below); and who is In and the club's turn on
-the live yes, which would save _You're In_ its read a row. **Nothing here has been seen on a
+backend's #545 note); the push and in-app notices of a seat opening (#549, #559); _+ Post a game_
+enabled (#558, below). **Owed to the backend**: ~~a `called_off_reason` for the club's own cancel and
+for a full game a player left~~ — both came: the club's cancel is `CANCELLED_BY_THE_CLUB` (#547), and a
+full game a player left is no longer called off but stays on the others' Home as _Seat open_ (#624,
+#629, below); and who is In on the live yes, which would save _You're In_ its read a row. **Nothing here has been seen on a
 device.**
 
 **Posting a game is this feature's** ([#558](https://github.com/Raketa02/Raketa/issues/558); the
@@ -626,31 +609,23 @@ for two decks with one left; folding them in is left for a ticket of its own. `t
 asserts the fill marks the games list stale rather than counting a re-read, since nothing holds
 that list on the group page any more.
 
-**When the club answers, and what Home is sent** ([#615](https://github.com/Raketa02/Raketa/issues/615);
-the backend's #613 and #614; the mechanics §14.1, the screens A4.2 and A8, Q98). A game waiting for
-its On request club says when the club must answer. The card's line reads _Kazimierz Padel answers by
-11:00 · Nobody pays until it confirms_, or _The club answers by …_ for a club the read no longer
-names. Either details' money row draws the card's line word for word, on a line of its own under the
-share — _YOUR SHARE 25 zł_ over _Kazimierz Padel answers by 11:00 · Nobody pays until it confirms_,
-then _Nobody pays until Kazimierz Padel confirms_ once the deadline passes: the booked details opened
-from the card, and the filling details opened from a _You're In_ row (`GameFacts`' `below`). It
-first ran on after the figure with the clauses the other way round — _25 zł nobody pays until
-Kazimierz Padel confirms · Kazimierz Padel answers by 11:00_ — so the card and its details said one
-thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). **Every booked
-money row has drawn its words under the figure since** — _PAID 40 zł_ over _Paid · 38,40 zł back if
+**What Home is sent, and every money row's words under the figure**
+([#615](https://github.com/Raketa02/Raketa/issues/615); the backend's #613; the mechanics §14.1, the
+screens A4.2 and A8). Either details' money row draws the card's line word for word, on a line of its
+own under the share: the booked details opened from the card, and the filling details opened from a
+_You're In_ row (`GameFacts`' `below`). It first ran on after the figure, so the card and its details
+said one thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). **Every
+booked money row has drawn its words under the figure since** — _PAID 40 zł_ over _Paid · 38,40 zł back if
 you leave by Wed 19:00_, the seat open, why a game is off, the rescue's _fills by_ — the user's
 ruling of 2026-10-10, so the row reads the same way whatever the game's state. A booked game's line
 there is the Home card's without the figure the row already draws: _Paid_, then what comes back
 while the cut-off is ahead, so _Paid_ alone after it; _your share · to the club_ went the same day.
-The spoken row is label, figure, then the words. The wire's `answer_by` becomes `answerBy`, absent for a `null` and for
-an older server that sends none, and `answerByAhead` folds it on the read's clock as `cutOffAhead`
-folds the cut-off. **No screen shows a deadline that has passed**: the server nulls it from the
-deadline on, the phone drops it at `now` too, and the read's clock ticks while one is there
-(`lineCanRunOut`), on the 30-second tick the cut-off's clause already runs on, so a passed deadline
-can stand for up to that long. The filling details' clock stood still before this, since nothing on
-them ran out. Both details build the aside once (`waitingAside`). **The time is Warsaw's**
-(`answersByWords`): the hour alone on the read's day, else the weekday with it (_Sun 00:15_), the
-form of the cut-off's _Sun 17:00_. **Home is sent only what it draws** since #613 — live games,
+The spoken row is label, figure, then the words. **No screen shows a deadline that has passed**: the
+phone drops one at `now`, as `cutOffAhead` drops the cut-off, and the read's clock ticks while one is
+there (`lineCanRunOut`), on the 30-second tick the cut-off's clause already runs on, so a passed
+deadline can stand for up to that long. **The time is Warsaw's** (`deadlineWords`): the hour alone on
+the read's day, else the weekday with it (_Sun 00:15_), the form of the cut-off's _Sun 17:00_. **Home
+is sent only what it draws** since #613 — live games,
 games that ended less than a day after their hour, and any game that needs the reader — so `onHome`
 no longer shelves every booking ever; it catches a card that crosses the line while Home is on
 screen.
@@ -706,82 +681,42 @@ shows the same number. **From the bubble the booking is not yet cached**, so the
 word — where from the details it opens at once. **Not seen on a device**: the door's pressed shade
 and its row with _Open game_ want a look.
 
-**It's a game! comes at a club that confirms too, with when the club answers under the word**
+**It's a game! marks the four matched, with what is still missing under the word**
 ([#628](https://github.com/Raketa02/Raketa/issues/628); the backend's #622; the mechanics Q103, the
-screens A2.4; story S-01B's F-REQUEST-40.1). At 20:15 on Thursday Paula's yes fills Friday's 19:00 at
-Kazimierz Padel (25 zł a share). Her screen counts _Booking in 10 s_ and at zero shows the whole _It's
-a game!_: the four faces, the word, _Open game_ and _Later_, with one line under the word, _Kazimierz
-Padel answers by 21:15 · Nobody pays until it confirms_. **Why**: the product owner ruled that _It's a
-game!_ marks the four being matched, not only a booking that is paid. The toast that stood here said
-the yes had gone somewhere, never that the game was made. **At a club that books at once the screen is
-unchanged**: nothing is still missing, so there is no line. The line is Home's words for the game
-(`waitingWords`): the hour alone when the deadline falls on the read's day, the weekday with it on
-another (_answers by Thu 09:00_). It is drawn in `tiny` `onDarkTiny`, the details' role for the same
-words, centred under the word and rising with it, and said after the picture in the header's sentence
-(design-system Part 16, 2026-10-10). It shows only to the player whose yes filled the game. The other
-three are told _It's a game! · Kazimierz Padel answers by 21:15_, and after a club's no the new card
-first is announced as _Your new game_ (both in `notifications.md`). _Open game_ opens the waiting
-game's booked details over Home, the screen Home's card opens. A yes said on the details leaves them
-under the screen, now _Waiting for the club_; only a booked fill sends them back to the deck.
-
-**The line is read off the booking, and only a read made since the yes counts** (#628). The answer to
-the yes names no deadline, so `ItsAGameAtTheClub` reads `GET /bookings/{id}` (the id is the
-proposal's) through `useBookingSinceMount`, and folds it as Home does (`itsAGameWaiting` over
-`answerByAhead`). **Why**: the game may have gone to the club before — a seat opened and it filled
-again — and a booking cached then names that request's deadline. A read that fails since leaves the
-same one behind, so the hook reads again on mount and gives only what landed since. The screen comes
-once that read lands. A read that is refused, or held offline, still brings it, with the line _Nobody
-pays until Kazimierz Padel confirms_ and no deadline. A yes that held no card draws its faces off the
-same read, and says _It's a game!_ in a toast when it cannot.
-
-**The club's yes is its notice, never a second It's a game!** (#628, Q103). _Kazimierz Padel confirmed
-your game_ is bannered as any other notice (`notifications.md`). **Why**: the screen marks the players
-matched, and they were matched once; only the yes that filled the game raises it.
-
-**Open for the product owner**: the screen waits for the booking's read, a beat on a good connection,
-rather than coming up at once and filling the line in a moment later. A line that changed under the
-screen's one announcement would be heard without its deadline. **Not seen on a device**: the line under
-the word wants a look on a narrow phone, where it wraps to two lines.
+screens A2.4). **Why**: the product owner ruled that _It's a game!_ marks the four being matched, not
+only a booking that is paid. With every share held nothing is missing, and there is no line; the one
+thing that can be missing is a payment (#630, below). The line is drawn in `tiny` `onDarkTiny`, the
+details' role for the same words, centred under the word and rising with it, and said after the
+picture in the header's sentence (design-system Part 16, 2026-10-10). It shows only to the player
+whose yes filled the game; the other three are told by a notice (`notifications.md`).
 
 **A full game that falls back stays on Home as _Seat open_**
 ([#629](https://github.com/Raketa02/Raketa/issues/629); the backend's #624; the mechanics Q106, the
 screens A8; story S-01B's F-HOME-10.1, F-REQUEST-31.1, F-REQUEST-31.2). On Thursday at 20:40 Oscar
-leaves Friday's 19:00 at Kazimierz Padel while the club decides. Marta reads _Oscar Bertran left
-your game — it's filling again_, and the game stays on her Home: _Seat open_ in amber, _1 seat open
-· Kazimierz Padel is asked again when it's full · nobody paid_, and at a club that books at once _1
-seat open · books when it's full · nobody paid_. **Why**: the game used to leave everybody's Home
-while Play still had it filling (#543), so the notice pointed at a game Home no longer held. The
-wire's `filling_again` and `club_confirms` become `fillingAgain: { clubConfirms }`, absent on every
-booked game and from an older server that sends neither. `moneyLineOf` reads it as a line of its own
+leaves Friday's 19:00 at Kazimierz Padel while one payment is awaited. Marta reads _Oscar Bertran left
+your game — it's filling again_, and the game stays on her Home: _Seat open_ in amber, _1 seat open ·
+books when it's full · nobody paid_. **Why**: the game used to leave everybody's Home while Play still
+had it filling, so the notice pointed at a game Home no longer held. The wire's `filling_again`
+becomes `fillingAgain`, absent on every booked game and from an older server that sends none. `moneyLineOf` reads it as a line of its own
 (`fillingAgain`), never _fills by …_: nobody paid, so no cut-off applies. It is a stage of its own
 in the status table (`FILLING_AGAIN`): live, with no room and no court, and never _New_. The read
-says how it ends: _Waiting for the club_ again once it is full, or _Called off_ with
+says how it ends: _Booked_ once it is full again, or _Called off_ with
 `BOOK_BY_PASSED` (_A seat was open past its last moment to book · Nobody paid_) or `COURT_HOUR_LOST`
 (_Its court went to another game before it filled again · Nobody paid_). The wire keeps
 `filling_again` on the called-off game, so the stage is _Seat open_ and the mark together
 (`isFillingAgain`), never the mark alone. Home's badge is the server's `needing_you`, which never
-counts it, and the card has no bubble, as on _Waiting for the club_: the chat opens when the game is
-booked.
+counts it, and the card has no bubble, as on _Waiting for one payment_: the chat opens when the game
+is booked.
 
 **Its way out is a game still filling's** (#629). The details draw _Seat open_ with no court and no
 Chat, and the share over the card's line. At the foot, **_Withdraw_** stands where _Leave the game_
 does, since the read gives no `leaving`. It is free and never on the record, as on a _You're In_
 row, with no sheet and no toast: `DELETE /proposals/{id}/yes` with the booking's id, which is the
 game's (`useWithdrawFillingAgain`), then back to Home, which no longer holds the game. It is gone
-once the game is called off. A refused withdrawal (the game ended, or went to its club meanwhile) is
+once the game is called off. A refused withdrawal (the game ended, or filled again meanwhile) is
 a toast, and the booking is read again so the details draw what it is now. **Every withdrawal reads
 Home again** (`rereadAfterWithdrawing`), so _Withdraw_ on the game's _You're In_ row takes the card
 off Home too.
-
-**The club's no and its silence are told apart** (#629; the mechanics Q105; story S-01E's
-F-REQUEST-23.1, the phone's half). Home's card and the booked details say _Kazimierz Padel said no_
-where they said _couldn't take it_, and _Kazimierz Padel didn't answer in time_ as before, each with
-_Nobody paid — you'll get a new card first_: the notice's and the email's words (#623; A8). The
-filling details that a notice opens said _The club couldn't take it_ for both, because the game's
-own read has one status for both, `TURNED_DOWN`. They now also read the booking, which has the same
-id, for its `called_off_reason` (`clubsAnswer`). The tag says _Kazimierz Padel said no_ or
-_Kazimierz Padel didn't answer in time_, and _Called off_ (Home's word) until that read lands, or if
-it fails, with _Padel · called off_ under the names.
 
 **Calls made here, open for the product owner**:
 
@@ -796,10 +731,6 @@ it fails, with _Padel · called off_ under the names.
   its last moment to book_. The lost court uses the notice's own words.
 - **No toast after _Withdraw_**, as on a _You're In_ row: the details close onto a Home without the
   card.
-- **The filling details read the booking** to learn which answer it was. That is a second read, on a
-  turned-down game only, rather than asking the backend for a reason on `GET /proposals/{id}`. Their
-  share row draws nothing more, as on every game that ended unfilled; their second line reads
-  _Padel · called off_, where it read _turned down_, for a silence too.
 
 **Owed by the root**: the root `CONTEXT.md`'s **Seat open** still says _decided and not yet built
 (#624)_, and doesn't name the lost court. **Nothing here has been seen on a device**: _Withdraw_ at the
@@ -815,13 +746,13 @@ the book-by, where it used to reopen the seat at once (Q109); the market's pay w
 
 - **Ivan, the last yes, sees _It's a game!_** with _Waiting for one payment · until 14:40 · Nobody pays
   until it's in_ under the word. The answer to his yes carries `payment_awaited_until`, which
-  `fillOutcome` reads as `paymentAwaited`; the line is #628's role with its second face (`aPaymentAwaited`,
+  `fillOutcome` reads as `paymentAwaited`; the line is #628's role (`aPaymentAwaited`,
   `itsAGameLine`), spoken _Waiting for one payment until 14:40. Nobody pays until it's in_. The time is
   the answer's, so nothing is read for it. **A refusal of his own comes first**: no screen, only his
   sheet, naming his time (`confirm` carries the `Confirmation`). **Why** (Q110): the four are matched, and
   _It's a game!_ marks that.
 - **Home** draws `WAITING_FOR_A_PAYMENT` as a stage of the status table: live, _New_ until opened (it
-  filled), and no room and no court, at either kind of club, since nobody paid. Its line is
+  filled), and no room and no court, since nobody paid. Its line is
   `paymentAwaited` — _until 14:40_ only while the time is ahead, so it leaves at the deadline on the
   read's clock (`lineCanRunOut`). **The payer reads their own time first** (`yourPayment`, off
   `your_payment_due_by`): _Confirm your payment by 14:40_, on that game and on one gone back to filling
@@ -837,18 +768,12 @@ the book-by, where it used to reopen the seat at once (Q109); the market's pay w
   (`paymentToConfirmOn`), so the screen that names the time offers the act. Which times the details'
   money row names, and whether their clock ticks, are `domain/details.ts`' (`paymentDueOf`,
   `detailsCanRunOut`).
-- **Paying in time shows the payer _It's a game!_** (Q110; §12.2: _you see It's a game!_), at either
-  kind of club. The others are told by the server: _booked · you paid 40 zł_, or _Kazimierz Padel
-  confirmed your game · you paid 25 zł_ at a club that confirms (_40 zł held_ and _25 zł held_ since
-  Q113, #637). The payer's own copy is born seen,
+- **Paying in time shows the payer _It's a game!_** (Q110; §12.2: _you see It's a game!_). The others
+  are told by the server: _booked · you paid 40 zł_ (_40 zł held_ since Q113, #637). The payer's own copy is born seen,
   because the backend records the payer as the one whose act filled it. A confirmation's booked answer
   is the fill's `booked`, drawn from the card the sheet was opened on, or off the booking for a _TO
   CONFIRM_ row, which holds no card. This replaces the toast that confirming from _TO CONFIRM_ showed,
   now said only when that read fails.
-- **At a club that confirms** a card failing at the desk's _Accept_ gives the same status and the same
-  time (#626). Out of time the club's yes is called off, and those still In keep their places: _Seat
-  open · Kazimierz Padel is asked again when it's full · nobody paid_ (Q106, Q112). Paid in time, Home
-  reads _Booked_ after the re-read.
 - **After 14:40** the server tells the payer their time ran out and the others that the game is filling
   again. The phone re-reads Home's two reads on that notice (`rereadHome`, `notifications.md`), so the
   others' game turns _Seat open_ (#629) and the payer's _TO CONFIRM_ row stays without a time while the
@@ -857,10 +782,6 @@ the book-by, where it used to reopen the seat at once (Q109); the market's pay w
 
 **Calls made here, open for the product owner**:
 
-- **The payer at a club that confirms sees _It's a game!_ on paying in time**, as §12.2 says, though
-  the four were told _It's a game!_ when the game went to the club. The ticket's _paying in time ends on
-  the club's yes notice_ is read as what the others are told. A payer whose own yes filled the game
-  sees the screen twice; the other way would be a toast in the club's yes notice's words.
 - **_Confirm your payment_ on the booked details.** A4.1 draws no such button, but without it the
   details would name a time with no way to act on it from that screen.
 - **_TO CONFIRM_'s line moved into each row**, and the header stands alone (design-system Part 16).
@@ -957,7 +878,7 @@ anywhere (Q113).
 
 - **The quote is the read's** (`leaving.refund_grosze`, `leaving.card_fee_grosze`): `Leaving` carries
   it as `lateRefund` (`backGrosze`, `keptGrosze`) after the cut-off only. The noughts the read sends
-  while an On request club decides are no quote — nobody has paid. The _40 zł_ is the two together,
+  while one payment is awaited are no quote — nobody has paid. The _40 zł_ is the two together,
   which is the payment: the server's refund is the payment less the fee.
 - **While the read quotes none** — the fee is not yet known, which is the case for a club on its own
   negotiated pricing until Stripe reports it, and for the moment `leavingAt` turns a share taken at
@@ -1097,3 +1018,23 @@ fake server judging it by distance, as the backend does. **Not seen on a device.
 - **Home's line says _Somebody didn't come_ to the player who didn't**, for the same reason.
 - **_Who's here_ replaces _We played_ for the whole first half hour**, though the grid is on the
   screen it opens: at 16:10 the court, not the score, is what a player is there for.
+
+**No club confirms a game: a full game is simply booked**
+([#676](https://github.com/Raketa02/Raketa/issues/676); the backend's #669;
+[ADR-0196](../../../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+§1, the mechanics Q121; story S-01E's F-REQUEST-3.1, F-REQUEST-23.1). Paula's yes completes Marta's
+Thursday game at Kazimierz Padel: _It's a game!_ with nothing under the word, and Home and the details
+read it _Booked_, each player's 25 zł held until the cut-off. **Why**: no court platform makes a club
+confirm a booking, and a desk that is shut until 16:00 called off every game that filled in the
+morning, so every club now books the moment the last yes lands. **What went**, with the wire's
+`waiting_for_the_club`, `club_confirms`, `answer_by` (the score's own `answer_by` stays), `HomeStatus`'
+and `ProposalStatus`' `WAITING_FOR_THE_CLUB`, `TURNED_DOWN`, and `CalledOffReason`'s `REFUSED` and
+`NO_ANSWER`: the _Waiting for the club_ tag and its amber _waiting for the club_ on a _You're In_ row;
+_answers by_ on Home, the details, the rail's clock and _It's a game!_ (`answerByAhead`,
+`answersByWords`, `waitingWords`, `itsAGameWaiting`, `ItsAGameAtTheClub` and its since-mount read,
+`useBookingSinceMount`); the fill's `waiting` outcome; _said no_ and _didn't answer in time_
+(`clubsAnswer`, and the filling details' second read of the booking); and _is asked again when it's
+full_ — a full game gone back to filling only _books when it's full_, so `fillingAgain` is a plain
+mark. **The stamp always shows the price** on _Book it now_ (`chargesAtOnce`), and a yes holds no club
+any more (`YesOn`). The leaving kind is kept under a name that says so, `WHILE_WAITING_FOR_A_PAYMENT`:
+_Leave the game_ while one payment is awaited still withdraws the yes, nobody having paid.
