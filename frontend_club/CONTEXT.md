@@ -41,6 +41,9 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   names or over the form. Turned into a sentence only by the feature's `copy.ts`. The website's
   own codes (`backend_unreachable`, `club_point_missing`, `code_wrong_length`…) share the
   backend's vocabulary.
+- **Foretold** — what the Cancel dialog said a cancel would do, _moves to Court 3_ or _called
+  off_, posted with the cancel so the notice says what landed against it. The cancel decides
+  afresh (the root's **Move by cancel**), and the backend's answer names only what landed.
 - **Token** (design) — a CSS custom property in `src/ui/tokens.css`. The only place a colour or a
   size is written. Not to be confused with an access or refresh token, which this app always
   calls by those names.
@@ -59,6 +62,3 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   sends the desk back to Overview, or, when the link was spent or went stale, to
   **`/payments/continue`**, which asks for another and follows it. Where the account stands is the
   domain's (not started, _Stripe needs more details_, ready), read off the setup checklist.
-- **Countdown** — what is left of a request's time to answer, counted from the backend's own
-  `read_at`, so a browser whose clock is wrong draws the same figure. Not a timer of the
-  backend's: when it runs out the page is read again, and the backend says the request is off.

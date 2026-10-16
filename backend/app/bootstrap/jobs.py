@@ -41,7 +41,6 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_expire_proposals,
-    build_expire_unanswered_requests,
     build_payment_provider,
     build_run_out_the_time_to_pay,
     build_the_cut_off,
@@ -106,15 +105,8 @@ CONVERSATION_SWEEP_JOB = "conversation-sweep"
 #: nothing a player reads waits on it.
 PROPOSAL_EXPIRY_JOB = "proposal-expiry"
 
-#: The On request timeout (#543). It calls off every request an On request club
-#: did not answer in its time to confirm — and **correctness depends on it**:
-#: every read refuses an answer past the deadline already, but only this frees
-#: the court the request held and makes its players due a new card first.
-REQUEST_TIMEOUT_JOB = "request-timeout"
-
-#: Time to pay (#625, #626). It runs out every refused share's time to pay that
-#: is up — the seat reopens for everybody, the holds kept for it are let go, and
-#: at the club's yes the booking is called off and its court freed — and
+#: Time to pay (#625). It runs out every refused share's time to pay that is up
+#: — the seat reopens for everybody, and the holds kept for it are let go — and
 #: **correctness depends on it**: a payer's own act past the time already runs
 #: it out first, but nothing else does it for the others.
 TIME_TO_PAY_JOB = "time-to-pay"
@@ -192,7 +184,6 @@ def build_scheduled_jobs(
         or settings.MAIL_DELIVERY_ENABLED
         or settings.PROPOSAL_EXPIRY_ENABLED
         or settings.PROPOSER_ENABLED
-        or settings.REQUEST_TIMEOUT_ENABLED
         or settings.TIME_TO_PAY_ENABLED
         or settings.CUT_OFF_ENABLED
         or settings.HOLDING_ENABLED
@@ -238,12 +229,6 @@ def build_scheduled_jobs(
         if settings.PROPOSAL_EXPIRY_ENABLED:
             jobs.append(
                 build_proposal_expiry_job(
-                    session_factory=session_factory, settings=settings
-                )
-            )
-        if settings.REQUEST_TIMEOUT_ENABLED:
-            jobs.append(
-                build_request_timeout_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -388,45 +373,6 @@ def build_proposal_expiry_job(
     return PeriodicJob(
         name=PROPOSAL_EXPIRY_JOB,
         interval_seconds=settings.PROPOSAL_EXPIRY_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_request_timeout_job(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    settings: Settings,
-) -> PeriodicJob:
-    """Call off every request an On request club did not answer in time
-    (the mechanics §16.8, §16.16).
-
-    **Idempotent and safe beside itself with no lock**: each request is one
-    transaction that locks its game first, the aggregate records nothing on a
-    request already answered, and a genuine race is caught by the stream
-    version and stepped over. **Correctness depends on it**: until it runs an
-    unanswered request holds its court and owes its players nothing.
-    """
-
-    clock = build_clock()
-
-    async def run() -> None:
-        async with session_factory() as session:
-            done = await build_expire_unanswered_requests(
-                session, clock=clock, settings=settings
-            ).execute()
-        if done.requests or done.conflicts:
-            logger.info(
-                "request timeout finished",
-                extra={
-                    "job": REQUEST_TIMEOUT_JOB,
-                    "requests": done.requests,
-                    "conflicts": done.conflicts,
-                },
-            )
-
-    return PeriodicJob(
-        name=REQUEST_TIMEOUT_JOB,
-        interval_seconds=settings.REQUEST_TIMEOUT_INTERVAL_SECONDS,
         run=run,
     )
 

@@ -4,14 +4,14 @@ When each port is built and how long it lives; **what** is built is the
 composition root's (``app/bootstrap/composition.py``), as for every other
 surface. Everything else the console takes — the proposals' repository and
 directory, the group directory, the seat charges, a yes and a deck, the club's
-answers, the payment provider — it takes through the context's own
-declaration, so a test that replaces one replaces it for the console too.
+acts, the payment provider — it takes through the context's own declaration, so
+a test that replaces one replaces it for the console too.
 
 **Most are jobs' units of work** (#591, #592) — what *Run it now* runs: the
-On request timeout, the book-by sweep, the cut-off, the day close's payouts and
-summary, the rating catch-up and the chat sweep, each the builder its job
-calls — and one is the step the outbox runs for a seat's money. Each is over
-this request's session and its clock, which is the real *now*.
+book-by sweep, the cut-off, the day close's payouts and summary, the rating
+catch-up and the chat sweep, each the builder its job calls — and one is the
+step the outbox runs for a seat's money. Each is over this request's session
+and its clock, which is the real *now*.
 
 **And the dealer's first act** (#592): ``MakeProposal``, which no route takes
 — the proposer's, a seed's and *About to expire*'s. **And what a notice is
@@ -53,7 +53,6 @@ from app.bootstrap.composition import (
     build_decide_club_payouts,
     build_destroy_ended_conversations,
     build_expire_proposals,
-    build_expire_unanswered_requests,
     build_run_out_the_time_to_pay,
     build_make_proposal,
     build_notice_pushes,
@@ -93,9 +92,6 @@ from app.modules.payments.application.handlers.settle_seat_charges import (
 from app.modules.payments.application.payouts import DecideClubPayouts
 from app.modules.payments.domain.ports import ClubPayoutRepository
 from app.modules.payments.presentation.dependencies import PaymentProviderDep
-from app.modules.proposals.application.club_requests import (
-    ExpireUnansweredRequests,
-)
 from app.modules.proposals.application.cut_off import TheCutOff
 from app.modules.proposals.application.holding import TheHolding
 from app.modules.proposals.application.expire_proposals import ExpireProposals
@@ -143,7 +139,7 @@ PlayerNamesDep = Annotated[PlayerNames, Depends(get_player_names)]
 
 
 def get_club_terms(db: DbSession) -> ClubTerms:
-    """Whether each club sells, its cut-off, and whether it confirms each game."""
+    """Whether each club sells, and its cut-off."""
     return build_club_terms(db)
 
 
@@ -191,18 +187,6 @@ def get_court_hours(db: DbSession) -> CourtHours:
 
 
 CourtHoursDep = Annotated[CourtHours, Depends(get_court_hours)]
-
-
-def get_expire_unanswered_requests(
-    db: DbSession, clock: ClockDep, settings: SettingsDep
-) -> ExpireUnansweredRequests:
-    """The ``request-timeout`` job's unit of work, over the real *now*."""
-    return build_expire_unanswered_requests(db, clock=clock, settings=settings)
-
-
-ExpireUnansweredRequestsDep = Annotated[
-    ExpireUnansweredRequests, Depends(get_expire_unanswered_requests)
-]
 
 
 def get_run_out_the_time_to_pay(

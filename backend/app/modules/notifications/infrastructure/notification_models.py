@@ -103,6 +103,13 @@ class NoticeORM(Base):
     kept_grosze: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     #: About a seat the player went for and does not hold — a rescue (#640).
     rescue: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: The court a club's move put the game on, and its kind (#671) — on
+    #: *Game moved* alone.
+    court_name: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    indoor: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    #: The court a club's cancel moved the game from (#672) — *Court 2 can't
+    #: be played*.
+    moved_from: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
 
 
 class NoticesOpenedORM(Base):

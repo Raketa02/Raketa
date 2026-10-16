@@ -1,5 +1,6 @@
 """*Run it now*: a timed rule's job, run over what is due at the real *now*
-(``docs/adr/0194`` §5; #591 built the club's answer window, #592 the rest).
+(``docs/adr/0194`` §5; #592). The club's answer window, #591's press, went
+with On request (#669).
 
 **It runs the job's own unit of work** — the code the scheduler's loop runs
 each tick (``app/bootstrap/jobs.py``) — over this request's session and clock,
@@ -35,7 +36,6 @@ from app.api.dev.dependencies import (
     DecideClubPayoutsDep,
     DestroyEndedConversationsDep,
     ExpireProposalsDep,
-    ExpireUnansweredRequestsDep,
     ProposeGamesDep,
     RunOutTheTimeToPayDep,
     SettleRatingsOnResultsDep,
@@ -55,7 +55,6 @@ from app.bootstrap.jobs import (
     PROPOSER_JOB,
     PROPOSER_ON_CHANGES_JOB,
     RATING_CATCH_UP_JOB,
-    REQUEST_TIMEOUT_JOB,
     TIME_TO_PAY_JOB,
     propose_over,
 )
@@ -70,7 +69,6 @@ RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
     {
         PROPOSER_JOB: "the proposer",
         PROPOSAL_EXPIRY_JOB: "the book-by sweep",
-        REQUEST_TIMEOUT_JOB: "the club's answer window",
         TIME_TO_PAY_JOB: "time to pay",
         HOLDING_JOB: "hold the shares",
         CUT_OFF_JOB: "the cut-off",
@@ -171,7 +169,7 @@ async def run_the_proposer(db: DbSession, proposer: ProposeGamesDep) -> RanRespo
         conflicts=proposed.refused,
         says=(
             f"Over {proposed.pools} group(s): {proposed.made} pick(s) made, "
-            f"{proposed.dealt} version(s) dealt, {proposed.redealt} turned-down "
+            f"{proposed.dealt} version(s) dealt, {proposed.redealt} cancelled "
             f"game(s) re-dealt, {proposed.lost} card(s) found without their court "
             f"hour."
             if done
@@ -206,40 +204,14 @@ async def run_the_book_by_sweep(expire: ExpireProposalsDep) -> RanResponse:
 
 
 @router.post(
-    f"/{REQUEST_TIMEOUT_JOB}",
-    response_model=RanResponse,
-    summary=_summary(REQUEST_TIMEOUT_JOB),
-    description=(
-        "Calls off every request an On request club has not answered by its "
-        "deadline — *Called off · no answer*, nobody paid, the court free and "
-        "the players owed a new card. A request still inside its time to "
-        "confirm is left waiting."
-    ),
-)
-async def run_the_request_timeout(expire: ExpireUnansweredRequestsDep) -> RanResponse:
-    unanswered = await expire.execute()
-    return RanResponse(
-        job=REQUEST_TIMEOUT_JOB,
-        done=unanswered.requests,
-        conflicts=unanswered.conflicts,
-        says=(
-            f"{unanswered.requests} request(s) past the club's answer called off."
-            if unanswered.requests
-            else "No request is past the club's answer yet: nothing was done."
-        ),
-    )
-
-
-@router.post(
     f"/{TIME_TO_PAY_JOB}",
     response_model=RanResponse,
     summary=_summary(TIME_TO_PAY_JOB),
     description=(
-        "Runs out every refused share's time to pay that is up (#625, #626) — "
-        "and its time to fix the card, before the cut-off (#638): the payer's "
-        "seat reopens — offered to others, theirs to take back while free — "
-        "the holds the others kept are let go, and at a club that confirms the "
-        "booking is called off, its desk emailed. On a booked game whose "
+        "Runs out every refused share's time to pay that is up (#625) — and its "
+        "time to fix the card, before the cut-off (#638): the payer's seat "
+        "reopens — offered to others, theirs to take back while free — and the "
+        "holds the others kept are let go. On a booked game whose "
         "holding was refused (#639), the player's seat opens to Fill in as a "
         "leaver's, and they owe nothing. A time still running is left as it "
         "is."

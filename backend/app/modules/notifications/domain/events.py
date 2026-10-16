@@ -101,6 +101,13 @@ class NoticeGiven:
     ``rescue`` is a notice about a seat the player went for on a booked game
     and does not hold (#640) — *to take the seat*. Defaulted for the rows
     recorded before it was asked.
+
+    ``court_name`` and ``indoor`` are the court a club's move put the game on
+    and its kind (#671) — *Bonarka Arena moved your game to Court 3* / *Padel ·
+    indoor* — kept on the notice so it reads the same after a second move;
+    ``None`` on every other kind, and on the rows recorded before.
+    ``moved_from`` is the court the game left, said when a club's cancel moved
+    it — *Court 2 can't be played*, the cancel's reason in ``reason`` (#672).
     """
 
     notice_id: UUID
@@ -127,6 +134,9 @@ class NoticeGiven:
     you_left: bool = False
     kept_grosze: int | None = None
     rescue: bool = False
+    court_name: str | None = None
+    indoor: bool | None = None
+    moved_from: str | None = None
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``

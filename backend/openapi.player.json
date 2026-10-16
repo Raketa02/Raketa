@@ -5271,7 +5271,7 @@
           "proposals"
         ],
         "summary": "Say yes to a game",
-        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**A member may join a post they were never dealt** (#546) \u2014 *I'm in* on a sheet's *Already happening here*: a yes like any other, held to who the post is for (`no_longer_fits` otherwise) and to what dealing it would ask of them now \u2014 free for its hour, no game then, within their Games & money (`post_not_open_to_you`, which is not said).\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account, all or none \u2014 kept until the club's cut-off, which takes them, or taken at once after it (#637) \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off). When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged \u2014 the court is held, the club is emailed, and the holds and *It's a game!* follow its yes.",
+        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**A member may join a post they were never dealt** (#546) \u2014 *I'm in* on a sheet's *Already happening here*: a yes like any other, held to who the post is for (`no_longer_fits` otherwise) and to what dealing it would ask of them now \u2014 free for its hour, no game then, within their Games & money (`post_not_open_to_you`, which is not said).\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account, all or none \u2014 kept until the club's cut-off, which takes them, or taken at once after it (#637) \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off). When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **No club confirms the game**: the last yes books it at every club (#669).",
         "operationId": "say_yes_api_v1_proposals__proposal_id__yes_post",
         "security": [
           {
@@ -5312,7 +5312,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit, or a post is not for them (#546); the card has gone, and who or why is not said. `post_not_open_to_you` \u2014 joining a post they were never dealt, they could not be dealt it now (#546). Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit, or a post is not for them (#546); the card has gone, and who or why is not said. `post_not_open_to_you` \u2014 joining a post they were never dealt, they could not be dealt it now (#546). Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5348,7 +5348,7 @@
           "proposals"
         ],
         "summary": "Withdraw a yes",
-        "description": "*Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.\n\n**While an On request club decides, this is *Leave the game*** (#543): nobody has paid; the request to the club is taken back, the held court is free, and the game is back in the decks with this seat open \u2014 the others still In, and on their Home as `SEAT_OPEN` with `filling_again` (#624). Full again, it goes to the club again; past its book-by it is `CALLED_OFF` \u00b7 `BOOK_BY_PASSED` for them instead. On a game already `filling_again`, it takes the game off the player's own Home.",
+        "description": "*Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.\n\n**While a full game waits for one payment, this is *Leave the game*** (#625): nobody has paid; the leaver's hold is let go, the payer's time runs on, and the game is back in the decks with this seat open \u2014 the others still In, and on their Home as `SEAT_OPEN` with `filling_again` (Q106); past its book-by it is `CALLED_OFF` \u00b7 `BOOK_BY_PASSED` for them instead. On a game already `filling_again`, it takes the game off the player's own Home.",
         "operationId": "withdraw_yes_api_v1_proposals__proposal_id__yes_delete",
         "security": [
           {
@@ -5382,7 +5382,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5444,7 +5444,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_already_answered` \u2014 this player is In: they leave by withdrawing their yes, never by a no.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_already_answered` \u2014 this player is In: they leave by withdrawing their yes, never by a no.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6378,7 +6378,7 @@
             }
           },
           "409": {
-            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `no_longer_fits` as a yes meets it. **On a rescue's payment** (#545), as `POST /bookings/{id}/seats` meets them: `seat_just_taken`, `booking_is_called_off`, `game_has_started`, `rescue_not_offered` \u2014 and the payment is let go.",
+            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `no_longer_fits` as a yes meets it. **On a rescue's payment** (#545), as `POST /bookings/{id}/seats` meets them: `seat_just_taken`, `booking_is_called_off`, `game_has_started`, `rescue_not_offered` \u2014 and the payment is let go.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6539,7 +6539,7 @@
           "proposals"
         ],
         "summary": "Leave a booked game",
-        "description": "*Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** nothing is taken: the leaver's hold is let go, nobody is refunded (#637), and the seat is offered to others \u2014 on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is filling again \u2014 and so it is on a game already `filling_again` (#624). The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). Refused once the hour has begun.",
+        "description": "*Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** nothing is taken: the leaver's hold is let go, nobody is refunded (#637), and the seat is offered to others \u2014 on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While a payment is awaited** nobody has paid: the yes is withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is filling again \u2014 and so it is on a game already `filling_again` (Q106). The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). Refused once the hour has begun.",
         "operationId": "leave_the_game_api_v1_bookings__booking_id__departure_post",
         "security": [
           {
@@ -7442,7 +7442,7 @@
                 "type": "null"
               }
             ],
-            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `CHECKED` \u2014 **the reader's** card was only checked when the game filled far ahead, and their share is held from `held_from`: *40 z\u0142 held from Sat 19:00 \u00b7 taken Wed 19:00* (#639) \u2014 free to leave until the cut-off all the same. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for its club or for a payment, called off, and for a reader not on the game. Switches by itself at `held_from` and at `taken_at`."
+            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `CHECKED` \u2014 **the reader's** card was only checked when the game filled far ahead, and their share is held from `held_from`: *40 z\u0142 held from Sat 19:00 \u00b7 taken Wed 19:00* (#639) \u2014 free to leave until the cut-off all the same. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for a payment, called off, and for a reader not on the game. Switches by itself at `held_from` and at `taken_at`."
           },
           "held_from": {
             "anyOf": [
@@ -7619,7 +7619,7 @@
           "paid": {
             "type": "boolean",
             "title": "Paid",
-            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
+            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for a payment, on a game that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
           }
         },
         "type": "object",
@@ -7653,7 +7653,7 @@
               }
             ],
             "title": "Game Id",
-            "description": "The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id. `null` while it waits for its On request club, and on a request the club never booked."
+            "description": "The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id. `null` on a game that waited for a payment and was never booked."
           },
           "pool_id": {
             "type": "string",
@@ -7674,7 +7674,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/HomeStatus",
-            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed: two scores named different winners (no `uncounted_reason`), or one of the reasons `uncounted_reason` names. `PLAYED_NO_SCORE` \u2014 full at its hour, and nobody recorded it before the entry window closed: played for everybody on it, and no Level moves. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. `SEAT_OPEN` \u2014 somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) \u2014 a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open \u00b7 Kazimierz Padel is asked again when it's full \u00b7 nobody paid* (`club_confirms`), else *1 seat open \u00b7 books when it's full \u00b7 nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. **`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) \u2014 full, and one player's share was refused when it filled or when its On request club said yes: *Waiting for one payment \u00b7 until `payment_due_by` \u00b7 Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* \u2014 *Fix your card by \u2026* before the cut-off (`time_to`, #638) \u2014 beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` \u2014 and so is a game one of the others left meanwhile."
+            "description": "`BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed: two scores named different winners (no `uncounted_reason`), or one of the reasons `uncounted_reason` names. `PLAYED_NO_SCORE` \u2014 full at its hour, and nobody recorded it before the entry window closed: played for everybody on it, and no Level moves. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. `SEAT_OPEN` \u2014 somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`WAITING_FOR_A_PAYMENT`** (#625; Q111) \u2014 full, and one player's share was refused when it filled: *Waiting for one payment \u00b7 until `payment_due_by` \u00b7 Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* \u2014 *Fix your card by \u2026* before the cut-off (`time_to`, #638) \u2014 beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` \u2014 and so is a game one of the others left meanwhile. **`SEAT_OPEN` with `filling_again`** (Q106) \u2014 a full game that went back to filling before it was booked: a payment it waited for did not come in time, or a seat opened while it waited \u2014 a player left, their week filled, or two players stopped fitting. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open \u00b7 books when it's full \u00b7 nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `BOOKED`; `CALLED_OFF` if its book-by passes first. No club confirms a game: nothing on Home waits for a club's answer (#669)."
           },
           "called_off_reason": {
             "anyOf": [
@@ -7685,7 +7685,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it: *Kazimierz Padel said no*. `NO_ANSWER` \u2014 the club did not answer in time: *Kazimierz Padel didn't answer in time*. In both nobody paid, and the players get a new card first. (A seat opening while it waited takes the request back instead: the game is `SEAT_OPEN` with `filling_again` for the people still In.) `BOOK_BY_PASSED` \u2014 a game that went back to filling reached its book-by before it was full again, or a seat opened after its book-by while the club decided (a player left, their week filled, or two stopped fitting): nobody paid. `COURT_HOUR_LOST` \u2014 a game that went back to filling lost its court to another game before it was full again \u2014 or, at a club that books at once, before the payment it waited for came in: nobody paid, and its players are dealt a new card first. `PAYMENT_NOT_IN_TIME` \u2014 a payment the game waited for did not come in time and it could no longer fill: the book-by had come (#625, #626). Nobody paid. `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` \u2014 the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `BOOK_BY_PASSED` \u2014 a game that went back to filling reached its book-by before it was full again: nobody paid. `COURT_HOUR_LOST` \u2014 a game that went back to filling lost its court to another game before it was full again \u2014 or before the payment it waited for came in: nobody paid, and its players are dealt a new card first. `PAYMENT_NOT_IN_TIME` \u2014 a payment the game waited for did not come in time and it could no longer fill: the book-by had come (#625). Nobody paid. `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` \u2014 the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547)."
           },
           "club_cancel_reason": {
             "anyOf": [
@@ -7721,12 +7721,7 @@
           "filling_again": {
             "type": "boolean",
             "title": "Filling Again",
-            "description": "A full game that went back to filling before it was booked (#624, Q106) \u2014 `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by passes, or its court goes, before it is full again. `false` on every booked game."
-          },
-          "club_confirms": {
-            "type": "boolean",
-            "title": "Club Confirms",
-            "description": "The game's club confirms each game (On request): it waits for the club's yes once full. On a game `filling_again` the line is *Kazimierz Padel is asked again when it's full*; `false` is *books when it's full*."
+            "description": "A full game that went back to filling before it was booked (#625, Q106) \u2014 `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by passes, or its court goes, before it is full again. `false` on every booked game."
           },
           "starts_at": {
             "type": "string",
@@ -7752,26 +7747,25 @@
               }
             ],
             "title": "Court Name",
-            "description": "The court the game was given \u2014 *Court 2*. `null` until the club gives it: an On request club gives it with its yes."
+            "description": "The court the game was given \u2014 *Court 2*. `null` on a game that was never booked, which no court was given."
+          },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 2 \u00b7 indoor* \u2014 which follows a move (Q122). `null` with `court_name`."
           },
           "sides": {
             "$ref": "#/components/schemas/BookedSidesSchema"
           },
           "money": {
             "$ref": "#/components/schemas/BookedMoneySchema"
-          },
-          "answer_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer By",
-            "description": "When the On request club must answer \u2014 the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 \u00b7 Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` \u2014 the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant."
           },
           "payment_due_by": {
             "anyOf": [
@@ -7784,7 +7778,7 @@
               }
             ],
             "title": "Payment Due By",
-            "description": "When the payment the game waits for is due \u2014 *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in* (#625, #626; Q111): a share was refused, and its player's seat is theirs alone until then. Never names whose payment it is. `null` unless `WAITING_FOR_A_PAYMENT`. Like `free_to_leave_until`, the line switches by itself at this instant."
+            "description": "When the payment the game waits for is due \u2014 *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in* (#625; Q111): a share was refused, and its player's seat is theirs alone until then. Never names whose payment it is. `null` unless `WAITING_FOR_A_PAYMENT`. Like `free_to_leave_until`, the line switches by itself at this instant."
           },
           "your_payment_due_by": {
             "anyOf": [
@@ -7797,7 +7791,7 @@
               }
             ],
             "title": "Your Payment Due By",
-            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625, #626). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share was refused** reads, from outside, the seat kept for them alone until then (#640) \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 offered to nobody else meanwhile. `null` for everybody else, and from the moment it runs out."
+            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share was refused** reads, from outside, the seat kept for them alone until then (#640) \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 offered to nobody else meanwhile. `null` for everybody else, and from the moment it runs out."
           },
           "time_to": {
             "anyOf": [
@@ -7853,14 +7847,13 @@
           "open_seats",
           "needs_you",
           "filling_again",
-          "club_confirms",
           "starts_at",
           "ends_at",
           "where",
           "court_name",
+          "indoor",
           "sides",
           "money",
-          "answer_by",
           "payment_due_by",
           "your_payment_due_by",
           "time_to",
@@ -7900,8 +7893,6 @@
       "CalledOffReason": {
         "type": "string",
         "enum": [
-          "REFUSED",
-          "NO_ANSWER",
           "SHORT_AT_THE_CUT_OFF",
           "CANCELLED_BY_THE_CLUB",
           "BOOK_BY_PASSED",
@@ -8738,15 +8729,22 @@
             "title": "Court Name",
             "description": "What the club calls the court \u2014 *Court 6* \u2014 on a `SEAT_OPEN` card; `null` on a game still filling, which is given one at booking."
           },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The kind of court the card promises \u2014 `true` *Indoor*, `false` *Outdoor* \u2014 when every free court it could be booked on is of that kind; `null` when they are mixed, which promises neither (Q122). Shown, never chosen by. On a `SEAT_OPEN` card: the booked court's kind."
+          },
           "no_free_cancellation": {
             "type": "boolean",
             "title": "No Free Cancellation",
             "description": "The club's cut-off has already passed for this game."
-          },
-          "club_confirms": {
-            "type": "boolean",
-            "title": "Club Confirms",
-            "description": "An On request club: a full game waits for the club's yes before anybody pays, so *Book it now* charges nobody at once and its stamp carries no price."
           },
           "sides": {
             "$ref": "#/components/schemas/DeckSidesSchema"
@@ -8781,8 +8779,8 @@
           "open_seats_after_your_yes",
           "court",
           "court_name",
+          "indoor",
           "no_free_cancellation",
-          "club_confirms",
           "sides",
           "forecast",
           "overlap"
@@ -9042,7 +9040,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it \u2014 emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it \u2014 emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_A_PAYMENT` \u2014 on a game `WAITING_FOR_A_PAYMENT` (#625): nobody had paid, the yes is withdrawn, the leaver's hold is let go, and the payer's time runs on \u2014 the game is `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn."
           }
         },
         "type": "object",
@@ -9976,7 +9974,7 @@
             },
             "type": "array",
             "title": "Cards",
-            "description": "This segment's cards in the order dealt: seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast; the same people only at their best hour."
+            "description": "This segment's cards in the order dealt. **A card owed to the reader comes first** \u2014 the new game a club's cancel owed them, soonest first among two, with no mark (#673). Then seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast; the same people only at their best hour."
           }
         },
         "type": "object",
@@ -10454,7 +10452,7 @@
               }
             ],
             "title": "Game Id",
-            "description": "The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id. `null` while it waits for its On request club, and on a request the club never booked \u2014 there is no Game, and no room."
+            "description": "The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id. `null` on a game that waited for a payment and was never booked \u2014 there is no Game, and no room."
           },
           "pool_id": {
             "type": "string",
@@ -10471,7 +10469,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/HomeStatus",
-            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed: two scores named different winners (no `uncounted_reason`), or one of the reasons `uncounted_reason` names. `PLAYED_NO_SCORE` \u2014 full at its hour, and nobody recorded it before the entry window closed: played for everybody on it, and no Level moves. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. `SEAT_OPEN` \u2014 somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) \u2014 a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open \u00b7 Kazimierz Padel is asked again when it's full \u00b7 nobody paid* (`club_confirms`), else *1 seat open \u00b7 books when it's full \u00b7 nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. **`WAITING_FOR_A_PAYMENT`** (#625, #626; Q111) \u2014 full, and one player's share was refused when it filled or when its On request club said yes: *Waiting for one payment \u00b7 until `payment_due_by` \u00b7 Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* \u2014 *Fix your card by \u2026* before the cut-off (`time_to`, #638) \u2014 beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` \u2014 and so is a game one of the others left meanwhile."
+            "description": "`BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed: two scores named different winners (no `uncounted_reason`), or one of the reasons `uncounted_reason` names. `PLAYED_NO_SCORE` \u2014 full at its hour, and nobody recorded it before the entry window closed: played for everybody on it, and no Level moves. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. `SEAT_OPEN` \u2014 somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`WAITING_FOR_A_PAYMENT`** (#625; Q111) \u2014 full, and one player's share was refused when it filled: *Waiting for one payment \u00b7 until `payment_due_by` \u00b7 Nobody pays until it's in*. Nobody paid, there is no Game and no court given, and it asks nothing of the reader (`needs_you` is `false`); to the payer it reads *Confirm your payment by `your_payment_due_by`* \u2014 *Fix your card by \u2026* before the cut-off (`time_to`, #638) \u2014 beside their *To confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with `filling_again` \u2014 and so is a game one of the others left meanwhile. **`SEAT_OPEN` with `filling_again`** (Q106) \u2014 a full game that went back to filling before it was booked: a payment it waited for did not come in time, or a seat opened while it waited \u2014 a player left, their week filled, or two players stopped fitting. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open \u00b7 books when it's full \u00b7 nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `BOOKED`; `CALLED_OFF` if its book-by passes first. No club confirms a game: nothing on Home waits for a club's answer (#669)."
           },
           "called_off_reason": {
             "anyOf": [
@@ -10482,7 +10480,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it: *Kazimierz Padel said no*. `NO_ANSWER` \u2014 the club did not answer in time: *Kazimierz Padel didn't answer in time*. In both nobody paid, and the players get a new card first. (A seat opening while it waited takes the request back instead: the game is `SEAT_OPEN` with `filling_again` for the people still In.) `BOOK_BY_PASSED` \u2014 a game that went back to filling reached its book-by before it was full again, or a seat opened after its book-by while the club decided (a player left, their week filled, or two stopped fitting): nobody paid. `COURT_HOUR_LOST` \u2014 a game that went back to filling lost its court to another game before it was full again \u2014 or, at a club that books at once, before the payment it waited for came in: nobody paid, and its players are dealt a new card first. `PAYMENT_NOT_IN_TIME` \u2014 a payment the game waited for did not come in time and it could no longer fill: the book-by had come (#625, #626). Nobody paid. `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` \u2014 the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `BOOK_BY_PASSED` \u2014 a game that went back to filling reached its book-by before it was full again: nobody paid. `COURT_HOUR_LOST` \u2014 a game that went back to filling lost its court to another game before it was full again \u2014 or before the payment it waited for came in: nobody paid, and its players are dealt a new card first. `PAYMENT_NOT_IN_TIME` \u2014 a payment the game waited for did not come in time and it could no longer fill: the book-by had come (#625). Nobody paid. `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` \u2014 the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547)."
           },
           "club_cancel_reason": {
             "anyOf": [
@@ -10519,12 +10517,7 @@
           "filling_again": {
             "type": "boolean",
             "title": "Filling Again",
-            "description": "A full game that went back to filling before it was booked (#624, Q106) \u2014 `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by passes, or its court goes, before it is full again. `false` on every booked game."
-          },
-          "club_confirms": {
-            "type": "boolean",
-            "title": "Club Confirms",
-            "description": "The game's club confirms each game (On request): it waits for the club's yes once full. On a game `filling_again` the line is *Kazimierz Padel is asked again when it's full*; `false` is *books when it's full*."
+            "description": "A full game that went back to filling before it was booked (#625, Q106) \u2014 `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by passes, or its court goes, before it is full again. `false` on every booked game."
           },
           "starts_at": {
             "type": "string",
@@ -10545,26 +10538,25 @@
               }
             ],
             "title": "Court Name",
-            "description": "What the club calls the court \u2014 *Court 2*. `null` until the club gives it: an On request club gives it with its yes."
+            "description": "What the club calls the court \u2014 *Court 2*. `null` on a game that was never booked, which no court was given."
+          },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 2 \u00b7 indoor* \u2014 which follows a move (Q122). `null` with `court_name`."
           },
           "sides": {
             "$ref": "#/components/schemas/BookedSidesSchema"
           },
           "money": {
             "$ref": "#/components/schemas/BookedMoneySchema"
-          },
-          "answer_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer By",
-            "description": "When the On request club must answer \u2014 the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 \u00b7 Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` \u2014 the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant."
           },
           "payment_due_by": {
             "anyOf": [
@@ -10577,7 +10569,7 @@
               }
             ],
             "title": "Payment Due By",
-            "description": "When the payment the game waits for is due \u2014 *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in* (#625, #626; Q111): a share was refused, and its player's seat is theirs alone until then. Never names whose payment it is. `null` unless `WAITING_FOR_A_PAYMENT`. Like `free_to_leave_until`, the line switches by itself at this instant."
+            "description": "When the payment the game waits for is due \u2014 *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in* (#625; Q111): a share was refused, and its player's seat is theirs alone until then. Never names whose payment it is. `null` unless `WAITING_FOR_A_PAYMENT`. Like `free_to_leave_until`, the line switches by itself at this instant."
           },
           "your_payment_due_by": {
             "anyOf": [
@@ -10590,7 +10582,7 @@
               }
             ],
             "title": "Your Payment Due By",
-            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625, #626). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share was refused** reads, from outside, the seat kept for them alone until then (#640) \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 offered to nobody else meanwhile. `null` for everybody else, and from the moment it runs out."
+            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share was refused** reads, from outside, the seat kept for them alone until then (#640) \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 offered to nobody else meanwhile. `null` for everybody else, and from the moment it runs out."
           },
           "time_to": {
             "anyOf": [
@@ -10618,13 +10610,12 @@
           "open_seats",
           "needs_you",
           "filling_again",
-          "club_confirms",
           "starts_at",
           "club",
           "court_name",
+          "indoor",
           "sides",
           "money",
-          "answer_by",
           "payment_due_by",
           "your_payment_due_by",
           "time_to"
@@ -10651,7 +10642,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "The reader's booked games \u2014 and their games an On request club has, or had, to answer \u2014 **soonest first**, and only what Home draws: **every live game** (waiting for the club, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`). Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here."
+            "description": "The reader's booked games \u2014 and their full games waiting for one payment, or gone back to filling \u2014 **soonest first**, and only what Home draws: **every live game** (waiting for a payment, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`). Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here."
           }
         },
         "type": "object",
@@ -10666,7 +10657,6 @@
       "HomeStatus": {
         "type": "string",
         "enum": [
-          "WAITING_FOR_THE_CLUB",
           "WAITING_FOR_A_PAYMENT",
           "BOOKED",
           "SEAT_OPEN",
@@ -10928,7 +10918,7 @@
         "enum": [
           "BEFORE_THE_CUT_OFF",
           "AFTER_THE_CUT_OFF",
-          "WHILE_WAITING_FOR_THE_CLUB"
+          "WHILE_WAITING_FOR_A_PAYMENT"
         ],
         "title": "Leaving",
         "description": "What *Leave the game* does, by when it is pressed (the mechanics \u00a713) \u2014\nsaid on the details before, and answered by the act after."
@@ -10937,7 +10927,7 @@
         "properties": {
           "kind": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 *Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off.* (Q113) `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. If someone takes it, you get 38,24 z\u0142 back (40 z\u0142 less the 1,76 z\u0142 kept on your payment); if nobody does, you won't. On your record if nobody takes it.* \u2014 with no figure and no clause while the fee kept is not yet known (#641). `WHILE_WAITING_FOR_THE_CLUB` \u2014 *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 *Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off.* (Q113) `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. If someone takes it, you get 38,24 z\u0142 back (40 z\u0142 less the 1,76 z\u0142 kept on your payment); if nobody does, you won't. On your record if nobody takes it.* \u2014 with no figure and no clause while the fee kept is not yet known (#641). `WHILE_WAITING_FOR_A_PAYMENT` \u2014 the game waits for one payment (#625): *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
           },
           "refund_grosze": {
             "anyOf": [
@@ -11118,6 +11108,18 @@
             "format": "date-time",
             "title": "Book By",
             "description": "The latest moment the game can fill; past it the yes lapses."
+          },
+          "indoor": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor",
+            "description": "The kind of court the game promises \u2014 `true` *Indoor*, `false` *Outdoor* \u2014 when every free court it could be booked on is of that kind; `null` when they are mixed, which promises neither (Q122). The same rule as the deck card's `indoor`. Shown, never chosen by."
           }
         },
         "type": "object",
@@ -11129,7 +11131,8 @@
           "starts_at",
           "club",
           "share_grosze",
-          "book_by"
+          "book_by",
+          "indoor"
         ],
         "title": "LiveYesSchema",
         "description": "One yes on a game that has not filled."
@@ -11588,7 +11591,6 @@
         "type": "string",
         "enum": [
           "GAME_BOOKED",
-          "WAITING_FOR_THE_CLUB",
           "WAITING_FOR_A_PAYMENT",
           "TIME_TO_PAY_RAN_OUT",
           "TIME_TO_FIX_RAN_OUT",
@@ -11597,9 +11599,8 @@
           "GAME_CALLED_OFF",
           "SOMEONE_LEFT",
           "REFUNDED",
-          "CLUB_CONFIRMED",
-          "CLUB_COULD_NOT_TAKE_IT",
           "NEW_GAME",
+          "GAME_MOVED",
           "POST_DID_NOT_FILL",
           "YOU_COMPLETE_IT",
           "CHALLENGE",
@@ -12922,7 +12923,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/ProposalStatus",
-            "description": "`FILLING` \u2014 seats are open: *Filling \u00b7 `in_count` of `seats` in*. `WAITING_FOR_THE_CLUB` \u2014 every seat is In and an On request club has still to say yes; nobody pays until it does, and the book-by no longer ends it. `WAITING_FOR_A_PAYMENT` \u2014 every seat is In and one player's refused share is awaited until `payment_due_by` (#625, #626): their seat is theirs alone, and paying in time books it. `FILLED` \u2014 booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` \u2014 it ended unfilled. `TURNED_DOWN` \u2014 its On request club refused it or did not answer: nobody paid, and the people In are dealt a new card first."
+            "description": "`FILLING` \u2014 seats are open: *Filling \u00b7 `in_count` of `seats` in*. `WAITING_FOR_A_PAYMENT` \u2014 every seat is In and one player's refused share is awaited until `payment_due_by` (#625): their seat is theirs alone, and paying in time books it. `FILLED` \u2014 booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` \u2014 it ended unfilled."
           },
           "actions": {
             "items": {
@@ -12930,7 +12931,7 @@
             },
             "type": "array",
             "title": "Actions",
-            "description": "What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while the club decides \u2014 *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes`, which also calls off the request to the club \u2014 and while a payment is awaited \u2014 and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`) \u2014 within their time to pay too, beside `LEAVE`; a payer refused for terms or a missing method has `YES` there, once fixed. Empty once the game is over or their answer is final."
+            "description": "What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while a payment is awaited \u2014 *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes` \u2014 and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`) \u2014 within their time to pay too, beside `LEAVE`; a payer refused for terms or a missing method has `YES` there, once fixed. Empty once the game is over or their answer is final."
           },
           "your_payment": {
             "anyOf": [
@@ -12979,23 +12980,17 @@
             "title": "No Free Cancellation",
             "description": "The club's cut-off has already passed for this game."
           },
-          "club_confirms": {
-            "type": "boolean",
-            "title": "Club Confirms",
-            "description": "An On request club: a full game waits for its yes."
-          },
-          "answer_by": {
+          "indoor": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "type": "boolean"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Answer By",
-            "description": "When the On request club must answer \u2014 the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 \u00b7 Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` \u2014 the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant. Here it stands in the money row in place of the book-by, which no longer ends a game that filled in time."
+            "title": "Indoor",
+            "description": "The kind of court the game promises \u2014 `true` *Indoor*, `false` *Outdoor* \u2014 when every free court it could be booked on is of that kind; `null` when they are mixed (Q122). Shown, never chosen by."
           },
           "payment_due_by": {
             "anyOf": [
@@ -13008,7 +13003,7 @@
               }
             ],
             "title": "Payment Due By",
-            "description": "When the payment the game waits for is due \u2014 *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in* (#625, #626) \u2014 never whose. `null` unless `WAITING_FOR_A_PAYMENT`. The reader's own is `your_payment.confirm_by`."
+            "description": "When the payment the game waits for is due \u2014 *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in* (#625) \u2014 never whose. `null` unless `WAITING_FOR_A_PAYMENT`. The reader's own is `your_payment.confirm_by`."
           },
           "time_to": {
             "anyOf": [
@@ -13059,8 +13054,7 @@
           "share_grosze",
           "book_by",
           "no_free_cancellation",
-          "club_confirms",
-          "answer_by",
+          "indoor",
           "payment_due_by",
           "time_to",
           "sides",
@@ -13074,13 +13068,11 @@
         "type": "string",
         "enum": [
           "FILLING",
-          "WAITING_FOR_THE_CLUB",
           "WAITING_FOR_A_PAYMENT",
           "FILLED",
           "EXPIRED",
           "WITHDRAWN",
-          "COURT_HOUR_LOST",
-          "TURNED_DOWN"
+          "COURT_HOUR_LOST"
         ],
         "title": "ProposalStatus",
         "description": "Where a proposal stands for its details (the mechanics \u00a714.2)."
@@ -13861,6 +13853,11 @@
             "title": "Court Name",
             "description": "What the club calls the court."
           },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 3 \u00b7 indoor* (Q122)."
+          },
           "share_grosze": {
             "type": "integer",
             "title": "Share Grosze",
@@ -13899,6 +13896,7 @@
           "starts_at",
           "club",
           "court_name",
+          "indoor",
           "share_grosze",
           "open_seats",
           "deadline",
@@ -14941,7 +14939,7 @@
           "open_seats": {
             "type": "integer",
             "title": "Open Seats",
-            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked \u2014 on a full game an On request club has still to confirm \u2014 and on a full game waiting for one payment, whose seat is its payer's alone for their time to pay (#625)."
+            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked, and on a full game waiting for one payment, whose seat is its payer's alone for their time to pay (#625)."
           },
           "booked": {
             "anyOf": [
@@ -14953,12 +14951,6 @@
               }
             ],
             "description": "Present when this yes booked the game: every seat's share was held until the club's cut-off, or taken after it (#637), and the booking and its Game are open. `null` otherwise."
-          },
-          "waiting_for_the_club": {
-            "type": "boolean",
-            "title": "Waiting For The Club",
-            "description": "This yes filled the game at an **On request** club: it went to the club, which confirms it within its time to confirm, and nobody pays until it does \u2014 the charge and *It's a game!* follow its yes. The game is on Home as `WAITING_FOR_THE_CLUB`.",
-            "default": false
           },
           "your_payment": {
             "anyOf": [
@@ -14982,7 +14974,7 @@
               }
             ],
             "title": "Payment Awaited Until",
-            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer \u2014 a rescue's refused payment too, whose seat is kept for its player alone and no game waits on it (`your_payment.confirm_by`, #640)."
+            "description": "**This yes filled the game and a share was refused** (#625; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer \u2014 a rescue's refused payment too, whose seat is kept for its player alone and no game waits on it (`your_payment.confirm_by`, #640)."
           },
           "money": {
             "anyOf": [

@@ -43,13 +43,9 @@ class NoticeKind(StrEnum):
     #: the notice keeps as ``until`` (#637); *you paid 30 zł* when taken at once
     #: after it.
     GAME_BOOKED = "GAME_BOOKED"
-    #: *It's a game! · Kazimierz Padel answers by 21:15* — the four are matched,
-    #: and the game went to its On request club; nobody has paid (Q103).
-    WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
     #: *It's a game! · waiting for one payment until 14:40* — the four are
     #: matched, and one share was refused: its player's time to pay runs, and
-    #: nobody pays until it is in (#625, Q110). At the club's yes, *Your Fri
-    #: 19:00 is waiting for one payment, until 21:20* (#626).
+    #: nobody pays until it is in (#625, Q110).
     WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     #: *Your time to pay ran out · Tue 19:00* — to the payer: their seat is
     #: open to others, and theirs to take back while it is free (#625).
@@ -70,14 +66,13 @@ class NoticeKind(StrEnum):
     SOMEONE_LEFT = "SOMEONE_LEFT"
     #: *You've been refunded* — your seat was taken.
     REFUNDED = "REFUNDED"
-    #: *The club confirmed* (On request) — and the seats were taken.
-    CLUB_CONFIRMED = "CLUB_CONFIRMED"
-    #: *Kazimierz Padel said no*, or *… didn't answer in time* (On request) —
-    #: told apart by its reason, and emailed (Q105).
-    CLUB_COULD_NOT_TAKE_IT = "CLUB_COULD_NOT_TAKE_IT"
     #: *Your new game · Fri 19:00 at Bonarka Arena* — the card first the club's
-    #: no, its silence or its cancel promised (Q107).
+    #: cancel promised (Q107).
     NEW_GAME = "NEW_GAME"
+    #: *Bonarka Arena moved your game to Court 3 · Thu 19:00* / *Padel · indoor
+    #: · nothing else changes* — the club's own Move (#671, Q122). Always on,
+    #: to everybody on the booking, opening the booked game, never emailed.
+    GAME_MOVED = "GAME_MOVED"
     #: *Your post didn't fill.*
     POST_DID_NOT_FILL = "POST_DID_NOT_FILL"
     #: *You complete it* — a card needs only you.
@@ -123,31 +118,22 @@ class NoticeReason(StrEnum):
 
     #: Somebody left a booked game: their seat is open.
     SEAT_OPEN = "SEAT_OPEN"
-    #: Somebody left a game waiting for its club: it is filling again.
+    #: Somebody left a full game waiting for one payment: it is filling again.
     FILLING_AGAIN = "FILLING_AGAIN"
     #: A full game went back to filling and nobody is named: whose week
     #: filled, who no longer fits, whose card failed is never said (Q104).
     FELL_BACK = "FELL_BACK"
-    #: A seat opened after the book-by while the club decided: the game can
-    #: no longer fill — called off, nobody paid (Q104).
-    LEFT_AFTER_THE_BOOK_BY = "LEFT_AFTER_THE_BOOK_BY"
     #: A full game gone back to filling reached its book-by first (Q106).
     BOOK_BY_PASSED = "BOOK_BY_PASSED"
     #: A full game gone back to filling lost its court hour first.
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
     #: A game still short at the club's cut-off.
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
-    #: An On request club said no.
-    REFUSED = "REFUSED"
-    #: An On request club did not answer in time.
-    NO_ANSWER = "NO_ANSWER"
-    #: The payment is awaited at the On request club's yes (#626).
-    AT_THE_CLUBS_YES = "AT_THE_CLUBS_YES"
     #: The game booked the moment the payment it waited for came in: *booked ·
     #: you paid*, never a second *It's a game!* (#625, Q110).
     PAYMENT_CAME_IN = "PAYMENT_CAME_IN"
     #: A payment the game waited for did not come in time and it could no
-    #: longer fill — called off, nobody paid (#625, #626).
+    #: longer fill — called off, nobody paid (#625).
     PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
     #: Its court went to another game before the payment it waited for came in
     #: (#625).
@@ -239,6 +225,13 @@ class Notice:
     #: About a seat the player went for on a booked game and does not hold —
     #: a rescue (#640): *to take the seat*, never *to keep your seat*.
     rescue: bool = False
+    #: The court a move put the game on, and its kind (#671) — kept on the
+    #: notice, so *Court 3 · indoor* reads the same after a second move.
+    court_name: str | None = None
+    indoor: bool | None = None
+    #: The court the game left, said when a club's cancel moved it — *Court 2
+    #: can't be played* (#672).
+    moved_from: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,6 +319,9 @@ class NoticesOfADay:
             you_left=notice.you_left,
             kept_grosze=notice.kept_grosze,
             rescue=notice.rescue,
+            court_name=notice.court_name,
+            indoor=notice.indoor,
+            moved_from=notice.moved_from,
         )
         self._record_that(given)
         return given

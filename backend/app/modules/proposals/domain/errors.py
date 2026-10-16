@@ -41,7 +41,7 @@ class BookingNotFound(NotFoundError):
     """No such booked game **for this player**: it does not exist, or they have
     no seat on it. One code for both, so a booking id is not a way to learn
     whose evening it is (#542). **For a club**, no such booking at that club —
-    another club's is not one (#543)."""
+    another club's is not one (#547)."""
 
     code = "booking_not_found"
 
@@ -210,34 +210,6 @@ class PaymentToConfirm(ConflictError):
 
 
 # --------------------------------------------------------------------------- #
-# A club answering a request (#543)
-# --------------------------------------------------------------------------- #
-
-
-class RequestNotWaiting(ConflictError):
-    """The game is not waiting for this club's answer any more: the club
-    already answered it, the request was withdrawn because a seat opened — and
-    the game is filling again — or its deadline passed and it was recorded as
-    unanswered. Nothing was recorded."""
-
-    code = "request_not_waiting"
-
-    def __init__(self) -> None:
-        super().__init__("this game is not waiting for your answer")
-
-
-class RequestTimedOut(ConflictError):
-    """The club's time to confirm ran out before this answer arrived: the
-    request is called off as unanswered, whether or not that is recorded yet.
-    Nothing was recorded and nobody paid."""
-
-    code = "request_timed_out"
-
-    def __init__(self) -> None:
-        super().__init__("the time to answer this request has run out")
-
-
-# --------------------------------------------------------------------------- #
 # Leaving a booked game (#544)
 # --------------------------------------------------------------------------- #
 
@@ -253,7 +225,7 @@ class GameHasStarted(ConflictError):
 
 
 class BookingIsCalledOff(ConflictError):
-    """The game is off — refused, unanswered, or short at its cut-off — so
+    """The game is off — short at its cut-off, or cancelled by its club — so
     there is nothing to leave; everybody still in is refunded, or nobody paid.
     Nothing was recorded."""
 
@@ -407,16 +379,6 @@ class PostNotOpenToYou(ConflictError):
 # --------------------------------------------------------------------------- #
 # The club runs its bookings (#547)
 # --------------------------------------------------------------------------- #
-
-
-class BookingNotBooked(ConflictError):
-    """The game is still waiting for the club's answer: accept or refuse it.
-    There is no court of the players' to move and nothing paid to cancel."""
-
-    code = "booking_not_booked"
-
-    def __init__(self) -> None:
-        super().__init__("this game is waiting for your answer")
 
 
 class CourtNotFree(ConflictError):

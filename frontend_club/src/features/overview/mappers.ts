@@ -7,7 +7,7 @@ import type { components } from '@/generated/schema';
 
 type WireSetup = components['schemas']['SetupResponse'];
 
-/** The five steps, in the order the backend lists them and Overview draws them. */
+/** The four steps, in the order the backend lists them and Overview draws them. */
 export type SetupStep = components['schemas']['SetupStep'];
 
 /**

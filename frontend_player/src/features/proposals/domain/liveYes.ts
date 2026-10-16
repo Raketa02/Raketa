@@ -18,7 +18,7 @@ import type { DeckCard } from './deck';
  */
 export interface LiveYes extends Pick<
   DeckCard,
-  'proposalId' | 'kind' | 'startsAt' | 'club' | 'shareGrosze' | 'deadline'
+  'proposalId' | 'kind' | 'startsAt' | 'club' | 'shareGrosze' | 'deadline' | 'indoor'
 > {
   /** The group the game was dealt in — its pool is filed under the group's id. */
   readonly groupId: string;

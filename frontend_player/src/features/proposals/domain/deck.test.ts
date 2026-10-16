@@ -47,7 +47,6 @@ function card(extra: Partial<DeckCard> = {}): DeckCard {
     openSeatsAfterYourYes: 3,
     court: 'COURT_AVAILABLE',
     noFreeCancellation: false,
-    clubConfirms: false,
     sides: { yours: [YOU, person('Zofia')], theirs: [person('Ania'), person('Ewa')] },
     forecast: { pct: 87, provisional: false },
     overlap: { grade: 'GOOD', cells: [], game: { day: 6, range: 'AFTERNOON' } },
@@ -169,10 +168,6 @@ describe('the court block and the stamp', () => {
     expect(chargesAtOnce(card())).toBe(false);
     expect(chargesAtOnce(card({ court: 'BOOK_IT_NOW' }))).toBe(true);
     expect(chargesAtOnce(card({ type: 'SEAT_OPEN', court: 'BOOKED' }))).toBe(true);
-  });
-
-  it('does not price Book it now at an On request club, where the charge waits for the club', () => {
-    expect(chargesAtOnce(card({ court: 'BOOK_IT_NOW', clubConfirms: true }))).toBe(false);
   });
 
   it('says you complete it when your yes leaves no seat open, and not once it is given', () => {

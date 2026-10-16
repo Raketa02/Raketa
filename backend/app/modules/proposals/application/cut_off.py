@@ -15,7 +15,7 @@ of two things happens to it:
   after the cut-off is full at it, and goes ahead short: its leaver's share is
   taken with everybody's.
 
-**Correctness depends on it**, as the On request timeout's does: every read says
+**Correctness depends on it**, as time to pay's does: every read says
 *called off*, and *paid*, from the cut-off on (``BookedGame.called_off_reason``,
 ``money_of``), but only this moves the money and frees the court. **One
 transaction per game, the game locked first**, over a clock-derived list in one

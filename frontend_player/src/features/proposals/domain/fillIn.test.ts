@@ -56,7 +56,6 @@ describe('yesOnRow — what the fill holds for a row’s I’m in', () => {
       proposalId: 'b-1',
       type: 'SEAT_OPEN',
       court: 'BOOKED',
-      club: { id: 'club-1', name: 'Ogrody 33' },
     });
   });
 });
@@ -97,7 +96,7 @@ describe('squaresOfYes — a You’re In row’s squares (A3.2)', () => {
 });
 
 describe('mayWithdraw — Withdraw on a You’re In row', () => {
-  it('is offered only once the details say so — never while the club decides, nor before the read', () => {
+  it('is offered only once the details say so — never while a payment is awaited, nor before the read', () => {
     expect(mayWithdraw({ actions: ['WITHDRAW'] })).toBe(true);
     expect(mayWithdraw({ actions: ['LEAVE'] })).toBe(false);
     expect(mayWithdraw(undefined)).toBe(false);

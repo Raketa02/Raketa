@@ -314,7 +314,7 @@ _REFUSED: dict[int | str, dict[str, Any]] = {
     summary="Set a player's saved card: what it does, its kind and its network",
     description=(
         "What the next payment cloned from this player's saved card does — the "
-        "next fill's hold, a rescue's, a club's acceptance — which kind of card "
+        "next fill's hold, a rescue's, a holding's — which kind of card "
         "it is, so the fee kept when its share is taken, and which network "
         "holds it, so how long a hold lasts. Each field omitted is left as it is."
     ),

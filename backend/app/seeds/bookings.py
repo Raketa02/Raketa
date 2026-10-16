@@ -1,36 +1,37 @@
 """The protagonist's booked games, and her receipts (#541; the screens Part D).
 
 **A booked game is a full card that filled** (``docs/adr/0029``): each is made
-the way the dealer makes a pick — ``MakeProposal``, at an hour Bonarka Arena
-sells padel — dealt to her and three of *Padel po pracy*'s crowd, and then said
-yes to through ``SayYes``, the use case the phone's swipe runs, her yes last. So
-the last yes **books** it: every seat held together through the run's own fake
-provider — **taken at once** for the game on the day, which is after its
-cut-off, and **held until the cut-off** for next week's (#637) — a Booking on
-the first free court, the ordinary Game it opens and its chat, and a receipt
-for each of the four whose share was taken. Nothing here opens a table.
+the way the dealer makes a pick — ``MakeProposal``, at an hour its club sells
+padel — dealt to her and three of *Padel po pracy*'s crowd, and then said yes
+to through ``SayYes``, the use case the phone's swipe runs, her yes last. So
+the last yes **books** it, at any club — no club confirms a game (#669): every
+seat held together through the run's own fake provider — **taken at once** for
+the game on the day, which is after its cut-off, and **held until the cut-off**
+for next week's (#637) — a Booking on the first free court, the ordinary Game
+it opens and its chat, and a receipt for each of the four whose share was
+taken. Nothing here opens a table.
 
 **Two games, three states the screens draw**:
 
-- **on the day** — the first hour still on sale today, which is after its
-  cut-off as well; when none is left today, the first hour inside the club's
-  cut-off instead, so a run late in the evening still seeds a game the club's
-  free cancellation no longer covers;
-- **before the cut-off** — the first hour on sale **next week**, so her own
-  week holds one booked game and her *games per week* (two) leaves this week's
-  cards in her deck.
+- **on the day** — the first hour at Bonarka Arena still to come today, which
+  is after its cut-off as well; when none is left today, the first hour inside
+  the club's cut-off instead, so a run late in the evening still seeds a game
+  the club's free cancellation no longer covers. **No game fills later than its
+  release time** — a day before it at Bonarka (#670; ``docs/adr/0196`` §1) —
+  so this one is filled **as if earlier**, an hour before its release time,
+  when the hour was still on sale, and the cut-off job is run at its cut-off
+  (#637), as the API's would have run it then: its shares read taken;
+- **before the cut-off** — the first hour **Kazimierz Padel** sells **next
+  week**, so her own week holds one booked game and her *games per week* (two)
+  leaves this week's cards in her deck. Kazimierz, a kilometre from Bonarka and
+  so one of the clubs her group plays at, worked On request until it was
+  removed (#669): its full game waited for the desk's yes. Now it is **booked
+  the moment its last yes lands**, as at any club; it hands Raketa its hours a
+  day ahead, so next week's first is always on sale.
 
 **Out of the other layers' way**: neither hour is one of her answered picks'
 hours, and each crowd member it seats is booked once — so neither *one game per
 hour* nor anybody's *games per week* moves a yes the proposals layer seeded.
-
-**And one game waiting for an On request club** (#543): Kazimierz Padel, a
-kilometre from Bonarka and so one of the clubs her group plays at, is put a full
-game of hers at the first padel hour it sells that holds none of her games — the
-same ``MakeProposal`` and four ``SayYes``, the last answered *waiting for the
-club*: nobody charged, the court held, the desk emailed. **It waits the club's
-time to confirm** — an hour at Kazimierz — from the run's now, and then the
-timeout job calls it off as unanswered; a re-run puts a fresh one.
 
 **And one game of the crowd's filled far ahead** (#639): four of *Padel po
 pracy*'s crowd — never her — fill Bonarka's first padel hour whose cut-off is
@@ -41,9 +42,8 @@ cut-off, which the console's *hold the shares* runs. The four have no game that
 week and no yes at the hour, so the fill moves nothing another layer seeded.
 
 **Re-running books nothing twice**: an hour she already has a booked game at is
-left as it is, a game of hers still waiting for Kazimierz is left waiting, a
-far-ahead hour the crowd already booked is left as it is, and a later run on a
-later day books later hours.
+left as it is, a far-ahead hour the crowd already booked is left as it is, and
+a later run on a later day books later hours.
 """
 
 from __future__ import annotations
@@ -75,8 +75,9 @@ from app.bootstrap.composition import (
 )
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, Sport, hours, shifted
+from app.kernel import Instant, Sport, hours, instant, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
+from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import (
@@ -90,7 +91,6 @@ from app.modules.proposals.domain.deck import (
     week_of,
     week_window,
 )
-from app.modules.proposals.domain.home import BookingStage
 from app.modules.proposals.domain.proposal import Origin
 from app.modules.proposals.domain.proposer import CourtHourOnSale
 from app.modules.users.domain.value_objects import Email
@@ -105,9 +105,9 @@ from app.seeds.proposals import (
     her_games_group,
 )
 
-#: The On request club her waiting game is put to — a kilometre from Bonarka,
-#: so one of the clubs her group plays at.
-WAITING_CLUB: Final = next(
+#: The club her game next week is booked at — a kilometre from Bonarka, so one
+#: of the clubs her group plays at.
+NEXT_WEEK_CLUB: Final = next(
     club for club in SEED_CLUBS if club.name == "Kazimierz Padel"
 )
 
@@ -115,6 +115,10 @@ WAITING_CLUB: Final = next(
 #: the Holding time by a day, so a Visa's hold — 4 days 18 hours — cannot
 #: reach it, and every seat is checked (#639).
 FAR_AHEAD: Final = HOLDING_LEAD + timedelta(days=1)
+
+#: How long before its release time a game inside its club's release lead was
+#: filled: the hour was on sale then, with time to fill it (#670).
+BEFORE_THE_RELEASE: Final = timedelta(hours=1)
 
 #: The two states, in the order they are booked.
 ON_THE_DAY: Final = "on the day"
@@ -129,16 +133,22 @@ class SeededBooking:
     start: Instant
     #: Whether this run booked it, or found her booked then already.
     made: bool
+    #: The club it is booked at.
+    club: str
 
 
 @final
 @dataclass(frozen=True, slots=True)
-class SeededWaiting:
-    """Her game waiting for an On request club."""
+class _Target:
+    """An hour to book her a game at, in the state it seeds, and its club."""
 
+    state: str
     start: Instant
-    #: Whether this run put it to the club, or found it waiting already.
-    made: bool
+    club: SeedClub
+    club_id: UUID
+    #: When it fills: now, or — for an hour inside its club's release lead —
+    #: an hour before its release time.
+    filled_at: Instant
 
 
 @final
@@ -161,17 +171,15 @@ class SeededBookings:
     bookings: tuple[SeededBooking, ...]
     #: Her receipts once the games were booked.
     receipts: int
-    waiting: SeededWaiting | None = None
     far_ahead: SeededFarAhead | None = None
 
     @property
     def starts(self) -> tuple[Instant, ...]:
-        """Every hour this layer booked or put to a club — what the layers
-        after it keep out of the way of."""
+        """Every hour this layer booked — what the layers after it keep out of
+        the way of."""
 
         return (
             *(booking.start for booking in self.bookings),
-            *([self.waiting.start] if self.waiting is not None else []),
             *([self.far_ahead.start] if self.far_ahead is not None else []),
         )
 
@@ -202,16 +210,20 @@ async def book_her_games(
         her, group_id = found
         club_id = await games_club_id(session)
         hours_on_sale = await padel_hours_on_sale(session, club_id, now=now)
-        targets = await _the_hours(session, club_id, hours_on_sale, seeded, now=now)
+        targets = await _the_hours(session, club_id, seeded, now=now)
         partners = await _partners(session, group_id, her, seeded)
         booked = await build_booked_games(session).starts_of(
             her, start=now, end=now + DECK_HORIZON
         )
 
         bookings: list[SeededBooking] = []
-        for index, (state, start) in enumerate(targets):
-            if any(abs(start - game) < GAME_LENGTH for game in booked):
-                bookings.append(SeededBooking(state, start, made=False))
+        for index, target in enumerate(targets):
+            if any(abs(target.start - game) < GAME_LENGTH for game in booked):
+                bookings.append(
+                    SeededBooking(
+                        target.state, target.start, made=False, club=target.club.name
+                    )
+                )
                 continue
             three = partners[3 * index : 3 * index + 3]
             if len(three) < 3:
@@ -222,25 +234,19 @@ async def book_her_games(
             await _book(
                 session,
                 settings=settings,
-                clock=clock,
+                clock=FixedClock(at=target.filled_at),
                 provider=provider,
                 pool_id=group_id,
-                club_id=club_id,
-                start=start,
+                club_id=target.club_id,
+                start=target.start,
                 players=(*three, her),
+                now=now,
             )
-            bookings.append(SeededBooking(state, start, made=True))
-        waiting = await _put_to_the_club(
-            session,
-            settings=settings,
-            clock=clock,
-            provider=provider,
-            her=her,
-            pool_id=group_id,
-            partners=partners[3 * len(targets) : 3 * len(targets) + 3],
-            seeded=seeded,
-            now=now,
-        )
+            bookings.append(
+                SeededBooking(
+                    target.state, target.start, made=True, club=target.club.name
+                )
+            )
         far_ahead = await _the_crowd_far_ahead(
             session,
             settings=settings,
@@ -253,7 +259,6 @@ async def book_her_games(
             taken=[
                 *(booking.start for booking in bookings),
                 *(pick.start for pick in seeded.picks),
-                waiting.start,
             ],
             now=now,
         )
@@ -261,7 +266,6 @@ async def book_her_games(
     return SeededBookings(
         bookings=tuple(bookings),
         receipts=len(receipts),
-        waiting=waiting,
         far_ahead=far_ahead,
     )
 
@@ -403,71 +407,6 @@ async def _four_free_at(
     )
 
 
-async def _put_to_the_club(
-    session: AsyncSession,
-    *,
-    settings: Settings,
-    clock: FixedClock,
-    provider: PaymentProvider,
-    her: UUID,
-    pool_id: UUID,
-    partners: Sequence[UUID],
-    seeded: SeededProposals,
-    now: Instant,
-) -> SeededWaiting:
-    """Her full game at Kazimierz Padel, answered *waiting for the club* — or
-    the one still waiting from an earlier run."""
-
-    club_id = await club_id_of(session, WAITING_CLUB)
-    hers = await build_player_bookings(session).of_player(her, since=None)
-    already = next(
-        (
-            game
-            for game in hers
-            if game.stage is BookingStage.WAITING_FOR_THE_CLUB
-            and game.club_id == club_id
-        ),
-        None,
-    )
-    if already is not None:
-        return SeededWaiting(start=already.start, made=False)
-    if len(partners) < 3:
-        raise NotEnoughToBook(
-            f"the crowd has no three left to wait for {WAITING_CLUB.name} with her"
-        )
-    taken = [game.start for game in hers] + [pick.start for pick in seeded.picks]
-    start = next(
-        (
-            hour.start
-            for hour in await padel_hours_on_sale(session, club_id, now=now)
-            if not any(abs(hour.start - game) < GAME_LENGTH for game in taken)
-        ),
-        None,
-    )
-    if start is None:
-        raise NotEnoughToBook(
-            f"{WAITING_CLUB.name} sells no padel hour clear of her games from "
-            f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
-        )
-    answer = await all_say_yes(
-        session,
-        settings=settings,
-        clock=clock,
-        provider=provider,
-        pool_id=pool_id,
-        club_id=club_id,
-        start=start,
-        players=(*partners, her),
-    )
-    if answer is None or answer.waiting_until is None:
-        raise NotEnoughToBook(
-            f"her game at {WAITING_CLUB.name} on "
-            f"{start.astimezone(CLUB_ZONE):%a %d %b %H:%M} did not go to the club: "
-            f"{answer!r}"
-        )
-    return SeededWaiting(start=start, made=True)
-
-
 async def club_id_of(session: AsyncSession, club: SeedClub) -> UUID:
     """The club its desk signed up, off the desk's account."""
 
@@ -482,10 +421,20 @@ async def club_id_of(session: AsyncSession, club: SeedClub) -> UUID:
 
 
 async def padel_hours_on_sale(
-    session: AsyncSession, club_id: UUID, *, now: Instant
+    session: AsyncSession,
+    club_id: UUID,
+    *,
+    now: Instant,
+    on_sale_at: Instant | None = None,
 ) -> list[CourtHourOnSale]:
+    """The club's padel hours from ``now``, soonest first, as it sold them at
+    ``on_sale_at`` — at ``now`` unless told otherwise."""
+
     on_sale = await build_court_hours(session).on_sale(
-        [club_id], start=now, end=now + DECK_HORIZON, now=now
+        [club_id],
+        start=now,
+        end=now + DECK_HORIZON,
+        now=now if on_sale_at is None else on_sale_at,
     )
     return sorted(
         (
@@ -500,49 +449,59 @@ async def padel_hours_on_sale(
 async def _the_hours(
     session: AsyncSession,
     club_id: UUID,
-    on_sale: Sequence[CourtHourOnSale],
     seeded: SeededProposals,
     *,
     now: Instant,
-) -> list[tuple[str, Instant]]:
-    """The hour on the day — or inside the cut-off — and the first next week."""
+) -> list[_Target]:
+    """The hour on the day at Bonarka — or inside its cut-off — and the first
+    Kazimierz sells next week. The first is inside Bonarka's release lead, so
+    it is read as Bonarka sold it before any deadline, and filled an hour
+    before its own release time."""
 
     terms = (await build_club_terms(session).of([club_id], now=now)).get(club_id)
     if terms is None:
         raise NotEnoughToBook(f"{GAMES_CLUB.name} sells nothing at {now}")
     cut_off = shifted(now, hours(terms.cut_off_hours))
+    sold = await padel_hours_on_sale(
+        session, club_id, now=now, on_sale_at=before_any_deadline(now)
+    )
     today = next(
-        (hour.start for hour in on_sale if local_day(hour.start) == local_day(now)),
+        (hour for hour in sold if local_day(hour.start) == local_day(now)),
         None,
     )
     soon = (
         (ON_THE_DAY, today)
         if today is not None
         else next(
-            (
-                (AFTER_THE_CUT_OFF, hour.start)
-                for hour in on_sale
-                if hour.start < cut_off
-            ),
+            ((AFTER_THE_CUT_OFF, hour) for hour in sold if hour.start < cut_off),
             None,
         )
     )
+    if soon is None:
+        raise NotEnoughToBook(
+            f"{GAMES_CLUB.name} sells no padel hour inside its cut-off from "
+            f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
+        )
     picked = {pick.start for pick in seeded.picks}
+    next_week = await club_id_of(session, NEXT_WEEK_CLUB)
     later = next(
         (
             hour.start
-            for hour in on_sale
+            for hour in await padel_hours_on_sale(session, next_week, now=now)
             if week_of(hour.start) > week_of(now) and hour.start not in picked
         ),
         None,
     )
-    if soon is None or later is None:
+    if later is None:
         raise NotEnoughToBook(
-            f"{GAMES_CLUB.name} sells no padel hour "
-            f"{'inside its cut-off' if soon is None else 'next week'} from "
+            f"{NEXT_WEEK_CLUB.name} sells no padel hour next week from "
             f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
         )
-    return [soon, (BEFORE_THE_CUT_OFF, later)]
+    state, hour = soon
+    return [
+        _Target(state, hour.start, GAMES_CLUB, club_id, when_it_fills(hour, now=now)),
+        _Target(BEFORE_THE_CUT_OFF, later, NEXT_WEEK_CLUB, next_week, now),
+    ]
 
 
 async def _partners(
@@ -575,7 +534,11 @@ async def _book(
     club_id: UUID,
     start: Instant,
     players: tuple[UUID, ...],
+    now: Instant,
 ) -> None:
+    """Every yes said on ``clock`` — and the cut-off job run at a cut-off
+    that has passed since."""
+
     answer = await all_say_yes(
         session,
         settings=settings,
@@ -591,6 +554,38 @@ async def _book(
             f"her game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} filled and "
             f"did not book: {answer!r}"
         )
+    await the_cut_off_if_it_passed(
+        session,
+        settings=settings,
+        booking_id=answer.booked.booking_id,
+        filled_at=clock.at,
+        now=now,
+    )
+
+
+def when_it_fills(hour: CourtHourOnSale, *, now: Instant) -> Instant:
+    """When a seeded game at ``hour`` fills: now while the hour is on sale —
+    or, inside its club's release lead (#670), an hour before its release
+    time, when it still was."""
+
+    return now if hour.book_by > now else instant(hour.book_by - BEFORE_THE_RELEASE)
+
+
+async def the_cut_off_if_it_passed(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    booking_id: UUID,
+    filled_at: Instant,
+    now: Instant,
+) -> None:
+    """For a game filled before a cut-off that has passed by ``now``, the
+    cut-off job run at that cut-off, as the API's would have run it then
+    (#637), so its shares read taken."""
+
+    booked = await build_player_bookings(session).find(booking_id)
+    if booked is not None and filled_at < booked.cut_off <= now:
+        await the_cut_off_came(session, settings=settings, at=booked.cut_off)
 
 
 async def all_say_yes(
@@ -646,15 +641,15 @@ def booking_lines(seeded: SeededBookings) -> list[str]:
     """The report's section: her booked games, and her receipts."""
 
     lines = [
-        f"Her booked games at {GAMES_CLUB.name}, four seats each — held until "
-        "the cut-off, taken after it:"
+        "Her booked games, four seats each — held until the cut-off, taken after "
+        "it:"
     ]
     for booking in seeded.bookings:
         state = "booked" if booking.made else "already booked"
         money = "held" if booking.state == BEFORE_THE_CUT_OFF else "taken"
         lines.append(
             f"  {booking.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · "
-            f"{booking.state} · {state} · {money}"
+            f"{booking.club} · {booking.state} · {state} · {money}"
         )
     lines.append(f"  her receipts: {seeded.receipts}")
     if seeded.far_ahead is not None:
@@ -669,11 +664,5 @@ def booking_lines(seeded: SeededBookings) -> list[str]:
             f"The crowd's game filled far ahead at {GAMES_CLUB.name}: "
             f"{far.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · {state} · "
             f"{far.checked} of 4 cards checked{held}"
-        )
-    if seeded.waiting is not None:
-        state = "put to the club" if seeded.waiting.made else "still waiting"
-        lines.append(
-            f"Her game waiting for {WAITING_CLUB.name} (On request): "
-            f"{seeded.waiting.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · {state}"
         )
     return lines

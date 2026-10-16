@@ -3,6 +3,10 @@
 - **Status:** Accepted — **§1 amended below** (2026-10-10: a hold's last moment, the real fee at
   capture, an exact refund, and a cancel that costs nothing — Q113)
 - **Date:** 2026-09-30
+- **The 2026-10-10 amendment's holds, amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)**
+  §1–§2: a share is held at the fill, at its holding time or at a rescue, and never at a club's yes,
+  because *On request* is removed and no club gives one. A club's cancel that a free court of the same
+  club absorbs moves the game and calls nothing on the port. The port itself is unchanged.
 - **Builds** [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §4–§5 for
   [#536](https://github.com/Raketa02/Raketa/issues/536): the payments port, its two adapters, and
   the **Payment method** aggregate. Settles four things 0189 left to the ticket, one of which is
@@ -196,3 +200,10 @@ production uses.
   a hold is undocumented, so the holding is a second, separate off-session payment.
 
 The build is [#636](https://github.com/Raketa02/Raketa/issues/636).
+
+> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.** The holds above were placed at the fill or,
+> through ADR-0189's amendment of the same day, at an On request club's yes. With *On request*
+> removed, a share is held at the fill, at its holding time or at a rescue, and nowhere else. A
+> club's cancel still lets every hold go before the cut-off and refunds in full after it when it
+> calls the game off. A cancel absorbed by another court of the same club moves the game instead,
+> and nothing is cancelled, captured or refunded on the port.

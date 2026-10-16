@@ -200,7 +200,6 @@ def test_a_rescue_card_is_a_seat_open_card_on_a_booked_court():
     assert card.open_seats_after_your_yes == 0
     assert card.deadline == CUT_OFF
     assert not card.no_free_cancellation
-    assert not card.club_confirms
     assert card.proposal_id == rescue.booking_id
 
 

@@ -58,7 +58,7 @@ describe('the yes screen’s ground', () => {
     expect(onCentre).toBeGreaterThanOrEqual(AA);
   });
 
-  // Q103 (#628): *It's a game!* at a club that confirms says under the word what is still missing.
+  // Q103, Q110 (#628, #630): *It's a game!* says under the word what is still missing — a payment.
   it('carries the line under the word in the on-dark tiny grey past AA on both ends', () => {
     const onCentre = contrast(over(theme.color.onDarkTiny, CENTRE), parse(CENTRE).rgb);
     const onEdge = contrast(over(theme.color.onDarkTiny, EDGE), parse(EDGE).rgb);

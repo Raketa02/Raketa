@@ -9,6 +9,20 @@ the process, like every other context's. The **teller** — the handler that tur
 **pusher**, which pushes a notice given, write, so each is registered per
 delivery batch over that batch's session in ``app/bootstrap/events.py``; the
 pusher holds the run's push service, as the room teller holds its live channel.
+
+**Three notice kinds left with On request** (#669; ``docs/adr/0196`` §1):
+``WAITING_FOR_THE_CLUB``, ``CLUB_CONFIRMED`` and ``CLUB_COULD_NOT_TAKE_IT``, with
+the ``AT_THE_CLUBS_YES``, ``REFUSED``, ``NO_ANSWER`` and ``LEFT_AFTER_THE_BOOK_BY``
+reasons. ``notifications.notice_given`` keeps its name and version — its shape did
+not change — and a stored row naming a retired kind no longer folds: the local
+store is reset with the removal and only ``local`` has ever run.
+
+**One kind joined with the club's Move** (#671; Q122): ``GAME_MOVED``, which
+names the court the game is on now and its kind — two facts added to
+``notifications.notice_given`` **defaulted**, as ``own``, ``until`` and
+``rescue`` were, so a row given before names no court and the version stays.
+**A move by cancel says the court it left** (#672): ``moved_from``, a third
+fact added the same way, beside the cancel's reason in ``reason``.
 """
 
 from __future__ import annotations

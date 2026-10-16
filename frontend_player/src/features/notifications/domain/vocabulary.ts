@@ -4,14 +4,13 @@
  * one file whose job is saying so (#559).
  *
  * The wire's own spellings, kept, because the list keys nothing by them yet and the push carries
- * them as they are: a notice's kind — every notice the mechanics §17.2 tells, *the club confirmed*
- * and *couldn't take it* two of them — and where a tap opens it.
+ * them as they are: a notice's kind — every notice the mechanics §17.2 tells — and where a tap
+ * opens it. No club confirms a game any more (ADR-0196, #676), so none is about a club's answer.
  */
 
 /** Every notice a player can be told. */
 export type NoticeKind =
   | 'GAME_BOOKED'
-  | 'WAITING_FOR_THE_CLUB'
   | 'WAITING_FOR_A_PAYMENT'
   | 'TIME_TO_PAY_RAN_OUT'
   | 'TIME_TO_FIX_RAN_OUT'
@@ -20,9 +19,9 @@ export type NoticeKind =
   | 'GAME_CALLED_OFF'
   | 'SOMEONE_LEFT'
   | 'REFUNDED'
-  | 'CLUB_CONFIRMED'
-  | 'CLUB_COULD_NOT_TAKE_IT'
   | 'NEW_GAME'
+  /** A club's cancel moved the game to another court, or the club moved it (#671): its booking. */
+  | 'GAME_MOVED'
   | 'POST_DID_NOT_FILL'
   | 'YOU_COMPLETE_IT'
   | 'CHALLENGE'
@@ -35,7 +34,6 @@ export type NoticeKind =
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
-  'WAITING_FOR_THE_CLUB',
   'WAITING_FOR_A_PAYMENT',
   'TIME_TO_PAY_RAN_OUT',
   'TIME_TO_FIX_RAN_OUT',
@@ -44,9 +42,8 @@ export const NOTICE_KINDS = [
   'GAME_CALLED_OFF',
   'SOMEONE_LEFT',
   'REFUNDED',
-  'CLUB_CONFIRMED',
-  'CLUB_COULD_NOT_TAKE_IT',
   'NEW_GAME',
+  'GAME_MOVED',
   'POST_DID_NOT_FILL',
   'YOU_COMPLETE_IT',
   'CHALLENGE',

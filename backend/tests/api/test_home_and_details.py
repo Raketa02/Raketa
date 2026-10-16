@@ -181,7 +181,7 @@ async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
         assert card["needs_you"] is False
         assert card["starts_at"] == SATURDAY_FIVE_UTC
         assert card["club"] == {"id": club, "name": "Bonarka Arena"}
-        assert card["court_name"] == "Court 1"
+        assert (card["court_name"], card["indoor"]) == ("Court 1", True)
         assert card["money"] == {
             "share_grosze": 30_00,
             "paid": False,
@@ -476,23 +476,6 @@ async def test_a_game_with_a_seat_open_is_sent_and_counted(
     assert home["needing_you"] == 1
 
 
-async def test_a_game_waiting_for_its_club_is_sent(
-    client, session_factory, clock, four
-):
-    club, _ = await a_club_and_its_desk(client, way="ON_REQUEST")
-    group = await a_group(client, four[0], club, *four[1:])
-    proposal = await makes(
-        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
-    )
-    for player in four:
-        said = await says_yes(client, player, proposal)
-        assert said.status_code == 200, said.text
-
-    [card] = (await home_of(client, four[0]))["games"]
-
-    assert card["status"] == "WAITING_FOR_THE_CLUB"
-
-
 async def test_a_result_still_to_enter_is_sent_and_counted_until_the_entry_closes(
     client, session_factory, clock, club, four, group
 ):
@@ -690,7 +673,7 @@ async def test_a_player_in_the_game_reads_its_details(
     assert details["starts_at"] == SATURDAY_FIVE_UTC
     assert details["ends_at"] == "2026-10-10T16:00:00Z"
     assert details["where"] == {"id": club, "name": "Bonarka Arena", "distance_km": 3.3}
-    assert details["court_name"] == "Court 1"
+    assert (details["court_name"], details["indoor"]) == ("Court 1", True)
     assert details["money"] == {
         "share_grosze": 30_00,
         "paid": False,
@@ -812,7 +795,8 @@ async def test_a_player_still_deciding_reads_their_own_card(
     assert "court_name" not in details
     assert details["share_grosze"] == 30_00
     assert details["no_free_cancellation"] is False
-    assert details["club_confirms"] is False
+    # Bonarka's one padel court is indoor: the card promises it (Q122).
+    assert details["indoor"] is True
     tiles = details["sides"]["yours"] + details["sides"]["theirs"]
     assert {tile["player_id"] for tile in tiles} == {str(one["id"]) for one in four}
     assert details["sides"]["yours"][0]["is_you"] is True
@@ -896,23 +880,6 @@ async def test_a_card_with_somebody_in_the_reader_blocked_is_not_shown_to_them(
     assert refused.status_code == 404, refused.text
 
 
-async def test_a_full_game_at_an_on_request_club_waits_and_its_players_may_leave(
-    client, session_factory, clock, four
-):
-    club, _ = await a_club_and_its_desk(client, way="ON_REQUEST")
-    group = await a_group(client, four[0], club, *four[1:])
-    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
-    for player in four:
-        await says_yes(client, player, proposal)
-
-    details = (await proposal_of(client, four[0], proposal)).json()
-
-    assert details["status"] == "WAITING_FOR_THE_CLUB"
-    assert details["actions"] == ["LEAVE"]
-    assert details["club_confirms"] is True
-    assert details["in_count"] == 4
-
-
 async def test_a_filled_game_reads_filled_with_nothing_to_do(
     client, session_factory, clock, club, four, group
 ):
@@ -924,6 +891,9 @@ async def test_a_filled_game_reads_filled_with_nothing_to_do(
 
     assert details["status"] == "FILLED"
     assert details["actions"] == []
+    # Its court is given now: the kind is the booking's to say, never read off
+    # the courts still free (#671).
+    assert details["indoor"] is None
 
 
 async def test_a_refused_payment_is_confirmed_from_the_details(

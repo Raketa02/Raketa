@@ -50,8 +50,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   where a person placed a test key, and is skipped by name otherwise (ADR-0190 §1).
   **The tenth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
   details' three demands — a player's bookings (`bookings`), a booked game's result (`games`), a
-  club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
-  requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
+  club's distance (the Player profile and `clubs`) — and, since #543, the players' Names on
+  a club's bookings (`users`; its other demand, an On request club's requests and answers,
+  went with On request, #669), and since #544
   what happens to a booked game after the fill (`BookedGameChanges`), a paid share given back
   (`SeatRefunds`, and since #641 a late leaver told the figure) and, since #641 in place of
   the estimate's `CardFees`, what a leaver after the cut-off would get back (`LateRefunds`)
@@ -60,7 +61,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   #546 the pair rule and a player's level window (`PlayerFit` — since #661 with the
   reliability filter, and every kind over one reading) and each member's Level, week,
   gender and preference (`PlayersInPlay`) — and since #547 the club's bookings as its desk
-  reads and runs them (`ClubBookings`), what each took and gave back (`BookingTakings`), the
+  reads and runs them (`ClubBookings` — since #672 with the cancel's preview and a move by
+  cancel), what each took and gave back (`BookingTakings`), the
   group each pool is (`PoolOrigins`) — `DeskCheckIns`, whether a club checked players in,
   went with desk check-in (#651) — and since #639 the shares checked at the fill and held
   at their Holding time (`CheckedShares`, registered over a fresh fake: what is due and a
@@ -72,8 +74,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first
-  free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
-  both the Club context's facts — and the Games context's: the ordinary Game a booking opens
+  free court of a club at an hour with its cut-off — and every free court, each with its
+  kind (#671) and its share, which a club's cancel asks before a court absorbs it (#672) —
+  the court a club's cancel closes for its hour (`CourtClosures`, #673), and a club's desk —
+  all the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
   club's cancel do to it (`GameChanges`, #544, #545, #547). Who Didn't come to it
   (`GameNoShows`, #547, #657) went with #659: a *Didn't come* is priced once, on *shows up*,
@@ -94,7 +98,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the two adapters of the push port — the recording service every API test reads, and Expo,
   asked over a loopback server speaking Expo's documented push API, never Expo itself.
   **The fifteenth, `notification_demands.py`, is Notifications' consumer register**
-  (#549): a game as it stands (`GameBriefs`), what a refund gave back (`PaidShares`), who an
+  (#549): a game as it stands (`GameBriefs`), whose deck shows a card and, since #673, the
+  kind of court it promises (`Decks`), what a refund gave back (`PaidShares`), who an
   open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`) —
   and since #663 a booked game's court, asked of the Game (`GameCourts`), and the booked hours
   just ended, off the bookings' projection (`EndedHours`).

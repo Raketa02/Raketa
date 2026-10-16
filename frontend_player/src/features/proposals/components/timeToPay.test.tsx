@@ -13,9 +13,6 @@
  *   details and sheet name the time.
  * - **Paying in time** shows the payer *It's a game!*, which they never saw; **out of time** the
  *   game is *Seat open* to the others and the payer's row loses its time.
- * - **At a club that confirms** a card refused at the club's *Accept* reads the same: paying in time
- *   shows its payer *It's a game!* too (§12.2), and out of time the game is filling again, the club
- *   asked again when it is full.
  * - **Before the cut-off it is the time to fix the card** ([#643](https://github.com/Raketa02/Raketa/issues/643);
  *   Q113): nothing is being taken, so the payer is told to fix the card, never to pay — at the fill,
  *   and at the holding time of a game booked far ahead, which stays booked meanwhile. The others'
@@ -134,7 +131,6 @@ const GAME_ID = 'a1000000-0000-4000-8000-000000000001';
 
 /** 10:30 on Thursday in Warsaw — the end of the time to pay, half an hour after Home's read. */
 const DUE = '2026-10-01T08:30:00Z';
-const KAZIMIERZ = 'Kazimierz Padel';
 
 let transport: Transport;
 
@@ -234,7 +230,7 @@ function waitingDetails(
     court_name: null,
     money: unheldMoney({ share_grosze: 4000 }),
     shows_forecast: false,
-    leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
+    leaving: { kind: 'WHILE_WAITING_FOR_A_PAYMENT', refund_grosze: 0, card_fee_grosze: 0 },
     payment_due_by: DUE,
     ...extra,
   });
@@ -281,7 +277,7 @@ function notice(extra: Partial<Wire['NoticeSchema']>): Wire['NoticeSchema'] {
 // ---------------------------------------------------------------------------
 
 describe('the last yes, when another player’s share is refused (Q110)', () => {
-  /** Ivan's card: his yes completes it, at a club that books at once. */
+  /** Ivan's card: his yes completes it. */
   const lastSeat = deckCard({
     in_count: 3,
     open_seats_after_your_yes: 0,
@@ -324,7 +320,6 @@ describe('the last yes, when another player’s share is refused (Q110)', () => 
       proposal_id: lastSeat.proposal_id,
       open_seats: 0,
       booked: null,
-      waiting_for_the_club: false,
       your_payment: null,
       payment_awaited_until: until,
     });
@@ -360,7 +355,6 @@ describe('the last yes, when another player’s share is refused (Q110)', () => 
       proposal_id: lastSeat.proposal_id,
       open_seats: 0,
       booked: null,
-      waiting_for_the_club: false,
       your_payment: {
         seat_charge_id: SEAT_CHARGE,
         refusal: 'AUTHENTICATION_REQUIRED',
@@ -396,7 +390,6 @@ describe('the last yes, when another player’s share is refused (Q110)', () => 
       proposal_id: lastSeat.proposal_id,
       open_seats: 0,
       booked: null,
-      waiting_for_the_club: false,
       your_payment: {
         seat_charge_id: SEAT_CHARGE,
         refusal: 'AUTHENTICATION_REQUIRED',
@@ -737,7 +730,6 @@ describe('paying in time (Q110)', () => {
         proposal_id: BOOKING,
         open_seats: 0,
         booked: { booking_id: BOOKING, game_id: GAME_ID },
-        waiting_for_the_club: false,
         your_payment: null,
         payment_awaited_until: null,
       });
@@ -777,7 +769,6 @@ describe('out of time (Q109, Q111)', () => {
                 open_seats: 1,
                 payment_due_by: null,
                 filling_again: true,
-                club_confirms: false,
               })
             : waitingForAPayment(),
         ],
@@ -859,165 +850,5 @@ describe('out of time (Q109, Q111)', () => {
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${BOOKING}`));
     expect(await screen.findByRole('button', { name: FILL.confirm.title.PAY })).toBeTruthy();
     expect(screen.queryByText(/Confirm your payment by/)).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// At a club that confirms
-// ---------------------------------------------------------------------------
-
-describe('at a club that confirms, a card refused at the club’s Accept (#626)', () => {
-  const atKazimierz = {
-    club: { ...homeGame().club, name: KAZIMIERZ },
-    club_confirms: true,
-    money: unheldMoney({ share_grosze: 2500 }),
-  } as const;
-
-  it('reads the same — Waiting for one payment to the others, the payer’s time on their card and row', async () => {
-    stubHomeGames(transport, [
-      waitingForAPayment(atKazimierz),
-      waitingForAPayment({
-        ...atKazimierz,
-        booking_id: 'f2000000-0000-4000-8000-000000000001',
-        your_payment_due_by: DUE,
-      }),
-    ]);
-    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
-      json<Wire['PaymentsToConfirmResponse']>({
-        payments: [
-          toConfirmRow({
-            proposal_id: 'f2000000-0000-4000-8000-000000000001',
-            club: { id: homeGame().club.id, name: KAZIMIERZ },
-            share_grosze: 2500,
-          }),
-        ],
-      }),
-    );
-    await onHome();
-
-    const theirs = await card();
-    expect(within(theirs).getByText(HOME.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
-    expect(
-      within(theirs).getByText('Waiting for one payment · until 10:30 · Nobody pays until it’s in'),
-    ).toBeTruthy();
-    const yours = await screen.findByTestId('home-game-f2000000-0000-4000-8000-000000000001');
-    expect(within(yours).getByText('Confirm your payment by 10:30', HIDDEN_TOO)).toBeTruthy();
-    const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
-    expect(within(row).getByText('Confirm your payment by 10:30')).toBeTruthy();
-    expect(within(row).getByText(`${KAZIMIERZ} · 25 zł`)).toBeTruthy();
-
-    // At the deadline the time leaves the row and the card by itself, before any read says so.
-    act(() => jest.advanceTimersByTime(30 * MINUTE));
-    expect(await within(row).findByText(FILL.toConfirm.open)).toBeTruthy();
-    expect(screen.queryByText('Confirm your payment by 10:30', HIDDEN_TOO)).toBeNull();
-  });
-
-  // §12.2: "If you pay in time … You see It's a game!" — the others are told the club's yes.
-  it('paying in time shows its payer It’s a game! here too, and the game reads Booked', async () => {
-    let paid = false;
-    transport.on('GET', HOME_PATH, () =>
-      json<Wire['HomeResponse']>({
-        read_at: HOME_READ_AT,
-        needing_you: paid ? 0 : 1,
-        games: [
-          paid
-            ? homeGame({ ...atKazimierz, money: bookedMoney({ share_grosze: 2500 }) })
-            : waitingForAPayment({ ...atKazimierz, your_payment_due_by: DUE }),
-        ],
-      }),
-    );
-    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
-      json<Wire['PaymentsToConfirmResponse']>({
-        payments: paid
-          ? []
-          : [
-              toConfirmRow({
-                club: { id: homeGame().club.id, name: KAZIMIERZ },
-                share_grosze: 2500,
-              }),
-            ],
-      }),
-    );
-    transport.on('GET', SEAT_CHARGE_PATH, () =>
-      json(seatCharge({ amount_grosze: 2500, club: { id: homeGame().club.id, name: KAZIMIERZ } })),
-    );
-    transport.on('POST', CONFIRMATION_PATH, () => {
-      paid = true;
-      return json<Wire['YesAnswerResponse']>({
-        proposal_id: BOOKING,
-        open_seats: 0,
-        booked: { booking_id: BOOKING, game_id: GAME_ID },
-        waiting_for_the_club: false,
-        your_payment: null,
-        payment_awaited_until: null,
-      });
-    });
-    stubBooking(
-      transport,
-      bookingDetails({
-        game_id: GAME_ID,
-        club_confirms: true,
-        where: { ...bookingDetails().where, name: KAZIMIERZ },
-        money: bookedMoney({ share_grosze: 2500 }),
-      }),
-    );
-    await onHome();
-
-    const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
-    fireEvent.press(within(row).getByRole('button', { name: /^Confirm your payment for Padel/ }));
-    fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.check }));
-
-    expect(
-      await screen.findByRole('header', {
-        name: 'It’s a game! You and Piotr Sowa against Inés Díaz and Bartek Lis',
-      }),
-    ).toBeTruthy();
-    expect(toasts()).toEqual([]);
-
-    fireEvent.press(screen.getByRole('button', { name: FILL.itsAGame.later }));
-    await waitFor(() => expect(screen.queryByTestId('its-a-game')).toBeNull());
-    expect(await within(await card()).findByText(HOME.status.BOOKED)).toBeTruthy();
-  });
-
-  // #626: out of time the club's yes is called off, and those still In keep their places — the game
-  // filling again, its club asked again when it is full (Q106, Q112).
-  it('out of time, turns the others’ game into Seat open, the club asked again when it is full', async () => {
-    let ranOut = false;
-    transport.on('GET', HOME_PATH, () =>
-      json<Wire['HomeResponse']>({
-        read_at: HOME_READ_AT,
-        needing_you: 0,
-        games: [
-          ranOut
-            ? waitingForAPayment({
-                ...atKazimierz,
-                status: 'SEAT_OPEN',
-                open_seats: 1,
-                payment_due_by: null,
-                filling_again: true,
-              })
-            : waitingForAPayment(atKazimierz),
-        ],
-      }),
-    );
-    await onHome();
-    expect(await within(await card()).findByText(HOME.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
-
-    ranOut = true;
-    await told(
-      notice({
-        kind: 'SOMEONE_LEFT',
-        title: 'Your Sat 16:00 is filling again',
-        body: 'Padel at Kazimierz Padel — a seat opened.',
-      }),
-    );
-
-    const drawn = await card();
-    expect(await within(drawn).findByText(HOME.status.SEAT_OPEN)).toBeTruthy();
-    expect(
-      within(drawn).getByText(
-        '1 seat open · Kazimierz Padel is asked again when it’s full · nobody paid',
-      ),
-    ).toBeTruthy();
   });
 });

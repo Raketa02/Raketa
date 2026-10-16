@@ -35,7 +35,6 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
-    WayOfWorkingChosen,
 )
 from app.modules.clubs.domain.courts import Court, CourtName
 from app.modules.clubs.domain.errors import (
@@ -43,7 +42,6 @@ from app.modules.clubs.domain.errors import (
     CourtNotFound,
     CourtSportNotOffered,
     ExceptionNotFound,
-    WayOfWorkingNotChosen,
 )
 from app.modules.clubs.domain.hours_exceptions import (
     ClosedHours,
@@ -52,11 +50,7 @@ from app.modules.clubs.domain.hours_exceptions import (
 )
 from app.modules.clubs.domain.payments_account import PaymentsAccount, PaymentsStatus
 from app.modules.clubs.domain.prices import PriceBand, SportPrices
-from app.modules.clubs.domain.raketa_terms import (
-    OtherClubsCourts,
-    RaketaSettings,
-    WayOfWorking,
-)
+from app.modules.clubs.domain.raketa_terms import OtherClubsCourts, RaketaSettings
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
@@ -76,8 +70,6 @@ class ClubCourts:
     #: Each priced sport's prices. A sport the club stopped offering may keep a
     #: row here, inert — no court of it can exist — until the next save.
     prices: dict[Sport, SportPrices] = field(default_factory=dict)
-    #: How the club works with Raketa — ``None`` until it chooses.
-    way: WayOfWorking | None = None
     #: The settings, **at their defaults until the club confirms them**.
     settings: RaketaSettings = field(default_factory=RaketaSettings)
     #: Whether the club has saved its settings at least once.
@@ -336,19 +328,7 @@ class ClubCourts:
             if sport in offered_sports
         ]
 
-    # --------------------------------------------------- the way and settings
-
-    def choose_way(self, way: WayOfWorking, *, occurred_at: datetime) -> None:
-        """One way for the whole club, changeable later; choosing the one it
-        has records nothing."""
-
-        if way is self.way:
-            return
-        self._record_that(
-            WayOfWorkingChosen(
-                club_id=self.club_id, way=way.value, occurred_at=occurred_at
-            )
-        )
+    # --------------------------------------------------------------- settings
 
     def save_settings(
         self, settings: RaketaSettings, *, paused: bool, occurred_at: datetime
@@ -356,18 +336,15 @@ class ClubCourts:
         """The club saves its settings form. **The first save is the club
         confirming them**, so it records even when every value is a default;
         after that, only a save that moved something does. Pausing and resuming
-        are acts of their own. Refused until a way of working is chosen."""
+        are acts of their own. Nothing comes first: with one way of working
+        there is nothing to choose before them (#670)."""
 
-        if self.way is None:
-            raise WayOfWorkingNotChosen()
         if settings != self.settings or not self.settings_confirmed:
             self._record_that(
                 RaketaSettingsChanged(
                     club_id=self.club_id,
                     release_lead_days=settings.release_lead_days,
                     cut_off_hours=settings.cut_off_hours,
-                    minimum_notice_hours=settings.minimum_notice_hours,
-                    time_to_confirm_minutes=settings.time_to_confirm_minutes,
                     other_clubs_courts=settings.other_clubs_courts.offered,
                     other_clubs_within_km=settings.other_clubs_courts.within_km,
                     occurred_at=occurred_at,
@@ -474,14 +451,10 @@ class ClubCourts:
             )
         elif isinstance(event, ExceptionRemoved):
             del self.exceptions[event.exception_id]
-        elif isinstance(event, WayOfWorkingChosen):
-            self.way = WayOfWorking(event.way)
         elif isinstance(event, RaketaSettingsChanged):
             self.settings = RaketaSettings(
                 release_lead_days=event.release_lead_days,
                 cut_off_hours=event.cut_off_hours,
-                minimum_notice_hours=event.minimum_notice_hours,
-                time_to_confirm_minutes=event.time_to_confirm_minutes,
                 other_clubs_courts=OtherClubsCourts(
                     offered=event.other_clubs_courts,
                     within_km=event.other_clubs_within_km,

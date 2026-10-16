@@ -8,8 +8,6 @@ booking that opens its Game — over the Bookings context's own use cases;
 #545): a player leaving it, somebody taking the seat they left or saying no to
 it, a seat kept for a rescuer whose share was refused (#640), and the cut-off
 calling off one still short.
-``BookingsClubRequests`` is an On request club's (#543): the request a full game
-is put to the club as, the club's yes or no, and a seat opening while it waits.
 ``BookingsBookedGames`` answers *games per week* and *one game per hour* — the
 deck's, the proposer's and the fill's — with a player's booked games, replacing
 the stand-in that answered nothing while no game could be booked.
@@ -30,9 +28,10 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
-from app.kernel import Instant, Sport, invariant
+from app.kernel import Instant, Sport
 from app.modules.bookings.application.at_the_club import (
     CancelTheBooking,
+    MovedByCancel,
     MoveTheBooking,
 )
 from app.modules.bookings.application.book_the_game import (
@@ -49,15 +48,6 @@ from app.modules.bookings.application.rescues import (
     KeepTheSeat,
     RescueTheSeat,
     SayNoToTheSeat,
-)
-from app.modules.bookings.application.requests import (
-    BookTheRequest,
-    CallOffForAPayment,
-    GameToRequest,
-    RequestTheGame,
-    CallOffTheRequest,
-    WaitForThePayment,
-    WithdrawTheRequest,
 )
 from app.modules.bookings.domain.booking import (
     BookedCourt,
@@ -88,12 +78,10 @@ from app.modules.proposals.domain.home import (
 )
 from app.modules.proposals.domain.ports import (
     BookableCourt,
-    ClubRequest,
     FullGame,
-    GameToAsk,
     RefusedPayment,
 )
-from app.modules.proposals.domain.proposal import ClubAnswer, ReopenReason, TimeTo
+from app.modules.proposals.domain.proposal import ReopenReason, TimeTo
 
 
 @final
@@ -111,8 +99,8 @@ class BookingsGameBookings:
         return BookableCourt(
             court_id=offered.court.court_id,
             name=offered.court.name,
+            indoor=offered.court.indoor,
             cut_off=offered.cut_off,
-            time_to_confirm=offered.time_to_confirm,
         )
 
     async def book(self, game: FullGame, *, at: Instant) -> UUID:
@@ -133,12 +121,16 @@ class BookingsGameBookings:
                 share_grosze=game.share_grosze,
                 first_side=game.first_side,
                 second_side=game.second_side,
-                court=BookedCourt(court_id=game.court.court_id, name=game.court.name),
+                court=BookedCourt(
+                    court_id=game.court.court_id,
+                    name=game.court.name,
+                    indoor=game.court.indoor,
+                ),
                 cut_off=game.court.cut_off,
             ),
             at=at,
         )
-        return invariant(booking.game_id, f"{booking.booking_id} booked with no game")
+        return booking.game_id
 
 
 @final
@@ -250,151 +242,6 @@ class BookingsBookedGameChanges:
 
 
 @final
-class BookingsClubRequests:
-    def __init__(
-        self,
-        *,
-        bookings: BookingRepository,
-        directory: BookingDirectory,
-        ask: RequestTheGame,
-        accept: BookTheRequest,
-        turn_down: CallOffTheRequest,
-        withdraw: WithdrawTheRequest,
-        wait: WaitForThePayment,
-        not_in_time: CallOffForAPayment,
-    ) -> None:
-        self._bookings = bookings
-        self._directory = directory
-        self._ask = ask
-        self._accept = accept
-        self._turn_down = turn_down
-        self._withdraw = withdraw
-        self._wait = wait
-        self._not_in_time = not_in_time
-
-    async def ask(self, game: GameToAsk, *, at: Instant) -> None:
-        try:
-            await self._ask.execute(
-                GameToRequest(
-                    booking_id=game.proposal_id,
-                    pool_id=game.pool_id,
-                    club_id=game.club_id,
-                    sport=game.sport,
-                    kind=game.kind,
-                    start=game.start,
-                    share_grosze=game.share_grosze,
-                    first_side=game.first_side,
-                    second_side=game.second_side,
-                    court=BookedCourt(
-                        court_id=game.court.court_id, name=game.court.name
-                    ),
-                    cut_off=game.court.cut_off,
-                    answer_by=game.answer_by,
-                    filled_by=game.filled_by,
-                ),
-                at=at,
-            )
-        except CourtTaken as taken:
-            raise CourtJustTaken() from taken
-
-    async def find(self, booking_id: UUID) -> ClubRequest | None:
-        booking = await self._bookings.load(booking_id)
-        return None if booking is None else _request(booking)
-
-    async def waiting_at(self, club_id: UUID) -> Sequence[ClubRequest]:
-        found: list[ClubRequest] = []
-        for booking_id in await self._directory.waiting_at(club_id):
-            request = await self.find(booking_id)
-            if request is not None and request.waiting:
-                found.append(request)
-        return found
-
-    async def unanswered(self, *, now: Instant) -> Sequence[UUID]:
-        return await self._directory.unanswered(now=now)
-
-    async def accept(self, booking_id: UUID, *, at: Instant) -> UUID:
-        booking = await self._accept.execute(booking_id, at=at)
-        return invariant(booking.game_id, f"{booking_id} accepted with no game")
-
-    async def turn_down(
-        self,
-        booking_id: UUID,
-        *,
-        answer: ClubAnswer,
-        reason: str | None,
-        at: Instant,
-    ) -> None:
-        if answer is ClubAnswer.REFUSED:
-            await self._turn_down.refused(booking_id, reason=reason, at=at)
-        else:
-            await self._turn_down.unanswered(booking_id, at=at)
-
-    async def withdraw(
-        self,
-        booking_id: UUID,
-        *,
-        player_ids: tuple[UUID, ...],
-        left: tuple[UUID, ...] = (),
-        at: Instant,
-    ) -> bool:
-        return await self._withdraw.execute(
-            booking_id, player_ids=player_ids, left=left, at=at
-        )
-
-    async def await_a_payment(
-        self,
-        booking_id: UUID,
-        *,
-        player_ids: tuple[UUID, ...],
-        until: Instant,
-        to_fix_the_card: bool,
-        at: Instant,
-    ) -> None:
-        await self._wait.execute(
-            booking_id,
-            player_ids=player_ids,
-            until=until,
-            to_fix_the_card=to_fix_the_card,
-            at=at,
-        )
-
-    async def payment_not_in_time(
-        self,
-        booking_id: UUID,
-        *,
-        player_ids: tuple[UUID, ...],
-        for_good: bool,
-        at: Instant,
-    ) -> bool:
-        return await self._not_in_time.execute(
-            booking_id, player_ids=player_ids, for_good=for_good, at=at
-        )
-
-
-def _request(booking: Booking) -> ClubRequest | None:
-    """The request a booking was put to its club as — ``None`` for one born
-    booked, which no club was asked about."""
-
-    if booking.answer_by is None:
-        return None
-    return ClubRequest(
-        booking_id=booking.booking_id,
-        club_id=booking.club_id,
-        sport=booking.sport,
-        kind=booking.kind,
-        start=booking.start,
-        share_grosze=booking.share_grosze,
-        court_name=booking.court.name,
-        first_side=booking.first_side,
-        second_side=booking.second_side,
-        cut_off=booking.cut_off,
-        answer_by=booking.answer_by,
-        waiting=booking.is_waiting,
-        pay_by=booking.pay_by,
-    )
-
-
-@final
 class BookingsBookedGames:
     def __init__(self, directory: BookingDirectory) -> None:
         self._directory = directory
@@ -449,19 +296,14 @@ class BookingsPlayerBookings:
 
 
 _STAGES = {
-    BookingState.WAITING_FOR_THE_CLUB: BookingStage.WAITING_FOR_THE_CLUB,
-    BookingState.WAITING_FOR_A_PAYMENT: BookingStage.WAITING_FOR_A_PAYMENT,
     BookingState.BOOKED: BookingStage.BOOKED,
     BookingState.SEAT_OPEN: BookingStage.SEAT_OPEN,
     BookingState.CALLED_OFF: BookingStage.CALLED_OFF,
 }
 
 _CALLED_OFF = {
-    CalledOff.REFUSED: CalledOffReason.REFUSED,
-    CalledOff.NO_ANSWER: CalledOffReason.NO_ANSWER,
     CalledOff.SHORT_AT_THE_CUT_OFF: CalledOffReason.SHORT_AT_THE_CUT_OFF,
     CalledOff.CANCELLED_BY_THE_CLUB: CalledOffReason.CANCELLED_BY_THE_CLUB,
-    CalledOff.PAYMENT_NOT_IN_TIME: CalledOffReason.PAYMENT_NOT_IN_TIME,
 }
 
 _CANCEL_REASONS = {
@@ -472,20 +314,15 @@ _CANCEL_REASONS = {
 }
 
 
-def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
-    """The game a booking is to its players — a request taken back because a
-    seat opened, or because the payment the club's yes waited on did not come
-    (#626), is a game gone back to filling (``FILLING_AGAIN``), the people still
-    In as the booking left them: Proposals folds it against the proposal
-    (``as_filling_again``). **To its club** a request taken back is nothing
-    (#624), and one whose payment did not come is called off (#626, Q112)."""
+def _booked_game(booking: Booking) -> BookedGame:
+    """The game a booking is, to its players and to its club alike."""
 
-    filling_again = booking.taken_back and not for_the_club
     return BookedGame(
         booking_id=booking.booking_id,
         pool_id=booking.pool_id,
         club_id=booking.club_id,
         court_name=booking.court.name,
+        indoor=booking.court.indoor,
         sport=booking.sport,
         kind=booking.kind,
         start=booking.start,
@@ -494,11 +331,9 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
         second_side=booking.second_side,
         cut_off=booking.cut_off,
         game_id=booking.game_id,
-        stage=BookingStage.FILLING_AGAIN if filling_again else _STAGES[booking.state],
+        stage=_STAGES[booking.state],
         called_off=(
-            None
-            if booking.called_off is None or filling_again
-            else _CALLED_OFF[booking.called_off]
+            None if booking.called_off is None else _CALLED_OFF[booking.called_off]
         ),
         short_from=booking.short_from,
         open=tuple(_open_seat(left) for left in booking.open_departures),
@@ -509,26 +344,11 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
             if booking.cancel_reason is None
             else _CANCEL_REASONS[booking.cancel_reason]
         ),
-        answer_by=booking.answer_by,
         version=booking.version,
-        paying={
-            **(
-                {}
-                if booking.pay_by is None
-                else {payer: booking.pay_by for payer in booking.payers}
-            ),
-            # A booked game whose holding was refused (#639): the payer's own
-            # time to fix the card.
-            **booking.fixing_until,
-        },
-        time_to=(
-            TimeTo.FIX_THE_CARD
-            if booking.cards_to_fix
-            or (booking.pay_by is not None and booking.to_fix_the_card)
-            else TimeTo.PAY
-            if booking.pay_by is not None
-            else None
-        ),
+        # A booked game whose holding was refused (#639): the payer's own time
+        # to fix the card.
+        paying=booking.fixing_until,
+        time_to=TimeTo.FIX_THE_CARD if booking.cards_to_fix else None,
         booked_at=booking.booked_at,
         cancelled_at=booking.cancelled_at,
         cards_to_fix={
@@ -579,17 +399,13 @@ class BookingsClubBookings:
         found: list[BookedGame] = []
         for booking_id in await self._directory.at_club(club_id, start=start, end=end):
             booking = await self._bookings.load(booking_id)
-            # A request taken back is no booking of the club's: the game is
-            # filling again (#624). One whose payment did not come in time is
-            # called off at its club (#626).
-            if booking is not None and booking.called_off is not CalledOff.SEAT_OPENED:
-                found.append(_booked_game(booking, for_the_club=True))
+            if booking is not None:
+                found.append(_booked_game(booking))
         return found
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
         return [
-            CourtToMoveTo(court_id=court.court_id, name=court.name)
-            for court in await self._move.free_courts(booking_id)
+            _to_move_to(court) for court in await self._move.free_courts(booking_id)
         ]
 
     async def move(
@@ -599,17 +415,43 @@ class BookingsClubBookings:
             court = await self._move.execute(booking_id, court_id, at=at)
         except CourtTaken as taken:
             raise CourtJustTaken() from taken
-        return None if court is None else CourtToMoveTo(court.court_id, court.name)
+        if court is None:
+            return None
+        return _to_move_to(court)
+
+    async def absorbing_court(
+        self, booking_id: UUID, *, because: ClubCancelReason
+    ) -> CourtToMoveTo | None:
+        court = await self._cancel.absorbing_court(
+            booking_id, CancelReason(because.value)
+        )
+        return None if court is None else _to_move_to(court)
 
     async def cancel(
-        self, booking_id: UUID, *, because: ClubCancelReason, at: Instant
-    ) -> ClubCancellation:
-        cancelled = await self._cancel.execute(
-            booking_id, CancelReason(because.value), at=at
-        )
+        self,
+        booking_id: UUID,
+        *,
+        because: ClubCancelReason,
+        anyway: bool,
+        at: Instant,
+    ) -> ClubCancellation | CourtToMoveTo:
+        try:
+            cancelled = await self._cancel.execute(
+                booking_id, CancelReason(because.value), anyway=anyway, at=at
+            )
+        except CourtTaken as taken:
+            raise CourtJustTaken() from taken
+        if isinstance(cancelled, MovedByCancel):
+            return _to_move_to(cancelled.court)
         return ClubCancellation(
             still_in=cancelled.still_in, refunded=cancelled.refunded
         )
+
+
+def _to_move_to(court: BookedCourt) -> CourtToMoveTo:
+    """A booked game's court, as the club's desk reads it."""
+
+    return CourtToMoveTo(court_id=court.court_id, name=court.name, indoor=court.indoor)
 
 
 @final

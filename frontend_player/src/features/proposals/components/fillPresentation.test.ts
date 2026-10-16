@@ -43,69 +43,32 @@ describe('It’s a game! as a listener hears it', () => {
     );
   });
 
-  it('says the line under the word after the picture, a sentence a clause (Q103)', () => {
-    const line = itsAGameLine({
-      of: 'theClub',
-      club: 'Kazimierz Padel',
-      answerBy: { at: '2026-09-30T19:15:00Z', today: true },
-    });
+  it('says the line under the word after the picture (Q110)', () => {
+    const line = itsAGameLine({ until: { at: '2026-10-06T12:40:00Z', today: true } });
     expect(
       itsAGameSentence(
         { yours: [{ playerId: 'me' }], theirs: [{ playerId: 'k', name: 'Kuba Wiśniewski' }] },
         line.spoken,
       ),
     ).toBe(
-      'It’s a game! You against Kuba Wiśniewski. Kazimierz Padel answers by 21:15. Nobody pays until it confirms',
+      'It’s a game! You against Kuba Wiśniewski. Waiting for one payment until 14:40. Nobody pays until it’s in',
     );
-  });
-});
-
-/** Wednesday 30 September 2026 in Warsaw. */
-describe('It’s a game!’s line at a club that confirms (Q103)', () => {
-  it('says when the club answers — the hour alone that day, as Home writes it', () => {
-    expect(
-      itsAGameLine({
-        of: 'theClub',
-        club: 'Kazimierz Padel',
-        answerBy: { at: '2026-09-30T19:15:00Z', today: true },
-      }).drawn,
-    ).toBe('Kazimierz Padel answers by 21:15 · Nobody pays until it confirms');
-  });
-
-  it('names the weekday when the deadline falls on another day', () => {
-    expect(
-      itsAGameLine({
-        of: 'theClub',
-        club: 'Kazimierz Padel',
-        answerBy: { at: '2026-10-01T07:00:00Z', today: false },
-      }).drawn,
-    ).toBe('Kazimierz Padel answers by Thu 09:00 · Nobody pays until it confirms');
-  });
-
-  it('says only that nobody pays until it confirms, with no deadline to give', () => {
-    expect(itsAGameLine({ of: 'theClub', club: 'Kazimierz Padel' })).toEqual({
-      drawn: 'Nobody pays until Kazimierz Padel confirms',
-      spoken: 'Nobody pays until Kazimierz Padel confirms',
-    });
-    expect(itsAGameLine({ of: 'theClub' }).drawn).toBe('Nobody pays until the club confirms');
   });
 });
 
 /** Tuesday 6 October 2026 in Warsaw. */
 describe('It’s a game!’s line while one payment is missing (Q110)', () => {
   it('says until when, the hour alone that day, and never whose — drawn with dots, spoken in sentences', () => {
-    expect(
-      itsAGameLine({ of: 'aPayment', until: { at: '2026-10-06T12:40:00Z', today: true } }),
-    ).toEqual({
+    expect(itsAGameLine({ until: { at: '2026-10-06T12:40:00Z', today: true } })).toEqual({
       drawn: 'Waiting for one payment · until 14:40 · Nobody pays until it’s in',
       spoken: 'Waiting for one payment until 14:40. Nobody pays until it’s in',
     });
   });
 
   it('names the weekday when the time falls on another day', () => {
-    expect(
-      itsAGameLine({ of: 'aPayment', until: { at: '2026-10-06T22:15:00Z', today: false } }).drawn,
-    ).toBe('Waiting for one payment · until Wed 00:15 · Nobody pays until it’s in');
+    expect(itsAGameLine({ until: { at: '2026-10-06T22:15:00Z', today: false } }).drawn).toBe(
+      'Waiting for one payment · until Wed 00:15 · Nobody pays until it’s in',
+    );
   });
 });
 

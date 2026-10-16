@@ -1,5 +1,5 @@
-"""What ``bookings`` demands of the rest of the platform (#543, #544), run
-against every registered implementation.
+"""What ``bookings`` demands of the rest of the platform (#541, #544, #673),
+run against every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/booking_demands.py`` is
@@ -22,31 +22,33 @@ from app.bootstrap.booking_demands import (
     implementations_of,
 )
 from app.bootstrap.composition import (
+    build_club_courts_at_the_hour,
     build_domain_event_store,
     build_event_publisher,
     build_game_opening,
     build_game_repository,
 )
 from app.kernel import InvariantViolated, Sport, instant
+from app.modules.bookings.domain.booking import CancelReason
 from app.modules.bookings.domain.ports import (
     ClubCourtsAtTheHour,
     ClubDesk,
     ClubDesks,
+    CourtClosures,
     GameChanges,
     GameOpening,
-    PlayerAddress,
-    PlayerAddresses,
 )
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
 from app.shared.ids import new_uuid
-from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
+from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
     a_club_and_its_desk,
+    every_hour_of_the_week,
 )
 
 
@@ -83,7 +85,7 @@ def test_every_registered_implementation_answers_a_declared_demand():
 
 
 # --------------------------------------------------------------------------- #
-# ClubCourtsAtTheHour — the first free court, its cut-off and time to confirm
+# ClubCourtsAtTheHour — the first free court and its cut-off
 # --------------------------------------------------------------------------- #
 
 
@@ -91,9 +93,7 @@ def test_every_registered_implementation_answers_a_declared_demand():
 async def test_the_first_free_court_comes_with_the_club_s_terms(
     implementation, client, session
 ):
-    club_id, _ = await a_club_and_its_desk(
-        client, way="ON_REQUEST", time_to_confirm_minutes=20
-    )
+    club_id, _ = await a_club_and_its_desk(client)
     courts: ClubCourtsAtTheHour = implementation.build(session)
 
     found = await courts.first_free(
@@ -102,7 +102,7 @@ async def test_the_first_free_court_comes_with_the_club_s_terms(
 
     assert found is not None
     assert found.court.name == "Court 1"
-    assert (found.cut_off_hours, found.time_to_confirm_minutes) == (24, 20)
+    assert found.cut_off_hours == 24
     assert (
         await courts.first_free(UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE)
         is None
@@ -113,20 +113,73 @@ async def test_the_first_free_court_comes_with_the_club_s_terms(
 async def test_the_free_courts_at_an_hour_are_the_sport_s_in_the_club_s_order(
     implementation, client, session
 ):
-    """#547: where a booked game may be moved."""
+    """#547: where a booked game may be moved — each with its kind, indoor or
+    outdoor, which the move keeps (#671, Q122), and the share one player pays
+    for it at the hour, which a club's cancel asks of a court before it absorbs
+    the game (#672)."""
 
-    club_id, _ = await a_club_and_its_desk(client)
+    club_id, desk = await a_club_and_its_desk(client)
+    outdoor = await adds_a_court(
+        client, desk, name="Court 4", sport="PADEL", indoor=False
+    )
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
     courts: ClubCourtsAtTheHour = implementation.build(session)
 
     padel = await courts.free_courts(
         UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
     )
 
-    assert [court.name for court in padel] == ["Court 1"]
+    assert [(one.court.name, one.court.indoor, one.share_grosze) for one in padel] == [
+        ("Court 1", True, 30_00),
+        ("Court 4", False, 30_00),
+    ]
+    first = await courts.first_free(
+        UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
+    )
+    assert first is not None and first.court.indoor is True
     squash = await courts.free_courts(
         UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE
     )
     assert list(squash) == []
+
+
+# --------------------------------------------------------------------------- #
+# CourtClosures — the court a club's cancel took, closed for the hour (#673)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(CourtClosures))
+async def test_a_court_closed_by_a_cancel_is_off_sale_for_that_hour_alone(
+    implementation, client, session
+):
+    club_id, desk = await a_club_and_its_desk(client)
+    court_3 = await adds_a_court(client, desk, name="Court 3", sport="PADEL")
+    await sets_hours(client, desk, [court_3["id"]], every_hour_of_the_week())
+    courts = build_club_courts_at_the_hour(session)
+    [court_1, _] = await courts.free_courts(
+        UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
+    )
+    closures: CourtClosures = implementation.build(session)
+
+    await closures.close(
+        UUID(club_id),
+        court_1.court.court_id,
+        start=SATURDAY_FIVE,
+        because=CancelReason.REPAIR,
+        at=MONDAY_MORNING,
+    )
+    await session.commit()
+
+    def names(free) -> list[str]:
+        return [one.court.name for one in free]
+
+    assert names(
+        await courts.free_courts(UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE)
+    ) == ["Court 3"]
+    an_hour_on = SATURDAY_FIVE + timedelta(hours=1)
+    assert names(
+        await courts.free_courts(UUID(club_id), sport=Sport.PADEL, start=an_hour_on)
+    ) == ["Court 1", "Court 3"]
 
 
 # --------------------------------------------------------------------------- #
@@ -145,22 +198,6 @@ async def test_a_club_s_desk_is_its_one_sign_in_and_its_name(
         email="desk@ogrody.pl", club_name="Ogrody 33"
     )
     assert await desks.of(new_uuid()) is None
-
-
-# --------------------------------------------------------------------------- #
-# PlayerAddresses — whom the club's no, or its silence, is emailed to (#623)
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize("implementation", registered(PlayerAddresses))
-async def test_a_player_is_addressed_at_their_sign_in(implementation, client, session):
-    ola, _ = await players.register(client, "ola")
-    addresses: PlayerAddresses = implementation.build(session)
-
-    found = await addresses.of([ola, new_uuid()])
-
-    assert found == {ola: PlayerAddress(email="ola@example.com")}
-    assert await addresses.of([]) == {}
 
 
 # --------------------------------------------------------------------------- #

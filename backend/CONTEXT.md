@@ -318,10 +318,10 @@ there; they are not repeated here.
   handling. Any other provider is refused `provider_not_the_fake`. _Avoid_: *mock Stripe*,
   *webhook simulator*, a control with an effect the real provider could not have.
 - **Situation** — a named builder in the dev console that sets the stage for one mechanic in
-  one press — *Fresh deal*, *Needs her yes · Instant club* and · *On request club*, *Card
-  declines at the fill*, *About to expire*, *Kuba leaves before the cut-off*, *Empty seat at
-  the cut-off*, *Ania leaves*, *A posted game*, *Just played* and *Club day close* — so the
-  rows can play it out. It
+  one press — *Fresh deal*, *Needs her yes*, *Card declines at the fill*,
+  *About to expire*, *Kuba leaves before the cut-off*, *Empty seat at the cut-off*, *Ania
+  leaves*, *A posted game*, *Just played* and *Club day close* — so the rows can play it
+  out. It
   runs **the same use cases a request runs** (built from the seed's building blocks,
   ADR-0029), so it can never leave a state the app could not reach;
   it **writes history, never time** — the server's clock is never moved, and what happened

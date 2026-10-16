@@ -13,17 +13,16 @@ Every claim is read where somebody would read it: the protagonist's deck and
 Home, the desk's payouts and its mail — and, for what only a job records, the
 console's own state pane, which reads the record rather than the clock.
 
-The world: **Bonarka Arena**, Instant, a padel court every hour at 30 zł a
-seat, with a 24-hour cut-off and two hours' notice; **Kazimierz Padel**, On
-request with thirty minutes to confirm — both desks on the seed's reserved TLD
-— and nine members the seed could have made. The clock stands on **Monday 5
+The world: **Bonarka Arena**, a padel court every hour at 30 zł a seat, sold
+until a day before, with a 24-hour cut-off — its desk on the seed's
+reserved TLD — and nine members the seed could have made. The clock stands on **Monday 5
 October 2026, 08:00 in Kraków**, so the last club day closed is Sunday's.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -63,7 +62,6 @@ from tests.unit.fake_clock import MovableClock
 GAMES_JOBS = (
     "proposer",
     "proposal-expiry",
-    "request-timeout",
     "time-to-pay",
     "holding",
     "cut-off",
@@ -90,12 +88,9 @@ def clock(app, payments):
 
 @dataclass(frozen=True)
 class World:
-    #: Instant: a 24-hour cut-off and two hours' notice.
+    #: Sold until a day before, with a 24-hour cut-off.
     bonarka: str
     bonarka_desk: dict
-    #: On request, thirty minutes to confirm.
-    kazimierz: str
-    kazimierz_desk: dict
     group: UUID
     #: The protagonist — the phone in the tester's hand.
     marta: dict
@@ -121,13 +116,6 @@ async def world(client, session_factory, payments, clock) -> World:
     bonarka, bonarka_desk = await a_club_and_its_desk(
         client, email=f"desk.bonarka@{SEED}"
     )
-    kazimierz, kazimierz_desk = await a_club_and_its_desk(
-        client,
-        name="Kazimierz Padel",
-        email=f"desk.kazimierz@{SEED}",
-        way="ON_REQUEST",
-        point=(50.05, 19.94),
-    )
     marta, *rest = [
         await a_member(client, session_factory, payments, name, domain=SEED)
         for name in (
@@ -143,9 +131,7 @@ async def world(client, session_factory, payments, clock) -> World:
         )
     ]
     group = await a_group(client, marta, bonarka, *rest)
-    return World(
-        bonarka, bonarka_desk, kazimierz, kazimierz_desk, group, marta, tuple(rest)
-    )
+    return World(bonarka, bonarka_desk, group, marta, tuple(rest))
 
 
 async def runs(client, job: str) -> dict:
@@ -284,10 +270,11 @@ async def test_run_it_now_on_the_proposer_deals_nothing_twice(client, clock, wor
 async def test_run_it_now_leaves_a_card_before_its_book_by_and_records_it_after(
     client, session_factory, clock, world
 ):
-    """Monday 11:00 at Bonarka: two hours' notice, so it books by 09:00."""
+    """Tuesday 09:00 at Bonarka: a day's release lead, so it books by Monday
+    09:00."""
 
     game = await a_card(
-        session_factory, clock, world, world.bonarka, start=warsaw(5, 11)
+        session_factory, clock, world, world.bonarka, start=warsaw(6, 9)
     )
 
     assert (await runs(client, "proposal-expiry"))["done"] == 0
@@ -340,27 +327,10 @@ async def test_a_card_still_filling_counts_down_to_its_book_by(
     pane = pane_of(await board_of(client, world.group), game)
 
     assert moments_of(pane) == {
-        "BOOK_BY": (at(SATURDAY_FIVE - timedelta(hours=2)), "proposal-expiry")
+        "BOOK_BY": (at(SATURDAY_FIVE - timedelta(days=1)), "proposal-expiry")
     }
     [moment] = pane["moments"]
     assert moment["says"]
-
-
-async def test_a_request_counts_down_to_the_club_s_answer(
-    client, session_factory, clock, world
-):
-    game = await a_card(session_factory, clock, world, world.kazimierz)
-    assert (await all_say_yes(client, game, world))["waiting_for_the_club"] is True
-
-    pane = pane_of(await board_of(client, world.group), game)
-
-    # A request no longer ends at its book-by: the club's answer is its moment.
-    assert moments_of(pane) == {
-        "CLUB_ANSWER_DUE": (
-            at(MONDAY_MORNING + timedelta(minutes=30)),
-            "request-timeout",
-        )
-    }
 
 
 async def test_a_booked_game_counts_down_to_its_cut_off_and_its_days_close(
@@ -467,10 +437,11 @@ async def test_about_to_expire_deals_her_a_card_that_goes_at_the_next_full_hour(
 
     assert pressed.status_code == 200, pressed.text
     body = pressed.json()
-    # The next full hour a book-by can be: Monday 11:00 at two hours' notice.
+    # The next full hour a book-by can be: Tuesday 09:00, a day's release
+    # lead before it.
     assert (body["book_by"], body["starts_at"]) == (
         at(warsaw(5, 9)),
-        at(warsaw(5, 11)),
+        at(warsaw(6, 9)),
     )
     assert body["club_name"] == "Bonarka Arena"
     assert "fires at 09:00 · 60 min" in body["says"]
@@ -644,14 +615,21 @@ async def test_club_day_close_writes_the_last_closed_day_s_played_games(
     assert (body["day"], body["club_name"]) == (SUNDAY, "Bonarka Arena")
     assert body["closed_at"] == at(warsaw(4, 23))
     # Two games, two fours of the group — never her: her week is the phone's.
-    assert len(body["games"]) == 2
+    played, booked = body["games"]
     seated = [p["player_id"] for game in body["games"] for p in game["people"]]
     assert len(seated) == len(set(seated)) == 8
     assert str(world.marta["id"]) not in seated
-    for game in body["games"]:
-        # Played on Sunday, and booked inside it: after Saturday's close.
-        assert at(warsaw(4, 7)) <= game["starts_at"] <= at(warsaw(4, 22))
-        assert at(warsaw(3, 23)) <= game["booked_at"] < game["starts_at"]
+    # Played on Sunday, and booked before it began: no game fills later than a
+    # day before it at Bonarka (#670), so at its release time, an hour early.
+    assert played["played"] is True
+    assert at(warsaw(4, 7)) <= played["starts_at"] <= at(warsaw(4, 22))
+    assert played["booked_at"] == at(
+        datetime.fromisoformat(played["starts_at"]) - timedelta(days=1, hours=1)
+    )
+    # Booked inside Sunday — after Saturday's close — for a day ahead or more.
+    assert booked["played"] is False
+    assert booked["booked_at"] == at(warsaw(4, 22))
+    assert datetime.fromisoformat(booked["starts_at"]) > warsaw(5, 22)
     assert await home_of(client, world.marta) == []
 
     # The shares are captured from the outbox; then the day close pays the
@@ -678,23 +656,30 @@ async def test_club_day_close_writes_the_last_closed_day_s_played_games(
 async def test_the_day_close_leaves_a_day_that_has_not_closed(
     client, session_factory, payments, clock, world
 ):
-    """Her game today at Bonarka is played by the evening, but the day closes
-    at 23:00: until then neither the payout nor the summary is due."""
+    """Her game on Tuesday morning at Bonarka is booked on Monday — a day ahead
+    at least (#670) — and played by Tuesday evening, but a day closes at 23:00:
+    until Monday's close its desk is not told of it, and until Tuesday's the
+    club is not paid for it."""
 
-    clock.move(timedelta(hours=-3))  # filled at five in the morning
     game = await a_card(
-        session_factory, clock, world, world.bonarka, start=warsaw(5, 9)
+        session_factory, clock, world, world.bonarka, start=warsaw(6, 9)
     )
     assert (await all_say_yes(client, game, world))["booked"] is not None
-    clock.move(timedelta(hours=3 + 14))  # Monday 22:00, the game long over
+    clock.move(timedelta(hours=14))  # Monday 22:00
     await players.deliver_the_outbox(session_factory, payments=payments)
-
-    assert (await runs(client, "club-payouts"))["done"] == 0
     assert (await runs(client, "new-bookings-summary"))["done"] == 0
 
     clock.move(timedelta(hours=1))  # 23:00: Monday has closed
-    assert (await runs(client, "club-payouts"))["done"] == 1
     assert (await runs(client, "new-bookings-summary"))["done"] == 1
+    # Its cut-off — Monday 09:00 — took the shares.
+    assert (await runs(client, "cut-off"))["done"] == 1
+    await players.deliver_the_outbox(session_factory, payments=payments)
+
+    clock.move(timedelta(hours=23))  # Tuesday 22:00, the game long over
+    assert (await runs(client, "club-payouts"))["done"] == 0
+
+    clock.move(timedelta(hours=1))  # 23:00: Tuesday has closed
+    assert (await runs(client, "club-payouts"))["done"] == 1
 
 
 async def test_club_day_close_pressed_again_finds_the_day_closed_out(

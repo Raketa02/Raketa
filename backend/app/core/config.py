@@ -455,50 +455,35 @@ class Settings(BaseSettings):
     # `ProposalExpired` a poster will be told from, and a projection whose live
     # reads stay narrow as it grows.
     #
-    # **The book-by itself is emphatically not here**: it is the club's, derived
-    # from its way of working in `clubs/domain/raketa_terms.py`, and an
-    # environment that could move it would decide when a player's yes lapses.
+    # **The book-by itself is emphatically not here**: it is the club's release
+    # time, derived from its release lead in `clubs/domain/raketa_terms.py`, and
+    # an environment that could move it would decide when a player's yes lapses.
     #
     # Every minute, chosen against the record's lag rather than a backlog: the
     # read is one indexed range of unrecorded endings.
     PROPOSAL_EXPIRY_ENABLED: bool = True
     PROPOSAL_EXPIRY_INTERVAL_SECONDS: float = 60
 
-    # --- the On request timeout (#543, the mechanics §16.8, §16.16)
+    # --- time to pay (#625, the mechanics §12.2, Q109)
     #
-    # **Correctness depends on it**, unlike the book-by sweep: an unanswered
-    # request already refuses the club's answer past its deadline at every read,
-    # but only this calls the game off — *Called off · no answer* — frees the
-    # court it held and makes its players due a new card first.
-    #
-    # **The deadline itself is emphatically not here**: it is the club's time to
-    # confirm, a Raketa setting in `clubs/domain/raketa_terms.py`. Every thirty
-    # seconds, because that window is minutes long and a court held past it is
-    # an hour nobody can sell.
-    REQUEST_TIMEOUT_ENABLED: bool = True
-    REQUEST_TIMEOUT_INTERVAL_SECONDS: float = 30
-
-    # --- time to pay (#625, #626, the mechanics §12.2, Q109)
-    #
-    # **Correctness depends on it**, as on the timeout: a payer acting past
-    # their time already runs it out first, but only this reopens the seat for
-    # everybody else, lets the holds kept for it go — and, at the club's yes,
-    # calls the booking off and frees the court. **The thirty minutes are
-    # emphatically not here**: they are domain, `proposals/domain/limits.py`'s
-    # `TIME_TO_PAY`. Every thirty seconds, because the window is minutes long
-    # and the others' money is held on their cards meanwhile.
+    # **Correctness depends on it**: a payer acting past their time already
+    # runs it out first, but only this reopens the seat for everybody else and
+    # lets the holds kept for it go. **The thirty minutes are emphatically not
+    # here**: they are domain, `proposals/domain/limits.py`'s `TIME_TO_PAY`.
+    # Every thirty seconds, because the window is minutes long and the others'
+    # money is held on their cards meanwhile.
     TIME_TO_PAY_ENABLED: bool = True
     TIME_TO_PAY_INTERVAL_SECONDS: float = 30
 
     # --- the cut-off (#544, the mechanics §12.3, §16.12)
     #
-    # **Correctness depends on it**, as on the timeout: a booked game with a seat
-    # open since before its cut-off reads *called off* at every read from the
-    # cut-off on, but only this gives everybody still in their money back, frees
-    # the court and tells the club. **The cut-off itself is emphatically not
-    # here**: it is the club's free-cancellation setting, kept on each booking as
-    # it stood when the game filled. Every thirty seconds, because the money is
-    # owed from the cut-off on.
+    # **Correctness depends on it**, as on time to pay: a booked game with a
+    # seat open since before its cut-off reads *called off* at every read from
+    # the cut-off on, but only this gives everybody still in their money back,
+    # frees the court and tells the club. **The cut-off itself is emphatically
+    # not here**: it is the club's free-cancellation setting, kept on each
+    # booking as it stood when the game filled. Every thirty seconds, because
+    # the money is owed from the cut-off on.
     CUT_OFF_ENABLED: bool = True
     CUT_OFF_INTERVAL_SECONDS: float = 30
 

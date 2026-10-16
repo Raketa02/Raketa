@@ -13,8 +13,10 @@ cohort: players at the protagonist's own padel Level, free on her evenings, who
 want competitive padel as she does.
 
 **Her booked games** (#541, ``app/seeds/bookings.py``) are seeded on top of the
-same world — two games filled by four yeses, hers last — and read back where
-she would look: her receipts, the club named as the seller, and her games.
+same world — one at Bonarka Arena on the day and one at Kazimierz Padel next
+week, each filled by four yeses, hers last, and booked the moment it filled —
+read back where she would look: her receipts, the club named as the seller, and
+her games.
 
 **Her rescues** (#545, ``app/seeds/rescues.py``) on top of those: a seat that
 fills by the cut-off on every run, and one offered until the start whenever the
@@ -337,6 +339,12 @@ async def test_she_has_a_game_on_the_day_paid_and_one_before_its_cut_off_held(
     assert later.state == BEFORE_THE_CUT_OFF
     assert later.start > now + timedelta(hours=24)
     assert [booking.made for booking in seeded.bookings] == [True, True]
+    # Next week's at Kazimierz Padel, booked the moment her yes filled it — no
+    # club confirms a game (#669).
+    assert [booking.club for booking in seeded.bookings] == [
+        "Bonarka Arena",
+        "Kazimierz Padel",
+    ]
     # The crowd's game filled far ahead: every seat checked, held at its
     # Holding time four days before the cut-off (#639).
     far = seeded.far_ahead

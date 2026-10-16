@@ -141,7 +141,6 @@ describe('a yes on a post already happening', () => {
       proposalId: 'p-9',
       type: 'CHALLENGE',
       court: 'COURT_AVAILABLE',
-      club: post.club,
     });
   });
 

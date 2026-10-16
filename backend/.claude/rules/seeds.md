@@ -39,6 +39,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `decision_on_record` agrees to believe. The object store is the one thing the seed writes
   that lives outside the database, so the run **asks it one question first** and reports
   rather than dies when it cannot answer.
+- **At least one live club has indoor and outdoor courts of one sport at the same Raketa
+  hours** (#671, Q122), and the run refuses a seed with none
+  (`_refuse_a_seed_with_no_club_of_both_kinds`): Bonarka Arena's padel Court 4 is outdoor
+  beside Courts 1–3 indoors — her game books Court 1 and may move to 2 or 3, never 4, and a
+  padel card there promises neither kind — and Ogrody 33's tennis books Kort centralny,
+  outdoors, first, which may move indoors to Court 4. The report names each such club's
+  sports.
 - **What the seed promises about the screens is proved by reading them**
   (`app/seeds/screens.py`): the group deck, Fill in, the posting grid and the club's
   Bookings day are each read through their own use case as the protagonist or her club,

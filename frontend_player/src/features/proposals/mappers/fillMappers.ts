@@ -21,7 +21,6 @@ export function toYesAnswer(wire: Schemas['YesAnswerResponse']): YesAnswer {
     proposalId: wire.proposal_id,
     openSeats: wire.open_seats,
     booked: booked === null ? null : { bookingId: booked.booking_id, gameId: booked.game_id },
-    waitingForTheClub: wire.waiting_for_the_club,
     yourPayment: refused === null ? null : toYourPayment(refused),
     ...(awaited === null ? {} : { paymentAwaitedUntil: awaited }),
   };
@@ -54,7 +53,9 @@ type WireToConfirm =
 function toPaymentToConfirm(wire: WireToConfirm): PaymentToConfirm | undefined {
   const { refusal } = wire;
   if (refusal !== 'AUTHENTICATION_REQUIRED' && refusal !== 'DECLINED') return undefined;
-  const yes = toLiveYes(wire);
+  // The refused share's wire (`PaymentToConfirmSchema`) publishes no court kind, so its yes is read
+  // as mixed: the row it feeds draws no kind.
+  const yes = toLiveYes({ ...wire, indoor: null });
   const confirmBy: string | null | undefined = wire.confirm_by;
   const timeTo: TimeTo | null | undefined = wire.time_to;
   return yes === undefined

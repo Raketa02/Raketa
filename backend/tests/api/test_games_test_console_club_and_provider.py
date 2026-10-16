@@ -1,31 +1,30 @@
 """The games test console as the club and the payment provider (#591;
 ``docs/adr/0194`` §2–§5).
 
-**The club row** answers a request, moves and cancels as the club whose court
-it is — each press the club route's own use case, so it
-answers what the desk's own button answers, refusals included. **The payment
-provider** is the process's fake, given controls: a card set to succeed,
-decline or ask for the bank's check; a payment the bank confirms on the phone a
-laptop cannot reach the bank from; a refund delivered; and the notices it would
-have sent, replayed twice or out of order through the webhook's own handling.
-**Run it now** runs the club's answer window over what is due. And two
-situations: *Needs her yes, On request club* (3) and *Card declines at the
-fill* (4). *Check-in at the club* went with desk check-in (#651).
+**The club row** moves and cancels as the club whose court it is — a cancel
+another free court absorbs moving the game, and *Cancel anyway* calling it off
+(#672) — each press the club route's own use case, so it answers what the
+desk's own button answers, refusals included. **The payment provider** is the
+process's fake, given controls: a card set to succeed, decline or ask for the
+bank's check; a payment the bank confirms on the phone a laptop cannot reach
+the bank from; a refund delivered; and the notices it would have sent,
+replayed twice or out of order through the webhook's own handling. And one
+situation: *Card declines at the fill* (4). *Check-in at the club* went with
+desk check-in (#651), and the club's Accept and Refuse, the club's answer
+window and *Needs her yes, On request club* (3) with On request (#669).
 
 Every claim is read where somebody would read it: the protagonist's Home, deck,
 receipts and booking details, and the desk's own lists.
 
-The world: **Bonarka Arena**, Instant, two padel courts at 30 zł a seat, and
-**Kazimierz Padel**, On request with thirty minutes to confirm, a kilometre
-away — both desks addressed on the seed's reserved TLD — and four members the
-seed could have made. The clock stands on **Monday 5 October 2026, 08:00 in
+The world: **Bonarka Arena**, two padel courts at 30 zł a seat, its
+desk addressed on the seed's reserved TLD, and four members the seed could have
+made. The clock stands on **Monday 5 October 2026, 08:00 in
 Kraków**.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -63,9 +62,6 @@ from tests.api.proposals_world import (
 )
 from tests.unit.fake_clock import MovableClock
 
-#: Thirty minutes, Kazimierz's time to confirm.
-TIME_TO_CONFIRM = timedelta(minutes=30)
-#: Monday at 09:00 — the first hour Bonarka sells that has not begun.
 
 
 @pytest.fixture
@@ -82,9 +78,6 @@ class World:
     #: Instant, with Court 1 and Court 3 for padel.
     bonarka: str
     bonarka_desk: dict
-    #: On request, thirty minutes to confirm.
-    kazimierz: str
-    kazimierz_desk: dict
     group: UUID
     #: The protagonist — the phone in the tester's hand.
     marta: dict
@@ -108,13 +101,6 @@ async def world(client, session_factory, payments, clock) -> World:
     )
     second = await adds_a_court(client, bonarka_desk, name="Court 3", sport="PADEL")
     await sets_hours(client, bonarka_desk, [second["id"]], every_hour_of_the_week())
-    kazimierz, kazimierz_desk = await a_club_and_its_desk(
-        client,
-        name="Kazimierz Padel",
-        email=f"desk.kazimierz@{SEED}",
-        way="ON_REQUEST",
-        point=(50.05, 19.94),
-    )
     marta, kuba, zofia, marek = [
         await a_member(client, session_factory, payments, name, domain=SEED)
         for name in ("marta", "kuba", "zofia", "marek")
@@ -123,8 +109,6 @@ async def world(client, session_factory, payments, clock) -> World:
     return World(
         bonarka,
         bonarka_desk,
-        kazimierz,
-        kazimierz_desk,
         group,
         marta,
         kuba,
@@ -157,16 +141,6 @@ async def all_but_hers(client, game: UUID, world: World) -> None:
     for member in world.three:
         said = await says(client, CONSOLE, "yes", member, game)
         assert said.status_code == 200, said.text
-
-
-async def a_request(client, session_factory, clock, world: World, **kwargs) -> UUID:
-    """The four's game at Kazimierz, her yes last: waiting for the club."""
-
-    game = await a_card(session_factory, clock, world, world.kazimierz, **kwargs)
-    await all_but_hers(client, game, world)
-    hers = await says(client, PLAYER, "yes", world.marta, game)
-    assert hers.json()["waiting_for_the_club"] is True, hers.text
-    return game
 
 
 async def a_booked_game(
@@ -211,12 +185,6 @@ async def her_home_game(client, world: World, game: UUID) -> dict:
     return found
 
 
-async def waiting_at(client, desk: dict) -> list[dict]:
-    read = await client.get("/api/v1/club/bookings/waiting", headers=desk)
-    assert read.status_code == 200, read.text
-    return read.json()["bookings"]
-
-
 async def the_desk_s_day(client, desk: dict) -> list[dict]:
     read = await client.get(
         "/api/v1/club/bookings", params={"date": "2026-10-05"}, headers=desk
@@ -230,8 +198,6 @@ async def the_desk_s_day(client, desk: dict) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 _CLUB_ACTS = {
-    "accept": ("POST", "acceptance"),
-    "refuse": ("POST", "refusal"),
     "free courts": ("GET", "free-courts"),
     "move": ("POST", "move"),
     "cancel": ("POST", "cancellation"),
@@ -252,67 +218,6 @@ async def club_does(
     return await client.request(
         method, f"/dev/clubs/{club}/bookings/{booking}/{tail}", json=body
     )
-
-
-@pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_accepting_a_request_books_it_as_the_club_s_own(
-    client, session_factory, clock, world, via
-):
-    game = await a_request(client, session_factory, clock, world)
-
-    accepted = await club_does(
-        client, via, "accept", world.kazimierz, world.kazimierz_desk, game
-    )
-
-    assert accepted.status_code == 200, accepted.text
-    assert accepted.json() == {
-        "outcome": "BOOKED",
-        "court_name": "Court 1",
-        "payment_due_by": None,
-        "time_to": None,
-    }
-    assert (await her_home_game(client, world, game))["status"] == "BOOKED"
-    assert await waiting_at(client, world.kazimierz_desk) == []
-
-
-@pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_accepting_an_answered_request_is_refused_alike(
-    client, session_factory, clock, world, via
-):
-    game = await a_request(client, session_factory, clock, world)
-    first = await club_does(
-        client, CLUB, "accept", world.kazimierz, world.kazimierz_desk, game
-    )
-    assert first.status_code == 200, first.text
-
-    again = await club_does(
-        client, via, "accept", world.kazimierz, world.kazimierz_desk, game
-    )
-
-    assert again.status_code == 409, again.text
-    assert code_of(again) == "request_not_waiting"
-
-
-@pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_refusing_a_request_calls_it_off_as_the_club_s_own(
-    client, session_factory, clock, world, via
-):
-    game = await a_request(client, session_factory, clock, world)
-
-    refused = await club_does(
-        client,
-        via,
-        "refuse",
-        world.kazimierz,
-        world.kazimierz_desk,
-        game,
-        body={"reason": "Court booked by a league"},
-    )
-
-    assert refused.status_code == 204, refused.text
-    home = await her_home_game(client, world, game)
-    assert (home["status"], home["called_off_reason"]) == ("CALLED_OFF", "REFUSED")
-    assert await waiting_at(client, world.kazimierz_desk) == []
 
 
 @pytest.mark.parametrize("via", [CLUB, CONSOLE])
@@ -363,7 +268,36 @@ async def test_moving_onto_a_court_that_is_not_free_is_refused_alike(
 
 
 @pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_cancelling_a_game_as_the_club_s_own(
+async def test_a_cancel_court_3_absorbs_moves_the_game_as_the_club_s_own(
+    client, session_factory, payments, clock, world, via
+):
+    """#672: Court 3 is free at the hour, indoor like Court 1 and at the same
+    price, so the cancel moves the game there and calls nothing off."""
+
+    game = await a_booked_game(client, session_factory, payments, clock, world)
+
+    cancelled = await club_does(
+        client,
+        via,
+        "cancel",
+        world.bonarka,
+        world.bonarka_desk,
+        game,
+        body={"reason": "REPAIR"},
+    )
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["outcome"] == "MOVED"
+    assert (cancelled.json()["court"]["name"], cancelled.json()["court"]["indoor"]) == (
+        "Court 3",
+        True,
+    )
+    home = await her_home_game(client, world, game)
+    assert (home["status"], home["court_name"]) == ("BOOKED", "Court 3")
+
+
+@pytest.mark.parametrize("via", [CLUB, CONSOLE])
+async def test_cancelling_a_game_anyway_as_the_club_s_own(
     client, session_factory, payments, clock, world, via
 ):
     game = await a_booked_game(client, session_factory, payments, clock, world)
@@ -375,10 +309,11 @@ async def test_cancelling_a_game_as_the_club_s_own(
         world.bonarka,
         world.bonarka_desk,
         game,
-        body={"reason": "WEATHER"},
+        body={"reason": "WEATHER", "anyway": True},
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json() == {"outcome": "CALLED_OFF", "court": None}
     home = await her_home_game(client, world, game)
     assert (home["status"], home["called_off_reason"], home["club_cancel_reason"]) == (
         "CALLED_OFF",
@@ -399,9 +334,9 @@ async def test_cancelling_a_game_called_off_already_is_refused_alike(
         world.bonarka,
         world.bonarka_desk,
         game,
-        body={"reason": "REPAIR"},
+        body={"reason": "REPAIR", "anyway": True},
     )
-    assert first.status_code == 204, first.text
+    assert first.status_code == 200, first.text
 
     again = await club_does(
         client,
@@ -410,7 +345,7 @@ async def test_cancelling_a_game_called_off_already_is_refused_alike(
         world.bonarka,
         world.bonarka_desk,
         game,
-        body={"reason": "REPAIR"},
+        body={"reason": "REPAIR", "anyway": True},
     )
 
     assert again.status_code == 409, again.text
@@ -420,8 +355,6 @@ async def test_cancelling_a_game_called_off_already_is_refused_alike(
 @pytest.mark.parametrize(
     ("method", "tail"),
     [
-        ("POST", "bookings/{booking}/acceptance"),
-        ("POST", "bookings/{booking}/refusal"),
         ("GET", "bookings/{booking}/free-courts"),
         ("POST", "bookings/{booking}/move"),
         ("POST", "bookings/{booking}/cancellation"),
@@ -649,14 +582,16 @@ async def test_the_controls_refuse_a_provider_that_is_not_the_process_s_fake(
 
 async def the_club_cancels(client, game: UUID, world: World) -> None:
     """From its desk, after the cut-off took the shares: everybody refunded in
-    full (#637) — a refund decided, and made from the outbox."""
+    full (#637) — a refund decided, and made from the outbox. *Anyway*: Court 3
+    would otherwise take the game (#672)."""
 
     cancelled = await client.post(
         f"/api/v1/club/bookings/{game}/cancellation",
-        json={"reason": "WEATHER"},
+        json={"reason": "WEATHER", "anyway": True},
         headers=world.bonarka_desk,
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
 
 
 def kinds(receipts: list[dict]) -> list[str]:
@@ -877,160 +812,6 @@ async def test_a_notice_the_provider_never_sent_is_refused_before_any_is_read(
 
 
 # --------------------------------------------------------------------------- #
-# Run it now: the club's answer window
-# --------------------------------------------------------------------------- #
-
-
-async def runs_the_answer_window(client):
-    ran = await client.post("/dev/jobs/request-timeout")
-    assert ran.status_code == 200, ran.text
-    return ran.json()
-
-
-async def test_run_it_now_leaves_a_request_that_is_not_due_waiting(
-    client, session_factory, clock, world
-):
-    game = await a_request(client, session_factory, clock, world)
-
-    ran = await runs_the_answer_window(client)
-
-    assert ran["done"] == 0
-    assert (await her_home_game(client, world, game))[
-        "status"
-    ] == "WAITING_FOR_THE_CLUB"
-    assert len(await waiting_at(client, world.kazimierz_desk)) == 1
-
-
-async def test_run_it_now_calls_off_a_request_once_its_answer_is_due(
-    client, session_factory, clock, world
-):
-    game = await a_request(client, session_factory, clock, world)
-    clock.move(TIME_TO_CONFIRM + timedelta(minutes=1))
-
-    ran = await runs_the_answer_window(client)
-
-    assert ran["done"] == 1
-    home = await her_home_game(client, world, game)
-    assert (home["status"], home["called_off_reason"]) == ("CALLED_OFF", "NO_ANSWER")
-    assert (await runs_the_answer_window(client))["done"] == 0
-
-
-# --------------------------------------------------------------------------- #
-# Situation 3 · Needs her yes, On request club
-# --------------------------------------------------------------------------- #
-
-
-async def test_needs_her_yes_on_request_leaves_her_yes_to_ask_the_club(
-    client, session_factory, clock, world
-):
-    game = await a_card(session_factory, clock, world, world.kazimierz)
-
-    pressed = await presses(
-        client,
-        "needs-her-yes-on-request-club",
-        group_id=world.group,
-        sport="PADEL",
-        protagonist_id=world.marta["id"],
-    )
-
-    assert pressed.status_code == 200, pressed.text
-    assert pressed.json()["game_id"] == str(game)
-    assert pressed.json()["answer_by"] is None
-    [card] = [
-        c
-        for c in await deck_of(client, world.marta, world.group)
-        if c["proposal_id"] == str(game)
-    ]
-    assert (card["in_count"], card["open_seats_after_your_yes"]) == (3, 0)
-    assert card["club_confirms"] is True
-    # Her yes, from her phone, asks the club — and the club row answers it.
-    hers = await says(client, PLAYER, "yes", world.marta, game)
-    assert hers.json()["waiting_for_the_club"] is True, hers.text
-    [waiting] = await waiting_at(client, world.kazimierz_desk)
-    assert waiting["booking_id"] == str(game)
-    accepted = await club_does(
-        client, CONSOLE, "accept", world.kazimierz, world.kazimierz_desk, game
-    )
-    assert accepted.json()["outcome"] == "BOOKED", accepted.text
-
-
-async def test_needs_her_yes_on_request_says_so_when_no_game_can_be_set_up(
-    client, clock, world
-):
-    """Nobody in the group is rated in tennis, so no tennis card can be left
-    needing her — and the situation says so rather than inventing one."""
-
-    pressed = await presses(
-        client,
-        "needs-her-yes-on-request-club",
-        group_id=world.group,
-        sport="TENNIS",
-        protagonist_id=world.marta["id"],
-    )
-
-    assert pressed.status_code == 409, pressed.text
-    assert code_of(pressed) == "situation_unavailable"
-
-
-async def test_needs_her_yes_on_request_can_have_asked_the_club_minutes_ago(
-    client, clock, world
-):
-    """The request written as if it had been asked twenty-five minutes ago, so
-    the club's half hour runs out in five — and *Run it now* then calls it
-    off, and not a moment before."""
-
-    pressed = await presses(
-        client,
-        "needs-her-yes-on-request-club",
-        group_id=world.group,
-        sport="PADEL",
-        protagonist_id=world.marta["id"],
-        answer_due_in_minutes=5,
-    )
-
-    assert pressed.status_code == 200, pressed.text
-    answer_by = MONDAY_MORNING + timedelta(minutes=5)
-    assert pressed.json()["answer_by"] == at(answer_by)
-    assert "5 min" in pressed.json()["says"]
-    game = UUID(pressed.json()["game_id"])
-    assert (await her_home_game(client, world, game))[
-        "status"
-    ] == "WAITING_FOR_THE_CLUB"
-    [waiting] = await waiting_at(client, world.kazimierz_desk)
-    assert (waiting["booking_id"], waiting["answer_by"]) == (str(game), at(answer_by))
-    assert {p["player_id"] for p in waiting["players"]} == {
-        str(m["id"]) for m in world.four
-    }
-
-    assert (await runs_the_answer_window(client))["done"] == 0
-    clock.move(timedelta(minutes=6))
-    assert (await runs_the_answer_window(client))["done"] == 1
-
-    home = await her_home_game(client, world, game)
-    assert (home["status"], home["called_off_reason"]) == ("CALLED_OFF", "NO_ANSWER")
-    assert await waiting_at(client, world.kazimierz_desk) == []
-
-
-async def test_needs_her_yes_on_request_asks_now_when_the_club_gives_less_time(
-    client, clock, world
-):
-    """Kazimierz gives thirty minutes: asked for forty-five, the club is asked
-    now and its answer is due when its own half hour runs out."""
-
-    pressed = await presses(
-        client,
-        "needs-her-yes-on-request-club",
-        group_id=world.group,
-        sport="PADEL",
-        protagonist_id=world.marta["id"],
-        answer_due_in_minutes=45,
-    )
-
-    assert pressed.status_code == 200, pressed.text
-    assert pressed.json()["answer_by"] == at(MONDAY_MORNING + TIME_TO_CONFIRM)
-
-
-# --------------------------------------------------------------------------- #
 # Situation 4 · Card declines at the fill
 # --------------------------------------------------------------------------- #
 
@@ -1097,13 +878,7 @@ async def test_a_situation_makes_its_game_only_at_a_club_the_seed_signed_up(
     assert pressed.json()["club_id"] == world.bonarka
 
 
-@pytest.mark.parametrize(
-    "situation",
-    [
-        "needs-her-yes-on-request-club",
-        "card-declines-at-the-fill",
-    ],
-)
+@pytest.mark.parametrize("situation", ["card-declines-at-the-fill"])
 async def test_each_situation_refuses_a_protagonist_the_seed_did_not_create(
     client, payments, world, situation
 ):

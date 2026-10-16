@@ -7,10 +7,10 @@ the deck withholds it when somebody In is somebody they do not fit. For a reader
 In, everybody In and the open seats: nobody else's deciding is shown to them.
 
 **The status** is *filling* until every seat is In; a full game still filling is
-one an On request club has to confirm — *waiting for the club*. **The actions**
-are the reader's: *I'm in* and *Not this time* while they may answer, *Withdraw*
-when they are In, *Leave the game* while the club decides, and nothing once the
-game is over or their answer is final.
+one *waiting for one payment* — a share refused as it filled (#625). **The
+actions** are the reader's: *I'm in* and *Not this time* while they may answer,
+*Withdraw* when they are In, *Leave the game* while the payment is awaited, and
+nothing once the game is over or their answer is final.
 """
 
 from __future__ import annotations
@@ -31,7 +31,12 @@ from app.modules.proposals.domain.details import (
 from app.modules.player_profile.domain.gender import Gender
 from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.domain.post import Who, stand_together
-from app.modules.proposals.domain.proposal import Origin, Proposal, ReopenReason
+from app.modules.proposals.domain.proposal import (
+    Origin,
+    Proposal,
+    ReopenReason,
+    TimeTo,
+)
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 MADE_AT = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -79,6 +84,24 @@ def a_post_of_mine(*versions: tuple[UUID, ...]) -> Proposal:
     for version in versions:
         proposal.deal(version, at=MADE_AT)
     return proposal
+
+
+def full_and_waiting_for_a(pick: Proposal) -> Proposal:
+    """Every seat In, and A's share refused as it filled: A has thirty minutes
+    to fix the card (#625, #638)."""
+
+    for player in pick.versions[0].players:
+        pick.say_yes(player, at=NOW)
+    pick.give_time_to_pay(
+        A,
+        reason=ReopenReason.AUTHENTICATION_REQUIRED,
+        seat_charge_id=uuid4(),
+        until=NOW + timedelta(minutes=30),
+        time_to=TimeTo.FIX_THE_CARD,
+        filled_by=C,
+        at=NOW,
+    )
+    return pick
 
 
 def unfit(*pairs: tuple[UUID, UUID]) -> frozenset[frozenset[UUID]]:
@@ -183,15 +206,13 @@ def test_a_game_with_seats_open_is_filling():
     assert status_of_proposal(a_pick((ME, A, B, C)), now=NOW) is ProposalStatus.FILLING
 
 
-def test_a_full_game_still_filling_waits_for_the_club():
-    """At an On request club the fill leaves a full game untouched until the
-    club says yes (#541, #543)."""
+def test_a_full_game_still_filling_waits_for_one_payment():
+    """The fill books a full game at once, at every club, unless a share is
+    refused: then the game waits for that payment (#625)."""
 
-    pick = a_pick((ME, A, B, C))
-    for player in (ME, A, B, C):
-        pick.say_yes(player, at=NOW)
+    pick = full_and_waiting_for_a(a_pick((ME, A, B, C)))
 
-    assert status_of_proposal(pick, now=NOW) is ProposalStatus.WAITING_FOR_THE_CLUB
+    assert status_of_proposal(pick, now=NOW) is ProposalStatus.WAITING_FOR_A_PAYMENT
 
 
 def test_a_game_past_its_book_by_is_expired_before_any_sweep():
@@ -227,13 +248,11 @@ def test_a_reader_in_may_withdraw():
     assert actions_for(pick, ME, now=NOW) == (ReaderAction.WITHDRAW,)
 
 
-def test_while_the_club_decides_a_reader_in_may_only_leave():
-    """*Withdraw* is hidden while waiting for the club; *Leave the game* with its
-    sheet takes its place (the mechanics §13)."""
+def test_while_a_payment_is_awaited_a_reader_in_may_only_leave():
+    """*Withdraw* is hidden while the full game waits for one payment; *Leave
+    the game* with its sheet takes its place (the mechanics §13)."""
 
-    pick = a_pick((ME, A, B, C))
-    for player in (ME, A, B, C):
-        pick.say_yes(player, at=NOW)
+    pick = full_and_waiting_for_a(a_pick((ME, A, B, C)))
 
     assert actions_for(pick, ME, now=NOW) == (ReaderAction.LEAVE,)
 

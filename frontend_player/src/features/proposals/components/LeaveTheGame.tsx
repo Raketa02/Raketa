@@ -5,9 +5,9 @@
  * mechanics §13).
  *
  * **What it costs is the read's** (`leaving`, #544): before the club's cut-off nothing is taken and
- * the hold on the card is let go (Q113), after it the share stays taken, and — while an On request
- * club decides — nobody has paid and leaving withdraws the yes. The server folds it on its own clock
- * and quotes the same words the departure answers with; nothing here works out a refund.
+ * the hold on the card is let go (Q113), after it the share stays taken, and — while a full game
+ * waits for one payment — nobody has paid and leaving withdraws the yes. The server folds it on its
+ * own clock and quotes the same words the departure answers with; nothing here works out a refund.
  *
  * **The door's shape is the group exit's** (`ExitDoor`): the sheet is the surface while the act is
  * in flight — its act busy, a refusal said on it in words with the act still there — and the door
@@ -17,8 +17,8 @@
  * details stay, read again.
  *
  * **Two acts behind one door**: a booked game's departure (`POST /bookings/{id}/departure`), and on
- * the details of a game still filling that waits for its club, the yes withdrawn (A4.2: *Leave the
- * game with its sheet*, sent as the withdrawal) — the same words, the same sheet.
+ * the details of a full game that waits for one payment, the yes withdrawn (#625: *Leave the game
+ * with its sheet*, sent as the withdrawal) — the same words, the same sheet.
  *
  * The door is 6.1's `secondary` where details 10 draws dark red text — the group exit's call, for
  * its reason: red is *ended badly* (1.3), and the sheet is what makes it deliberate (Part 16).
@@ -44,8 +44,8 @@ export interface LeaveTheGameProps {
   /** What leaving costs now — the read's. */
   readonly leaving: Leaving;
   /**
-   * The departure — a booked game's (`useLeaveBooking`), or, on a game still filling that waits
-   * for its club, the yes withdrawn (`useLeaveWhileWaiting`). It answers which of the three it was.
+   * The departure — a booked game's (`useLeaveBooking`), or, on a full game that waits for one
+   * payment, the yes withdrawn (`useLeaveWhileWaiting`). It answers which of the three it was.
    */
   readonly act: UseMutationResult<LeavingKind, AppError, void>;
   /** Where the player goes once they have left — Home from a booked game; nowhere from the details. */

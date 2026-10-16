@@ -22,7 +22,6 @@ export const HOME_GAME_COPY = {
    * in *Never played*'s place (#655), and *Played* for a For fun game after its hour (#656).
    */
   status: {
-    WAITING_FOR_THE_CLUB: 'Waiting for the club',
     WAITING_FOR_A_PAYMENT: 'Waiting for one payment',
     BOOKED: 'Booked',
     SEAT_OPEN: 'Seat open',
@@ -36,7 +35,6 @@ export const HOME_GAME_COPY = {
   } satisfies Readonly<Record<ShownStatus, string>>,
   /** The same words mid-line — the details' second line, *Padel · booked*, and the room's. */
   statusInLine: {
-    WAITING_FOR_THE_CLUB: 'waiting for the club',
     WAITING_FOR_A_PAYMENT: 'waiting for one payment',
     BOOKED: 'booked',
     SEAT_OPEN: 'seat open',
@@ -57,41 +55,28 @@ export const HOME_GAME_COPY = {
     paid: 'Paid',
     /** *30 zł · free to leave until Fri 16:00* — the club's cut-off, before which nothing is taken (Q113). */
     freeToLeaveUntil: 'free to leave until',
-    nobodyPaysUntil: 'Nobody pays until',
-    confirms: 'confirms',
-    theClub: 'the club',
-    /** After *Bonarka answers by 20:45 ·* — the club named once already (Q98). */
-    nobodyPaysUntilItConfirms: 'Nobody pays until it confirms',
     seatOpen: 'seat open',
     seatsOpen: 'seats open',
     fillsBy: 'fills by',
     orTheGameIsOff: 'or the game is off and nothing is taken',
     offeredToOthers: 'offered to others',
     goesAhead: 'the game goes ahead',
-    /**
-     * A full game gone back to filling (Q106): *1 seat open · Kazimierz Padel is asked again when
-     * it's full · nobody paid*, or *books when it's full* at a club that books at once.
-     */
-    askedAgain: 'is asked again when it’s full',
+    /** A full game gone back to filling (Q106): *1 seat open · books when it's full · nobody paid*. */
     booksWhenFull: 'books when it’s full',
     /** The same words mid-line, closing that one. */
     nobodyPaidInLine: 'nobody paid',
     refunded: 'Refunded',
     nobodyPaid: 'Nobody paid',
-    /** After the club's no or its silence (Q105): the notice's and the email's words. */
-    nobodyPaidNewCardFirst: 'Nobody paid — you’ll get a new card first',
     /** The shares were held and let go — short at the cut-off, or the club's cancel before it (Q113). */
     nothingWasTaken: 'Nothing was taken',
     /**
-     * Why a game is off (§14.1, #543, #544, #624, #625) — the club's three read with its name before
-     * them (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. The club's no and its
-     * silence, and a payment not in time, are the notice's and the email's words (Q105). Keyed by the
-     * wire's reason, so a reason with no words fails here.
+     * Why a game is off (§14.1, #544, #624, #625) — the club's cancel read with its name before it
+     * (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. A payment not in time is
+     * the notice's and the email's words. Keyed by the wire's reason, so a reason with no words
+     * fails here.
      */
     calledOff: {
       SHORT_AT_THE_CUT_OFF: 'A seat was still empty at the cut-off',
-      REFUSED: 'said no',
-      NO_ANSWER: 'didn’t answer in time',
       CANCELLED_BY_THE_CLUB: 'cancelled it',
       BOOK_BY_PASSED: 'A seat was open past its last moment to book',
       COURT_HOUR_LOST: 'Its court went to another game before it filled again',
@@ -140,7 +125,6 @@ export const HOME_GAME_COPY = {
     taken: 'taken',
     freeToLeaveUntilThen: 'free to leave until then',
     nobodyPaid: 'nobody paid',
-    nobodyPaidNewCardFirst: 'nobody paid — you’ll get a new card first',
     nothingWasTaken: 'nothing was taken',
     /** Today's result act, once the hour has come — the button under the game card. */
     resultAct: {

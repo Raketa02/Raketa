@@ -17,25 +17,17 @@ courts may be in reach of any group near it. Its payments account going ready �
 or ready no longer — is one of those, since it is what makes a club live (#537).
 **A game filling is one too** (#541): its booking took a court hour from every
 card at that club and hour, in any pool — and a seat reopened, or a yes paused,
-left a seat open. **So is a game put to an On request club, and the club's
-answer** (#543): the request holds a court hour, and a request refused,
-unanswered or withdrawn frees it — and a turned-down game's people are owed a
-new card first. **And the club's cancel of a booked game** (#547): its court
-hour is free, and the people still in are owed a new card first.
+left a seat open. **And the club's cancel of a booked game** (#547): the people
+still in are owed a new card first — the court it was on closed for the hour
+(#673). **A club's move too** (#671): the court it left is free at the hour
+again, and offered again at once — unless a cancel moved it, which closes that
+court for the hour.
 """
 
 from __future__ import annotations
 
 from app.application.events import DeliveryContext
-from app.modules.bookings.domain.events import (
-    BookingAccepted,
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
-    CancelledByClub,
-    PaymentNotInTime,
-    RequestWithdrawn,
-)
+from app.modules.bookings.domain.events import CancelledByClub, CourtMoved
 from app.modules.clubs.domain.club_courts_events import (
     CourtAdded,
     CourtChanged,
@@ -50,7 +42,6 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
-    WayOfWorkingChosen,
 )
 from app.modules.groups.domain.events import GroupJoined, JoinRequestApproved
 from app.modules.player_profile.domain.events import (
@@ -108,7 +99,6 @@ CLUB_EVENTS = (
     ExceptionAdded,
     ExceptionRemoved,
     PricesSet,
-    WayOfWorkingChosen,
     RaketaSettingsChanged,
     RaketaPaused,
     RaketaResumed,
@@ -116,17 +106,11 @@ CLUB_EVENTS = (
     PaymentsStatusChanged,
     # A booking holds a court hour the club no longer sells (#541).
     ProposalFilled,
-    # A request holds one, and its answer or its withdrawal frees it (#543).
-    BookingRequested,
-    BookingAccepted,
-    BookingRefused,
-    BookingTimedOut,
-    RequestWithdrawn,
-    # A payment the club's yes waited on that did not come frees it (#626).
-    PaymentNotInTime,
     # The club's cancel frees its court hour, and owes its people a new card
     # first (#547).
     CancelledByClub,
+    # The club's move frees the court it left (#671).
+    CourtMoved,
 )
 
 

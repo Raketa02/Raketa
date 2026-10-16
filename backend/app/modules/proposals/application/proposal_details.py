@@ -9,12 +9,9 @@ arrangement **the engine's own forecast** gives with the reader on their own
 side, exactly as the deck draws them; the overlap grid is the people drawn; WHERE
 is the club and its distance from the reader, never a court number, which is
 given at booking; the money row is the share and the book-by. The status says
-*filling* or *waiting for the club*, or how it ended — a filled game's booking has
-its id — and the actions are what the reader may do now. **Waiting for the club,
-it says when the club must answer** (Q98): the deadline its request was put with,
-while it is ahead — asked of the request only then, since the proposal alone
-says it waits. **Waiting for one payment, it says until when** (#625, Q111),
-and to the payer that the payment is theirs.
+*filling*, or how it ended — a filled game's booking has its id — and the
+actions are what the reader may do now. **Waiting for one payment, it says until
+when** (#625, Q111), and to the payer that the payment is theirs.
 
 **A read, recorded nowhere**, against one instant, with one read per provider.
 
@@ -56,14 +53,13 @@ from app.modules.proposals.domain.details import (
     status_of_proposal,
 )
 from app.modules.proposals.domain.errors import ProposalNotFound
-from app.modules.proposals.domain.home import answer_by_ahead
 from app.modules.proposals.domain.overlap import Overlap, overlap_of
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     ClubDistances,
     ClubNames,
-    ClubRequests,
     ClubTerms,
+    CourtKinds,
     DeckPeople,
     DeckPerson,
     PlayerFit,
@@ -103,11 +99,9 @@ class ProposalDetails:
     #: The club's cut-off has already passed for this game. ``False`` for a
     #: club no longer selling.
     no_free_cancellation: bool
-    #: An On request club: a full game waits for its yes before anybody pays.
-    club_confirms: bool
-    #: When the club must answer, while the game waits for it and the moment
-    #: is ahead — ``None`` on every other status (Q98).
-    answer_by: Instant | None
+    #: The kind of court the card promises — *Indoor*, *Outdoor*, or ``None``
+    #: when the free courts it could be booked on are of mixed kinds (Q122).
+    indoor: bool | None
     club_name: str | None
     distance_km: float | None
     people: Mapping[UUID, DeckPerson]
@@ -124,20 +118,20 @@ class ReadProposalDetails:
         forecasts: BalanceForecasts,
         people: DeckPeople,
         terms: ClubTerms,
+        kinds: CourtKinds,
         clubs: ClubNames,
         distances: ClubDistances,
         players: PlayersInPlay,
-        requests: ClubRequests,
         clock: Clock,
     ) -> None:
         self._players = players
-        self._requests = requests
         self._pools = pools
         self._proposals = proposals
         self._fit = fit
         self._forecasts = forecasts
         self._people = people
         self._terms = terms
+        self._kinds = kinds
         self._clubs = clubs
         self._distances = distances
         self._clock = clock
@@ -194,11 +188,14 @@ class ReadProposalDetails:
         names = await self._clubs.names_of([proposal.club_id])
         distances = await self._distances.from_player(reader, [proposal.club_id])
         status = status_of_proposal(proposal, now=now)
-        # Its booking has the proposal's own id.
-        request = (
-            await self._requests.find(proposal.proposal_id)
-            if status is ProposalStatus.WAITING_FOR_THE_CLUB
-            else None
+        # The kind a card promises is read off the free courts only while the
+        # game still fills: once booked, its court and kind are the booking's
+        # (``GET /bookings/{id}``), and the courts still free say nothing.
+        hour = (proposal.club_id, proposal.sport, proposal.start)
+        kinds = (
+            await self._kinds.of([hour])
+            if status in (ProposalStatus.FILLING, ProposalStatus.WAITING_FOR_A_PAYMENT)
+            else {}
         )
         return ProposalDetails(
             proposal=proposal,
@@ -231,13 +228,7 @@ class ReadProposalDetails:
             and cut_off_passed(
                 proposal.start, cut_off_hours=terms.cut_off_hours, now=now
             ),
-            club_confirms=terms is not None and terms.confirms_each_game,
-            # A club that answered between the two reads leaves no deadline.
-            answer_by=(
-                answer_by_ahead(request.answer_by, now=now)
-                if request is not None and request.waiting
-                else None
-            ),
+            indoor=kinds.get(hour),
             club_name=names.get(proposal.club_id),
             distance_km=distances.get(proposal.club_id),
             people=people,

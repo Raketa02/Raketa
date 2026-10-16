@@ -14,13 +14,15 @@ the three still on it. Nothing here opens a table.
   left now: the leaver's hold let go (#637), the seat open until the
   cut-off, when the game is off unless it is taken. Always seedable: her week
   has an hour that far ahead in every fortnight;
-- **offered until the start** — a game inside the cut-off, booked as a
-  last-minute game and left now: the seat open until the hour, the leaver
-  refunded only when somebody takes it. **Seedable only while an hour of her
-  week Bonarka still sells falls inside its cut-off** — her week is Tuesday to
-  Friday evenings and Saturday until three, and Bonarka takes three hours'
-  notice, so a run from Saturday noon to Monday evening, or late on a weekday
-  afternoon, finds none — and otherwise skipped by name.
+- **offered until the start** — a game inside the cut-off, booked as if
+  earlier and left now: the seat open until the hour, the leaver refunded only
+  when somebody takes it. No game fills later than its release time, a day
+  before it at Bonarka (#670; ``docs/adr/0196`` §1), so this one filled an hour
+  before its release time and the cut-off job ran at its cut-off, as the API's
+  would have then (#637). **Seedable only while an hour of her week Bonarka
+  sells falls inside its cut-off** — her week is Tuesday to Friday evenings and
+  Saturday until three, so a run from Saturday afternoon to Monday evening, or
+  late on a weekday evening, finds none — and otherwise skipped by name.
 
 **Out of the other layers' way**: neither hour is one of her booked games',
 answered picks' or waiting game's, and the four on each are crowd members with
@@ -54,6 +56,7 @@ from app.bootstrap.composition import (
 from app.core.config import Settings
 from app.kernel import Instant, hours, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
 from app.modules.proposals.application.commands import (
@@ -66,6 +69,8 @@ from app.seeds.bookings import (
     SeededBookings,
     all_say_yes,
     padel_hours_on_sale,
+    the_cut_off_if_it_passed,
+    when_it_fills,
 )
 from app.seeds.clock import FixedClock
 from app.seeds.proposals import (
@@ -146,19 +151,27 @@ async def seed_the_rescues(
             *(pick.start for pick in seeded.picks),
             *(row.game.start for row in board.seats_to_fill),
         ]
+        # As Bonarka sold them before any deadline: an hour inside its release
+        # lead is filled as if earlier, when it was on sale.
         hers = [
-            hour.start
-            for hour in await padel_hours_on_sale(session, club_id, now=now)
+            hour
+            for hour in await padel_hours_on_sale(
+                session, club_id, now=now, on_sale_at=before_any_deadline(now)
+            )
             if free_for_the_hour(week, start=hour.start, zone=CLUB_ZONE)
             and not any(abs(hour.start - other) < GAME_LENGTH for other in taken)
         ]
         wanted = {
             FILLS_BY_THE_CUT_OFF: next(
-                (start for start in hers if start >= cut_off + LEAD_PAST_THE_CUT_OFF),
+                (
+                    hour
+                    for hour in hers
+                    if hour.start >= cut_off + LEAD_PAST_THE_CUT_OFF
+                ),
                 None,
             ),
             OFFERED_UNTIL_THE_START: next(
-                (start for start in hers if start < cut_off), None
+                (hour for hour in hers if hour.start < cut_off), None
             ),
         }
 
@@ -170,8 +183,8 @@ async def seed_the_rescues(
             if existing is not None:
                 rescues.append(SeededRescue(state, existing.game.start, made=False))
                 continue
-            start = wanted[state]
-            if start is None:
+            hour = wanted[state]
+            if hour is None:
                 if state == FILLS_BY_THE_CUT_OFF:
                     raise NotEnoughToBook(
                         f"{GAMES_CLUB.name} sells no padel hour of her week a day "
@@ -185,7 +198,7 @@ async def seed_the_rescues(
                 )
                 continue
             four = await _four_free_at(
-                session, group_id, her, start, excluding=used, now=now
+                session, group_id, her, hour.start, excluding=used, now=now
             )
             used.update(four)
             await _a_game_left_by_one(
@@ -195,10 +208,11 @@ async def seed_the_rescues(
                 provider=provider,
                 pool_id=group_id,
                 club_id=club_id,
-                start=start,
+                start=hour.start,
                 four=four,
+                filled_at=when_it_fills(hour, now=now),
             )
-            rescues.append(SeededRescue(state, start, made=True))
+            rescues.append(SeededRescue(state, hour.start, made=True))
     return SeededRescues(rescues=tuple(rescues), skipped=skipped)
 
 
@@ -250,13 +264,15 @@ async def _a_game_left_by_one(
     club_id: UUID,
     start: Instant,
     four: Sequence[UUID],
+    filled_at: Instant,
 ) -> None:
-    """The four's game booked, and the last of them leaving it."""
+    """The four's game booked at ``filled_at``, and the last of them leaving it
+    now, on ``clock``."""
 
     answer = await all_say_yes(
         session,
         settings=settings,
-        clock=clock,
+        clock=FixedClock(at=filled_at),
         provider=provider,
         pool_id=pool_id,
         club_id=club_id,
@@ -268,6 +284,13 @@ async def _a_game_left_by_one(
             f"the rescue at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} filled and "
             f"did not book: {answer!r}"
         )
+    await the_cut_off_if_it_passed(
+        session,
+        settings=settings,
+        booking_id=answer.booked.booking_id,
+        filled_at=filled_at,
+        now=clock.at,
+    )
     await build_leave_the_game(session, clock=clock, settings=settings).execute(
         LeaveTheGameCommand(booking_id=answer.booked.booking_id, player_id=four[-1])
     )

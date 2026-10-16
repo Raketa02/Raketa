@@ -203,50 +203,36 @@ for app in "${SELECTED[@]}"; do
   [ "$app" = frontend_player ] || continue
 
   # -------------------------------------------------------------------------
-  # The evidence union (docs/adr/0106). **A number is ruleset; a shape is the API
-  # contract**, and adding or reshaping a variant is an API release, because the
-  # client generates an exhaustive renderer per variant and must never be handed
-  # a shape it cannot draw. The generic probe above proves the check notices *a*
-  # contract change; this proves it notices the one change this repository has
-  # written a whole ADR about — and that the union is in the document at all, so
-  # the probe cannot quietly become a no-op the day evidence stops being
-  # published. The player's document is the only one that carries it.
-  #
-  # The other half of this chain is in the backend suite: nothing regenerates the
-  # contract document from the code, so
-  # tests/unit/test_matchmaking_evidence_vocabulary.py asserts that
-  # openapi.player.json still reproduces from the union the code emits. Reshape
-  # a variant and one of the two goes red — this one when the document moved
-  # without the client, that one when the code moved without the document.
+  # A shape the client renders. **A shape is the API contract**: adding a field is
+  # an API release, because the client renders every field it is handed. The probe
+  # needs one schema the player document publishes and the player's mappers read;
+  # the blocked-players list is that schema, since blockMappers.ts reads it.
   # -------------------------------------------------------------------------
   echo
-  echo "$app — a reshaped evidence variant"
+  echo "$app — a reshaped rendered shape"
 
-  variants=$(python3 - "$DOC" <<'COUNT'
+  published=$(python3 - "$DOC" <<'COUNT'
 import json, sys
 schemas = json.load(open(sys.argv[1]))["components"]["schemas"]
-print(" ".join(sorted(n for n in schemas if n.endswith("Evidence"))))
+print("yes" if "BlockedPlayerSchema" in schemas and schemas["BlockedPlayerSchema"].get("properties") else "no")
 COUNT
 )
 
-  # The eight of `EvidenceKind`. Counted rather than listed, because the roster
-  # is pinned in the backend suite and a second list here would be a second
-  # answer to *how many kinds are there*.
-  [ "$(wc -w <<<"$variants")" -ge 8 ] \
-    && ok "the contract publishes the evidence union" \
-    || bad "the contract publishes the evidence union" \
-           "found: $variants — the drift probe below would prove nothing"
+  [ "$published" = yes ] \
+    && ok "the contract publishes the probe's rendered shape" \
+    || bad "the contract publishes the probe's rendered shape" \
+           "BlockedPlayerSchema is missing — the drift probe below would prove nothing"
 
-  # Reshape one variant the way a real release does: a field added to a shape
-  # the client already renders. Nothing else in the document moves.
+  # Reshape it the way a real release does: a field added to a shape the client
+  # already renders. Nothing else in the document moves.
   python3 - "$DOC" <<'RESHAPE'
 import json, sys
 path = sys.argv[1]
 with open(path) as fh:
     doc = json.load(fh)
-variant = doc["components"]["schemas"]["AvailabilityOverlapEvidence"]
-variant["properties"]["probe_slots"] = {"type": "integer", "title": "Probe Slots"}
-variant.setdefault("required", []).append("probe_slots")
+shape = doc["components"]["schemas"]["BlockedPlayerSchema"]
+shape["properties"]["probe_slots"] = {"type": "integer", "title": "Probe Slots"}
+shape.setdefault("required", []).append("probe_slots")
 with open(path, "w") as fh:
     json.dump(doc, fh, indent=2)
     fh.write("\n")
@@ -255,11 +241,11 @@ RESHAPE
   out=$(bash "$CHECK" "$app" 2>&1)
   got=$?
 
-  [ "$got" = 1 ] && ok "a reshaped evidence variant without a regenerated client fails" \
-    || bad "a reshaped evidence variant without a regenerated client fails" "want exit 1, got $got"
+  [ "$got" = 1 ] && ok "a reshaped rendered shape without a regenerated client fails" \
+    || bad "a reshaped rendered shape without a regenerated client fails" "want exit 1, got $got"
 
-  grep -q 'probe_slots' <<<"$out" && ok "the failure prints the reshaped variant" \
-    || bad "the failure prints the reshaped variant"
+  grep -q 'probe_slots' <<<"$out" && ok "the failure prints the reshaped shape" \
+    || bad "the failure prints the reshaped shape"
 
   restore
 

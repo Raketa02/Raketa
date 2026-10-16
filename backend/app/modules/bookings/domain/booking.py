@@ -8,25 +8,10 @@ filled, and the Game it opened. Its money is the Seat charges' (``payments``),
 its result the Game's (``games``) — after the fill, *everything that happens to a
 game today happens to it unchanged* (Q6).
 
-**Born booked** (#541), or **born waiting for the club** (#543): at an On
-request club a full game is put to the club, which has its time to confirm to
-say yes (the mechanics §16.3, §16.8). While it waits the court is **reserved**
-for it — nobody else is offered that court — and nobody has paid. The club's
-yes books it and opens the Game; its no, or no answer by the deadline, calls it
-off; and **a seat opening while it waits** — somebody left, or could no longer
-be In — withdraws the request: nobody paid, the game is filling again, and
-**the people still In keep their places**, a seat open where each opener sat,
-so it stays on their Home as *Seat open* (Q106). **Full again, the same game is
-asked again on the same stream**, with whoever is In then: one id from the
-first card to the court.
-
-**A share refused at the club's yes waits for its player** (#626; Q109, Q112):
-the booking stays accepted and its court held — *waiting for a payment* —
-while that player has until ``pay_by`` to pay. The payment in time books it
-and opens the Game, the club not asked again; out of time, it is called off
-(*a player's payment didn't come in time*), the court the club's again, and
-the people still In keep their places as after a withdrawn request — unless
-the book-by had come, when it is called off for good.
+**Born booked** (#541), at every club: the last yes books the game the moment
+it lands, and no club confirms it (``docs/adr/0196`` §1). On request, which
+put a full game to the club's desk and waited for its answer, is removed — its
+events left with it, the local store reset (#669).
 
 **A player leaves a booked game** (#544; the mechanics §12.3, §13): their seat
 opens — *seat open* — and the game is still the others'. **A game plays full or
@@ -71,20 +56,13 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import SPORT_SPECS, Instant, Sport, instant, invariant
 from app.modules.bookings.domain.events import (
-    BookingAccepted,
-    BookingAwaitingAPayment,
     BookingConfirmed,
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
     CardFixed,
     CardToFix,
     CourtMoved,
-    PaymentNotInTime,
     PlayerCheckedIn,
-    RequestWithdrawn,
     KeptSeatRanOut,
     NoSaidToTheSeat,
     SeatKept,
@@ -97,22 +75,36 @@ from app.shared.domain.events import EventRecorder
 
 @dataclass(frozen=True, slots=True)
 class BookedCourt:
-    """The court a game is booked on: its id, and what the club calls it."""
+    """The court a game is booked on: its id, what the club calls it, and its
+    **kind** — indoor or outdoor — which the players always see on a booked
+    game (#671; the mechanics §5.2, Q122)."""
 
     court_id: UUID
     name: str
+    indoor: bool
+
+    def may_move_to(self, court: "BookedCourt") -> bool:
+        """Whether a game on this court may move to ``court`` for its kind
+        (the mechanics §16.4, Q122, *a call*): the same kind, or indoor for an
+        outdoor game — never outdoors from indoors, which would be a different
+        game to the players."""
+
+        return court.indoor or not self.indoor
+
+
+@dataclass(frozen=True, slots=True)
+class FreeCourt:
+    """A court of the game's sport its club still sells at the game's hour,
+    and the share one player pays for it there — what a club's cancel asks of
+    it before the court may absorb the game (#672)."""
+
+    court: BookedCourt
+    share_grosze: int
 
 
 class BookingState(StrEnum):
     """Where a booking stands (the mechanics §14.1, §16.7)."""
 
-    #: An On request club has the full game and has not answered yet. The
-    #: court is reserved for it; nobody has paid.
-    WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
-    #: The club said yes, and one player's share could not be held: the yes
-    #: and the court are kept while they have time to pay (#626). Nobody has
-    #: paid.
-    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     #: Full and paid, the court the players'.
     BOOKED = "BOOKED"
     #: Booked and paid, and somebody left: a seat is open (#544).
@@ -124,21 +116,10 @@ class BookingState(StrEnum):
 class CalledOff(StrEnum):
     """Why a booking will not be played."""
 
-    #: The club refused the request.
-    REFUSED = "REFUSED"
-    #: The club did not answer it in time.
-    NO_ANSWER = "NO_ANSWER"
-    #: A seat opened while it waited for the club; the game is filling again,
-    #: and nobody has a seat on the request.
-    SEAT_OPENED = "SEAT_OPENED"
     #: A seat that opened before the club's cut-off was still open at it (#544).
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
     #: The club cancelled it, with its reason (#547).
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
-    #: The club said yes and a player's payment did not come in time (#626):
-    #: nobody paid. The game is filling again for the people still In, unless
-    #: it can no longer fill (``called_off_for_good``).
-    PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
 
 
 class CancelReason(StrEnum):
@@ -147,7 +128,8 @@ class CancelReason(StrEnum):
 
     WEATHER = "WEATHER"
     REPAIR = "REPAIR"
-    #: The desk sold the hour too — an Instant club's double sale (§16.16).
+    #: The desk sold a handed-over hour too, by mistake (§16.3, §16.16). It
+    #: stays with Only Raketa the one way (#670; ``docs/adr/0196`` §1).
     DOUBLE_BOOKING = "DOUBLE_BOOKING"
     OTHER = "OTHER"
 
@@ -208,33 +190,12 @@ class Booking:
     second_side: tuple[UUID, ...]
     cut_off: Instant
     state: BookingState
-    #: The ordinary Game it opened — ``None`` until the club said yes.
-    game_id: UUID | None = None
-    #: When the club's answer is due, while it waits — ``None`` on a booking
-    #: born booked, and kept once answered.
-    answer_by: Instant | None = None
-    #: When its request was taken back because a seat opened, or the payment
-    #: the club's yes waited on did not come — ``None`` while it waits, once
-    #: asked again, and on a booking that never was.
-    taken_back_at: Instant | None = None
-    #: When the payment the club's yes waits on is due — ``None`` unless it
-    #: waits for one (#626).
-    pay_by: Instant | None = None
-    #: Whose payment the club's yes waits on.
-    payers: tuple[UUID, ...] = ()
-    #: Their time is to fix the card — the yes came before the cut-off — rather
-    #: than to pay (#638). ``False`` unless it waits for one.
-    to_fix_the_card: bool = False
-    #: Called off as it could no longer fill — a payment refused at the club's
-    #: yes with no time left before the book-by, or one whose time ran out on
-    #: it (#626).
-    called_off_for_good: bool = False
+    #: The ordinary Game it opened.
+    game_id: UUID
+    #: When it was booked — the fill.
+    booked_at: Instant
     #: Why it will not be played, once called off.
     called_off: CalledOff | None = None
-    #: The club's own note when it refused — for its records, never a player's.
-    refusal_reason: str | None = None
-    #: When it was booked — ``None`` while it waits, and if it never was.
-    booked_at: Instant | None = None
     #: When its club cancelled it, once it did (#637).
     cancelled_at: Instant | None = None
     #: Everybody who left the booked game, in the order they did (#544) — each
@@ -287,6 +248,7 @@ class Booking:
             club_id=club_id,
             court_id=court.court_id,
             court_name=court.name,
+            indoor=court.indoor,
             sport=sport.value,
             kind=kind.value,
             start=start,
@@ -302,57 +264,12 @@ class Booking:
         return booking
 
     @classmethod
-    def requested(
-        cls,
-        *,
-        booking_id: UUID,
-        pool_id: UUID,
-        club_id: UUID,
-        court: BookedCourt,
-        sport: Sport,
-        kind: SearchMode,
-        start: Instant,
-        share_grosze: int,
-        first_side: tuple[UUID, ...],
-        second_side: tuple[UUID, ...],
-        cut_off: Instant,
-        answer_by: Instant,
-        filled_by: UUID | None,
-        at: Instant,
-    ) -> "Booking":
-        """A full game put to its On request club, the court reserved for it —
-        by ``filled_by``'s own act, if a player's."""
-
-        requested = _a_request(
-            booking_id=booking_id,
-            pool_id=pool_id,
-            club_id=club_id,
-            court=court,
-            sport=sport,
-            kind=kind,
-            start=start,
-            share_grosze=share_grosze,
-            first_side=first_side,
-            second_side=second_side,
-            cut_off=cut_off,
-            answer_by=answer_by,
-            filled_by=filled_by,
-            at=at,
-        )
-        booking = cls._waiting(requested)
-        booking._events.record(requested)
-        return booking
-
-    @classmethod
     def from_history(cls, events: Iterable[DomainEvent]) -> "Booking":
         history = iter(events)
         opening = next(history)
-        if isinstance(opening, BookingConfirmed):
-            booking = cls._booked(opening)
-        elif isinstance(opening, BookingRequested):
-            booking = cls._waiting(opening)
-        else:
+        if not isinstance(opening, BookingConfirmed):
             raise TypeError(f"A booking stream opens {opening!r}")
+        booking = cls._booked(opening)
         for event in history:
             booking._apply(event)
         return booking
@@ -363,7 +280,11 @@ class Booking:
             booking_id=confirmed.booking_id,
             pool_id=confirmed.pool_id,
             club_id=confirmed.club_id,
-            court=BookedCourt(court_id=confirmed.court_id, name=confirmed.court_name),
+            court=BookedCourt(
+                court_id=confirmed.court_id,
+                name=confirmed.court_name,
+                indoor=confirmed.indoor,
+            ),
             sport=Sport(confirmed.sport),
             kind=SearchMode(confirmed.kind),
             start=instant(confirmed.start),
@@ -377,25 +298,6 @@ class Booking:
             version=1,
         )
 
-    @classmethod
-    def _waiting(cls, requested: BookingRequested) -> "Booking":
-        return cls(
-            booking_id=requested.booking_id,
-            pool_id=requested.pool_id,
-            club_id=requested.club_id,
-            court=BookedCourt(court_id=requested.court_id, name=requested.court_name),
-            sport=Sport(requested.sport),
-            kind=SearchMode(requested.kind),
-            start=instant(requested.start),
-            share_grosze=requested.share_grosze,
-            first_side=tuple(requested.first_side),
-            second_side=tuple(requested.second_side),
-            cut_off=instant(requested.cut_off),
-            state=BookingState.WAITING_FOR_THE_CLUB,
-            answer_by=instant(requested.answer_by),
-            version=1,
-        )
-
     def pull_events(self) -> list[DomainEvent]:
         return self._events.pull()
 
@@ -406,19 +308,6 @@ class Booking:
         """Everybody with a seat on it, the first side first."""
 
         return (*self.first_side, *self.second_side)
-
-    @property
-    def is_waiting(self) -> bool:
-        """The club has still to answer."""
-
-        return self.state is BookingState.WAITING_FOR_THE_CLUB
-
-    @property
-    def awaits_a_payment(self) -> bool:
-        """The club said yes, and a payment it waits on is still to come
-        (#626)."""
-
-        return self.state is BookingState.WAITING_FOR_A_PAYMENT
 
     @property
     def fixing_until(self) -> dict[UUID, Instant]:
@@ -443,23 +332,11 @@ class Booking:
     @property
     def open_seats(self) -> int:
         """Seats nobody holds on a booked game — the leavers' (#544). Nought on
-        a request, which nobody has paid for, and on a game called off."""
+        a game called off."""
 
         if self.state is not BookingState.SEAT_OPEN:
             return 0
         return self.seats - len(self.players)
-
-    @property
-    def taken_back(self) -> bool:
-        """Its request was taken back because a seat opened — or the payment
-        the club's yes waited on did not come, the game still able to fill
-        (#626): the game is filling again, its people still In keeping their
-        places (Q106)."""
-
-        return self.called_off is CalledOff.SEAT_OPENED or (
-            self.called_off is CalledOff.PAYMENT_NOT_IN_TIME
-            and not self.called_off_for_good
-        )
 
     @property
     def is_booked(self) -> bool:
@@ -739,11 +616,48 @@ class Booking:
         )
         return True
 
-    def move_to(self, court: BookedCourt, *, at: Instant) -> None:
+    def absorbing_court(
+        self, free: Iterable[FreeCourt], *, because: CancelReason
+    ) -> BookedCourt | None:
+        """The court that takes the game when its club cancels it ``because``
+        — a **move by cancel** (#672; the mechanics §16.9, Q122) — or ``None``
+        when none does, and the cancel calls the game off.
+
+        ``free`` is every court of the game's sport its club still sells at
+        the game's hour, in the club's order. One absorbs the cancel when
+        nothing about the game would change: **the same share**, **the same
+        kind, or indoor for an outdoor game** — and, for *weather*, **indoor
+        only**, since an outdoor court at the same hour is rained on too. Of
+        two, the same kind comes first, then indoor; within that, the club's
+        own order."""
+
+        absorbing = [
+            one.court
+            for one in free
+            if one.court.court_id != self.court.court_id
+            and one.share_grosze == self.share_grosze
+            and self.court.may_move_to(one.court)
+            and (because is not CancelReason.WEATHER or one.court.indoor)
+        ]
+        # A stable sort: the club's order holds within each kind.
+        absorbing.sort(key=lambda court: court.indoor is not self.court.indoor)
+        return absorbing[0] if absorbing else None
+
+    def move_to(
+        self, court: BookedCourt, *, at: Instant, because: CancelReason | None = None
+    ) -> None:
         """The club puts the game on ``court`` — another court of its sport,
-        free at the hour (#547). Whether it is free, and of the sport, is the
-        caller's question, asked of what the club sells; that the game is still
-        to be played, and the court another, is this one's."""
+        free at the hour (#547). Whether it is free, of the sport, and of a kind
+        the players would accept — the same kind, or indoor for an outdoor game
+        (#671, Q122) — is the caller's question, asked of what the club sells;
+        that the game is still to be played, and the court another, is this
+        one's. The record carries the new court's kind, so the players read
+        *Court 3 · indoor* from here on, and the court it left.
+
+        ``because`` is the club's cancel the move takes the place of — a move
+        by cancel (#672), its court found by ``absorbing_court`` — and ``None``
+        for the club's own Move. Either way nothing else about the game
+        changes: its players, its seats and their money stay as they are."""
 
         self._refuse_unless_still_to_be_played(at)
         invariant(
@@ -755,7 +669,10 @@ class Booking:
                 booking_id=self.booking_id,
                 court_id=court.court_id,
                 court_name=court.name,
+                indoor=court.indoor,
                 occurred_at=at,
+                reason=None if because is None else because.value,
+                moved_from=self.court.name,
             )
         )
 
@@ -788,163 +705,6 @@ class Booking:
             )
         )
 
-    def accept(self, *, game_id: UUID, at: Instant) -> None:
-        """The club said yes, every seat was paid, and ``game_id`` is open — at
-        its yes, or when the payment its yes waited on came in (#626)."""
-
-        invariant(
-            self.is_waiting or self.awaits_a_payment,
-            f"{self.booking_id} is accepted while {self.state}",
-        )
-        self._record_that(
-            BookingAccepted(booking_id=self.booking_id, game_id=game_id, occurred_at=at)
-        )
-
-    def await_a_payment(
-        self,
-        player_ids: tuple[UUID, ...],
-        *,
-        until: Instant,
-        at: Instant,
-        to_fix_the_card: bool = False,
-    ) -> None:
-        """The club said yes and these players' shares could not be held: the
-        yes and the court are kept until ``until`` (#626; Q109) — their time
-        to fix the card, before the cut-off, or to pay (#638)."""
-
-        self._refuse_unless_waiting()
-        invariant(
-            bool(player_ids) and set(player_ids) <= set(self.players),
-            f"{player_ids} are not all on {self.booking_id}",
-        )
-        invariant(at < until, f"{self.booking_id} awaits a payment until {until}")
-        self._record_that(
-            BookingAwaitingAPayment(
-                booking_id=self.booking_id,
-                player_ids=player_ids,
-                until=until,
-                occurred_at=at,
-                to_fix_the_card=to_fix_the_card,
-            )
-        )
-
-    def payment_not_in_time(
-        self, player_ids: tuple[UUID, ...], *, for_good: bool, at: Instant
-    ) -> bool:
-        """The payment the club's yes waited on did not come in time — or no
-        time was left at its yes (``at_once``: the booking was still waiting
-        for the club): called off, nobody paid, the court free. ``for_good``
-        when the game can no longer fill. Answers whether anything was
-        recorded — nothing on a booking the club has no longer, or one whose
-        request a seat opening took back first."""
-
-        if not (self.awaits_a_payment or self.is_waiting):
-            return False
-        at_once = self.is_waiting
-        invariant(not at_once or for_good, f"{self.booking_id} called off at once")
-        invariant(
-            bool(player_ids) and set(player_ids) <= set(self.players),
-            f"{player_ids} are not all on {self.booking_id}",
-        )
-        self._record_that(
-            PaymentNotInTime(
-                booking_id=self.booking_id,
-                player_ids=player_ids,
-                occurred_at=at,
-                for_good=for_good,
-                at_once=at_once,
-            )
-        )
-        return True
-
-    def refuse(self, *, reason: str | None, at: Instant) -> None:
-        """The club said no."""
-
-        self._refuse_unless_waiting()
-        self._record_that(
-            BookingRefused(booking_id=self.booking_id, reason=reason, occurred_at=at)
-        )
-
-    def time_out(self, *, at: Instant) -> None:
-        """The club's answer was due and never came."""
-
-        self._refuse_unless_waiting()
-        invariant(
-            self.answer_by is not None and at >= self.answer_by,
-            f"{self.booking_id} timed out at {at}, its answer due {self.answer_by}",
-        )
-        self._record_that(BookingTimedOut(booking_id=self.booking_id, occurred_at=at))
-
-    def withdraw_request(
-        self,
-        player_ids: tuple[UUID, ...],
-        *,
-        left: tuple[UUID, ...] = (),
-        at: Instant,
-    ) -> bool:
-        """These players' seats opened while the game waited: the request is
-        off, and the others keep their places (Q106). ``left`` is those of them
-        who took their own yes back. Answers whether anything was recorded —
-        nothing on a booking not waiting for the club."""
-
-        if not (self.is_waiting or self.awaits_a_payment):
-            return False
-        invariant(
-            bool(player_ids) and set(player_ids) <= set(self.players),
-            f"{player_ids} are not all on {self.booking_id}",
-        )
-        invariant(
-            set(left) <= set(player_ids),
-            f"{left} left {self.booking_id}, whose seats {player_ids} opened",
-        )
-        self._record_that(
-            RequestWithdrawn(
-                booking_id=self.booking_id,
-                player_ids=player_ids,
-                occurred_at=at,
-                left=left,
-            )
-        )
-        return True
-
-    def request_again(
-        self,
-        *,
-        court: BookedCourt,
-        first_side: tuple[UUID, ...],
-        second_side: tuple[UUID, ...],
-        cut_off: Instant,
-        answer_by: Instant,
-        filled_by: UUID | None,
-        at: Instant,
-    ) -> None:
-        """The game whose request was withdrawn is full again: put to the club
-        again, with whoever is In now, on the first free court now — by
-        ``filled_by``'s own act, if a player's."""
-
-        invariant(
-            self.taken_back,
-            f"{self.booking_id} is asked again from {self.state}, {self.called_off}",
-        )
-        self._record_that(
-            _a_request(
-                booking_id=self.booking_id,
-                pool_id=self.pool_id,
-                club_id=self.club_id,
-                court=court,
-                sport=self.sport,
-                kind=self.kind,
-                start=self.start,
-                share_grosze=self.share_grosze,
-                first_side=first_side,
-                second_side=second_side,
-                cut_off=cut_off,
-                answer_by=answer_by,
-                filled_by=filled_by,
-                at=at,
-            )
-        )
-
     # ------------------------------------------------------------------- fold
 
     def _refuse_unless_still_to_be_played(self, at: Instant) -> None:
@@ -959,12 +719,6 @@ class Booking:
             f"cut-off {self.cut_off}, start {self.start}",
         )
 
-    def _refuse_unless_waiting(self) -> None:
-        invariant(
-            self.is_waiting,
-            f"{self.booking_id} is answered while {self.state}",
-        )
-
     def _record_that(self, event: DomainEvent) -> None:
         self._apply(event)
         self._events.record(event)
@@ -977,48 +731,7 @@ class Booking:
         }
 
     def _apply(self, event: DomainEvent) -> None:
-        if isinstance(event, BookingAccepted):
-            self.state = BookingState.BOOKED
-            self.game_id = event.game_id
-            self.booked_at = instant(event.occurred_at)
-            self.pay_by = None
-            self.payers = ()
-            self.to_fix_the_card = False
-        elif isinstance(event, BookingAwaitingAPayment):
-            self.state = BookingState.WAITING_FOR_A_PAYMENT
-            self.pay_by = instant(event.until)
-            self.payers = tuple(event.player_ids)
-            self.to_fix_the_card = event.to_fix_the_card
-        elif isinstance(event, PaymentNotInTime):
-            self.state = BookingState.CALLED_OFF
-            self.called_off = CalledOff.PAYMENT_NOT_IN_TIME
-            self.called_off_for_good = event.for_good
-            self.pay_by = None
-            self.payers = ()
-            self.to_fix_the_card = False
-            if not event.for_good:
-                # The game is filling again: its players read it folded
-                # against the proposal, and the club still sees all four, so
-                # nobody is named by being left off (Q112).
-                self.taken_back_at = instant(event.occurred_at)
-        elif isinstance(event, BookingRefused):
-            self.state = BookingState.CALLED_OFF
-            self.called_off = CalledOff.REFUSED
-            self.refusal_reason = event.reason
-        elif isinstance(event, BookingTimedOut):
-            self.state = BookingState.CALLED_OFF
-            self.called_off = CalledOff.NO_ANSWER
-        elif isinstance(event, RequestWithdrawn):
-            self.state = BookingState.CALLED_OFF
-            self.called_off = CalledOff.SEAT_OPENED
-            self.taken_back_at = instant(event.occurred_at)
-            self.pay_by = None
-            self.payers = ()
-            self.to_fix_the_card = False
-            opened = set(event.player_ids)
-            self.first_side = tuple(p for p in self.first_side if p not in opened)
-            self.second_side = tuple(p for p in self.second_side if p not in opened)
-        elif isinstance(event, CardToFix):
+        if isinstance(event, CardToFix):
             self.cards_to_fix = {
                 **self.cards_to_fix,
                 event.player_id: RefusedHolding(
@@ -1092,7 +805,9 @@ class Booking:
             self.cards_to_fix = {}
             self.kept = {}
         elif isinstance(event, CourtMoved):
-            self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
+            self.court = BookedCourt(
+                court_id=event.court_id, name=event.court_name, indoor=event.indoor
+            )
         elif isinstance(event, CancelledByClub):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.CANCELLED_BY_THE_CLUB
@@ -1104,16 +819,6 @@ class Booking:
             # Retired (#651): a stored scan is read and changes nothing —
             # nothing asks who the desk saw any more.
             pass
-        elif isinstance(event, BookingRequested):
-            self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
-            self.first_side = tuple(event.first_side)
-            self.second_side = tuple(event.second_side)
-            self.cut_off = instant(event.cut_off)
-            self.answer_by = instant(event.answer_by)
-            self.state = BookingState.WAITING_FOR_THE_CLUB
-            self.called_off = None
-            self.called_off_for_good = False
-            self.taken_back_at = None
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
         self.version += 1
@@ -1132,46 +837,3 @@ def _sides_of_a_game(
         f"somebody on both sides: {first_side} {second_side}",
     )
 
-
-def _a_request(
-    *,
-    booking_id: UUID,
-    pool_id: UUID,
-    club_id: UUID,
-    court: BookedCourt,
-    sport: Sport,
-    kind: SearchMode,
-    start: Instant,
-    share_grosze: int,
-    first_side: tuple[UUID, ...],
-    second_side: tuple[UUID, ...],
-    cut_off: Instant,
-    answer_by: Instant,
-    filled_by: UUID | None,
-    at: Instant,
-) -> BookingRequested:
-    _sides_of_a_game(sport, first_side, second_side)
-    invariant(cut_off <= start, f"a cut-off {cut_off} after the game {start}")
-    # The club's longest time to confirm is the shortest notice it may give,
-    # so an answer is always due before the game could start.
-    invariant(
-        at < answer_by <= start,
-        f"asked at {at}, answer due {answer_by}, the game at {start}",
-    )
-    return BookingRequested(
-        booking_id=booking_id,
-        pool_id=pool_id,
-        club_id=club_id,
-        court_id=court.court_id,
-        court_name=court.name,
-        sport=sport.value,
-        kind=kind.value,
-        start=start,
-        share_grosze=share_grosze,
-        first_side=first_side,
-        second_side=second_side,
-        cut_off=cut_off,
-        answer_by=answer_by,
-        occurred_at=at,
-        filled_by=filled_by,
-    )

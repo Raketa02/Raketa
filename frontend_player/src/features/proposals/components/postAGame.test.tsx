@@ -884,7 +884,6 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
         proposal_id: post.proposal_id,
         open_seats: 1,
         booked: null,
-        waiting_for_the_club: false,
         your_payment: null,
       }),
     );
@@ -914,7 +913,6 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
         proposal_id: rescue.booking_id,
         open_seats: 0,
         booked: { booking_id: rescue.booking_id, game_id: GAME_ID },
-        waiting_for_the_club: false,
         your_payment: null,
       }),
     );

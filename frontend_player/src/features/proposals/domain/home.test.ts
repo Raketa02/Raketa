@@ -1,7 +1,6 @@
 import type { DeckPerson } from './deck';
 import {
   ENDED_HOME_SHELF_LIFE_MS,
-  answerByAhead,
   chatIsOpen,
   completesTheRescue,
   courtIsGiven,
@@ -121,77 +120,6 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     });
   });
 
-  it('waits for the club by name, and nobody pays', () => {
-    const waiting = game({
-      status: 'WAITING_FOR_THE_CLUB',
-      money: { shareGrosze: 3000, paid: false },
-    });
-    expect(moneyLineOf(waiting, BEFORE_CUT_OFF)).toEqual({
-      kind: 'waiting',
-      club: 'Bonarka Arena',
-    });
-  });
-
-  /**
-   * **When the club answers** (Q98; the screens A8): the deadline the desk is given, while it is
-   * ahead of `now` — and the hour alone when it falls on the read's day, on the club's calendar.
-   */
-  describe('the club’s deadline to answer', () => {
-    /** Thursday 1 October, 10:00 in Warsaw — the read. */
-    const READ = Date.parse('2026-10-01T08:00:00Z');
-    /** 11:00 the same day. */
-    const ELEVEN = '2026-10-01T09:00:00Z';
-    const waiting = (extra: Partial<HomeGame> = {}) =>
-      game({
-        status: 'WAITING_FOR_THE_CLUB',
-        money: { shareGrosze: 3000, paid: false },
-        answerBy: ELEVEN,
-        ...extra,
-      });
-
-    it('says when the club answers while the deadline is ahead', () => {
-      expect(moneyLineOf(waiting(), READ)).toEqual({
-        kind: 'waiting',
-        club: 'Bonarka Arena',
-        answerBy: { at: ELEVEN, today: true },
-      });
-    });
-
-    it('drops it at the deadline itself — the line reads as it did before', () => {
-      expect(moneyLineOf(waiting(), Date.parse(ELEVEN))).toEqual({
-        kind: 'waiting',
-        club: 'Bonarka Arena',
-      });
-      expect(moneyLineOf(waiting(), Date.parse(ELEVEN) + 60_000)).toEqual({
-        kind: 'waiting',
-        club: 'Bonarka Arena',
-      });
-    });
-
-    it('says it of the club when the read no longer names it', () => {
-      expect(moneyLineOf(waiting({ club: { id: 'club-1' } }), READ)).toEqual({
-        kind: 'waiting',
-        answerBy: { at: ELEVEN, today: true },
-      });
-    });
-
-    it('is today by the club’s calendar, and another day past its midnight', () => {
-      // 23:30 and 00:15 in Warsaw: the second is Friday, though it is still Thursday in UTC.
-      expect(answerByAhead({ answerBy: '2026-10-01T21:30:00Z' }, READ)).toEqual({
-        at: '2026-10-01T21:30:00Z',
-        today: true,
-      });
-      expect(answerByAhead({ answerBy: '2026-10-01T22:15:00Z' }, READ)).toEqual({
-        at: '2026-10-01T22:15:00Z',
-        today: false,
-      });
-    });
-
-    it('is nothing for a value that is not an instant', () => {
-      expect(answerByAhead({ answerBy: 'soon' }, READ)).toBeUndefined();
-    });
-  });
-
   it('counts the open seats the read says, and fills by the cut-off while it is ahead', () => {
     const open = game({ status: 'SEAT_OPEN', openSeats: 2 });
     expect(moneyLineOf(open, BEFORE_CUT_OFF)).toEqual({
@@ -204,51 +132,28 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
 
   /**
    * **A full game gone back to filling** (#624, Q106): *Seat open*, the seats nobody is In on, and
-   * how it is booked once full again — the club asked again, or at once. Nobody paid, so no cut-off.
+   * that it books once full again — every club books at once (#676). Nobody paid, so no cut-off.
    */
   describe('a full game gone back to filling', () => {
-    const filling = (clubConfirms: boolean) =>
-      game({
-        status: 'SEAT_OPEN',
-        openSeats: 1,
-        gameId: undefined,
-        courtName: undefined,
-        club: { id: 'club-1', name: 'Kazimierz Padel' },
-        money: { shareGrosze: 2500, paid: false },
-        fillingAgain: { clubConfirms },
-      });
-
-    it('is a seat open, the club asked again when it is full, nobody paid', () => {
-      expect(moneyLineOf(filling(true), BEFORE_CUT_OFF)).toEqual({
-        kind: 'fillingAgain',
-        seats: 1,
-        club: 'Kazimierz Padel',
-        clubConfirms: true,
-      });
+    const filling = game({
+      status: 'SEAT_OPEN',
+      openSeats: 1,
+      gameId: undefined,
+      courtName: undefined,
+      club: { id: 'club-1', name: 'Kazimierz Padel' },
+      money: { shareGrosze: 2500, paid: false },
+      fillingAgain: true,
     });
 
-    it('books when it is full at a club that books at once', () => {
-      expect(moneyLineOf(filling(false), BEFORE_CUT_OFF)).toEqual({
-        kind: 'fillingAgain',
-        seats: 1,
-        club: 'Kazimierz Padel',
-        clubConfirms: false,
-      });
-    });
-
-    it('says it of the club when the read no longer names it', () => {
-      expect(moneyLineOf({ ...filling(true), club: { id: 'club-1' } }, BEFORE_CUT_OFF)).toEqual({
-        kind: 'fillingAgain',
-        seats: 1,
-        clubConfirms: true,
-      });
+    it('is a seat open that books when it is full, nobody paid', () => {
+      expect(moneyLineOf(filling, BEFORE_CUT_OFF)).toEqual({ kind: 'fillingAgain', seats: 1 });
     });
 
     it('is called off with why once its last moment to book passes, or its court goes', () => {
       for (const reason of ['BOOK_BY_PASSED', 'COURT_HOUR_LOST'] as const) {
         expect(
           moneyLineOf(
-            { ...filling(true), status: 'CALLED_OFF', calledOffReason: reason, openSeats: 0 },
+            { ...filling, status: 'CALLED_OFF', calledOffReason: reason, openSeats: 0 },
             BEFORE_CUT_OFF,
           ),
         ).toEqual({ kind: 'calledOff', reason, club: 'Kazimierz Padel' });
@@ -319,7 +224,7 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
         status: 'SEAT_OPEN',
         openSeats: 1,
         money: { shareGrosze: 4000, paid: false },
-        fillingAgain: { clubConfirms: false },
+        fillingAgain: true,
         yourPaymentDueBy: TWENTY_TO_THREE,
       });
       expect(moneyLineOf(fellBack, READ)).toEqual({
@@ -330,8 +235,6 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
       expect(moneyLineOf(fellBack, Date.parse(TWENTY_TO_THREE))).toEqual({
         kind: 'fillingAgain',
         seats: 1,
-        club: 'Bonarka Arena',
-        clubConfirms: false,
       });
     });
 
@@ -385,14 +288,14 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
       reason: 'SHORT_AT_THE_CUT_OFF',
       club: 'Bonarka Arena',
     });
-    const refused = game({
+    const unpaid = game({
       status: 'CALLED_OFF',
-      calledOffReason: 'REFUSED',
+      calledOffReason: 'PAYMENT_NOT_IN_TIME',
       money: { shareGrosze: 3000, paid: false },
     });
-    expect(moneyLineOf(refused, BEFORE_CUT_OFF)).toEqual({
+    expect(moneyLineOf(unpaid, BEFORE_CUT_OFF)).toEqual({
       kind: 'calledOff',
-      reason: 'REFUSED',
+      reason: 'PAYMENT_NOT_IN_TIME',
       club: 'Bonarka Arena',
     });
   });
@@ -453,7 +356,6 @@ describe('onHome — how long an ended game keeps its card', () => {
   const hourEnds = Date.parse(STARTS_AT) + 3_600_000;
 
   it.each<HomeStatus>([
-    'WAITING_FOR_THE_CLUB',
     'WAITING_FOR_A_PAYMENT',
     'BOOKED',
     'SEAT_OPEN',
@@ -476,20 +378,20 @@ describe('onHome — how long an ended game keeps its card', () => {
   });
 
   it('keeps a full game gone back to filling, which is live (Q106)', () => {
-    const filling = game({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: true } });
+    const filling = game({ status: 'SEAT_OPEN', fillingAgain: true });
     expect(onHome(filling, hourEnds + 30 * ENDED_HOME_SHELF_LIFE_MS)).toBe(true);
   });
 });
 
 describe('lineCanRunOut — a clause that leaves the line by itself', () => {
-  it('runs out while the cut-off or the club’s deadline is there to pass', () => {
+  it('runs out while the cut-off is there to pass', () => {
     expect(lineCanRunOut(game())).toBe(true);
-    const waiting = game({
-      status: 'WAITING_FOR_THE_CLUB',
+    const fellBack = game({
+      status: 'SEAT_OPEN',
+      fillingAgain: true,
       money: { shareGrosze: 3000, paid: false },
     });
-    expect(lineCanRunOut({ ...waiting, answerBy: '2026-10-01T09:00:00Z' })).toBe(true);
-    expect(lineCanRunOut(waiting)).toBe(false);
+    expect(lineCanRunOut(fellBack)).toBe(false);
   });
 
   it('runs out while a checked share is still to be held — the details’ row switches then', () => {
@@ -510,7 +412,7 @@ describe('lineCanRunOut — a clause that leaves the line by itself', () => {
     const fellBack = game({
       status: 'SEAT_OPEN',
       money: { shareGrosze: 4000, paid: false },
-      fillingAgain: { clubConfirms: false },
+      fillingAgain: true,
     });
     expect(lineCanRunOut({ ...fellBack, yourPaymentDueBy: '2026-10-06T12:40:00Z' })).toBe(true);
   });
@@ -587,9 +489,14 @@ describe('leavingAt — what leaving lets go of, now', () => {
     expect(leavingAt(booked(HELD), Date.parse(CUT_OFF))).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
   });
 
-  it('is the read’s own after the cut-off, while the club decides, and where there is no button', () => {
+  it('is the read’s own after the cut-off, while a payment is awaited, and where there is no button', () => {
     const late = { money: HELD, leaving: { kind: 'AFTER_THE_CUT_OFF' as const } };
     expect(leavingAt(late, BEFORE_CUT_OFF)).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
+    const waiting = {
+      money: { shareGrosze: 2800, paid: false },
+      leaving: { kind: 'WHILE_WAITING_FOR_A_PAYMENT' as const },
+    };
+    expect(leavingAt(waiting, BEFORE_CUT_OFF)).toEqual({ kind: 'WHILE_WAITING_FOR_A_PAYMENT' });
     expect(leavingAt({ money: HELD }, BEFORE_CUT_OFF)).toBeUndefined();
   });
 });
@@ -608,7 +515,6 @@ describe('isNew — marked until opened (the mechanics §11.4)', () => {
   });
 
   it('is new only while the game is still ahead of its result', () => {
-    expect(isNew(game({ status: 'WAITING_FOR_THE_CLUB' }), new Set())).toBe(true);
     expect(isNew(game({ status: 'WAITING_FOR_A_PAYMENT' }), new Set())).toBe(true);
     expect(isNew(game({ status: 'SEAT_OPEN' }), new Set())).toBe(true);
     expect(isNew(game({ status: 'NEEDS_RESULT' }), new Set())).toBe(false);
@@ -621,9 +527,8 @@ describe('isNew — marked until opened (the mechanics §11.4)', () => {
 
   /** *New* marks a game that filled; one gone back to filling is not full any more. */
   it('is not new while the game is filling again, and new once it is full again', () => {
-    const fillingAgain = { clubConfirms: true };
-    expect(isNew(game({ status: 'SEAT_OPEN', fillingAgain }), new Set())).toBe(false);
-    expect(isNew(game({ status: 'WAITING_FOR_THE_CLUB' }), new Set())).toBe(true);
+    expect(isNew(game({ status: 'SEAT_OPEN', fillingAgain: true }), new Set())).toBe(false);
+    expect(isNew(game({ status: 'BOOKED' }), new Set())).toBe(true);
   });
 });
 
@@ -654,7 +559,6 @@ describe('openedFrom / openedToKeep — what the phone keeps', () => {
 
 describe('chatIsOpen — the room lives its own life once booked, and closes as today (§14.3)', () => {
   it.each<[HomeStatus, boolean]>([
-    ['WAITING_FOR_THE_CLUB', false],
     // Nobody paid and nothing is booked yet: the chat opens when it is (Q111).
     ['WAITING_FOR_A_PAYMENT', false],
     ['BOOKED', true],
@@ -670,9 +574,9 @@ describe('chatIsOpen — the room lives its own life once booked, and closes as 
     expect(chatIsOpen({ status })).toBe(open);
   });
 
-  /** No Game and no room: the chat opens when the game is booked, as on *Waiting for the club*. */
+  /** No Game and no room: the chat opens when the game is booked, as on *Waiting for one payment*. */
   it('has no room on a full game gone back to filling', () => {
-    expect(chatIsOpen({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: true } })).toBe(false);
+    expect(chatIsOpen({ status: 'SEAT_OPEN', fillingAgain: true })).toBe(false);
   });
 });
 
@@ -706,15 +610,12 @@ describe('stakeOnTheDetails — the seat a payer’s time keeps, where the tag d
 
   it('is nothing on a game not booked yet, whose tag says it waits', () => {
     expect(stakeOnTheDetails({ status: 'WAITING_FOR_A_PAYMENT' })).toBeUndefined();
-    expect(
-      stakeOnTheDetails({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: false } }),
-    ).toBeUndefined();
+    expect(stakeOnTheDetails({ status: 'SEAT_OPEN', fillingAgain: true })).toBeUndefined();
   });
 });
 
-describe('courtIsGiven — a court number once the club has said yes (A4.2)', () => {
+describe('courtIsGiven — a court number once the game is booked (A4.2)', () => {
   it.each<[HomeStatus, boolean]>([
-    ['WAITING_FOR_THE_CLUB', false],
     ['WAITING_FOR_A_PAYMENT', false],
     ['BOOKED', true],
     ['SEAT_OPEN', true],
@@ -725,14 +626,12 @@ describe('courtIsGiven — a court number once the club has said yes (A4.2)', ()
   });
 
   it('gives no court to a full game gone back to filling', () => {
-    expect(courtIsGiven({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: false } })).toBe(
-      false,
-    );
+    expect(courtIsGiven({ status: 'SEAT_OPEN', fillingAgain: true })).toBe(false);
   });
 });
 
 describe('isFillingAgain — a full game gone back to filling, while it fills (Q106)', () => {
-  const fillingAgain = { clubConfirms: true };
+  const fillingAgain = true;
 
   it('is a Seat open the read marks filling again', () => {
     expect(isFillingAgain({ status: 'SEAT_OPEN', fillingAgain })).toBe(true);
@@ -786,7 +685,7 @@ describe('resultActOf — the result, reached from the details as today', () => 
   });
 
   it.each<HomeStatus>([
-    'WAITING_FOR_THE_CLUB',
+    'WAITING_FOR_A_PAYMENT',
     'BOOKED',
     'SEAT_OPEN',
     'COUNTED',

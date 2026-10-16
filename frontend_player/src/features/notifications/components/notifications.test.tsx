@@ -257,20 +257,19 @@ describe('the Notifications row, in the ACCOUNT group', () => {
 // ---------------------------------------------------------------------------
 
 describe('the Notifications screen', () => {
-  // The screens A7.2 as #620 amends it, Q113 adds Fix your card, and #663 the five steps at the
-  // court: §17.2's always-on notices.
-  it('lists the seventeen always on, each inert with its green tag (mock 52)', async () => {
+  // The screens A7.2 as #620 amends it, Q113 adds Fix your card, #663 the five steps at the
+  // court, and Q121 takes the club's answer away: §17.2's always-on notices.
+  it('lists the sixteen always on, each inert with its green tag (mock 52, #677)', async () => {
     const rows = [
       'It’s a game! · held',
-      'It’s a game! · the club answers by …',
       'Waiting for one payment',
       'Fix your card by … to keep your seat',
       'Confirm your payment by … to keep your seat',
       'Game called off · nothing was taken, or with the refund',
       'Someone left your game · or it’s filling again',
       'You’ve been refunded',
-      'The club confirmed / said no / didn’t answer in time',
       'Your new game',
+      'A game moved to another court',
       'A game you left',
       'Your post didn’t fill',
       '… is at the club and you’re not there yet',
@@ -713,10 +712,10 @@ describe('a notice while the app is open, on a phone not pushed', () => {
 
   // Q103: the minute's read used to leave Home as it was until the app had been away for longer
   // than Home stays fresh — the game a notice is about is there before it is tapped now.
-  it('re-reads Home — a game waiting for the club is on Home without leaving the app', async () => {
+  it('re-reads Home — the game a notice is about is on Home without leaving the app', async () => {
     const MATCHED = notice({
-      title: 'It’s a game! · Kazimierz Padel answers by 21:15',
-      body: 'Padel · Fri 19:00. Nobody pays until it confirms.',
+      title: 'It’s a game! · 25 zł held',
+      body: 'Padel · Fri 19:00 at Kazimierz Padel.',
       new: true,
     });
     await launchSignedIn();
@@ -724,14 +723,7 @@ describe('a notice while the app is open, on a phone not pushed', () => {
     await sessionReadTheList();
     expect(screen.queryByTestId(`home-game-${BOOKING}`)).toBeNull();
 
-    stubHomeGames(transport, [
-      homeGame({
-        status: 'WAITING_FOR_THE_CLUB',
-        game_id: null,
-        court_name: null,
-        money: unheldMoney(),
-      }),
-    ]);
+    stubHomeGames(transport, [homeGame()]);
     stubNotices(transport, [MATCHED]);
     await act(async () => jest.advanceTimersByTime(60_000));
 
@@ -1090,26 +1082,25 @@ describe('the recent notices, behind the bell on Home', () => {
 });
 
 // ---------------------------------------------------------------------------
-// It's a game! while the club decides, and the new card after its no
+// It's a game! while one payment is awaited, and the new card after a club's cancel
 // ---------------------------------------------------------------------------
 
 /**
- * Q103 and Q107 (#622): the four matched at a club that confirms are told *It's a game! · the club
- * answers by …*, which opens the game — still the proposal's, waiting for its club; and after the
- * club's no, the new card first is told as *Your new game*, which opens the deck with it on top.
- * Each is opened the same way from the banner and from its row behind the bell.
+ * Q110 and Q107 (#622, #625): the four matched while one payment is missing are told *It's a game! ·
+ * waiting for one payment …*, which opens the game — still the proposal's, nobody paid; and after a
+ * club's cancel called a game off, the new card first is told as *Your new game*, which opens the
+ * deck with it on top. Each is opened the same way from the banner and from its row behind the bell.
  */
-describe('It’s a game! while the club decides, and Your new game (Q103, Q107)', () => {
+describe('It’s a game! while one payment is awaited, and Your new game (Q110, Q107)', () => {
   const MATCHED = deckCard({
     in_count: 4,
     open_seats_after_your_yes: 0,
     club: { id: 'c0000000-0000-4000-8000-000000000009', name: 'Kazimierz Padel' },
-    club_confirms: true,
   });
-  const ANSWERS_BY = notice({
-    kind: 'WAITING_FOR_THE_CLUB',
-    title: 'It’s a game! · Kazimierz Padel answers by 21:15',
-    body: 'Padel · Fri 19:00. Nobody pays until it confirms.',
+  const AWAITED = notice({
+    kind: 'WAITING_FOR_A_PAYMENT',
+    title: 'It’s a game! · waiting for one payment until 14:40',
+    body: 'Padel · Fri 19:00 at Kazimierz Padel. Nobody pays until it’s in.',
     opens: 'PROPOSAL',
     game_id: MATCHED.proposal_id,
     new: true,
@@ -1135,7 +1126,7 @@ describe('It’s a game! while the club decides, and Your new game (Q103, Q107)'
       MATCHED.proposal_id,
       proposalDetails(MATCHED, {
         pool_id: CREW_ID,
-        status: 'WAITING_FOR_THE_CLUB',
+        status: 'WAITING_FOR_A_PAYMENT',
         actions: ['LEAVE'],
       }),
     );
@@ -1161,32 +1152,32 @@ describe('It’s a game! while the club decides, and Your new game (Q103, Q107)'
     );
   }
 
-  it('the banner It’s a game! · answers by opens the game, waiting for its club', async () => {
-    await told(ANSWERS_BY);
+  it('the banner It’s a game! · waiting for one payment opens the game, nobody paid yet', async () => {
+    await told(AWAITED);
 
     fireEvent.press(
-      await screen.findByRole('button', { name: `${ANSWERS_BY.title}. ${ANSWERS_BY.body}` }),
+      await screen.findByRole('button', { name: `${AWAITED.title}. ${AWAITED.body}` }),
     );
 
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
     );
-    expect(await screen.findByText('Waiting for the club')).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'Waiting for one payment' })).toBeTruthy();
   });
 
   it('its row behind the bell opens the game too — back is the list', async () => {
-    stubNotices(transport, [ANSWERS_BY], { newCount: 1 });
+    stubNotices(transport, [AWAITED], { newCount: 1 });
     await launchSignedIn();
     jest.setSystemTime(DECK_READ_AT);
     fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
     await waitFor(() => expect(screen).toHavePathname('/notices'));
 
-    fireEvent.press(await screen.findByRole('button', { name: /^New\. It’s a game! · Kazimierz/ }));
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. It’s a game! · waiting/ }));
 
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
     );
-    expect(await screen.findByText('Waiting for the club')).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'Waiting for one payment' })).toBeTruthy();
     fireEvent.press(await screen.findByLabelText('Back'));
     await waitFor(() => expect(screen).toHavePathname('/notices'));
   });
@@ -1220,7 +1211,7 @@ describe('It’s a game! while the club decides, and Your new game (Q103, Q107)'
 
     await onTopOfTheDeck(REDEALT);
 
-    act(() => phone.tap(payloadOf(ANSWERS_BY)));
+    act(() => phone.tap(payloadOf(AWAITED)));
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
     );
@@ -1443,5 +1434,59 @@ describe('a push tapped on the phone', () => {
     act(() => phone.tap({ opens: 'BOOKING', game_id: 'not-a-game' }));
 
     expect(screen).toHavePathname('/');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Game moved (#677)
+// ---------------------------------------------------------------------------
+
+describe('Game moved — a club moved the booked game to another court (#677)', () => {
+  const MOVED = notice({
+    kind: 'GAME_MOVED',
+    title: 'Bonarka Arena moved your game to Court 3 · Thu 19:00',
+    body: 'Court 2 can’t be played · Padel · indoor · nothing else changes',
+    opens: 'BOOKING',
+    game_id: BOOKING,
+    new: true,
+  });
+
+  beforeEach(() => {
+    stubBooking(transport, bookingDetails());
+  });
+
+  it('the banner opens the booked game, on the court it moved to', async () => {
+    stubBooking(transport, bookingDetails({ court_name: 'Court 3', indoor: true }));
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+
+    act(() => phone.receive({ title: MOVED.title, body: MOVED.body, data: payloadOf(MOVED) }));
+    fireEvent.press(await screen.findByRole('button', { name: `${MOVED.title}. ${MOVED.body}` }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(await screen.findByText(/Court 3 · indoor/)).toBeTruthy();
+  });
+
+  it('its row behind the bell opens the booked game too — back is the list', async () => {
+    stubNotices(transport, [MOVED], { newCount: 1 });
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. Bonarka Arena moved/ }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    fireEvent.press(await screen.findByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+  });
+
+  it('a push of it, tapped, opens the booked game', async () => {
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+
+    act(() => phone.tap(payloadOf(MOVED)));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 });

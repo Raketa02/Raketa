@@ -1,6 +1,6 @@
 """``PlayerNames`` over the port ``users`` already publishes — the club's one
-view of a player on a request (#543; the mechanics §16.14: *each player's name,
-and whether they paid*).
+view of a player on its bookings (#547; the mechanics §16.14: *each player's
+name, and whether they paid*).
 
 **The Name, never the nickname** (``docs/adr/0171`` §4), and nothing else: no
 photograph, no Level, no week — what a deck card draws is a player's to be shown

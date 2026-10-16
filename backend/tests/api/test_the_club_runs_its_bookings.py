@@ -5,11 +5,13 @@ The club's desk reads its bookings **by day**, filtered, each with its players
 (name, *paid*, *held*), its money and the group it came from. It **moves** a
 booked game to another free court at the same hour, and **cancels** one with a
 reason — everybody refunded in full, nothing on anybody's record, the players
-dealt a new card first. **The club sees no attendance** (#657): a game somebody
-Didn't come to — caught at the court by the players, in
-``test_attendance_at_the_court.py`` — is *played* for the club, which was paid
-for the hour. **Desk check-in is removed** (#651): a scan the desk made before
-it was is still in the booking's stream, and stops no tap.
+dealt a new card first — unless another of its courts takes the game, which
+``test_a_cancel_moves_the_game.py`` proves (#672). **The club sees no
+attendance** (#657): a game somebody Didn't come to — caught at the court by
+the players, in ``test_attendance_at_the_court.py`` — is *played* for the
+club, which was paid for the hour. **Desk check-in is removed** (#651): a scan
+the desk made before it was is still in the booking's stream, and stops no
+tap.
 
 Every act is taken over HTTP as the website and the phone take it, against the
 fake payment provider; every claim is read where somebody would read it.
@@ -34,11 +36,12 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
+from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.bookings.domain.events import PlayerCheckedIn
 from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
     BOOKING_AGGREGATE,
 )
-from tests.api.club_courts_world import adds_a_court, sets_hours
+from tests.api.club_courts_world import adds_a_court, court_path, sets_hours
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -71,21 +74,54 @@ def clock(app):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant — and a second padel court, Court 3, a game can be
-    moved to."""
+    """Bonarka Arena — and two more padel courts: Court 3, indoor like Court
+    1, which a game on Court 1 can be moved to, and Court 4, outdoor, which it
+    cannot (#671, Q122)."""
 
-    club_id, desk = await a_club_and_its_desk(client, way="INSTANT")
+    club_id, desk = await a_club_and_its_desk(client)
     padel = await client.get("/api/v1/club/courts", headers=desk)
     court_1 = next(one for one in padel.json()["courts"] if one["name"] == "Court 1")
     court_2 = next(one for one in padel.json()["courts"] if one["name"] == "Court 2")
     court_3 = await adds_a_court(client, desk, name="Court 3", sport="PADEL")
+    court_4 = await adds_a_court(
+        client, desk, name="Court 4", sport="PADEL", indoor=False
+    )
     await sets_hours(
         client,
         desk,
-        [court_1["id"], court_2["id"], court_3["id"]],
+        [court_1["id"], court_2["id"], court_3["id"], court_4["id"]],
         every_hour_of_the_week(),
     )
     return club_id, desk
+
+
+async def court_named(client, desk: dict, name: str) -> dict:
+    courts = (await client.get("/api/v1/club/courts", headers=desk)).json()["courts"]
+    return next(one for one in courts if one["name"] == name)
+
+
+async def makes_court_1_outdoor(client, desk: dict) -> None:
+    """The desk corrects Court 1's kind: a game booked on it after is an
+    outdoor game."""
+
+    court_1 = await court_named(client, desk, "Court 1")
+    changed = await client.put(
+        court_path(court_1["id"]),
+        json={"name": "Court 1", "sport": "PADEL", "indoor": False, "offered": True},
+        headers=desk,
+    )
+    assert changed.status_code == 200, changed.text
+
+
+async def books_the_four(client, session_factory, clock, club_id, group, four) -> str:
+    proposal = await makes(
+        session_factory, clock, pool_id=group, club_id=club_id, versions=(tuple(four),)
+    )
+    for player in four[:3]:
+        assert (await says_yes(client, player, proposal)).status_code == 200
+    last = await says_yes(client, four[3], proposal)
+    assert last.status_code == 200, last.text
+    return last.json()["booked"]["booking_id"]
 
 
 @pytest.fixture
@@ -103,16 +139,10 @@ async def group(client, club, four) -> UUID:
 
 @pytest.fixture
 async def booking(client, session_factory, clock, club, group, four) -> str:
-    """The four's game on Saturday at 17:00 on Court 1, booked by Tomek's yes."""
+    """The four's game on Saturday at 17:00 on Court 1, indoor, booked by
+    Tomek's yes."""
 
-    proposal = await makes(
-        session_factory, clock, pool_id=group, club_id=club[0], versions=(tuple(four),)
-    )
-    for player in four[:3]:
-        assert (await says_yes(client, player, proposal)).status_code == 200
-    last = await says_yes(client, four[3], proposal)
-    assert last.status_code == 200, last.text
-    return last.json()["booked"]["booking_id"]
+    return await books_the_four(client, session_factory, clock, club[0], group, four)
 
 
 async def the_day(client, desk: dict, *, day: str = SATURDAY, chosen: str = "ALL"):
@@ -195,12 +225,7 @@ async def test_the_club_reads_its_bookings_by_day_with_what_it_may_see(
     assert row["booked_from"]["name"] == "Sobotni padel"
     assert row["booked_from"]["official"] is False
     assert row["may_move_or_cancel"] is True
-    assert day["counts"] == {
-        "all": 1,
-        "waiting_for_you": 0,
-        "seat_open": 0,
-        "called_off": 0,
-    }
+    assert day["counts"] == {"all": 1, "seat_open": 0, "called_off": 0}
     assert (await the_day(client, desk, day="2026-10-11"))["bookings"] == []
 
 
@@ -274,10 +299,13 @@ async def test_the_club_moves_a_game_to_another_free_court_and_the_players_read_
 ):
     club_id, desk = club
 
+    assert (await details_of(client, four[0], booking))["indoor"] is True
     free = await client.get(f"{BOOKINGS}/{booking}/free-courts", headers=desk)
     assert free.status_code == 200, free.text
+    # Court 3 keeps the kind; Court 4, outdoor, would be a different game to
+    # the players (Q122), and Court 2 is tennis.
     [court_3] = free.json()["courts"]
-    assert court_3["name"] == "Court 3"
+    assert (court_3["name"], court_3["indoor"]) == ("Court 3", True)
 
     moved = await client.post(
         f"{BOOKINGS}/{booking}/move",
@@ -287,12 +315,69 @@ async def test_the_club_moves_a_game_to_another_free_court_and_the_players_read_
 
     assert moved.status_code == 200, moved.text
     assert moved.json() == court_3
-    assert (await details_of(client, four[0], booking))["court_name"] == "Court 3"
+    details = await details_of(client, four[0], booking)
+    assert (details["court_name"], details["indoor"]) == ("Court 3", True)
+    [home] = await home_of(client, four[1])
+    assert (home["court_name"], home["indoor"]) == ("Court 3", True)
     [row] = (await the_day(client, desk))["bookings"]
-    assert row["court_name"] == "Court 3"
+    assert (row["court_name"], row["indoor"]) == ("Court 3", True)
     # Court 1 is free at the hour again, and Court 3 is not.
     again = await client.get(f"{BOOKINGS}/{booking}/free-courts", headers=desk)
-    assert [one["name"] for one in again.json()["courts"]] == ["Court 1"]
+    assert [(one["name"], one["indoor"]) for one in again.json()["courts"]] == [
+        ("Court 1", True)
+    ]
+
+
+async def test_an_indoor_game_is_never_moved_outdoors(client, clock, club, booking):
+    """A move keeps the kind (#671, Q122): the outdoor court is not offered,
+    and a move onto it is refused as a court that is not free."""
+
+    _, desk = club
+    court_4 = await court_named(client, desk, "Court 4")
+
+    refused = await client.post(
+        f"{BOOKINGS}/{booking}/move", json={"court_id": court_4["id"]}, headers=desk
+    )
+
+    assert (refused.status_code, refused.json()["code"]) == (409, "court_not_free")
+    details = (
+        await client.get(f"{BOOKINGS}/{booking}/free-courts", headers=desk)
+    ).json()
+    assert "Court 4" not in {one["name"] for one in details["courts"]}
+
+
+async def test_an_outdoor_game_may_move_to_either_kind_and_the_players_read_it(
+    client, session_factory, clock, club, group, four
+):
+    """An outdoor game moves to another outdoor court, or indoors — never the
+    other way (#671, Q122) — and the players read the kind as it stands."""
+
+    club_id, desk = club
+    await makes_court_1_outdoor(client, desk)
+    booking = await books_the_four(client, session_factory, clock, club_id, group, four)
+    details = await details_of(client, four[0], booking)
+    assert (details["court_name"], details["indoor"]) == ("Court 1", False)
+    [home] = await home_of(client, four[0])
+    assert (home["court_name"], home["indoor"]) == ("Court 1", False)
+
+    free = await client.get(f"{BOOKINGS}/{booking}/free-courts", headers=desk)
+
+    assert free.status_code == 200, free.text
+    assert [(one["name"], one["indoor"]) for one in free.json()["courts"]] == [
+        ("Court 3", True),
+        ("Court 4", False),
+    ]
+    court_3 = next(one for one in free.json()["courts"] if one["name"] == "Court 3")
+    moved = await client.post(
+        f"{BOOKINGS}/{booking}/move",
+        json={"court_id": court_3["court_id"]},
+        headers=desk,
+    )
+    assert moved.status_code == 200, moved.text
+    details = await details_of(client, four[0], booking)
+    assert (details["court_name"], details["indoor"]) == ("Court 3", True)
+    [row] = (await the_day(client, desk))["bookings"]
+    assert (row["court_name"], row["indoor"]) == ("Court 3", True)
 
 
 async def test_a_court_that_is_not_free_is_refused_and_so_is_a_move_once_started(
@@ -325,17 +410,21 @@ async def test_the_club_cancels_with_a_reason_and_everybody_is_refunded_in_full(
 ):
     """After the cut-off took the shares: everybody is refunded in full, and
     the club bears the fees (#637; before it, every hold is let go —
-    ``test_holding_until_the_cut_off.py``)."""
+    ``test_holding_until_the_cut_off.py``). *Anyway*, since Court 3 would
+    otherwise take the game (#672, ``test_a_cancel_moves_the_game.py``)."""
 
     club_id, desk = club
     await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
 
     cancelled = await client.post(
-        f"{BOOKINGS}/{booking}/cancellation", json={"reason": "WEATHER"}, headers=desk
+        f"{BOOKINGS}/{booking}/cancellation",
+        json={"reason": "WEATHER", "anyway": True},
+        headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json() == {"outcome": "CALLED_OFF", "court": None}
     await mailbox.drain()
     for player in four:
         [card] = await home_of(client, player)
@@ -366,11 +455,16 @@ async def test_the_club_cancels_with_a_reason_and_everybody_is_refunded_in_full(
         "WEATHER",
     )
     assert row["money"]["refunded_grosze"] == 4 * SHARE
-    # The hour is the club's to sell again, and the four are owed a new card.
+    # No booking holds the hour — read before any deadline, since past its
+    # release time it is the club's own again (#670) — and the four are owed a
+    # new card.
     async with session_factory() as session:
         assert (
             await build_court_hours(session).offered(
-                UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE, now=clock.now()
+                UUID(club_id),
+                sport=Sport.PADEL,
+                start=SATURDAY_FIVE,
+                now=before_any_deadline(SATURDAY_FIVE),
             )
             is not None
         )
@@ -394,9 +488,11 @@ async def test_a_cancelled_game_is_on_nobody_s_record(
     assert left.status_code == 200, left.text
 
     cancelled = await client.post(
-        f"{BOOKINGS}/{booking}/cancellation", json={"reason": "REPAIR"}, headers=desk
+        f"{BOOKINGS}/{booking}/cancellation",
+        json={"reason": "REPAIR", "anyway": True},
+        headers=desk,
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
     clock.move(timedelta(days=2))
 
     for player in four:

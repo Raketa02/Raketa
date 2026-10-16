@@ -238,12 +238,9 @@ class Sides:
 @dataclass(frozen=True, slots=True)
 class SellingTerms:
     """What a card needs of the club it is at, while the club sells: when its
-    free cancellation ends, and whether it confirms each full game itself."""
+    free cancellation ends."""
 
     cut_off_hours: int
-    #: An On request club: *Book it now* waits for the club, and nobody is
-    #: charged until it says yes (the mechanics §11).
-    confirms_each_game: bool
 
 
 @final
@@ -345,13 +342,20 @@ class DeckCard:
     #: says how many are In on the whole game.
     version_count: int
     no_free_cancellation: bool
-    #: At an On request club the club confirms a full game before anybody pays.
-    club_confirms: bool
     #: What the club calls the court — once booked: a rescue's (#545).
     court_name: str | None = None
+    #: The kind of court the card promises (the mechanics §5.2, Q122; #671):
+    #: ``True`` *Indoor*, ``False`` *Outdoor* — a rescue's booked court, or
+    #: every free court the card could be booked on being of one kind — and
+    #: ``None`` when they are of mixed kinds, which is nothing to promise.
+    indoor: bool | None = None
     #: Everybody on a rescue's booked game — each *paid* (#545); nobody on a
     #: game still filling, whose people are In.
     paid: tuple[UUID, ...] = ()
+    #: The owed card for its reader (#673; the mechanics §8.2, Q123): first in
+    #: their deck, until they answer it or it is gone. **Never said** — it
+    #: carries no mark, for anybody.
+    owed_to_you: bool = False
 
     @property
     def court(self) -> CourtState:
@@ -375,9 +379,13 @@ def card_of(
     weeks: Sequence[WeeklyHours],
     terms: SellingTerms,
     now: Instant,
+    indoor: bool | None = None,
 ) -> DeckCard:
     """The card ``view`` is of, standing as ``sides`` — ``weeks`` being the
-    weeks of the people on it, whose overlap it draws on the club's clock."""
+    weeks of the people on it, whose overlap it draws on the club's clock, and
+    ``indoor`` the kind of court it promises, when that is certain (Q122). It
+    is owed to its reader when the reader is one of those it was dealt to
+    first after a club's cancel (#673)."""
 
     return DeckCard(
         proposal_id=proposal.proposal_id,
@@ -397,7 +405,8 @@ def card_of(
         no_free_cancellation=cut_off_passed(
             proposal.start, cut_off_hours=terms.cut_off_hours, now=now
         ),
-        club_confirms=terms.confirms_each_game,
+        indoor=indoor,
+        owed_to_you=view.reader in proposal.owed_card_for,
     )
 
 
@@ -415,11 +424,19 @@ def _order_key(card: DeckCard) -> tuple[int, int, Instant, int, str]:
 
 def dealt_in_order(cards: Iterable[DeckCard]) -> tuple[DeckCard, ...]:
     """One segment's cards in §8.2's order, the same people only at their best
-    hour — **one batch**, so call it per kind."""
+    hour — **one batch**, so call it per kind. **The cards owed to the reader
+    come first** (#673; Q123), soonest first, ahead of the usual order — and
+    so are the ones kept of the same people at two hours."""
 
+    every = list(cards)
+    owed = sorted(
+        (card for card in every if card.owed_to_you),
+        key=lambda card: (card.start, _order_key(card)),
+    )
+    usual = sorted((card for card in every if not card.owed_to_you), key=_order_key)
     seen: set[frozenset[UUID]] = set()
     dealt: list[DeckCard] = []
-    for card in sorted(cards, key=_order_key):
+    for card in (*owed, *usual):
         if card.people in seen:
             continue
         seen.add(card.people)

@@ -13,7 +13,12 @@ import { playerName } from '@/shared/formatting/playerName';
 import { platformClock } from '@/shared/date/platformZone';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { Face, ItsAGamePicture, PaymentToConfirm, StillMissing } from '../domain/fill';
+import type {
+  Face,
+  ItsAGamePaymentAwaited,
+  ItsAGamePicture,
+  PaymentToConfirm,
+} from '../domain/fill';
 import type { PaymentWindow, SeatAtStake, YourTime } from '../domain/home';
 import { gameDayOf, type GameDay } from '../domain/when';
 
@@ -23,7 +28,6 @@ import {
   LINE_JOIN,
   paymentAwaitedClauses,
   shareWords,
-  waitingClauses,
   yourPaymentWords,
 } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
@@ -59,24 +63,15 @@ export function itsAGameSentence(picture: ItsAGamePicture, line?: string): strin
 }
 
 /**
- * **The line under the word**, Home's own words for the game (A8), drawn with the mocks' dot:
- *
- * - at a club that confirms (Q103; the screens A2.4), *Kazimierz Padel answers by 21:15 · Nobody
- *   pays until it confirms* (`waitingWords`) — the hour alone that day, the weekday with it on
- *   another; *Nobody pays until Kazimierz Padel confirms* with no deadline to give. Spoken a
- *   sentence a clause;
- * - while one payment is missing (Q110), *Waiting for one payment · until 14:40 · Nobody pays until
- *   it's in*, never whose. Spoken *Waiting for one payment until 14:40. Nobody pays until it's in* —
- *   *until 14:40* is no sentence of its own.
+ * **The line under the word** while one payment is missing (Q110), Home's own words for the game
+ * (A8), drawn with the mocks' dot: *Waiting for one payment · until 14:40 · Nobody pays until it's
+ * in*, never whose. Spoken *Waiting for one payment until 14:40. Nobody pays until it's in* —
+ * *until 14:40* is no sentence of its own.
  */
-export function itsAGameLine(missing: StillMissing): {
+export function itsAGameLine(missing: ItsAGamePaymentAwaited): {
   readonly drawn: string;
   readonly spoken: string;
 } {
-  if (missing.of === 'theClub') {
-    const clauses = waitingClauses(missing.club, missing.answerBy);
-    return { drawn: clauses.join(LINE_JOIN), spoken: clauses.join('. ') };
-  }
   const [waiting, until, nobodyPays] = paymentAwaitedClauses(missing.until);
   return {
     drawn: [waiting, until, nobodyPays].join(LINE_JOIN),

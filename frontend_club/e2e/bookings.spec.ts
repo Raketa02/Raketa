@@ -4,13 +4,16 @@ import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 import { booking } from './stub/bookings';
 import { fromNow } from './stub/club';
-import { atClubHour, clubTime, dayFromToday } from './stub/clock';
+import { clubTime, dayFromToday } from './stub/clock';
 import { court, week } from './stub/courts';
 
 /**
- * **Bookings** (#563, the screens B4, the mechanics §16.7–§16.9): every Raketa booking at the
- * club, one day at a time, with its players, its status, its money and the group it came from;
- * the requests an On request club answers, and the games it moves or cancels.
+ * **Bookings** (#563, #674, #675, the screens B4, the mechanics §16.7, §16.9 and §16.16): every
+ * Raketa booking at the club, one day at a time, with its court and the court's kind, its
+ * players, its status, its money and the group it came from, and the games the club moves or
+ * cancels. No club confirms a game (Q121), so nothing on the page waits for the desk's answer. A
+ * cancel moves the game when another of the club's courts takes it (Q122), and the dialog says
+ * which it will be before the desk confirms.
  */
 
 const EVERY_DAY = [1, 2, 3, 4, 5, 6, 7];
@@ -39,6 +42,7 @@ test.describe('Bookings', () => {
     const tennis = court({
       name: 'Kort centralny',
       sport: 'TENNIS',
+      indoor: false,
       hours: week(EVERY_DAY, 7, 23),
     });
     club.raketa.courts = [padel, tennis];
@@ -62,10 +66,10 @@ test.describe('Bookings', () => {
 
     await openDay(page, day);
 
-    // Soonest first, and only that day's.
+    // Soonest first, and only that day's, each court with its kind.
     await expect(page.getByRole('rowheader')).toHaveText([
-      /18:00–19:00\s*Kort centralny/,
-      /19:00–20:00\s*Court 1/,
+      /^18:00–19:00\s*Kort centralny · outdoor$/,
+      /^19:00–20:00\s*Court 1 · indoor$/,
     ]);
 
     const seatOpen = rowAt(page, '18:00–19:00');
@@ -142,9 +146,6 @@ test.describe('Bookings', () => {
     club.raketa.courts = [padel];
     const day = dayFromToday(1);
     club.bookings.add(
-      booking({ court: padel, day, hour: 9, stage: 'CALLED_OFF', called_off_reason: 'REFUSED' }),
-    );
-    club.bookings.add(
       booking({
         court: padel,
         day,
@@ -173,9 +174,7 @@ test.describe('Bookings', () => {
 
     await openDay(page, day);
 
-    await expect(rowAt(page, '09:00–10:00').getByRole('cell').nth(2)).toHaveText(
-      /Called off\s*Refused/,
-    );
+    await expect(page.getByRole('rowheader')).toHaveCount(3);
     await expect(rowAt(page, '10:00–11:00').getByRole('cell').nth(2)).toHaveText(
       /Called off\s*Cancelled by you · Double booking/,
     );
@@ -230,16 +229,24 @@ test.describe('Bookings', () => {
     expect(lastQuery()).toEqual({ filter: 'ALL' });
   });
 
-  test('an address the page cannot read opens today, all of it', async ({ page, club }) => {
+  test('an address the page cannot read opens today, all of it', async ({ page, stub, club }) => {
     void club;
     await signIn(page);
-    await page.goto('/bookings?date=2026-02-30&filter=everything&booking=nobody');
-    await expect(
-      page.getByRole('navigation', { name: 'Day' }).getByRole('heading', { name: /^Today · / }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('navigation', { name: 'Filter bookings' }).getByRole('link', { name: /^All/ }),
-    ).toHaveAttribute('aria-current', 'true');
+    // `waiting` was *Waiting for you*'s word, which went with On request (Q121).
+    for (const filter of ['everything', 'waiting']) {
+      await page.goto(`/bookings?date=2026-02-30&filter=${filter}&booking=nobody`);
+      await expect(
+        page.getByRole('navigation', { name: 'Day' }).getByRole('heading', { name: /^Today · / }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole('navigation', { name: 'Filter bookings' })
+          .getByRole('link', { name: /^All/ }),
+      ).toHaveAttribute('aria-current', 'true');
+      expect(stub.requests('get', '/api/v1/club/bookings').at(-1)?.query).toEqual({
+        filter: 'ALL',
+      });
+    }
   });
 
   test('the filters narrow the day, each with the whole day’s count, and stay as the day changes', async ({
@@ -252,20 +259,21 @@ test.describe('Bookings', () => {
     const day = dayFromToday(2);
     club.bookings.add(booking({ court: padel, day, hour: 18 }));
     club.bookings.add(booking({ court: padel, day, hour: 19, stage: 'SEAT_OPEN' }));
-    club.bookings.add(booking({ court: padel, day, hour: 20, stage: 'WAITING_FOR_YOU' }));
     club.bookings.add(
-      booking({ court: padel, day, hour: 21, stage: 'CALLED_OFF', called_off_reason: 'REFUSED' }),
+      booking({
+        court: padel,
+        day,
+        hour: 21,
+        stage: 'CALLED_OFF',
+        called_off_reason: 'SHORT_AT_THE_CUT_OFF',
+      }),
     );
     await openDay(page, day);
     const filters = page.getByRole('navigation', { name: 'Filter bookings' });
 
-    await expect(filters.getByRole('link')).toHaveText([
-      'All 4',
-      'Waiting for you 1',
-      'Seat open 1',
-      'Called off 1',
-    ]);
-    await expect(filters.getByRole('link', { name: 'All 4' })).toHaveAttribute(
+    // Nothing waits for the desk's answer (Q121): there is no *Waiting for you*.
+    await expect(filters.getByRole('link')).toHaveText(['All 3', 'Seat open 1', 'Called off 1']);
+    await expect(filters.getByRole('link', { name: 'All 3' })).toHaveAttribute(
       'aria-current',
       'true',
     );
@@ -283,22 +291,16 @@ test.describe('Bookings', () => {
     });
 
     await filters.getByRole('link', { name: /^Called off/ }).click();
+    await expect(page).toHaveURL(new RegExp(`date=${day}&filter=called-off$`));
     await expect(page.getByRole('rowheader')).toHaveText([/21:00–22:00/]);
-    await filters.getByRole('link', { name: /^Waiting for you/ }).click();
-    await expect(page.getByRole('rowheader')).toHaveText([/20:00–21:00/]);
 
     await page
       .getByRole('navigation', { name: 'Day' })
       .getByRole('link', { name: 'Next day' })
       .click();
-    await expect(page).toHaveURL(new RegExp(`date=${dayFromToday(3)}&filter=waiting$`));
-    await expect(page.getByText('Nothing on this day is waiting for your answer.')).toBeVisible();
-    await expect(filters.getByRole('link')).toHaveText([
-      'All 0',
-      'Waiting for you 0',
-      'Seat open 0',
-      'Called off 0',
-    ]);
+    await expect(page).toHaveURL(new RegExp(`date=${dayFromToday(3)}&filter=called-off$`));
+    await expect(page.getByText('No game on this day was called off.')).toBeVisible();
+    await expect(filters.getByRole('link')).toHaveText(['All 0', 'Seat open 0', 'Called off 0']);
   });
 
   test('the booking an exception was refused over opens on its day, marked', async ({
@@ -329,471 +331,8 @@ test.describe('Bookings', () => {
     await expect(rowAt(page, '17:00–18:00')).not.toHaveAttribute('aria-current');
   });
 
-  test.describe('a request waiting for the club', () => {
-    test('shows its countdown; Accept books it, every share held until the cut-off, and the badge goes down', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      const waiting = club.bookings.add(
-        booking({
-          court: padel,
-          day,
-          hour: 19,
-          stage: 'WAITING_FOR_YOU',
-          answer_by: fromNow(25 * MINUTE_MS),
-          cut_off: fromNow(2 * HOUR_MS),
-        }),
-      );
-      club.bookings.add(
-        booking({ court: padel, day: dayFromToday(2), hour: 19, stage: 'WAITING_FOR_YOU' }),
-      );
-      await openDay(page, day);
-      const bar = page.getByRole('navigation', { name: 'Club website' });
-      await expect(
-        bar.getByRole('link', { name: 'Bookings, 2 waiting for your answer' }),
-      ).toBeVisible();
-
-      const row = rowAt(page, '19:00–20:00');
-      await expect(row.getByRole('cell').nth(2)).toHaveText('Waiting for you');
-      await expect(row.getByRole('timer')).toHaveText(/^2[45]:\d\d left to answer$/);
-      await expect(row.getByRole('cell').nth(1).getByRole('listitem').first()).toHaveText(
-        'Anna Nowak',
-      );
-      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
-      // Neither moved nor cancelled while it waits: it is answered.
-      await expect(row.getByRole('button', { name: /^(Move|Cancel)/ })).toHaveCount(0);
-
-      await row.getByRole('button', { name: /^Accept the 19:00 game on / }).click();
-
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^The 19:00 game on \w{3} \d{1,2} \w{3} is booked on Court 1\. The shares are held now and taken at your cut-off, or taken at once if it has passed\.$/,
-      );
-      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
-      await expect(row.getByRole('cell').nth(1).getByRole('listitem').first()).toHaveText(
-        /Anna Nowak\s*held$/,
-      );
-      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
-      await expect(row.getByRole('timer')).toHaveCount(0);
-      await expect(row.getByRole('button', { name: /^Move/ })).toBeVisible();
-      await expect(
-        bar.getByRole('link', { name: 'Bookings, 1 waiting for your answer' }),
-      ).toBeVisible();
-      expect(
-        stub.requests('post', '/api/v1/club/bookings/{booking_id}/acceptance').map((r) => r.params),
-      ).toEqual([{ booking_id: waiting.booking_id }]);
-    });
-
-    test('an Accept after the cut-off takes every share at once', async ({ page, club }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      club.bookings.add(
-        booking({
-          court: padel,
-          day,
-          hour: 19,
-          stage: 'WAITING_FOR_YOU',
-          cut_off: fromNow(-HOUR_MS),
-        }),
-      );
-      await openDay(page, day);
-      const row = rowAt(page, '19:00–20:00');
-
-      await row.getByRole('button', { name: /^Accept/ }).click();
-
-      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
-      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-        /Anna Nowak\s*taken$/,
-        /Piotr Sikora\s*taken$/,
-        /Kasia Wiśniewska\s*taken$/,
-        /Marek Zając\s*taken$/,
-      ]);
-      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*140 zł\s*Refunded\s*0 zł/);
-    });
-
-    test('Refuse asks first, keeps a note for the club, and nobody pays', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      club.bookings.add(booking({ court: padel, day, hour: 18, stage: 'WAITING_FOR_YOU' }));
-      club.bookings.add(booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }));
-      await openDay(page, day);
-      const refusals = () =>
-        stub.requests('post', '/api/v1/club/bookings/{booking_id}/refusal').map((r) => r.body);
-
-      await rowAt(page, '18:00–19:00')
-        .getByRole('button', { name: /^Refuse/ })
-        .click();
-      let dialog = page.getByRole('dialog', { name: /^Refuse the 18:00 game on .+\?$/ });
-      await expect(dialog).toContainText('Nobody has paid.');
-      // It promises the desk exactly the words the players read (Q105).
-      await expect(dialog).toContainText(
-        'The players read “Ogrody 33 said no” and “Nobody paid — you’ll get a new card first”',
-      );
-      await expect(dialog).not.toContainText('Called off');
-      await dialog.getByRole('button', { name: 'Back' }).click();
-      await expect(dialog).toBeHidden();
-      expect(refusals()).toEqual([]);
-
-      await rowAt(page, '18:00–19:00')
-        .getByRole('button', { name: /^Refuse/ })
-        .click();
-      dialog = page.getByRole('dialog', { name: /^Refuse the 18:00 game on / });
-      await dialog.getByLabel('Note').fill('  Court  maintenance ');
-      await dialog.getByRole('button', { name: 'Refuse', exact: true }).click();
-
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^You refused the 18:00 game on .+\. Nobody paid, and the hour is yours to sell again\.$/,
-      );
-      await expect(rowAt(page, '18:00–19:00').getByRole('cell').nth(2)).toHaveText(
-        /Called off\s*Refused/,
-      );
-      expect(refusals()).toEqual([{ reason: 'Court maintenance' }]);
-
-      // The note starts empty for the next request, and none is no note.
-      await rowAt(page, '19:00–20:00')
-        .getByRole('button', { name: /^Refuse/ })
-        .click();
-      dialog = page.getByRole('dialog', { name: /^Refuse the 19:00 game on / });
-      await expect(dialog.getByLabel('Note')).toHaveValue('');
-      await dialog.getByRole('button', { name: 'Refuse', exact: true }).click();
-      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText(
-        /Called off\s*Refused/,
-      );
-      expect(refusals()).toEqual([{ reason: 'Court maintenance' }, { reason: null }]);
-    });
-
-    test('a yes that waits on one payment says until when, and is no longer the desk’s to answer', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      const dueBy = atClubHour(day, 18, 20);
-      const waiting = club.bookings.add(
-        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
-      );
-      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', () => {
-        waiting.stage = 'WAITING_FOR_A_PAYMENT';
-        waiting.answer_by = null;
-        waiting.payment_due_by = dueBy;
-        waiting.time_to = 'PAY';
-        return {
-          status: 200,
-          body: {
-            outcome: 'WAITING_FOR_A_PAYMENT' as const,
-            court_name: null,
-            payment_due_by: dueBy,
-            time_to: 'PAY' as const,
-          },
-        };
-      });
-      await openDay(page, day);
-      const bar = page.getByRole('navigation', { name: 'Club website' });
-      const filters = page.getByRole('navigation', { name: 'Filter bookings' });
-      await expect(
-        bar.getByRole('link', { name: 'Bookings, 1 waiting for your answer' }),
-      ).toBeVisible();
-      const row = rowAt(page, '19:00–20:00');
-      await row.getByRole('button', { name: /^Accept/ }).click();
-
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^You accepted the 19:00 game on .+\. One player’s payment is still to come, until 18:20: the court is kept for it, and once it’s in the game is booked\. If it doesn’t come, the game is called off and you’re emailed\.$/,
-      );
-      await expect(page.getByRole('main').getByRole('status')).not.toContainText('seat');
-      await expect(row.getByRole('cell').nth(2)).toHaveText(
-        /^Accepted\s*Waiting for one player’s payment until 18:20$/,
-      );
-      // Nobody has paid yet, and nobody is named as the one it waits on.
-      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-        'Anna Nowak',
-        'Piotr Sikora',
-        'Kasia Wiśniewska',
-        'Marek Zając',
-      ]);
-      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
-      // The desk has answered: nothing to press, and nothing waits for it.
-      await expect(row.getByRole('button')).toHaveCount(0);
-      await expect(row.getByRole('timer')).toHaveCount(0);
-      await expect(filters.getByRole('link')).toHaveText([
-        'All 1',
-        'Waiting for you 0',
-        'Seat open 0',
-        'Called off 0',
-      ]);
-      await expect(bar.getByRole('link', { name: 'Bookings', exact: true })).toBeVisible();
-
-      // The payment came in: an ordinary booked game.
-      waiting.stage = 'BOOKED';
-      waiting.payment_due_by = null;
-      waiting.time_to = null;
-      waiting.players = waiting.players.map((player) => ({ ...player, paid: true }));
-      waiting.money = { ...waiting.money, collected_grosze: waiting.money.price_grosze };
-      await page.reload();
-      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
-      await expect(row.getByRole('button', { name: /^Move/ })).toBeVisible();
-    });
-
-    test('a yes before the cut-off waits on one player’s card, not a payment', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(2);
-      const dueBy = atClubHour(day, 18, 20);
-      const waiting = club.bookings.add(
-        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
-      );
-      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', () => {
-        waiting.stage = 'WAITING_FOR_A_PAYMENT';
-        waiting.answer_by = null;
-        waiting.payment_due_by = dueBy;
-        waiting.time_to = 'FIX_THE_CARD';
-        return {
-          status: 200,
-          body: {
-            outcome: 'WAITING_FOR_A_PAYMENT' as const,
-            court_name: null,
-            payment_due_by: dueBy,
-            time_to: 'FIX_THE_CARD' as const,
-          },
-        };
-      });
-      await openDay(page, day);
-      const row = rowAt(page, '19:00–20:00');
-      await row.getByRole('button', { name: /^Accept/ }).click();
-
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^You accepted the 19:00 game on .+\. One player’s card is still to be fixed, until 18:20: the court is kept for it, and once it’s fixed the game is booked\. If it isn’t, the game is called off and you’re emailed\.$/,
-      );
-      await expect(row.getByRole('cell').nth(2)).toHaveText(
-        /^Accepted\s*Waiting for one player’s card until 18:20$/,
-      );
-      // Nobody's share is held yet, and nobody is named as the one it waits on.
-      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-        'Anna Nowak',
-        'Piotr Sikora',
-        'Kasia Wiśniewska',
-        'Marek Zając',
-      ]);
-
-      // The card was fixed: booked, every share held until the cut-off.
-      waiting.stage = 'BOOKED';
-      waiting.payment_due_by = null;
-      waiting.time_to = null;
-      waiting.players = waiting.players.map((player) => ({ ...player, held: true }));
-      await page.reload();
-      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
-      await expect(row.getByRole('cell').nth(1).getByRole('listitem').first()).toHaveText(
-        /Anna Nowak\s*held$/,
-      );
-      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
-    });
-
-    test('a yes whose time to pay runs out reads called off from that moment', async ({
-      page,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      club.bookings.add(
-        booking({
-          court: padel,
-          day,
-          hour: 19,
-          stage: 'WAITING_FOR_A_PAYMENT',
-          payment_due_by: fromNow(4_000),
-          time_to: 'PAY',
-        }),
-      );
-      await openDay(page, day);
-      const row = rowAt(page, '19:00–20:00');
-      await expect(row.getByRole('cell').nth(2)).toHaveText(
-        /^Accepted\s*Waiting for one player’s payment until \d\d:\d\d$/,
-      );
-
-      await expect(row.getByRole('cell').nth(2)).toHaveText(
-        /^Called off\s*Payment didn’t come in time$/,
-        { timeout: 10_000 },
-      );
-      await expect(row.getByRole('button')).toHaveCount(0);
-      await expect(
-        page.getByRole('navigation', { name: 'Filter bookings' }).getByRole('link'),
-      ).toHaveText(['All 1', 'Waiting for you 0', 'Seat open 0', 'Called off 1']);
-    });
-
-    test('a yes with no time left to pay is called off, and one a player can no longer play opens a seat', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      const tooLate = club.bookings.add(
-        booking({ court: padel, day, hour: 18, stage: 'WAITING_FOR_YOU' }),
-      );
-      const unfit = club.bookings.add(
-        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
-      );
-      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', ({ params }) => {
-        if (params.booking_id === tooLate.booking_id) {
-          tooLate.stage = 'CALLED_OFF';
-          tooLate.called_off_reason = 'PAYMENT_NOT_IN_TIME';
-          return { status: 200, body: { outcome: 'CALLED_OFF' as const, court_name: null } };
-        }
-        unfit.stage = 'SEAT_OPEN';
-        unfit.players = unfit.players.slice(0, 3);
-        unfit.open_seats = 1;
-        return { status: 200, body: { outcome: 'SEAT_OPENED' as const, court_name: null } };
-      });
-      await openDay(page, day);
-
-      await rowAt(page, '18:00–19:00')
-        .getByRole('button', { name: /^Accept/ })
-        .click();
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^A player’s payment didn’t go through for the 18:00 game on .+, and there was no time left to pay, so it is called off\. Nobody paid, and the hour is yours to sell again\.$/,
-      );
-      await expect(rowAt(page, '18:00–19:00').getByRole('cell').nth(2)).toHaveText(
-        /^Called off\s*Payment didn’t come in time$/,
-      );
-
-      await rowAt(page, '19:00–20:00')
-        .getByRole('button', { name: /^Accept/ })
-        .click();
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^One of the players can no longer play the 19:00 game on .+, so nobody paid\. It is looking for a player again, and you’ll be asked again once it’s full\.$/,
-      );
-      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText('Seat open');
-    });
-
-    test('a yes the backend answers outside its contract says something went wrong, and the day shows what landed', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      const waiting = club.bookings.add(
-        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
-      );
-      // Waiting for a payment, with no time to say it waits until.
-      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', () => {
-        waiting.stage = 'WAITING_FOR_A_PAYMENT';
-        waiting.answer_by = null;
-        waiting.payment_due_by = fromNow(30 * MINUTE_MS);
-        waiting.time_to = 'PAY';
-        return {
-          status: 200,
-          body: { outcome: 'WAITING_FOR_A_PAYMENT' as const, court_name: null },
-        };
-      });
-      await openDay(page, day);
-      await rowAt(page, '19:00–20:00')
-        .getByRole('button', { name: /^Accept/ })
-        .click();
-
-      await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-        'Something went wrong on our side. Try again in a moment.',
-      );
-      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText(
-        /^Accepted\s*Waiting for one player’s payment until \d\d:\d\d$/,
-      );
-    });
-
-    test('an answer that came too late, or with nobody to charge through, says so', async ({
-      page,
-      stub,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      const late = club.bookings.add(
-        booking({ court: padel, day, hour: 18, stage: 'WAITING_FOR_YOU' }),
-      );
-      club.bookings.add(booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }));
-      await openDay(page, day);
-
-      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', ({ params }) => {
-        if (params.booking_id === late.booking_id) {
-          late.stage = 'CALLED_OFF';
-          late.called_off_reason = 'NO_ANSWER';
-          return { status: 409, body: refusal('request_timed_out') };
-        }
-        return { status: 503, body: refusal('payments_unavailable') };
-      });
-
-      await rowAt(page, '18:00–19:00')
-        .getByRole('button', { name: /^Accept/ })
-        .click();
-      await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-        /^Your time to answer the 18:00 game on .+ ran out: it was called off as unanswered, and the players read “Ogrody 33 didn’t answer in time”\.$/,
-      );
-      await expect(rowAt(page, '18:00–19:00').getByRole('cell').nth(2)).toHaveText(
-        /Called off\s*No answer/,
-      );
-
-      await rowAt(page, '19:00–20:00')
-        .getByRole('button', { name: /^Accept/ })
-        .click();
-      await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-        /^We couldn’t reach the payment provider to charge the players for the 19:00 game on .+\. Nothing was recorded; try again\.$/,
-      );
-      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText(
-        'Waiting for you',
-      );
-    });
-
-    test('when the countdown runs out, the request is no longer answerable and reads called off', async ({
-      page,
-      club,
-    }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
-      const day = dayFromToday(1);
-      club.bookings.add(
-        booking({
-          court: padel,
-          day,
-          hour: 19,
-          stage: 'WAITING_FOR_YOU',
-          answer_by: fromNow(4_000),
-        }),
-      );
-      await openDay(page, day);
-      const row = rowAt(page, '19:00–20:00');
-      await expect(row.getByRole('timer')).toHaveText(/^0:0\d left to answer$/);
-
-      await expect(row.getByRole('cell').nth(2)).toHaveText(/Called off\s*No answer/, {
-        timeout: 10_000,
-      });
-      await expect(row.getByRole('button', { name: /^(Accept|Refuse)/ })).toHaveCount(0);
-      await expect(
-        page
-          .getByRole('navigation', { name: 'Club website' })
-          .getByRole('link', { name: 'Bookings', exact: true }),
-      ).toBeVisible();
-    });
-  });
-
   test.describe('a booked game', () => {
-    test('Move lists the free courts of its sport at its hour, and moves it there', async ({
+    test('Move lists the free courts of its sport at its hour, of its kind or indoor, each with its kind, and moves it there', async ({
       page,
       stub,
       club,
@@ -804,8 +343,9 @@ test.describe('Bookings', () => {
       const off = court({ name: 'Court 3', sport: 'PADEL', hours, offered: false });
       const mornings = court({ name: 'Court 4', sport: 'PADEL', hours: week(EVERY_DAY, 7, 12) });
       const held = court({ name: 'Court 5', sport: 'PADEL', hours });
+      const outside = court({ name: 'Court 6', sport: 'PADEL', indoor: false, hours });
       const tennis = court({ name: 'Kort tenisowy', sport: 'TENNIS', hours });
-      club.raketa.courts = [one, two, off, mornings, held, tennis];
+      club.raketa.courts = [one, two, off, mornings, held, outside, tennis];
       const day = dayFromToday(2);
       const game = club.bookings.add(booking({ court: one, day, hour: 19 }));
       club.bookings.add(booking({ court: held, day, hour: 19 }));
@@ -817,21 +357,22 @@ test.describe('Bookings', () => {
         .click();
       const dialog = page.getByRole('dialog', { name: /^Move the 19:00 game on / });
       await expect(dialog).toContainText(
-        'It is on Court 1. The players see the new court; nothing else about the game changes.',
+        'It is on Court 1 · indoor. The players are told the new court; nothing else about the game changes.',
       );
+      // Never outdoors from indoors: Court 6 is free, and a different game to the players.
       await expect(dialog.getByRole('radio')).toHaveCount(1);
-      await expect(dialog.getByRole('radio', { name: 'Court 2' })).not.toBeChecked();
+      await expect(dialog.getByRole('radio', { name: 'Court 2 · indoor' })).not.toBeChecked();
       await expect(dialog.getByRole('button', { name: 'Move', exact: true })).toBeDisabled();
 
-      await dialog.getByRole('radio', { name: 'Court 2' }).check();
+      await dialog.getByRole('radio', { name: 'Court 2 · indoor' }).check();
       await dialog.getByRole('button', { name: 'Move', exact: true }).click();
 
       await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^The 19:00 game on .+ is on Court 2 now\. The players see the new court\.$/,
+        /^The 19:00 game on .+ is on Court 2 · indoor now, and the players are told\.$/,
       );
       await expect(page.getByRole('rowheader')).toHaveText([
-        /19:00–20:00\s*Court 2/,
-        /19:00–20:00\s*Court 5/,
+        /19:00–20:00\s*Court 2 · indoor/,
+        /19:00–20:00\s*Court 5 · indoor/,
       ]);
       expect(
         stub
@@ -840,14 +381,45 @@ test.describe('Bookings', () => {
       ).toEqual([[game.booking_id, { court_id: two.id }]]);
     });
 
-    test('Move with no court free says to cancel instead; a court taken meanwhile says so', async ({
+    test('Move offers an outdoor game an outdoor court or an indoor one, as served', async ({
+      page,
+      club,
+    }) => {
+      const hours = week(EVERY_DAY, 7, 23);
+      const one = court({ name: 'Court 1', sport: 'PADEL', indoor: false, hours });
+      const two = court({ name: 'Court 2', sport: 'PADEL', hours });
+      const three = court({ name: 'Court 3', sport: 'PADEL', indoor: false, hours });
+      club.raketa.courts = [one, two, three];
+      const day = dayFromToday(2);
+      club.bookings.add(booking({ court: one, day, hour: 19 }));
+      await openDay(page, day);
+      await expect(page.getByRole('rowheader')).toHaveText([/19:00–20:00\s*Court 1 · outdoor/]);
+
+      await rowAt(page, '19:00–20:00').getByRole('button', { name: /^Move/ }).click();
+      const dialog = page.getByRole('dialog', { name: /^Move the 19:00 game on / });
+      await expect(dialog).toContainText('It is on Court 1 · outdoor.');
+      await expect(dialog.getByRole('radio')).toHaveCount(2);
+      await expect(dialog.getByRole('radiogroup', { name: 'Move it to' })).toHaveText(
+        /^Court 2 · indoor\s*Court 3 · outdoor$/,
+      );
+
+      await dialog.getByRole('radio', { name: 'Court 2 · indoor' }).check();
+      await dialog.getByRole('button', { name: 'Move', exact: true }).click();
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^The 19:00 game on .+ is on Court 2 · indoor now, and the players are told\.$/,
+      );
+      await expect(page.getByRole('rowheader')).toHaveText([/19:00–20:00\s*Court 2 · indoor/]);
+    });
+
+    test('Move with no indoor court free for an indoor game says to cancel instead; a court taken meanwhile says so', async ({
       page,
       stub,
       club,
     }) => {
       const hours = week(EVERY_DAY, 7, 23);
       const one = court({ name: 'Court 1', sport: 'PADEL', hours });
-      club.raketa.courts = [one];
+      const outside = court({ name: 'Court 6', sport: 'PADEL', indoor: false, hours });
+      club.raketa.courts = [one, outside];
       const day = dayFromToday(2);
       club.bookings.add(booking({ court: one, day, hour: 19 }));
       await openDay(page, day);
@@ -855,34 +427,144 @@ test.describe('Bookings', () => {
       await rowAt(page, '19:00–20:00').getByRole('button', { name: /^Move/ }).click();
       const dialog = page.getByRole('dialog', { name: /^Move the 19:00 game on / });
       await expect(dialog).toContainText(
-        'No other padel court is free at 19:00. If the court can’t be played, cancel the game with “Repair”.',
+        'No other indoor padel court is free at 19:00. If the court can’t be played, cancel the game with “Repair”.',
       );
       await expect(dialog.getByRole('radio')).toHaveCount(0);
       await dialog.getByRole('button', { name: 'Back' }).click();
       await expect(dialog).toBeHidden();
 
       const two = court({ name: 'Court 2', sport: 'PADEL', hours });
-      club.raketa.courts = [one, two];
+      club.raketa.courts = [one, two, outside];
       stub.on('post', '/api/v1/club/bookings/{booking_id}/move', () => ({
         status: 409,
         body: refusal('court_just_taken'),
       }));
       await rowAt(page, '19:00–20:00').getByRole('button', { name: /^Move/ }).click();
-      await dialog.getByRole('radio', { name: 'Court 2' }).check();
+      await dialog.getByRole('radio', { name: 'Court 2 · indoor' }).check();
       await dialog.getByRole('button', { name: 'Move', exact: true }).click();
       await expect(page.getByRole('main').getByRole('alert')).toHaveText(
         /^Another game took that court a moment ago\. Move the 19:00 game on .+ again to see the courts still free\.$/,
       );
-      await expect(rowAt(page, '19:00–20:00')).toContainText('Court 1');
+      await expect(rowAt(page, '19:00–20:00')).toContainText('Court 1 · indoor');
     });
 
-    test('Cancel before the cut-off asks why, spells out that every hold is let go, and nobody pays', async ({
+    test('Cancel asks why, then says the game moves to another court of its kind, and the cancel moves it there: nobody is refunded', async ({
       page,
       stub,
       club,
     }) => {
-      const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
+      const hours = week(EVERY_DAY, 7, 23);
+      const two = court({ name: 'Court 2', sport: 'PADEL', hours });
+      const three = court({ name: 'Court 3', sport: 'PADEL', hours });
+      const outside = court({ name: 'Court 4', sport: 'PADEL', indoor: false, hours });
+      club.raketa.courts = [two, three, outside];
+      const day = dayFromToday(2);
+      const game = club.bookings.add(booking({ court: two, day, hour: 19 }));
+      await openDay(page, day);
+      const previews = () =>
+        stub.requests('get', '/api/v1/club/bookings/{booking_id}/cancellation/preview');
+
+      await rowAt(page, '19:00–20:00')
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      const dialog = page.getByRole('dialog', { name: /^Cancel the 19:00 game on .+\?$/ });
+      // The reason first: what a cancel does depends on it.
+      await expect(dialog.getByRole('radiogroup', { name: 'Why' })).toHaveText(
+        /^Weather\s*Repair\s*Double booking\s*Other$/,
+      );
+      await expect(dialog).not.toContainText('This game');
+      await expect(dialog.getByRole('button', { name: 'Cancel the booking' })).toBeDisabled();
+      await expect(dialog.getByRole('button', { name: 'Cancel the game anyway' })).toHaveCount(0);
+      expect(previews()).toEqual([]);
+
+      await dialog.getByRole('radio', { name: 'Repair' }).check();
+      await expect(dialog.getByRole('status')).toHaveText(
+        /^This game moves to Court 3 · indoor · the players are told, nobody is refunded\./,
+      );
+      await expect(dialog.getByRole('status')).toContainText(
+        '“Cancel the game anyway” calls it off instead, for an hour you’re closing whole: every hold is let go and nobody pays a fee.',
+      );
+      await expect(dialog.getByRole('button', { name: 'Cancel the booking' })).toBeEnabled();
+      await expect(dialog.getByRole('button', { name: 'Cancel the game anyway' })).toBeEnabled();
+      expect(previews().map((r) => [r.params.booking_id, r.query])).toEqual([
+        [game.booking_id, { reason: 'REPAIR' }],
+      ]);
+
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^The 19:00 game on .+ moved to Court 3 · indoor: the players are told, and nobody is refunded\.$/,
+      );
+      // The game goes on, on Court 3: every share still held, and Move and Cancel still the club's.
+      const row = rowAt(page, '19:00–20:00');
+      await expect(page.getByRole('rowheader')).toHaveText([/19:00–20:00\s*Court 3 · indoor/]);
+      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
+      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+        /held$/,
+        /held$/,
+        /held$/,
+        /held$/,
+      ]);
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł\s*Refunded\s*0 zł/);
+      await expect(row.getByRole('button')).toHaveText(['Move', 'Cancel']);
+      expect(
+        stub
+          .requests('post', '/api/v1/club/bookings/{booking_id}/cancellation')
+          .map((r) => [r.params.booking_id, r.body]),
+      ).toEqual([[game.booking_id, { reason: 'REPAIR', anyway: false }]]);
+    });
+
+    test('a weather cancel moves an outdoor game indoors only, and the dialog reads again as the reason changes', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const hours = week(EVERY_DAY, 7, 23);
+      const one = court({ name: 'Court 1', sport: 'PADEL', indoor: false, hours });
+      const two = court({ name: 'Court 2', sport: 'PADEL', indoor: false, hours });
+      const three = court({ name: 'Court 3', sport: 'PADEL', hours });
+      club.raketa.courts = [one, two, three];
+      const day = dayFromToday(2);
+      club.bookings.add(booking({ court: one, day, hour: 19 }));
+      await openDay(page, day);
+
+      await rowAt(page, '19:00–20:00')
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      const dialog = page.getByRole('dialog', { name: /^Cancel the 19:00 game on .+\?$/ });
+      // The same kind first…
+      await dialog.getByRole('radio', { name: 'Repair' }).check();
+      await expect(dialog.getByRole('status')).toContainText(
+        'This game moves to Court 2 · outdoor · the players are told, nobody is refunded.',
+      );
+      // …but an outdoor court at the same hour is rained on too.
+      await dialog.getByRole('radio', { name: 'Weather' }).check();
+      await expect(dialog.getByRole('status')).toContainText(
+        'This game moves to Court 3 · indoor · the players are told, nobody is refunded.',
+      );
+      expect(
+        stub
+          .requests('get', '/api/v1/club/bookings/{booking_id}/cancellation/preview')
+          .map((r) => r.query.reason),
+      ).toEqual(['REPAIR', 'WEATHER']);
+
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^The 19:00 game on .+ moved to Court 3 · indoor: the players are told, and nobody is refunded\.$/,
+      );
+      await expect(page.getByRole('rowheader')).toHaveText([/19:00–20:00\s*Court 3 · indoor/]);
+    });
+
+    test('Cancel before the cut-off, with only an outdoor court free for an indoor game, says the game is called off: every hold let go, and nobody pays', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const hours = week(EVERY_DAY, 7, 23);
+      const padel = court({ name: 'Court 1', sport: 'PADEL', hours });
+      // Free, but outdoors: never for an indoor game.
+      const outside = court({ name: 'Court 6', sport: 'PADEL', indoor: false, hours });
+      club.raketa.courts = [padel, outside];
       const day = dayFromToday(2);
       const game = club.bookings.add(booking({ court: padel, day, hour: 19, stage: 'SEAT_OPEN' }));
       await openDay(page, day);
@@ -893,27 +575,29 @@ test.describe('Bookings', () => {
         .getByRole('button', { name: /^Cancel/ })
         .click();
       const dialog = page.getByRole('dialog', { name: /^Cancel the 19:00 game on .+\?$/ });
-      await expect(dialog.getByRole('radiogroup', { name: 'Why' })).toHaveText(
-        /^Weather\s*Repair\s*Double booking\s*Other$/,
-      );
-      await expect(dialog).toContainText(
-        'Every hold is let go and nobody pays a fee. It goes on nobody’s record',
+      await dialog.getByRole('radio', { name: 'Repair' }).check();
+      await expect(dialog.getByRole('status')).toHaveText(
+        'This game is called off: every hold is let go and nobody pays a fee. It goes on nobody’s ' +
+          'record, the players are offered another game first, and the hour is yours to sell again.',
       );
       await expect(dialog).not.toContainText('refunded');
-      await expect(dialog.getByRole('button', { name: 'Cancel the booking' })).toBeDisabled();
+      await expect(dialog.getByRole('button', { name: 'Cancel the game anyway' })).toHaveCount(0);
       await dialog.getByRole('button', { name: 'Keep the game' }).click();
       await expect(dialog).toBeHidden();
       expect(cancellations()).toEqual([]);
 
+      // Asked again, the reason starts unchosen, and nothing is said until it is.
       await rowAt(page, '19:00–20:00')
         .getByRole('button', { name: /^Cancel/ })
         .click();
-      await expect(dialog.getByRole('radio', { name: 'Weather' })).not.toBeChecked();
+      await expect(dialog.getByRole('radio', { name: 'Repair' })).not.toBeChecked();
+      await expect(dialog).not.toContainText('This game');
       await dialog.getByRole('radio', { name: 'Double booking' }).check();
+      await expect(dialog.getByRole('status')).toContainText('This game is called off');
       await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
 
       await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^You cancelled the 19:00 game on .+\. Every hold is let go: nobody pays\.$/,
+        /^The 19:00 game on .+ is called off\. Every hold is let go: nobody pays\.$/,
       );
       const row = rowAt(page, '19:00–20:00');
       await expect(row.getByRole('cell').nth(2)).toHaveText(
@@ -929,11 +613,11 @@ test.describe('Bookings', () => {
       ]);
       await expect(row.getByRole('button')).toHaveCount(0);
       expect(cancellations().map((r) => [r.params.booking_id, r.body])).toEqual([
-        [game.booking_id, { reason: 'DOUBLE_BOOKING' }],
+        [game.booking_id, { reason: 'DOUBLE_BOOKING', anyway: false }],
       ]);
     });
 
-    test('Cancel after the cut-off spells out that everyone is refunded in full, the card fees not returned', async ({
+    test('Cancel after the cut-off says everyone is refunded in full, the card fees not returned', async ({
       page,
       club,
     }) => {
@@ -947,18 +631,142 @@ test.describe('Bookings', () => {
 
       await row.getByRole('button', { name: /^Cancel/ }).click();
       const dialog = page.getByRole('dialog', { name: /^Cancel the 19:00 game on .+\?$/ });
-      await expect(dialog).toContainText(
-        'Everyone is refunded in full; the card fees are not returned. It goes on nobody’s record',
+      await dialog.getByRole('radio', { name: 'Weather' }).check();
+      await expect(dialog.getByRole('status')).toHaveText(
+        /^This game is called off: everyone is refunded in full; the card fees are not returned\. It goes on nobody’s record/,
       );
       await expect(dialog).not.toContainText('hold');
-      await dialog.getByRole('radio', { name: 'Weather' }).check();
       await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
 
       await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^You cancelled the 19:00 game on .+\. Everyone is refunded in full\.$/,
+        /^The 19:00 game on .+ is called off\. Everyone is refunded in full\.$/,
       );
       await expect(row.getByRole('cell').nth(3)).toHaveText(
         /Collected\s*140 zł\s*Refunded\s*140 zł/,
+      );
+    });
+
+    test('Cancel the game anyway calls it off though another court would take it', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const hours = week(EVERY_DAY, 7, 23);
+      const one = court({ name: 'Court 1', sport: 'PADEL', hours });
+      const two = court({ name: 'Court 2', sport: 'PADEL', hours });
+      club.raketa.courts = [one, two];
+      const day = dayFromToday(1);
+      const game = club.bookings.add(
+        booking({ court: one, day, hour: 19, cut_off: fromNow(-HOUR_MS) }),
+      );
+      await openDay(page, day);
+
+      await rowAt(page, '19:00–20:00')
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      const dialog = page.getByRole('dialog', { name: /^Cancel the 19:00 game on .+\?$/ });
+      await dialog.getByRole('radio', { name: 'Other' }).check();
+      await expect(dialog.getByRole('status')).toHaveText(
+        'This game moves to Court 2 · indoor · the players are told, nobody is refunded. ' +
+          '“Cancel the game anyway” calls it off instead, for an hour you’re closing whole: ' +
+          'everyone is refunded in full; the card fees are not returned.',
+      );
+      await dialog.getByRole('button', { name: 'Cancel the game anyway' }).click();
+
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^The 19:00 game on .+ is called off\. Everyone is refunded in full\.$/,
+      );
+      const row = rowAt(page, '19:00–20:00');
+      await expect(page.getByRole('rowheader')).toHaveText([/19:00–20:00\s*Court 1 · indoor/]);
+      await expect(row.getByRole('cell').nth(2)).toHaveText(
+        /Called off\s*Cancelled by you · Other/,
+      );
+      await expect(row.getByRole('cell').nth(3)).toHaveText(
+        /Collected\s*140 zł\s*Refunded\s*140 zł/,
+      );
+      expect(
+        stub
+          .requests('post', '/api/v1/club/bookings/{booking_id}/cancellation')
+          .map((r) => [r.params.booking_id, r.body]),
+      ).toEqual([[game.booking_id, { reason: 'OTHER', anyway: true }]]);
+    });
+
+    test('the cancel decides afresh: its answer says where the game went, or that it is off, when that is not what the dialog said', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const hours = week(EVERY_DAY, 7, 23);
+      const one = court({ name: 'Court 1', sport: 'PADEL', hours });
+      const three = court({ name: 'Court 3', sport: 'PADEL', hours });
+      const four = court({ name: 'Court 4', sport: 'PADEL', hours });
+      club.raketa.courts = [one, three, four];
+      const day = dayFromToday(2);
+      club.bookings.add(booking({ court: one, day, hour: 18 }));
+      club.bookings.add(booking({ court: one, day, hour: 19 }));
+      club.bookings.add(booking({ court: one, day, hour: 20 }));
+      await openDay(page, day);
+      const dialog = page.getByRole('dialog', { name: /^Cancel the \d\d:00 game on .+\?$/ });
+      const notice = page.getByRole('main').getByRole('status');
+
+      // Court 3, said; taken before the confirm: Court 4 takes the game instead.
+      await rowAt(page, '19:00–20:00')
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      await dialog.getByRole('radio', { name: 'Repair' }).check();
+      await expect(dialog.getByRole('status')).toContainText('This game moves to Court 3 · indoor');
+      club.bookings.add(booking({ court: three, day, hour: 19 }));
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+      await expect(notice).toHaveText(
+        /^Court 3 was taken a moment ago, so the 19:00 game on .+ moved to Court 4 · indoor: the players are told, and nobody is refunded\.$/,
+      );
+      await expect(rowAt(page, '19:00–20:00').getByRole('rowheader')).toHaveText([
+        /Court 4 · indoor/,
+        /Court 3 · indoor/,
+      ]);
+
+      // Court 3, said; every court taken before the confirm: the game is off.
+      await rowAt(page, '18:00–19:00')
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      await dialog.getByRole('radio', { name: 'Repair' }).check();
+      await expect(dialog.getByRole('status')).toContainText('This game moves to Court 3 · indoor');
+      club.bookings.add(booking({ court: three, day, hour: 18 }));
+      club.bookings.add(booking({ court: four, day, hour: 18 }));
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+      await expect(notice).toHaveText(
+        /^Court 3 was taken a moment ago, so the 18:00 game on .+ is called off\. Every hold is let go: nobody pays\.$/,
+      );
+
+      // Called off, said; a court came free before the confirm: the game moves there.
+      club.bookings.add(booking({ court: three, day, hour: 20 }));
+      club.bookings.add(booking({ court: four, day, hour: 20 }));
+      await rowAt(page, '20:00–21:00')
+        .filter({ hasText: 'Court 1' })
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      await dialog.getByRole('radio', { name: 'Repair' }).check();
+      await expect(dialog.getByRole('status')).toContainText('This game is called off');
+      club.raketa.courts = [one, three, four, court({ name: 'Court 5', sport: 'PADEL', hours })];
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+      await expect(notice).toHaveText(
+        /^A court came free a moment ago, so the 20:00 game on .+ moved to Court 5 · indoor: the players are told, and nobody is refunded\.$/,
+      );
+
+      // The court it would move to went to another game as the cancel landed: nothing happened.
+      stub.on('post', '/api/v1/club/bookings/{booking_id}/cancellation', () => ({
+        status: 409,
+        body: refusal('court_just_taken'),
+      }));
+      await rowAt(page, '20:00–21:00')
+        .filter({ hasText: 'Court 5' })
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      await dialog.getByRole('radio', { name: 'Other' }).check();
+      await expect(dialog.getByRole('status')).toContainText('This game');
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+      await expect(page.getByRole('main').getByRole('alert')).toHaveText(
+        /^The court that would have taken the 20:00 game on .+ went to another game a moment ago\. Cancel it again to see what a cancel does now\.$/,
       );
     });
 
@@ -988,10 +796,6 @@ test.describe('Bookings', () => {
         status: 409,
         body: refusal('game_has_started'),
       }));
-      stub.on('post', '/api/v1/club/bookings/{booking_id}/cancellation', () => {
-        game.starts_at = fromNow(-MINUTE_MS);
-        return { status: 409, body: refusal('game_has_started') };
-      });
 
       await rowAt(page, '19:00–20:00').getByRole('button', { name: /^Move/ }).click();
       const moving = page.getByRole('dialog', { name: /^Move the 19:00 game on / });
@@ -1000,45 +804,37 @@ test.describe('Bookings', () => {
       );
       await moving.getByRole('button', { name: 'Back' }).click();
 
+      // Asked what a cancel would do, the backend says it has begun: nothing to confirm.
+      stub.on('get', '/api/v1/club/bookings/{booking_id}/cancellation/preview', () => ({
+        status: 409,
+        body: refusal('game_has_started'),
+      }));
       await rowAt(page, '19:00–20:00')
         .getByRole('button', { name: /^Cancel/ })
         .click();
       const cancelling = page.getByRole('dialog', { name: /^Cancel the 19:00 game on / });
       await cancelling.getByRole('radio', { name: 'Repair' }).check();
+      await expect(cancelling.getByRole('alert')).toHaveText(
+        /^The 19:00 game on .+ has started, so it can’t be moved or cancelled any more\.$/,
+      );
+      await expect(cancelling.getByRole('button', { name: 'Cancel the booking' })).toBeDisabled();
+      await cancelling.getByRole('button', { name: 'Keep the game' }).click();
+
+      // Read again, and begun by the confirm.
+      club.bookings.install();
+      stub.on('post', '/api/v1/club/bookings/{booking_id}/cancellation', () => {
+        game.starts_at = fromNow(-MINUTE_MS);
+        return { status: 409, body: refusal('game_has_started') };
+      });
+      await rowAt(page, '19:00–20:00')
+        .getByRole('button', { name: /^Cancel/ })
+        .click();
+      await cancelling.getByRole('radio', { name: 'Repair' }).check();
+      await expect(cancelling.getByRole('status')).toContainText('This game is called off');
       await cancelling.getByRole('button', { name: 'Cancel the booking' }).click();
       await expect(page.getByRole('main').getByRole('alert')).toHaveText(
         /^The 19:00 game on .+ has started, so it can’t be moved or cancelled any more\.$/,
       );
     });
-  });
-
-  test('the badge catches up as the desk moves between pages', async ({ page, club }) => {
-    const padel = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [padel];
-    const waiting = club.bookings.add(
-      booking({ court: padel, day: dayFromToday(1), hour: 19, stage: 'WAITING_FOR_YOU' }),
-    );
-    await signIn(page);
-    const bar = page.getByRole('navigation', { name: 'Club website' });
-    await expect(
-      bar.getByRole('link', { name: 'Bookings, 1 waiting for your answer' }),
-    ).toBeVisible();
-
-    // It ran out while nobody was looking, and the desk went to another page.
-    waiting.stage = 'CALLED_OFF';
-    waiting.called_off_reason = 'NO_ANSWER';
-    await bar.getByRole('link', { name: 'Groups' }).click();
-    await expect(page.getByRole('heading', { name: 'Groups', level: 1 })).toBeVisible();
-    await expect(bar.getByRole('link', { name: 'Bookings', exact: true })).toBeVisible();
-
-    // A new one arrived.
-    club.bookings.add(
-      booking({ court: padel, day: dayFromToday(2), hour: 19, stage: 'WAITING_FOR_YOU' }),
-    );
-    await bar.getByRole('link', { name: 'Courts & prices' }).click();
-    await expect(page.getByRole('heading', { name: 'Courts & prices', level: 1 })).toBeVisible();
-    await expect(
-      bar.getByRole('link', { name: 'Bookings, 1 waiting for your answer' }),
-    ).toBeVisible();
   });
 });

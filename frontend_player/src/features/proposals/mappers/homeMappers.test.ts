@@ -28,10 +28,10 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
   open_seats: 0,
   needs_you: false,
   filling_again: false,
-  club_confirms: false,
   starts_at: '2026-10-03T14:00:00Z',
   club: { id: 'club-1', name: 'Bonarka Arena' },
   court_name: 'Court 2',
+  indoor: true,
   sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
   money: {
     share_grosze: 2800,
@@ -42,7 +42,6 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
     free_to_leave_until: '2026-10-02T14:00:00Z',
     refunded_grosze: null,
   },
-  answer_by: null,
   payment_due_by: null,
   your_payment_due_by: null,
   time_to: null,
@@ -88,6 +87,7 @@ describe('toHome', () => {
           startsAt: '2026-10-03T14:00:00Z',
           club: { id: 'club-1', name: 'Bonarka Arena' },
           courtName: 'Court 2',
+          indoor: true,
           sides: {
             yours: [
               {
@@ -156,31 +156,22 @@ describe('toHome', () => {
     expect(game?.money).toEqual({ shareGrosze: 2800, paid: false });
   });
 
-  it('reads a game waiting for the club with no Game and no court yet', () => {
+  it('reads a game waiting for one payment with no Game and no court yet', () => {
     const [game] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
-      games: [homeGame({ status: 'WAITING_FOR_THE_CLUB', game_id: null, court_name: null })],
+      games: [
+        homeGame({
+          status: 'WAITING_FOR_A_PAYMENT',
+          game_id: null,
+          court_name: null,
+          indoor: null,
+        }),
+      ],
     }).games;
 
     expect(game).not.toHaveProperty('gameId');
     expect(game).not.toHaveProperty('courtName');
-  });
-
-  it('carries when the club answers, and nothing from a null or an older server’s silence', () => {
-    const [waiting, unset, older] = toHome({
-      read_at: '2026-10-01T08:00:00Z',
-      needing_you: 0,
-      games: [
-        homeGame({ status: 'WAITING_FOR_THE_CLUB', answer_by: '2026-10-01T09:00:00Z' }),
-        homeGame({ status: 'WAITING_FOR_THE_CLUB' }),
-        homeGame({ status: 'WAITING_FOR_THE_CLUB', answer_by: undefined }),
-      ],
-    }).games;
-
-    expect(waiting?.answerBy).toBe('2026-10-01T09:00:00Z');
-    expect(unset).not.toHaveProperty('answerBy');
-    expect(older).not.toHaveProperty('answerBy');
   });
 
   it('carries the payment a game waits for, the reader’s own time, and nothing from a null or an older server’s silence', () => {
@@ -294,23 +285,21 @@ describe('toHome', () => {
   });
 
   /**
-   * **A full game gone back to filling** (#624, Q106) carries which way its line ends — asked of the
-   * club again, or booked at once — and a booked game carries nothing, from an older server too.
+   * **A full game gone back to filling** (#624, Q106) is marked so, and a booked game carries
+   * nothing, from an older server too.
    */
-  it('reads a full game gone back to filling, and whether its club is asked again', () => {
-    const [atTheClub, atOnce, booked, older] = toHome({
+  it('reads a full game gone back to filling', () => {
+    const [filling, booked, older] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       games: [
-        homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true, club_confirms: true }),
-        homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true, club_confirms: false }),
-        homeGame({ status: 'SEAT_OPEN', open_seats: 1, club_confirms: true }),
-        homeGame({ status: 'SEAT_OPEN', filling_again: undefined, club_confirms: undefined }),
+        homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true }),
+        homeGame({ status: 'SEAT_OPEN', open_seats: 1 }),
+        homeGame({ status: 'SEAT_OPEN', filling_again: undefined }),
       ],
     }).games;
 
-    expect(atTheClub?.fillingAgain).toEqual({ clubConfirms: true });
-    expect(atOnce?.fillingAgain).toEqual({ clubConfirms: false });
+    expect(filling?.fillingAgain).toBe(true);
     expect(booked).not.toHaveProperty('fillingAgain');
     expect(older).not.toHaveProperty('fillingAgain');
   });
@@ -365,11 +354,11 @@ describe('toBookedGame', () => {
     open_seats: 0,
     needs_you: false,
     filling_again: false,
-    club_confirms: false,
     starts_at: '2026-10-03T14:00:00Z',
     ends_at: '2026-10-03T15:00:00Z',
     where: { id: 'club-1', name: 'Bonarka Arena', distance_km: 3.1 },
     court_name: 'Court 2',
+    indoor: true,
     sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
     money: {
       share_grosze: 2800,
@@ -383,7 +372,6 @@ describe('toBookedGame', () => {
     shows_forecast: true,
     leaving: null,
     rescue: null,
-    answer_by: null,
     payment_due_by: null,
     your_payment_due_by: null,
     time_to: null,
@@ -444,8 +432,8 @@ describe('toBookedGame', () => {
     expect(toBookedGame(details())).not.toHaveProperty('leaving');
   });
 
-  /** No figure while the fee kept isn't known (#641) — and the club's wait quotes nought, which is no refund. */
-  it('carries no quote after the cut-off while the fee kept is unknown, nor while the club decides', () => {
+  /** No figure while the fee kept isn't known (#641) — and a payment's wait quotes nought, which is no refund. */
+  it('carries no quote after the cut-off while the fee kept is unknown, nor while a payment is awaited', () => {
     const unknown = toBookedGame(
       details({
         leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
@@ -453,12 +441,12 @@ describe('toBookedGame', () => {
     );
     const waiting = toBookedGame(
       details({
-        leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
+        leaving: { kind: 'WHILE_WAITING_FOR_A_PAYMENT', refund_grosze: 0, card_fee_grosze: 0 },
       }),
     );
 
     expect(unknown?.leaving).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
-    expect(waiting?.leaving).toEqual({ kind: 'WHILE_WAITING_FOR_THE_CLUB' });
+    expect(waiting?.leaving).toEqual({ kind: 'WHILE_WAITING_FOR_A_PAYMENT' });
   });
 
   it('reads the open seat offered from outside, and nothing for a player in the game', () => {
@@ -469,16 +457,6 @@ describe('toBookedGame', () => {
     expect(game?.rescue).toEqual({ deadline: '2026-10-02T14:00:00Z', fillsByTheCutOff: true });
     expect(toBookedGame(details())).not.toHaveProperty('rescue');
     expect(toBookedGame(details({ rescue: undefined }))).not.toHaveProperty('rescue');
-  });
-
-  it('carries when the club answers, and nothing from a null or an older server’s silence', () => {
-    const waiting = toBookedGame(
-      details({ status: 'WAITING_FOR_THE_CLUB', answer_by: '2026-10-03T09:00:00Z' }),
-    );
-
-    expect(waiting?.answerBy).toBe('2026-10-03T09:00:00Z');
-    expect(toBookedGame(details())).not.toHaveProperty('answerBy');
-    expect(toBookedGame(details({ answer_by: undefined }))).not.toHaveProperty('answerBy');
   });
 
   it('carries the payment a game waits for in detail, as Home does', () => {
@@ -509,12 +487,11 @@ describe('toBookedGame', () => {
         status: 'SEAT_OPEN',
         open_seats: 1,
         filling_again: true,
-        club_confirms: true,
         leaving: null,
       }),
     );
 
-    expect(filling?.fillingAgain).toEqual({ clubConfirms: true });
+    expect(filling?.fillingAgain).toBe(true);
     expect(filling).not.toHaveProperty('leaving');
     expect(toBookedGame(details())).not.toHaveProperty('fillingAgain');
   });

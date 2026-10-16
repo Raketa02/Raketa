@@ -103,16 +103,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   process collides on the stream, and whatever the world moved past is refused and counted.
   One pool failing is logged and passed over. What is dealt is domain
   (`proposals/domain/proposer.py`); only the two cadences are settings.
-  The seventeenth is the **On request timeout** (`request-timeout`, #543), and **correctness
-  depends on it**: every read already refuses a club's answer past its deadline
-  (`request_timed_out`) and drops the request from the club's list, but only this calls the
-  game off — *Called off · no answer* — frees the court the request held and makes its
-  players owed a new card first. Its read names **candidates** (`unanswered`, by state and
-  `answer_by`), each one transaction that locks its game first, a conflict counted and
-  stepped over. The deadline is the club's time to confirm, a Raketa setting; only the
-  cadence (thirty seconds — the window is minutes long) is a setting here.
+  The seventeenth was the **On request timeout** (`request-timeout`, #543), which called off
+  a request its club did not answer in time; it went with On request (#669; ADR-0196 §1),
+  with its switch and its interval, since no club confirms a game.
   The eighteenth is the **cut-off** (`cut-off`, #544, #637; `TheCutOff`), and **correctness
-  depends on it** as on the timeout, twice over. A booked game with a seat open since before
+  depends on it**, twice over. A booked game with a seat open since before
   its cut-off reads *called off · short at the cut-off* at every read from the cut-off on
   (`BookedGame.called_off_reason`, `keeping_of`), but only this lets everybody's hold go,
   frees the court and emails the club; and **a full game's shares read *paid* from the
@@ -140,9 +135,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   day's new bookings, once (a stream per club per day, born with the email).
   The twenty-first is **time to pay** (`time-to-pay`, #625, #626), and **correctness
   depends on it**: a payer's own act past their time already runs it out first, but only
-  this reopens the seat for everybody else, lets the holds the others kept go and — at a
-  club that confirms — calls the booking off, frees the court and emails the desk; and
-  the book-by sweep leaves a game with a payment awaited for it. Its read names
+  this reopens the seat for everybody else and lets the holds the others kept go; and the
+  book-by sweep leaves a game with a payment awaited for it. Its read names
   **candidates** (`ProposalDirectory.paying_past`, over `proposals.paying_until`), each one
   transaction that locks its game first, a conflict counted and stepped over. The thirty
   minutes are domain (`TIME_TO_PAY`); only the cadence (thirty seconds) is a setting. It

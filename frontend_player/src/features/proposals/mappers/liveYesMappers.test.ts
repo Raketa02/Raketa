@@ -24,6 +24,12 @@ describe('a live yes', () => {
     });
   });
 
+  it('carries the court’s kind when the game promises one, and leaves it off when mixed', () => {
+    expect(toLiveYes(liveYes({ indoor: true }))?.indoor).toBe(true);
+    expect(toLiveYes(liveYes({ indoor: false }))?.indoor).toBe(false);
+    expect(toLiveYes(liveYes({ indoor: null }))).not.toHaveProperty('indoor');
+  });
+
   it('leaves the name off a club that no longer exists', () => {
     const read = toLiveYes(
       liveYes({ club: { id: 'b0000000-0000-4000-8000-000000000009', name: null } }),

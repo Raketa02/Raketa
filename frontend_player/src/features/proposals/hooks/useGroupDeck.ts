@@ -261,7 +261,7 @@ function answeredCard(asked: unknown): string | undefined {
 
 /**
  * **What a yes taken back re-reads** — an answer's, the live yeses among them, and Home: a game
- * waiting for its club is on it, and so is a full game gone back to filling (Q106), and the yes
+ * waiting for one payment is on it, and so is a full game gone back to filling (Q106), and the yes
  * taken back takes either off.
  */
 export function rereadAfterWithdrawing(client: QueryClient, groupId: string) {

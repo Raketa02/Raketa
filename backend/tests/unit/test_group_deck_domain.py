@@ -342,6 +342,7 @@ def a_card(
     pct: int | None = 80,
     people: tuple[UUID, ...] | None = None,
     start: datetime = START,
+    owed: bool = False,
 ) -> DeckCard:
     others = people if people is not None else tuple(uuid4() for _ in range(3))
     return DeckCard(
@@ -364,7 +365,7 @@ def a_card(
         open_seats_after_your_yes=open_after,
         version_count=1,
         no_free_cancellation=False,
-        club_confirms=False,
+        owed_to_you=owed,
     )
 
 
@@ -409,6 +410,40 @@ def test_the_same_people_are_dealt_only_at_their_best_hour():
     other = a_card(open_after=3)
 
     assert dealt_in_order([same_later, other, best]) == (best, other)
+
+
+def test_a_card_owed_to_me_comes_first_whatever_the_usual_order_says():
+    # Ahead of a card my yes would book, and of a seat to rescue (#673, Q123).
+    owed = a_card(open_after=3, deadline_hours=96, pct=40, owed=True)
+    book_it = a_card(open_after=0)
+    rescue = a_card(open_after=0, type_=CardType.SEAT_OPEN)
+
+    assert dealt_in_order([book_it, rescue, owed]) == (owed, rescue, book_it)
+
+
+def test_two_owed_cards_come_soonest_first_and_the_usual_order_follows():
+    later = a_card(
+        open_after=0,
+        owed=True,
+        start=datetime(2026, 10, 11, 18, tzinfo=WARSAW),
+    )
+    sooner = a_card(open_after=3, deadline_hours=72, owed=True)
+    usual = a_card(open_after=0, deadline_hours=1)
+
+    assert dealt_in_order([usual, later, sooner]) == (sooner, later, usual)
+
+
+def test_the_owed_card_is_the_one_kept_of_the_same_people_at_two_hours():
+    people = (A, B, C)
+    better = a_card(open_after=0, people=people)
+    owed = a_card(
+        open_after=3,
+        people=people,
+        owed=True,
+        start=datetime(2026, 10, 11, 18, tzinfo=WARSAW),
+    )
+
+    assert dealt_in_order([better, owed]) == (owed,)
 
 
 def test_the_court_block_says_book_it_now_when_my_yes_fills_the_game():

@@ -128,7 +128,7 @@
           "dev"
         ],
         "summary": "Withdraw, as this person",
-        "description": "`DELETE /api/v1/proposals/{id}/yes` as the acting account \u2014 and while an On request club decides, *Leave the game*, which takes the request with it.",
+        "description": "`DELETE /api/v1/proposals/{id}/yes` as the acting account \u2014 and while a full game waits for one payment, *Leave the game*.",
         "operationId": "withdraw_yes_dev_as__player_id__proposals__proposal_id__yes_delete",
         "parameters": [
           {
@@ -288,7 +288,7 @@
           "dev"
         ],
         "summary": "Leave the game, as this person",
-        "description": "`POST /api/v1/bookings/{id}/departure` as the acting account: before the cut-off the hold let go and nothing taken (#637), after it the seat offered until the start and refunded when it is taken, while the club decides the request withdrawn \u2014 and the seat offered to the group.",
+        "description": "`POST /api/v1/bookings/{id}/departure` as the acting account: before the cut-off the hold let go and nothing taken (#637), after it the seat offered until the start and refunded when it is taken, while a payment is awaited the yes withdrawn \u2014 and the seat offered to the group.",
         "operationId": "leave_the_game_dev_as__player_id__bookings__booking_id__departure_post",
         "parameters": [
           {
@@ -1464,200 +1464,6 @@
         }
       }
     },
-    "/dev/clubs/{club_id}/bookings/{booking_id}/acceptance": {
-      "post": {
-        "tags": [
-          "dev",
-          "dev"
-        ],
-        "summary": "Accept a request, as the club",
-        "description": "`POST /api/v1/club/bookings/{id}/acceptance` as the acting club: everybody charged together or not at all, over the provider this process moves money through, and the reserved court given.",
-        "operationId": "accept_dev_clubs__club_id__bookings__booking_id__acceptance_post",
-        "parameters": [
-          {
-            "name": "booking_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Booking Id"
-            }
-          },
-          {
-            "name": "club_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
-              "title": "Club Id"
-            },
-            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AcceptanceResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/dev/clubs/{club_id}/bookings/{booking_id}/refusal": {
-      "post": {
-        "tags": [
-          "dev",
-          "dev"
-        ],
-        "summary": "Refuse a request, as the club",
-        "description": "`POST /api/v1/club/bookings/{id}/refusal` as the acting club: nobody paid, the hour is the club's again, the players are dealt a new card.",
-        "operationId": "refuse_dev_clubs__club_id__bookings__booking_id__refusal_post",
-        "parameters": [
-          {
-            "name": "booking_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Booking Id"
-            }
-          },
-          {
-            "name": "club_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
-              "title": "Club Id"
-            },
-            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/RefusalRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Payload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "403": {
-            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/dev/clubs/{club_id}/bookings/{booking_id}/free-courts": {
       "get": {
         "tags": [
@@ -1849,7 +1655,7 @@
           "dev"
         ],
         "summary": "Cancel a game, as the club",
-        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: every hold let go before the cut-off, everybody refunded in full after it, on nobody's record, a new card owed.",
+        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: moved onto a free court of the club's that absorbs it, nothing else changing (#672) \u2014 or, with none or `anyway`, called off: every hold let go before the cut-off, everybody refunded in full after it, on nobody's record, a new card owed. Answers which it was.",
         "operationId": "cancel_dev_clubs__club_id__bookings__booking_id__cancellation_post",
         "parameters": [
           {
@@ -1886,8 +1692,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelOutcomeSchema"
+                }
+              }
+            }
           },
           "403": {
             "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
@@ -1939,7 +1752,7 @@
           "dev"
         ],
         "summary": "Set a player's saved card: what it does, its kind and its network",
-        "description": "What the next payment cloned from this player's saved card does \u2014 the next fill's hold, a rescue's, a club's acceptance \u2014 which kind of card it is, so the fee kept when its share is taken, and which network holds it, so how long a hold lasts. Each field omitted is left as it is.",
+        "description": "What the next payment cloned from this player's saved card does \u2014 the next fill's hold, a rescue's, a holding's \u2014 which kind of card it is, so the fee kept when its share is taken, and which network holds it, so how long a hold lasts. Each field omitted is left as it is.",
         "operationId": "steer_a_card_dev_payments_cards__player_id__put",
         "parameters": [
           {
@@ -2544,15 +2357,15 @@
         }
       }
     },
-    "/dev/situations/needs-her-yes-instant-club": {
+    "/dev/situations/needs-her-yes": {
       "post": {
         "tags": [
           "dev",
           "dev"
         ],
-        "summary": "Situation 2 \u00b7 Needs her yes, Instant club",
-        "description": "Leaves a game needing only the protagonist's yes, at a club that books at once: the soonest card of hers in the group and sport that her deck shows \u2014 one with 2 hours left before its book-by, where there is one \u2014 with enough of the people dealt it beside her saying yes \u2014 each through the yes their own phone runs. Her yes then fills it: a charge, *It's a game!*, then Home. With no such card, the proposer deals first.",
-        "operationId": "needs_her_yes_instant_club_dev_situations_needs_her_yes_instant_club_post",
+        "summary": "Situation 2 \u00b7 Needs her yes",
+        "description": "Leaves a game needing only the protagonist's yes: the soonest card of hers in the group and sport that her deck shows \u2014 one with 2 hours left before its book-by, where there is one \u2014 with enough of the people dealt it beside her saying yes \u2014 each through the yes their own phone runs. Her yes then fills it: a charge, *It's a game!*, then Home. With no such card, the proposer deals first.",
+        "operationId": "needs_her_yes_dev_situations_needs_her_yes_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2570,79 +2383,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NeedsHerYesResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`group_not_found` \u2014 no such group.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/dev/situations/needs-her-yes-on-request-club": {
-      "post": {
-        "tags": [
-          "dev",
-          "dev"
-        ],
-        "summary": "Situation 3 \u00b7 Needs her yes, On request club",
-        "description": "Situation 2 at a club that confirms each game: her yes asks the club, and the club row accepts or refuses \u2014 or the club's time to confirm runs out. **With `answer_due_in_minutes`, the club is asked already**: her game at the soonest hour an On request club of the group's sells, made and said yes to by her and three of the group \u2014 hers last \u2014 as if earlier, so the answer is due that many minutes from now (or, past the club's own time to confirm, that long from now); then *Run it now* on the club's answer window calls it off once it is due.",
-        "operationId": "needs_her_yes_on_request_club_dev_situations_needs_her_yes_on_request_club_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OnRequestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OnRequestResponse"
                 }
               }
             }
@@ -2843,7 +2583,7 @@
           "dev"
         ],
         "summary": "Situation 6 \u00b7 Kuba leaves before the cut-off",
-        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's that books at once \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: their hold let go, nothing taken, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go.",
+        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: their hold let go, nothing taken, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go.",
         "operationId": "one_leaves_before_the_cut_off_dev_situations_one_leaves_before_the_cut_off_post",
         "requestBody": {
           "content": {
@@ -2916,7 +2656,7 @@
           "dev"
         ],
         "summary": "Situation 7 \u00b7 Empty seat at the cut-off",
-        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's that books at once \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go \u2014 nobody pays; taken first, the game plays.",
+        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go \u2014 nobody pays; taken first, the game plays.",
         "operationId": "empty_seat_at_the_cut_off_dev_situations_empty_seat_at_the_cut_off_post",
         "requestBody": {
           "content": {
@@ -2989,7 +2729,7 @@
           "dev"
         ],
         "summary": "Situation 8 \u00b7 Ania leaves",
-        "description": "Two games of hers to leave from the phone, at a club of the group's that books at once, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first lets her hold go \u2014 nothing taken (#637); leaving the second keeps her seat paid until a row takes it, and then refunds her.",
+        "description": "Two games of hers to leave from the phone, at a club of the group's, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first lets her hold go \u2014 nothing taken (#637); leaving the second keeps her seat paid until a row takes it, and then refunds her.",
         "operationId": "she_leaves_dev_situations_she_leaves_post",
         "requestBody": {
           "content": {
@@ -3135,7 +2875,7 @@
           "dev"
         ],
         "summary": "Situation 10 \u00b7 Just played",
-        "description": "Her game at the hour that ended last, at a club of the group's that books at once \u2014 made and filled by her and three of the group as if earlier, when the hour was on sale \u2014 awaiting its result: the rows and her phone enter a score, agree or counter, or say somebody didn't come. **With `result_confirms_in_minutes`, a score is up already**: the game is the hour that ended last before then, and somebody across the net from her stated their side won as if earlier, so silence confirms it that many minutes from now; *Run it now* on the rating catch-up then moves the Levels, and not before.",
+        "description": "Her game at the hour that ended last, at a club of the group's \u2014 made and filled by her and three of the group as if earlier, when the hour was on sale \u2014 awaiting its result: the rows and her phone enter a score, agree or counter, or say somebody didn't come. **With `result_confirms_in_minutes`, a score is up already**: the game is the hour that ended last before then, and somebody across the net from her stated their side won as if earlier, so silence confirms it that many minutes from now; *Run it now* on the rating catch-up then moves the Levels, and not before.",
         "operationId": "just_played_dev_situations_just_played_post",
         "requestBody": {
           "content": {
@@ -3208,7 +2948,7 @@
           "dev"
         ],
         "summary": "Situation 11 \u00b7 Club day close",
-        "description": "Writes the last closed club day's played games \u2014 yesterday's, or today's from 23:00 \u2014 at a club of the group's that books at once and has had no day close for it yet: up to 2, each a game's worth of the group, never the protagonist, booked inside that day on a clock backdated to it. Once the outbox has captured the shares, *Run it now* on club payouts pays the club for them, and on the new bookings summary emails its desk the day's bookings.",
+        "description": "Writes into the last closed club day \u2014 yesterday's, or today's from 23:00 \u2014 at a club of the group's that has had no day close for it yet, up to two games, each a game's worth of the group, never the protagonist and nobody on both: **one played that day**, booked before the day, an hour before its release time (no game fills later than its club's release lead before it), its shares taken at its cut-off; and **one booked inside that day**, an hour before its close, at the soonest hour the club sold then. Once the outbox has captured the shares, *Run it now* on club payouts pays the club for the first, and on the new bookings summary emails its desk the second.",
         "operationId": "club_day_close_dev_situations_club_day_close_post",
         "requestBody": {
           "content": {
@@ -3342,29 +3082,6 @@
         }
       }
     },
-    "/dev/jobs/request-timeout": {
-      "post": {
-        "tags": [
-          "dev",
-          "dev"
-        ],
-        "summary": "Run it now \u00b7 the club's answer window",
-        "description": "Calls off every request an On request club has not answered by its deadline \u2014 *Called off \u00b7 no answer*, nobody paid, the court free and the players owed a new card. A request still inside its time to confirm is left waiting.",
-        "operationId": "run_the_request_timeout_dev_jobs_request_timeout_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RanResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/dev/jobs/time-to-pay": {
       "post": {
         "tags": [
@@ -3372,7 +3089,7 @@
           "dev"
         ],
         "summary": "Run it now \u00b7 time to pay",
-        "description": "Runs out every refused share's time to pay that is up (#625, #626) \u2014 and its time to fix the card, before the cut-off (#638): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 the holds the others kept are let go, and at a club that confirms the booking is called off, its desk emailed. On a booked game whose holding was refused (#639), the player's seat opens to Fill in as a leaver's, and they owe nothing. A time still running is left as it is.",
+        "description": "Runs out every refused share's time to pay that is up (#625) \u2014 and its time to fix the card, before the cut-off (#638): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 and the holds the others kept are let go. On a booked game whose holding was refused (#639), the player's seat opens to Fill in as a leaver's, and they owe nothing. A time still running is left as it is.",
         "operationId": "run_the_time_to_pay_dev_jobs_time_to_pay_post",
         "responses": {
           "200": {
@@ -3670,67 +3387,6 @@
           "says"
         ],
         "title": "AboutToExpireResponse"
-      },
-      "AcceptOutcome": {
-        "type": "string",
-        "enum": [
-          "BOOKED",
-          "WAITING_FOR_A_PAYMENT",
-          "CALLED_OFF",
-          "SEAT_OPENED"
-        ],
-        "title": "AcceptOutcome",
-        "description": "What the club's yes came to."
-      },
-      "AcceptanceResponse": {
-        "properties": {
-          "outcome": {
-            "$ref": "#/components/schemas/AcceptOutcome",
-            "description": "`BOOKED` \u2014 every share is held, and taken at your cut-off (or taken now, after it \u2014 #637); the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
-          },
-          "court_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Court Name",
-            "description": "The court the players were given \u2014 on a booked game only."
-          },
-          "payment_due_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payment Due By",
-            "description": "When the player's payment is due \u2014 *Accepted \u00b7 waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only."
-          },
-          "time_to": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TimeTo"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted \u00b7 waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` \u2014 you accepted after it, where the shares are taken at once: *Accepted \u00b7 waiting for one player's payment until 21:20*. `null` with `payment_due_by`."
-          }
-        },
-        "type": "object",
-        "required": [
-          "outcome",
-          "court_name"
-        ],
-        "title": "AcceptanceResponse"
       },
       "AtTheCourtPress": {
         "properties": {
@@ -4047,7 +3703,7 @@
                 "type": "null"
               }
             ],
-            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `CHECKED` \u2014 **the reader's** card was only checked when the game filled far ahead, and their share is held from `held_from`: *40 z\u0142 held from Sat 19:00 \u00b7 taken Wed 19:00* (#639) \u2014 free to leave until the cut-off all the same. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for its club or for a payment, called off, and for a reader not on the game. Switches by itself at `held_from` and at `taken_at`."
+            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `CHECKED` \u2014 **the reader's** card was only checked when the game filled far ahead, and their share is held from `held_from`: *40 z\u0142 held from Sat 19:00 \u00b7 taken Wed 19:00* (#639) \u2014 free to leave until the cut-off all the same. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for a payment, called off, and for a reader not on the game. Switches by itself at `held_from` and at `taken_at`."
           },
           "held_from": {
             "anyOf": [
@@ -4199,7 +3855,7 @@
           "paid": {
             "type": "boolean",
             "title": "Paid",
-            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
+            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for a payment, on a game that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
           }
         },
         "type": "object",
@@ -4224,34 +3880,18 @@
             "type": "string",
             "title": "Court Name"
           },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor"
+          },
           "cut_off": {
             "type": "string",
             "format": "date-time",
             "title": "Cut Off"
           },
-          "answer_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer By",
-            "description": "When the club's answer is due, on a booking put to it."
-          },
           "booked_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date-time",
             "title": "Booked At"
           },
           "called_off": {
@@ -4286,8 +3926,8 @@
         "required": [
           "state",
           "court_name",
+          "indoor",
           "cut_off",
-          "answer_by",
           "booked_at",
           "called_off",
           "cancel_reason",
@@ -4298,8 +3938,6 @@
       "BookingState": {
         "type": "string",
         "enum": [
-          "WAITING_FOR_THE_CLUB",
-          "WAITING_FOR_A_PAYMENT",
           "BOOKED",
           "SEAT_OPEN",
           "CALLED_OFF"
@@ -4310,12 +3948,8 @@
       "CalledOff": {
         "type": "string",
         "enum": [
-          "REFUSED",
-          "NO_ANSWER",
-          "SEAT_OPENED",
           "SHORT_AT_THE_CUT_OFF",
-          "CANCELLED_BY_THE_CLUB",
-          "PAYMENT_NOT_IN_TIME"
+          "CANCELLED_BY_THE_CLUB"
         ],
         "title": "CalledOff",
         "description": "Why a booking will not be played."
@@ -4347,6 +3981,40 @@
         "title": "CalledOffBySchema",
         "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The name is carried because the court cannot supply it**: the leaver whose\ndeparture called the game off has been **vacated** \u2014 their seat is drawn\n`player_id: null` \u2014 so the seats alone could not name them. It is the same\nname a seat carries, read in the same set read, and it is `null` for the\nsame reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
       },
+      "CancelOutcomeKind": {
+        "type": "string",
+        "enum": [
+          "MOVED",
+          "CALLED_OFF"
+        ],
+        "title": "CancelOutcomeKind",
+        "description": "What a cancel came to \u2014 or, in its preview, would come to (#672)."
+      },
+      "CancelOutcomeSchema": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/CancelOutcomeKind",
+            "description": "`MOVED` \u2014 a free court of yours at the game's hour, sold at its price, of its kind or indoor for an outdoor game (indoor only for `WEATHER`), takes the game: every hold or payment stays as it is, nobody is refunded, and the players are told *Game moved*. `CALLED_OFF` \u2014 the game is off, the money as the cancel says."
+          },
+          "court": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourtToMoveToSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The court the game moves to, and its kind; `null` when called off."
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "court"
+        ],
+        "title": "CancelOutcomeSchema"
+      },
       "CancelReason": {
         "type": "string",
         "enum": [
@@ -4362,7 +4030,13 @@
         "properties": {
           "reason": {
             "$ref": "#/components/schemas/ClubCancelReason",
-            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money."
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money, or, when another of your courts takes the game, as why the court it left can't be played."
+          },
+          "anyway": {
+            "type": "boolean",
+            "title": "Anyway",
+            "description": "**Cancel the game anyway** \u2014 for a club closing the whole hour (an event, a power cut): the game is called off even when another court would take it.",
+            "default": false
           }
         },
         "type": "object",
@@ -4629,7 +4303,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "Played that day, soonest first."
+            "description": "The game played that day, then the one booked that day."
           },
           "says": {
             "type": "string",
@@ -4665,25 +4339,12 @@
               }
             ],
             "title": "Name"
-          },
-          "confirms_each_game": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confirms Each Game",
-            "description": "`true` at an On request club, `false` at an Instant one; `null` for a club no longer selling through Raketa."
           }
         },
         "type": "object",
         "required": [
           "club_id",
-          "name",
-          "confirms_each_game"
+          "name"
         ],
         "title": "ClubPane"
       },
@@ -4747,12 +4408,18 @@
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "Its kind \u2014 *Court 3 \u00b7 indoor*."
           }
         },
         "type": "object",
         "required": [
           "court_id",
-          "name"
+          "name",
+          "indoor"
         ],
         "title": "CourtToMoveToSchema"
       },
@@ -4772,7 +4439,12 @@
             "type": "string",
             "format": "date-time",
             "title": "Booked At",
-            "description": "Inside the day, after the close before."
+            "description": "When it filled: the day's played game before the day began, an hour before its release time; the day's new booking inside the day, an hour before its close."
+          },
+          "played": {
+            "type": "boolean",
+            "title": "Played",
+            "description": "Played that day, and paid for at its close \u2014 or booked that day, and in its desk's summary."
           },
           "people": {
             "items": {
@@ -4787,6 +4459,7 @@
           "game_id",
           "starts_at",
           "booked_at",
+          "played",
           "people"
         ],
         "title": "DayCloseGame"
@@ -5037,7 +4710,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it \u2014 emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it \u2014 emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_A_PAYMENT` \u2014 on a game `WAITING_FOR_A_PAYMENT` (#625): nobody had paid, the yes is withdrawn, the leaver's hold is let go, and the payer's time runs on \u2014 the game is `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn."
           }
         },
         "type": "object",
@@ -5239,7 +4912,7 @@
             },
             "type": "array",
             "title": "Courts",
-            "description": "Every other court of the game's sport you still have for Raketa at its hour, in your own order. Empty: there is none \u2014 **Cancel** with *repair* if the court cannot be played."
+            "description": "Every other court of the game's sport you still have for Raketa at its hour **that keeps the game's kind** \u2014 the same kind, or an indoor court for an outdoor game, never outdoors from indoors \u2014 in your own order, each with its kind. Empty: there is none \u2014 **Cancel** with *repair* if the court cannot be played."
           }
         },
         "type": "object",
@@ -5343,10 +5016,6 @@
           "standing": {
             "$ref": "#/components/schemas/Standing"
           },
-          "waiting_for_the_club": {
-            "type": "boolean",
-            "title": "Waiting For The Club"
-          },
           "share_grosze": {
             "type": "integer",
             "title": "Share Grosze"
@@ -5434,7 +5103,6 @@
           "book_by",
           "cut_off",
           "standing",
-          "waiting_for_the_club",
           "share_grosze",
           "seats",
           "open_seats",
@@ -5910,7 +5578,7 @@
         "enum": [
           "BEFORE_THE_CUT_OFF",
           "AFTER_THE_CUT_OFF",
-          "WHILE_WAITING_FOR_THE_CLUB"
+          "WHILE_WAITING_FOR_A_PAYMENT"
         ],
         "title": "Leaving",
         "description": "What *Leave the game* does, by when it is pressed (the mechanics \u00a713) \u2014\nsaid on the details before, and answered by the act after."
@@ -5938,7 +5606,6 @@
         "type": "string",
         "enum": [
           "BOOK_BY",
-          "CLUB_ANSWER_DUE",
           "PAYMENT_DUE",
           "HOLDING",
           "CUT_OFF",
@@ -6075,7 +5742,6 @@
         "type": "string",
         "enum": [
           "GAME_BOOKED",
-          "WAITING_FOR_THE_CLUB",
           "WAITING_FOR_A_PAYMENT",
           "TIME_TO_PAY_RAN_OUT",
           "TIME_TO_FIX_RAN_OUT",
@@ -6084,9 +5750,8 @@
           "GAME_CALLED_OFF",
           "SOMEONE_LEFT",
           "REFUNDED",
-          "CLUB_CONFIRMED",
-          "CLUB_COULD_NOT_TAKE_IT",
           "NEW_GAME",
+          "GAME_MOVED",
           "POST_DID_NOT_FILL",
           "YOU_COMPLETE_IT",
           "CHALLENGE",
@@ -6241,112 +5906,6 @@
           "notices"
         ],
         "title": "NoticesResponse"
-      },
-      "OnRequestRequest": {
-        "properties": {
-          "group_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Group Id"
-          },
-          "sport": {
-            "$ref": "#/components/schemas/Sport"
-          },
-          "protagonist_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Protagonist Id",
-            "description": "Whose phone it is \u2014 the protagonist the situation is for."
-          },
-          "answer_due_in_minutes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 60.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Due In Minutes",
-            "description": "Ask the club already, as if her yes had been said earlier, so that its answer is due this many minutes from now. A club's own time to confirm is the most it can be: asked for more, the club is asked now and `answer_by` says when. Left out, her yes is left for the phone."
-          }
-        },
-        "type": "object",
-        "required": [
-          "group_id",
-          "sport",
-          "protagonist_id"
-        ],
-        "title": "OnRequestRequest"
-      },
-      "OnRequestResponse": {
-        "properties": {
-          "game_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Game Id"
-          },
-          "starts_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Starts At"
-          },
-          "book_by": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Book By"
-          },
-          "club_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Club Name"
-          },
-          "people_in": {
-            "items": {
-              "$ref": "#/components/schemas/PersonRef"
-            },
-            "type": "array",
-            "title": "People In",
-            "description": "Everybody In now, in yes order."
-          },
-          "answer_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer By",
-            "description": "When the club's answer is due, once it was asked; `null` while her yes is left for the phone."
-          },
-          "says": {
-            "type": "string",
-            "title": "Says",
-            "description": "What happened, for the tester."
-          }
-        },
-        "type": "object",
-        "required": [
-          "game_id",
-          "starts_at",
-          "book_by",
-          "club_name",
-          "people_in",
-          "answer_by",
-          "says"
-        ],
-        "title": "OnRequestResponse"
       },
       "OneLeavesResponse": {
         "properties": {
@@ -6988,7 +6547,7 @@
           "redealt": {
             "type": "integer",
             "title": "Redealt",
-            "description": "Turned-down games whose people it re-dealt."
+            "description": "Cancelled games whose people it re-dealt."
           },
           "refused": {
             "type": "integer",
@@ -7196,25 +6755,6 @@
         ],
         "title": "RefundsResponse"
       },
-      "RefusalRequest": {
-        "properties": {
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason",
-            "description": "Why, for your own records \u2014 **never shown to the players**, who read *Called off \u00b7 refused*. Blank is no reason."
-          }
-        },
-        "type": "object",
-        "title": "RefusalRequest"
-      },
       "ResultPane": {
         "properties": {
           "game_id": {
@@ -7396,7 +6936,7 @@
               }
             ],
             "title": "Game Id",
-            "description": "The Game it opened \u2014 what a score, an agreement and an attendance tap name. `null` while its club decides, and for good if it never said yes."
+            "description": "The Game it opened \u2014 what a score, an agreement and an attendance tap name. `null` on a game that waited for a payment and has no booking."
           },
           "starts_at": {
             "type": "string",
@@ -7657,6 +7197,11 @@
             "title": "Court Name",
             "description": "What the club calls the court."
           },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "The court's kind \u2014 *Court 3 \u00b7 indoor* (Q122)."
+          },
           "share_grosze": {
             "type": "integer",
             "title": "Share Grosze",
@@ -7695,6 +7240,7 @@
           "starts_at",
           "club",
           "court_name",
+          "indoor",
           "share_grosze",
           "open_seats",
           "deadline",
@@ -8105,8 +7651,7 @@
           "FILLED",
           "EXPIRED",
           "WITHDRAWN",
-          "COURT_HOUR_LOST",
-          "TURNED_DOWN"
+          "COURT_HOUR_LOST"
         ],
         "title": "Standing",
         "description": "Where a proposal stands at an instant \u2014 derived, never stored."
@@ -8417,7 +7962,7 @@
           "open_seats": {
             "type": "integer",
             "title": "Open Seats",
-            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked \u2014 on a full game an On request club has still to confirm \u2014 and on a full game waiting for one payment, whose seat is its payer's alone for their time to pay (#625)."
+            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked, and on a full game waiting for one payment, whose seat is its payer's alone for their time to pay (#625)."
           },
           "booked": {
             "anyOf": [
@@ -8429,12 +7974,6 @@
               }
             ],
             "description": "Present when this yes booked the game: every seat's share was held until the club's cut-off, or taken after it (#637), and the booking and its Game are open. `null` otherwise."
-          },
-          "waiting_for_the_club": {
-            "type": "boolean",
-            "title": "Waiting For The Club",
-            "description": "This yes filled the game at an **On request** club: it went to the club, which confirms it within its time to confirm, and nobody pays until it does \u2014 the charge and *It's a game!* follow its yes. The game is on Home as `WAITING_FOR_THE_CLUB`.",
-            "default": false
           },
           "your_payment": {
             "anyOf": [
@@ -8458,7 +7997,7 @@
               }
             ],
             "title": "Payment Awaited Until",
-            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer \u2014 a rescue's refused payment too, whose seat is kept for its player alone and no game waits on it (`your_payment.confirm_by`, #640)."
+            "description": "**This yes filled the game and a share was refused** (#625; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer \u2014 a rescue's refused payment too, whose seat is kept for its player alone and no game waits on it (`your_payment.confirm_by`, #640)."
           },
           "money": {
             "anyOf": [

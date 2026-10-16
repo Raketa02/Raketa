@@ -9,6 +9,7 @@ import type { LiveYes } from '../domain/liveYes';
 import {
   LIVE_YES_HINT,
   liveYesLabel,
+  liveYesPlace,
   liveYesTitle,
   liveYesesHeader,
 } from './liveYesesPresentation';
@@ -49,6 +50,16 @@ describe('a row', () => {
       'Padel · Saturday 15:00, Bonarka Arena, 28 zł if it fills',
     );
     expect(LIVE_YES_HINT).toBe('Opens the game’s details');
+  });
+
+  it('says the court’s kind under the club — Indoor, Outdoor, or nothing for mixed courts', () => {
+    const day = { kind: 'weekday', weekday: 6 } as const;
+    expect(liveYesPlace({ ...YES, indoor: true })).toBe('Bonarka Arena · Indoor');
+    expect(liveYesPlace({ ...YES, indoor: false })).toBe('Bonarka Arena · Outdoor');
+    expect(liveYesPlace(YES)).toBe('Bonarka Arena');
+    expect(liveYesLabel({ ...YES, indoor: true }, day)).toBe(
+      'Padel · Saturday 15:00, Bonarka Arena · Indoor, 28 zł if it fills',
+    );
   });
 
   it('names a club that no longer exists in the card’s words', () => {

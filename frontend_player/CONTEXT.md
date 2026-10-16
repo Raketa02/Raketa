@@ -146,6 +146,10 @@ review comment and a test description all use the same word.
 - **Notice banner** — a notice pushed while the app is open, drawn by the app at the top because the
   phone presents nothing then; a press opens its game (#559). _Avoid_: toast — a toast is not a
   control and is never pressed.
+- **`GAME_MOVED` notice kind** — the wire spelling of _Game moved_, the root term; always on and
+  opened on the booked game (#677). `domain/vocabulary.ts` spells it.
+- **`indoor` on the wire** — `true`, `false` or `null`. The mappers drop a `null` to an absent
+  `indoor?`, and `courtKindWords` is the one place the phone spells it (#677).
 - **Incoming link** — an address the operating system opens the app with, read by
   `+native-intent` before anything is routed. Only three are links — `join/<code>` (a **Group
   link**), `invite/<token>` and `reset/<token>` — by the app's scheme or the **link domain**
@@ -602,8 +606,9 @@ _Matched!_ — left with the old loop ([#576](https://github.com/Raketa02/Raketa
 ground, the entrance and the tile came to `features/proposals` with the face that stays (#574).
 
 - **It's a game!** — the full-phone screen a yes lands on when it **filled a game** dealt in a
-  group's deck (#555) — booked, or gone to its On request club, with one line under the word for
-  what is still missing (#628, Q103): your side and theirs sliding in to meet with a `vs`
+  group's deck (#555) — booked, or waiting for one payment, with one line under the word for what
+  is still missing then (#630, Q110; no club confirms a game since ADR-0196, #676): your side and
+  theirs sliding in to meet with a `vs`
   between, one lime word, two pills, on the app's one dark ground (`YesGround`), moved once by
   `YesEntrance`. The faces are drawn off **the card the yes was said on**, and the doors are
   _Open game_ (Home laid down, the game pushed over it) and _Later_. Raised by the fill over the

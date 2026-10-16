@@ -1,7 +1,7 @@
 /**
- * **One club's Raketa offer, as the backend would keep it** (#535): its courts and their Raketa
- * hours, its exceptions, its prices, its way of working and its settings, and the setup checklist
- * read off all of them. The rules are the club surface's own, from `backend/openapi.club.json`,
+ * **One club's Raketa offer, as the backend would keep it** (#535, #670): its courts and their
+ * Raketa hours, its exceptions, its prices and its settings, and the setup checklist read off all
+ * of them. The rules are the club surface's own, from `backend/openapi.club.json`,
  * kept just deep enough that a test can add a court, paint its week, price its sport and confirm
  * the settings without programming each reply. A test that is about one reply overrides that
  * handler with `stub.on`.
@@ -17,14 +17,13 @@ import { refusal, type Reply, type StubBackend } from './backend';
 import { clubTime, dayFromToday } from './clock';
 
 type Sport = components['schemas']['Sport'];
-type WayOfWorking = components['schemas']['WayOfWorking'];
 type PaymentsStatus = components['schemas']['PaymentsStatus'];
 type StepState = components['schemas']['StepState'];
 type SetupStep = components['schemas']['SetupStep'];
 type BandDays = components['schemas']['BandDays'];
 export type Court = components['schemas']['CourtResponse'];
 export type Exception = components['schemas']['ExceptionResponse'];
-type Settings = Omit<components['schemas']['RaketaSettingsResponse'], 'way_of_working'>;
+type Settings = components['schemas']['RaketaSettingsResponse'];
 type SportPrice = components['schemas']['SportPriceResponse'];
 type ErrorBody = components['schemas']['ErrorResponse'];
 
@@ -46,16 +45,12 @@ const MOST_GROSZE = 1000_00;
 const BOUNDS = {
   release_lead_days: [1, 13],
   cut_off_hours: [0, 72],
-  minimum_notice_hours: [1, 48],
-  time_to_confirm_minutes: [5, 60],
   other_clubs_courts: [1, 50],
 } as const;
 
 export const DEFAULT_SETTINGS: Settings = {
   release_lead_days: 3,
   cut_off_hours: 24,
-  minimum_notice_hours: 2,
-  time_to_confirm_minutes: 30,
   other_clubs_courts: { offered: false, within_km: 10 },
   paused: false,
 };
@@ -99,7 +94,6 @@ export class FakeClubCourts {
   exceptions: Exception[] = [];
   /** Each priced sport's price and bands, as the desk saved them. */
   prices = new Map<Sport, { price: number; bands: SportPrice['bands'] }>();
-  way: WayOfWorking | null = null;
   settings: Settings = structuredClone(DEFAULT_SETTINGS);
   /** Whether the club has confirmed its settings: the checklist's last step. */
   confirmed = false;
@@ -128,7 +122,6 @@ export class FakeClubCourts {
   /** Everything the checklist needs but payments, done; payments ready makes the club live. */
   ready(payments: PaymentsStatus = 'READY'): void {
     this.payments = payments;
-    this.way ??= 'INSTANT';
     this.confirmed = true;
     if (!this.courts.some((each) => each.offered)) {
       this.courts.push(court({ name: 'Court 1', sport: 'PADEL', hours: week([1, 2, 3], 17, 21) }));
@@ -140,7 +133,10 @@ export class FakeClubCourts {
     return this.bookingsAhead().some((booking) => booking.court_id === id);
   }
 
-  /** The setup checklist, read off everything set, as the backend reads it (#535, #537). */
+  /**
+   * The setup checklist, read off everything set, as the backend reads it (#535, #537, #670):
+   * the settings wait for nothing.
+   */
   setup(): components['schemas']['SetupResponse'] {
     const offered = this.courts.some((each) => each.offered);
     const selling = this.courts.filter((each) => each.offered && each.hours.length > 0);
@@ -149,10 +145,9 @@ export class FakeClubCourts {
     const doneOr = (done: boolean): StepState => (done ? 'DONE' : 'TO_DO');
     const steps: { step: SetupStep; state: StepState }[] = [
       { step: 'CONNECT_PAYMENTS', state: doneOr(this.payments === 'READY') },
-      { step: 'WAY_OF_WORKING', state: doneOr(this.way !== null) },
       { step: 'COURTS', state: doneOr(offered) },
       { step: 'HOURS_AND_PRICES', state: offered ? doneOr(hoursAndPrices) : 'LOCKED' },
-      { step: 'SETTINGS', state: this.way === null ? 'LOCKED' : doneOr(this.confirmed) },
+      { step: 'SETTINGS', state: doneOr(this.confirmed) },
     ];
     return {
       steps,
@@ -161,8 +156,8 @@ export class FakeClubCourts {
     };
   }
 
-  private settingsResponse(): components['schemas']['RaketaSettingsResponse'] {
-    return { way_of_working: this.way, ...structuredClone(this.settings) };
+  private settingsResponse(): Settings {
+    return structuredClone(this.settings);
   }
 
   private pricesResponse(): components['schemas']['PricesResponse'] {
@@ -379,13 +374,6 @@ export class FakeClubCourts {
       return { status: 200, body: this.pricesResponse() };
     });
 
-    stub.on('put', '/api/v1/club/way-of-working', ({ headers, body }) => {
-      const signedOut = this.guard(headers.authorization);
-      if (signedOut !== null) return signedOut;
-      this.way = body.way_of_working;
-      return { status: 200, body: this.settingsResponse() };
-    });
-
     stub.on('get', '/api/v1/club/raketa-settings', ({ headers }) => {
       return this.guard(headers.authorization) ?? { status: 200, body: this.settingsResponse() };
     });
@@ -393,12 +381,9 @@ export class FakeClubCourts {
     stub.on('put', '/api/v1/club/raketa-settings', ({ headers, body }) => {
       const signedOut = this.guard(headers.authorization);
       if (signedOut !== null) return signedOut;
-      if (this.way === null) return conflict('way_of_working_not_chosen');
       const values = {
         release_lead_days: body.release_lead_days,
         cut_off_hours: body.cut_off_hours,
-        minimum_notice_hours: body.minimum_notice_hours,
-        time_to_confirm_minutes: body.time_to_confirm_minutes,
         other_clubs_courts: body.other_clubs_courts.within_km,
       };
       for (const [field, [least, most]] of Object.entries(BOUNDS)) {

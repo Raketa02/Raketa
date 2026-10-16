@@ -29,10 +29,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   *they're here* — each **at the club or away**, the press building the fix on the club's
   point (`GameClubs.of`) or 2 km north of it — *I was there* and *yes, they were here*,
   #657 — a
-  *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591), the payment
+  *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591; the move press
+  lists each free court with its kind, *→ Court 3 · indoor*, and the pane names the booked
+  court's, #671; *Cancel* says whether it moved the game and where, beside *Cancel
+  anyway*, #672), the payment
   provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
   the situations under `/dev/situations/…`, *Run it now* under `/dev/jobs/{job}` — the
-  scheduler's own job name (#591 the club's answer window, #592 the rest) — and each
+  scheduler's own job name (#592; #591's club's answer window went with On request, #669) —
+  and each
   person's **Sent** pane, `GET /dev/as/{player_id}/sent` (#594): their notices as the bell
   lists them (the player route's own `ReadRecentNotices`), the push each was given as
   (`NoticePushes`, the pusher's own — what would have been pushed, since no seed account
@@ -41,7 +45,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   lists every job with a press (`RUN_IT_NOW`) and every other job the scheduler registers
   with why it has none (`NOT_RUN_HERE`); `test_games_test_console_time.py` builds the
   register and fails a job that is neither. Each game's pane carries its **pending
-  moments** (`board.py`'s `Moment`: book-by, the club's answer, a payment due — at the fill,
+  moments** (`board.py`'s `Moment`: book-by, a payment due — at the fill,
   at a refused holding, or a seat kept for a refused rescuer (#640) — the holding of the
   shares checked at the fill (#639), cut-off, the hour's end that asks *How did it go?*
   (#663), the day close that tells the desk and the one that pays the club, and a stated

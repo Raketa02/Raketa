@@ -23,7 +23,6 @@ COURTS = "/api/v1/club/courts"
 RAKETA_HOURS = "/api/v1/club/raketa-hours"
 EXCEPTIONS = "/api/v1/club/exceptions"
 PRICES = "/api/v1/club/prices"
-WAY_OF_WORKING = "/api/v1/club/way-of-working"
 RAKETA_SETTINGS = "/api/v1/club/raketa-settings"
 SETUP = "/api/v1/club/setup"
 PAYMENTS_LINK = "/api/v1/club/payments/onboarding-link"
@@ -73,22 +72,12 @@ async def sets_prices(client, desk: dict, prices: list[dict]) -> dict:
     return saved.json()
 
 
-async def chooses(client, desk: dict, way: str) -> dict:
-    chosen = await client.put(
-        WAY_OF_WORKING, json={"way_of_working": way}, headers=desk
-    )
-    assert chosen.status_code == 200, chosen.text
-    return chosen.json()
-
-
 def settings(**overrides) -> dict:
     """The settings form as the desk leaves it untouched: every default."""
 
     return {
         "release_lead_days": 3,
         "cut_off_hours": 24,
-        "minimum_notice_hours": 2,
-        "time_to_confirm_minutes": 30,
         "other_clubs_courts": {"offered": False, "within_km": 10},
         "paused": False,
         **overrides,

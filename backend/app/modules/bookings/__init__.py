@@ -13,6 +13,6 @@ a booking holds are what a club can no longer sell (``clubs``' ``CourtBookings``
 answered here), and a player's booked games are what *games per week* and *one
 game per hour* count (``proposals``' ``BookedGames``).
 
-Only Raketa and Instant clubs here; On request (*waiting for the club*) is #543,
-and leaving, the cut-off, rescues and the club's bookings follow it.
+Every club books a full game at once — no club confirms one (#669; ADR-0196
+§1) — and leaving, the cut-off, rescues and the club's bookings follow it.
 """

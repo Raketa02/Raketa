@@ -3,8 +3,9 @@
 Ola and Kuba play padel with the same group. Ola blocks Kuba. From that moment:
 
 - **Ola's yeses where Kuba is In are taken back** (§4) — on a game still
-  filling by the ordinary *Withdraw*, picks and posts alike, and on a game
-  waiting for its club as if she left it, so the others In are told she left.
+  filling by the ordinary *Withdraw*, picks and posts alike, and on a full game
+  waiting for one payment as if she left it, so the others In are told she
+  left.
   Kuba's yes stands. A booked game is never touched.
 - **No later yes puts them together** (§1), whichever of them says it.
 - **Ola sees her block** — on *Blocked players* and on Kuba's record (§3) —
@@ -30,10 +31,10 @@ from sqlalchemy import select
 from app.api.dependencies import get_clock
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.modules.blocks.domain.ids import block_id
+from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHECKS
 from tests.api import players_world as players
 from tests.api.proposals_world import (
     MONDAY_MORNING,
-    a_club_and_its_desk,
     a_club_selling,
     a_group,
     a_member,
@@ -49,7 +50,6 @@ from tests.unit.fake_clock import MovableClock
 GROUPS = "/api/v1/groups"
 HOME = "/api/v1/home"
 NOTICES = "/api/v1/players/me/notices"
-WAITING = "/api/v1/club/bookings/waiting"
 SATURDAY_SEVEN = warsaw(10, 19)
 
 
@@ -316,27 +316,32 @@ async def test_a_booked_game_is_never_touched(
     assert len(payments.called("authorise")) == charged
 
 
-async def test_a_game_waiting_for_its_club_loses_my_place_as_if_i_left(
-    client, session_factory, clock, mailbox, payments
+async def test_a_game_waiting_for_a_payment_loses_my_place_as_if_i_left(
+    client, session_factory, clock, mailbox, payments, club
 ):
-    """Ruled 2026-10-06 (§4): the request is withdrawn, the game fills again
-    with Ola's seat open, nobody has paid, and the others In are told she left
-    — the one notice a block causes, and it reads exactly like leaving."""
+    """Ruled 2026-10-06 (§4): Ewa's share was refused as the game filled, so it
+    waits for her payment. Ola's yes is withdrawn, the game fills again with her
+    seat open, nobody has paid, and the others In are told she left — the one
+    notice a block causes, and it reads exactly like leaving."""
 
-    club, desk = await a_club_and_its_desk(client, way="ON_REQUEST")
-    four = [
-        await a_player(client, payments, name)
-        for name in ("ola", "kuba", "ewa", "tomek")
+    ola, kuba, ewa, tomek = [
+        await a_player(client, payments, "ola"),
+        await a_player(client, payments, "kuba"),
+        await a_player(client, payments, "ewa", entered=A_CARD_THE_BANK_ALWAYS_CHECKS),
+        await a_player(client, payments, "tomek"),
     ]
-    ola, kuba = four[0], four[1]
-    group = await a_group(client, ola, club, *four[1:])
+    group = await a_group(client, ola, club, kuba, ewa, tomek)
     game = await makes(
-        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=((ola, kuba, ewa, tomek),),
     )
-    for player in four:
+    for player in (ola, kuba, ewa, tomek):
         said = await says_yes(client, player, game)
         assert said.status_code == 200, said.text
-    assert said.json()["waiting_for_the_club"] is True
+    assert said.json()["payment_awaited_until"] is not None, said.text
     await mailbox.drain()
 
     await blocks(client, ola, kuba)
@@ -346,19 +351,19 @@ async def test_a_game_waiting_for_its_club_loses_my_place_as_if_i_left(
     assert await live_ids(client, kuba) == [str(game)]
     details = await details_of(client, kuba, game)
     assert (details["status"], details["in_count"]) == ("FILLING", 3)
-    waiting = await client.get(WAITING, headers=desk)
-    assert waiting.json()["bookings"] == []
-    assert payments.called("authorise") == []
-    # Each was told it was a game when it went to the club (#622); the block
-    # adds one notice, and Ola none.
-    for player in four[1:]:
-        [notice, asked] = await notices_of(client, mailbox, player)
-        assert asked["kind"] == "WAITING_FOR_THE_CLUB"
+    assert payments.called("capture") == []
+    # Kuba and Tomek were told it was a game waiting for one payment; the
+    # block adds one notice to them, and to Ewa, and Ola none.
+    for player in (kuba, tomek):
+        [notice, waiting] = await notices_of(client, mailbox, player)
+        assert waiting["kind"] == "WAITING_FOR_A_PAYMENT"
         assert notice["kind"] == "SOMEONE_LEFT"
         assert notice["title"] == "ola left your game"
         assert "block" not in notice["title"].lower() + notice["body"].lower()
+    [notice, *_] = await notices_of(client, mailbox, ewa)
+    assert notice["title"] == "ola left your game"
     assert [n["kind"] for n in await notices_of(client, mailbox, ola)] == [
-        "WAITING_FOR_THE_CLUB"
+        "WAITING_FOR_A_PAYMENT"
     ]
 
 

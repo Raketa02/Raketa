@@ -73,11 +73,9 @@ def clock(app):
 
 @pytest.fixture
 async def club(client) -> str:
-    """Bonarka Arena, Instant: one padel court at 160 zł, a 24-hour cut-off."""
+    """Bonarka Arena: one padel court at 160 zł, a 24-hour cut-off."""
 
-    club_id, _desk = await a_club_and_its_desk(
-        client, way="INSTANT", padel_grosze=160_00
-    )
+    club_id, _desk = await a_club_and_its_desk(client, padel_grosze=160_00)
     return club_id
 
 

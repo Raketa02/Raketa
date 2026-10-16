@@ -11,7 +11,6 @@ import {
   fillOutcome,
   fillRefusal,
   itsAGamePicture,
-  itsAGameWaiting,
   paymentToConfirmOn,
   seatAtStake,
   undoSecondsLeft,
@@ -41,7 +40,6 @@ function card(extra: Partial<DeckCard> = {}): DeckCard {
     openSeatsAfterYourYes: 3,
     court: 'COURT_AVAILABLE',
     noFreeCancellation: false,
-    clubConfirms: false,
     sides: { yours: [YOU, person('Zofia')], theirs: [person('Ania'), person('Ewa')] },
     overlap: { grade: 'SLIM', cells: [], game: { day: 6, range: 'AFTERNOON' } },
     ...extra,
@@ -53,7 +51,6 @@ function answer(extra: Partial<YesAnswer> = {}): YesAnswer {
     proposalId: 'p-1',
     openSeats: 2,
     booked: null,
-    waitingForTheClub: false,
     yourPayment: null,
     ...extra,
   };
@@ -62,10 +59,6 @@ function answer(extra: Partial<YesAnswer> = {}): YesAnswer {
 describe('waitsForUndo — the yes that moves money waits ten seconds (the mechanics §6.5)', () => {
   it('holds a yes on Book it now', () => {
     expect(waitsForUndo(card({ court: 'BOOK_IT_NOW', openSeatsAfterYourYes: 0 }))).toBe(true);
-  });
-
-  it('holds Book it now at an On request club too — at zero the game goes to the club (A2.4)', () => {
-    expect(waitsForUndo(card({ court: 'BOOK_IT_NOW', clubConfirms: true }))).toBe(true);
   });
 
   it('holds every rescue join, not only the last seat (Q74)', () => {
@@ -127,14 +120,6 @@ describe('fillOutcome — what a yes did, read off the server’s answer', () =>
     expect(
       fillOutcome(answer({ yourPayment: { seatChargeId: 's-1', refusal: 'TERMS_NEEDED' } })),
     ).toEqual({ kind: 'termsAgain' });
-  });
-
-  // Q103: It's a game! at once, for the game the yes filled — the booking it went to the club as.
-  it('is the game sent to the club when an On request club has it to confirm (#543)', () => {
-    expect(fillOutcome(answer({ openSeats: 0, waitingForTheClub: true }))).toEqual({
-      kind: 'waiting',
-      bookingId: 'p-1',
-    });
   });
 
   it('is a vote counted otherwise — seats still open', () => {
@@ -230,14 +215,12 @@ describe('aPaymentAwaited — what It’s a game! says is missing while one paym
 
   it('is until when — the hour alone when it falls that day', () => {
     expect(aPaymentAwaited('2026-10-06T12:40:00Z', NOW)).toEqual({
-      of: 'aPayment',
       until: { at: '2026-10-06T12:40:00Z', today: true },
     });
   });
 
   it('says it falls on another day, past the club’s midnight', () => {
     expect(aPaymentAwaited('2026-10-06T22:15:00Z', NOW)).toEqual({
-      of: 'aPayment',
       until: { at: '2026-10-06T22:15:00Z', today: false },
     });
   });
@@ -293,74 +276,15 @@ describe('itsAGamePicture — the faces It’s a game! draws', () => {
   });
 });
 
-describe('itsAGameWaiting — what It’s a game! says is missing at a club that confirms (Q103)', () => {
-  /** Read at 10:00 in Warsaw, Wednesday 30 September. */
-  const READ_AT = '2026-09-30T08:00:00Z';
-  /** `null` — a read that no longer names the club. */
-  const read = (answerBy: string | undefined, name: string | null = 'Kazimierz Padel') => ({
-    readAt: READ_AT,
-    where: { id: 'c-9', ...(name === null ? {} : { name }) },
-    ...(answerBy === undefined ? {} : { answerBy }),
-  });
-
-  it('is the club’s deadline from the booking’s read, the hour alone when it falls that day', () => {
-    expect(itsAGameWaiting('Kazimierz Padel', read('2026-09-30T19:15:00Z'))).toEqual({
-      of: 'theClub',
-      club: 'Kazimierz Padel',
-      answerBy: { at: '2026-09-30T19:15:00Z', today: true },
-    });
-  });
-
-  it('says it falls on another day — a club given until the next morning', () => {
-    expect(itsAGameWaiting('Kazimierz Padel', read('2026-10-01T07:00:00Z'))).toEqual({
-      of: 'theClub',
-      club: 'Kazimierz Padel',
-      answerBy: { at: '2026-10-01T07:00:00Z', today: false },
-    });
-  });
-
-  it('names no deadline the read says is gone, or does not give', () => {
-    expect(itsAGameWaiting('Kazimierz Padel', read('2026-09-30T07:59:00Z'))).toEqual({
-      of: 'theClub',
-      club: 'Kazimierz Padel',
-    });
-    expect(itsAGameWaiting('Kazimierz Padel', read(undefined))).toEqual({
-      of: 'theClub',
-      club: 'Kazimierz Padel',
-    });
-  });
-
-  it('with no read, is the club the card named — and nothing when it named none', () => {
-    expect(itsAGameWaiting('Bonarka Arena', undefined)).toEqual({
-      of: 'theClub',
-      club: 'Bonarka Arena',
-    });
-    expect(itsAGameWaiting(undefined, undefined)).toEqual({ of: 'theClub' });
-  });
-
-  it('takes the club’s name from the read, and the card’s when the read has none', () => {
-    expect(itsAGameWaiting('Old name', read(undefined, 'Kazimierz Padel'))).toEqual({
-      of: 'theClub',
-      club: 'Kazimierz Padel',
-    });
-    expect(itsAGameWaiting('Bonarka Arena', read(undefined, null))).toEqual({
-      of: 'theClub',
-      club: 'Bonarka Arena',
-    });
-  });
-});
-
 describe('yesOnRescue — what the fill holds for a rescue’s I’m in', () => {
   it('is the booking’s seat, a rescue on a booked court, with the sides when the surface holds them', () => {
-    const club = { id: 'club-1', name: 'Ogrody 33' };
-    expect(yesOnRescue({ bookingId: 'b-1', club })).toEqual({
+    expect(yesOnRescue({ bookingId: 'b-1' })).toEqual({
       proposalId: 'b-1',
       type: 'SEAT_OPEN',
       court: 'BOOKED',
-      club,
     });
     const sides = { yours: [YOU], theirs: [] };
-    expect(yesOnRescue({ bookingId: 'b-1', club, sides })).toMatchObject({ sides });
-    expect(waitsForUndo(yesOnRescue({ bookingId: 'b-1', club }))).toBe(true);
+    expect(yesOnRescue({ bookingId: 'b-1', sides })).toMatchObject({ sides });
+    expect(waitsForUndo(yesOnRescue({ bookingId: 'b-1' }))).toBe(true);
   });
 });

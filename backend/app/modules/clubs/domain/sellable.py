@@ -9,7 +9,7 @@ band that holds it or the standard price, and carries its share and its
 book-by, so whoever deals it reads both from here rather than re-deriving them.
 
 **Only a live club sells**, because *a club's courts reach players' decks only
-when all five steps are done* (§16.2). A **paused** club is still live and
+when all four steps are done* (§16.2). A **paused** club is still live and
 still sells: its cards keep their court until their book-by and can still book
 (§16.15). Pausing is what ``taking_new_cards`` says, and dealing new cards is
 somebody else's decision to make from it.
@@ -30,11 +30,7 @@ from app.kernel import Instant, Sport, Zone, iso_weekday
 from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, hour_start, local_day
 from app.modules.clubs.domain.prices import share_of
-from app.modules.clubs.domain.raketa_terms import (
-    RaketaSettings,
-    WayOfWorking,
-    book_by,
-)
+from app.modules.clubs.domain.raketa_terms import RaketaSettings, book_by
 from app.modules.clubs.domain.setup import checklist_of
 from app.modules.player_profile.domain.weekly_hours import HOURS_OF_THE_DAY
 
@@ -62,7 +58,6 @@ class ClubOffer:
     """What one live club sells through Raketa in a window, and on what terms."""
 
     club_id: UUID
-    way: WayOfWorking
     settings: RaketaSettings
     #: ``False`` while the club is paused: no new card may be built on its
     #: courts, while the cards already dealt keep theirs.
@@ -84,18 +79,16 @@ def offer_of(
     ``end`` — ``None`` for a club that is not live. ``taken`` is every
     ``(court, start)`` a booking holds."""
 
-    if club.way is None or not checklist_of(club).live:
+    if not checklist_of(club).live:
         return None
     return ClubOffer(
         club_id=club.club_id,
-        way=club.way,
         settings=club.settings,
         taking_new_cards=not club.paused,
         zone=CLUB_ZONE,
         hours=tuple(
             _sellable(
                 club,
-                way=club.way,
                 start=start,
                 end=end,
                 now=now,
@@ -108,7 +101,6 @@ def offer_of(
 def _sellable(
     club: ClubCourts,
     *,
-    way: WayOfWorking,
     start: Instant,
     end: Instant,
     now: Instant,
@@ -128,7 +120,7 @@ def _sellable(
                 at = hour_start(day, hour)
                 if not start <= at < end or (court.id, at) in taken:
                     continue
-                deadline = book_by(at, way=way, settings=club.settings)
+                deadline = book_by(at, settings=club.settings)
                 if deadline <= now:
                     continue
                 if any(

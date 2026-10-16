@@ -12,7 +12,7 @@ import type { ProposalDetails } from '../domain/details';
 
 import { toChallenger, toClub, toDeckSides, toForecast, toKind, toOverlap } from './deckMappers';
 import { toYourPayment } from './fillMappers';
-import { toAnswerBy, toPaymentDueBy } from './homeMappers';
+import { toPaymentDueBy } from './homeMappers';
 
 type Schemas = components['schemas'];
 
@@ -44,8 +44,6 @@ export function toProposalDetails(
     shareGrosze: wire.share_grosze,
     deadline: wire.book_by,
     noFreeCancellation: wire.no_free_cancellation,
-    clubConfirms: wire.club_confirms,
-    ...toAnswerBy(wire.answer_by),
     ...toPaymentDueBy(wire),
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),

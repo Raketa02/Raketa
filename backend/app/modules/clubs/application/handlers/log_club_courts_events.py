@@ -27,7 +27,6 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
-    WayOfWorkingChosen,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,6 @@ ClubCourtsEvent = (
     | ExceptionAdded
     | ExceptionRemoved
     | PricesSet
-    | WayOfWorkingChosen
     | RaketaSettingsChanged
     | RaketaPaused
     | RaketaResumed
@@ -60,7 +58,6 @@ _LINES: dict[type, str] = {
     ExceptionAdded: "clubs.exception.added",
     ExceptionRemoved: "clubs.exception.removed",
     PricesSet: "clubs.prices.set",
-    WayOfWorkingChosen: "clubs.way_of_working.chosen",
     RaketaSettingsChanged: "clubs.raketa_settings.changed",
     RaketaPaused: "clubs.raketa.paused",
     RaketaResumed: "clubs.raketa.resumed",

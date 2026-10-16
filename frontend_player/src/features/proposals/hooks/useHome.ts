@@ -1,7 +1,7 @@
 /**
  * **Home's reads** ([#556](https://github.com/Raketa02/Raketa/issues/556)) — the booked games
- * (`GET /home`), one booked game in detail (`GET /bookings/{id}`, and as read since a screen came
- * up), which of them this phone has opened, and the clock every fold over them runs on.
+ * (`GET /home`), one booked game in detail (`GET /bookings/{id}`), which of them this phone has
+ * opened, and the clock every fold over them runs on.
  *
  * **The shell holds Home all session**: the bar's Home badge is the read's `needing_you`, so the
  * query is observed for as long as the tabs are up, and whatever invalidates it — a fill, a
@@ -42,45 +42,20 @@ export function rereadHome(client: QueryClient) {
   ]);
 }
 
-/** One booked game's read — the details', and *It's a game!*'s when a row's join is booked. */
-function bookingQuery(bookingId: string) {
-  return {
-    queryKey: proposalKeys.booking(bookingId),
-    queryFn: ({ signal }: { readonly signal: AbortSignal }) => readBooking(bookingId, { signal }),
-  };
-}
-
 /**
- * `null` is a game in a sport this build cannot name — read, and nothing to draw. `enabled` false asks
+ * **One booked game's read** — the details', and *It's a game!*'s when a row's join is booked. `null`
+ * is a game in a sport this build cannot name — read, and nothing to draw. `enabled` false asks
  * nothing — *It's a game!* reads the booking only when the yes held no sides of its own.
  */
 export function useBooking(
   bookingId: string,
   { enabled = true }: { readonly enabled?: boolean } = {},
 ) {
-  return useQuery<BookedGame | null, AppError>({ ...bookingQuery(bookingId), enabled });
-}
-
-/**
- * **The booking as read since the screen asking came up** — *It's a game!*'s read for a game sent to
- * its club (Q103), whose line is the club's deadline. It is read again on mount, whatever the cache
- * holds: a booking cached from an earlier request names that request's deadline, and so does what a
- * failed read leaves behind. So `booking` is only ever a read landed since mount — `null` for a sport
- * this build cannot name — and `settled` says one has landed, failed, or is held offline.
- */
-export function useBookingSinceMount(bookingId: string) {
-  const read = useQuery<BookedGame | null, AppError>({
-    ...bookingQuery(bookingId),
-    refetchOnMount: 'always',
+  return useQuery<BookedGame | null, AppError>({
+    queryKey: proposalKeys.booking(bookingId),
+    queryFn: ({ signal }) => readBooking(bookingId, { signal }),
+    enabled,
   });
-  const landed = read.isFetchedAfterMount;
-  const booking = landed && read.isSuccess ? read.data : undefined;
-  const failed = landed && read.isError;
-  return {
-    booking,
-    failed,
-    settled: booking !== undefined || failed || bookingReadState(read).paused,
-  };
 }
 
 /** The booking's read, as `BookingAbsent` asks about it. */
@@ -106,10 +81,9 @@ export function useHomeBadge(): number | undefined {
 
 /**
  * **Now, on the read's clock** — the read's `read_at` moved on by however long the phone has held
- * it. While a card's cut-off or its club's deadline is still ahead the clock ticks
- * (`useDeckClock`'s thirty seconds, `lineCanRunOut`), so *free to leave until Sat 17:00* and
- * *answers by 20:45* switch at that instant by themselves, as the wire asks; otherwise it stands at
- * the read.
+ * it. While a card's cut-off or a time to pay is still ahead the clock ticks (`useDeckClock`'s
+ * thirty seconds, `lineCanRunOut`), so *free to leave until Sat 17:00* and *until 14:40* switch at
+ * that instant by themselves, as the wire asks; otherwise it stands at the read.
  */
 export function useReadClock(readAt: string | undefined, receivedAt: number, ticking: boolean) {
   const device = useDeckClock(receivedAt, ticking);

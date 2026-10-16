@@ -171,7 +171,6 @@ async def test_a_yes_records_and_answers_as_the_player_s_own(
         "proposal_id": str(game),
         "open_seats": 3,
         "booked": None,
-        "waiting_for_the_club": False,
         "your_payment": None,
         "payment_awaited_until": None,
         "money": None,
@@ -440,7 +439,7 @@ async def test_needs_her_yes_puts_three_in_so_her_yes_completes_it(
 ):
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.marta["id"],
@@ -457,7 +456,6 @@ async def test_needs_her_yes_puts_three_in_so_her_yes_completes_it(
     assert card["in_count"] == 3
     assert card["open_seats_after_your_yes"] == 0
     assert card["court"] == "BOOK_IT_NOW"
-    assert card["club_confirms"] is False
     # Every one of the three put In is somebody the console may act as.
     put_in = {person["player_id"] for person in pressed.json()["people_in"]}
     assert len(put_in) == 3
@@ -492,14 +490,14 @@ async def test_needs_her_yes_prefers_a_card_she_has_time_to_answer(
         clock,
         pool_id=world.group,
         club_id=world.club,
-        start=warsaw(5, 11),
+        start=warsaw(6, 9),
         versions=(four,),
     )
     saturday = await a_card(session_factory, clock, world, *four)
 
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.marta["id"],
@@ -517,7 +515,7 @@ async def test_needs_her_yes_refuses_a_protagonist_the_seed_did_not_create(
 ):
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="PADEL",
         protagonist_id=world.piotr["id"],
@@ -534,7 +532,7 @@ async def test_needs_her_yes_says_so_when_no_game_can_be_set_up(client, clock, w
 
     pressed = await presses(
         client,
-        "needs-her-yes-instant-club",
+        "needs-her-yes",
         group_id=world.group,
         sport="TENNIS",
         protagonist_id=world.marta["id"],
@@ -569,11 +567,7 @@ async def test_the_pane_of_a_game_still_filling(client, session_factory, clock, 
     assert pane["standing"] == "FILLING"
     assert pane["origin"] == "PICK"
     assert pane["kind"] == "COMPETITIVE"
-    assert pane["club"] == {
-        "club_id": world.club,
-        "name": "Bonarka Arena",
-        "confirms_each_game": False,
-    }
+    assert pane["club"] == {"club_id": world.club, "name": "Bonarka Arena"}
     # The court hour, Saturday 17:00; its book-by; the club's cut-off — 24 h
     # before, as the club's settings stand.
     assert pane["starts_at"] == at(SATURDAY_FIVE)

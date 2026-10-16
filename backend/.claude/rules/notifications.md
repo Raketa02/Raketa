@@ -10,7 +10,7 @@ paths:
 # Notifications
 
 Decisions that are load-bearing and not obvious from the code (#549, #621, #622, #623,
-#625, #626, #663; ADR-0189 §5 and its 2026-10-09 amendment; ADR-0195 §3, §5; the
+#625, #626, #663, #673; ADR-0189 §5 and its 2026-10-09 amendment; ADR-0195 §3, §5; the
 mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
@@ -77,27 +77,18 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   for it, so the pusher skips it and the dev console's *Sent* pane says so. Today it is
   `SeatChargeTaken`'s *It's a game! · you paid* to the payer whose own act booked the
   seat: **the filler** — `ProposalFilled.filled_by`, recorded by the fill from the yes,
-  join or confirmed payment that left no seat open (`Fill.run(by=…)`), `None` for the
-  club's yes and a paused yes coming back, and read as `GameBrief.filled_by` — and **a
-  rescuer** (`seats_taken`), whose join showed them *It's a game!* too. And it is the
-  copy of *It's a game! · … answers by* (below) to **the player whose act put the game
-  to its club** — the same `by`, recorded on the request as `BookingRequested.filled_by`
-  (#622). The club's yes (*… confirmed your game*) is the club's act and counted for all
-  four.
-- **Two notices mark the four matched, and the card a club's answer promised** (#622; the
-  mechanics Q103, Q107). Both always on, never capped, never emailed:
-  - **`WAITING_FOR_THE_CLUB`** — *It's a game! · Kazimierz Padel answers by 21:15* / *Padel ·
-    Fri 19:00. Nobody pays until it confirms.* — on `BookingRequested`, to **everybody on
-    the request** (its two sides), opening the game still filling (`PROPOSAL`). Each time
-    the game goes to the club: full again after a seat opened, it is a new request with a
-    new deadline and all four are told again. **Only while the game still waits on that
-    very request** (`GameBrief.answer_by` equal to the event's): a request taken back, or
-    answered, before its delivery is told by what came of it — *filling again*, or the
-    club's answer — never with a deadline the club no longer has. **The deadline is kept
-    on the notice** (`Notice.until` → `NoticeGiven.until` → `notices.until`, migration
-    0051) and said against **the moment it was given** (`Said.given_at`): the hour alone
-    that day, the weekday and the hour on another — Home's *answers by*, frozen, so the row
-    reads the same later in the list.
+  join or confirmed payment that left no seat open (`Fill.run(by=…)`), `None` for a paused
+  yes coming back, and read as `GameBrief.filled_by` — and **a rescuer** (`seats_taken`),
+  whose join showed them *It's a game!* too.
+- **No notice waits on a club** (#669; ADR-0196 §1): no club confirms a game, so
+  *It's a game! · … answers by*, *… confirmed your game* and *… said no* / *… didn't answer
+  in time* (`WAITING_FOR_THE_CLUB`, `CLUB_CONFIRMED`, `CLUB_COULD_NOT_TAKE_IT`) went with On
+  request, with their words and their reasons. **A deadline on a notice is kept on it**
+  (`Notice.until` → `NoticeGiven.until` → `notices.until`, migration 0051) and said against
+  **the moment it was given** (`Said.given_at`): the hour alone that day, the weekday and the
+  hour on another, so the row reads the same later in the list.
+- **The card a club's cancel promised is told** (#622; the mechanics Q107) — always on,
+  never capped, never emailed:
   - **`NEW_GAME`** — *Your new game · Fri 19:00 at Bonarka Arena* / *The same players ·
     40 zł a share — say yes to book it.* — on `proposals.redealt`, which names the card
     (`card_id`) and **those the owed game promised it to who are on it** (`player_ids`:
@@ -107,26 +98,57 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
     sport and kind). Once per card: `Redealt` is recorded once per owed game. **A card the
     proposer deals for any other reason tells nobody** — a lost court hour's new card first
     included, which no notice promised; older `Redealt` rows name no card and tell nobody.
+    **At the club and hour the cancel took it names the kind of court** (#673; Q123) — *The
+    same players · outdoor · 40 zł a share — say yes to book it.* — since the kind (or the
+    price) is then what changed: the teller compares the card's club and hour with the
+    cancelled game's (`GameBriefs.about` of each) and asks the deck for the kind the card
+    promises (`Decks.kind_of_court`, over `ReadGroupDeck.kind_of_court` — the deck's own
+    `CourtKinds` read), kept on the row as `notices.indoor` (migration 0059's column, so the
+    row reads the same later); `None` there when its free courts are mixed, and never asked
+    at another club or hour, which names no kind.
+  - **The cancel notice promises it** (#673; Q123): the players still in read *Bonarka Arena
+    cancelled padel · Thu 15 Oct, 19:00 because a court needs repair. We'll look for another
+    game for you first.* — the email's own line (`words.py`'s `_called_off`, the club's
+    cancel only). A leaver's cancel notice and a game short at its cut-off promise nothing.
+- **The club's own Move is told** (#671; the mechanics §16.4, §17.2, Q122) — always on,
+  never capped, never emailed, since no money moves:
+  - **`GAME_MOVED`** on `bookings.court_moved` — *Bonarka Arena moved your game to Court 3 ·
+    Thu 19:00* / *Padel · indoor · nothing else changes* — to everybody with a seat on the
+    booking (`GameBrief.seated`), opening the booked game (`BOOKING`). **The court and its
+    kind are the event's, and kept on the notice** (`Notice.court_name`, `indoor` →
+    `NoticeGiven` → `notices`, migration 0059, defaulted `None` for every other kind and
+    every row before), so the row reads *Court 3 · indoor* after a second move too; a
+    notice told without them says *another court*.
+  - **A move by cancel says why** (#672; the mechanics §16.9, Q122): the same `GAME_MOVED`,
+    told off the same `bookings.court_moved`, which then carries the cancel's `reason` and
+    the court it left (`moved_from`) — *Bonarka Arena moved your game to Court 3 · Thu
+    19:00* / *Court 2 can't be played · Padel · indoor · nothing else changes*, the court
+    left worded per reason (`words.py`'s `_CANNOT_BE_PLAYED`): *can't be played in this
+    weather*, *can't be played* (repair), *was booked twice*, *isn't available* (other) —
+    a call, since the mechanics give *can't be played* alone. The reason rides on
+    `notices.reason`; the court left is kept on the row (`Notice.moved_from` →
+    `NoticeGiven` → `notices.moved_from`, migration 0060, `None` on every other kind and
+    every row before), so it too reads the same after a second move. Nothing about the
+    money is told: nothing moved.
 - **A time to pay names its time and never its payer** (#625, #626; Q109, Q110). Always
   on, never capped, and emailed only where money is — the payer's confirm email:
   - **`CONFIRM_PAYMENT`** with `until` — *Confirm your payment by 14:40 to keep your seat* /
     *Padel · Tue 19:00 at Bonarka Arena — the others are waiting.* — while the payer's time
-    runs at the delivery (`GameBrief.paying`); a refused share on a game already over (the
-    club's yes past the book-by) tells nothing.
-  - **`WAITING_FOR_A_PAYMENT`** on `TimeToPayGiven` — *It's a game! · waiting for one payment
-    until 14:40* / *Padel · Tue 19:00 at Bonarka Arena. Nobody pays until it's in.*; at the
-    club's yes (`AT_THE_CLUBS_YES`) *Your Fri 19:00 is waiting for one payment, until 21:20*
-    / *Padel at Kazimierz Padel. Nobody pays until it's in.* — to everybody In but the
-    payers, the filler's copy their own; keyed by the game and the deadline, so two refused
-    at one fill, or a payer refused again, tell it once; only while the game still waits.
+    runs at the delivery (`GameBrief.paying`); a refused share on a game already over tells
+    nothing.
+  - **`WAITING_FOR_A_PAYMENT`** on `TimeToPayGiven` — *It's a game! · waiting for one
+    payment until 14:40* / *Padel · Tue 19:00 at Bonarka Arena. Nobody pays until it's in.*
+    — to everybody In but the payers, the filler's copy their own; keyed by the game and the
+    deadline, so two refused at one fill, or a payer refused again, tell it once; only while
+    the game still waits.
   - **`GAME_BOOKED` · `PAYMENT_CAME_IN`** — *Your Tue 19:00 is booked · you paid 40 zł* /
     *Padel at Bonarka Arena.* on a game that booked on the payment it waited for
-    (`GameBrief.booked_on_a_payment`); at the club's yes it stays *… confirmed your game*.
+    (`GameBrief.booked_on_a_payment`).
   - **`TIME_TO_PAY_RAN_OUT`** on `TimeToPayRanOut` to the payers — *Your time to pay ran out
     · Tue 19:00* / *Your seat is open to others now — confirm your payment to take it back
     while it's free.* — and *filling again* (`FELL_BACK`) to everybody else still In; past
     the book-by, `GAME_CALLED_OFF` · `PAYMENT_NOT_IN_TIME` to them all (*A payment didn't go
-    through in time*), as `PaymentNotInTime.at_once` tells the club's yes with no time left.
+    through in time*).
   - **Before the cut-off it is the payer's time to fix the card** (#638; Q113), and only the
     payer's words change: **`FIX_YOUR_CARD`** in place of `CONFIRM_PAYMENT` — *Fix your card
     by 14:40 to keep your seat* / *Nothing is paid now. Padel · Tue 19:00 at Bonarka Arena —
@@ -155,9 +177,9 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
     offered to others again, and you owe nothing — you can still take it while it's free.* —
     opening the booking; never one who took the seat in the same act (their late
     confirmation ran it out first). Both always on; nobody else is told.
-  - **`FellBackToFilling`** — a leave or a paused week while it waited, at a club that books
-    at once — is told as `RequestWithdrawn` is; a court lost while it waited is *called off ·
-    nobody paid* with `COURT_LOST_WAITING_FOR_A_PAYMENT`.
+  - **`FellBackToFilling`** — a leave, a paused week, a block or a pair that stopped
+    fitting while it waited — is told to everybody still In, as below; a court lost while
+    it waited is *called off · nobody paid* with `COURT_LOST_WAITING_FOR_A_PAYMENT`.
 - **Caps and bundling are decided as each trigger is delivered** (`NoticesOfADay.give`);
   the screens' C3 *Notifications job* is not built. *You complete it* once a day,
   *Challenges for you* three times — past the cap each **joins the day's last notice of
@@ -180,60 +202,49 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   `SeatChargeChecked` the same for a seat only checked far ahead (#639): free to leave until
   the cut-off all the same; a share kept because its card was fixed at its holding
   (`SeatChargeKept.fixed`) and one held again there (`SeatChargeHeldAgain`) tell nothing —
-  and `SeatChargeTaken` at once after the cut-off is *It's a game! · you paid*; or, on a booking
-  that waited for its club and to anybody but a rescuer, *the club confirmed* (*· 25 zł held*
-  before the cut-off): one notice for the club's yes, never two. **The take at the cut-off
-  tells nothing** (`SeatChargeTaken.kept`) — the quiet row and receipt of Q113 are not built
-  yet. **A hold let go says why** (`SeatChargeReleased.reason`): at the cut-off or the club's
-  cancel before it, *Game called off · nothing was taken* (`amount_grosze` `null`); a
-  leaver's own let-go is told nobody, and a leaver whose empty seat called the game off reads
-  *Nothing was taken from you*. `SeatChargeFailed` is
+  and `SeatChargeTaken` at once after the cut-off is *It's a game! · you paid*. **The take
+  at the cut-off tells nothing** (`SeatChargeTaken.kept`) — the quiet row and receipt of
+  Q113 are not built yet. **A hold let go says why** (`SeatChargeReleased.reason`): at the
+  cut-off or the club's cancel before it, *Game called off · nothing was taken*
+  (`amount_grosze` `null`); a leaver's own let-go is told nobody, and a leaver whose empty
+  seat called the game off reads *Nothing was taken from you*. `SeatChargeFailed` is
   *Confirm your payment* (to take the seat, on a booked game). **A refund now says why**:
   `SeatChargeRefundDecided.reason` — the `RefundReason`, now in the payments domain —
-  defaulted `None` for older rows: called off at the
-  cut-off or by the club is *Game called off · with the refund*, and **a leaver's own refund
-  is told nobody** (their act, and emailed). **A seat taken is told when the refund is made**
-  (#641; `SeatChargeRefunded`, `_seat_taken_refunded`): *You've been refunded 38,24 zł ·
-  your seat was taken* / *40 zł less the 1,76 zł kept on your payment — Padel at …* — the
-  refund and what was kept, the provider's own figures (`PaidShare.refunded_grosze`,
-  `kept_grosze`, `seat_taken`), the fee kept recorded on the notice (`Notice.kept_grosze` →
-  `NoticeGiven.kept_grosze` → `notices.kept_grosze`, migration 0055) so it reads the same
-  later; a notice given before it says *Somebody took your seat*. **No figure a notice says
-  is an estimate**: a refund whose fee is not yet known waits, and so does its telling.
-  The emails stay where they were, queued by the acts in `payments` — but the seat-taken
-  refund's, queued when it is made (`EmailTheSeatTakenRefund`).
+  defaulted `None` for older rows: called off at the cut-off or by the club is *Game called
+  off · with the refund*, and **a leaver's own refund is told nobody** (their act, and
+  emailed). **A seat taken is told when the refund is made** (#641; `SeatChargeRefunded`,
+  `_seat_taken_refunded`): *You've been refunded 38,24 zł · your seat was taken* / *40 zł
+  less the 1,76 zł kept on your payment — Padel at …* — the refund and what was kept, the
+  provider's own figures (`PaidShare.refunded_grosze`, `kept_grosze`, `seat_taken`), the fee
+  kept recorded on the notice (`Notice.kept_grosze` → `NoticeGiven.kept_grosze` →
+  `notices.kept_grosze`, migration 0055) so it reads the same later; a notice given before
+  it says *Somebody took your seat*. **No figure a notice says is an estimate**: a refund
+  whose fee is not yet known waits, and so does its telling. The emails stay where they
+  were, queued by the acts in `payments` — but the seat-taken refund's, queued when it is
+  made (`EmailTheSeatTakenRefund`).
 - **Somebody leaving**: `SeatLeft` tells everybody seated. *Fill in
   alerts* go out on `SeatLeft`: who in the pool switched them on is read first (one query),
   and only they are put to `RescueOffers` — a pool nobody asked to be alerted in is never
   read whole.
 - **Every ending and fall-back of a full game is told to everybody still in it, in its own
-  words** (#623; Q104, Q105, Q108) — always on, never capped, and **never saying whose card
+  words** (#623; Q104, Q108) — always on, never capped, and **never saying whose card
   failed, whose week filled or who no longer fits**:
-  - **`RequestWithdrawn`** — a full game falling back while its club decided, to everybody
-    still In (`_fell_back`). The request now says **who took their own yes back**
-    (`RequestWithdrawn.left`, written by `withdraw_a_yes` — *Leave*, *Withdraw*, leaving the
-    group, a block — and empty from the fill's *one game per hour* and *games per week*, a
-    pair that stopped fitting and a share refused at the club's yes). A leaver still out is
-    named — *Oscar Bertran left your game — it's filling again* (`SOMEONE_LEFT`,
-    `FILLING_AGAIN`); anything else is *Your Fri 19:00 at Kazimierz Padel is filling again* /
-    *A seat opened — nobody paid.* (`SOMEONE_LEFT`, `FELL_BACK`). **Past the book-by** the
-    game can no longer fill: *Your Fri 19:00 is called off · nobody paid* / *Oscar Bertran
-    left after its last moment to book — Padel at Kazimierz Padel.* (`GAME_CALLED_OFF`,
-    `LEFT_AFTER_THE_BOOK_BY`; *A seat opened after …* with nobody named). A request whose
-    game was full again before the delivery — asked again, or booked — is told by that.
-  - **A full game gone back to filling that ends first** (`GameBrief.fell_back_at`, the
-    booking's `taken_back_at`): `ProposalExpired` — *… is called off · nobody paid* / *It
+  - **`FellBackToFilling`** — a full game waiting for one payment falling back, to
+    everybody still In (`_fell_back`). It says **who took their own yes back**
+    (`FellBackToFilling.left`, written by `withdraw_a_yes` — *Leave*, *Withdraw*, leaving
+    the group, a block — and empty from the fill's *one game per hour* and *games per
+    week* and a pair that stopped fitting). A leaver still out is named — *Oscar Bertran
+    left your game — it's filling again* (`SOMEONE_LEFT`, `FILLING_AGAIN`); anything else
+    is *Your Fri 19:00 at Bonarka Arena is filling again* / *A seat opened — nobody paid.*
+    (`SOMEONE_LEFT`, `FELL_BACK`). A game full again before the delivery — booked, or
+    waiting for a payment once more — is told by that.
+  - **A full game gone back to filling that ends first** (`GameBrief.fell_back_at`):
+    `ProposalExpired` — *… is called off · nobody paid* / *It
     didn't fill again before its last moment to book …* (`BOOK_BY_PASSED`; told already, and
     not again, when it fell back at or after its book-by; a post's poster is told this and
     never *your post didn't fill*) — and `CourtHourLost` — *Its court went to another game
     before it filled again …* (`COURT_HOUR_LOST`). A card that never filled is still told
     nothing.
-  - **The club's no and its silence read apart** (`CLUB_COULD_NOT_TAKE_IT`'s reason):
-    *Kazimierz Padel said no* and *Kazimierz Padel didn't answer in time*, each with *Padel ·
-    Fri 19:00. Nobody paid — you'll get a new card first.* **Both are emailed** — the one
-    always-on notice emailed with no money moving — and the email is queued by the act, as
-    every email is: Bookings' `CallOffTheRequest`, to each player on the request, over its
-    own `PlayerAddresses` (users; `booking_demands.py`).
   - **A leaver is told only when it touches them** (Q108), in a leaver's words and never
     promised a new game: **`Notice.you_left`** → `NoticeGiven.you_left` (defaulted `False`) →
     `notices.you_left` (migration 0052), opening the game they left (`PROPOSAL` — they have

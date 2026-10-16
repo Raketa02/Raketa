@@ -159,9 +159,8 @@ async def say_no(proposal_id: UUID, acting: ActingDep, say: SayNoDep) -> Respons
     responses=_REFUSED,
     summary="Withdraw, as this person",
     description=(
-        "`DELETE /api/v1/proposals/{id}/yes` as the acting account — and while an "
-        "On request club decides, *Leave the game*, which takes the request with "
-        "it."
+        "`DELETE /api/v1/proposals/{id}/yes` as the acting account — and while a "
+        "full game waits for one payment, *Leave the game*."
     ),
 )
 async def withdraw_yes(
@@ -187,8 +186,8 @@ async def withdraw_yes(
     description=(
         "`POST /api/v1/bookings/{id}/departure` as the acting account: before "
         "the cut-off the hold let go and nothing taken (#637), after it the seat "
-        "offered until the start and refunded when it is taken, while the club "
-        "decides the request withdrawn — and the seat offered to the group."
+        "offered until the start and refunded when it is taken, while a payment "
+        "is awaited the yes withdrawn — and the seat offered to the group."
     ),
 )
 async def leave_the_game(

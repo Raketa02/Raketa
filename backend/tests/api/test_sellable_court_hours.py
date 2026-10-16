@@ -28,7 +28,6 @@ from app.bootstrap.composition import (
     build_sellable_court_hours,
 )
 from app.kernel import Sport, instant
-from app.modules.clubs.domain.raketa_terms import WayOfWorking
 from app.modules.clubs.infrastructure.club_courts_sellable_hours import (
     ClubCourtsSellableHours,
 )
@@ -37,7 +36,6 @@ from tests.api.club_courts_world import (
     BookedCourts,
     a_desk,
     adds_a_court,
-    chooses,
     PAYMENTS_LINK,
     confirms_settings,
     connects_payments,
@@ -86,19 +84,21 @@ def padel_prices() -> list[dict]:
 
 
 async def a_live_club(
-    client, *, way: str = "INSTANT", name: str = "Bonarka Arena", **settings
+    client, *, name: str = "Bonarka Arena", release_lead_days: int = 1, **settings
 ) -> tuple[str, dict, dict]:
     """A club selling one padel court on Tuesday 18:00–20:00 and Saturday 09:00
-    — its id, its desk, and the court."""
+    — its id, its desk, and the court. It hands Raketa its hours a day ahead
+    unless told otherwise, so Tuesday's are still Raketa's on Monday morning."""
 
     club_id, desk = await a_desk(
         client, name=name, email=f"desk@{name.split()[0].lower()}.pl", sports=("PADEL",)
     )
-    await chooses(client, desk, way)
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], [(2, 18), (2, 19), (6, 9)])
     await sets_prices(client, desk, padel_prices())
-    await confirms_settings(client, desk, **settings)
+    await confirms_settings(
+        client, desk, release_lead_days=release_lead_days, **settings
+    )
     await connects_payments(client, desk)
     return club_id, desk, court
 
@@ -125,7 +125,6 @@ async def test_a_live_club_sells_its_pattern_for_the_fortnight_priced_by_the_hou
     offers = await sellable(session_factory, [club_id])
 
     offer = offers[UUID(club_id)]
-    assert offer.way is WayOfWorking.INSTANT
     assert offer.taking_new_cards is True
     assert starts_and_prices(offer) == [
         (warsaw(6, 18), 140_00, 35_00),
@@ -142,8 +141,8 @@ async def test_a_live_club_sells_its_pattern_for_the_fortnight_priced_by_the_hou
         Sport.PADEL,
         True,
     )
-    # Instant: the start less the minimum notice, two hours by default.
-    assert first.book_by == warsaw(6, 16)
+    # The release time: the start less the release lead, a day here.
+    assert first.book_by == warsaw(5, 18)
 
 
 async def test_the_hours_are_by_start_then_by_the_club_s_order_of_courts(
@@ -226,30 +225,29 @@ async def test_an_hour_a_booking_holds_is_not_sold_again(
 async def test_an_hour_past_its_book_by_is_no_longer_sold(
     client, clock, session_factory
 ):
-    club_id, _, _ = await a_live_club(client, minimum_notice_hours=3)
+    club_id, _, _ = await a_live_club(client)
 
-    # Tuesday 15:30: 18:00 is inside the three hours' notice, 19:00 is not.
+    # Monday 18:30: Tuesday 18:00 went back to the club at 18:00, a day before
+    # it; 19:00 is Raketa's until 19:00.
     offer = (
         await sellable(
-            session_factory, [club_id], now=warsaw(6, 15) + timedelta(minutes=30)
+            session_factory, [club_id], now=warsaw(5, 18) + timedelta(minutes=30)
         )
     )[UUID(club_id)]
 
     assert offer.hours[0].start == warsaw(6, 19)
-    assert offer.hours[0].book_by == warsaw(6, 16)
+    assert offer.hours[0].book_by == warsaw(5, 19)
 
 
-async def test_an_only_raketa_club_sells_until_its_release_lead(
-    client, clock, session_factory
-):
-    """Unsold hours go back to the club the release lead before the game:
-    three days by default, so Tuesday's hours are already the club's."""
+async def test_a_club_sells_until_its_release_lead(client, clock, session_factory):
+    """Only Raketa is the one way (#670): unsold hours go back to the club the
+    release lead before the game — three days by default, so on Monday
+    morning Tuesday's hours are already the club's."""
 
-    club_id, _, _ = await a_live_club(client, way="ONLY_RAKETA")
+    club_id, _, _ = await a_live_club(client, release_lead_days=3)
 
     offer = (await sellable(session_factory, [club_id]))[UUID(club_id)]
 
-    assert offer.way is WayOfWorking.ONLY_RAKETA
     assert [hour.start for hour in offer.hours] == [
         warsaw(10, 9),
         warsaw(13, 18),
@@ -312,7 +310,6 @@ async def test_a_club_whose_payments_are_not_ready_sells_nothing(
     none of its hours is for sale."""
 
     club_id, desk = await a_desk(client, sports=("PADEL",))
-    await chooses(client, desk, "INSTANT")
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], [(2, 18)])
     await sets_prices(client, desk, padel_prices())

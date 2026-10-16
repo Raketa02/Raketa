@@ -106,11 +106,25 @@ describe('where a tap goes', () => {
     ).toEqual({ opens: 'booking', bookingId: GAME });
   });
 
-  // Q103: the four matched at a club that confirms — the game is still the proposal's, waiting.
-  it('It’s a game! · the club answers by, to the game’s details in its group', () => {
+  // Q122 (#671): the contract's new kind is spelled so it opens where it is sent — the booked game.
+  it('Game moved, to the booked game it moved', () => {
     expect(
       toTarget({
-        kind: 'WAITING_FOR_THE_CLUB',
+        kind: 'GAME_MOVED',
+        opens: 'BOOKING',
+        gameId: GAME,
+        poolId: POOL,
+        sport: 'PADEL',
+        gameKind: 'COMPETITIVE',
+      }),
+    ).toEqual({ opens: 'booking', bookingId: GAME });
+  });
+
+  // Q110: the four matched with one payment missing — the game is still the proposal's, waiting.
+  it('It’s a game! · waiting for one payment, to the game’s details in its group', () => {
+    expect(
+      toTarget({
+        kind: 'WAITING_FOR_A_PAYMENT',
         opens: 'PROPOSAL',
         gameId: GAME,
         poolId: POOL,
@@ -126,7 +140,7 @@ describe('where a tap goes', () => {
     });
   });
 
-  // Q107: the card first the club's no promised, on top of the deck it was dealt in.
+  // Q107: the card first a club's cancel promised, on top of the deck it was dealt in.
   it('Your new game, to the group’s deck with the card on top', () => {
     expect(
       toTarget({

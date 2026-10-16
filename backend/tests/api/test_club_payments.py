@@ -33,7 +33,6 @@ from tests.api.club_courts_world import (
     SETUP,
     a_desk,
     adds_a_court,
-    chooses,
     confirms_settings,
     sets_hours,
     sets_prices,
@@ -146,7 +145,6 @@ async def a_club_set_up_but_for_payments(client) -> tuple[str, dict]:
     players' decks."""
 
     club_id, desk = await a_desk(client, sports=("PADEL",))
-    await chooses(client, desk, "INSTANT")
     court = await adds_a_court(client, desk, name="Court 1")
     await sets_hours(client, desk, [court["id"]], [(2, 18)])
     await sets_prices(

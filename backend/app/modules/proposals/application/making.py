@@ -88,6 +88,7 @@ class MakeProposal:
             book_by=offered.book_by,
             at=now,
             posted_for=command.posted_for,
+            owed_card_for=command.owed_card_for,
         )
         if poster is not None:
             await self._guards.refuse_an_unchargeable_yes(poster)

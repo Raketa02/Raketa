@@ -5,10 +5,11 @@
 the members free and fitting for them → *Picked for you* cards; the seats a no
 left and the unanswered seats of a pick at half In → next best fits; the cards
 whose last court at their club and hour went → lost, and the people who were In
-dealt a new card first — as are the people on a game an On request club turned
-down (#543), never where it turned them down, by the first run that finds them
-an hour. What to do is decided by
-one pure batch (``domain/proposer.py``); this reads its facts and applies it.
+dealt a new card first — as are the people still in on a booked game its club
+cancelled (#547), who are dealt **the owed card**, closest to the cancelled
+game first and recording whom it is owed to (#673), by the first run that finds
+them an hour. What to do is decided by one pure batch (``domain/proposer.py``);
+this reads its facts and applies it.
 
 **Every fact is read live and once per pool**, one read per provider where the
 provider allows: the pool's members and clubs, the games filling in it, every
@@ -96,8 +97,7 @@ class Proposed:
     made: int = 0
     dealt: int = 0
     lost: int = 0
-    #: Turned-down games whose people were dealt a new card first, or found
-    #: none.
+    #: Games their club cancelled whose people were dealt a new card first.
     redealt: int = 0
     refused: int = 0
 
@@ -234,8 +234,8 @@ class ProposeGames:
         return filling
 
     async def _owed(self, pool: Pool, now: Instant) -> list[Proposal]:
-        """This pool's games a club turned down, or cancelled once booked, whose
-        people are still owed a new card first."""
+        """This pool's booked games a club cancelled whose people are still owed
+        a new card first."""
 
         owed: list[Proposal] = []
         for proposal_id in await self._directory.owed_a_new_card_in(pool.id, now=now):
@@ -350,7 +350,7 @@ class ProposeGames:
         named: tuple[UUID, ...],
         now: Instant,
     ) -> bool:
-        """The people on a turned-down game were dealt their new card,
+        """The people on a cancelled game were dealt their new card,
         ``card_id``: it owes nothing more, and says which card it was."""
 
         proposal = await self._proposals.load(proposal_id)
@@ -374,6 +374,7 @@ class ProposeGames:
                 start=pick.start,
                 versions=[pick.named],
                 proposal_id=game_id,
+                owed_card_for=pick.owed_card_for,
             )
         )
         return True
@@ -417,6 +418,7 @@ def _game_of(pool: Pool, sport: Sport, pick: Pick) -> UUID:
         club_id=pick.club_id,
         start=pick.start,
         named=pick.named,
+        after=pick.after,
     )
 
 

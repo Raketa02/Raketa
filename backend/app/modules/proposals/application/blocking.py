@@ -10,14 +10,14 @@ group leaver's take (``leaving.py``).
 ``YesWithdrawn`` a tap on *Withdraw* records, dated at the block: free and
 silent on a game still filling, picks and posts alike — a post the blocker made
 carries on with the blocked player In, as when a poster withdraws with others
-In. On a game **waiting for its club** the request goes with the yes, as the
-blocker's own *Leave* would take it (ruled 2026-10-06), so the others In are
-told the blocker left; nothing names a block.
+In. On a full game **waiting for one payment** the yes goes as the blocker's own
+*Leave* would take it (ruled 2026-10-06), so the others In are told the blocker
+left; nothing names a block.
 
 **Only the blocker's yeses, and only where the blocked player is In.** The
 blocked player's yes stands; a game they were merely dealt keeps the blocker's
-yes, because the pair rule refuses them a seat beside it. **A booking the club
-confirmed is never touched**: it is no longer filling, so it is not a live yes.
+yes, because the pair rule refuses them a seat beside it. **A booked game is
+never touched**: it is no longer filling, so it is not a live yes.
 
 **A paused yes is taken back too.** Another booking that filled the blocker's
 week paused it, and it is still theirs: left paused, it would come back the day
@@ -43,7 +43,6 @@ from uuid import UUID
 from app.kernel import Instant
 from app.modules.proposals.application.answers import withdraw_a_yes
 from app.modules.proposals.domain.ports import (
-    ClubRequests,
     ProposalDirectory,
     ProposalRepository,
     UndecidedCharges,
@@ -58,12 +57,10 @@ class WithdrawABlockersYeses:
         *,
         proposals: ProposalRepository,
         directory: ProposalDirectory,
-        requests: ClubRequests,
         undecided: UndecidedCharges,
     ) -> None:
         self._proposals = proposals
         self._directory = directory
-        self._requests = requests
         self._undecided = undecided
 
     async def execute(self, *, blocker_id: UUID, blocked_id: UUID, at: Instant) -> int:
@@ -80,7 +77,6 @@ class WithdrawABlockersYeses:
                 proposal,
                 blocker_id,
                 proposals=self._proposals,
-                requests=self._requests,
                 undecided=self._undecided,
                 at=at,
             )

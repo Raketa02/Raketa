@@ -20,7 +20,7 @@ mechanics §13): nothing before the cut-off — the hold is let go, so there is 
 quote — after it, the share less **exactly the fee kept on the reader's own
 payment** when somebody takes the seat, asked of the payments once a read and
 **never an estimate**: no figure while that fee is not yet known; nothing paid
-while the club decides — and no button once the hour has come.
+while a payment is awaited — and no button once the hour has come.
 
 **The chat is a join, not a field** (``docs/adr/0149`` §3): the reader's rooms,
 ``GET /conversations``, carry the booked game's room by its ``game_id``.
@@ -31,12 +31,11 @@ in the seat that opened first (*You?*, unpaid), the court, the players *paid*,
 and ``rescue``: when the seat leaves the board, and so what *I'm in* costs.
 No *Leave*, and nothing that needs it.
 
-**A full game gone back to filling** (#624, Q106) is read as Home reads it —
-folded against its proposal, for the people In now: *Seat open*, nobody paid,
-no court, and no *Leave* of its own — its way out is a game still
-filling's, *Withdraw*. **A game waiting for one payment** (#625, #626) is read
-as Home reads it too — at a club that books at once off its proposal, since it
-has no booking — with the time to pay, and *Leave*, which withdraws the yes.
+**A game waiting for one payment** (#625) is read as Home reads it — off its
+proposal, since it has no booking — with the time to pay, and *Leave*, which
+withdraws the yes; **gone back to filling** (Q106), *Seat open*, nobody paid,
+no court, and no *Leave* of its own — its way out is a game still filling's,
+*Withdraw*.
 
 **Refused with one code** — ``booking_not_found`` — for a booking that does not
 exist and one the reader has no seat on and is not offered, so a booking id

@@ -45,7 +45,6 @@ from tests.api import players_world as players
 from tests.api.club_courts_world import (
     a_desk,
     adds_a_court,
-    chooses,
     confirms_settings,
     connects_payments,
     sets_hours,
@@ -89,16 +88,20 @@ async def a_club_and_its_desk(
     *,
     name: str = "Bonarka Arena",
     email: str | None = None,
-    way: str = "INSTANT",
     point: tuple[float, float] = (50.06, 19.95),
     paused: bool = False,
     hours: list[tuple[int, int]] | None = None,
     padel_grosze: int = 120_00,
+    release_lead_days: int = 1,
     **settings,
 ) -> tuple[str, dict]:
     """``a_club_selling``'s club, and its desk's session — for a test that
     changes what the club sells afterwards. The desk signs in at ``email``, or
-    at an address made of the club's name."""
+    at an address made of the club's name.
+
+    It works Only Raketa, the one way (#670), and **hands Raketa its hours a
+    day ahead** unless told otherwise — the shortest release lead, so a game
+    fills until the day before it."""
 
     club_id, desk = await a_desk(
         client,
@@ -107,7 +110,6 @@ async def a_club_and_its_desk(
         sports=("PADEL", "TENNIS"),
         point=point,
     )
-    await chooses(client, desk, way)
     padel = await adds_a_court(client, desk, name="Court 1", sport="PADEL")
     tennis = await adds_a_court(client, desk, name="Court 2", sport="TENNIS")
     await sets_hours(
@@ -124,7 +126,9 @@ async def a_club_and_its_desk(
             {"sport": "TENNIS", "price_grosze": 80_00, "bands": []},
         ],
     )
-    await confirms_settings(client, desk, paused=paused, **settings)
+    await confirms_settings(
+        client, desk, paused=paused, release_lead_days=release_lead_days, **settings
+    )
     await connects_payments(client, desk)
     return club_id, desk
 

@@ -16,6 +16,14 @@ import {
 
 import { toDeckCard, toGroupDeck, toWireKind } from './deckMappers';
 
+describe('a card’s kind of court (#677)', () => {
+  it('reads Indoor or Outdoor as the server promises it, and nothing where it promises neither', () => {
+    expect(toDeckCard(deckCard({ indoor: true }))).toMatchObject({ indoor: true });
+    expect(toDeckCard(deckCard({ indoor: false }))).toMatchObject({ indoor: false });
+    expect(toDeckCard(deckCard({ indoor: null }))).not.toHaveProperty('indoor');
+  });
+});
+
 describe('a card', () => {
   it('reads every field the card draws', () => {
     const read = toDeckCard(
@@ -27,7 +35,6 @@ describe('a card', () => {
         version_count: 2,
         court: 'BOOK_IT_NOW',
         no_free_cancellation: true,
-        club_confirms: true,
       }),
     );
 
@@ -43,7 +50,6 @@ describe('a card', () => {
       openSeatsAfterYourYes: 3,
       court: 'BOOK_IT_NOW',
       noFreeCancellation: true,
-      clubConfirms: true,
       forecast: { pct: 87, provisional: false },
       overlap: { grade: 'SLIM', game: { day: 6, range: 'AFTERNOON' } },
     });

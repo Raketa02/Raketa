@@ -1,18 +1,19 @@
 """The club closes hours without touching its pattern, and opens them again
-(#535, the mechanics §16.5, the screens B3)."""
+(#535, the mechanics §16.5, the screens B3) — and a club's cancel closes the
+court it took a game off for that hour (#673)."""
 
 from __future__ import annotations
 
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
-from app.kernel import Clock
+from app.kernel import Clock, Instant
 from app.modules.clubs.application.commands import (
     AddExceptionCommand,
     RemoveExceptionCommand,
 )
 from app.modules.clubs.domain.club_courts import ClubCourts
-from app.modules.clubs.domain.court_hours import hour_start, local_day
+from app.modules.clubs.domain.court_hours import hour_start, local_day, local_hour
 from app.modules.clubs.domain.errors import CourtBookedThen
 from app.modules.clubs.domain.hours_exceptions import (
     ClosedHours,
@@ -106,6 +107,44 @@ class AddException:
                 booking_id=str(first.booking_id),
                 starts_at=first.start.isoformat(),
             )
+
+
+class CloseACourtForAnHour:
+    """One court closed for the one hour starting at ``start`` — **in the
+    caller's transaction**, nothing committed — for the reason the caller
+    words.
+
+    What a club's cancel asks (#673, a ruling beside ``docs/adr/0196`` §3): the
+    court it took a game off can't be played then, so it is never sold for that
+    hour again — an exception like any the desk adds, on the club's own list,
+    which the desk removes to sell the court again. **Nothing booked is asked
+    about**: the caller has just freed the hour it closes. A court the club no
+    longer has is sold at no hour, and is nothing to close."""
+
+    def __init__(self, *, courts: ClubCourtsRepository) -> None:
+        self._courts = courts
+
+    async def execute(
+        self, club_id: UUID, court_id: UUID, *, start: Instant, reason: str, at: Instant
+    ) -> None:
+        hour = local_hour(start)
+        today = local_day(at)
+        club = await self._courts.load(club_id)
+        if court_id not in club.courts:
+            return
+        club.add_exception(
+            HoursException(
+                id=new_uuid(),
+                court_ids=(court_id,),
+                first_day=local_day(start),
+                last_day=local_day(start),
+                hours=ClosedHours(opens=hour, closes=hour + 1),
+                reason=ExceptionReason(reason),
+            ),
+            today=today,
+            occurred_at=at,
+        )
+        await self._courts.save(club)
 
 
 class RemoveException:

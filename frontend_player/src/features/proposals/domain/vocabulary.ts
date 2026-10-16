@@ -63,12 +63,12 @@ export type PaymentRefusal = 'AUTHENTICATION_REQUIRED' | 'DECLINED' | 'TERMS_NEE
 /**
  * **What a game on Home is, right now** (the mechanics §14.1; #542, #556) — one status per card,
  * folded by the server at its `read_at` from the booking, its Game's result and the clock. The
- * wire's own spelling, because the copy is keyed by it: *Waiting for the club*, *Waiting for one
- * payment* (#625, #626), *Booked*, *Seat open*, the five result states — *Played · no score* in
- * *Never played*'s place since #655 — and *Called off*.
+ * wire's own spelling, because the copy is keyed by it: *Waiting for one payment* (#625, #626),
+ * *Booked*, *Seat open*, the five result states — *Played · no score* in *Never played*'s place
+ * since #655 — and *Called off*. A full game books at once at every club (ADR-0196, #676): none
+ * waits for its club.
  */
 export type HomeStatus =
-  | 'WAITING_FOR_THE_CLUB'
   | 'WAITING_FOR_A_PAYMENT'
   | 'BOOKED'
   | 'SEAT_OPEN'
@@ -81,17 +81,14 @@ export type HomeStatus =
   | 'CALLED_OFF';
 
 /**
- * **Why a game on Home is called off** (#543, #544, #547, #624, #625) — the club refused the request,
- * or did not answer it in time (nobody paid in either), a seat that opened before the club's cut-off
- * was still empty at it, or the club cancelled it (everybody still in is refunded in full in both);
- * of a full game gone back to filling, its last moment to book passed with a seat open, or its court
- * went to another game first (nobody paid in either); and a payment the game waited for did not come
- * in before its last moment to book (nobody paid). The wire's own spelling: the line under the card
- * is keyed by it.
+ * **Why a game on Home is called off** (#544, #547, #624, #625) — a seat that opened before the
+ * club's cut-off was still empty at it, or the club cancelled it (everybody still in is refunded in
+ * full in both); of a full game gone back to filling, its last moment to book passed with a seat
+ * open, or its court went to another game first (nobody paid in either); and a payment the game
+ * waited for did not come in before its last moment to book (nobody paid). The wire's own spelling:
+ * the line under the card is keyed by it.
  */
 export type CalledOffReason =
-  | 'REFUSED'
-  | 'NO_ANSWER'
   | 'SHORT_AT_THE_CUT_OFF'
   | 'CANCELLED_BY_THE_CLUB'
   | 'BOOK_BY_PASSED'
@@ -115,10 +112,12 @@ export type UncountedReason = 'SEAT_EMPTY' | 'DIDNT_COME';
 /**
  * **What *Leave the game* costs right now** (the mechanics §13; #544) — before the club's cut-off
  * (nothing is taken: the hold on the card is let go, Q113), after it (the share stays taken, and
- * comes back less the fee kept on it only when somebody takes the seat), or while an On request
- * club decides (nobody has paid; leaving withdraws the yes). The sheet's words are keyed by it.
+ * comes back less the fee kept on it only when somebody takes the seat), or while a full game waits
+ * for one payment (#625: nobody has paid; leaving withdraws the yes). The sheet's words are keyed
+ * by it.
  */
-export type LeavingKind = 'BEFORE_THE_CUT_OFF' | 'AFTER_THE_CUT_OFF' | 'WHILE_WAITING_FOR_THE_CLUB';
+export type LeavingKind =
+  'BEFORE_THE_CUT_OFF' | 'AFTER_THE_CUT_OFF' | 'WHILE_WAITING_FOR_A_PAYMENT';
 
 /**
  * **Where the shares of a booked game stand** (the mechanics §12.2; Q113) — held on the cards until
@@ -138,22 +137,15 @@ export type TimeTo = 'FIX_THE_CARD' | 'PAY';
 
 /**
  * **Where a game still filling stands, for its details** (the mechanics §14.2; #542) — filling,
- * full and waiting for an On request club, full and waiting for one player's payment (#625, #626),
- * booked, or one of the four ways it ended unfilled.
+ * full and waiting for one player's payment (#625, #626), booked, or one of the three ways it ended
+ * unfilled.
  */
 export type ProposalStatus =
-  | 'FILLING'
-  | 'WAITING_FOR_THE_CLUB'
-  | 'WAITING_FOR_A_PAYMENT'
-  | 'FILLED'
-  | 'EXPIRED'
-  | 'WITHDRAWN'
-  | 'COURT_HOUR_LOST'
-  | 'TURNED_DOWN';
+  'FILLING' | 'WAITING_FOR_A_PAYMENT' | 'FILLED' | 'EXPIRED' | 'WITHDRAWN' | 'COURT_HOUR_LOST';
 
 /**
- * **What the reader may do on a game's details now**, in the screen's order (#542, #543): *I'm in* /
- * *Not this time*, *Withdraw* while they are In, *Leave the game* in its place while the club
- * decides, and *Confirm your payment* while their seat waits on a refused one.
+ * **What the reader may do on a game's details now**, in the screen's order (#542, #625): *I'm in* /
+ * *Not this time*, *Withdraw* while they are In, *Leave the game* in its place while the full game
+ * waits for one payment, and *Confirm your payment* while their seat waits on a refused one.
  */
 export type ReaderAction = 'YES' | 'NO' | 'WITHDRAW' | 'LEAVE' | 'CONFIRM_PAYMENT';

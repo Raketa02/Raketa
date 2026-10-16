@@ -13,15 +13,17 @@ called.
 
 **The hour is the club's**, Europe/Warsaw — *Sat 10 Oct, 17:00* — and money is
 said as the money emails say it (``zloty``): *30 zł*, *28,55 zł*. **A deadline
-is said against the moment it was told**, as Home's *answers by* is against
-now: *21:15* that day, *Fri 09:00* on another — so a notice read later in the
-list says what it said when it was given.
+is said against the moment it was told**: *21:15* that day, *Fri 09:00* on
+another — so a notice read later in the list says what it said when it was
+given.
 
 **Every ending and fall-back of a full game has words of its own** (#623;
-Q104, Q105, Q108): *filling again* never says whose week filled, who no longer
-fits or whose card failed; the club's no and its silence read apart; and a
-leaver is told in a leaver's words — *which you left* — and never promised a
-new game.
+Q104, Q108): *filling again* never says whose week filled, who no longer fits
+or whose card failed; and a leaver is told in a leaver's words — *which you
+left* — and never promised a new game. **The club's cancel promises the owed
+card** to the players still in (#673; Q123): *We'll look for another game for
+you first*, as their email says — and *Your new game* names the kind of court
+when it is at the club and hour the cancel took.
 
 **Each new step at the court reaches the person it waits on** (#663): *isn't
 here yet* to the player awaited, *they're at the club* to whoever tapped it,
@@ -30,15 +32,14 @@ net when a score goes up — saying when silence settles it, and that silence
 costs nothing — and *were they there?* to the courtmates of a player who says
 *I was there*.
 
-**A time to pay names its time and never its payer** (#625, #626; Q109, Q110):
-the payer reads *Confirm your payment by 14:40 to keep your seat*, the others
-*It's a game! · waiting for one payment until 14:40* — at the club's yes, *Your
-Fri 19:00 is waiting for one payment, until 21:20* — then *booked · you paid*,
-never a second *It's a game!*, or *filling again*; the payer, out of time, *Your
-time to pay ran out*. **Before the cut-off it is the payer's time to fix the
-card** (#638; Q113) — nothing is taken then, so they are never asked to pay:
-*Fix your card by 14:40 to keep your seat*, and out of time *Your time to fix
-your card ran out*. The others' words are the same either way.
+**A time to pay names its time and never its payer** (#625; Q109, Q110): the
+payer reads *Confirm your payment by 14:40 to keep your seat*, the others *It's
+a game! · waiting for one payment until 14:40* — then *booked · you paid*,
+never a second *It's a game!*, or *filling again*; the payer, out of time,
+*Your time to pay ran out*. **Before the cut-off it is the payer's time to fix
+the card** (#638; Q113) — nothing is taken then, so they are never asked to
+pay: *Fix your card by 14:40 to keep your seat*, and out of time *Your time to
+fix your card ran out*. The others' words are the same either way.
 """
 
 from __future__ import annotations
@@ -59,6 +60,18 @@ _SPORT_WORDS: Final = {
     Sport.TENNIS: "Tennis",
     Sport.SQUASH: "Squash",
     Sport.BADMINTON: "Badminton",
+}
+
+#: A court's kind, as a player reads it (Q122).
+_KIND_WORDS: Final = {True: "indoor", False: "outdoor"}
+
+#: Why the court a club's cancel moved the game from can't be played, as *Game
+#: moved* says it after the court's name (#672; the mechanics §17.2, Q122).
+_CANNOT_BE_PLAYED: Final[dict[str, str]] = {
+    CancelReason.WEATHER: "can't be played in this weather",
+    CancelReason.REPAIR: "can't be played",
+    CancelReason.DOUBLE_BOOKING: "was booked twice",
+    CancelReason.OTHER: "isn't available",
 }
 
 #: Why a game was called off, as the notice says it — ``None`` is the club's
@@ -102,6 +115,11 @@ class Said:
     kept_grosze: int | None = None
     #: About a seat the player went for and does not hold — a rescue (#640).
     rescue: bool = False
+    #: The court a move put the game on, and its kind (#671).
+    court_name: str | None = None
+    indoor: bool | None = None
+    #: The court a club's cancel moved the game from (#672).
+    moved_from: str | None = None
 
 
 def _when(at: Instant) -> str:
@@ -162,15 +180,6 @@ def words_for(said: Said) -> Words:
     if kind is NoticeKind.WAITING_FOR_A_PAYMENT:
         pay_by = invariant(said.until, "a game waiting for a payment, by no time")
         by = _by(pay_by, given_at=said.given_at)
-        if said.reason == NoticeReason.AT_THE_CLUBS_YES:
-            # They had *It's a game!* when the club was asked (Q110).
-            return Words(
-                title=(
-                    f"Your {_hour(said.starts_at)} is waiting for one payment, "
-                    f"until {by}"
-                ),
-                body=f"{sport} at {said.club}. Nobody pays until it's in.",
-            )
         return Words(
             title=f"It's a game! · waiting for one payment until {by}",
             body=(
@@ -220,41 +229,31 @@ def words_for(said: Said) -> Words:
                 "still take it back while it's free."
             ),
         )
-    if kind is NoticeKind.WAITING_FOR_THE_CLUB:
-        answer_by = invariant(said.until, "a game waiting for its club, by no time")
-        return Words(
-            title=(
-                f"It's a game! · {said.club} answers by "
-                f"{_by(answer_by, given_at=said.given_at)}"
-            ),
-            body=f"{sport} · {_hour(said.starts_at)}. Nobody pays until it confirms.",
-        )
-    if kind is NoticeKind.CLUB_CONFIRMED:
-        if said.until is not None:
-            # Held until the cut-off, taken at it (#637, Q113).
-            return Words(
-                title=f"{said.club} confirmed your game · {money} held",
-                body=f"{sport} · {when} — it's a game. {money} is held on your "
-                f"card and taken at the club's cut-off, {_hour(said.until)}.",
-            )
-        return Words(
-            title=f"{said.club} confirmed your game",
-            body=f"{sport} · {when} — it's a game, and you paid {money}.",
-        )
-    if kind is NoticeKind.CLUB_COULD_NOT_TAKE_IT:
-        # Its no and its silence read apart, as the email and Home say them
-        # (Q105).
-        return Words(
-            title=f"{said.club} said no"
-            if said.reason == NoticeReason.REFUSED
-            else f"{said.club} didn't answer in time",
-            body=f"{sport} · {_hour(said.starts_at)}. Nobody paid — you'll get a new "
-            "card first.",
-        )
     if kind is NoticeKind.NEW_GAME:
+        # At the club and hour the cancel took, the kind is what changed —
+        # kept on the notice only then (#673, Q123).
+        kind_of_court = "" if said.indoor is None else f" · {_KIND_WORDS[said.indoor]}"
         return Words(
             title=f"Your new game · {_hour(said.starts_at)} at {said.club}",
-            body=f"The same players · {money} a share — say yes to book it.",
+            body=(
+                f"The same players{kind_of_court} · {money} a share "
+                "— say yes to book it."
+            ),
+        )
+    if kind is NoticeKind.GAME_MOVED:
+        # The club's own Move (#671, Q122): the new court and its kind, and
+        # that nothing else — the hour, the price, the players — changes. A
+        # move by cancel (#672) first says why the court it left can't be
+        # played, in the words of the club's reason.
+        court = said.court_name or "another court"
+        kind_of_court = "" if said.indoor is None else f" · {_KIND_WORDS[said.indoor]}"
+        body = f"{sport}{kind_of_court} · nothing else changes"
+        if said.reason is not None:
+            left = said.moved_from or "Your court"
+            body = f"{left} {_CANNOT_BE_PLAYED[said.reason]} · {body}"
+        return Words(
+            title=f"{said.club} moved your game to {court} · {_hour(said.starts_at)}",
+            body=body,
         )
     if kind is NoticeKind.CONFIRM_PAYMENT:
         return _confirm_payment(said, game=game, money=money)
@@ -521,7 +520,6 @@ def _confirm_by(said: Said, *, money: str) -> Words:
 #: Why a full game that went back to filling was called off before it was
 #: full again — nobody paid (Q104, Q106).
 _NOBODY_PAID: Final[dict[str, str]] = {
-    NoticeReason.LEFT_AFTER_THE_BOOK_BY: "A seat opened after its last moment to book",
     NoticeReason.BOOK_BY_PASSED: "It didn't fill again before its last moment to book",
     NoticeReason.COURT_HOUR_LOST: "Its court went to another game before it filled "
     "again",
@@ -536,8 +534,6 @@ def _game_called_off(
 ) -> Words:
     why = _NOBODY_PAID.get(said.reason or "")
     if why is not None:
-        if said.reason == NoticeReason.LEFT_AFTER_THE_BOOK_BY and said.names:
-            why = f"{_people(said.names)} left after its last moment to book"
         return Words(
             title=f"Your {_hour(said.starts_at)} is called off · nobody paid",
             body=f"{why} — {sport} at {said.club}.",
@@ -587,4 +583,7 @@ def _called_off(said: Said, *, sport: str, when: str, game: str) -> str:
         return f"{game} was still short at the club's cut-off."
     because = _CALLED_OFF_BECAUSE.get(said.reason or CancelReason.OTHER)
     cancelled = f"{said.club} cancelled {sport.lower()} · {when}"
-    return f"{cancelled} {because}." if because else f"{cancelled}."
+    why = f"{cancelled} {because}." if because else f"{cancelled}."
+    # The players still in are owed the card first, as their email says
+    # (#673, Q123) — a leaver is told in a leaver's words, promised nothing.
+    return f"{why} We'll look for another game for you first."

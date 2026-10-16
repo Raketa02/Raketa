@@ -314,10 +314,10 @@ async def test_when_the_last_court_goes_the_people_in_get_a_new_card_first(
     assert await live_ids(client, ola) == []
 
 
-async def test_a_club_lengthening_its_notice_takes_no_card_s_court(
+async def test_a_club_lengthening_its_release_lead_takes_no_card_s_court(
     client, session_factory, payments, clock
 ):
-    club, desk = await a_club_and_its_desk(client, hours=[(6, 17)])
+    club, desk = await a_club_and_its_desk(client, hours=[(6, 17)], release_lead_days=1)
     crowd = await members(
         client,
         session_factory,
@@ -336,15 +336,46 @@ async def test_a_club_lengthening_its_notice_takes_no_card_s_court(
         if starts([c]) == [SATURDAY_FIVE]
     ]
 
-    # Two days' notice from now on: on Friday evening Saturday 17:00 is no
-    # longer for sale — but the card was made with two hours', and its court is
+    # Five days' lead from now on: on Thursday morning Saturday 17:00 is no
+    # longer for sale — but the card was made with a day's, and its court is
     # still there.
-    await confirms_settings(client, desk, minimum_notice_hours=48)
-    clock.move(timedelta(days=4, hours=10))
+    await confirms_settings(client, desk, release_lead_days=5)
+    clock.move(timedelta(days=3, hours=1))
     proposed = await proposes(session_factory, clock, group)
 
     assert proposed.lost == 0
     assert card["proposal_id"] in ids_of(await deck_of(client, crowd[1], group))
+
+
+async def test_a_card_at_a_three_day_club_is_never_dealt_for_the_day_after_tomorrow(
+    client, session_factory, payments, clock
+):
+    """Only Raketa is the one way (#670; ``docs/adr/0196`` §1), so a game's
+    book-by is always its release time: three days before it, at a club that
+    keeps the default. On Monday morning, Tuesday's and Wednesday's 18:00 have
+    gone back to the club, and the first card is Thursday's, open until Monday
+    18:00."""
+
+    club = await a_club_selling(
+        client, hours=[(2, 18), (3, 18), (4, 18)], release_lead_days=3
+    )
+    crowd = await members(
+        client,
+        session_factory,
+        payments,
+        "ola",
+        "kuba",
+        "ewa",
+        "tomek",
+        week=[{"day": day, "hour": 18} for day in (2, 3, 4)],
+    )
+    group = await a_group(client, crowd[0], club, *crowd[1:])
+
+    await proposes(session_factory, clock, group)
+
+    [card] = await deck_of(client, crowd[0], group)
+    assert starts([card]) == [warsaw(8, 18)]
+    assert datetime.fromisoformat(card["deadline"]) == warsaw(5, 18)
 
 
 # --------------------------------------------------------------------------- #

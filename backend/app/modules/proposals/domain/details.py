@@ -13,23 +13,20 @@ sees everybody In and the open seats, as their You're In row draws it: whose
 names are still deciding is no business of somebody already In. And nobody is
 deciding on a game that is over.
 
-**Waiting for the club is a full game still filling.** The fill leaves a full
-game untouched at an On request club until the club says yes (#541, #543), so a
-proposal with every seat In that has not ended is that game, whatever the club's
-settings say now.
-
-**Waiting for one payment is a full game too** (#625, #626): a share was
-refused, and its player's time to pay runs — their seat theirs alone.
+**Waiting for one payment is a full game still filling** (#625): a share was
+refused, and its player's time to pay runs — their seat theirs alone. No club
+confirms a game (``docs/adr/0196`` §1), so nothing else leaves a full game
+filling (#669).
 
 **The actions are what the routes would take.** *I'm in* and *Not this time*
 while the reader may answer and a seat is open; *Withdraw* when they are In;
-*Leave the game* in its place while the club decides, or a payment is awaited
-(the mechanics §13); a refused payment is **confirmed**, never said again,
-since the bank would be asked the same question — within the payer's time to
-pay too, when a share refused for terms or a missing method is said yes to
-again once fixed; and nothing once the game is over or the answer is final — a
-no, a seat reopened because they no longer fit, a yes paused by a full week,
-which comes back by itself.
+*Leave the game* in its place while a payment is awaited (the mechanics §13); a
+refused payment is **confirmed**, never said again, since the bank would be
+asked the same question — within the payer's time to pay too, when a share
+refused for terms or a missing method is said yes to again once fixed; and
+nothing once the game is over or the answer is final — a no, a seat reopened
+because they no longer fit, a yes paused by a full week, which comes back by
+itself.
 """
 
 from __future__ import annotations
@@ -50,18 +47,14 @@ class ProposalStatus(StrEnum):
 
     #: Seats are open — *Filling · 2 of 4 in*.
     FILLING = "FILLING"
-    #: Every seat is In and an On request club has still to say yes.
-    WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
     #: Every seat is In and one player's refused share is awaited: their time
-    #: to pay runs (#625, #626).
+    #: to pay runs (#625).
     WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     #: The last yes booked it: the booking has the proposal's id.
     FILLED = "FILLED"
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
-    #: Its On request club refused it or did not answer (#543).
-    TURNED_DOWN = "TURNED_DOWN"
 
 
 class ReaderAction(StrEnum):
@@ -73,9 +66,8 @@ class ReaderAction(StrEnum):
     NO = "NO"
     #: *Withdraw* — ``DELETE /proposals/{id}/yes``.
     WITHDRAW = "WITHDRAW"
-    #: *Leave the game* while the club decides: leaving withdraws the yes —
-    #: ``DELETE /proposals/{id}/yes`` — with its sheet (the mechanics §13), and
-    #: the request to the club with it (#543).
+    #: *Leave the game* while a payment is awaited: leaving withdraws the yes —
+    #: ``DELETE /proposals/{id}/yes`` — with its sheet (the mechanics §13).
     LEAVE = "LEAVE"
     #: *Confirm your payment to keep your seat*.
     CONFIRM_PAYMENT = "CONFIRM_PAYMENT"
@@ -115,8 +107,6 @@ def status_of_proposal(proposal: Proposal, *, now: Instant) -> ProposalStatus:
         case Standing.FILLING:
             if proposal.waiting_for_a_payment:
                 return ProposalStatus.WAITING_FOR_A_PAYMENT
-            if proposal.open_seats == 0:
-                return ProposalStatus.WAITING_FOR_THE_CLUB
             return ProposalStatus.FILLING
         case Standing.FILLED:
             return ProposalStatus.FILLED
@@ -126,8 +116,6 @@ def status_of_proposal(proposal: Proposal, *, now: Instant) -> ProposalStatus:
             return ProposalStatus.WITHDRAWN
         case Standing.COURT_HOUR_LOST:
             return ProposalStatus.COURT_HOUR_LOST
-        case Standing.TURNED_DOWN:
-            return ProposalStatus.TURNED_DOWN
         case _:
             exhaustive(standing)
 

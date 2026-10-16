@@ -1,21 +1,23 @@
 """**Every ending and fall-back of a full game is told in its own words** (#623;
-the mechanics §13, §17.2, Q104, Q105, Q108; the screens A9).
+the mechanics §13, §17.2, Q104, Q108; the screens A9).
 
 Everybody still in a full game is told when it ends or falls back to filling,
 and never whose card failed, whose week filled or who no longer fits; a named
-leaver keeps their name. The club's no and its silence read apart, and both
-are emailed. A player who left is told only when it touches them — the
-call-off their empty seat caused, or the club's cancel that refunds them — in
-a leaver's words, never promised a new game.
+leaver keeps their name. A player who left is told only when it touches them —
+the call-off their empty seat caused, or the club's cancel that refunds them —
+in a leaver's words, never promised a new game.
+
+A full game falls back while it waits for one payment (#625): Ewa's bank wants
+her to confirm every payment, so the last yes leaves her share refused and the
+game waiting for it, and a seat opening meanwhile sends it back to filling.
 
 Every act is taken over HTTP as the phone and the desk take it; the outbox is
 drained the way the worker drains it, and every claim is read off the list
 behind the bell and the mailbox.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
-**Saturday 10 October, 17:00** — at Kazimierz Padel (On request, 30 zł a seat,
-thirty minutes to confirm, a book-by two hours before) or at Bonarka Arena
-(Instant, 40 zł a seat, a 24-hour cut-off).
+**Saturday 10 October, 17:00** at Bonarka Arena — 40 zł a seat, a book-by a
+day before, its release time, and a 24-hour cut-off.
 """
 
 from __future__ import annotations
@@ -26,13 +28,9 @@ from uuid import UUID
 import pytest
 
 from app.api.dependencies import get_clock
-from app.bootstrap.composition import (
-    build_the_cut_off,
-    build_expire_unanswered_requests,
-    build_propose_games,
-)
+from app.bootstrap.composition import build_propose_games, build_the_cut_off
 from app.core.config import get_settings
-from tests.api import players_world as players
+from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHECKS
 from tests.api.club_courts_world import EXCEPTIONS
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -42,6 +40,8 @@ from tests.api.proposals_world import (
     a_group,
     a_member,
     makes,
+    runs_out,
+    saves_a_card,
     says_yes,
     sweeps,
     warsaw,
@@ -50,13 +50,16 @@ from tests.api.proposals_world import (
 from tests.unit.fake_clock import MovableClock
 
 NOTICES = "/api/v1/players/me/notices"
-#: Saturday's book-by at Kazimierz Padel: two hours' notice before the hour.
-BOOK_BY = SATURDAY_FIVE - timedelta(hours=2)
+#: Saturday's book-by at Bonarka Arena: its release time, a day before the hour.
+BOOK_BY = SATURDAY_FIVE - timedelta(days=1)
 #: Bonarka Arena's cut-off: a day before the hour.
 CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
+#: Thirty minutes from the last yes on Monday morning: Ewa's time to fix her
+#: card ends at 08:30 in Kraków.
+EWA_S_TIME_ENDS = MONDAY_MORNING + timedelta(minutes=30)
 
 FILLING_AGAIN = (
-    "Your Sat 17:00 at Kazimierz Padel is filling again",
+    "Your Sat 17:00 at Bonarka Arena is filling again",
     "A seat opened — nobody paid.",
 )
 
@@ -82,22 +85,15 @@ async def four(client, session_factory, payments) -> list[dict]:
 
 
 @pytest.fixture
-async def kazimierz(client) -> tuple[str, dict]:
-    """Kazimierz Padel, On request: the club and its desk's session."""
-
-    return await a_club_and_its_desk(client, name="Kazimierz Padel", way="ON_REQUEST")
-
-
-@pytest.fixture
 async def bonarka(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant, padel at 160 zł — 40 zł a seat."""
+    """Bonarka Arena, padel at 160 zł — 40 zł a seat."""
 
-    return await a_club_and_its_desk(client, way="INSTANT", padel_grosze=160_00)
+    return await a_club_and_its_desk(client, padel_grosze=160_00)
 
 
 async def a_full_game(client, session_factory, clock, club: str, four) -> UUID:
-    """The four's game on Saturday at 17:00, every one of them In: waiting for
-    an On request club, or booked at one that books at once."""
+    """The four's game on Saturday at 17:00, every one of them In: booked — or
+    waiting for one payment, when a share is refused."""
 
     group = await a_group(client, four[0], club, *four[1:])
     proposal = await makes(
@@ -110,11 +106,16 @@ async def a_full_game(client, session_factory, clock, club: str, four) -> UUID:
 
 
 @pytest.fixture
-async def waiting(client, session_factory, clock, kazimierz, four, mailbox) -> UUID:
-    """Saturday's game, put to Kazimierz Padel by Sergio's yes — and
-    delivered, so what a test does next is told after it."""
+async def waiting(
+    client, session_factory, clock, payments, bonarka, four, mailbox
+) -> UUID:
+    """Saturday's game at Bonarka Arena, full with Sergio's yes and waiting for
+    Ewa's payment, which her bank wants her to confirm — and delivered, so what
+    a test does next is told after it."""
 
-    club, _ = kazimierz
+    club, _ = bonarka
+    ewa = four[2]
+    await saves_a_card(client, payments, ewa["headers"], A_CARD_THE_BANK_ALWAYS_CHECKS)
     proposal = await a_full_game(client, session_factory, clock, club, four)
     await mailbox.drain()
     return proposal
@@ -164,7 +165,7 @@ async def cuts_off(session_factory, clock):
 
 
 # --------------------------------------------------------------------------- #
-# Falling back to filling, while the club decides
+# Falling back to filling, while a payment is awaited
 # --------------------------------------------------------------------------- #
 
 
@@ -178,16 +179,16 @@ async def test_a_named_leave_before_the_book_by_keeps_its_name(
     for player in (marta, ewa, sergio):
         assert await last_told(client, mailbox, player) == (
             "oscar left your game",
-            "Padel at Kazimierz Padel · Sat 10 Oct, 17:00 — it's filling again.",
+            "Padel at Bonarka Arena · Sat 10 Oct, 17:00 — it's filling again.",
         )
 
 
 async def test_a_week_that_fills_with_another_game_is_told_as_filling_again(
     client, session_factory, clock, payments, four, waiting, mailbox
 ):
-    """Sergio plays one game a week, and another of his games books first: his
-    yes pauses and the request is taken back. The others are told it is
-    filling again — never whose week filled."""
+    """Sergio plays one game a week, and another of his games books while
+    Saturday's waits for Ewa's payment: his yes pauses and the game falls back.
+    The others are told it is filling again — never whose week filled."""
 
     marta, oscar, ewa, sergio = four
     capped = await client.put(
@@ -212,14 +213,17 @@ async def test_a_week_that_fills_with_another_game_is_told_as_filling_again(
     ] == ["It's a game! · 30 zł held"]
 
 
-async def test_a_paused_yes_that_comes_back_and_refills_it_is_told_as_any_fill(
-    client, session_factory, clock, payments, four, waiting, mailbox
+async def test_a_paused_yes_that_comes_back_and_fills_it_is_told_as_any_fill(
+    client, session_factory, clock, payments, bonarka, four, mailbox
 ):
-    """Sergio's week filled and Saturday's game went back to filling; then he
-    leaves his other game, his week has room again, and his paused yes comes
-    back and fills Saturday's. All four are told it went to the club, as at any
-    fill — Sergio's copy too, since no act of his own filled it."""
+    """Sergio plays one game a week. He said yes to Saturday's game, then
+    another of his games booked and paused that yes, and Ewa's yes left
+    Saturday's one seat short. He leaves his other game, his week has room
+    again, and his paused yes comes back and fills Saturday's. All four are told
+    *It's a game!*, as at any fill — Sergio's copy too, since no act of his own
+    filled it."""
 
+    club, _ = bonarka
     marta, oscar, ewa, sergio = four
     capped = await client.put(
         "/api/v1/players/me/games-and-money",
@@ -227,83 +231,31 @@ async def test_a_paused_yes_that_comes_back_and_refills_it_is_told_as_any_fill(
         headers=sergio["headers"],
     )
     assert capped.status_code == 200, capped.text
-    elsewhere = await a_game_that_books_elsewhere(
-        client, session_factory, clock, payments, sergio, start=warsaw(9, 18)
-    )
-    await mailbox.drain()
-    clock.move(timedelta(minutes=5))
-
-    await leaves(client, sergio, elsewhere)
-
-    asked_again = (
-        "It's a game! · Kazimierz Padel answers by 08:35",
-        "Padel · Sat 17:00. Nobody pays until it confirms.",
-    )
-    for player in four:
-        assert await last_told(client, mailbox, player) == asked_again
-
-
-async def test_two_who_no_longer_fit_at_the_club_s_yes_are_never_named(
-    client, kazimierz, four, waiting, mailbox
-):
-    """Marta blocked Oscar while the club decided, and the club said yes before
-    the block took her yeses back: Oscar's later yes no longer counts. Those
-    still In are told it is filling again; Oscar is told nothing of why."""
-
-    _, desk = kazimierz
-    marta, oscar, ewa, sergio = four
-    told_oscar = await told(client, mailbox, oscar)
-    # Not delivered before the club answers: the block has yet to take
-    # Marta's yeses back.
-    blocked = await players.block_between(client, marta["token"], oscar["id"])
-    assert blocked.status_code in (200, 201, 204), blocked.text
-
-    accepted = await client.post(
-        f"/api/v1/club/bookings/{waiting}/acceptance", headers=desk
-    )
-
-    assert accepted.json()["outcome"] == "SEAT_OPENED", accepted.text
-    for player in (marta, ewa, sergio):
-        assert await last_told(client, mailbox, player) == FILLING_AGAIN
-    assert await told(client, mailbox, oscar) == told_oscar
-
-
-async def test_a_leave_after_the_book_by_while_the_club_decides_is_called_off(
-    client, session_factory, clock, kazimierz, four, mailbox
-):
-    """The last yes landed at 14:50 on Saturday, ten minutes before the
-    book-by; at 15:10, while the club still decides, Oscar leaves. The game can
-    no longer fill: the others read that it is called off, nobody paid — once,
-    though the sweep records the ending later. It is not emailed."""
-
-    club, _ = kazimierz
-    marta, oscar, ewa, sergio = four
     group = await a_group(client, marta, club, oscar, ewa, sergio)
     proposal = await makes(
         session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
     )
-    for player in four[:3]:
-        await says_yes(client, player, proposal)
-    clock.move(warsaw(10, 14) + timedelta(minutes=50) - clock.now())
-    assert (await says_yes(client, sergio, proposal)).json()["waiting_for_the_club"]
-    await mailbox.drain()
-    clock.move(timedelta(minutes=20))
-
-    assert (await withdraws(client, oscar, proposal)).status_code == 204
-    await sweeps(session_factory, clock)
-
-    called_off = (
-        "Your Sat 17:00 is called off · nobody paid",
-        "oscar left after its last moment to book — Padel at Kazimierz Padel.",
+    for player in (marta, oscar, sergio):
+        assert (await says_yes(client, player, proposal)).status_code == 200
+    elsewhere = await a_game_that_books_elsewhere(
+        client, session_factory, clock, payments, sergio, start=warsaw(9, 18)
     )
-    for player in (marta, ewa, sergio):
-        [notice, *_] = await told(client, mailbox, player)
-        assert notice == called_off
-        assert [n for n in await told(client, mailbox, player) if n == called_off] == [
-            called_off
-        ]
-        assert called_off[0] not in await subjects_to(mailbox, player)
-    assert called_off not in await told(client, mailbox, oscar)
+    assert (await says_yes(client, ewa, proposal)).json()["open_seats"] == 1
+    await mailbox.drain()
+    clock.move(timedelta(minutes=5))
+
+    await leaves(client, sergio, elsewhere)
+    await mailbox.drain()
+
+    booked = (
+        "It's a game! · 40 zł held",
+        "Padel at Bonarka Arena · Sat 10 Oct, 17:00.",
+    )
+    for player in four:
+        notices = await client.get(NOTICES, headers=player["headers"])
+        [newest, *_] = notices.json()["notices"]
+        assert (newest["title"], newest["body"]) == booked
+        assert newest["your_own"] is False
 
 
 # --------------------------------------------------------------------------- #
@@ -314,25 +266,34 @@ async def test_a_leave_after_the_book_by_while_the_club_decides_is_called_off(
 async def test_a_game_gone_back_to_filling_past_its_book_by_is_called_off(
     client, session_factory, clock, four, waiting, mailbox
 ):
+    """Oscar left while it waited for Ewa's payment, and her time to fix her
+    card ran out: her seat reopened. Nobody filled the two seats before the
+    book-by."""
+
     marta, oscar, ewa, sergio = four
     await withdraws(client, oscar, waiting)
-    clock.move(BOOK_BY - MONDAY_MORNING)
+    clock.move(EWA_S_TIME_ENDS - MONDAY_MORNING)
+    await runs_out(session_factory, clock)
+    clock.move(BOOK_BY - EWA_S_TIME_ENDS)
 
     await sweeps(session_factory, clock)
 
-    for player in (marta, ewa, sergio):
+    for player in (marta, sergio):
         assert await last_told(client, mailbox, player) == (
             "Your Sat 17:00 is called off · nobody paid",
             "It didn't fill again before its last moment to book — Padel at "
-            "Kazimierz Padel.",
+            "Bonarka Arena.",
         )
     assert (await last_told(client, mailbox, oscar))[0].startswith("It's a game!")
 
 
 async def test_a_game_gone_back_to_filling_whose_court_went_is_called_off(
-    client, session_factory, clock, kazimierz, four, waiting, mailbox
+    client, session_factory, clock, bonarka, four, waiting, mailbox
 ):
-    _, desk = kazimierz
+    """Oscar left while it waited for Ewa's payment; then Bonarka Arena closes
+    Saturday's 17:00 for a repair: no court is left at its hour."""
+
+    _, desk = bonarka
     marta, oscar = four[:2]
     await withdraws(client, oscar, waiting)
     closed = await client.post(
@@ -361,56 +322,8 @@ async def test_a_game_gone_back_to_filling_whose_court_went_is_called_off(
     assert await last_told(client, mailbox, marta) == (
         "Your Sat 17:00 is called off · nobody paid",
         "Its court went to another game before it filled again — Padel at "
-        "Kazimierz Padel.",
+        "Bonarka Arena.",
     )
-
-
-# --------------------------------------------------------------------------- #
-# The club's no, and its silence (Q105)
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize(
-    ("how", "title"),
-    [
-        ("refused", "Kazimierz Padel said no"),
-        ("no answer", "Kazimierz Padel didn't answer in time"),
-    ],
-)
-async def test_the_club_s_no_and_its_silence_are_told_apart_and_emailed(
-    client, session_factory, clock, kazimierz, four, waiting, mailbox, how, title
-):
-    _, desk = kazimierz
-    if how == "refused":
-        refused = await client.post(
-            f"/api/v1/club/bookings/{waiting}/refusal",
-            json={"reason": "a tournament"},
-            headers=desk,
-        )
-        assert refused.status_code == 204, refused.text
-    else:
-        clock.move(timedelta(minutes=30))
-        async with session_factory() as session:
-            done = await build_expire_unanswered_requests(
-                session, clock=clock, settings=get_settings()
-            ).execute()
-        assert done.requests == 1
-
-    for player in four:
-        assert await last_told(client, mailbox, player) == (
-            title,
-            "Padel · Sat 17:00. Nobody paid — you'll get a new card first.",
-        )
-        [email] = [
-            email
-            for email in await mailbox.to(f"{player['name']}@example.com")
-            if email.subject == title
-        ]
-        assert "Padel at Kazimierz Padel — Saturday 10 October, 17:00" in email.text
-        assert "Nobody paid." in email.text
-        assert "new card first" in email.text
-        # The club's own note is its, never the player's.
-        assert "tournament" not in email.text
 
 
 # --------------------------------------------------------------------------- #
@@ -516,7 +429,9 @@ async def test_a_paid_leaver_the_club_s_cancel_refunds_is_told_as_a_leaver(
         headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     assert await last_told(client, mailbox, oscar) == (
         "Saturday's 17:00 at Bonarka Arena, which you left, was cancelled",
         "Bonarka Arena cancelled it because of the weather — you're refunded 40 zł.",
@@ -533,7 +448,8 @@ async def test_a_paid_leaver_the_club_s_cancel_refunds_is_told_as_a_leaver(
     # new game first.
     assert await last_told(client, mailbox, marta) == (
         "Game called off · you're refunded 40 zł",
-        "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the weather.",
+        "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the "
+        "weather. We'll look for another game for you first.",
     )
     [theirs] = [
         email
@@ -559,7 +475,9 @@ async def test_a_leaver_refunded_already_hears_nothing_of_the_club_s_cancel(
         headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     assert await told(client, mailbox, oscar) == told_oscar
     assert await subjects_to(mailbox, oscar) == emails_before
 

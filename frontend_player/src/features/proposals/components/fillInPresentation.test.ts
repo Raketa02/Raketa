@@ -70,10 +70,9 @@ describe('seatWhen — how long a rescue is offered (A3.1)', () => {
   });
 });
 
-describe('yesWhen — a yes’s book-by, or the club deciding (A3.2)', () => {
-  it('is the book-by while the game fills, and waiting for the club while it decides', () => {
-    expect(yesWhen(yes(), false)).toBe('book by Sat 13:00');
-    expect(yesWhen(yes(), true)).toBe('waiting for the club');
+describe('yesWhen — a yes’s book-by (A3.2)', () => {
+  it('is the book-by while the game fills', () => {
+    expect(yesWhen(yes())).toBe('book by Sat 13:00');
   });
 });
 
@@ -87,12 +86,9 @@ describe('the rows, spoken', () => {
     );
   });
 
-  it('say a yes’s game, its club and its book-by — or that the club decides', () => {
-    expect(yesRowLabel(yes(), SATURDAY, false)).toBe(
+  it('say a yes’s game, its club and its book-by', () => {
+    expect(yesRowLabel(yes(), SATURDAY)).toBe(
       'Padel · Saturday 15:00, Bonarka Arena, book by Sat 13:00',
-    );
-    expect(yesRowLabel(yes(), SATURDAY, true)).toBe(
-      'Padel · Saturday 15:00, Bonarka Arena, waiting for the club',
     );
   });
 });

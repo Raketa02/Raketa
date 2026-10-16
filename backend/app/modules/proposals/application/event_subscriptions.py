@@ -41,7 +41,6 @@ from app.modules.proposals.domain.events import (
     TimeToPayGiven,
     TimeToPayMet,
     TimeToPayRanOut,
-    TurnedDown,
     VersionDealt,
     YesPaused,
     YesResumed,
@@ -49,6 +48,10 @@ from app.modules.proposals.domain.events import (
     YesWithdrawn,
 )
 
+#: Every name here is a published contract (``.claude/rules/domain-events.md``).
+#: ``proposals.turned_down`` — an On request club's no, or its silence — is
+#: unregistered with On request (#669; ``docs/adr/0196`` §1), since the local
+#: store is reset with the removal and only ``local`` has ever run.
 _EVENTS = (
     (ProposalMade, "proposals.proposal_made"),
     (VersionDealt, "proposals.version_dealt"),
@@ -63,7 +66,6 @@ _EVENTS = (
     (SeatReopened, "proposals.seat_reopened"),
     (YesPaused, "proposals.yes_paused"),
     (YesResumed, "proposals.yes_resumed"),
-    (TurnedDown, "proposals.turned_down"),
     (Redealt, "proposals.redealt"),
     (ClubCancelled, "proposals.club_cancelled"),
     (TimeToPayGiven, "proposals.time_to_pay_given"),
@@ -73,9 +75,17 @@ _EVENTS = (
 )
 
 
+#: The wire version ``proposals.time_to_pay_given`` is written under: version 1
+#: carried ``at_the_clubs_yes``, which #669 removed with On request — a change
+#: to the wire shape, versioned as one. Version 1 is not registered: the store
+#: is reset with the removal, so a stored row of it is a decoding error.
+TIME_TO_PAY_GIVEN_VERSION = 2
+
+
 def register_proposal_events(catalog: EventCatalog) -> None:
     for event_class, name in _EVENTS:
-        catalog.register(event_class, name=name, version=1)
+        version = TIME_TO_PAY_GIVEN_VERSION if event_class is TimeToPayGiven else 1
+        catalog.register(event_class, name=name, version=version)
 
 
 def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
@@ -92,7 +102,6 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(SeatReopened, LogProposalEvent())
     dispatcher.subscribe(YesPaused, LogProposalEvent())
     dispatcher.subscribe(YesResumed, LogProposalEvent())
-    dispatcher.subscribe(TurnedDown, LogProposalEvent())
     dispatcher.subscribe(Redealt, LogProposalEvent())
     dispatcher.subscribe(ClubCancelled, LogProposalEvent())
     dispatcher.subscribe(TimeToPayGiven, LogProposalEvent())

@@ -50,8 +50,10 @@
    and a list of your own yeses that have not become games yet.
 8. **Members can post a game.** They pick the hour and the court; the app deals it to their
    best fits as a **Challenge**.
-9. **The club is the seller.** On the club website it lists its courts, hours and prices,
-   sets how it works with Raketa, answers requests and cancels; it gets paid through Raketa
+9. **The club is the seller.** On the club website it lists its courts, hours and prices, and
+   hands Raketa a block of hours to sell alone: **Only Raketa**, the one way until Raketa is the
+   club's booking software (Q121). It moves and cancels booked games, and a cancel moves the game
+   to another of its courts when nothing about it changes (Q122). It gets paid through Raketa
    after the game and pays the card fee as it would at its own terminal. Raketa earns nothing
    for now ([§16](#16-the-club-website)).
 10. **After the game, only an exception asks anything** (Q114–Q119). A full game nobody recorded
@@ -68,6 +70,7 @@
 | --- | --- |
 | **Group** | A crowd of players at a home club (a player group) or a club's own community (an official group). This document is written for "a pool of players plus the courts around them"; a group is the first pool, a whole city (Explore) will be a later one. |
 | **Court hour** | One court at one club for one hour. Every game lasts exactly **1 hour**, for every sport. |
+| **Kind of court** | **Indoor** or **outdoor**, as the club records each court. A booked game always shows its court's kind; a card shows it only when every free court it could be booked on is of one kind ([§5.2](#52-what-a-card-promises), Q122). Not to be confused with a game's **kind**, below. |
 | **Game** | Two or four players plus one court hour plus a kind. |
 | **Kind** | **Competitive** (a counted game: a confirmed score moves levels) or **For fun** (a friendly: levels stay put). |
 | **Share** | The court's price divided by the seats (4 for padel and badminton, 2 for tennis and squash). Fixed on the card. |
@@ -76,15 +79,18 @@
 | **Yes / No** | Swipe right / swipe left on a card. |
 | **In** | A player who said yes to a game that has not filled yet. |
 | **Momentum** | How many players are In on a game. |
-| **Fills** | The moment the last seat says yes. The game is then **Booked**, every share **held** on its player's card — or, at an On request club, *waiting for the club* until it confirms ([§11](#11-the-moment-a-game-fills)). |
-| **Book-by** | The latest moment a card can still fill ([§5.4](#54-the-only-deadline-the-courts-book-by)). |
+| **Fills** | The moment the last seat says yes. The game is then **Booked**, at every club, and every share **held** on its player's card ([§11](#11-the-moment-a-game-fills), Q121). |
+| **Book-by** | The latest moment a card can still fill: the club's release time, the release lead before the game ([§5.4](#54-the-only-deadline-the-courts-book-by), Q121). |
+| **Only Raketa** | How every club works with Raketa: it hands Raketa a block of hours, which Raketa sells alone until the release lead before each game. The one way until Raketa is the club's booking software; *Instant* and *On request* were removed (Q121, [§16.3](#163-one-way-to-work-with-raketa)). |
 | **Cut-off** | The club's free-cancellation deadline, for example 24 hours before the game. A club setting, and the one deadline in a game, the same for everyone: leaving before it is free, and at it a full game's shares are taken and a short game is called off ([§12.3](#123-leaving-before-and-after-the-cut-off)). |
 | **Held · Taken** | A share is **held** when its amount is reserved on the player's card and nothing has moved; the hold is **let go** on a leave, a call-off or a club's cancel before the cut-off, and costs nobody anything. It is **taken** at the cut-off, or at once after it ([§12.2](#122-when-a-game-fills), Q113). A card hold is never called *a Hold*, which is the account gate in the glossary. |
 | **Card check** | A share held for a few seconds and let go at the fill, when that seat's hold would not last until the cut-off. It proves the money is there that day ([§12.2](#122-when-a-game-fills)). |
 | **Holding time** | When a seat's share is held to stay until the cut-off: at the fill when its hold reaches the cut-off, otherwise **four days before the cut-off** ([§12.2](#122-when-a-game-fills)). |
-| **Time to fix the card** | The 30 minutes a player whose card was refused **before the cut-off** — at the fill, at its On request club's yes, at the holding time, or taking a rescue — has to fix it, with their seat kept for them; nothing is paid. Never past the cut-off or the book-by ([§12.2](#122-when-a-game-fills)). |
-| **Time to pay** | The 30 minutes a player whose payment failed **after the cut-off**, where money is taken at once — when the game filled, when its On request club accepted it, or taking a rescue — has to pay, with their seat held for them, never past the book-by (a rescue: never past the start) ([§12.2](#122-when-a-game-fills)). |
+| **Time to fix the card** | The 30 minutes a player whose card was refused **before the cut-off** — at the fill, at the holding time, or taking a rescue — has to fix it, with their seat kept for them; nothing is paid. Never past the cut-off or the book-by ([§12.2](#122-when-a-game-fills)). |
+| **Time to pay** | The 30 minutes a player whose payment failed **after the cut-off**, where money is taken at once — when the game filled, or taking a rescue — has to pay, with their seat held for them, never past the book-by (a rescue: never past the start) ([§12.2](#122-when-a-game-fills)). |
 | **Rescue** | An open seat in a booked game that lost a player. |
+| **Move by cancel** | A club's cancel that another free court of the same club absorbs: the same sport, day, hour and price, and the same kind of court or indoor for an outdoor game (indoor only for *weather*). The game moves and is never called off, and nobody's money changes ([§16.9](#169-cancelling-a-booking), Q122). |
+| **Owed card** | The new card dealt first to the players still in a game that a club's cancel called off: the closest game to the lost one, first in their deck ([§8.2](#82-the-order), Q123). |
 | **Post** | A game a member creates by picking the hour and the court. Its players see it as a **Challenge**. |
 | **Home** | The first tab of the bottom bar: your games. |
 | **Isn't here yet · Arrival** | The tap a player at the club makes, in the first half of the game, about another player on the court; and the moment that player is shown to be at the club, by their own *I'm here* or a courtmate's *They're here*. The arrival makes it **on time**, **Came late** or **Didn't come** ([§15.1](#151-attendance-at-the-court), Q115). |
@@ -136,7 +142,7 @@ from the speech bubble on its Home card ([§14.3](#143-the-chat)).
   once, inline: *Competitive / For fun / Either*. Nothing else is blocked. The answer is the
   existing per-sport Play intent, changeable later.
 - **Blocks.** Two players, either of whom blocked the other, are never on the same card, in any
-  group. Blocking somebody takes back your yeses where they are In, until the club confirms; your
+  group. Blocking somebody takes back your yeses where they are In, until the game is booked; your
   booked games stay ([ADR-0193](../../adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
 - **Gender preference** and the **level window** apply to every pair on a card, with the blocks
   above: together they are the pair rule of [§5.1](#51-what-it-does).
@@ -228,6 +234,9 @@ number. The number is given when the game is booked. If Bonarka has four courts 
   one, and nobody's yes changes. Otherwise the card disappears, and the players who were In
   are dealt a new card first ("You three were In — Sat 18:00?").
 - The **price is fixed on the card**. A club changing its prices affects only new cards.
+- **The kind of court** is on the card only when it is certain: *Indoor* or *Outdoor* when every
+  free court of the sport at that club and hour is of that kind, and nothing when they are mixed.
+  The court is picked at booking, and a booked game always shows its kind (Q122, *a call*).
 
 ### 5.3 Keeping the deck clean
 
@@ -239,12 +248,18 @@ number. The number is given when the game is booked. If Bonarka has four courts 
 
 ### 5.4 The only deadline: the court's book-by
 
-A card lives until its court's **book-by** time. Nobody chooses it; it comes from the club:
+A card lives until its court's **book-by** time. Nobody chooses it; it comes from the club: it is
+**the club's release time**, *N* days before the game (the release lead, a club setting from 1 to
+13, default 3), after which unsold courts go back to the club.
 
-| Club works with Raketa as… | Book-by is… |
-| --- | --- |
-| **Only Raketa** | the club's release time: *N* days before the game (club setting, default 3), after which unsold courts go back to the club |
-| **Instant** or **On request** | the game's start minus the club's minimum notice (default 2 h) |
+> **Amended 2026-10-12** (Q121, [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+> §1). This was a table of two rows: the release time at an *Only Raketa* club, and the game's
+> start minus the club's minimum notice (default 2 h) at an *Instant* or *On request* club. Both of
+> those ways were removed, so every card's book-by is the release time. **No card can fill later
+> than a day before its game, and by default three** *(a call: the release lead keeps its range of
+> 1–13 days; the alternative is a release lead in hours, down to 2 hours)*. A game less than a day
+> away is made only by a rescue ([§10.1](#101-seats-to-fill--the-rescue-board)), which lives until
+> the start.
 
 There are **no answer windows, no restarts and no ceilings**. A card shows a countdown only
 when its book-by is less than 24 hours away. At book-by an unfilled card simply disappears:
@@ -254,7 +269,9 @@ to everyone still In ([§14.1](#141-home-and-the-statuses), Q104, Q106).
 
 A card whose club **cut-off has already passed** (a last-minute game) says **No free
 cancellation** on it before anyone swipes: its shares are taken the moment it fills
-([§12.3](#123-leaving-before-and-after-the-cut-off)).
+([§12.3](#123-leaving-before-and-after-the-cut-off)). Since Q121 that happens only at a club whose
+cut-off is longer than its release lead: with the default 24-hour cut-off, the book-by never comes
+after it.
 
 ---
 
@@ -384,20 +401,29 @@ Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-scr
   Afternoon 12–17, Evening 17–23**): bright where everyone is free for at least one whole hour
   in the range, dim where all but one are, the game's range ringed in coral; labelled **High /
   Good / Slim overlap** by today's grading (Q71).
-- **The court block** — *Day HH:MM · Club* (and the court number once booked), the share, and
-  one state tag: **Court available** (your yes is a free vote), **Book it now** (your yes fills
-  it) or **Booked** (a rescue). **No free cancellation** when the cut-off has passed.
+- **The court block** — *Day HH:MM · Club* (and the court number once booked, with its kind:
+  *Court 6 · indoor*), *Indoor* or *Outdoor* when every free court the card could be booked on is
+  of that kind (Q122), the share, and one state tag: **Court available** (your yes is a free
+  vote), **Book it now** (your yes fills it) or **Booked** (a rescue). **No free cancellation**
+  when the cut-off has passed.
 - **The ribbon countdown** — only when the deadline is under 24 h: *21 h 00*, then *45 min*,
   coral under an hour (Q72).
 - **The stamps** — I'M IN / NOT THIS TIME while dragging; **I'M IN · 32 zł** whenever the yes
   books at once (Book it now, or a rescue): it holds the share until the cut-off, or takes it at
-  once after the cut-off. At an On request club the hold waits for the club
-  ([§11](#11-the-moment-a-game-fills)), so its *Book it now* stamp carries no price.
+  once after the cut-off. Every club books at once since Q121, so the stamp always carries the
+  price; at an *On request* club it used to carry none, because the hold waited for the club.
 
 ### 8.2 The order
 
-Within one group, one sport and one segment, cards are ordered by **how likely you are to
-swipe right**:
+**An owed card comes first** (Q123). The card dealt to the players still in a game that a club's
+cancel called off ([§16.9](#169-cancelling-a-booking)) is first in the deck of each player it is
+owed to, whenever the deck opens, until they answer it or it is gone. Two owed cards are shown
+soonest first. It carries **no mark**, for anybody, a player with push off included, and other
+members' decks are unaffected *(a call)*. The card records the players it is owed to, and the deck
+orders by that *(a call)*. A card a notice opened is still lifted on top by the phone, as before.
+
+After the owed cards, within one group, one sport and one segment, cards are ordered by **how
+likely you are to swipe right**:
 
 1. **Seats still open after your yes, fewest first** — 0 (*you complete it*), then 1, 2, 3.
    Momentum is counted on the **game**, across all its versions.
@@ -522,12 +548,11 @@ and *You're In* lists only your own yeses. Otherwise nobody would need to swipe.
 
 Your yeses in this group that have not filled yet — **picks, challenges and your own posts
 only**; a rescue join goes straight to Home, because that game is booked (Q76). Each row shows
-the club, the book-by (or *waiting for the club*), who is In as filled squares and the open
-seats as dashed ones, and **Withdraw** (hidden while waiting for the club — leaving then happens
-from the game details). The moment a game fills, it appears in **Home** and leaves this list —
-except at an On request club, where it also stays here, marked *waiting for the club*, until the
-club answers. A full game that goes back to filling before it is booked is here again, as any
-game still filling, and stays on Home as *Seat open* ([§14.1](#141-home-and-the-statuses), Q106).
+the club, the book-by, who is In as filled squares and the open seats as dashed ones, and
+**Withdraw**. The moment a game fills, it appears in **Home** and leaves this list. A full game
+that goes back to filling before it is booked is here again, as any game still filling, and stays
+on Home as *Seat open* ([§14.1](#141-home-and-the-statuses), Q106). Until Q121 a game waiting for
+its *On request* club also stayed here, marked *waiting for the club*, with no Withdraw.
 
 ---
 
@@ -538,18 +563,13 @@ When the last yes lands (after the 10-second undo, when it applies):
 1. **Every share is held together, or none is** ([§12.2](#122-when-a-game-fills)). Nothing is
    taken until the club's cut-off. A card that is refused gives its player **time to fix the
    card** (after the cut-off, **time to pay**), and the others' holds wait for it.
-2. The court is booked with the club and gets its number. At an **On request** club, the game
-   first waits for the club to confirm (within the club's time to confirm, 30 minutes by
-   default); nothing is held until it does ([§16.3](#163-three-ways-to-work-with-raketa)).
+2. The court is booked with the club and gets its number, **at every club**: nobody at the club
+   confirms anything (Q121, [§16.3](#163-one-way-to-work-with-raketa)).
 3. **It's a game!** marks the four (or two) being **matched**, not only booked (Q103). The player
-   whose yes filled it sees it full screen, at every kind of club — the faces and one word, with
-   **Open game** and **Later** — and so does a player whose confirmed payment completes a game
-   waiting for it (Q110). One line under the word says what is still missing, if anything:
-   - at a club that confirms, *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*,
-     in place of the toast that used to say the game went to the club. The time is written as
-     Home's *answers by* is: the hour alone when it falls today ([§14.1](#141-home-and-the-statuses));
-   - at a club that books at once, when another player's payment failed, *Waiting for one payment
-     · until 14:40 · Nobody pays until it's in* (Q110, [§12.2](#122-when-a-game-fills)).
+   whose yes filled it sees it full screen — the faces and one word, with **Open game** and
+   **Later** — and so does a player whose confirmed payment completes a game waiting for it
+   (Q110). When another player's payment failed, one line under the word says so: *Waiting for one
+   payment · until 14:40 · Nobody pays until it's in* (Q110, [§12.2](#122-when-a-game-fills)).
 
    **Your own fill is never announced back to you** (Q102): that player gets no banner for it, and
    the bell doesn't count it, though the row is in their list
@@ -561,12 +581,6 @@ When the last yes lands (after the 10-second undo, when it applies):
      taken.*; for a checked seat, *Your card was checked. 30 zł will be held from Sat 19:00 and
      taken on Wed 19:00, the club's cut-off. Leave before then and nothing is taken.*), and the
      receipt follows when the share is taken, also kept in You › Payments (Q113);
-   - **at a club that confirms:** *It's a game! · Kazimierz Padel answers by 21:15* (*Padel · Fri
-     19:00. Nobody pays until it confirms.*), always on and not emailed (Q103). The club's yes is
-     then one notice to all four, *Kazimierz Padel confirmed your game · 25 zł held* (*you paid
-     25 zł* after the cut-off), with the booking email — never a second *It's a game!*. A game that
-     goes back to filling, refills and goes to the club again is told to all four again, with the
-     new time;
    - **while one payment is missing:** *It's a game! · waiting for one payment until 14:40*, and
      *Your Tue 19:00 is booked · 40 zł held* (*you paid 40 zł* after the cut-off) when it is in
      (Q110). Nobody is told *It's a game!* twice.
@@ -577,6 +591,14 @@ When the last yes lands (after the 10-second undo, when it applies):
    - a player who reached their games per week has their other yeses that week paused.
 6. The game's **chat** opens, with the players as members.
 7. The **sides** are drawn for the most even game.
+
+> **Amended 2026-10-12** (Q121, [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+> §1). Steps 2–4 also described a game at an *On request* club: it waited for the club to confirm,
+> within the club's time to confirm (30 minutes by default), before anything was held; its filler
+> saw *It's a game!* with *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*; the
+> others were told *It's a game! · Kazimierz Padel answers by 21:15*; and the club's yes was one more
+> notice, *Kazimierz Padel confirmed your game · 25 zł held*. On request was removed, so every game
+> is booked at its fill.
 
 ---
 
@@ -627,8 +649,6 @@ When the last yes lands (after the 10-second undo, when it applies):
   > nothing is taken. Both read *40 zł · free to leave until Wed 19:00* from the moment the game
   > filled.
 
-- **At an On request club** the shares are held when the club accepts, under the same rules
-  ([§16.8](#168-answering-a-request-on-request)).
 - **At the cut-off**, every held share of a full game is **taken**, and the real card fee is
   recorded once Stripe reports it. Each player's money line becomes *Paid · 40 zł*. The take is a
   quiet row in their recent notices, never pushed or bannered, and a receipt
@@ -636,13 +656,12 @@ When the last yes lands (after the 10-second undo, when it applies):
   A game still short at its cut-off is called off and every hold is let go: nobody pays anything
   ([§12.3](#123-leaving-before-and-after-the-cut-off)).
 - **After the cut-off, money is taken at once.** A game that fills after its cut-off (a last-minute
-  game), an On request club's yes after it, and a rescue taken after it are authorised and taken
-  in one go.
+  game) and a rescue taken after it are authorised and taken in one go.
 - **If your card is refused** — declined, or your bank asks you to confirm (rare, but allowed even
   with permission on file) — nobody pays, and your seat is kept for you alone for **30 minutes**.
   Which window it is depends on the cut-off:
-  - **Before the cut-off: time to fix the card.** It covers a refusal at the fill, at an On request
-    club's yes, at the holding time, or taking a rescue. Nothing is being taken, so you are not
+  - **Before the cut-off: time to fix the card.** It covers a refusal at the fill, at the holding
+    time, or taking a rescue. Nothing is being taken, so you are not
     asked to pay. You confirm with your bank in the app, or change card, and the same check or hold
     runs again at your press. Nothing is paid in that window. Your notice, your email and your
     *To confirm* row read *"Fix your card by 14:40 to keep your seat."*, and the email says nothing
@@ -651,20 +670,17 @@ When the last yes lands (after the 10-second undo, when it applies):
     payment by 14:40 to keep your seat."* It is never past the book-by.
   - Taking a rescue, either window ends at the game's start at the latest
     ([§10.1](#101-seats-to-fill--the-rescue-board)).
-- **While a refused card waits at the fill or at the club's yes:**
-  - The other players' holds stay on their cards, one they confirmed with their bank included. At a
-    club that confirms, the club's yes and its court stay too. At a club that books at once the
+- **While a refused card waits at the fill:**
+  - The other players' holds stay on their cards, one they confirmed with their bank included. The
     court is not held, as for any game still filling.
   - The game is *Waiting for one payment* on everyone's Home
     ([§14.1](#141-home-and-the-statuses), Q111). The others are told *It's a game! · waiting for one
-    payment until 14:40* — at a club that confirms, where they already had *It's a game!*, *Your
-    Fri 19:00 is waiting for one payment, until 21:20* (Q110). Nobody is told whose card it is. The
+    payment until 14:40* (Q110). Nobody is told whose card it is. The
     others' words are the same in both windows; only the refused player's change. *(Written in
     while recording Q113.)*
   - **If you fix it, or pay, in time,** the game books at once on the holds already kept: nobody's
-    bank is asked again, and the club's desk isn't asked again. You see *It's a game!*; the others
-    read *Your Tue 19:00 is booked · 40 zł held* (*you paid 40 zł* after the cut-off), or *Kazimierz
-    Padel confirmed your game · 25 zł held* at a club that confirms.
+    bank is asked again. You see *It's a game!*; the others read *Your Tue 19:00 is booked · 40 zł
+    held* (*you paid 40 zł* after the cut-off).
   - **If you don't,** the kept holds are let go and your seat is offered to others as any open seat
     of a game still filling. You owe nothing. You may still take it back while it is free:
     confirming in the app is your yes again, and if it goes through before somebody else takes the
@@ -672,8 +688,8 @@ When the last yes lands (after the 10-second undo, when it applies):
     out (*Your time to fix your card ran out*, or *Your time to pay ran out*), and the others that
     the game is filling again ([§17.2](#172-notifications)).
   - **If no time is left** before the book-by, the game is called off at once and everyone is
-    told. So is a game whose court another card books during the wait, at a club that books at
-    once; its people are dealt a new card first, as when any card loses its court
+    told. So is a game whose court another card books during the wait; its people are dealt a new
+    card first, as when any card loses its court
     ([§5.2](#52-what-a-card-promises)).
   - Nothing retries a card by itself.
 - **A card refused at the holding time** is on a game already booked. The game stays booked while
@@ -690,6 +706,12 @@ When the last yes lands (after the 10-second undo, when it applies):
 - **BLIK can't be held** ([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)).
   Its rule is decided when BLIK launches ([O1](#21-open-items)); until then, cards only.
 
+> **Amended 2026-10-12** (Q121, [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+> §1). This section also held the shares at an *On request* club when the club accepted, took them at
+> once for a club's yes after the cut-off, gave a card refused at the club's yes its time to fix the
+> card or to pay, and kept the club's yes and its court through that window. No club gives a yes
+> any more: a share is held at the fill, at its holding time or at a rescue.
+
 ### 12.3 Leaving, before and after the cut-off
 
 | When | What happens to your money | Your seat |
@@ -699,8 +721,9 @@ When the last yes lands (after the 10-second undo, when it applies):
 | **At the cut-off, if a seat is still empty** | The game is **called off** and every hold is let go: nobody pays anything, the club included | The court goes back to the club |
 | **After the cut-off** | Your share was taken. **Only if someone takes your seat**, you get it back less exactly what was kept on your payment — *38,24 zł* of a 40 zł share paid by a business card — shown to the grosz before you leave and on your receipt. Otherwise nothing comes back | Becomes a rescue until the start |
 | **A last-minute game** (filled after its cut-off) | Taken at once; then as *after the cut-off*, from the start. Its card said **No free cancellation** | — |
-| **The club cancels**, before the cut-off | Every hold is let go: nothing was taken, nobody is refunded, and nobody pays a fee, the club included | The game is off; a new card first ([§16.9](#169-cancelling-a-booking)) |
-| **The club cancels**, after the cut-off | Everyone still in is refunded **in full**, and the club bears the card fees, as the seller (Q44) | The same |
+| **The club cancels, and another of its courts takes the game** (a move by cancel), before or after the cut-off | **Nothing changes**: every hold, or every share already taken, stays as it was, and nobody is refunded | The game moves to that court, and you're told *Game moved* ([§16.9](#169-cancelling-a-booking), Q122) |
+| **The club cancels and the game is off**, before the cut-off | Every hold is let go: nothing was taken, nobody is refunded, and nobody pays a fee, the club included | The game is off; an owed card first ([§16.9](#169-cancelling-a-booking), Q123) |
+| **The club cancels and the game is off**, after the cut-off | Everyone still in is refunded **in full**, and the club bears the card fees, as the seller (Q44) | The same |
 
 **What was kept on your payment** is Stripe's real fee on it, known once the share is taken: 1,5 % +
 1 zł on a personal card from the EEA, 1,9 % + 1 zł on a business card, 2,5 % + 1 zł on a UK card
@@ -792,7 +815,7 @@ leaver's refund can still happen, so the money stays where it can pay it. Wordin
 | --- | --- |
 | Before the cut-off | Leaving is free: *"Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off."* (a checked share has no hold yet: *"Nothing is taken."*). The line under the button says the same, and the toast reads *"You left the game. Nothing was taken."* (Q113) |
 | After the cut-off | *"Your seat is offered to others. If someone takes it, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment); if nobody does, you won't. On your record if nobody takes it."* The figure is the exact one for that payment; while its fee isn't known yet, the sheet gives no figure and no clause (Q113) |
-| Waiting for the club, or for one payment | *"Nobody has paid yet. Leaving withdraws your yes."* Any request to the club is taken back and the game goes back to filling, your seat open: the others stay In, and the game stays on their Home as *Seat open* until it is full again — at a club that confirms, it then goes back to the club as a new request (Q106). A player whose card waits keeps their time to fix it, or to pay. After the game's book-by it can no longer refill, so it is called off, nobody paid. |
+| Waiting for one payment | *"Nobody has paid yet. Leaving withdraws your yes."* The game goes back to filling, your seat open: the others stay In, and the game stays on their Home as *Seat open* until it is full again (Q106). A player whose card waits keeps their time to fix it, or to pay. (Until Q121 this row also served a game waiting for its *On request* club: the request was taken back, the game went back to the club when it refilled, and a leave after its book-by called it off.) |
 | After the start | No button. |
 
 The leaver's email says the same (Q113): before the cut-off, *You left the game · nothing was
@@ -804,10 +827,9 @@ says when a refund reaches BLIK. *(The bodies were written in while recording Q1
 The others in the game are told, with the new state of the game:
 
 - from a booked game, *"Kuba left — the seat is open"*, in the chat and by notification;
-- from a game waiting for the club or for one payment, *"Oscar Bertran left your game — it's
-  filling again."* (Q104);
-- from a game waiting for the club, after its book-by, *"Your Fri 19:00 is called off · nobody
-  paid"* / *"Oscar Bertran left after its last moment to book — Padel at Kazimierz Padel."* (Q104).
+- from a game waiting for one payment, *"Oscar Bertran left your game — it's filling again."*
+  (Q104). A leave from a game waiting for its club after its book-by, which called it off
+  (*"Oscar Bertran left after its last moment to book"*), went with *On request* (Q121).
 
 **A leaver is told only when it touches them** (Q108). Once you have left, you hear about the game
 again in two cases only. Apart from the refund a late leaver gets when someone takes their seat —
@@ -821,7 +843,9 @@ reaches a leaver:
   stand). It changes no money, so it isn't emailed. What it costs is §15.4's: 10 points since Q117;
 - **the club's cancel refunded you** — you left after the cut-off and your seat was still paid
   for: you are told in a leaver's words, with the club's reason and your refund, and never promised
-  a new game. The notice and the refund email both use those words.
+  a new game. The notice and the refund email both use those words. A cancel that moves the game
+  to another court ([§16.9](#169-cancelling-a-booking), Q122) refunds nobody, so it doesn't reach
+  you.
 
 ---
 
@@ -834,30 +858,32 @@ on, Needs a player** and **Held** are gone: the booking *is* the plan.
 
 | Status | When | Money line |
 | --- | --- | --- |
-| **Waiting for the club** | An On request club has not confirmed yet | Before the club's time to confirm runs out: *Bonarka answers by 20:45 · Nobody pays until it confirms*. After: *Nobody pays until Bonarka confirms* |
-| **Waiting for one payment** | One player's card was refused when the game filled or when the club accepted it, and their time to fix the card (before the cut-off) or time to pay (after it) runs ([§12.2](#122-when-a-game-fills), Q111, Q113) | *Waiting for one payment · until 14:40 · Nobody pays until it's in*, in both windows. The refused player's own card reads *Fix your card by 14:40* before the cut-off and *Confirm your payment by 14:40* after it, beside their *To confirm* row |
+| **Waiting for one payment** | One player's card was refused when the game filled, and their time to fix the card (before the cut-off) or time to pay (after it) runs ([§12.2](#122-when-a-game-fills), Q111, Q113) | *Waiting for one payment · until 14:40 · Nobody pays until it's in*, in both windows. The refused player's own card reads *Fix your card by 14:40* before the cut-off and *Confirm your payment by 14:40* after it, beside their *To confirm* row |
 | **Booked** | Full and booked | Before the cut-off, whether the share is held yet or only checked: *30 zł · free to leave until Sat 17:00*. After it, once the share is taken: *Paid · 30 zł* (Q113). A player whose card was refused at the holding time reads *Fix your card by 14:40* until it is fixed; the game stays booked, and the others' cards don't change |
 | **Seat open** | Someone left a booked game | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and nothing is taken*. After: *1 seat open · offered to others · the game goes ahead* |
-| **Seat open** | A full game went back to filling before it was booked (Q106) | At a club that confirms: *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid*. At a club that books at once: *1 seat open · books when it's full · nobody paid* |
+| **Seat open** | A full game went back to filling before it was booked (Q106) | *1 seat open · books when it's full · nobody paid* |
 | **Needs result · Confirm the result · Counted · Uncounted · Played · no score** | After the hour ([§15.2](#152-results-and-sportsmanship), [§15.3](#153-a-game-nobody-recorded-and-a-game-somebody-didnt-come-to)). *Needs result* follows *How did it go?* on a Competitive game; *Played · no score* replaced *Never played* (Q114); *Uncounted* says why — a seat empty at the hour, or someone who didn't come (Q115) | — |
-| **Called off** | A seat was empty at the cut-off; the club cancelled; the club said no or didn't answer in time; a game that went back to filling reached its book-by; a player left it after its book-by while the club decided; a failed payment had no time left before the book-by, or the court went to another card while it waited for that payment | The reason, and *nothing was taken* (the holds were let go: at the cut-off, or a club's cancel before it), *refunded 30 zł* (a club's cancel after the cut-off) or *nobody paid* |
+| **Called off** | A seat was empty at the cut-off; the club cancelled and no other court of the club took the game ([§16.9](#169-cancelling-a-booking)); a game that went back to filling reached its book-by; a failed payment had no time left before the book-by, or the court went to another card while it waited for that payment | The reason, and *nothing was taken* (the holds were let go: at the cut-off, or a club's cancel before it), *refunded 30 zł* (a club's cancel after the cut-off) or *nobody paid* |
 
 **A full game that falls back stays on Home** (Q106). It goes back to filling before it is booked
-when a player leaves it while the club decides, when a yes is taken back because that player's
-week filled or because two of its players no longer fit at the club's yes, or when a player's time
-to pay runs out. For those still In it reads *Seat open*, as a booked game that lost a player
-does, and it is in *You're In* as well ([§10.2](#102-youre-in)). It becomes *Waiting for the club*
-again when it refills (*Booked* at a club that books at once), and *Called off · nobody paid* if
-its book-by passes first. A player who withdraws their own yes no longer sees it on Home, and
-Home's badge doesn't count it: it asks nothing of those still In.
+when a player leaves it while it waits for one payment, when a yes is taken back meanwhile, or when
+a player's time to fix the card or time to pay runs out. For those still In it reads *Seat open*,
+as a booked game that lost a player does, and it is in *You're In* as well
+([§10.2](#102-youre-in)). It becomes *Booked* when it refills, and *Called off · nobody paid* if
+its book-by passes first. Until Q121 a game also fell back while its *On request* club decided,
+and became *Waiting for the club* again when it refilled. A player who withdraws their own yes no
+longer sees it on Home, and Home's badge doesn't count it: it asks nothing of those still In.
 
 *Waiting for one payment* ends **Booked** when the payment comes in, or *Seat open* when the time
 to pay runs out (Q111).
 
-The club's answer reads the same way on the called-off card, its details, the notice and the email
-(Q105): *Kazimierz Padel said no* when it refused, *Kazimierz Padel didn't answer in time* when it
-let its time to confirm run out, each with *Padel · Fri 19:00. Nobody paid — you'll get a new card
-first.*
+**A booked game names its court's kind** on its Home card and its details: *Court 3 · indoor*
+(Q122).
+
+The club's answer — *Kazimierz Padel said no* and *Kazimierz Padel didn't answer in time*, the same
+on the called-off card, its details, the notice and the email (Q105) — went with *On request*
+(Q121): no club answers a game. A club's cancel that calls a game off is told with its reason and
+*We'll look for another game for you first* ([§17.2](#172-notifications), Q123).
 
 *Free to leave until* names the club's cut-off, the same moment for everyone in the game. Until
 then nothing has been taken, and leaving lets the hold go, so the word is true
@@ -870,12 +896,8 @@ taken Sat 17:00*, and *Paid · 30 zł* after the cut-off ([§14.2](#142-the-game
 40 zł hold that appeared and vanished the day a game filled far ahead is explained as the card
 check.
 
-*Answers by* names the end of the club's **time to confirm** after the game filled
-([§11](#11-the-moment-a-game-fills)): the time its desk is given, in the request email's *Answer
-by …* and the countdown on its Bookings page ([§16.8](#168-answering-a-request-on-request)), so
-the players can tell five minutes from an hour (Q98). Once that time has passed the clause leaves
-the line, as *free to leave until …* leaves at the cut-off, until the game is called off as
-*Kazimierz Padel didn't answer in time* (Q105). It moves no money.
+*Answers by*, the end of an *On request* club's time to confirm on a game waiting for it (Q98),
+went with *On request* (Q121, [§16.8](#168-answering-a-request-on-request)).
 
 A game that **starts with a seat still open** (someone left after the cut-off and nobody took
 it) cannot take a result. It ends **Uncounted · a seat was empty**: no levels move, and nothing
@@ -890,7 +912,8 @@ From the mocks (details 5–10, in [`mocks/game-details/`](mocks/game-details/))
   it is not over, lit volt when something is unread.
 - **The game card:** status row (dot + status); player tiles — two rows for doubles, one for
   singles — with the *vs* line naming the sides; tapping a tile opens that player's record;
-  the court facts (**WHERE** club · court · distance, **DAY**, **TIME** start–end, the money row,
+  the court facts (**WHERE** club · court · its kind · distance — *Bonarka Arena · Court 3 ·
+  indoor · 3,1 km* (Q122) — **DAY**, **TIME** start–end, the money row,
   which says when the share is held and when it is taken — [§14.1](#141-home-and-the-statuses)).
 - **The balance forecast**, as today. Hidden while a seat is open.
 - **At the court:** from the hour's start to 30 minutes after it, *isn't here yet* beside each
@@ -905,23 +928,22 @@ From the mocks (details 5–10, in [`mocks/game-details/`](mocks/game-details/))
 The same screen serves two more readers (Q75, Q96):
 
 - **Before the game is booked** (tapping a card, its **i**, or a You're In row): the status row
-  reads *Filling · 2 of 4 in* or *Waiting for the club* — or, for a game that had filled, *Seat
-  open* or *Waiting for one payment*, as on Home ([§14.1](#141-home-and-the-statuses)); WHERE
-  names the club with no court number; the money row reads *"30 zł if it fills · book by Sat
-  13:00"* — while waiting for the
-  club, the share with *nobody pays until Bonarka confirms* and, until its time to confirm runs
-  out, *Bonarka answers by 20:45* ([§14.1](#141-home-and-the-statuses)); the overlap grid and one
+  reads *Filling · 2 of 4 in* — or, for a game that had filled, *Seat open* or *Waiting for one
+  payment*, as on Home ([§14.1](#141-home-and-the-statuses)); WHERE names the club with no court
+  number, and *Indoor* or *Outdoor* when every free court it could be booked on is of that kind
+  (Q122); the money row reads *"30 zł if it fills · book by Sat 13:00"*; the overlap grid and one
   plain paragraph on what a yes means follow; the actions are **I'm in / Not this time**, or
-  **Withdraw** if you are In — while waiting for the club, **Leave the game** with its sheet
-  ([§13](#13-leaving-a-game)). No Chat.
+  **Withdraw** if you are In — while it waits for one payment, **Leave the game** with its sheet
+  ([§13](#13-leaving-a-game)). No Chat. Until Q121 it could also read *Waiting for the club*, with
+  *nobody pays until Bonarka confirms* and *Bonarka answers by 20:45*.
 - **A rescue, seen by a member who is not in it** (a Seat open card or a Seats to fill row):
   the paid tiles, the dashed *You?* tile, the court number, and **I'm in · 27 zł** — said as
   *held until the cut-off* before it, and *paid now* after it (Q113). No Chat, no Leave.
 
 ### 14.3 The chat
 
-- **One chat per game.** It opens **when the game is booked** — at an On request club, when the
-  club confirms — because there is nothing to talk about before, and yeses are silent.
+- **One chat per game.** It opens **when the game is booked** — at its fill, at every club since
+  Q121 — because there is nothing to talk about before, and yeses are silent.
 - **Members are whoever is in the game now.** A leaver drops out with a line *"Kuba left — the
   seat is open"*; a joiner comes in and sees the history.
 - Reached **from the game details** and **from the speech bubble on its Home card**, which
@@ -1097,58 +1119,78 @@ signed in with the club's own account. The player app never shows club tools, an
 
 | Page | Today | With Games and Fill in |
 | --- | --- | --- |
-| **Overview** | The club's landing page | The setup checklist until the club is live ([§16.2](#162-getting-ready-to-take-bookings)); after that, **only what is waiting for the club's answer** (Q86, Q95). The statistics that will live here later are out of scope. |
+| **Overview** | The club's landing page | The setup checklist until the club is live ([§16.2](#162-getting-ready-to-take-bookings)); after that, a line that the club is live on Raketa and a link to today's Bookings (Q121, *a call*: it showed only what was waiting for the club's answer, Q86, Q95, and nothing waits any more). The statistics that will live here later are out of scope. |
 | **Details** | Name, district, city, sports, map point | Unchanged |
 | **Administrators** | Invite and manage Administrators | Unchanged |
 | **Groups** | The club's official groups, their *Games* figure (reads 0 today) and Hand over | *Games* counts the games actually booked in each official group; the "other clubs' courts" setting links from here ([§16.13](#1613-official-groups-and-administrators)) |
 | **Courts & prices** | — | **New** ([§16.4](#164-courts), [§16.5](#165-hours-and-prices)) |
-| **Raketa settings** | — | **New** ([§16.3](#163-three-ways-to-work-with-raketa), [§16.6](#166-settings)) |
+| **Raketa settings** | — | **New** ([§16.3](#163-one-way-to-work-with-raketa), [§16.6](#166-settings)) |
 | **Bookings** | — | **New** ([§16.7](#167-bookings)–[§16.9](#169-cancelling-a-booking)) |
 | **Check in** | — | **Removed** on 2026-10-11 (Q116), after it was built: whether somebody came is caught at the court ([§15.1](#151-attendance-at-the-court), [§16.10](#1610-check-in)) |
 | **Money** | — | **New** ([§16.11](#1611-money)) |
 
 ### 16.2 Getting ready to take bookings
 
-A club's courts reach players' decks only when **all five** are done. The Overview shows them as a
+A club's courts reach players' decks only when **all four** are done. The Overview shows them as a
 checklist, says which one is missing, and drops the checklist once the club is live (Q95):
 
 1. **Connect payments** — the club's Stripe account, through **Stripe's own hosted sign-up** (the
    club is sent to Stripe and comes back; company data with REGON, the representative and owners,
    a Polish IBAN). The club gets its **full Stripe dashboard** for payouts and disputes. The club
    is the seller, so without it nothing can be charged (Q86).
-2. **Choose how you work with Raketa** — Only Raketa, Instant or On request ([§16.3](#163-three-ways-to-work-with-raketa)).
-3. **Add your courts** ([§16.4](#164-courts)).
-4. **Set hours and prices** ([§16.5](#165-hours-and-prices)).
-5. **Check the settings** — cut-off, release lead or minimum notice ([§16.6](#166-settings)).
+2. **Add your courts** ([§16.4](#164-courts)).
+3. **Set hours and prices** ([§16.5](#165-hours-and-prices)).
+4. **Check the settings** — the cut-off and the release lead ([§16.6](#166-settings)).
 
-Until then the club still exists for search, groups and Administrators exactly as today.
+Until then the club still exists for search, groups and Administrators exactly as today. There were
+five steps until Q121: the second was *Choose how you work with Raketa*, which went with the choice
+([§16.3](#163-one-way-to-work-with-raketa)).
 
-### 16.3 Three ways to work with Raketa
+### 16.3 One way to work with Raketa
 
-Each club chooses **one way for the whole club** (Q12). It can change it later; the change applies
-to hours not yet booked ◇.
+**Only Raketa** is the one way, for every club, **until Raketa is the club's booking software**
+(Q121). The club hands Raketa a block of hours, its courts' Raketa hours
+([§16.5](#165-hours-and-prices)):
 
-| | **Only Raketa** | **Instant** | **On request** |
-| --- | --- | --- | --- |
-| Who sells the court | Raketa alone, until the release time | Raketa **and** the club's own desk or system | Raketa **and** the club's own desk or system |
-| When a game fills | Booked at once | Booked at once; the club promises to honour it and to close hours it sells elsewhere | The club confirms within the time it set (default 30 min); nobody pays until it does |
-| Book-by | The release time (default 3 days before) | Start minus minimum notice (default 2 h) | Start minus minimum notice (default 2 h) |
-| After the release time | Unsold hours return to the club and leave Raketa | — | — |
-| If it goes wrong | — | A double sale: the club cancels ([§16.9](#169-cancelling-a-booking)) | Refused or no answer: nobody paid; the players get a new card first |
+- **Who sells the court:** Raketa alone, until the release time. The club keeps those hours off its
+  own desk and its own system until then.
+- **When a game fills:** it is booked at once. Nobody at the club confirms anything.
+- **Book-by:** the release time — the release lead before the game, 1–13 days, 3 by default
+  *(a call: the range stays in days)*. So no game fills later than a day before its start
+  ([§5.4](#54-the-only-deadline-the-courts-book-by)).
+- **After the release time:** unsold hours go back to the club and leave Raketa.
+- **If it goes wrong:** the desk sold a handed-over hour by mistake. The club cancels with *double
+  booking*, and a free court of the same club takes the game when one can
+  ([§16.9](#169-cancelling-a-booking)).
 
-A future live link to the club's own booking system is the **Instant** way kept up to date
-automatically; nothing else about bookings changes for the club.
+> **Amended 2026-10-12** (Q121, [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+> §1). This section was *Three ways to work with Raketa*: each club chose one way for the whole club
+> (Q12), **Only Raketa**, **Instant** — Raketa and the desk both sold, and the club closed by hand
+> every hour it sold elsewhere, its book-by the start minus a minimum notice (default 2 h) — or
+> **On request**, where the club confirmed each full game within a time it set (default 30 min) and
+> nobody paid until it did. On request let a shut desk kill every game that filled while nobody was
+> there, and Instant asked a desk to keep two calendars true by hand, for ever. No court platform
+> makes a club confirm a booking, none relies on a desk closing hours by hand, and every one that is
+> effortless for the club has one calendar; Kraków's tenis4U, Playmore and kluby.org offer no API,
+> and tenis4U's terms forbid reading its site. So both ways were removed, and **Raketa will become
+> the club's booking software**, its shape decided in a grilling of its own. The *future live link
+> to the club's own booking system*, which this section called the Instant way kept up to date
+> automatically, is replaced by that decision ([§20](#20-out-of-scope)).
 
 ### 16.4 Courts
 
 - The club lists its courts ◇: a **name** as the club uses it (*Court 2*, *Kort centralny*), **one
-  sport** per court, and **indoor or outdoor** (shown on the card, because it matters to players).
+  sport** per court, and **indoor or outdoor**, its **kind**, because it matters to players. Players
+  see it since Q122: always on a booked game, and on a card when every free court it could be booked
+  on is of one kind ([§5.2](#52-what-a-card-promises)).
 - A court can be switched **off** (not offered to Raketa) without deleting it.
 - Players never pick a court number. A card promises "a court at this club at this hour"; the
   number is **given at booking** — the first free court of that sport at that hour ([§5.2](#52-what-a-card-promises)).
 - The club can **move** a booked game to another free court of the same sport at the same hour
-  (a court needs repair, a better fit for the desk) ◇. Players see the new number; nothing else
-  changes.
+  (a court needs repair, a better fit for the desk) ◇, of the **same kind, or indoor for an outdoor
+  game** — never outdoors from indoors (Q122, *a call*). Players see the new number and are told
+  *Game moved* · *Padel · indoor · nothing else changes* ([§17.2](#172-notifications)); nothing
+  else changes. Until Q122 a move told nobody.
 
 ### 16.5 Hours and prices
 
@@ -1167,23 +1209,23 @@ automatically; nothing else about bookings changes for the club.
     was charged;
   - closing an hour that has a **booking**: not allowed from the calendar — the club cancels the
     booking instead ([§16.9](#169-cancelling-a-booking)).
-- **Instant clubs** must close, straight away, every hour they sell at their own desk. The calendar
-  makes that one click per hour ◇.
+- **Raketa's hours stay off the club's own desk** until their release time (Q121). *Instant* clubs,
+  removed with Q121, had to close straight away every hour they sold at their own desk, one click
+  per hour ◇.
 
 ### 16.6 Settings
 
 | Setting | Default |
 | --- | --- |
-| How we work with Raketa: Only Raketa · Instant · On request | — |
-| Release lead (Only Raketa): days before the game unsold courts return to us | 3 days |
+| Release lead: days before the game unsold courts return to us (1–13) | 3 days |
 | Free-cancellation cut-off (players leave free until it; a game still short at it is called off) | 24 h before |
-| Minimum notice (Instant / On request): the latest a Raketa game can book | 2 h before |
-| Time to confirm (On request) | 30 min |
 | Offer our groups other clubs' courts when ours are full ([§4.3](#43-courts)) | off · 10 km |
 | Pause Raketa bookings ([§16.15](#1615-pausing-or-leaving-raketa)) ◇ | off |
 
 A changed setting applies to games booked **after** the change; a booked game keeps the cut-off it
-was booked with ◇. *We check players in* was removed with check-in on 2026-10-11 (Q116).
+was booked with ◇. *We check players in* was removed with check-in on 2026-10-11 (Q116). *How we
+work with Raketa*, the *minimum notice* (2 h) and the *time to confirm* (30 min) were removed with
+*Instant* and *On request* on 2026-10-12 (Q121).
 
 ### 16.7 Bookings
 
@@ -1191,7 +1233,7 @@ One page, by day, listing every Raketa booking at the club ◇:
 
 | Column | What it shows |
 | --- | --- |
-| **When · court** | Day, hour, court number (with **Move** to another free court) |
+| **When · court** | Day, hour, court number and its kind (with **Move** to another free court of the same kind, or an indoor one for an outdoor game — Q122) |
 | **Sport · kind** | Padel · Competitive, Tennis · friendly… |
 | **Players** | Each player's name, and their share **held** or **taken** (Q113). Nothing about who came or the score (Q115, Q116) |
 | **Status** | See below |
@@ -1202,59 +1244,83 @@ The statuses the club sees:
 
 | Status | Meaning for the club |
 | --- | --- |
-| **Waiting for you** | On request only: a full game asks for the court; **Accept** or **Refuse** before the countdown ends |
-| **Accepted · waiting for one player's payment** | On request only: the club accepted, and one player's card was refused; the court stays held until their time to fix the card (before the cut-off) or time to pay (after it) ends ([§16.8](#168-answering-a-request-on-request), Q112, Q113). Not in *Waiting for you*: the club has answered |
 | **Booked** | Full; its shares are held until the cut-off and taken at it. Before the cut-off it can still be called off if a player leaves and nobody replaces them |
 | **Seat open** | A player left; Raketa is finding a replacement. Before the cut-off: if nobody is found, the game is called off at the cut-off and the court comes back to the club |
-| **Called off** | With the reason: short at the cut-off, cancelled by the club, refused, no answer, or a player's payment didn't come in time after the club accepted (Q112). Every hold was let go, everyone was refunded (a cancel after the cut-off), or nobody paid; the hour is free again |
+| **Called off** | With the reason: short at the cut-off, or cancelled by the club when no other court took the game ([§16.9](#169-cancelling-a-booking)). Every hold was let go, or everyone was refunded (a cancel after the cut-off); the hour is free again |
 | **Played** | The hour has passed — whatever the players record about who came and the score, which the club never sees (Q115) |
 
-Filters: all · waiting for you · seat open · called off
+Filters: all · seat open · called off
 ([the-screens.md B4](the-screens.md#b4-bookings)) ◇.
+
+*Waiting for you* (a full game asking for the court, with **Accept** and **Refuse** before a
+countdown), *Accepted · waiting for one player's payment* (Q112), the *refused* and *no answer*
+reasons and the *waiting for you* filter went with *On request* (Q121).
 
 ### 16.8 Answering a request (On request)
 
-- A **Waiting for you** booking shows the players, the hour, the sport, the price and the countdown.
-- **Accept** books it: every share is held at that moment, all together or not at all, and taken
-  at the cut-off — or, when the club accepts after its cut-off, taken at once
-  ([§12.2](#122-when-a-game-fills), Q113) — and a court number is given. The request email says
-  so: *the shares are held when you accept and taken at the cut-off*.
-- **An Accept that meets a refused card waits on one payment** (Q112). The club's yes and the
-  court are kept for that player's time to fix the card (before the cut-off) or time to pay (after
-  it) — 30 minutes, never past the book-by — and the booking reads *Accepted · waiting for one
-  player's payment until 21:20*, never naming the player; before the cut-off, *Accepted · waiting
-  for one player's card until 21:20*, and a lapse is emailed *A player's card wasn't fixed in time —
-  the court is free again.* *(Written in while recording Q113.)*
-  It isn't in *Waiting for you*, because the desk has answered. If the player pays in time, the
-  game books and the desk isn't asked again. If the time runs out — or none is left, because the
-  book-by has passed — the desk is emailed as for a cut-off, *"A game didn't go ahead"* / *"A
-  player's payment didn't come in time — the court is free again."*, and when the game is full
-  again the desk is asked again, as for any new request.
-- **Refuse** (with an optional reason ◇) or **no answer** in time: nobody paid, the booking reads
-  *Called off · refused* or *Called off · no answer*, and the players are dealt a new card first.
-  The players read *Kazimierz Padel said no* or *Kazimierz Padel didn't answer in time* (Q105), and
-  the Refuse dialog promises the desk exactly those words.
-- While a request waits, the hour stays reserved for it; nobody else is offered that court.
-- Because the window is short, the club is alerted by **email** as well as on the website
-  ([§16.12](#1612-what-the-club-is-told)). A club that cannot watch the website during its hours
-  should choose Only Raketa or Instant.
+**Removed on 2026-10-12** (Q121, [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1), after it
+was built. An *On request* club was shown each full game as a **Waiting for you** booking, with the
+players, the hour, the sport, the price and a countdown, and emailed *A booking is waiting for your
+answer*. **Accept** held every share and gave a court number; an Accept that met a refused card
+waited on that player's payment, *Accepted · waiting for one player's payment until 21:20* (Q112),
+and a lapse was emailed *A game didn't go ahead*. **Refuse**, or **no answer** in time, called the
+game off as *refused* or *no answer*, the players read *Kazimierz Padel said no* or *… didn't
+answer in time* (Q105), and they were dealt a new card first. While a request waited, the hour was
+reserved for it.
+
+A desk that was shut when a game filled let its request run out, so every game that filled while
+nobody was there was called off, and the desk had to watch the website all day. No court platform
+asks a club to confirm a booking. Every full game is now booked at its fill
+([§16.3](#163-one-way-to-work-with-raketa)), and the club answers nothing.
 
 ### 16.9 Cancelling a booking
 
 - **Cancel** on a booking, with a reason ◇: *weather*, *repair*, *double booking*, *other*.
-- **Before the cut-off every hold is let go**: nothing was taken, nobody is refunded, and nobody
-  pays a fee, the club included (Q113). **After the cut-off everyone is refunded in full.** Either
-  way it goes on **nobody's record**, and the same players are dealt a new card first. They are
-  told the club cancelled, with the reason, and told again when the new card arrives
-  ([§17.2](#172-notifications), Q107). A leaver the cancel refunds — one who left after the
-  cut-off, whose seat was still paid — is told in a leaver's words and never promised a new game
-  ([§13](#13-leaving-a-game), Q108).
-- After the cut-off, the card fees on those payments are not returned by Stripe; as the seller,
-  **the club bears them** (Q44). The cancel dialog says which: before the cut-off *every hold is
-  let go and nobody pays a fee*; after it *everyone is refunded in full; the card fees are not
-  returned*.
+  *Double booking* stays though *Instant* is gone (Q121, *a call*): a club can still sell a
+  handed-over hour at its own desk by mistake.
+- **A cancel first tries to move the game** (Q122). Raketa looks at the same club for another free
+  court with the same **sport**, **day**, **hour** and **price** *(a call: price is per club and
+  sport today, so it always holds; the rule keeps it for prices per court)*, of the **same kind, or
+  indoor for an outdoor game** — and for a ***weather*** cancel, **indoor only** *(a call)*, because
+  an outdoor court at the same hour is rained on too. The same kind is picked first, then indoor,
+  each in the club's own court order *(a call)*.
+- **If one is free, the game moves there: a move by cancel.** Every hold, or every share already
+  taken, stays exactly as it was: nothing is refunded, let go or released, before or after the
+  cut-off. The court number changes; nobody is owed a card, nobody swipes, and it is on nobody's
+  record. Every player is told *Game moved* ([§17.2](#172-notifications)): *Bonarka Arena moved your
+  game to Court 3 · Thu 19:00* / *Court 2 can't be played · Padel · indoor · nothing else
+  changes*.
+- **The cancel dialog shows what it will do** before the club confirms *(a call)*: *This game moves
+  to Court 3 · indoor · the players are told, nobody is refunded*, or *This game is called off*
+  with the consequence below. When it would move, the dialog also offers **Cancel the game
+  anyway**, for a club closing the whole hour (an event, a power cut). The cancel decides afresh
+  when the club confirms: a court taken in between moves the game to the next court that
+  qualifies, or calls it off, and the answer says which.
+- **Otherwise the game is called off**: with *Cancel the game anyway*, or when no court qualifies
+  (an indoor game with only an outdoor court free, or no court at all). **Before the cut-off every
+  hold is let go**: nothing was taken, nobody is refunded, and nobody pays a fee, the club included
+  (Q113). **After the cut-off everyone is refunded in full.** Either way it goes on **nobody's
+  record**, and the players still in are dealt an **owed card** first. They are told the club
+  cancelled, with the reason and *We'll look for another game for you first* *(a call: the email
+  already said it)*, and told again when the new card arrives ([§17.2](#172-notifications), Q107).
+  A leaver the cancel refunds — one who left after the cut-off, whose seat was still paid — is told
+  in a leaver's words and never promised a new game ([§13](#13-leaving-a-game), Q108).
+- **The owed card is the closest game to the lost one** (Q123): first **the same club, day and
+  hour**, on a court of the other kind or at a new price; then, **for a player group only, another
+  club at the same day and hour**, nearest first; then **the closest hour in time**, the home club
+  first. An official group stays at its home club unless its courts are full
+  ([§4.3](#43-courts)). The rule that never dealt the same players that club and hour again is gone
+  *(a call)*: it was written for a club that refused a game. The owed card is an ordinary card: its
+  players must all be free for its hour and fit each other, and each swipes it. It is first in
+  their decks ([§8.2](#82-the-order)). A game no hour is found for stays owed until its old hour
+  passes.
+- After the cut-off, the card fees on the payments a call-off refunds are not returned by Stripe;
+  as the seller, **the club bears them** (Q44). The cancel dialog says which: before the cut-off
+  *every hold is let go and nobody pays a fee*; after it *everyone is refunded in full; the card
+  fees are not returned*.
 - Not possible once the game has started ◇.
-- An Instant club that sold the hour at its desk too cancels here with *double booking*.
+- Until Q121, an *Instant* club that sold the hour at its desk too cancelled here with *double
+  booking*; a club that sells a handed-over hour by mistake still does.
 - Raketa keeps count of a club's cancellations; frequent cancellations are a quality matter
   between Raketa and the club, not something players are shown ◇.
 
@@ -1300,17 +1366,20 @@ whether people come or not.
 
 ### 16.12 What the club is told
 
-On the website (badges on Bookings and Overview), and by **email** where marked ◇:
+On the website, and by **email** where marked ◇:
 
 | Event | Email |
 | --- | --- |
-| **A request is waiting for you** (On request), with the countdown, and that the shares are held when you accept and taken at the cut-off (Q113) | yes, at once |
 | A new booking | a daily summary |
 | A booking lost a player (Seat open) | no |
 | A game was called off at the cut-off — the hour is free again | yes, at once |
-| A game didn't go ahead — a player's payment didn't come in time after you accepted (Q112); before the cut-off, a player's card wasn't fixed in time (Q113) | yes, at once |
 | A payout was sent | yes |
 | Stripe needs something from you (account details, a dispute) | yes, at once |
+
+The website's badges on Bookings and Overview counted requests waiting for an answer, and the desk
+was emailed *A booking is waiting for your answer*, *… said no* / *… didn't answer in time*, and *A
+game didn't go ahead* after an Accept that waited on a payment (Q112, Q113). All of them went with
+*On request* (Q121); the cut-off email and the daily summary stay.
 
 ### 16.13 Official groups and administrators
 
@@ -1342,17 +1411,22 @@ On the website (badges on Bookings and Overview), and by **email** where marked 
 
 | Situation | What happens |
 | --- | --- |
-| The desk sold an hour Raketa had already booked (Instant) | The club cancels with *double booking*: every hold let go before the cut-off, a full refund after it; nobody's record; the players get a new card first. |
-| The club forgets to answer a request | It expires: nobody paid, *Called off · no answer*, the players get a new card first. |
-| A player's card is refused when the club accepts | *Accepted · waiting for one player's payment until …* (before the cut-off, *… one player's card until …*), the court held for 30 minutes at most; fixed or paid in time, it books without asking the club again; otherwise the club is emailed *A game didn't go ahead* and the hour is free again ([§16.8](#168-answering-a-request-on-request)). |
+| The desk sold an hour it had handed to Raketa, and Raketa had booked it | The club cancels with *double booking*. A free court of the same club, the same kind or indoor for an outdoor game, takes the game, and nothing changes but the court; otherwise every hold is let go before the cut-off, a full refund after it; nobody's record; the players get an owed card first ([§16.9](#169-cancelling-a-booking)). |
 | The club closes an hour that has cards on it but no booking | The cards move to another free court at that hour or disappear; nobody was charged. |
-| A court breaks on the day | **Move** the game to another free court; if there is none, **Cancel** with *repair*. |
+| A court breaks on the day | **Cancel** with *repair*: another free court of the same kind, or an indoor one for an outdoor game, takes the game, and the players are told *Game moved*. With none, the game is called off and its players get an owed card first. **Move** does the same by hand. |
+| It rains on an outdoor game | **Cancel** with *weather*: only a free indoor court takes it; with none, the game is called off (Q122). |
+| The club closes the whole hour (an event, a power cut) | **Cancel the game anyway**: the game is called off even when a court was free (Q122). |
 | The club changes a price after cards were dealt | The dealt cards and booked games keep their price. |
 | A player leaves after the cut-off and nobody replaces them | The game goes ahead short; every share was taken at the cut-off, so the club is paid in full. |
 | A game is still short at the cut-off | Called off; every hold is let go, so nobody paid and no fee arises; the hour is free again for the club. |
 | A player's bank disputes a payment | Handled on the club's Stripe account; the booking and the accepted terms are the evidence (no check-in since Q116). |
 | The club's Stripe account needs attention | New cards stop until it is fixed; booked games are unaffected. |
 | The club wants to stop | Pause, then disconnect once everything booked has been played and paid out. |
+
+Until Q121 this table also held *The club forgets to answer a request* (it expired: nobody paid,
+*Called off · no answer*, a new card first) and *A player's card is refused when the club accepts*
+(*Accepted · waiting for one player's payment until …*, the court held for at most 30 minutes).
+Both went with *On request*, and its *Instant* row became the handed-over hour sold by mistake.
 
 ### 16.17 The pages at a glance
 
@@ -1362,11 +1436,11 @@ The club website keeps its **top bar** (Q90):
 Top bar:  Overview · Bookings · Courts & prices · Money · Groups · Administrators   [Club name ▾]
                                                                                     ├ Details
                                                                                     └ Raketa settings
-Overview ........ setup checklist until live · then only what is waiting for your answer
-Bookings ........ by day · Accept / Refuse · Move · Cancel
+Overview ........ setup checklist until live · then "you're live" and today's Bookings
+Bookings ........ by day · Move · Cancel (moves the game when a court can take it)
 Courts & prices . courts · weekly hours · exceptions · price bands
 Money ........... per booking · payouts · link to the Stripe dashboard
-Raketa settings . way of working · cut-off · release · notice · confirm · pause
+Raketa settings . release · cut-off · other clubs' courts · pause
 Groups .......... official groups · Games figure · other clubs' courts
 Administrators .. unchanged
 Details ......... unchanged
@@ -1402,8 +1476,8 @@ after the cut-off), *Game called off · nothing was taken* (or *with the refund*
 cancel after the cut-off), *You've been refunded*, *Fix your card by 14:40 to keep your seat* and
 *Confirm your payment by 14:40 to keep your seat*; a leaver's own *You left the game* is emailed
 too — *nothing was taken* before the cut-off, the exact refund if their seat is taken after it
-([§13](#13-leaving-a-game), Q113). So are **the club's no and its silence** (Q105), though no money
-moves: while push is off, email is the only way to reach a player outside the app.
+([§13](#13-leaving-a-game), Q113). Until Q121 so were **the club's no and its silence** (Q105),
+though no money moved; they went with *On request*.
 
 **The take at the cut-off is quiet** (Q113): *Your 40 zł for Thu 19:00 was taken* is a row in the
 recent notices, counted on the bell like any notice but never pushed or bannered, and a receipt —
@@ -1425,8 +1499,9 @@ push.
 - **Your own act is never announced back to you.** The player whose yes filled a game sees *It's a
   game!* and gets no banner for it, and the bell doesn't count it; the row is still in their list.
   The same holds for a payment confirmed in the app that completes a game. Their only banner is
-  the one about money held or taken by someone else's act, such as *Kazimierz Padel confirmed
-  your game · 25 zł held*.
+  the one about money held or taken by someone else's act, such as *Your Tue 19:00 is booked ·
+  40 zł held* when another player's payment comes in (until Q121, also *Kazimierz Padel confirmed
+  your game · 25 zł held*).
 - **Home is read again whenever a notice arrives**, so the game is there when the notice is tapped.
 
 **Every ending and fall-back of a full game is told to everyone still in it** (Q104). A game that
@@ -1452,15 +1527,14 @@ screen**, and a **For fun** game is told none of them:
 | Notification | Setting |
 | --- | --- |
 | **It's a game! · 30 zł held** (*you paid 30 zł* after the cut-off) — or, after one payment was missing, *Your Tue 19:00 is booked · 40 zł held* | always on |
-| **It's a game! · Kazimierz Padel answers by 21:15** (On request; [§11](#11-the-moment-a-game-fills), Q103) | always on · not emailed |
-| **Waiting for one payment** — *It's a game! · waiting for one payment until 14:40*; at a club that confirms, *Your Fri 19:00 is waiting for one payment, until 21:20* ([§12.2](#122-when-a-game-fills), Q110) | always on · not emailed |
+| **Waiting for one payment** — *It's a game! · waiting for one payment until 14:40* ([§12.2](#122-when-a-game-fills), Q110) | always on · not emailed |
 | **Fix your card by 14:40 to keep your seat** — before the cut-off; and *Your time to fix your card ran out*, when it did (Q113) | always on |
 | **Confirm your payment by 14:40 to keep your seat** — after the cut-off; and *Your time to pay ran out*, when it did | always on |
-| **Game called off** (with the reason, and *nothing was taken*, the refund, or *nobody paid*) | always on · emailed with *nothing was taken* or a refund |
+| **Game called off** (with the reason, and *nothing was taken*, the refund, or *nobody paid*); after a club's cancel, also *We'll look for another game for you first*, as the email says, except to a leaver it refunds (Q123, *a call*) | always on · emailed with *nothing was taken* or a refund |
+| **Game moved** — after a move by cancel, *Bonarka Arena moved your game to Court 3 · Thu 19:00* / *Court 2 can't be played · Padel · indoor · nothing else changes*, the reason worded per the cancel's reason (*weather*, *repair*, *double booking*, *other*); after the club's own Move, the same title with *Padel · indoor · nothing else changes* ([§16.9](#169-cancelling-a-booking), Q122). Opens the booked game | always on · not emailed (*a call*) |
 | **Someone left your game**, or **it's filling again** | always on · not emailed |
 | **You've been refunded** (you left after the cut-off and your seat was taken: the exact sum and the fee kept on your payment) | always on |
-| **The club confirmed / said no / didn't answer in time** (On request) — *Kazimierz Padel said no* and *Kazimierz Padel didn't answer in time*, each with *Padel · Fri 19:00. Nobody paid — you'll get a new card first.* (Q105) | always on |
-| **Your new game** — *Your new game · Sat 10:00 at Bonarka Arena* / *The same players · 40 zł a share — say yes to book it.*, whenever a notice or email promised *you'll get a new card first* (the club said no, didn't answer, or cancelled), to the players it is dealt to (Q107) | always on · not emailed |
+| **Your new game** — *Your new game · Sat 10:00 at Bonarka Arena* / *The same players · 40 zł a share — say yes to book it.*, to the players an owed card is dealt to after a club's cancel called their game off (Q107, Q123); for a card at the same club and hour, the body names the kind: *The same players · outdoor · 40 zł a share — say yes to book it*. It opens the deck on the card, and goes only to a player whose deck shows it | always on · not emailed |
 | **A game you left** — called off by your empty seat, or cancelled by the club with your refund ([§13](#13-leaving-a-game), Q108) | always on · emailed only for the club's cancel |
 | **Your post didn't fill** | always on |
 | **Isn't here yet** · **They're at the club** · **How did it go?** · **Is that right?** · **Were they there?** — the game's own notices, above (Q120) | always on · not emailed (written in: none is about money or the club's answer) · never for For fun |
@@ -1469,6 +1543,12 @@ screen**, and a **For fun** game is told none of them:
 | **Fill in alerts** — a booked game you fit needs one more | off by default · at most 3 a day |
 
 No notification is ever sent for a single swipe.
+
+> **Amended 2026-10-12** (Q121–Q123, [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)).
+> Three kinds went with *On request*: *It's a game! · Kazimierz Padel answers by 21:15* (Q103), *The
+> club confirmed / said no / didn't answer in time* (Q105), and the *at a club that confirms* words of
+> *Waiting for one payment* (Q110). *Your new game* now follows only a club's cancel. *Game moved*
+> and the cancel notice's new line are new.
 
 ---
 
@@ -1493,8 +1573,10 @@ No notification is ever sent for a single swipe.
 | Time to pay | 30 minutes, after the cut-off; never past the last moment to book (the book-by) |
 | A refused rescuer keeps the seat | 30 minutes (to fix the card, or to pay), never past the game's start (a call, Q113) |
 | Recent notices | the newest 30 · the bell's number shows *99+* above 99 |
-| Book-by | release time (Only Raketa) or start − minimum notice |
-| Club defaults | release 3 days · cut-off 24 h · minimum notice 2 h · confirm 30 min · other clubs 10 km |
+| Book-by | the release time: the game's start − the release lead, so never later than a day before the game (Q121, a call) |
+| Club defaults | release lead 3 days (1–13) · cut-off 24 h · other clubs 10 km. The minimum notice (2 h) and the time to confirm (30 min) went with Q121 |
+| A court that absorbs a club's cancel | the same club, sport, day, hour and price; the same kind, or indoor for an outdoor game; indoor only for *weather*; the same kind first, then indoor, in the club's court order (Q122) |
+| An owed card's order | the same club, day and hour → for a player group, another club at the same day and hour, nearest first → the closest hour, home club first; first in each owed player's deck, soonest first (Q123) |
 | Player group reach | home club + 10 km |
 | Attendance tap window | from the hour's start to 30 minutes after it — the first half of a one-hour game (Q115) |
 | On time · Came late · Didn't come | an arrival within 10 minutes of the start · 10 to 30 minutes after it · none by 30 minutes after it |
@@ -1528,7 +1610,6 @@ No notification is ever sent for a single swipe.
 | You have no intent for the sport | Asked once, inline, the first time you open Games for it. |
 | Nobody in the group fits you | An empty deck with **Post a game**. |
 | A card is refused when the game fills | Nobody pays; your seat is yours alone for 30 minutes — time to fix the card before the cut-off, never past it or the book-by; time to pay after it, never past the book-by — and the others' holds stay; fix it or pay in time and the game books. Otherwise your seat is offered to others, you owe nothing, and you can still take it back while it is free ([§12.2](#122-when-a-game-fills)). |
-| A card is refused when an On request club accepts | The same, with the club's yes and its court kept; the desk isn't asked again if you fix it or pay in time ([§16.8](#168-answering-a-request-on-request)). |
 | A game fills far ahead of its cut-off | A seat whose hold wouldn't last until the cut-off is a card check at the fill, and its share is held four days before the cut-off; everyone is free to leave until the cut-off ([§12.2](#122-when-a-game-fills)). |
 | A card is refused at the holding time | The game stays booked; the player has 30 minutes to fix the card. Not fixed, their seat opens as a rescue, they owe nothing, and it counts as leaving before the cut-off on their record ([§12.2](#122-when-a-game-fills), a call). |
 | A holding still wouldn't last until the cut-off | Never expected: the share is taken at its last safe moment, and a leave before the cut-off after that is refunded in full ([§12.2](#122-when-a-game-fills), a call). |
@@ -1540,13 +1621,15 @@ No notification is ever sent for a single swipe.
 | A game is still short at the cut-off | Called off; every hold is let go, so nobody pays anything; the leavers had nothing taken. |
 | Someone leaves after the cut-off and nobody takes the seat | The game goes ahead short; it ends **Uncounted · a seat was empty**. |
 | A last-minute game | Its shares are taken the moment it fills; no free cancellation from the start; the card said so. |
-| An On request club refuses or does not answer | Nobody paid; the players are told *said no* or *didn't answer in time*, by notice and email; the same people are dealt a new card first, and told when it arrives. |
-| A player leaves, or a yes is taken back, while the club decides | The game goes back to filling and stays on the others' Home as *Seat open*. They are told it is filling again: a leaver by name, anything else never why. After its book-by it is called off instead. |
-| An Instant club double-sold the court | The club cancels; every hold let go before the cut-off, a full refund after it; a new card first; nobody's record. |
-| The club cancels a booked game | Called off; before the cut-off every hold is let go and nobody pays a fee, after it a full refund; nobody's record; a new card first. A leaver it refunds is told in a leaver's words, with no new card. |
+| A player leaves, or a yes is taken back, while the game waits for one payment | The game goes back to filling and stays on the others' Home as *Seat open*. They are told it is filling again: a leaver by name, anything else never why. |
+| The desk sold a handed-over hour by mistake | The club cancels with *double booking*, and the cancel is handled as below. |
+| The club cancels a booked game | A free court of the same club with the same sport, day, hour and price, of the same kind or indoor for an outdoor game (indoor only for *weather*), takes it: the game moves, every hold or payment stays, and everyone is told *Game moved* ([§16.9](#169-cancelling-a-booking), Q122). Otherwise, or with *Cancel the game anyway*, it is called off: before the cut-off every hold is let go and nobody pays a fee, after it a full refund; nobody's record; an owed card first. A leaver it refunds is told in a leaver's words, with no new card. |
+| The club moves your game by hand | Only to a free court of the same kind, or an indoor one for an outdoor game; you're told *Game moved* (Q122). |
+| You're owed a card | It is first in your group's deck whenever you open it, until you answer it or it's gone; two owed cards soonest first; no mark (Q123). |
+| A game less than a day away | No fresh card can make it: every book-by is at least a day before its game, and by default three (Q121, a call). Only a rescue of a booked game's seat fills that late. |
 | The club changes its prices | Only new cards carry the new price. |
 | You leave a group | Your yeses there are withdrawn. Your booked games stay. |
-| Somebody you blocked | Never on a card with you. Your yeses where they are In are taken back, until the club confirms. Your booked games stay. |
+| Somebody you blocked | Never on a card with you. Your yeses where they are In are taken back, until the game is booked. Your booked games stay. |
 | Someone isn't there at the start | In the first half of the game, anyone at the club taps *isn't here yet*; they are pushed at once. Arriving within 10 minutes records nothing; 10 to 30 minutes is *Came late* (−10) and the game plays on; no arrival by 30 minutes is *Didn't come* (−25), and the game takes no score ([§15.1](#151-attendance-at-the-court)). |
 | A tap from home, from 2 km away, after 30 minutes, or about yourself | Refused, in a plain sentence. |
 | The person tapped was on another court | Their own *I'm here* from the club lifts it at once; the tap cost its maker nothing. |
@@ -1559,6 +1642,12 @@ No notification is ever sent for a single swipe.
 | Two scores, different winners | Disputed: no Level moves, and each of the two who put a score up gets a *Results left in dispute* line, never points. |
 | A For fun game | Nobody is asked anything; it reads *Played*. |
 | Your reliability filter hides someone | Never on a card, a rescue or a post with you; a yes you gave before stands; a booked game never changes. A *New* player always passes ([§15.4](#154-the-record)). |
+
+Until Q121 this table also held *A card is refused when an On request club accepts* (the club's yes
+and its court kept while the card was fixed), *An On request club refuses or does not answer*
+(nobody paid; *said no* or *didn't answer in time*; a new card first) and *An Instant club
+double-sold the court*. All three went with *On request* and *Instant*: no club confirms a game,
+and a handed-over hour sold by mistake is cancelled as above.
 
 ---
 
@@ -1574,6 +1663,14 @@ No notification is ever sent for a single swipe.
   2026-10-06** with the flag itself ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 - The city-level pool (Explore). These mechanics are written for "a pool"; the city is a later
   pool, and distance matters again there.
+- **Raketa as the club's booking software**: the desk calendar, direct court bookings, season
+  bookings, blocks, prices per court, customers, coaches, leagues, benefit cards, fiscal printing,
+  staff roles, reports, importing from tenis4U, Playmore and kluby.org, and the business model. It
+  is the direction (Q121); its own grilling decides its shape.
+- **A link to a club's own booking system**, by deal or by reading its site. Decided against for
+  now (Q121): no Kraków system offers one, and tenis4U's terms forbid reading it.
+- **Indoor or outdoor as a player preference or filter.** Players see the kind; they don't choose
+  by it (Q122).
 
 ---
 
@@ -1980,3 +2077,6 @@ Aug–Sep 2026).
 | 118 | (2026-10-11, reverses §5.1's *no score, no weight and no toggle* and rule R-ENGINE-15; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-44.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §6) *Can a player keep away from unreliable partners?* **Yes, with an optional switch**, off by default: *Play only with players of at least High reliability* (or *at least Medium*). It is one more clause of the pair rule, in both directions, on *Picked for you*, *Challenges*, *Seat open* and Fill in; a *New* player passes every minimum. It acts from the moment it is switched on, or the moment someone drops below it; yeses already given stand (a call: the fill doesn't re-ask it, unlike a block), and booked games never change. The filtering player reads *Your filter hides 2 of the 11 players in your groups*; a hidden player reads, with nobody named, *Some players in your groups play only with High reliability or above. At 75 you're dealt with everyone again.* Members lists show points and band. Evidence: Playtomic's players ask for exactly this — *I've learnt to only book competitive matches with people whose reliability of their play level is more than 50%*, *falta poner una opción para … poner una fiabilidad mínima para entrar*, *why can't we … limit participation to those with a certain reliabilty rating?* — and Playtomic already refuses some matches with *The match requires a player reliability level of …*. |
 | 119 | (2026-10-11, amends Q6 and §15.2's *unchanged from today*, and ADR-0137's acceptance grace and two standing scores, reversing rules R-RESULT-6, R-RESULT-7 and R-RESULT-8; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-35.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §5) *How is a score settled?* **By one tap or by silence.** No score is taken before the hour. When the hour ends, all of a Competitive game's players are asked *How did it go?*, and the other side is asked *Is that right?* when a score goes up. One *That's right* settles it at once and closes the game, so in doubles the first agreement wins. Silence settles it 24 hours after the score, and costs nothing. Corrections end with the entry window, and Levels move within a minute of settling. Two scores naming the same winner count with the closer one; different winners end disputed, with no Level moved and a *Results left in dispute* line for both posters, never points. For fun asks nothing and reads *Played*. Calls made without a ruling: the closer score's tie, a For fun score standing at once, and Levels within a minute through the outbox and a one-minute catch-up job. Evidence: in the build *Is that right?* said silence cost nothing and then charged a year-long miss on *Answers about results*, and a different score at 22:00 wiped out a *That's right* at 20:35. Playtomic: *If one of the opposing team's players accepts the result, it will validate immediately*, results auto-confirm after 24 hours, and a friendly *will not affect your level*. Playmore freezes a disputed result until the club clears it, which Raketa doesn't do: nobody rules on a score. |
 | 120 | (2026-10-11, extends Q85, Q94 and §17.2; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-10.1 and F-RESULT-35.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §7) *Who is told about attendance and the score, and how?* Five new notices, always on — *Isn't here yet*, *They're at the club*, *How did it go?*, *Is that right?* and *Were they there?* — each opening the game's result screen, and never for a For fun game. **Push goes end to end on Android and iPhone**: a human follows a step-by-step ticket for the Expo project, Firebase and the Apple Developer Program at 99 USD a year (accepted by the product owner), and the app then switches push on. Every new notice being always on is a call. Evidence: a tap at the court is worth nothing if it reaches the absent player only when they next open the app; Playtomic documents one push after a match and none when the other team enters or confirms a score; Playtomic and Playmore both push through Firebase; and iOS is 32 % of Polish mobile web traffic. |
+| 121 | (2026-10-12, reverses Q1 and Q12, amends Q43's minimum notice and time to confirm, and ends On request's own rules — Q98, Q103's club half, Q104's and Q106's *asked again*, Q105, Q109's and Q112's club's yes, and Q113's *at an On request club's yes*; replaces PRD [#530](https://github.com/Raketa02/Raketa/issues/530)'s out-of-scope *live link to a club's own booking system — the Instant way, automated, later*; ruled by the product owner from story S-01E, [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776), F-REQUEST-3.1 and F-REQUEST-23.1, with F-REQUEST-44.1 and 45.1; specified by [#667](https://github.com/Raketa02/Raketa/issues/667); recorded by [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1) *Does a club choose how it works with Raketa?* **No: Only Raketa is the one way, until Raketa is the club's booking software.** *Instant* and *On request* are removed everywhere — the club website, the player app, the backend, the test console, the seed and these documents — with the choice, its setup step (five steps become four), the minimum notice and the time to confirm. **A full game books the moment its last yes lands, at every club**: requests, Accept and Refuse, *Waiting for the club*, *answers by*, *Waiting for you* and its badge, *Accepted · waiting for one player's payment*, *said no* and *didn't answer in time*, the request-timeout job, the three request notices and the desk's request emails go. A player whose card is refused at the fill keeps their time to fix the card, or to pay. **The book-by is always the release time**, so no game fills later than a day before its start, and by default three; rescues are unaffected, and only a club whose cut-off is longer than its release lead still deals a card past its cut-off. Raketa settings are the release lead, the cut-off, other clubs' courts and pause; the Overview, once live, says so and links to today's Bookings. *Double booking* stays as a cancel reason. **Raketa will become the club's booking software**: one calendar for the desk, the phone, walk-ins, season bookings, players' own bookings and the Games deck, its shape decided in its own grilling. **Calls made without a ruling** (ADR-0196 §7): the release lead keeps its 1–13 days (the alternative, a lead in hours down to 2 h, is a one-line change); the Overview once live; *double booking* stays; a clean cut, the local store reset and a migration dropping only what requests used; every seeded club Only Raketa, one with both kinds of court at the same hours. **Evidence:** Kazimierz Padel opens at 16:00, so a game that filled at 10:15 read *Kazimierz Padel answers by 11:15*, ran out, and was called off before the desk opened, and the desk had to watch the website all day. No court platform makes a club confirm a booking: Playtomic, MATCHi, Padel Mates, Eversports, ClubSpark, tenis4U, Playmore and kluby.org confirm at once, and Playmore's open games book the court when posted — *"Komplet graczy - gra potwierdzona, kort opłacony w całości"* ([Playmore](https://join.playmore.pl/gry-otwarte/)); the one exception, CourtReserve's opt-in approval, is used *"to … control guest bookings, or review certain membership types"* ([CourtReserve](https://help.courtreserve.com/en/articles/4299937-optional-approval-processes-in-courtreserve)). No competitor relies on a desk closing hours by hand, and every one effortless for the club has one calendar: Playtomic Manager takes *"incoming reservations seamlessly, both online and offline"* ([Playtomic](https://helpmanager.playtomic.com/hc/en-gb/articles/20535516949009)), and MATCHi rejects *"a slot that's already taken"* when Matchable writes to it ([MATCHi](https://matchi.zendesk.com/hc/en-gb/articles/27989311536029)). Kraków's tenis4U, Playmore and kluby.org publish no API, feed or calendar export; tenis4U's terms forbid software reading the site, *"do automatycznego lub ręcznego pobierania fragmentów lub całości strony"* ([tenis4U regulamin, §7](https://tenis4u.pl/regulamin/)), and its player app already carries *"Otwarte sparingi"* and *"Rezerwacje współdzielone"*. |
+| 122 | (2026-10-12, amends §16.4's *Move* and §16.9's cancel, which always called the game off; ruled by the product owner from story S-01E, [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776), F-REQUEST-22.1; specified by [#667](https://github.com/Raketa02/Raketa/issues/667); recorded by [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2 and §4) *Must a club's cancel throw the game away?* **No: a free court of the same club absorbs it when nothing about the game changes — a move by cancel.** Raketa first looks at the same club for a free court with the same sport, day, hour and price, of the same kind or indoor for an outdoor game, and indoor only for *weather*; the same kind first, then indoor, in the club's court order. The game moves there: every hold or taken share stays as it was, nothing is refunded or let go, nobody is owed a card or swipes anything, and every player is told *Game moved* — *Bonarka Arena moved your game to Court 3 · Thu 19:00* / *Court 2 can't be played · Padel · indoor · nothing else changes*. The cancel dialog previews it and offers *Cancel the game anyway*, and the cancel decides afresh when the club confirms. Otherwise the game is called off as before, and its players are owed a card (Q123). The club's own *Move* offers only the same kind, or indoor for an outdoor game, and tells the players with the same notice, *Padel · indoor · nothing else changes*. **Players see the kind of court**: a booked game always (*Court 3 · indoor*), and a card when every free court it could be booked on is of one kind; it is not a preference or a filter. A change of club, day, hour, price, or from indoor to outdoor is always a new card. **Calls made without a ruling** (ADR-0196 §7): the same price kept as a condition though price is per club and sport; the kind on a card only when certain; a weather cancel moves only indoors; the same kind before indoor; the preview and *Cancel the game anyway*; *Move* keeps the kind and tells the players; *Game moved* always on, opening the booked game, not emailed. **Evidence:** on Thursday at 15:00 the lights on Bonarka Arena's Court 2 failed; Court 3 was free at 19:00 at the same 160 zł, *Cancel* never offered it, and four 40 zł holds were let go. The club website's help said a court's indoor or outdoor was *shown on a player's card*, and nothing showed it. Playtomic picks an open match's court itself — *"the system automatically assigns courts as the match time approaches"* ([Playtomic](https://helpmanager.playtomic.com/hc/en-gb/articles/20534737902353)) — and cancels only if *"The court becomes unavailable at the club"* ([Playtomic](https://playerhelp.playtomic.com/hc/en-gb/articles/19831672824465)). |
+| 123 | (2026-10-12, amends Q107's source and §8.2's order, and lifts the build's rule *never at the club and hour that turned them down*, written for a refusal by [#543](https://github.com/Raketa02/Raketa/issues/543) and applied to a cancel by [#547](https://github.com/Raketa02/Raketa/issues/547); ruled by the product owner from story S-01E, [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776), F-REQUEST-22.1; specified by [#667](https://github.com/Raketa02/Raketa/issues/667); recorded by [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §3) *Which new card does a club's cancel owe, and where is it?* **The closest game to the lost one, first in the deck.** The **owed card** is chosen at (1) the same club, day and hour, on the other kind of court or at a new price; (2) for a player group only, another club at the same day and hour, nearest first; (3) the closest hour in time, the home club first. An official group stays at its home club unless its courts are full. The *never at this club and hour* rule goes entirely, because a refusal was its only other source. It is an ordinary card, its players free and fit, each of them swiping it; a game no hour is found for stays owed until its old hour passes. It is first in the group deck of each player it is owed to, whenever they open it, until they answer it or it is gone, soonest first among owed cards, with no mark for anybody; other members' decks are unaffected. The cancel notice gains *We'll look for another game for you first*, as the email already said; *Your new game* opens the deck on the card, and for a card at the same club and hour names the kind. **Calls made without a ruling** (ADR-0196 §7): the cancel notice's line; the rule lifted entirely, not only for a cancel; first for each player it is owed to, soonest first, unmarked even with push off; the card records the players it is owed to, and the deck orders by that. **Evidence:** after Bonarka's cancel, Marta's new card could never be Bonarka at Thursday 19:00, though the same hour there on another court was the closest game to the one she lost, and it landed eleventh of 33 in her deck, behind every card dealt to her before it, while the email promised *We'll look for another game for you first*. |

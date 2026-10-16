@@ -337,7 +337,6 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
         proposal_id: row.booking_id,
         open_seats: 0,
         booked: { booking_id: row.booking_id, game_id: GAME_ID },
-        waiting_for_the_club: false,
         your_payment: null,
       });
     });
@@ -476,19 +475,20 @@ describe('a You’re In row (A3.2, mock 13)', () => {
     );
   });
 
-  it('says waiting for the club while an On request club decides, and hides Withdraw', async () => {
-    const yes = yesInTheCrew({ status: 'WAITING_FOR_THE_CLUB', actions: ['LEAVE'], in_count: 4 });
+  it('hides Withdraw while the full game waits for one payment — Leave is on its details', async () => {
+    const yes = yesInTheCrew({ status: 'WAITING_FOR_A_PAYMENT', actions: ['LEAVE'], in_count: 4 });
     stubLiveYeses(transport, [yes]);
     await openFillIn();
 
-    expect(await screen.findByText(COPY.waitingForTheClub)).toBeTruthy();
+    expect(await screen.findByText('book by Thu 10:00')).toBeTruthy();
+    expect(screen.queryByText(/waiting for the club|answers by/)).toBeNull();
     await waitFor(() =>
       expect(transport.requestsTo('GET', proposalPath(yes.proposal_id)).length).toBeGreaterThan(0),
     );
     expect(screen.queryByRole('button', { name: COPY.withdraw })).toBeNull();
   });
 
-  it('offers no Withdraw until its game’s details say it may — a withdrawal while the club decides is a departure', async () => {
+  it('offers no Withdraw until its game’s details say it may — a withdrawal while a payment is awaited is a departure', async () => {
     const yes = liveYes({ pool_id: CREW.id });
     stubLiveYeses(transport, [yes]);
     transport.on('GET', proposalPath(yes.proposal_id), () => errorResponse(429, 'rate_limited'));

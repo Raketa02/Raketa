@@ -258,22 +258,16 @@ class EventRuntime:
             ),
         )
         # A leaver's yeses are withdrawn in the transaction that delivers the
-        # leaving, so this one needs the batch's session too — and a request a
-        # game of theirs waits on goes with them (#543).
+        # leaving, so this one needs the batch's session too — and their hold
+        # on a full game waiting for a payment goes with them (#625).
         subscribe_the_pool_leaver(
             dispatcher,
-            build_withdraw_a_leavers_yeses(
-                session, settings=get_settings(), runtime=self
-            ),
+            build_withdraw_a_leavers_yeses(session, runtime=self),
         )
         # A blocker's yeses where the blocked player is In are taken back in the
-        # transaction that delivers the block — and a request a waiting game of
-        # theirs had put to its club goes with them (`docs/adr/0193` §4).
+        # transaction that delivers the block (`docs/adr/0193` §4).
         subscribe_the_blocker(
-            dispatcher,
-            build_withdraw_a_blockers_yeses(
-                session, settings=get_settings(), runtime=self
-            ),
+            dispatcher, build_withdraw_a_blockers_yeses(session, runtime=self)
         )
         # A paused week comes back when a booked game stops being a player's —
         # and a yes that comes back as a game's last seat fills it, over this

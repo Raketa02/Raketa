@@ -46,7 +46,7 @@ export interface CourtBlockProps {
   readonly day: GameDay | undefined;
   readonly card: Pick<
     DeckCard,
-    'startsAt' | 'club' | 'courtName' | 'shareGrosze' | 'noFreeCancellation'
+    'startsAt' | 'club' | 'courtName' | 'indoor' | 'shareGrosze' | 'noFreeCancellation'
   >;
 }
 

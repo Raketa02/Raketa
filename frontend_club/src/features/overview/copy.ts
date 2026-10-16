@@ -1,7 +1,7 @@
 /**
  * **Overview's words**: the setup checklist until the club is live (the screens B2), with where
- * Stripe has the club's account, then once, *You're live*. What waits for the club's answer is
- * said in Bookings' words.
+ * Stripe has the club's account; then once, *You're live*, and after that, that the club is live
+ * on Raketa.
  */
 
 import type { PaymentsStatus, SetupStep, StepState } from './mappers';
@@ -21,11 +21,6 @@ const STEPS: Readonly<Record<SetupStep, StepWords>> = {
     title: 'Connect payments',
     explain: 'You are the seller: players pay your own Stripe account, and it pays you out.',
   },
-  WAY_OF_WORKING: {
-    title: 'Choose how you work with Raketa',
-    explain: 'Only Raketa, Instant or On request.',
-    action: 'Choose',
-  },
   COURTS: {
     title: 'Add your courts',
     explain: 'Each court with its sport, indoor or outdoor.',
@@ -39,17 +34,22 @@ const STEPS: Readonly<Record<SetupStep, StepWords>> = {
   },
   SETTINGS: {
     title: 'Check the settings',
-    explain: 'The cut-off, and the release lead or the minimum notice; then confirm them.',
+    explain: 'The release lead and the cut-off; then confirm them.',
     action: 'Check the settings',
-    locked: 'Once you choose how you work with Raketa.',
   },
 };
 
 export const OVERVIEW_COPY = {
   live: "You're live — your courts can now be booked through Raketa.",
+  /** Once the club is live, in the checklist's place (Q121). */
+  liveOnRaketa: {
+    title: 'Live on Raketa',
+    lead: 'Every game booked on your courts through Raketa is in Bookings, a day at a time.',
+    today: 'Today’s bookings',
+  },
   checklist: {
     title: 'Before your courts can be booked',
-    lead: "Your courts reach players' games once all five are done.",
+    lead: "Your courts reach players' games once all four are done.",
     /** The list, as a screen reader names it. */
     label: 'Setup checklist',
     states: {

@@ -1,18 +1,17 @@
-"""**The club's Raketa bookings**, on the club surface: **On request — the club
-confirms** (#543; the mechanics §16.8, §16.12, §16.14; the screens B2, B4), and
-**the club runs them** — a day of bookings, Move and Cancel (#547; the mechanics
-§16.7, §16.9; the screens B4, B6). The desk's Check in is removed (#651).
+"""**The club's Raketa bookings**, on the club surface: **the club runs them** —
+a day of bookings, Move and Cancel (#547; the mechanics §16.7, §16.9, §16.14;
+the screens B4, B6), the Cancel dialog's preview, and a cancel another court
+absorbs (#672). The desk's Check in is removed (#651), and so are On
+request's waiting list, Accept and Refuse (#669; ``docs/adr/0196`` §1): no club
+confirms a game.
 
 Mounted under ``/api/v1/club``, which only the club website consumes
-(``docs/adr/0187`` §5), and it takes a **club-audience** token: a desk answers
-its own club's requests. **Signed by this context** because the answer is the
-fill's — everybody charged together on the club's yes, the people dealt a new
-card on its no — and the fill is ``proposals``'.
+(``docs/adr/0187`` §5), and it takes a **club-audience** token: a desk runs its
+own club's bookings. **Signed by this context** because a cancel refunds and
+owes a new card, and every act on a game locks its proposal first.
 
 **What the club sees of a player is their Name, and whether they paid or their
-share is only held** (§16.14) — and on a request nobody has paid yet.
-Signed here for the bookings' acts too: a cancel refunds and owes a new card, and
-every act on a game locks its proposal first.
+share is only held** (§16.14).
 """
 
 from __future__ import annotations
@@ -22,7 +21,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, status
 from pydantic import BaseModel, Field
 
 from app.core.exception_handlers import ErrorResponse
@@ -34,31 +33,22 @@ from app.modules.proposals.application.club_bookings import (
     ClubDay,
 )
 from app.modules.proposals.application.club_money import ClubMoney, MoneyRow
-from app.modules.proposals.application.club_requests import (
-    REFUSAL_REASON_MAX,
-    Acceptance,
-    AcceptOutcome,
-    WaitingRequests,
-)
 from app.modules.proposals.domain.club_bookings import (
+    CancelOutcome,
     ClubFilter,
     ClubStatus,
     CourtToMoveTo,
-    called_off_for_the_club,
     price_of,
 )
 from app.modules.proposals.domain.deck import GAME_LENGTH
 from app.modules.proposals.domain.home import BookedGame, ClubCancelReason
-from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.presentation.dependencies import (
-    AcceptTheRequestDep,
     CancelTheGameDep,
     MoveTheGameDep,
+    PreviewTheCancelDep,
     ReadClubBookingsDep,
     ReadClubMoneyDep,
     ReadFreeCourtsDep,
-    ReadWaitingRequestsDep,
-    RefuseTheRequestDep,
 )
 
 router = APIRouter(prefix="/bookings", tags=["club"])
@@ -66,264 +56,24 @@ router = APIRouter(prefix="/bookings", tags=["club"])
 money_router = APIRouter(prefix="/money", tags=["club"])
 
 
-# The five reasons a booking of the club's can come to, as its desk reads them.
-# The players' reasons for a game gone back to filling (``BOOK_BY_PASSED``,
-# ``COURT_HOUR_LOST``, #624) are never the club's — such a game is on no page
-# of its — so the club's document keeps the players' enum's name and its own
-# values, and says nothing of them.
+# The two reasons a booking of the club's can come to, as its desk reads them.
+# The players' reasons for a game that never booked (``BOOK_BY_PASSED``,
+# ``COURT_HOUR_LOST``, ``PAYMENT_NOT_IN_TIME``, #625) are never the club's — such
+# a game is on no page of its — so the club's document keeps the players'
+# enum's name and its own values, and says nothing of them.
 class CalledOffReason(StrEnum):
     """Why a game will not be played (the mechanics §14.1, §16.7)."""
 
-    REFUSED = "REFUSED"
-    NO_ANSWER = "NO_ANSWER"
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
-    #: You said yes, and a player's payment did not come in time (#626).
-    PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
 
 
 def _reason_for_the_club(game: BookedGame, *, read_at: Instant) -> CalledOffReason:
     reason = invariant(
-        called_off_for_the_club(game, now=read_at),
+        game.called_off_reason(read_at),
         f"{game.booking_id} is called off for the club with no reason",
     )
     return CalledOffReason(reason.value)
-
-
-class WaitingPlayerSchema(BaseModel):
-    player_id: UUID
-    name: str | None = Field(
-        description=(
-            "Their Name, whole. `null` for an account that can no longer be named."
-        )
-    )
-
-
-class WaitingBookingSchema(BaseModel):
-    """A full game asking for a court — **Waiting for you**."""
-
-    booking_id: UUID
-    sport: Sport
-    kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
-    starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
-    ends_at: datetime
-    court_name: str = Field(
-        description=(
-            "The court reserved for the game while you decide — given to the "
-            "players with your yes."
-        )
-    )
-    players: list[WaitingPlayerSchema] = Field(
-        description="Everybody on the game. Nobody has paid yet."
-    )
-    price_grosze: int = Field(description="The court's price for the hour.")
-    share_grosze: int = Field(description="Each player's share of it.")
-    answer_by: datetime = Field(
-        description=(
-            "When your time to confirm runs out — the countdown. Past it the "
-            "request is called off as unanswered: nobody pays and the hour is "
-            "yours to sell again."
-        )
-    )
-
-
-class WaitingBookingsResponse(BaseModel):
-    """Everything waiting for the club's answer — the Overview's *waiting for
-    your answer*, the Bookings page's *Waiting for you*, and its badge."""
-
-    read_at: datetime = Field(
-        description="The instant the list was read at — what each countdown runs from."
-    )
-    bookings: list[WaitingBookingSchema] = Field(
-        description="The one due first, first. Empty: *Nothing is waiting for you.*"
-    )
-
-    @classmethod
-    def from_waiting(cls, waiting: WaitingRequests) -> "WaitingBookingsResponse":
-        return cls(
-            read_at=waiting.read_at,
-            bookings=[
-                WaitingBookingSchema(
-                    booking_id=request.booking_id,
-                    sport=request.sport,
-                    kind=request.kind,
-                    starts_at=request.start,
-                    ends_at=request.start + GAME_LENGTH,
-                    court_name=request.court_name,
-                    players=[
-                        WaitingPlayerSchema(
-                            player_id=player, name=waiting.names.get(player)
-                        )
-                        for player in request.players
-                    ],
-                    price_grosze=request.price_grosze,
-                    share_grosze=request.share_grosze,
-                    answer_by=request.answer_by,
-                )
-                for request in waiting.requests
-            ],
-        )
-
-
-_TIME_TO = (
-    "What the player's time to `payment_due_by` is for (#638; Q113). "
-    "`FIX_THE_CARD` — you accepted **before your cut-off**, where every share "
-    "is only held, so it is their time to fix their card: *Accepted · waiting "
-    "for one player's card until 21:20*, never past your cut-off; a lapse "
-    "emails you *A player's card wasn't fixed in time*. `PAY` — you accepted "
-    "after it, where the shares are taken at once: *Accepted · waiting for "
-    "one player's payment until 21:20*. `null` with `payment_due_by`."
-)
-
-
-class AcceptanceResponse(BaseModel):
-    outcome: AcceptOutcome = Field(
-        description=(
-            "`BOOKED` — every share is held, and taken at your cut-off (or "
-            "taken now, after it — #637); the game is booked on `court_name` and "
-            "the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one "
-            "player's payment did not go through (#626): **your yes and the "
-            "court are kept** until `payment_due_by` while they pay. Nobody has "
-            "paid yet; when they do, it is booked and you are not asked again, "
-            "and if they don't, it is called off and you are emailed *A game "
-            "didn't go ahead*. `CALLED_OFF` — a player's payment did not go "
-            "through and the game's last moment to book had come, so there was "
-            "no time to pay: called off, nobody paid, and the hour is yours to "
-            "sell again. `SEAT_OPENED` — a player could no longer be on the "
-            "game: **nobody paid**, the request is off and the game is looking "
-            "for a player again; you are asked again when it is full."
-        )
-    )
-    court_name: str | None = Field(
-        description="The court the players were given — on a booked game only."
-    )
-    payment_due_by: datetime | None = Field(
-        default=None,
-        description=(
-            "When the player's payment is due — *Accepted · waiting for one "
-            "player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` "
-            "only."
-        ),
-    )
-    time_to: TimeTo | None = Field(
-        default=None,
-        description=_TIME_TO,
-    )
-
-    @classmethod
-    def from_acceptance(cls, acceptance: Acceptance) -> "AcceptanceResponse":
-        return cls(
-            outcome=acceptance.outcome,
-            court_name=acceptance.court_name,
-            payment_due_by=acceptance.pay_by,
-            time_to=acceptance.time_to,
-        )
-
-
-class RefusalRequest(BaseModel):
-    reason: str | None = Field(
-        default=None,
-        max_length=REFUSAL_REASON_MAX,
-        description=(
-            "Why, for your own records — **never shown to the players**, who "
-            "read *Called off · refused*. Blank is no reason."
-        ),
-    )
-
-
-_NOT_FOUND: dict[int | str, dict[str, Any]] = {
-    status.HTTP_404_NOT_FOUND: {
-        "model": ErrorResponse,
-        "description": "`booking_not_found` — no such booking at this club.",
-    }
-}
-
-_NOT_WAITING = (
-    "`request_not_waiting` — the game is not waiting for your answer: you "
-    "already answered, a player left and it is looking for a player again, or "
-    "it was called off as unanswered. `request_timed_out` — your time to "
-    "confirm ran out: it is called off as unanswered. Nothing was recorded."
-)
-
-
-@router.get(
-    "/waiting",
-    response_model=WaitingBookingsResponse,
-    status_code=status.HTTP_200_OK,
-    summary="What is waiting for your answer",
-    description=(
-        "Every Raketa game at this club waiting for its answer — an **On "
-        "request** club's full games, each asking for a court — with the "
-        "players, the hour, the sport, the price and the countdown. Nobody has "
-        "paid. A request whose time to confirm has run out is not listed."
-    ),
-)
-async def waiting(
-    account: CurrentClubAccountDep, read: ReadWaitingRequestsDep
-) -> WaitingBookingsResponse:
-    return WaitingBookingsResponse.from_waiting(await read.execute(account.club_id))
-
-
-@router.post(
-    "/{booking_id}/acceptance",
-    response_model=AcceptanceResponse,
-    status_code=status.HTTP_200_OK,
-    responses={
-        **_NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"model": ErrorResponse, "description": _NOT_WAITING},
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "model": ErrorResponse,
-            "description": (
-                "`payments_unavailable` — the payment provider could not be "
-                "reached to charge the players. Nothing was recorded; retry."
-            ),
-        },
-    },
-    summary="Accept a request",
-    description=(
-        "**Accept** books the game: every share is held at this moment, all "
-        "together or not at all, on your account — you are the seller — and "
-        "taken at your cut-off, or at once when you accept after it (#637); the "
-        "players are given the court that was reserved for them. Their game and "
-        "its chat open; *It's a game! · 30 zł held* (*you paid* after the "
-        "cut-off) is emailed to each."
-    ),
-)
-async def accept(
-    booking_id: UUID, account: CurrentClubAccountDep, accept: AcceptTheRequestDep
-) -> AcceptanceResponse:
-    return AcceptanceResponse.from_acceptance(
-        await accept.execute(club_id=account.club_id, booking_id=booking_id)
-    )
-
-
-@router.post(
-    "/{booking_id}/refusal",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-    responses={
-        **_NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"model": ErrorResponse, "description": _NOT_WAITING},
-    },
-    summary="Refuse a request",
-    description=(
-        "**Refuse**, with a note for your own records if you like: nobody paid, "
-        "the hour is yours to sell again, and the players read *Called off · "
-        "refused* and are dealt a new card first — never this court hour again."
-    ),
-)
-async def refuse(
-    booking_id: UUID,
-    account: CurrentClubAccountDep,
-    refuse: RefuseTheRequestDep,
-    payload: RefusalRequest | None = None,
-) -> Response:
-    await refuse.execute(
-        club_id=account.club_id,
-        booking_id=booking_id,
-        reason=None if payload is None else payload.reason,
-    )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --------------------------------------------------------------------------- #
@@ -387,7 +137,6 @@ class ClubCountsSchema(BaseModel):
     """How many of the day's bookings each filter shows."""
 
     all: int
-    waiting_for_you: int
     seat_open: int
     called_off: int
 
@@ -398,26 +147,22 @@ class ClubBookingSchema(BaseModel):
     booking_id: UUID
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     ends_at: datetime
-    court_name: str = Field(
-        description=(
-            "The court it is on — reserved for it, while it waits for your answer."
-        )
+    court_name: str = Field(description="The court it is on.")
+    indoor: bool = Field(
+        description="The court's kind — *Court 3 · indoor* — as the players see it."
     )
     sport: Sport
     kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
     status: ClubStatus = Field(
         description=(
-            "`WAITING_FOR_YOU` — an On request game asking for the court: Accept "
-            "or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` — you "
-            "accepted, and one player's payment is still to come until "
-            "`payment_due_by` (#626): *Accepted · waiting for one player's "
-            "payment until 21:20*. Your yes and the court are kept; nothing for "
-            "you to answer. `BOOKED` — full; each share held until your cut-off "
-            "and taken at it (#637). `SEAT_OPEN` — "
+            "`BOOKED` — full; each share held until your cut-off and taken at "
+            "it (#637). `SEAT_OPEN` — "
             "a player left and Raketa is finding a replacement; before the "
             "cut-off, a seat still open at it calls the game off and the court "
             "comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody "
-            "was refunded or nobody paid, and the hour is free again. `PLAYED` — "
+            "was refunded or nobody paid, and the hour is free again — but the "
+            "court you cancelled stays closed for it, an exception you remove to "
+            "sell it again (#673). `PLAYED` — "
             "the hour has passed; you are paid whatever happened on the court."
         )
     )
@@ -425,12 +170,7 @@ class ClubBookingSchema(BaseModel):
         description=(
             "Why a `CALLED_OFF` game will not be played — `null` otherwise. "
             "`SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. "
-            "`CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). "
-            "`REFUSED` — you refused the request. `NO_ANSWER` — it was not "
-            "answered in time. `PAYMENT_NOT_IN_TIME` — you accepted, and a "
-            "player's payment didn't come in time: nobody paid, and you were "
-            "emailed *A game didn't go ahead*. Full again, the game asks you "
-            "again as a new request."
+            "`CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`)."
         )
     )
     cancel_reason: ClubCancelReason | None = Field(
@@ -444,16 +184,6 @@ class ClubBookingSchema(BaseModel):
     booked_from: BookedFromSchema | None = Field(
         description="The group it came from — `null` for a group that is gone."
     )
-    answer_by: datetime | None = Field(
-        description="Your countdown, while it waits for your answer — else `null`."
-    )
-    payment_due_by: datetime | None = Field(
-        description=(
-            "When the player's payment your yes waits on is due — "
-            "`WAITING_FOR_A_PAYMENT` only, else `null`. Never who."
-        )
-    )
-    time_to: TimeTo | None = Field(description=_TIME_TO)
     may_move_or_cancel: bool = Field(
         description=(
             "**Move** and **Cancel** are yours: booked or with a seat open, and "
@@ -469,6 +199,7 @@ class ClubBookingSchema(BaseModel):
             starts_at=game.start,
             ends_at=game.start + GAME_LENGTH,
             court_name=game.court_name,
+            indoor=game.indoor,
             sport=game.sport,
             kind=game.kind,
             status=row.status,
@@ -502,15 +233,6 @@ class ClubBookingSchema(BaseModel):
                     official=row.booked_from.official,
                 )
             ),
-            answer_by=(
-                game.answer_by if row.status is ClubStatus.WAITING_FOR_YOU else None
-            ),
-            payment_due_by=(
-                game.pay_by if row.status is ClubStatus.WAITING_FOR_A_PAYMENT else None
-            ),
-            time_to=(
-                game.time_to if row.status is ClubStatus.WAITING_FOR_A_PAYMENT else None
-            ),
             may_move_or_cancel=row.still_to_be_played,
         )
 
@@ -536,7 +258,6 @@ class ClubBookingsResponse(BaseModel):
             filter=day.chosen,
             counts=ClubCountsSchema(
                 all=day.counts[ClubFilter.ALL],
-                waiting_for_you=day.counts[ClubFilter.WAITING_FOR_YOU],
                 seat_open=day.counts[ClubFilter.SEAT_OPEN],
                 called_off=day.counts[ClubFilter.CALLED_OFF],
             ),
@@ -547,18 +268,21 @@ class ClubBookingsResponse(BaseModel):
 class CourtToMoveToSchema(BaseModel):
     court_id: UUID
     name: str
+    indoor: bool = Field(description="Its kind — *Court 3 · indoor*.")
 
     @classmethod
     def of(cls, court: CourtToMoveTo) -> "CourtToMoveToSchema":
-        return cls(court_id=court.court_id, name=court.name)
+        return cls(court_id=court.court_id, name=court.name, indoor=court.indoor)
 
 
 class FreeCourtsResponse(BaseModel):
     courts: list[CourtToMoveToSchema] = Field(
         description=(
             "Every other court of the game's sport you still have for Raketa at "
-            "its hour, in your own order. Empty: there is none — **Cancel** with "
-            "*repair* if the court cannot be played."
+            "its hour **that keeps the game's kind** — the same kind, or an "
+            "indoor court for an outdoor game, never outdoors from indoors — in "
+            "your own order, each with its kind. Empty: there is none — "
+            "**Cancel** with *repair* if the court cannot be played."
         )
     )
 
@@ -571,13 +295,62 @@ class CancelRequest(BaseModel):
     reason: ClubCancelReason = Field(
         description=(
             "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the "
-            "players with what comes of their money."
+            "players with what comes of their money, or, when another of your "
+            "courts takes the game, as why the court it left can't be played."
         )
+    )
+    anyway: bool = Field(
+        default=False,
+        description=(
+            "**Cancel the game anyway** — for a club closing the whole hour (an "
+            "event, a power cut): the game is called off even when another "
+            "court would take it."
+        ),
     )
 
 
+class CancelOutcomeKind(StrEnum):
+    """What a cancel came to — or, in its preview, would come to (#672)."""
+
+    #: Another of the club's courts took the game: *This game moves to Court 3
+    #: · indoor · the players are told, nobody is refunded*.
+    MOVED = "MOVED"
+    #: The game is called off.
+    CALLED_OFF = "CALLED_OFF"
+
+
+class CancelOutcomeSchema(BaseModel):
+    outcome: CancelOutcomeKind = Field(
+        description=(
+            "`MOVED` — a free court of yours at the game's hour, sold at its "
+            "price, of its kind or indoor for an outdoor game (indoor only for "
+            "`WEATHER`), takes the game: every hold or payment stays as it is, "
+            "nobody is refunded, and the players are told *Game moved*. "
+            "`CALLED_OFF` — the game is off, the money as the cancel says."
+        )
+    )
+    court: CourtToMoveToSchema | None = Field(
+        description="The court the game moves to, and its kind; `null` when called off."
+    )
+
+    @classmethod
+    def of(cls, outcome: CancelOutcome) -> "CancelOutcomeSchema":
+        if outcome.moved_to is None:
+            return cls(outcome=CancelOutcomeKind.CALLED_OFF, court=None)
+        return cls(
+            outcome=CancelOutcomeKind.MOVED,
+            court=CourtToMoveToSchema.of(outcome.moved_to),
+        )
+
+
+_NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    status.HTTP_404_NOT_FOUND: {
+        "model": ErrorResponse,
+        "description": "`booking_not_found` — no such booking at this club.",
+    }
+}
+
 _NOT_TO_BE_PLAYED = (
-    "`booking_not_booked` — it is waiting for your answer: accept or refuse it. "
     "`booking_is_called_off` — it is off already. `game_has_started` — its hour "
     "has begun. Nothing was recorded."
 )
@@ -593,8 +366,7 @@ _NOT_TO_BE_PLAYED = (
         "Bookings page — each with its status, its players (name, *paid*, "
         "*held*), its money (the court's price, collected, refunded) and the "
         "group it came from. `filter` narrows the list; `counts` are the "
-        "whole day's. A request a player's leaving took back is not listed: "
-        "it comes back when the game is full and asks again."
+        "whole day's."
     ),
 )
 async def bookings_on_a_day(
@@ -641,17 +413,19 @@ async def free_courts(
             "model": ErrorResponse,
             "description": (
                 f"{_NOT_TO_BE_PLAYED} `court_not_free` — that court is not a free "
-                "court of the game's sport at its hour. `court_just_taken` — "
-                "another game took it a moment ago; read the free courts again."
+                "court of the game's sport at its hour, or is outdoors for an "
+                "indoor game. `court_just_taken` — another game took it a moment "
+                "ago; read the free courts again."
             ),
         },
     },
     summary="Move a game to another court",
     description=(
         "**Move** a booked game — whole or with a seat open — onto another free "
-        "court of its sport at the same hour, until it starts. The players read "
-        "the new number; nothing else about the game changes. Answers the court "
-        "it is on now."
+        "court of its sport at the same hour, of the same kind or indoor for an "
+        "outdoor game, until it starts. The players read the new number and "
+        "its kind, and are told *Game moved*; nothing else about the game "
+        "changes. Answers the court it is on now."
     ),
 )
 async def move(
@@ -667,10 +441,10 @@ async def move(
     )
 
 
-@router.post(
-    "/{booking_id}/cancellation",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
+@router.get(
+    "/{booking_id}/cancellation/preview",
+    response_model=CancelOutcomeSchema,
+    status_code=status.HTTP_200_OK,
     responses={
         **_NOT_FOUND,
         status.HTTP_409_CONFLICT: {
@@ -678,16 +452,66 @@ async def move(
             "description": _NOT_TO_BE_PLAYED,
         },
     },
+    summary="What a cancel would do",
+    description=(
+        "The Cancel dialog: what cancelling with this `reason` would do now — "
+        "**move the game** to another of your courts at its hour (`MOVED`, "
+        "with the court and its kind), or **call it off** (`CALLED_OFF`). A "
+        "court takes the game when it is free at the game's hour, sold at the "
+        "game's price, and of the same kind or indoor for an outdoor game — "
+        "indoor only for `WEATHER`, since an outdoor court at the same hour is "
+        "rained on too; the same kind first, then indoor, in your own order. "
+        "When it would move, offer **Cancel the game anyway**. The cancel "
+        "itself decides afresh."
+    ),
+)
+async def cancellation_preview(
+    booking_id: UUID,
+    account: CurrentClubAccountDep,
+    read: PreviewTheCancelDep,
+    reason: ClubCancelReason = Query(description="The reason the desk chose."),
+) -> CancelOutcomeSchema:
+    return CancelOutcomeSchema.of(
+        await read.execute(
+            club_id=account.club_id, booking_id=booking_id, because=reason
+        )
+    )
+
+
+@router.post(
+    "/{booking_id}/cancellation",
+    response_model=CancelOutcomeSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        **_NOT_FOUND,
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                f"{_NOT_TO_BE_PLAYED} `court_just_taken` — the court that would "
+                "have taken the game went to another game a moment ago; cancel "
+                "again and it decides afresh."
+            ),
+        },
+    },
     summary="Cancel a game",
     description=(
-        "**Cancel** a booked game, with your reason, until it starts. **Before "
-        "your cut-off** every share is only held, and every hold is let go: "
-        "nothing was taken, nobody is refunded and nobody pays a fee, you "
-        "included (#637). **After it** everybody is **refunded in full** — the "
-        "card fees on those payments are not returned, and as the seller you "
-        "bear them. Either way it goes on **nobody's record**, the hour is "
-        "yours to sell again, and the players are told you cancelled, with the "
-        "reason, and dealt a new game first."
+        "**Cancel** a booked game, with your reason, until it starts. **First, "
+        "another of your courts takes it when one can** — free at the game's "
+        "hour, sold at its price, of its kind or indoor for an outdoor game, "
+        "indoor only for `WEATHER` — read afresh now, whatever the preview "
+        "said: the game **moves** there, every hold or payment stays exactly as "
+        "it is, nobody is refunded, nobody is owed a new game, and the players "
+        "are told *Game moved* with why the court they left can't be played. "
+        "**Otherwise, or with `anyway`, the game is called off**: **before your "
+        "cut-off** every share is only held, and every hold is let go — nothing "
+        "was taken, nobody is refunded and nobody pays a fee, you included "
+        "(#637); **after it** everybody is **refunded in full** — the card fees "
+        "on those payments are not returned, and as the seller you bear them. "
+        "Either way it goes on **nobody's record**, and the players are told "
+        "you cancelled, with the reason, and dealt a new game first. **Moved or "
+        "called off, the court the game was on is closed for that hour** — it "
+        "can't be played then — as an exception on your list, worded by the "
+        "reason; remove it to sell the court again. Answers which it was."
     ),
 )
 async def cancel(
@@ -695,11 +519,15 @@ async def cancel(
     payload: CancelRequest,
     account: CurrentClubAccountDep,
     cancel: CancelTheGameDep,
-) -> Response:
-    await cancel.execute(
-        club_id=account.club_id, booking_id=booking_id, because=payload.reason
+) -> CancelOutcomeSchema:
+    return CancelOutcomeSchema.of(
+        await cancel.execute(
+            club_id=account.club_id,
+            booking_id=booking_id,
+            because=payload.reason,
+            anyway=payload.anyway,
+        )
     )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --------------------------------------------------------------------------- #

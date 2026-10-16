@@ -86,10 +86,10 @@ def clock(app, payments):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant: padel at 160 zł — 40 zł a seat — and a 24-hour
+    """Bonarka Arena: padel at 160 zł — 40 zł a seat — and a 24-hour
     cut-off."""
 
-    return await a_club_and_its_desk(client, way="INSTANT", padel_grosze=160_00)
+    return await a_club_and_its_desk(client, padel_grosze=160_00)
 
 
 @pytest.fixture
@@ -523,7 +523,9 @@ async def test_a_club_cancel_while_his_card_is_to_fix_leaves_nothing_to_run_out(
         json={"reason": "WEATHER"},
         headers=club[1],
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     await mailbox.drain()
 
     assert await to_confirm(client, four["ivan"]) == []
@@ -545,7 +547,9 @@ async def test_a_club_cancel_of_a_checked_share_says_nothing_was_held(
         json={"reason": "WEATHER"},
         headers=club[1],
     )
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     await mailbox.drain()
 
     [ivan_s] = [

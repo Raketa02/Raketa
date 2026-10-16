@@ -125,7 +125,6 @@ const taken = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
   proposal_id: card.proposal_id,
   open_seats: 0,
   booked: { booking_id: card.proposal_id, game_id: GAME_ID },
-  waiting_for_the_club: false,
   your_payment: null,
 });
 
@@ -158,6 +157,8 @@ function rescueDetails(card: Wire['DeckCardSchema']): Wire['BookingDetailsRespon
     ends_at: '2026-10-03T15:00:00Z',
     where: { id: card.club.id, name: card.club.name, distance_km: 3.1 },
     court_name: 'Court 6',
+    // The booked court's kind is the card's: a rescue whose card names none shows none (#677).
+    indoor: card.indoor,
     sides: {
       yours: card.sides.yours.map(bookedTile),
       theirs: card.sides.theirs.map(bookedTile),
@@ -482,7 +483,6 @@ describe('a rescuer whose card is refused keeps the seat for 30 minutes (#640, #
     proposal_id: card.proposal_id,
     open_seats: 1,
     booked: null,
-    waiting_for_the_club: false,
     your_payment: {
       seat_charge_id: SEAT_CHARGE,
       refusal: 'AUTHENTICATION_REQUIRED',

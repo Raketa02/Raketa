@@ -18,6 +18,7 @@ import pytest
 
 from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
+from app.application.ports.events import EventDecodingError
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.clubs.application.event_subscriptions import register_club_events
 from app.modules.clubs.domain.club_courts_events import (
@@ -33,7 +34,6 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
-    WayOfWorkingChosen,
 )
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
@@ -178,13 +178,10 @@ COURT_EVENTS = [
     PricesSet(
         club_id=CLUB, sport="TENNIS", price_grosze=None, bands=(), occurred_at=NOW
     ),
-    WayOfWorkingChosen(club_id=CLUB, way="ON_REQUEST", occurred_at=NOW),
     RaketaSettingsChanged(
         club_id=CLUB,
         release_lead_days=3,
         cut_off_hours=24,
-        minimum_notice_hours=2,
-        time_to_confirm_minutes=30,
         other_clubs_courts=True,
         other_clubs_within_km=15,
         occurred_at=NOW,
@@ -212,7 +209,7 @@ def test_a_club_courts_event_decodes_back_into_the_event_that_was_appended(event
     assert decoded == event
 
 
-def test_the_club_courts_events_are_filed_in_the_clubs_namespace_at_version_one():
+def test_the_club_courts_events_are_filed_in_the_clubs_namespace():
     encoded = [_codec().encode(event) for event in COURT_EVENTS]
 
     assert [(row.event_type, row.schema_version) for row in encoded] == [
@@ -227,8 +224,56 @@ def test_the_club_courts_events_are_filed_in_the_clubs_namespace_at_version_one(
         ("clubs.exception_removed", 1),
         ("clubs.prices_set", 1),
         ("clubs.prices_set", 1),
-        ("clubs.way_of_working_chosen", 1),
-        ("clubs.raketa_settings_changed", 1),
+        # Version 2 since the minimum notice and the time to confirm went (#670).
+        ("clubs.raketa_settings_changed", 2),
         ("clubs.raketa_paused", 1),
         ("clubs.raketa_resumed", 1),
     ]
+
+
+def test_the_way_of_working_has_no_reader_any_more():
+    """Only Raketa is the one way (#670; ``docs/adr/0196`` §1): the choice went
+    with Instant and On request, and its name is given no class to answer to —
+    the local store is reset with the removal."""
+
+    with pytest.raises(EventDecodingError):
+        _codec().decode(
+            SerializedEventEnvelope(
+                id=uuid4(),
+                event_type="clubs.way_of_working_chosen",
+                schema_version=1,
+                payload={
+                    "club_id": str(CLUB),
+                    "way": "INSTANT",
+                    "occurred_at": NOW.isoformat(),
+                },
+                occurred_at=NOW,
+            )
+        )
+
+
+def test_settings_saved_under_version_1_are_refused_rather_than_misread():
+    """Version 1 carried the minimum notice and the time to confirm, and *We
+    check players in* before them. It is deliberately unreadable: nothing ran
+    anywhere but ``local``, whose store is reset with the removal."""
+
+    with pytest.raises(EventDecodingError):
+        _codec().decode(
+            SerializedEventEnvelope(
+                id=uuid4(),
+                event_type="clubs.raketa_settings_changed",
+                schema_version=1,
+                payload={
+                    "club_id": str(CLUB),
+                    "release_lead_days": 3,
+                    "cut_off_hours": 24,
+                    "minimum_notice_hours": 2,
+                    "time_to_confirm_minutes": 30,
+                    "other_clubs_courts": False,
+                    "other_clubs_within_km": 10,
+                    "check_in": None,
+                    "occurred_at": NOW.isoformat(),
+                },
+                occurred_at=NOW,
+            )
+        )

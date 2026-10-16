@@ -7,6 +7,24 @@ to (``.claude/rules/domain-events.md``).
 ``docs/adr/0195`` §9): nothing writes it, and it stays registered — decode-only,
 logged like the rest if a stored row is ever delivered — so a stored row still
 decodes, and the Booking's fold reads it and changes nothing.
+
+**On request's seven names are unregistered** with On request (#669;
+``docs/adr/0196`` §1): ``bookings.requested``, ``bookings.accepted``,
+``bookings.refused``, ``bookings.timed_out``, ``bookings.request_withdrawn``,
+``bookings.awaiting_a_payment`` and ``bookings.payment_not_in_time``. The local
+store is reset with the removal and only ``local`` has ever run, so a class
+kept only so an old row decodes would be a reader for a fact nothing reads.
+
+**``bookings.confirmed`` and ``bookings.court_moved`` are at version 2** (#671;
+Q122): each gained the court's kind, ``indoor``, a required fact on the wire —
+a change to the shape, versioned as one. Version 1 of each is not registered:
+the store is reset with the change, so a stored row of it is a decoding error,
+and no row of version 2 ever named a court without its kind.
+
+**``bookings.court_moved`` version 2 gained two defaulted facts** (#672): the
+club's cancel a move took the place of (``reason``) and the court it left
+(``moved_from``). Defaulted, so the version stays and a move recorded before
+reads as the club's own — the way ``notifications.notice_given`` grows.
 """
 
 from __future__ import annotations
@@ -17,12 +35,7 @@ from app.modules.bookings.application.handlers import (
     LogNewBookingsSummary,
 )
 from app.modules.bookings.domain.events import (
-    BookingAccepted,
-    BookingAwaitingAPayment,
     BookingConfirmed,
-    BookingRefused,
-    BookingRequested,
-    BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
     CardFixed,
@@ -30,9 +43,7 @@ from app.modules.bookings.domain.events import (
     CourtMoved,
     KeptSeatRanOut,
     NewBookingsSummarised,
-    PaymentNotInTime,
     PlayerCheckedIn,
-    RequestWithdrawn,
     NoSaidToTheSeat,
     SeatKept,
     SeatLeft,
@@ -41,11 +52,6 @@ from app.modules.bookings.domain.events import (
 
 _EVENTS = (
     (BookingConfirmed, "bookings.confirmed"),
-    (BookingRequested, "bookings.requested"),
-    (BookingAccepted, "bookings.accepted"),
-    (BookingRefused, "bookings.refused"),
-    (BookingTimedOut, "bookings.timed_out"),
-    (RequestWithdrawn, "bookings.request_withdrawn"),
     (SeatLeft, "bookings.seat_left"),
     (CalledOffAtCutOff, "bookings.called_off_at_cut_off"),
     (SeatRescued, "bookings.seat_rescued"),
@@ -54,8 +60,6 @@ _EVENTS = (
     (CancelledByClub, "bookings.cancelled_by_club"),
     (PlayerCheckedIn, "bookings.player_checked_in"),
     (NewBookingsSummarised, "bookings.new_bookings_summarised"),
-    (BookingAwaitingAPayment, "bookings.awaiting_a_payment"),
-    (PaymentNotInTime, "bookings.payment_not_in_time"),
     (CardToFix, "bookings.card_to_fix"),
     (CardFixed, "bookings.card_fixed"),
     (SeatKept, "bookings.seat_kept"),
@@ -63,18 +67,23 @@ _EVENTS = (
 )
 
 
+#: The wire version the two events that name a court are written under: a
+#: court without its kind was version 1 (#671).
+WITH_THE_COURT_S_KIND_VERSION = 2
+
+
 def register_booking_events(catalog: EventCatalog) -> None:
     for event_class, name in _EVENTS:
-        catalog.register(event_class, name=name, version=1)
+        version = (
+            WITH_THE_COURT_S_KIND_VERSION
+            if event_class in (BookingConfirmed, CourtMoved)
+            else 1
+        )
+        catalog.register(event_class, name=name, version=version)
 
 
 def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(BookingConfirmed, LogBookingEvent())
-    dispatcher.subscribe(BookingRequested, LogBookingEvent())
-    dispatcher.subscribe(BookingAccepted, LogBookingEvent())
-    dispatcher.subscribe(BookingRefused, LogBookingEvent())
-    dispatcher.subscribe(BookingTimedOut, LogBookingEvent())
-    dispatcher.subscribe(RequestWithdrawn, LogBookingEvent())
     dispatcher.subscribe(SeatLeft, LogBookingEvent())
     dispatcher.subscribe(CalledOffAtCutOff, LogBookingEvent())
     dispatcher.subscribe(SeatRescued, LogBookingEvent())
@@ -82,8 +91,6 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(CourtMoved, LogBookingEvent())
     dispatcher.subscribe(CancelledByClub, LogBookingEvent())
     dispatcher.subscribe(PlayerCheckedIn, LogBookingEvent())
-    dispatcher.subscribe(BookingAwaitingAPayment, LogBookingEvent())
-    dispatcher.subscribe(PaymentNotInTime, LogBookingEvent())
     dispatcher.subscribe(CardToFix, LogBookingEvent())
     dispatcher.subscribe(CardFixed, LogBookingEvent())
     dispatcher.subscribe(SeatKept, LogBookingEvent())

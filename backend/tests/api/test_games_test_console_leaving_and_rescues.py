@@ -12,8 +12,8 @@ Every claim is read where somebody would read it: Home, *Fill in* and the deck
 through the player surface; for the money only a job moves, the console's own
 state pane, which reads the record.
 
-The world is ``console_world.SeedWorld``: Bonarka Arena, Instant, a 24-hour
-cut-off and two hours' notice, and nine members the seed could have made. The
+The world is ``console_world.SeedWorld``: Bonarka Arena, selling until a day
+before, a 24-hour cut-off, and nine members the seed could have made. The
 clock stands on **Monday 5 October 2026, 08:00 in Kraków**.
 """
 

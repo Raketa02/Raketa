@@ -1,10 +1,9 @@
-"""**Time to pay** on the Proposal (#625, #626; the mechanics §12.2, Q109–Q111).
+"""**Time to pay** on the Proposal (#625; the mechanics §12.2, Q109–Q111).
 
-A share refused when a full game fills — or when its On request club says yes —
-no longer reopens the seat at once: **the reopening waits**. The player stays In,
-their seat held for them alone until thirty minutes from the refusal, never past
-the book-by, and nobody else may be dealt it or take it. Four ends, each a rule
-here:
+A share refused when a full game fills no longer reopens the seat at once:
+**the reopening waits**. The player stays In, their seat held for them alone
+until thirty minutes from the refusal, never past the book-by, and nobody else
+may be dealt it or take it. Four ends, each a rule here:
 
 - **paid in time** — the game books on the holds the others kept (the fill's,
   so here only what the stream says once it has);
@@ -12,10 +11,8 @@ here:
   and the seat is no longer held for them (``TimeToPayMet``);
 - **the time ran out** — their seat reopens, as Q24 always had it
   (``TimeToPayRanOut``);
-- **somebody else left while it waited** — at a club that books at once the
-  game falls back to filling (``FellBackToFilling``), and the payer's time runs
-  on; at the club's yes the request goes with the seat, which is the booking's
-  to record.
+- **somebody else left while it waited** — the game falls back to filling
+  (``FellBackToFilling``), and the payer's time runs on.
 
 **Which time it is** (#638; Q113): before the club's cut-off nothing is taken,
 only held, so a refused share is **time to fix the card** — never past the
@@ -105,7 +102,6 @@ def a_full_card(*, book_by: datetime = BOOK_BY) -> Proposal:
 def paulas_bank_checks(
     proposal: Proposal,
     *,
-    at_the_clubs_yes: bool = False,
     at: datetime = FILLED_AT,
     cut_off: datetime = CUT_OFF,
 ) -> Proposal:
@@ -117,7 +113,6 @@ def paulas_bank_checks(
         until=proposal.time_to_pay_ends(now, cut_off=instant(cut_off)) or now,
         time_to=TimeTo.at(now, cut_off=instant(cut_off)),
         filled_by=IVAN,
-        at_the_clubs_yes=at_the_clubs_yes,
         at=now,
     )
     return proposal
@@ -146,8 +141,6 @@ def test_a_refused_share_keeps_its_player_in_with_the_seat_held_for_her():
     assert proposal.waiting_for_a_payment is True
     assert proposal.paying[PAULA].until == PAY_BY
     assert proposal.paying[PAULA].payment_to_confirm == PAULAS_CHARGE
-    # Not a game its club has: the book-by still reads.
-    assert proposal.waiting_for_the_club is False
     assert proposal.standing_at(PAY_BY) is Standing.FILLING
 
 
@@ -334,28 +327,10 @@ def test_the_payer_leaving_gives_up_her_seat_and_her_time():
     assert PAULA not in proposal.reopened
 
 
-def test_at_the_club_s_yes_a_leave_takes_the_club_s_yes_and_nothing_falls_back():
-    """The request goes with the seat — the booking's to record — and full
-    again, the game is asked of the club again."""
-
-    proposal = paulas_bank_checks(a_full_card(), at_the_clubs_yes=True)
-    assert proposal.on_the_clubs_yes is True
-    assert proposal.payment_awaited_at is None
-    proposal.pull_events()
-
-    proposal.withdraw_yes(OSCAR, at=FILLED_AT + timedelta(minutes=4))
-
-    [withdrawn] = proposal.pull_events()
-    assert isinstance(withdrawn, YesWithdrawn)
-    assert proposal.on_the_clubs_yes is False
-    assert proposal.paying[PAULA].until == PAY_BY
-
-
-def test_a_game_waiting_for_a_payment_at_a_club_that_books_at_once_is_on_home():
+def test_a_game_waiting_for_a_payment_is_on_home():
     proposal = paulas_bank_checks(a_full_card())
 
     assert proposal.payment_awaited_at == FILLED_AT
-    assert proposal.on_the_clubs_yes is False
     assert a_full_card().payment_awaited_at is None
 
 
@@ -388,7 +363,7 @@ def test_a_filled_game_was_never_waiting_for_a_payment():
 # --------------------------------------------------------------------------- #
 
 
-def test_a_game_waiting_for_a_payment_at_a_club_that_books_at_once_is_read_off_it():
+def test_a_game_waiting_for_a_payment_is_read_off_its_proposal():
     proposal = paulas_bank_checks(a_full_card())
 
     waiting = without_a_booking(proposal, now=FILLED_AT)
@@ -396,11 +371,7 @@ def test_a_game_waiting_for_a_payment_at_a_club_that_books_at_once_is_read_off_i
     assert waiting.stage is BookingStage.WAITING_FOR_A_PAYMENT
     assert waiting.booking_id == proposal.proposal_id
     assert waiting.paying == {PAULA: PAY_BY}
-    assert (waiting.game_id, waiting.court_given, waiting.club_confirms) == (
-        None,
-        False,
-        False,
-    )
+    assert (waiting.game_id, waiting.court_given) == (None, False)
     assert set(waiting.players) == {MARTA, OSCAR, PAULA, IVAN}
 
     proposal.run_out_of_time(at=PAY_BY)

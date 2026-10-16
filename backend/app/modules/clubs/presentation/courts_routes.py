@@ -18,7 +18,6 @@ from app.modules.clubs.application.commands import (
     AddCourtCommand,
     AddExceptionCommand,
     ChangeCourtCommand,
-    ChooseWayOfWorkingCommand,
     RemoveCourtCommand,
     PriceBandInput,
     RemoveExceptionCommand,
@@ -42,13 +41,11 @@ from app.modules.clubs.presentation.courts_schemas import (
     RaketaSettingsRequest,
     RaketaSettingsResponse,
     SetupResponse,
-    WayOfWorkingRequest,
 )
 from app.modules.clubs.presentation.dependencies import (
     AddCourtDep,
     AddExceptionDep,
     ChangeCourtDep,
-    ChooseWayOfWorkingDep,
     CurrentClubAccountDep,
     ReadClubCourtsDep,
     ReadExceptionsDep,
@@ -380,33 +377,17 @@ async def set_prices(
     return PricesResponse.of(prices)
 
 
-@router.put(
-    "/way-of-working",
-    response_model=RaketaSettingsResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Choose how the club works with Raketa",
-    description=(
-        "One way for the whole club — the setup checklist's second step. "
-        "Changeable later; **the change applies to hours not yet booked**. "
-        "Choosing the one it has records nothing. Answers the settings page."
-    ),
-)
-async def choose_way_of_working(
-    payload: WayOfWorkingRequest,
-    account: CurrentClubAccountDep,
-    choose: ChooseWayOfWorkingDep,
-) -> RaketaSettingsResponse:
-    club = await choose.execute(
-        ChooseWayOfWorkingCommand(club_id=account.club_id, way=payload.way_of_working)
-    )
-    return RaketaSettingsResponse.from_domain(club)
-
-
 @router.get(
     "/raketa-settings",
     response_model=RaketaSettingsResponse,
     status_code=status.HTTP_200_OK,
-    summary="How the club works with Raketa, and its settings",
+    summary="The club's Raketa settings",
+    description=(
+        "Every setting, **at its default until the club confirms it**. Only "
+        "Raketa is the one way of working: Raketa sells the club's Raketa "
+        "hours alone until each one's release time, the release lead before "
+        "it, so there is no way to choose."
+    ),
 )
 async def read_raketa_settings(
     account: CurrentClubAccountDep, read: ReadClubCourtsDep
@@ -424,13 +405,6 @@ async def read_raketa_settings(
             "description": (
                 "`setting_out_of_range` — `details.field` names the setting and "
                 "`least` and `most` its range. Nothing was recorded."
-            ),
-        },
-        status.HTTP_409_CONFLICT: {
-            "model": ErrorResponse,
-            "description": (
-                "`way_of_working_not_chosen` — which settings matter depends on "
-                "the way, so it is chosen first. Nothing was recorded."
             ),
         },
     },
@@ -452,8 +426,6 @@ async def save_raketa_settings(
             club_id=account.club_id,
             release_lead_days=payload.release_lead_days,
             cut_off_hours=payload.cut_off_hours,
-            minimum_notice_hours=payload.minimum_notice_hours,
-            time_to_confirm_minutes=payload.time_to_confirm_minutes,
             other_clubs_courts=payload.other_clubs_courts.offered,
             other_clubs_within_km=payload.other_clubs_courts.within_km,
             paused=payload.paused,

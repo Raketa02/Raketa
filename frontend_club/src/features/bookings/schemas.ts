@@ -1,10 +1,11 @@
 /**
  * **What the Bookings page is asked for, and what its acts post.** The page's address says the
- * day, the filter and a booking to point at, `/bookings?date=2026-10-12&filter=waiting&booking=…`;
- * an act on a booking says which, on which booking, and what the desk chose.
+ * day, the filter and a booking to point at,
+ * `/bookings?date=2026-10-12&filter=seat-open&booking=…`; an act on a booking says which, on
+ * which booking, and what the desk chose.
  */
 
-import { formId, formText, isId } from '@/ui/forms';
+import { formId, formText, isId, type RefusalAbout } from '@/ui/forms';
 
 import {
   FILTERS,
@@ -27,7 +28,6 @@ export interface DayQuery {
 /** How each filter is written in the address: a word a desk could read; *all* is no word. */
 const SLUGS: Readonly<Record<BookingsFilter, string | null>> = {
   ALL: null,
-  WAITING_FOR_YOU: 'waiting',
   SEAT_OPEN: 'seat-open',
   CALLED_OFF: 'called-off',
 };
@@ -80,33 +80,58 @@ export function dayHref(query: {
 }
 
 /** What the desk can do to a booking from the page. */
-export type BookingAct = 'accept' | 'refuse' | 'move' | 'cancel';
+export type BookingAct = 'move' | 'cancel';
 
-const ACTS: readonly BookingAct[] = ['accept', 'refuse', 'move', 'cancel'];
+const ACTS: readonly BookingAct[] = ['move', 'cancel'];
 
 export function isBookingAct(value: unknown): value is BookingAct {
   return typeof value === 'string' && (ACTS as readonly string[]).includes(value);
 }
 
-/** The longest note a refusal keeps for the club's own records. */
-export const REFUSAL_NOTE_MOST = 200;
+/**
+ * **A refusal of an act on a game**, said about the game the desk saw: the act says whose
+ * sentence it is, since a move's and a cancel's `court_just_taken` mean different courts. `null`
+ * for a post that named no act.
+ */
+export type ActRefused = RefusalAbout & { readonly act: BookingAct | null };
+
+/**
+ * **What the cancel dialog said the cancel would do**, as it posted it: move the game to the
+ * court it named, or call the game off. The cancel decides afresh, and what landed is said
+ * against it.
+ */
+export type Foretold =
+  | { readonly outcome: 'MOVED'; readonly court: { readonly id: string; readonly name: string } }
+  | { readonly outcome: 'CALLED_OFF' };
+
+function readForetold(form: FormData): Foretold | null {
+  const outcome = formText(form, 'foretold');
+  if (outcome === 'CALLED_OFF') return { outcome };
+  const id = formId(form, 'foretold_court_id');
+  const name = formText(form, 'foretold_court');
+  return outcome === 'MOVED' && id !== null && name !== ''
+    ? { outcome, court: { id, name } }
+    : null;
+}
 
 /** An act as posted: which, on which booking, as the desk saw it, and what it chose. */
 export interface PostedAct {
-  /** `null` for anything that is none of the four. */
+  /** `null` for anything that is neither. */
   readonly act: BookingAct | null;
   readonly id: string | null;
   /** The game as the page named it to the desk: *the 19:00 game on Sat 3 Oct*. */
   readonly name: string;
-  /** A refusal's note, tidied: `''` for none. */
-  readonly note: string;
   readonly courtId: string | null;
   readonly cancel: CancelReason | null;
   /**
    * What the cancel dialog said a cancel does with the players' money: what landed is said as the
-   * desk was told it, since the backend's reply says nothing.
+   * desk was told it, since the backend's reply says nothing of the money.
    */
   readonly givesBack: CancelGivesBack | null;
+  /** *Cancel the game anyway*: called off, even when another court would take the game. */
+  readonly anyway: boolean;
+  /** What the cancel dialog said the cancel would do, or `null` when it said nothing. */
+  readonly foretold: Foretold | null;
 }
 
 export function readAct(form: FormData): PostedAct {
@@ -117,24 +142,21 @@ export function readAct(form: FormData): PostedAct {
     act: isBookingAct(act) ? act : null,
     id: formId(form, 'id'),
     name: formText(form, 'name'),
-    note: formText(form, 'note').trim().replace(/\s+/g, ' '),
     courtId: formId(form, 'court_id'),
     cancel: isCancelReason(reason) ? reason : null,
     givesBack: isCancelGivesBack(givesBack) ? givesBack : null,
+    anyway: formText(form, 'anyway') === 'true',
+    foretold: readForetold(form),
   };
 }
 
 /**
  * **What the page refuses before asking the backend**, as the backend's or the site's own code,
- * or `null` when the act can go: a refusal's note too long for the club's records, a move with
- * no court chosen, a cancel with no reason.
+ * or `null` when the act can go: a move with no court chosen, a cancel with no reason.
  */
 export function checkAct(posted: PostedAct): string | null {
   if (posted.act === null) return 'request_invalid';
   if (posted.id === null) return 'booking_not_found';
-  if (posted.act === 'refuse' && [...posted.note].length > REFUSAL_NOTE_MOST) {
-    return 'refusal_note_too_long';
-  }
   if (posted.act === 'move' && posted.courtId === null) return 'court_required';
   if (posted.act === 'cancel' && posted.cancel === null) return 'cancel_reason_required';
   return null;

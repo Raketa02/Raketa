@@ -25,19 +25,15 @@
  * carry no QR code and no check-in code, on the game's day or any other.
  *
  * **One read, `GET /bookings/{id}`, and nothing re-derived.** The status, the sides, the share and
- * whether it was paid, the cut-off, the club's deadline, whether the forecast is drawn and what
- * leaving costs are the server's (#542, #544, #614); what is decided here is how they are drawn,
- * and the clock the money row's *held from*, *taken* and *answers by* run on is the read's
- * (`useReadClock`).
+ * whether it was paid, the cut-off, whether the forecast is drawn and what leaving costs are the
+ * server's (#542, #544); what is decided here is how they are drawn, and the clock the money row's
+ * *held from*, *taken* and *until* run on is the read's (`useReadClock`).
  *
  * ## Three readers, one screen (A4)
  *
  * - **A player in the game** — the card, the result, the forecast, and ***Leave the game***
  *   with the line saying what it costs now (`LeaveTheGame`, #557; details 10), drawn while the read
  *   says there is a button: not once the hour has come, nor on a game that is over.
- * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
- *   court and no Chat, and *Bonarka answers by 20:45* under the share until that passes (Q98);
- *   *Leave the game* there withdraws the yes, nobody having paid.
  * - **A game waiting for one payment** (Q111, #630) — *Waiting for one payment* in amber, no court
  *   and no Chat, the share nobody pays yet over *Waiting for one payment · until 14:40 · Nobody pays
  *   until it's in*; *Leave the game* withdraws the yes, nobody having paid. **The payer** reads their
@@ -49,8 +45,7 @@
  *   unchanged; its player's money row reads *Fix your card by 14:40 to keep your seat*, and ***Fix
  *   your card*** under the card opens the same confirmation.
  * - **A full game gone back to filling** (Q106, #629) — *Seat open* in amber, no court and no Chat,
- *   the share nobody pays over *1 seat open · Kazimierz Padel is asked again when it's full · nobody
- *   paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
+ *   the share nobody pays over *1 seat open · books when it's full · nobody paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
  *   on a *You're In* row — no sheet in front of it, and back to Home, which no longer holds it.
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
@@ -206,8 +201,8 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   );
 
   // The money row turns to *Paid* by itself at the cut-off, *held from* to *held on your card* at a
-  // checked share's holding time, and *answers by* leaves at the club's deadline — and the door is
-  // *Who's here* until the first half hour ends (#658), so it ticks through that too.
+  // checked share's holding time, and *until* leaves at a time to pay — and the door is *Who's
+  // here* until the first half hour ends (#658), so it ticks through that too.
   const readAtTheCourt = game.status === 'NEEDS_RESULT' && tapsAreOpen(game.startsAt, game.readAt);
   const now = useReadClock(game.readAt, receivedAt, lineCanRunOut(game) || readAtTheCourt);
   const leaving = leavingAt(game, now);
@@ -237,7 +232,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const chat = rescue === undefined && chatIsOpen(game) ? room.conversationId : undefined;
   const act = resultActOf(game, { atTheCourt: tapsAreOpen(game.startsAt, now) });
   // A rescue's own seat — what I'm in takes, and what a refused rescuer's confirmation is for.
-  const seat = yesOnRescue({ bookingId: game.bookingId, club: game.where, sides: game.sides });
+  const seat = yesOnRescue({ bookingId: game.bookingId, sides: game.sides });
   const leaveHere = () => {
     if (here.current) router.back();
   };

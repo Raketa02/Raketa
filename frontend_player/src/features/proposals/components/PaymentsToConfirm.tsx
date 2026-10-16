@@ -5,14 +5,14 @@
  *
  * The player whose own yes filled a game is shown the confirmation the moment their share is
  * refused. **Everybody else's share is refused while they are elsewhere** — somebody else's yes
- * filled the game, or its club said yes — and *Confirm your payment by 14:40 to keep your seat*
+ * filled the game, or its holding time came — and *Confirm your payment by 14:40 to keep your seat*
  * reaches them by email and a notice; this section is where the app keeps it until they do. A row is
  * the game, as a live yes is drawn — *Padel · Saturday 15:00* over the club, the share — and under
  * them **their time to pay** while it runs, *Confirm your payment by 14:40* in amber (Q109; the
  * words Home's card says beside it), or, once it ran out, that the seat is open to others until they
  * confirm. **Before the club's cut-off it is their time to fix the card** (#643; Q113): *Fix your
  * card by 14:40*, with a line that nothing is paid now, and the button **Fix** — a card refused at
- * the fill, at its club's yes, at the holding time of a game booked already (#639), or on a rescue
+ * the fill, at the holding time of a game booked already (#639), or on a rescue
  * (#640). **Confirm** opens the fill's confirmation on that payment, naming the same time and
  * window. It is hidden when empty and while the first read is on its way; a read that failed says
  * so under the section's name.

@@ -35,29 +35,29 @@ export const NOTIFICATIONS_COPY = {
   loading: 'Reading your notifications…',
   readAgain: 'Try again',
   /**
-   * Seventeen always on (A7.2 as #620 amends it, Q113 adds *Fix your card*, and #663 the five steps
-   * at the court; mock 52 drew seven) — the mechanics §17.2's table, a row a line of it: *the club
-   * confirmed / said no / didn't answer in time* is one row for three notices, as *A game you left*
-   * is for two. The quiet row for the take at the cut-off is never pushed, so it is not listed.
+   * Sixteen always on (A7.2 as #620 amends it, Q113 adds *Fix your card*, #663 the five steps
+   * at the court, ADR-0196 §2 adds *Game moved* (#677) and Q121 takes the club's answer away;
+   * mock 52 drew seven) — the mechanics §17.2's table, a row a line of it: *A game you left* is
+   * one row for two notices. The quiet row for the take at the cut-off is never pushed, so it
+   * is not listed.
    *
    * The court's five are always on because each decides someone's record or result (ADR-0195
-   * §7), and each row is its notice's title with the name and the club left out, as the rows above
-   * it are.
+   * §7), and each row is its notice's title with the name and the club left out, as the rows
+   * above it are.
    */
   alwaysOn: {
     title: 'Always on',
     tag: 'on',
     rows: [
       'It’s a game! · held',
-      'It’s a game! · the club answers by …',
       'Waiting for one payment',
       'Fix your card by … to keep your seat',
       'Confirm your payment by … to keep your seat',
       'Game called off · nothing was taken, or with the refund',
       'Someone left your game · or it’s filling again',
       'You’ve been refunded',
-      'The club confirmed / said no / didn’t answer in time',
       'Your new game',
+      'A game moved to another court',
       'A game you left',
       'Your post didn’t fill',
       '… is at the club and you’re not there yet',

@@ -8,13 +8,12 @@
  * game** and **Later**. Nothing else: the player knows the game, and everybody else is told by the
  * notice *It's a game! · 30 zł held*, never this screen.
  *
- * **It marks the players matched, not only booked** (Q103), so it comes at a club that confirms too,
- * and while one payment is missing (Q110), with **one line under the word** for what is still
- * missing — *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*, or *Waiting for one
- * payment · until 14:40 · Nobody pays until it's in* — rising with it, and said after the picture.
- * At a club that books at once with every share held nothing is missing and there is no line. The
- * club's yes, later, is a notice, and so is the payment that comes in — to everybody but the payer
- * whose payment completed the game, who sees this screen then (Q110, §12.2).
+ * **It marks the players matched, not only booked** (Q103), so it comes while one payment is missing
+ * too (Q110), with **one line under the word** for it — *Waiting for one payment · until 14:40 ·
+ * Nobody pays until it's in* — rising with it, and said after the picture. With every share held
+ * nothing is missing and there is no line: a full game books at once at every club (ADR-0196). The
+ * payment that comes in, later, is a notice — to everybody but the payer whose payment completed the
+ * game, who sees this screen then (Q110, §12.2).
  *
  * The ground, the entrance's one beat and the tile are this screen's own (`YesGround`,
  * `YesEntrance`, `YesTile`), since [#574](https://github.com/Raketa02/Raketa/issues/574) brought
@@ -25,7 +24,7 @@
  * Drawn off the card the yes was said on — the reader's own version, the one the last yes filled,
  * whose rows are the sides the booking drew (`itsAGamePicture`) — with every photograph it carries,
  * the reader's own among them. Nothing is read here: the screen is up the moment the fill's host
- * raises it, which for a game sent to its club is once the booking's read has given the line.
+ * raises it.
  *
  * ## An overlay over the phone, not a route
  *
@@ -47,7 +46,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, ModalStage, theme, useLiveRegion } from '@/shared/ui';
 
 import type { DeckCard } from '../domain/deck';
-import { itsAGamePicture, type Face, type StillMissing } from '../domain/fill';
+import { itsAGamePicture, type Face, type ItsAGamePaymentAwaited } from '../domain/fill';
 
 import { FILL_COPY } from './fillCopy';
 import { itsAGameLine, itsAGameSentence } from './fillPresentation';
@@ -59,10 +58,8 @@ import { YesTile, type YesSeat } from './YesTile';
 export interface ItsAGameProps {
   /** The card the filling yes was said on. */
   readonly card: Pick<DeckCard, 'sides'>;
-  /**
-   * What is still missing — the club's yes (Q103), or one payment (Q110): the line under the word.
-   */
-  readonly missing?: StillMissing;
+  /** What is still missing — one payment (Q110): the line under the word. */
+  readonly missing?: ItsAGamePaymentAwaited;
   readonly onOpenGame: () => void;
   /** *Later*, and Android's back. */
   readonly onLater: () => void;

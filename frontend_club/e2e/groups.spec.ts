@@ -130,7 +130,6 @@ test.describe('Groups', () => {
     club,
   }) => {
     club.groups = [officialGroup({ name: 'Ogrody 33 Club', member_count: 11 })];
-    club.raketa.way = 'INSTANT';
     await openGroups(page);
 
     const line = page.getByRole('main').getByText(/^When your courts are full/);

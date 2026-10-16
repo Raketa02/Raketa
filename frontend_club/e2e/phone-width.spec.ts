@@ -31,7 +31,9 @@ test('the signed-out pages fit a phone', async ({ page }) => {
   }
 });
 
-test('the signed-in pages fit a phone, top bar and all', async ({ page }) => {
+test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) => {
+  // The fake club answers the sign-in: without it, this test leaned on the one before it.
+  void club;
   await signIn(page);
   for (const path of [
     '/overview',
@@ -130,7 +132,7 @@ test('Groups and Hand over fit a phone: the table, the choices and the question'
 });
 
 test("The club's menu, the checklist and Raketa settings fit a phone", async ({ page, club }) => {
-  club.raketa.way = 'ON_REQUEST';
+  void club;
   await signIn(page);
   await expect(page.getByRole('list', { name: 'Setup checklist' })).toBeVisible();
   await fitsSideways(page, '/overview');
@@ -219,10 +221,22 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
   long.players = long.players.map((player, index) =>
     index === 0 ? { ...player, name: 'Małgorzata Szczepańska-Wiśniewska' } : player,
   );
-  club.bookings.add(booking({ court: one, day, hour: 20, stage: 'WAITING_FOR_YOU' }));
+  club.bookings.add(
+    booking({
+      court: one,
+      day,
+      hour: 20,
+      stage: 'CALLED_OFF',
+      called_off_reason: 'CANCELLED_BY_THE_CLUB',
+      cancel_reason: 'DOUBLE_BOOKING',
+    }),
+  );
   await signIn(page);
   await page.goto(`/bookings?date=${day}`);
-  await expect(page.getByRole('timer')).toBeVisible();
+  await expect(page.getByRole('rowheader')).toHaveCount(2);
+  await expect(page.getByRole('rowheader').first()).toContainText(
+    'Kort centralny przy wejściu · indoor',
+  );
   await fitsSideways(page, '/bookings');
 
   await page.getByRole('button', { name: /^Move/ }).click();
@@ -230,25 +244,22 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
   await fitsSideways(page, '/bookings, moving');
   await page.getByRole('dialog').getByRole('button', { name: 'Back' }).click();
 
+  // The cancel would move the game to Court 2: the dialog says so and offers to cancel anyway.
   await page.getByRole('button', { name: /^Cancel/ }).click();
   await page.getByRole('dialog').getByRole('radio', { name: 'Repair' }).check();
+  await expect(page.getByRole('dialog').getByRole('status')).toContainText(
+    'This game moves to Court 2 · indoor',
+  );
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: 'Cancel the game anyway' }),
+  ).toBeVisible();
   await fitsSideways(page, '/bookings, cancelling');
-  await page.getByRole('dialog').getByRole('button', { name: 'Keep the game' }).click();
-
-  await page.getByRole('button', { name: /^Refuse/ }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await fitsSideways(page, '/bookings, refusing');
 });
 
-test("Overview's requests fit a phone", async ({ page, club }) => {
+test('Overview, once live, fits a phone', async ({ page, club }) => {
   club.raketa.ready();
-  const padel = club.raketa.courts[0];
-  if (padel === undefined) throw new Error('ready() seats a court');
-  club.bookings.add(
-    booking({ court: padel, day: dayFromToday(1), hour: 19, stage: 'WAITING_FOR_YOU' }),
-  );
   await signIn(page);
-  await expect(page.getByRole('timer')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Live on Raketa' })).toBeVisible();
   await fitsSideways(page, '/overview, live');
 });
 

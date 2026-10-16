@@ -64,7 +64,7 @@ export function standingSeats(rows: readonly SeatToFill[], now: number): readonl
  * players, not which side the seat is on, so *It's a game!* reads them off the booking once the seat
  * is taken.
  */
-export function yesOnRow(row: Pick<SeatToFill, 'bookingId' | 'club'>): YesOn {
+export function yesOnRow(row: Pick<SeatToFill, 'bookingId'>): YesOn {
   return yesOnRescue(row);
 }
 
@@ -96,8 +96,8 @@ export function squaresOfYes(details: Pick<ProposalDetails, 'sides' | 'seats' | 
 
 /**
  * **Whether a You're In row offers *Withdraw*** — only once its game's details say the reader may:
- * while an On request club decides they say *Leave* instead (A3.2), and a withdrawal then would call
- * the request off with no sheet in front of it. Nothing before the details are read.
+ * while the full game waits for one payment they say *Leave* instead (A3.2, #625), and a withdrawal
+ * then would leave the game with no sheet in front of it. Nothing before the details are read.
  */
 export function mayWithdraw(details: Pick<ProposalDetails, 'actions'> | undefined): boolean {
   return details?.actions.includes('WITHDRAW') ?? false;

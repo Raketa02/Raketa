@@ -417,6 +417,21 @@ make seed-host   # the same seed from the host — needs .env, like host-run uvi
 Both run `python -m app.seeds`. The schema must already exist; `make up` migrates on
 container start.
 
+**Reset the local store and seed it again after On request's and Instant's removal**
+(#669, #670; ADR-0196 §1): no club confirms a game now, and every club works **Only
+Raketa** — the one way of working until Raketa is the club's booking software — so a
+game's book-by is always its club's release time, a day or more before it. The seven
+booking events and the proposal event that recorded requests, and the club's
+`clubs.way_of_working_chosen`, left the code without decoders, and
+`clubs.raketa_settings_changed` moved to version 2 without the minimum notice and the
+time to confirm — a clean cut, since only `local` has ever run. A store written before it
+holds streams nothing can read, so `make down-v && make up && make seed`; migration
+`0058` drops the columns only requests used. `make seed` alone is not enough: it reads the
+store it is given. **The same reset follows the kind of court** (#671; ADR-0196 §4):
+`bookings.confirmed` and `bookings.court_moved` moved to version 2 carrying the court's
+kind, indoor or outdoor, and version 1 of each left without a decoder; migration `0059`
+adds the court a *Game moved* notice names.
+
 Every address is `<state>@raketa.example`, and the state is what the name says. The
 catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the
 failed case. A hundred average players is one scenario a hundred times, and no screen
@@ -554,26 +569,33 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   booking's state, and every charge and refund. Every press refreshes the board;
   *Refresh* covers the rest — nothing on the page acts on its own.
 - **The club** acts from its game's pane, as the club whose court it is:
-  *Accept* or *Refuse* a request, *Move* to a free court, and *Cancel* with a reason —
-  `/dev/clubs/{club_id}/…`, each the desk's own route's use case. (Attendance is the
-  players' at the court, never the club's.)
+  *Move* to a free court of the same kind, or an indoor one for an outdoor game — each
+  listed with its kind — *Cancel* with a reason, which moves the game when another free
+  court of the club's absorbs it and says where (#672), and *Cancel anyway*, which calls it
+  off all the same — `/dev/clubs/{club_id}/…`, each the desk's own route's use case. Either
+  cancel closes the court the game was on for its hour, an exception on the club's list
+  (#673), and the players it calls off are dealt the owed card first — *1 · Fresh deal*
+  runs the proposer that deals it. (Attendance is the players' at the court, never the
+  club's.)
 - **The payment provider** is the backend's in-process fake, steered: each row's saved card
   set to pay, decline or ask for the bank's check; *Bank confirms* on a payment that waits
   for its player (the laptop's phone cannot reach a bank), after which the phone's own
   *Confirm* books; *Refunds wait until delivered*, and *Deliver refund* on one; and each
   game's *Notices* — what Stripe would have sent for every move of a payment — delivered
   once, twice, or all newest first, through the webhook's own handling.
-- **Run it now** runs a timed rule's job over what is already due at the real *now*: the
-  club's answer window (`POST /dev/jobs/request-timeout`) calls off every request past its
-  deadline, and leaves the rest waiting.
+- **Run it now** runs a timed rule's job over what is already due at the real *now*
+  (`POST /dev/jobs/{job}`): the cut-off takes the shares held for a full game whose
+  cut-off has come, and leaves the rest held.
 - **Situations** set the stage for one mechanic in one press, through the same use cases a
-  request runs and at the real *now*: *1 · Fresh deal* runs the proposer for the group;
-  *2 · Needs her yes · Instant club* puts enough people In on one of the protagonist's cards
-  that her yes on the phone fills it; *3 · … On request club* does the same where the club
-  confirms — or, given minutes, asks the club already, written as if earlier, so its answer
-  is due that many minutes from now; and *4 · Card declines at the fill* is 2 with her card
-  set to decline. Pressed again and again they meet the domain's refusals; a fresh store is
-  `make down-v && make up && make seed`.
+  request runs and at the real *now*: *1 · Fresh deal* runs the proposer for the group; *2 ·
+  Needs her yes* puts enough people In on one of the protagonist's cards that her yes on the
+  phone fills it — and books it, at any club, since no club confirms a game (*3*, which put
+  a game to an On request club, went with it, #669); and *4 · Card declines at the fill* is
+  2 with her card set to decline. **Every club works Only Raketa** (#670), so a situation
+  that books its own game writes it **as if earlier**, an hour before the hour's release
+  time — and *11 · Club day close* writes one game played that day, booked before it, and
+  one booked inside it, since no game can be both. Pressed again and again they meet the
+  domain's refusals; a fresh store is `make down-v && make up && make seed`.
 
 It is gated twice, and both halves refuse:
 
@@ -717,20 +739,21 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and twelve jobs are in it today: the
-  **uncommitted-photo sweep**, which deletes every photo the object store has
-  held for more than 24 hours that no committed profile currently names; the
-  **photo re-review backfill**, which asks the reviewer about the photos nobody
-  ever asked it about; the **rating catch-up**, which is the whole path a confirmed
-  result has to a Level; the **conversation sweep**, which destroys every room
-  whose episode is over; the **mail worker**; and the new loop's jobs — the
-  proposer's sweep and its tick, the book-by sweep, the On request timeout, the
-  cut-off, the club payouts and the new-bookings summary. The challenge lapse loop
-  and the hour loop went with the challenges (#578); the exposure roll, the two
-  prompt loops, the interest expiry loop and the scale-pressure probe went with
-  the searches (#579); the candidate index's tail reader and snapshot refresh went
-  with the ranking (#580). The backfill takes no database session: its whole input and
-  output are the object store.
+  `app/bootstrap/jobs.py` is the register, and thirteen jobs are in it today: the
+  **uncommitted-photo sweep**, which deletes every photo the object store has held
+  for more than 24 hours that no committed profile currently names; the **photo
+  re-review backfill**, which asks the reviewer about the photos nobody ever asked
+  it about; the **rating catch-up**, which is the whole path a confirmed result
+  has to a Level; the **conversation sweep**, which destroys every room whose
+  episode is over; the **mail worker**; and the new loop's jobs — the proposer's
+  sweep and its tick, the book-by sweep, time to pay, the cut-off, the holding,
+  the club payouts and the new-bookings summary. The On request timeout went with
+  On request (#669). The challenge lapse loop and the hour loop went with the
+  challenges (#578); the exposure roll, the two prompt loops, the interest expiry
+  loop and the scale-pressure probe went with the searches (#579); the candidate
+  index's tail reader and snapshot refresh went with the ranking (#580). The
+  backfill takes no database session: its whole input and output are the object
+  store.
 
   **The conversation sweep deletes an aggregate** — a room and its whole stream,
   *destroyed, not delisted*

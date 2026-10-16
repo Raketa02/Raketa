@@ -1,12 +1,10 @@
 """**Notifications: push, the recent list, and the three choices** (#549; the
 mechanics §6.1–§6.4, §9.2, §10.1, §12–§13, §17.2; the screens A7.2, A9).
 
-Nine notices are always on — *It's a game! · you paid*, *It's a game! · the
-club answers by …* (#622), *Confirm your payment*, *Game called off · with the
-refund*, *Someone left your game*, *You've been refunded*, *The club confirmed /
-said no / didn't answer in time* (#623), *Your new game* (#622), *Your post
-didn't fill* — and each
-is pushed to the player's phones and listed. Three are the player's:
+Seven notices are always on — *It's a game! · you paid*, *Confirm your
+payment*, *Game called off · with the refund*, *Someone left your game*,
+*You've been refunded*, *Your new game* (#622), *Your post didn't fill* — and
+each is pushed to the player's phones and listed. Three are the player's:
 *You complete it* (on, once a day, bundled), *Challenges for you* (on, three a
 day, bundled), *Fill in alerts* (off, three a day). **No notice is ever sent for
 a single swipe.**
@@ -31,7 +29,6 @@ import pytest
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import (
     build_the_cut_off,
-    build_expire_unanswered_requests,
     build_notice_day_repository,
     build_propose_games,
 )
@@ -48,7 +45,7 @@ from app.modules.payments.domain.entered_cards import A_CARD_THAT_DECLINES_LATER
 from app.modules.proposals.application.propose_games import Proposed
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
-from tests.api.club_courts_world import EXCEPTIONS
+from tests.api.club_courts_world import EXCEPTIONS, adds_a_court, sets_hours
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -56,6 +53,7 @@ from tests.api.proposals_world import (
     a_group,
     a_member,
     deals,
+    every_hour_of_the_week,
     makes,
     saves_a_card,
     says_no,
@@ -84,9 +82,9 @@ def clock(app):
 
 @pytest.fixture
 async def bonarka(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant: the club, and its desk's session."""
+    """Bonarka Arena: the club, and its desk's session."""
 
-    return await a_club_and_its_desk(client, way="INSTANT")
+    return await a_club_and_its_desk(client)
 
 
 @pytest.fixture
@@ -492,12 +490,55 @@ async def test_a_game_the_club_cancels_is_called_off_with_its_reason(
         headers=desk,
     )
 
-    assert cancelled.status_code == 204, cancelled.text
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     for player in crowd[:4]:
         assert (await pushed_to(mailbox, pushes, player))[-1] == (
             "Game called off · nothing was taken",
-            "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the weather.",
+            "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the "
+            "weather. We'll look for another game for you first.",
         )
+
+
+async def test_a_game_the_club_moves_tells_everybody_the_court_and_its_kind(
+    client, bonarka, booking, crowd, mailbox, pushes
+):
+    """*Game moved* (#671; the mechanics §17.2, Q122): always on, to every
+    player on the booking, opening the booked game, and never emailed."""
+
+    _, desk = bonarka
+    court_3 = await adds_a_court(client, desk, name="Court 3", sport="PADEL")
+    await sets_hours(client, desk, [court_3["id"]], every_hour_of_the_week())
+    told_before = {player["name"]: len(pushes.to(player["phone"])) for player in crowd}
+
+    moved = await client.post(
+        f"/api/v1/club/bookings/{booking}/move",
+        json={"court_id": court_3["id"]},
+        headers=desk,
+    )
+
+    assert moved.status_code == 200, moved.text
+    for player in crowd[:4]:
+        assert (await pushed_to(mailbox, pushes, player))[
+            told_before[player["name"]] :
+        ] == [
+            (
+                "Bonarka Arena moved your game to Court 3 · Sat 17:00",
+                "Padel · indoor · nothing else changes",
+            )
+        ]
+        [notice, *_] = await notices_of(client, mailbox, player)
+        assert (notice["kind"], notice["opens"], notice["game_id"]) == (
+            "GAME_MOVED",
+            "BOOKING",
+            booking,
+        )
+        assert notice["your_own"] is False
+        emails = await mailbox.to(f"{player['name']}@example.com")
+        assert all("moved" not in email.subject.lower() for email in emails)
+    for player in crowd[4:]:
+        assert len(pushes.to(player["phone"])) == told_before[player["name"]]
 
 
 async def test_a_leaver_whose_seat_was_taken_is_told_they_were_refunded(
@@ -542,8 +583,8 @@ async def test_a_post_not_full_by_its_book_by_tells_its_poster(
         sport=Sport.PADEL,
     )
 
-    # Its book-by: the club's two hours' notice before the hour.
-    clock.move(SATURDAY_FIVE - timedelta(hours=2) - MONDAY_MORNING)
+    # Its book-by: the club's release time, a day before the hour.
+    clock.move(SATURDAY_FIVE - timedelta(days=1) - MONDAY_MORNING)
     await sweeps(session_factory, clock)
 
     assert await pushed_to(mailbox, pushes, ola) == [
@@ -557,244 +598,7 @@ async def test_a_post_not_full_by_its_book_by_tells_its_poster(
 
 
 # --------------------------------------------------------------------------- #
-# On request: the club's answer
-# --------------------------------------------------------------------------- #
-
-
-@pytest.fixture
-async def on_request(client) -> tuple[str, dict]:
-    """Kazimierz Padel, On request: the club and its desk's session."""
-
-    return await a_club_and_its_desk(client, name="Kazimierz Padel", way="ON_REQUEST")
-
-
-async def a_game_waiting_for(client, session_factory, clock, on_request, crowd) -> UUID:
-    club, _ = on_request
-    four = crowd[:4]
-    group = await a_group(client, four[0], club, *four[1:])
-    proposal = await makes(
-        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
-    )
-    for player in four:
-        assert (await says_yes(client, player, proposal)).status_code == 200
-    return proposal
-
-
-@pytest.fixture
-async def a_game_asked(
-    client, session_factory, clock, on_request, crowd, mailbox
-) -> UUID:
-    """Saturday's game, put to Kazimierz Padel by Tomek's yes at 08:00 on
-    Monday — thirty minutes to confirm — and delivered, so what a test does
-    next is told after it: a request answered or taken back before it was
-    delivered is told by what came of it."""
-
-    asked = await a_game_waiting_for(client, session_factory, clock, on_request, crowd)
-    await mailbox.drain()
-    return asked
-
-
-#: What the four are told when it goes to the club.
-IT_S_A_GAME_ASKED = (
-    "It's a game! · Kazimierz Padel answers by 08:30",
-    "Padel · Sat 17:00. Nobody pays until it confirms.",
-)
-
-
-async def test_the_game_going_to_its_club_tells_all_four_it_s_a_game_and_by_when(
-    client, clock, on_request, crowd, mailbox, pushes, a_game_asked
-):
-    """Tomek's yes put Saturday's game to Kazimierz Padel at 08:00 on Monday,
-    and the club has thirty minutes to confirm: the four are matched. The other
-    three are told so; Tomek saw *It's a game!* on his own screen, so his copy
-    is in his list already seen. Nobody is emailed — nobody has paid."""
-
-    ola, kuba, ewa, tomek = crowd[:4]
-
-    for player in (ola, kuba, ewa):
-        assert await pushed_to(mailbox, pushes, player) == [IT_S_A_GAME_ASKED]
-    assert await pushed_to(mailbox, pushes, tomek) == []
-    for player in (ola, kuba, ewa, tomek):
-        read = await the_list(client, mailbox, player)
-        [notice] = read["notices"]
-        assert (notice["kind"], notice["title"], notice["body"]) == (
-            "WAITING_FOR_THE_CLUB",
-            *IT_S_A_GAME_ASKED,
-        )
-        # It opens the game, still filling while the club decides.
-        assert (notice["opens"], notice["game_id"]) == ("PROPOSAL", str(a_game_asked))
-        assert (notice["your_own"], read["new_count"]) == (
-            (True, 0) if player is tomek else (False, 1)
-        )
-        assert await mailbox.to(f"{player['name']}@example.com") == []
-
-    # The notice keeps the time it was told: read on Tuesday, it says the same.
-    clock.move(timedelta(days=1))
-    [later] = await notices_of(client, mailbox, ola)
-    assert (later["title"], later["body"]) == IT_S_A_GAME_ASKED
-
-
-async def test_a_club_s_time_to_confirm_ending_on_another_day_names_the_day(
-    client, session_factory, clock, on_request, crowd, mailbox, pushes
-):
-    # Monday at 23:45: thirty minutes to confirm runs into Tuesday.
-    clock.move(timedelta(hours=15, minutes=45))
-    await a_game_waiting_for(client, session_factory, clock, on_request, crowd)
-
-    assert await pushed_to(mailbox, pushes, crowd[0]) == [
-        (
-            "It's a game! · Kazimierz Padel answers by Tue 00:15",
-            "Padel · Sat 17:00. Nobody pays until it confirms.",
-        )
-    ]
-
-
-async def test_a_game_full_again_and_asked_again_tells_all_four_the_new_time(
-    client, clock, on_request, crowd, mailbox, pushes, a_game_asked
-):
-    """Kuba took his yes back, and five minutes later said it again: the game
-    went back to Kazimierz Padel, which now answers by 08:35. Kuba's yes put it
-    there this time, so his copy of the second is his own."""
-
-    ola, kuba, ewa, tomek = crowd[:4]
-    assert (await withdraws(client, kuba, a_game_asked)).status_code == 204
-    await mailbox.drain()
-    clock.move(timedelta(minutes=5))
-
-    again = await says_yes(client, kuba, a_game_asked)
-
-    assert again.json()["waiting_for_the_club"] is True, again.text
-    asked_again = (
-        "It's a game! · Kazimierz Padel answers by 08:35",
-        IT_S_A_GAME_ASKED[1],
-    )
-    filling_again = (
-        "kuba left your game",
-        "Padel at Kazimierz Padel · Sat 10 Oct, 17:00 — it's filling again.",
-    )
-    for player in (ola, ewa):
-        assert await pushed_to(mailbox, pushes, player) == [
-            IT_S_A_GAME_ASKED,
-            filling_again,
-            asked_again,
-        ]
-    assert await pushed_to(mailbox, pushes, tomek) == [filling_again, asked_again]
-    assert await pushed_to(mailbox, pushes, kuba) == [IT_S_A_GAME_ASKED]
-    told = [
-        (notice["title"], notice["your_own"])
-        for notice in await notices_of(client, mailbox, kuba)
-    ]
-    assert told == [(asked_again[0], True), (IT_S_A_GAME_ASKED[0], False)]
-
-
-async def test_a_request_taken_back_before_it_was_told_is_told_by_what_came_of_it(
-    client, session_factory, clock, on_request, crowd, mailbox, pushes
-):
-    """Kuba took his yes back before the outbox told anybody the game had gone
-    to the club: the others hear that it is filling again, and never a deadline
-    the club no longer has."""
-
-    ola, kuba, ewa, tomek = crowd[:4]
-    proposal = await a_game_waiting_for(
-        client, session_factory, clock, on_request, crowd
-    )
-
-    assert (await withdraws(client, kuba, proposal)).status_code == 204
-
-    for player in (ola, ewa, tomek):
-        assert await titles_pushed_to(mailbox, pushes, player) == [
-            "kuba left your game"
-        ]
-    assert await notices_of(client, mailbox, kuba) == []
-
-
-async def test_the_club_s_yes_is_one_notice_that_it_confirmed_and_they_are_held(
-    client, on_request, crowd, mailbox, pushes, a_game_asked
-):
-    _, desk = on_request
-
-    accepted = await client.post(
-        f"/api/v1/club/bookings/{a_game_asked}/acceptance", headers=desk
-    )
-
-    assert accepted.status_code == 200, accepted.text
-    confirmed = (
-        "Kazimierz Padel confirmed your game · 30 zł held",
-        "Padel · Sat 10 Oct, 17:00 — it's a game. 30 zł is held on your card "
-        "and taken at the club's cut-off, Fri 17:00.",
-    )
-    for player in crowd[:3]:
-        assert await pushed_to(mailbox, pushes, player) == [
-            IT_S_A_GAME_ASKED,
-            confirmed,
-        ]
-    # Tomek's *It's a game!* was his own; the club's yes is news to him too.
-    assert await pushed_to(mailbox, pushes, crowd[3]) == [confirmed]
-    for player in crowd[:4]:
-        [email] = await mailbox.to(f"{player['name']}@example.com")
-        assert email.subject == "It's a game! · 30 zł held"
-
-
-async def test_the_club_s_no_tells_everybody_waiting_on_it(
-    client, on_request, crowd, mailbox, pushes, a_game_asked
-):
-    _, desk = on_request
-
-    refused = await client.post(
-        f"/api/v1/club/bookings/{a_game_asked}/refusal",
-        json={"reason": "a tournament"},
-        headers=desk,
-    )
-
-    assert refused.status_code == 204, refused.text
-    for player in crowd[:4]:
-        assert (await pushed_to(mailbox, pushes, player))[-1:] == [
-            (
-                "Kazimierz Padel said no",
-                "Padel · Sat 17:00. Nobody paid — you'll get a new card first.",
-            )
-        ]
-
-
-async def test_the_club_s_silence_tells_everybody_waiting_on_it_too(
-    session_factory, clock, crowd, mailbox, pushes, a_game_asked
-):
-    # Its time to confirm is thirty minutes; the job calls it off past them.
-    clock.move(timedelta(minutes=30))
-    async with session_factory() as session:
-        done = await build_expire_unanswered_requests(
-            session, clock=clock, settings=get_settings()
-        ).execute()
-
-    assert done.requests == 1
-    for player in crowd[:4]:
-        assert (await titles_pushed_to(mailbox, pushes, player))[-1:] == [
-            "Kazimierz Padel didn't answer in time"
-        ]
-
-
-async def test_leaving_a_game_waiting_for_the_club_tells_the_others_it_fills_again(
-    client, crowd, mailbox, pushes, a_game_asked
-):
-    ola, kuba, ewa, tomek = crowd[:4]
-
-    assert (await withdraws(client, kuba, a_game_asked)).status_code == 204
-
-    for player in (ola, ewa, tomek):
-        assert (await pushed_to(mailbox, pushes, player))[-1:] == [
-            (
-                "kuba left your game",
-                "Padel at Kazimierz Padel · Sat 10 Oct, 17:00 — it's filling again.",
-            )
-        ]
-    # Kuba was told it was a game, and nothing of his own leaving.
-    assert [n["kind"] for n in await notices_of(client, mailbox, kuba)] == [
-        "WAITING_FOR_THE_CLUB"
-    ]
-
-
-# --------------------------------------------------------------------------- #
-# Your new game — the card a club's no, silence or cancel owed
+# Your new game — the card a club's cancel owed
 # --------------------------------------------------------------------------- #
 
 #: Saturday evenings, 17:00–19:00 — the only hours the four are free.
@@ -820,16 +624,15 @@ async def deck_of(client, player: dict, group: UUID) -> list[dict]:
     return read.json()["cards"]
 
 
-async def a_game_the_club_turns_away(
-    client, session_factory, clock, mailbox, payments, how: str
+async def a_game_the_club_cancels(
+    client, session_factory, clock, mailbox, payments
 ) -> tuple[list[dict], UUID]:
-    """Kazimierz Padel, On request, sells padel on Saturday at 17:00 and 18:00.
-    The proposer deals the four Saturday's 17:00; all four say yes, and the
-    club says no to it, lets its time to confirm run out, or says yes and then
-    cancels it. The four, each with a phone, and their group."""
+    """Kazimierz Padel sells padel on Saturday at 17:00 and 18:00. The proposer
+    deals the four Saturday's 17:00; all four say yes, the last books it, and
+    the club cancels it. The four, each with a phone, and their group."""
 
     club, desk = await a_club_and_its_desk(
-        client, name="Kazimierz Padel", way="ON_REQUEST", hours=[(6, 17), (6, 18)]
+        client, name="Kazimierz Padel", hours=[(6, 17), (6, 18)]
     )
     four = [
         await a_member(client, session_factory, payments, name, week=SATURDAY_EVENINGS)
@@ -843,34 +646,26 @@ async def a_game_the_club_turns_away(
     game = UUID(card["proposal_id"])
     assert datetime.fromisoformat(card["starts_at"]) == SATURDAY_FIVE
     for player in four:
-        assert (await says_yes(client, player, game)).status_code == 200
-    path = f"/api/v1/club/bookings/{game}"
-    if how == "refused":
-        answered = await client.post(f"{path}/refusal", json={}, headers=desk)
-        assert answered.status_code == 204, answered.text
-    elif how == "no answer":
-        clock.move(timedelta(minutes=30))
-        async with session_factory() as session:
-            await build_expire_unanswered_requests(
-                session, clock=clock, settings=get_settings()
-            ).execute()
-    else:
-        accepted = await client.post(f"{path}/acceptance", headers=desk)
-        assert accepted.status_code == 200, accepted.text
-        cancelled = await client.post(
-            f"{path}/cancellation", json={"reason": "REPAIR"}, headers=desk
-        )
-        assert cancelled.status_code == 204, cancelled.text
+        said = await says_yes(client, player, game)
+        assert said.status_code == 200, said.text
+    assert said.json()["booked"] is not None, said.text
+    cancelled = await client.post(
+        f"/api/v1/club/bookings/{game}/cancellation",
+        json={"reason": "REPAIR"},
+        headers=desk,
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    # No other court takes it: called off (#672).
+    assert cancelled.json()["outcome"] == "CALLED_OFF"
     await mailbox.drain()
     return four, group
 
 
-@pytest.mark.parametrize("how", ["refused", "no answer", "cancelled"])
-async def test_the_new_card_a_club_s_answer_owed_is_told_to_each_player_once(
-    client, session_factory, clock, mailbox, payments, pushes, how
+async def test_the_new_card_a_club_s_cancel_owed_is_told_to_each_player_once(
+    client, session_factory, clock, mailbox, payments, pushes
 ):
-    four, group = await a_game_the_club_turns_away(
-        client, session_factory, clock, mailbox, payments, how
+    four, group = await a_game_the_club_cancels(
+        client, session_factory, clock, mailbox, payments
     )
     told_before = {player["name"]: len(pushes.to(player["phone"])) for player in four}
 
@@ -879,8 +674,8 @@ async def test_the_new_card_a_club_s_answer_owed_is_told_to_each_player_once(
 
     assert (proposed.redealt, proposed.made) == (1, 1)
     [card] = await deck_of(client, four[0], group)
-    # The four together at the nearest hour they are all free — never the
-    # 17:00 the club turned away.
+    # The four together at the nearest hour they are all free: the club's one
+    # court at 17:00, the one it cancelled, is closed for the hour (#673).
     assert datetime.fromisoformat(card["starts_at"]) == warsaw(10, 18)
     for player in four:
         assert (await pushed_to(mailbox, pushes, player))[
@@ -1470,31 +1265,6 @@ async def test_the_filler_s_own_notice_is_theirs_and_never_counted_or_pushed(
             True,
             1,
         )
-
-
-async def test_the_club_s_yes_is_counted_for_everybody_and_whose_yes_sent_it(
-    client, on_request, crowd, mailbox, a_game_asked
-):
-    """Tomek's yes put the game to Kazimierz Padel, and his *It's a game!* was
-    his own; the club's yes filled it. That yes is the club's act, so it is
-    news to all four."""
-
-    _, desk = on_request
-
-    accepted = await client.post(
-        f"/api/v1/club/bookings/{a_game_asked}/acceptance", headers=desk
-    )
-
-    assert accepted.status_code == 200, accepted.text
-    for player in crowd[:4]:
-        read = await the_list(client, mailbox, player)
-        [confirmed, asked] = read["notices"]
-        assert (confirmed["kind"], confirmed["your_own"]) == ("CLUB_CONFIRMED", False)
-        assert (asked["kind"], asked["your_own"]) == (
-            "WAITING_FOR_THE_CLUB",
-            player is crowd[3],
-        )
-        assert read["new_count"] == (1 if player is crowd[3] else 2)
 
 
 async def test_opening_the_list_again_or_with_a_clock_behind_never_moves_back(

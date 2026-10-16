@@ -12,16 +12,13 @@ there is.
 events in the act's own transaction, as a group's are (``docs/adr/0183`` §1) —
 the stream is the record. ``proposals.ended`` is the recorded ending and never
 the whole answer: a proposal past its ``book_by`` is over whether or not the
-sweep has written it, so every live read compares ``book_by`` with its clock too
-— **unless it is ``waiting_for_the_club``** (#543): every seat In and its On
-request club still to answer, which the book-by no longer ends.
+sweep has written it, so every live read compares ``book_by`` with its clock too.
 
-**A time to pay is on the row too** (#625, #626): ``paying_until`` is the
-earliest deadline of the payments the game waits for — the job that runs it out
-reads it, and the book-by sweep leaves a game with one, since that job ends it —
-and ``payment_awaited_at`` the moment a game at a club that books at once first
-waited for a payment: such a game has no booking, and is on its players' Home
-from then on.
+**A time to pay is on the row too** (#625): ``paying_until`` is the earliest
+deadline of the payments the game waits for — the job that runs it out reads
+it, and the book-by sweep leaves a game with one, since that job ends it — and
+``payment_awaited_at`` the moment the game first waited for a payment: such a
+game has no booking, and is on its players' Home from then on.
 
 ``proposal_people`` is **one row per person the game is anything to** — dealt a
 version, In, or gone — keyed by the game and the person, since each person is on
@@ -68,7 +65,7 @@ class ProposalORM(Base):
     __table_args__ = (
         CheckConstraint(
             "ended IS NULL OR ended IN ('FILLED', 'EXPIRED', 'WITHDRAWN', "
-            "'COURT_HOUR_LOST', 'TURNED_DOWN')",
+            "'COURT_HOUR_LOST')",
             name="ck_proposals_ended",
         ),
         # The sweep's read: unrecorded endings, by book-by.
@@ -98,22 +95,18 @@ class ProposalORM(Base):
     book_by: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     made_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ended: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
-    #: Every seat is In and its On request club has not answered (#543).
-    waiting_for_the_club: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="false", default=False
-    )
     #: The club cancelled the booked game it filled (#547): its people are
-    #: candidates for a new card first, as a turned-down game's are.
+    #: candidates for a new card first.
     club_cancelled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false", default=False
     )
     #: The earliest time to pay the game waits on — ``NULL`` while nobody's
-    #: payment is awaited (#625, #626).
+    #: payment is awaited (#625).
     paying_until: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    #: When the game first waited for a payment at a club that books at once
-    #: — on its players' Home from then on (#625).
+    #: When the game first waited for a payment — on its players' Home from
+    #: then on (#625).
     payment_awaited_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

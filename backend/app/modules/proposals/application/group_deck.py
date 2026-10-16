@@ -77,6 +77,7 @@ from app.modules.proposals.domain.ports import (
     BookedGames,
     ClubNames,
     ClubTerms,
+    CourtKinds,
     DeckPeople,
     DeckPerson,
     GamesAndMoneyRepository,
@@ -151,6 +152,7 @@ class ReadGroupDeck:
         wanted: WantedKinds,
         booked: BookedGames,
         terms: ClubTerms,
+        kinds: CourtKinds,
         fit: PlayerFit,
         forecasts: BalanceForecasts,
         people: DeckPeople,
@@ -168,6 +170,7 @@ class ReadGroupDeck:
         self._wanted = wanted
         self._booked = booked
         self._terms = terms
+        self._kinds = kinds
         self._fit = fit
         self._forecasts = forecasts
         self._people = people
@@ -205,6 +208,12 @@ class ReadGroupDeck:
         rescues = await self._offers.dealt_to(
             pool, reader, sport=sport, kinds=shown, now=now
         )
+        # The kind of court each card promises, when every free court it could
+        # be booked on is of one kind (Q122) — read now, as the court is given
+        # only at booking.
+        court_kinds = await self._kinds.of(
+            {(proposal.club_id, sport, proposal.start) for proposal, _ in views}
+        )
         people = await self._people.people(
             {
                 *(player for _, view in views for player in view.people),
@@ -233,6 +242,7 @@ class ReadGroupDeck:
                     weeks=[people[player].week for player in view.people],
                     terms=terms[proposal.club_id],
                     now=now,
+                    indoor=court_kinds.get((proposal.club_id, sport, proposal.start)),
                 )
             )
 
@@ -331,6 +341,13 @@ class ReadGroupDeck:
             return False
         deal = await self.deal_to(reader, pool, proposal.sport, [proposal], now=now)
         return bool(deal.views)
+
+    async def kind_of_court(self, proposal: Proposal) -> bool | None:
+        """The kind of court this card promises now, as every reader's deck
+        draws it (Q122) — what *Your new game* names (#673)."""
+
+        hour = (proposal.club_id, proposal.sport, proposal.start)
+        return (await self._kinds.of({hour})).get(hour)
 
     async def _dealt(
         self, reader: UUID, command: ReadGroupDeckCommand, now: Instant

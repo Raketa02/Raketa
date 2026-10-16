@@ -18,8 +18,6 @@ export const FILL_IN_COPY = {
   offeredUntilTheStart: 'offered until the start',
   /** A yes's subtitle while its game fills: *book by Sat 13:00*. */
   bookBy: 'book by',
-  /** In amber while an On request club decides. */
-  waitingForTheClub: 'waiting for the club',
   withdraw: 'Withdraw',
   /** A rescue's open seat, drawn in its dashed square. */
   openSeat: '?',

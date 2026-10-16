@@ -46,7 +46,7 @@ otherwise the provider lets it lapse untaken, which costs nothing.
 — their bank may check every payment, and that is the one it gave — when the
 fill it confirmed for books. When another seat is refused instead, it is let go
 with every other hold: *if any fails, the others are cancelled* — **unless the
-refused player is given time to pay** (#625, #626; the mechanics §12.2, Q109):
+refused player is given time to pay** (#625; the mechanics §12.2, Q109):
 then every other hold is **kept** on its card, the new ones recorded held, so
 that paying in time books the game on them and nobody's bank is asked again.
 
@@ -117,7 +117,7 @@ class GameToCharge:
     #: — its holds are keyed apart from the fill's, and a refusal asks them to
     #: confirm the payment to **take** the seat rather than to keep one.
     rescue: bool = False
-    #: **Time to pay** (#625, #626): a refused share's seat is held for its
+    #: **Time to pay** (#625): a refused share's seat is held for its
     #: player until then, and every other hold is kept for it — the email
     #: names the time. ``None`` lets every hold go: a rescue's refusal, and one
     #: with no time left before the book-by.
@@ -378,8 +378,8 @@ class ChargeTheSeats:
             await self._charges.save(charge)
             seats[player] = RefusedSeat(charge_id=charge.charge_id, reason=reason)
         if game.pay_by is None and not game.rescue:
-            # No time is left to pay — the book-by had come at the club's yes:
-            # the game is called off, and told so; there is nothing to confirm.
+            # No time is left to pay — the game's book-by has come: there is
+            # nothing to confirm by a time.
             return SeatsCharged(taken={}, refused=seats)
         payers = await self._payers.of(list(refused))
         for player, seat in seats.items():

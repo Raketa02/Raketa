@@ -154,8 +154,8 @@ export class FakeClub {
    */
   groups: OfficialGroup[] = [];
   /**
-   * What the club sells through Raketa: its courts, hours, exceptions, prices, way of working and
-   * settings, and the setup checklist read off them. Nothing is set, and payments are not
+   * What the club sells through Raketa: its courts, hours, exceptions, prices and settings, and
+   * the setup checklist read off them. Nothing is set, and payments are not
    * started, unless the test says (`club.raketa.ready()` makes the club live).
    */
   readonly raketa: FakeClubCourts;

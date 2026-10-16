@@ -44,8 +44,8 @@ export interface NoticeFacts {
  * its group — one still filling, or one that did not fill — and `DECK` the group's deck in the
  * card's sport and kind, **with the card on top**: *You complete it*, a challenge and *Your new
  * game* (Q107) are a card waiting for the player, and the deck is where it is answered. *It's a
- * game! · Kazimierz Padel answers by 21:15* (Q103) opens a game still the proposal's — nobody has
- * paid and there is no Game until its club says yes — so its details in the group.
+ * game! · waiting for one payment* (Q110) opens a game still the proposal's — nobody has paid and
+ * there is no Game until the payment is in — so its details in the group.
  *
  * **Each step at the court opens the booked game's result screen** (#664; `RESULT`), where the
  * person it waits on acts: *Ivan is at Ogrody 33 and you're not there yet* lands on *I'm here*, *Is

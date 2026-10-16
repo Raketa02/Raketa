@@ -4,37 +4,44 @@ import { revalidatePath } from 'next/cache';
 
 import { writeAsClub } from '@/server/club';
 import type { Outcome } from '@/server/outcome';
-import { isId, type RefusalAbout } from '@/ui/forms';
+import { isId } from '@/ui/forms';
 
 import {
-  toAccepted,
+  isCancelReason,
   toCancelBody,
+  toCancelOutcome,
   toFreeCourts,
+  toGameCourt,
   toMoveBody,
-  toRefusalBody,
-  type Accepted,
   type CancelGivesBack,
+  type CancelOutcome,
   type FreeCourt,
+  type GameCourt,
 } from './mappers';
-import { checkAct, readAct } from './schemas';
+import { checkAct, readAct, type ActRefused, type BookingAct, type Foretold } from './schemas';
 
 /** What landed, on which game, as the page named it to the desk. */
 export type Done = { readonly id: string; readonly name: string } & (
-  | { readonly act: 'accept'; readonly accepted: Accepted }
-  | { readonly act: 'refuse' }
-  | { readonly act: 'move'; readonly court: string }
-  | { readonly act: 'cancel'; readonly givesBack: CancelGivesBack | null }
+  | { readonly act: 'move'; readonly court: GameCourt }
+  | {
+      readonly act: 'cancel';
+      /** Moved to another court, or called off: the cancel's own answer. */
+      readonly landed: CancelOutcome;
+      /** What the dialog said it would do; `null` for *Cancel the game anyway*, or unsaid. */
+      readonly foretold: Foretold | null;
+      readonly givesBack: CancelGivesBack | null;
+    }
 );
 
 export interface BookingActState {
   readonly done: Done | null;
   /** What the backend or the page refused, said about the game the desk saw. */
-  readonly refusal: RefusalAbout | null;
+  readonly refusal: ActRefused | null;
 }
 
 /**
- * Everything a request's answer can change is on more than one page: the badge in the frame,
- * Overview's list and the day on Bookings. So every page is drawn again.
+ * A move or a cancel changes more than the day on Bookings: the hours Courts & prices holds for a
+ * game, and Money's month. So every page is drawn again.
  */
 function redraw(): void {
   revalidatePath('/', 'layout');
@@ -45,77 +52,47 @@ function redrawIfStale(error: { readonly status: number }): void {
   if (error.status === 404 || error.status === 409) redraw();
 }
 
-/**
- * What came of an act: what was refused, or what landed. A reply the contract does not allow
- * (`done` finds nothing true to say of it) is the backend failing; whatever landed is on the
- * page, drawn again.
- */
+/** What came of an act: what was refused, or what landed, which is on the page, drawn again. */
 function settle<T>(
   outcome: Outcome<T>,
+  act: BookingAct,
   name: string,
-  done: (data: T) => Done | null,
+  done: (data: T) => Done,
 ): BookingActState {
   if (!outcome.ok) {
     redrawIfStale(outcome.error);
-    return { done: null, refusal: { code: outcome.error.code, name } };
+    return { done: null, refusal: { code: outcome.error.code, name, act } };
   }
   redraw();
-  const landed = done(outcome.data);
-  return landed === null
-    ? { done: null, refusal: { code: 'backend_failed', name } }
-    : { done: landed, refusal: null };
+  return { done: done(outcome.data), refusal: null };
 }
 
 /**
- * **Accept**, **Refuse**, **Move** or **Cancel** one game: which is the hidden `act`.
+ * **Move** or **Cancel** one game: which is the hidden `act`.
  *
- * - *Accept* books an On request game: every share is held now, all together or not at all, and
- *   taken at the cut-off, or taken at once after it. A card that does not go through keeps the
- *   yes and the court while its player has time to fix it or to pay, or, with no time left, calls
- *   the game off; nobody has paid either way.
- * - *Refuse*, with a note for the club's own records: nobody paid.
- * - *Move* onto another free court of its sport at its hour, until it starts.
- * - *Cancel*, with the reason the players are told: before the cut-off every hold is let go,
- *   after it everybody is refunded in full.
+ * - *Move* onto another free court of its sport at its hour, of its kind of court or indoor for an
+ *   outdoor game, until it starts.
+ * - *Cancel*, with the reason the players are told. Another of the club's courts takes the game
+ *   when one can, and it moves there, nobody refunded (Q122); otherwise, or *anyway*, it is called
+ *   off: before the cut-off every hold is let go, after it everybody is refunded in full.
  */
 export async function actOnBooking(
   _previous: BookingActState,
   form: FormData,
 ): Promise<BookingActState> {
   const posted = readAct(form);
-  const { act, id, name, note, courtId, cancel, givesBack } = posted;
+  const { act, id, name, courtId, cancel, givesBack, anyway, foretold } = posted;
   const refused = checkAct(posted);
   if (refused !== null || act === null || id === null) {
-    return { done: null, refusal: { code: refused ?? 'request_invalid', name } };
+    return { done: null, refusal: { code: refused ?? 'request_invalid', name, act } };
   }
   const path = { params: { path: { booking_id: id } } };
 
   switch (act) {
-    case 'accept':
-      return settle(
-        await writeAsClub((api, auth) =>
-          api.POST('/api/v1/club/bookings/{booking_id}/acceptance', { ...auth, ...path }),
-        ),
-        name,
-        (data) => {
-          const accepted = toAccepted(data);
-          return accepted === null ? null : { act, id, name, accepted };
-        },
-      );
-    case 'refuse':
-      return settle(
-        await writeAsClub((api, auth) =>
-          api.POST('/api/v1/club/bookings/{booking_id}/refusal', {
-            ...auth,
-            ...path,
-            body: toRefusalBody(note),
-          }),
-        ),
-        name,
-        () => ({ act, id, name }),
-      );
     case 'move':
-      if (courtId === null) return { done: null, refusal: { code: 'court_required', name } };
+      if (courtId === null) {
+        return { done: null, refusal: { code: 'court_required', name, act } };
+      }
       return settle(
         await writeAsClub((api, auth) =>
           api.POST('/api/v1/club/bookings/{booking_id}/move', {
@@ -124,23 +101,33 @@ export async function actOnBooking(
             body: toMoveBody(courtId),
           }),
         ),
+        act,
         name,
-        (data) => ({ act, id, name, court: data.name }),
+        (data) => ({ act, id, name, court: toGameCourt(data) }),
       );
     case 'cancel':
       if (cancel === null) {
-        return { done: null, refusal: { code: 'cancel_reason_required', name } };
+        return { done: null, refusal: { code: 'cancel_reason_required', name, act } };
       }
       return settle(
         await writeAsClub((api, auth) =>
           api.POST('/api/v1/club/bookings/{booking_id}/cancellation', {
             ...auth,
             ...path,
-            body: toCancelBody(cancel),
+            body: toCancelBody(cancel, anyway),
           }),
         ),
+        act,
         name,
-        () => ({ act, id, name, givesBack }),
+        // *Anyway* always calls the game off: nothing the dialog said is there to differ from.
+        (data) => ({
+          act,
+          id,
+          name,
+          landed: toCancelOutcome(data),
+          foretold: anyway ? null : foretold,
+          givesBack,
+        }),
       );
   }
 }
@@ -170,12 +157,31 @@ export async function readFreeCourts(bookingId: string): Promise<FreeCourtsAnswe
   return { courts: toFreeCourts(outcome.data), refusal: null };
 }
 
+/** What a cancel with one reason would do now, or why it cannot be asked (a refusal's code). */
+export type CancelPreviewAnswer =
+  | { readonly outcome: CancelOutcome; readonly refusal: null }
+  | { readonly outcome: null; readonly refusal: string };
+
 /**
- * **How many requests wait now**, for the frame to see whether its badge is out of date: the
- * frame is not drawn again as the desk moves between pages, and a request arrives or runs out
- * while nobody acts. `null` when the backend could not say.
+ * **The Cancel dialog's preview** (Q122): what cancelling with the reason the desk chose would do
+ * now, read each time a reason is chosen, since a dialog has no render to read in. A game no
+ * longer cancellable says why, and the page is drawn again with the truth.
  */
-export async function readRequestCount(): Promise<number | null> {
-  const outcome = await writeAsClub((api, auth) => api.GET('/api/v1/club/bookings/waiting', auth));
-  return outcome.ok ? outcome.data.bookings.length : null;
+export async function readCancelPreview(
+  bookingId: string,
+  reason: string,
+): Promise<CancelPreviewAnswer> {
+  if (!isId(bookingId)) return { outcome: null, refusal: 'booking_not_found' };
+  if (!isCancelReason(reason)) return { outcome: null, refusal: 'cancel_reason_required' };
+  const outcome = await writeAsClub((api, auth) =>
+    api.GET('/api/v1/club/bookings/{booking_id}/cancellation/preview', {
+      ...auth,
+      params: { path: { booking_id: bookingId }, query: { reason } },
+    }),
+  );
+  if (!outcome.ok) {
+    redrawIfStale(outcome.error);
+    return { outcome: null, refusal: outcome.error.code };
+  }
+  return { outcome: toCancelOutcome(outcome.data), refusal: null };
 }

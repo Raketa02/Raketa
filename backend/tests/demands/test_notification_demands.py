@@ -60,6 +60,8 @@ from app.modules.proposals.domain.proposal import (
     TimeTo,
 )
 from app.shared.ids import new_uuid
+from tests.api.club_courts_world import adds_a_court, sets_hours
+from tests.api.proposals_world import a_club_and_its_desk, every_hour_of_the_week
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
 NOW = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -86,7 +88,9 @@ def _store(session):
     }
 
 
-async def _a_proposal(session, *, poster: UUID | None = None) -> Proposal:
+async def _a_proposal(
+    session, *, poster: UUID | None = None, club_id: UUID | None = None
+) -> Proposal:
     proposal = Proposal.make(
         proposal_id=new_uuid(),
         pool=Pool(id=new_uuid(), kind=PoolKind.GROUP),
@@ -94,7 +98,7 @@ async def _a_proposal(session, *, poster: UUID | None = None) -> Proposal:
         poster_id=poster,
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
-        club_id=new_uuid(),
+        club_id=club_id or new_uuid(),
         start=START,
         share_grosze=30_00,
         book_by=START - timedelta(hours=2),
@@ -110,31 +114,12 @@ async def _saved(session, proposal: Proposal) -> Proposal:
     return proposal
 
 
-def _requested(proposal: Proposal, *, at: Instant) -> Booking:
-    return Booking.requested(
-        booking_id=proposal.proposal_id,
-        pool_id=proposal.pool.id,
-        club_id=proposal.club_id,
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
-        sport=Sport.PADEL,
-        kind=SearchMode.COMPETITIVE,
-        start=START,
-        share_grosze=30_00,
-        first_side=(OLA, KUBA),
-        second_side=(EWA, TOMEK),
-        cut_off=START - timedelta(hours=24),
-        answer_by=at + timedelta(minutes=30),
-        filled_by=TOMEK,
-        at=at,
-    )
-
-
 def _booked(proposal: Proposal, *, at: Instant) -> Booking:
     return Booking.confirmed(
         booking_id=proposal.proposal_id,
         pool_id=proposal.pool.id,
         club_id=proposal.club_id,
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1", indoor=True),
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
         start=START,
@@ -180,11 +165,7 @@ async def test_a_game_still_filling_is_its_people_in_and_its_seats_open(
     brief = await games.about(proposal.proposal_id, at=NOW)
 
     assert brief is not None
-    assert (brief.filling, brief.booked, brief.waiting_for_the_club) == (
-        True,
-        False,
-        False,
-    )
+    assert (brief.filling, brief.booked) == (True, False)
     assert (brief.in_, brief.withdrawn, brief.open_seats) == ((OLA, EWA), (KUBA,), 2)
     assert (brief.undecided, brief.named) == ((TOMEK,), (TOMEK,))
     assert (brief.share_grosze, brief.posted_by, brief.starts_at) == (
@@ -237,11 +218,7 @@ async def test_a_booked_game_is_who_holds_a_seat_and_who_took_one(
     brief = await games.about(proposal.proposal_id, at=NOW + timedelta(hours=3))
 
     assert brief is not None
-    assert (brief.booked, brief.asked_the_club, brief.cancel_reason) == (
-        True,
-        False,
-        None,
-    )
+    assert (brief.booked, brief.cancel_reason) == (True, None)
     assert set(brief.seated) == {OLA, EWA, TOMEK, ZOSIA}
     assert brief.seats_taken == {KUBA: ZOSIA}
 
@@ -254,67 +231,17 @@ async def test_a_booked_game_says_whose_own_yes_filled_it(implementation, sessio
         filled.say_yes(player, at=NOW)
     filled.fill(first_side=(OLA, KUBA), second_side=(EWA, TOMEK), by=TOMEK, at=NOW)
     await _saved(session, filled)
-    by_the_club = await _a_proposal(session)
+    by_nobody = await _a_proposal(session)
     for player in (OLA, KUBA, EWA, TOMEK):
-        by_the_club.say_yes(player, at=NOW)
-    by_the_club.fill(first_side=(OLA, KUBA), second_side=(EWA, TOMEK), by=None, at=NOW)
-    await _saved(session, by_the_club)
+        by_nobody.say_yes(player, at=NOW)
+    by_nobody.fill(first_side=(OLA, KUBA), second_side=(EWA, TOMEK), by=None, at=NOW)
+    await _saved(session, by_nobody)
     still_filling = await _saved(session, await _a_proposal(session))
 
     later = NOW + timedelta(hours=1)
     assert (await games.about(filled.proposal_id, at=later)).filled_by == TOMEK
-    assert (await games.about(by_the_club.proposal_id, at=later)).filled_by is None
+    assert (await games.about(by_nobody.proposal_id, at=later)).filled_by is None
     assert (await games.about(still_filling.proposal_id, at=later)).filled_by is None
-
-
-@pytest.mark.parametrize("implementation", registered(GameBriefs))
-async def test_a_game_waiting_for_its_club_says_by_when_it_answers(
-    implementation, session
-):
-    """Only while it waits: refused, it says no deadline — nor does a game
-    still filling, or one booked at once."""
-
-    games: GameBriefs = implementation.build(session)
-    proposal = await _a_proposal(session)
-    for player in (OLA, KUBA, EWA, TOMEK):
-        proposal.say_yes(player, at=NOW)
-    await _saved(session, proposal)
-    answer_by = NOW + timedelta(minutes=30)
-    booking = Booking.requested(
-        booking_id=proposal.proposal_id,
-        pool_id=proposal.pool.id,
-        club_id=proposal.club_id,
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
-        sport=Sport.PADEL,
-        kind=SearchMode.COMPETITIVE,
-        start=START,
-        share_grosze=30_00,
-        first_side=(OLA, KUBA),
-        second_side=(EWA, TOMEK),
-        cut_off=START - timedelta(hours=24),
-        answer_by=answer_by,
-        filled_by=TOMEK,
-        at=NOW,
-    )
-    bookings = build_booking_repository(session, **_store(session))
-    await bookings.save(booking)
-    await session.commit()
-    later = NOW + timedelta(minutes=5)
-
-    waiting = await games.about(proposal.proposal_id, at=later)
-
-    assert waiting is not None
-    assert (waiting.waiting_for_the_club, waiting.answer_by) == (True, answer_by)
-    booking.refuse(reason=None, at=later)
-    await bookings.save(booking)
-    await session.commit()
-    assert (await games.about(proposal.proposal_id, at=later)).answer_by is None
-    filling = await _saved(session, await _a_proposal(session))
-    assert (await games.about(filling.proposal_id, at=later)).answer_by is None
-    booked = await _saved(session, await _a_proposal(session))
-    await bookings.save(_booked(booked, at=NOW))
-    await session.commit()
-    assert (await games.about(booked.proposal_id, at=later)).answer_by is None
 
 
 @pytest.mark.parametrize("implementation", registered(GameBriefs))
@@ -336,20 +263,24 @@ async def test_a_game_the_club_cancelled_says_why(implementation, session):
 async def test_a_full_game_gone_back_to_filling_says_since_when(
     implementation, session
 ):
-    """Kuba left while the club decided: the request was taken back, and the
-    game is filling again (Q106) — until it is asked again."""
+    """Kuba left while the game waited for Tomek's payment: it is filling
+    again (Q106), Tomek's time running on."""
 
     games: GameBriefs = implementation.build(session)
     proposal = await _a_proposal(session)
     for player in (OLA, KUBA, EWA, TOMEK):
         proposal.say_yes(player, at=NOW)
+    proposal.give_time_to_pay(
+        TOMEK,
+        reason=ReopenReason.AUTHENTICATION_REQUIRED,
+        seat_charge_id=new_uuid(),
+        until=NOW + timedelta(minutes=30),
+        time_to=TimeTo.FIX_THE_CARD,
+        filled_by=TOMEK,
+        at=NOW,
+    )
     proposal.withdraw_yes(KUBA, at=NOW + timedelta(minutes=5))
     await _saved(session, proposal)
-    booking = _requested(proposal, at=NOW)
-    booking.withdraw_request((KUBA,), left=(KUBA,), at=NOW + timedelta(minutes=5))
-    bookings = build_booking_repository(session, **_store(session))
-    await bookings.save(booking)
-    await session.commit()
     later = NOW + timedelta(minutes=10)
 
     brief = await games.about(proposal.proposal_id, at=later)
@@ -358,20 +289,11 @@ async def test_a_full_game_gone_back_to_filling_says_since_when(
     assert (brief.fell_back, brief.fell_back_at) == (True, NOW + timedelta(minutes=5))
     assert (brief.filling, brief.book_by) == (True, START - timedelta(hours=2))
     assert brief.in_ == (OLA, EWA, TOMEK)
-    booking.request_again(
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
-        first_side=(OLA, ZOSIA),
-        second_side=(EWA, TOMEK),
-        cut_off=START - timedelta(hours=24),
-        answer_by=later + timedelta(minutes=30),
-        filled_by=ZOSIA,
-        at=later,
-    )
-    await bookings.save(booking)
-    await session.commit()
-    assert (await games.about(proposal.proposal_id, at=later)).fell_back is False
+    assert brief.waiting_for_a_payment is False
     booked = await _saved(session, await _a_proposal(session))
-    await bookings.save(_booked(booked, at=NOW))
+    await build_booking_repository(session, **_store(session)).save(
+        _booked(booked, at=NOW)
+    )
     await session.commit()
     assert (await games.about(booked.proposal_id, at=later)).fell_back is False
 
@@ -411,7 +333,7 @@ async def test_a_game_waiting_for_a_payment_says_whose_and_until_when(
     assert (brief.waiting_for_a_payment, brief.paying) == (True, {TOMEK: pay_by})
     # His time is to fix his card (#638).
     assert brief.fixing == {TOMEK}
-    assert (brief.waiting_for_the_club, brief.fell_back) == (False, False)
+    assert brief.fell_back is False
     assert (booked.booked_on_a_payment, booked.paying) == (True, {})
     assert booked.fixing == frozenset()
     proposals = build_proposal_repository(session, **_store(session))
@@ -765,6 +687,25 @@ async def test_a_card_is_shown_to_nobody_outside_its_pool(implementation, sessio
 
     assert await decks.showing(proposal.proposal_id, [OLA, KUBA], at=NOW) == ()
     assert await decks.showing(new_uuid(), [OLA], at=NOW) == ()
+
+
+@pytest.mark.parametrize("implementation", registered(Decks))
+async def test_a_card_promises_a_kind_of_court_only_when_its_courts_are_one_kind(
+    implementation, client, session
+):
+    """What *Your new game* names at the club and hour a cancel took (#673): the
+    kind the card promises, as the deck shows it (Q122)."""
+
+    club_id, desk = await a_club_and_its_desk(client)
+    decks: Decks = implementation.build(session)
+    card = await _saved(session, await _a_proposal(session, club_id=UUID(club_id)))
+
+    # Court 1 is the club's one padel court, and indoor.
+    assert await decks.kind_of_court(card.proposal_id) is True
+    outdoor = await adds_a_court(client, desk, name="Court 4", indoor=False)
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
+    assert await decks.kind_of_court(card.proposal_id) is None
+    assert await decks.kind_of_court(new_uuid()) is None
 
 
 @pytest.mark.parametrize("implementation", registered(Names))

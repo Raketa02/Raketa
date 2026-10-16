@@ -10,12 +10,12 @@ summaries of each club's day of new bookings, sent once (#548).
 (#544), which the Player Score reads.
 
 **Three are demands on contexts it does not write**: which courts a club still
-has for Raketa at an hour, its cut-off and its time to confirm (``clubs``, over
-what it sells); the ordinary Game a booking opens (``games``, over the use case
-a completed line-up opens one with); and, for an On request club, whom to tell
-that a game waits for its answer and what the club is called (``clubs``, over
-its own account and details — #543) — and whom to tell it said no, or let its
-time run out (``users``, the players' addresses — #623).
+has for Raketa at an hour, and its cut-off (``clubs``, over what it sells); the
+ordinary Game a booking opens (``games``, over the use case a completed line-up
+opens one with); and whom a club's email is addressed to and what the club is
+called (``clubs``, over its own account and details). A club's cancel also
+closes the court it took a game off for that hour (``clubs``, over its own
+exceptions, #673).
 """
 
 from __future__ import annotations
@@ -26,7 +26,12 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.bookings.domain.booking import BookedCourt, Booking
+from app.modules.bookings.domain.booking import (
+    BookedCourt,
+    Booking,
+    CancelReason,
+    FreeCourt,
+)
 from app.modules.bookings.domain.keeping import Keeping
 from app.modules.bookings.domain.summary import NewBookingsSummary
 
@@ -88,8 +93,8 @@ class BookingDirectory(Protocol):
     ) -> Sequence[Instant]:
         """When each of this player's **booked** games starts, from ``start``
         until ``end`` — for ever when ``end`` is ``None`` — soonest first. A game
-        still waiting for its club is not booked yet, one called off never will
-        be, and one they left is not theirs (#544); one with a seat open is."""
+        called off never will be, and one they left is not theirs (#544); one
+        with a seat open is."""
         ...
 
     async def of_player(
@@ -116,19 +121,7 @@ class BookingDirectory(Protocol):
         about the set. A pool absent from the answer has booked none (#542).
 
         **Only a booked game counts** — whole, or with a seat open (#544): one
-        waiting for its club, or called off, is not a game anybody will play
-        there (#543)."""
-        ...
-
-    async def waiting_at(self, club_id: UUID) -> Sequence[UUID]:
-        """Every booking at this club waiting for its answer — **the one due
-        first, first** (#543)."""
-        ...
-
-    async def unanswered(self, *, now: Instant) -> Sequence[UUID]:
-        """Every booking still waiting for its club whose answer was due by
-        ``now``, the longest overdue first — **candidates**: the aggregate
-        decides."""
+        called off is not a game anybody will play there."""
         ...
 
     async def ever_seated(
@@ -151,8 +144,8 @@ class BookingDirectory(Protocol):
         self, club_id: UUID, *, start: Instant, end: Instant
     ) -> Sequence[UUID]:
         """Every booking at this club whose game starts from ``start`` until
-        ``end``, **whatever it came to** — waiting, booked, with a seat open,
-        called off — soonest first, and by id among games at one hour: the
+        ``end``, **whatever it came to** — booked, with a seat open, called
+        off — soonest first, and by id among games at one hour: the
         club's Bookings page for a day (#547)."""
         ...
 
@@ -160,9 +153,8 @@ class BookingDirectory(Protocol):
         self, *, start: Instant, end: Instant
     ) -> Mapping[UUID, Sequence[UUID]]:
         """Each club's bookings **booked** from ``start`` until ``end`` —
-        filled, or accepted by an On request club — whatever they came to
-        since, the soonest game first (#548). A club that booked none is
-        absent."""
+        filled — whatever they came to since, the soonest game first (#548). A
+        club that booked none is absent."""
         ...
 
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
@@ -203,13 +195,11 @@ class BookingHistoryQuery(Protocol):
 @dataclass(frozen=True, slots=True)
 class CourtForTheGame:
     """The court a full game is booked on — **the first free court of its
-    sport at its hour**, in the club's own order (the mechanics §11.2) — how
-    many hours before the game the club's free cancellation ends, and how many
-    minutes an On request club has to answer."""
+    sport at its hour**, in the club's own order (the mechanics §11.2) — and
+    how many hours before the game the club's free cancellation ends."""
 
     court: BookedCourt
     cut_off_hours: int
-    time_to_confirm_minutes: int
 
 
 @runtime_checkable
@@ -229,11 +219,34 @@ class ClubCourtsAtTheHour(Protocol):
 
     async def free_courts(
         self, club_id: UUID, *, sport: Sport, start: Instant
-    ) -> Sequence[BookedCourt]:
+    ) -> Sequence[FreeCourt]:
         """Every court of ``sport`` the club still has for Raketa from
         ``start``, read as ``first_free`` reads it — **in the club's own
-        order** — where a booked game may be moved to (#547). Empty when there
-        is none, or the club no longer sells."""
+        order** — where a booked game may be moved to (#547), each with the
+        share one player pays for it at that hour, which a club's cancel asks
+        of a court before it absorbs the game (#672). Empty when there is none,
+        or the club no longer sells."""
+        ...
+
+
+@runtime_checkable
+class CourtClosures(Protocol):
+    """**A demand of the Club context**: the court a club's cancel took a game
+    off, closed for the game's hour (#673, a ruling beside ``docs/adr/0196``
+    §3) — it can't be played then, so it is never sold for that hour again."""
+
+    async def close(
+        self,
+        club_id: UUID,
+        court_id: UUID,
+        *,
+        start: Instant,
+        because: CancelReason,
+        at: Instant,
+    ) -> None:
+        """Close ``court_id`` for the hour from ``start``, in the caller's
+        transaction, saying why in the club's own list — until the club
+        opens it again."""
         ...
 
 
@@ -303,29 +316,12 @@ class ClubDesk:
 
 @runtime_checkable
 class ClubDesks(Protocol):
-    """**A demand of the Club context**: the desk a request is sent to (the
-    mechanics §16.12 — *a request is waiting for you*, at once)."""
+    """**A demand of the Club context**: the desk a club's email is sent to
+    (the mechanics §16.12) — a game called off at the cut-off, at once, and the
+    day's new bookings."""
 
     async def of(self, club_id: UUID) -> ClubDesk | None:
         """The club's desk, or ``None`` for a club that no longer exists."""
-        ...
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class PlayerAddress:
-    """Whom an email to a player is addressed to."""
-
-    email: str
-
-
-@runtime_checkable
-class PlayerAddresses(Protocol):
-    """**A demand of the users context**: whom the club's no, or its silence,
-    is emailed to — each player on the request (#623; the mechanics Q105)."""
-
-    async def of(self, player_ids: Collection[UUID]) -> Mapping[UUID, PlayerAddress]:
-        """Each of these players. An account that no longer exists is absent."""
         ...
 
 

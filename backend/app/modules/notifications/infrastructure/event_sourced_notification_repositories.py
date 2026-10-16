@@ -240,6 +240,9 @@ class EventSourcedNoticeDayRepository:
                         you_left=event.you_left,
                         kept_grosze=event.kept_grosze,
                         rescue=event.rescue,
+                        court_name=event.court_name,
+                        indoor=event.indoor,
+                        moved_from=event.moved_from,
                     )
                 )
             elif isinstance(event, NoticeBundled):
@@ -400,5 +403,8 @@ def _recorded(row: NoticeORM, *, new: bool) -> RecordedNotice:
         you_left=row.you_left,
         kept_grosze=row.kept_grosze,
         rescue=row.rescue,
+        court_name=row.court_name,
+        indoor=row.indoor,
+        moved_from=row.moved_from,
         new=new,
     )

@@ -30,6 +30,7 @@ from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_the_cut_off, build_court_hours
 from app.core.config import get_settings
 from app.kernel import Sport
+from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -65,9 +66,9 @@ def clock(app):
 
 @pytest.fixture
 async def club(client) -> str:
-    """Bonarka Arena, Instant, with its desk's sign-in."""
+    """Bonarka Arena, with its desk's sign-in."""
 
-    club_id, _desk = await a_club_and_its_desk(client, way="INSTANT")
+    club_id, _desk = await a_club_and_its_desk(client)
     return club_id
 
 
@@ -126,12 +127,18 @@ async def cuts_off(session_factory, clock):
         ).execute()
 
 
-async def the_court_is_on_sale(session_factory, clock, club: str) -> bool:
-    """Whether a padel court at the club on Saturday at 17:00 is for sale."""
+async def the_court_is_free(session_factory, club: str) -> bool:
+    """Whether no booking holds the padel court at the club on Saturday at
+    17:00 — read before any deadline, as a card's held hour is, since at the
+    cut-off the hour has also gone back to the club: its release time, a day
+    before, is the cut-off here (#670)."""
 
     async with session_factory() as session:
         offered = await build_court_hours(session).offered(
-            UUID(club), sport=Sport.PADEL, start=SATURDAY_FIVE, now=clock.now()
+            UUID(club),
+            sport=Sport.PADEL,
+            start=SATURDAY_FIVE,
+            now=before_any_deadline(SATURDAY_FIVE),
         )
     return offered is not None
 
@@ -253,7 +260,7 @@ async def test_the_money_line_is_free_to_leave_until_the_cut_off_then_paid(
 
 
 # --------------------------------------------------------------------------- #
-# Leaving after the cut-off, after the start, and while the club decides
+# Leaving after the cut-off, and after the start
 # --------------------------------------------------------------------------- #
 
 
@@ -299,30 +306,6 @@ async def test_a_game_is_left_once_and_only_by_somebody_in_it(
     assert (outside.status_code, outside.json()["code"]) == (404, "booking_not_found")
 
 
-async def test_leaving_while_the_club_decides_withdraws_the_yes_and_nobody_paid(
-    client, session_factory, clock, four
-):
-    club, _desk = await a_club_and_its_desk(
-        client, name="Kazimierz Padel", way="ON_REQUEST"
-    )
-    group = await a_group(client, four[0], club, *four[1:])
-    proposal = await makes(
-        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
-    )
-    for player in four:
-        assert (await says_yes(client, player, proposal)).status_code == 200
-    ola, kuba, *_ = four
-
-    left = await leaves(client, kuba, proposal)
-
-    assert left.status_code == 200, left.text
-    assert left.json()["left"] == "WHILE_WAITING_FOR_THE_CLUB"
-    # The game is filling again, *Seat open* on the others' Home (Q106).
-    [card] = await home_of(client, ola)
-    assert (card["status"], card["filling_again"]) == ("SEAT_OPEN", True)
-    assert await home_of(client, kuba) == []
-
-
 async def test_the_leaver_leaves_the_game_s_chat_and_the_others_keep_it(
     client, booking, four, mailbox
 ):
@@ -358,14 +341,14 @@ async def test_a_game_still_short_at_its_cut_off_is_called_off_and_every_hold_le
     )
     # Nothing was taken, so nothing is refunded (#637).
     assert card["money"]["refunded_grosze"] is None
-    assert not await the_court_is_on_sale(session_factory, clock, club)
+    assert not await the_court_is_free(session_factory, club)
 
     run = await cuts_off(session_factory, clock)
 
     assert (run.games, run.conflicts) == (1, 0)
     for player in four:
         assert kinds_of(await receipts_of(client, mailbox, player)) == ["RELEASED"]
-    assert await the_court_is_on_sale(session_factory, clock, club)
+    assert await the_court_is_free(session_factory, club)
     assert await rooms_of(client, ola) == []
     [called_off] = [
         sent
