@@ -134,6 +134,7 @@ export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefine
     openSeatsAfterYourYes: wire.open_seats_after_your_yes,
     court: wire.court,
     ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
+    ...(wire.indoor === null ? {} : { indoor: wire.indoor }),
     noFreeCancellation: wire.no_free_cancellation,
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),

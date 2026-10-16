@@ -1038,3 +1038,21 @@ full_ — a full game gone back to filling only _books when it's full_, so `fill
 mark. **The stamp always shows the price** on _Book it now_ (`chargesAtOnce`), and a yes holds no club
 any more (`YesOn`). The leaving kind is kept under a name that says so, `WHILE_WAITING_FOR_A_PAYMENT`:
 _Leave the game_ while one payment is awaited still withdraws the yes, nobody having paid.
+
+**The kind of court is shown, and the owed card is first as served** (#677; ADR-0196 §2, §4; the
+backend's #671 and #673). A club's cancel that a free court absorbs moves the game to that court
+(_Court 3 · indoor_), and the club's own Move keeps the kind, so a player's booked court now carries
+its kind as well as its number. **Why**: an outdoor game moved indoors is a change a player should
+see before they walk to the court. The wire's `indoor` is `true`, `false` or `null`, and the phone
+spells it once: `courtKindWords` says _Indoor_ or _Outdoor_, and where a court is booked the kind
+follows its number in lower case. **Where it shows**: a card's court block says _Indoor_ or
+_Outdoor_ (`courtLine`) only where the read promises one kind, and nothing where its free courts are
+mixed; Home's booked row and the booked details read _Court 2 · indoor · 3,1 km_ (`whereAside`), and
+Home's spoken label names the kind after the court. A booked game gone
+back to filling has no court and so no kind (`courtWords`).
+
+**The deck draws the server's order, the owed card first.** The deck read puts a card owed to the
+reader first, soonest first among two, ahead of the usual order, and the phone draws the cards in
+the order served without re-sorting them (`groupGames.test.tsx`). **No flag crosses the wire** for
+it; the owed card carries no mark, and the one lift the phone makes is the card a notice opened
+(`withOnTop`), as it was before.

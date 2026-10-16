@@ -35,10 +35,10 @@ export const NOTIFICATIONS_COPY = {
   loading: 'Reading your notifications…',
   readAgain: 'Try again',
   /**
-   * Ten always on (A7.2 as #620 amends it, Q113 adds *Fix your card*, and Q121 takes the club's
-   * answer and *the club answers by* away; mock 52 drew seven) — the mechanics §17.2's table, a row
-   * a line of it: *A game you left* is one row for two notices. The quiet row for the take at the
-   * cut-off is never pushed, so it is not listed.
+   * Eleven always on (A7.2 as #620 amends it, Q113 adds *Fix your card*, Q121 takes the club's
+   * answer and *the club answers by* away, and ADR-0196 §2 adds *Game moved* (#677); mock 52 drew
+   * seven) — the mechanics §17.2's table, a row a line of it: *A game you left* is one row for two
+   * notices. The quiet row for the take at the cut-off is never pushed, so it is not listed.
    */
   alwaysOn: {
     title: 'Always on',
@@ -52,6 +52,7 @@ export const NOTIFICATIONS_COPY = {
       'Someone left your game · or it’s filling again',
       'You’ve been refunded',
       'Your new game',
+      'A game moved to another court',
       'A game you left',
       'Your post didn’t fill',
     ],

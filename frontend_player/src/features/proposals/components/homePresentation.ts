@@ -42,6 +42,7 @@ import type { GameDay } from '../domain/when';
 
 import {
   clubName,
+  courtKindWords,
   gameDayWords,
   LINE_JOIN,
   paymentAwaitedClauses,
@@ -265,15 +266,27 @@ export function statusSubline(sport: Sport, status: ShownStatus): string {
 }
 
 /**
- * *Court 2 · 3,1 km* — WHERE's aside: the court once it is given, and how far the club is when that
- * is known. Nothing when neither is.
+ * The court a booked game was given, and its kind in lower case (#677): *Court 2 · indoor*. Nothing
+ * while no court is given, and no kind the read does not hold.
+ */
+function courtWords(
+  game: Pick<HomeGame, 'status' | 'fillingAgain' | 'courtName' | 'indoor'>,
+): readonly string[] {
+  if (!courtIsGiven(game) || game.courtName === undefined) return [];
+  const kind = courtKindWords(game.indoor)?.toLowerCase();
+  return kind === undefined ? [game.courtName] : [game.courtName, kind];
+}
+
+/**
+ * *Court 2 · indoor · 3,1 km* — WHERE's aside: the court once it is given, with its kind, and how
+ * far the club is when that is known. Nothing when neither is.
  */
 export function whereAside(
-  game: Pick<HomeGame, 'status' | 'fillingAgain' | 'courtName'>,
+  game: Pick<HomeGame, 'status' | 'fillingAgain' | 'courtName' | 'indoor'>,
   distanceKm: number | undefined,
 ): string | undefined {
   const parts = [
-    ...(courtIsGiven(game) && game.courtName !== undefined ? [game.courtName] : []),
+    ...courtWords(game),
     ...(distanceKm === undefined ? [] : [formatDistanceKm(distanceKm)]),
   ];
   return parts.length === 0 ? undefined : parts.join(LINE_JOIN);
@@ -409,7 +422,7 @@ export function homeCardLabel({
 }: {
   readonly game: Pick<
     HomeGame,
-    'status' | 'fillingAgain' | 'sport' | 'kind' | 'club' | 'courtName' | 'startsAt'
+    'status' | 'fillingAgain' | 'sport' | 'kind' | 'club' | 'courtName' | 'indoor' | 'startsAt'
   >;
   /** Marked *new*. */
   readonly fresh: boolean;
@@ -420,10 +433,7 @@ export function homeCardLabel({
 }): string {
   const time = timeWords(game.startsAt);
   const status = statusWord(shownStatus(game));
-  const where =
-    courtIsGiven(game) && game.courtName !== undefined
-      ? `${clubName(game)}${SPOKEN_JOIN}${game.courtName}`
-      : clubName(game);
+  const where = [clubName(game), ...courtWords(game)].join(SPOKEN_JOIN);
   return [
     fresh ? `${status}${SPOKEN_JOIN}${COPY.newSpoken}` : status,
     sportParts(game.sport, game.kind).join(SPOKEN_JOIN),

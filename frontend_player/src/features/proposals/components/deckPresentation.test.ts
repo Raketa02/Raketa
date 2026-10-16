@@ -13,6 +13,7 @@ import {
   barLabels,
   capLine,
   countdownWords,
+  courtLine,
   detailsShareWords,
   fillingStatus,
   gameDayWords,
@@ -207,5 +208,24 @@ describe('a game’s details', () => {
       aside: 'if it fills · book by Tue 17:00',
       below: 'Confirm your payment by 14:40',
     });
+  });
+});
+
+describe('the court block’s kind (#677)', () => {
+  const card = { startsAt: '2026-10-03T14:00:00Z', club: { id: 'club-1', name: 'Ogrody 33' } };
+
+  it('says Indoor or Outdoor on a card, where the server says which', () => {
+    expect(courtLine(undefined, { ...card, indoor: true })).toBe('16:00 · Ogrody 33 · Indoor');
+    expect(courtLine(undefined, { ...card, indoor: false })).toBe('16:00 · Ogrody 33 · Outdoor');
+  });
+
+  it('says nothing about the kind where the server says nothing (mixed courts)', () => {
+    expect(courtLine(undefined, card)).toBe('16:00 · Ogrody 33');
+  });
+
+  it('follows a booked court’s number in lower case: Court 6 · indoor', () => {
+    expect(courtLine(undefined, { ...card, courtName: 'Court 6', indoor: true })).toBe(
+      '16:00 · Ogrody 33 · Court 6 · indoor',
+    );
   });
 });

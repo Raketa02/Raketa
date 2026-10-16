@@ -622,3 +622,44 @@ describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said'
     );
   });
 });
+
+describe('the booked court’s kind (#677)', () => {
+  it('reads the court, then its kind, then the distance: Court 3 · indoor · 3,1 km', () => {
+    const at = { status: 'BOOKED', courtName: 'Court 3', indoor: true } as const;
+    expect(whereAside(at, 3.1)).toBe('Court 3 · indoor · 3,1 km');
+    expect(whereAside({ ...at, indoor: false }, undefined)).toBe('Court 3 · outdoor');
+  });
+
+  it('names no kind where the read holds none, or no court is given', () => {
+    expect(whereAside({ status: 'BOOKED', courtName: 'Court 3' }, 3.1)).toBe('Court 3 · 3,1 km');
+    expect(whereAside({ status: 'SEAT_OPEN', fillingAgain: true, indoor: true }, 3.1)).toBe(
+      '3,1 km',
+    );
+  });
+
+  it('is spoken with the court, after it', () => {
+    const game = {
+      bookingId: 'b-1',
+      groupId: 'group-1',
+      sport: 'padel',
+      kind: 'competitive',
+      status: 'BOOKED',
+      openSeats: 0,
+      needsYou: false,
+      startsAt: '2026-10-03T14:00:00Z',
+      club: { id: 'club-1', name: 'Bonarka Arena' },
+      courtName: 'Court 3',
+      indoor: true,
+      sides: { yours: [], theirs: [] },
+      money: { shareGrosze: 4000, paid: true },
+    } as const;
+    expect(
+      homeCardLabel({
+        game,
+        fresh: false,
+        day: { kind: 'weekday', weekday: 6 },
+        money: undefined,
+      }),
+    ).toBe('Booked. Padel. Bonarka Arena, Court 3, indoor. Saturday, 16:00 until 17:00.');
+  });
+});

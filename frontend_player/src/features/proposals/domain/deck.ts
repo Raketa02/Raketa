@@ -87,6 +87,11 @@ export interface DeckCard {
   readonly court: CourtState;
   /** What the club calls the court — a rescue's, booked already: *· Court 6*. Absent until booked. */
   readonly courtName?: string;
+  /**
+   * The kind of court the card promises (#677): `true` *Indoor*, `false` *Outdoor*. Absent where the
+   * free courts it could be booked on are mixed, which promises neither (Q122).
+   */
+  readonly indoor?: boolean;
   /** The club's cut-off has already passed: *no free cancellation*. */
   readonly noFreeCancellation: boolean;
   /** The rows are the sides (Q70): the reader's, and the other. A side may be short of a seat. */

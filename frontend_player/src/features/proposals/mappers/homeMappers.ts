@@ -110,6 +110,7 @@ function toBooking(
     needsYou: wire.needs_you,
     startsAt: wire.starts_at,
     ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
+    ...(wire.indoor === null ? {} : { indoor: wire.indoor }),
     sides: toSides(wire.sides),
     money: toMoney(wire.money),
     ...toFillingAgain(wire),

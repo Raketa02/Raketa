@@ -146,6 +146,10 @@ review comment and a test description all use the same word.
 - **Notice banner** — a notice pushed while the app is open, drawn by the app at the top because the
   phone presents nothing then; a press opens its game (#559). _Avoid_: toast — a toast is not a
   control and is never pressed.
+- **`GAME_MOVED` notice kind** — the wire spelling of _Game moved_, the root term; always on and
+  opened on the booked game (#677). `domain/vocabulary.ts` spells it.
+- **`indoor` on the wire** — `true`, `false` or `null`. The mappers drop a `null` to an absent
+  `indoor?`, and `courtKindWords` is the one place the phone spells it (#677).
 - **Incoming link** — an address the operating system opens the app with, read by
   `+native-intent` before anything is routed. Only three are links — `join/<code>` (a **Group
   link**), `invite/<token>` and `reset/<token>` — by the app's scheme or the **link domain**

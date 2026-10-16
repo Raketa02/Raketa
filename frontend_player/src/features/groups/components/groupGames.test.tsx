@@ -557,6 +557,28 @@ describe('the card', () => {
     );
   });
 
+  it('says Indoor or Outdoor on a card the server promises a kind for, and nothing where it promises neither (#677)', async () => {
+    const indoor = deckCard({ indoor: true });
+    await openGames(groupDeck({ cards: [indoor] }));
+
+    expect(
+      await screen.findByLabelText(
+        'Court available, 32 zł, Saturday 16:00 · Bonarka Arena · Indoor',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('draws the cards in the order the server dealt them, the owed card first (#677)', async () => {
+    // The server puts a card owed to the reader first (#673); the phone draws the order it is served.
+    const owed = deckCard({ open_seats_after_your_yes: 1 });
+    const other = deckCard();
+    await openGames(groupDeck({ cards: [owed, other] }));
+
+    await screen.findByTestId(`game-card-${owed.proposal_id}`);
+    expect(screen.queryByTestId(`game-card-${other.proposal_id}`)).toBeNull();
+    expect(screen.getByTestId(`game-card-${other.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
+  });
+
   /** Q90: the cards behind fade as well as shrink, and they are real cards, never placeholders. */
   it('draws the next two cards behind the top one, and no more', async () => {
     const cards = [deckCard(), deckCard(), deckCard(), deckCard()];

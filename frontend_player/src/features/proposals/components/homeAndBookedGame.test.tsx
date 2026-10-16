@@ -192,6 +192,14 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(screen.getByText('Your games · 1')).toBeTruthy();
   });
 
+  it('draws the booked court with its kind — Court 2 · indoor (#677)', async () => {
+    stubHomeGames(transport, [homeGame({ court_name: 'Court 2', indoor: true })]);
+    await launchSignedIn();
+
+    const drawn = await card();
+    expect(within(drawn).getByText('Court 2 · indoor')).toBeTruthy();
+  });
+
   /** Q113: held at the fill and taken at the cut-off — leaving before it takes nothing. */
   it('says the share is free to leave until the cut-off, and Paid from it by itself', async () => {
     stubHomeGames(transport, [homeGame({ money: CUT_OFF_AT_ELEVEN })]);
@@ -319,7 +327,9 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(within(drawn).getByText(HOME.status.BOOKED)).toBeTruthy();
     expect(within(drawn).getByText(KAZIMIERZ)).toBeTruthy();
     expect(within(drawn).getByText('25 zł · free to leave until Fri 16:00')).toBeTruthy();
-    expect(screen.getByLabelText(/^Booked, new\. Padel\. Kazimierz Padel, Court 3\./)).toBeTruthy();
+    expect(
+      screen.getByLabelText(/^Booked, new\. Padel\. Kazimierz Padel, Court 3, indoor\./),
+    ).toBeTruthy();
     expect(screen.queryByText(/answers by|confirms|Nobody pays|waiting for the club/i)).toBeNull();
   });
 
@@ -685,7 +695,7 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.getByTestId(`game-tile-${BARTEK}`)).toBeTruthy();
     // Decorative to a listener — every tile names its person.
     expect(screen.getByText('You + Piotr vs Inés + Bartek', HIDDEN_TOO)).toBeTruthy();
-    expect(screen.getByLabelText('Where, Bonarka Arena, Court 2 · 3,1 km')).toBeTruthy();
+    expect(screen.getByLabelText('Where, Bonarka Arena, Court 2 · indoor · 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();
     expect(screen.getByLabelText('Paid, 28 zł, Paid')).toBeTruthy();
@@ -899,7 +909,7 @@ describe('a booked game’s details (A4.1)', () => {
 
     expect(await screen.findByRole('header', { name: HOME.status.BOOKED })).toBeTruthy();
     expect(screen.getByText('Padel · booked')).toBeTruthy();
-    expect(screen.getByLabelText('Where, Kazimierz Padel, Court 3 · 3,1 km')).toBeTruthy();
+    expect(screen.getByLabelText('Where, Kazimierz Padel, Court 3 · indoor · 3,1 km')).toBeTruthy();
     expect(
       screen.getByLabelText(
         'Your share, 25 zł, Held on your card · taken Fri 16:00 · free to leave until then',

@@ -297,15 +297,32 @@ export function clubName(card: Pick<DeckCard, 'club'>): string {
   return card.club.name ?? COPY.unknownClub;
 }
 
-/** *Saturday 16:00 · Ogrody 33* — the court block's line, and *· Court 6* once the court is booked. */
+/**
+ * *Indoor* or *Outdoor* — a court's kind as the card words it (#677), or nothing where the read
+ * holds none (its free courts are mixed).
+ */
+export function courtKindWords(indoor: boolean | undefined): 'Indoor' | 'Outdoor' | undefined {
+  if (indoor === undefined) return undefined;
+  return indoor ? 'Indoor' : 'Outdoor';
+}
+
+/**
+ * *Saturday 16:00 · Ogrody 33* — the court block's line. Once the court is booked it follows the
+ * number in lower case, *· Court 6 · indoor* (#677); before that the kind stands alone, *· Indoor*.
+ */
 export function courtLine(
   day: GameDay | undefined,
-  card: Pick<DeckCard, 'startsAt' | 'club' | 'courtName'>,
+  card: Pick<DeckCard, 'startsAt' | 'club' | 'courtName' | 'indoor'>,
 ): string {
   const when = [day === undefined ? undefined : gameDayWords(day), platformClock(card.startsAt)]
     .filter((part): part is string => part !== undefined)
     .join(' ');
-  return [when, clubName(card), card.courtName ?? ''].filter((part) => part !== '').join(DOT);
+  const kind = courtKindWords(card.indoor);
+  const kindPart =
+    kind === undefined ? '' : card.courtName === undefined ? kind : kind.toLowerCase();
+  return [when, clubName(card), card.courtName ?? '', kindPart]
+    .filter((part) => part !== '')
+    .join(DOT);
 }
 
 /** *32 zł* */
@@ -317,7 +334,10 @@ export function shareWords(card: Pick<DeckCard, 'shareGrosze'>): string {
 export function courtSpoken(
   tag: CourtTag,
   day: GameDay | undefined,
-  card: Pick<DeckCard, 'startsAt' | 'club' | 'courtName' | 'shareGrosze' | 'noFreeCancellation'>,
+  card: Pick<
+    DeckCard,
+    'startsAt' | 'club' | 'courtName' | 'indoor' | 'shareGrosze' | 'noFreeCancellation'
+  >,
 ): string {
   return [
     COPY.courtTag[tag],

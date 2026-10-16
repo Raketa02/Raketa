@@ -46,13 +46,13 @@ writes its answer, a refusal says so under the cards and the three are read agai
 taps are held. The row's line is the chosen ones that are on, short — _You complete it · Challenges ·
 Fill in alerts_ (mock 50) — or _Only the ones always on_.
 
-**The always on are words and a tag, never controls** — ten since #676. Mock 52 drew seven; the rows are
+**The always on are words and a tag, never controls** — eleven since #677. Mock 52 drew seven; the rows are
 A7.2's as [#620](https://github.com/Raketa02/Raketa/issues/620) amends it, a row a line of the
 mechanics §17.2's table, in its order ([#628](https://github.com/Raketa02/Raketa/issues/628)): _It's a
 game! · you paid_ (_· held_ since #642) · _Waiting for one payment_ · _Fix your card
 by … to keep your seat_ (since #643) · _Confirm your payment by … to keep your seat_ · _Game called off · with the refund_ (_· nothing was taken, or with the refund_ since #642) · _Someone left your game · or
 it's filling again_ · _You've been refunded_ ·
-_Your new game_ · _A game you left_ · _Your post didn't fill_. One row can be several notices — _A
+_Your new game_ · _A game moved to another court_ (#677) · _A game you left_ · _Your post didn't fill_. One row can be several notices — _A
 game you left_ is two — and a row names a
 notice before the backend gives it: _Waiting for one payment_ comes with #625, _A game you left_ and
 _filling again_ with #623. Each has 6.4's green **on** tag, one element to a listener (_…, always
@@ -281,9 +281,13 @@ arrival re-reads _TO CONFIRM_ as any does, so a row loses its time when the time
 Padel and it is booked at once, so the four are told _It's a game! · 25 zł held_ like at any club.
 `WAITING_FOR_THE_CLUB` (_It's a game! · Kazimierz Padel answers by 21:15_), `CLUB_CONFIRMED` and
 `CLUB_COULD_NOT_TAKE_IT` (_said no_, _didn't answer in time_) left the wire and `domain/vocabulary.ts`,
-and their two rows left the settings, which list ten. **Why**: every full game books the moment its
-last yes lands, at every club, so there is no answer to wait for or to be told. **The regenerated
-contract also brought `GAME_MOVED`** (#671): `domain/vocabulary.ts` spells it so the agreement holds,
-and `targetOf` opens it where the backend sends it (`BOOKING`, the booked game) — a call, held by one
-mapper test, rather than a notice listed that opens nothing. Its settings row, its screen tests and
-its paragraph here are #677's.
+and their two rows left the settings, which list ten (eleven since #677). **Why**: every full game books the moment its
+last yes lands, at every club, so there is no answer to wait for or to be told.
+
+**_Game moved_ is always on, and it opens the booked game** (#677; ADR-0196 §2, §4; the backend's
+#671 and #672). A club's cancel that a free court absorbs, or the club's own Move, tells every player
+on the booking: _Bonarka Arena moved your game to Court 3 · Thu 19:00_, with _Court 2 can't be played
+· Padel · indoor · nothing else changes_ for an automatic move, and _Padel · indoor · nothing else
+changes_ for the club's own. It is not emailed. `targetOf` opens it where the backend sends it
+(`BOOKING`), so a row behind the bell, the banner and a push all land on the booked game, with the
+court and its kind on it (_Court 3 · indoor_).

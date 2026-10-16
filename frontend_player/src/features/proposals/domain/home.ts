@@ -94,6 +94,8 @@ export interface HomeGame {
   readonly club: DeckCard['club'];
   /** What the club calls the court — *Court 2*. Absent on a game that never booked. */
   readonly courtName?: string;
+  /** The booked court's kind — *Court 2 · indoor* (#677). Absent with no court, or none the read holds. */
+  readonly indoor?: boolean;
   readonly sides: DeckCard['sides'];
   readonly money: BookedMoney;
   /**

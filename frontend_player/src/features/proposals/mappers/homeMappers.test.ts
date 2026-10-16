@@ -87,6 +87,7 @@ describe('toHome', () => {
           startsAt: '2026-10-03T14:00:00Z',
           club: { id: 'club-1', name: 'Bonarka Arena' },
           courtName: 'Court 2',
+          indoor: true,
           sides: {
             yours: [
               {

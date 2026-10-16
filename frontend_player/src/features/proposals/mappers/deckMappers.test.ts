@@ -16,6 +16,14 @@ import {
 
 import { toDeckCard, toGroupDeck, toWireKind } from './deckMappers';
 
+describe('a card’s kind of court (#677)', () => {
+  it('reads Indoor or Outdoor as the server promises it, and nothing where it promises neither', () => {
+    expect(toDeckCard(deckCard({ indoor: true }))).toMatchObject({ indoor: true });
+    expect(toDeckCard(deckCard({ indoor: false }))).toMatchObject({ indoor: false });
+    expect(toDeckCard(deckCard({ indoor: null }))).not.toHaveProperty('indoor');
+  });
+});
+
 describe('a card', () => {
   it('reads every field the card draws', () => {
     const read = toDeckCard(

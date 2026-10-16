@@ -247,7 +247,7 @@ describe('the Notifications row, in the ACCOUNT group', () => {
 describe('the Notifications screen', () => {
   // The screens A7.2 as #620 amends it, Q113 adds Fix your card, and Q121 takes the club's answer
   // away: §17.2's always-on notices.
-  it('lists the ten always on, each inert with its green tag (mock 52)', async () => {
+  it('lists the eleven always on, each inert with its green tag (mock 52, #677)', async () => {
     const rows = [
       'It’s a game! · held',
       'Waiting for one payment',
@@ -257,6 +257,7 @@ describe('the Notifications screen', () => {
       'Someone left your game · or it’s filling again',
       'You’ve been refunded',
       'Your new game',
+      'A game moved to another court',
       'A game you left',
       'Your post didn’t fill',
     ];
@@ -1234,5 +1235,59 @@ describe('a push tapped on the phone', () => {
     act(() => phone.tap({ opens: 'BOOKING', game_id: 'not-a-game' }));
 
     expect(screen).toHavePathname('/');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Game moved (#677)
+// ---------------------------------------------------------------------------
+
+describe('Game moved — a club moved the booked game to another court (#677)', () => {
+  const MOVED = notice({
+    kind: 'GAME_MOVED',
+    title: 'Bonarka Arena moved your game to Court 3 · Thu 19:00',
+    body: 'Court 2 can’t be played · Padel · indoor · nothing else changes',
+    opens: 'BOOKING',
+    game_id: BOOKING,
+    new: true,
+  });
+
+  beforeEach(() => {
+    stubBooking(transport, bookingDetails());
+  });
+
+  it('the banner opens the booked game, on the court it moved to', async () => {
+    stubBooking(transport, bookingDetails({ court_name: 'Court 3', indoor: true }));
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+
+    act(() => phone.receive({ title: MOVED.title, body: MOVED.body, data: payloadOf(MOVED) }));
+    fireEvent.press(await screen.findByRole('button', { name: `${MOVED.title}. ${MOVED.body}` }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(await screen.findByText(/Court 3 · indoor/)).toBeTruthy();
+  });
+
+  it('its row behind the bell opens the booked game too — back is the list', async () => {
+    stubNotices(transport, [MOVED], { newCount: 1 });
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. Bonarka Arena moved/ }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    fireEvent.press(await screen.findByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+  });
+
+  it('a push of it, tapped, opens the booked game', async () => {
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+
+    act(() => phone.tap(payloadOf(MOVED)));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 });

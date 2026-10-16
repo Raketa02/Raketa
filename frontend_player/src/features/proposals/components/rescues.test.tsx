@@ -157,6 +157,8 @@ function rescueDetails(card: Wire['DeckCardSchema']): Wire['BookingDetailsRespon
     ends_at: '2026-10-03T15:00:00Z',
     where: { id: card.club.id, name: card.club.name, distance_km: 3.1 },
     court_name: 'Court 6',
+    // The booked court's kind is the card's: a rescue whose card names none shows none (#677).
+    indoor: card.indoor,
     sides: {
       yours: card.sides.yours.map(bookedTile),
       theirs: card.sides.theirs.map(bookedTile),
