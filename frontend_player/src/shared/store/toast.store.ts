@@ -48,10 +48,25 @@ import { type Announcement } from '@/shared/ui/overlay';
 /** 9.2's three, and there is no fourth. `ok` is `mintInk`, per Rule C. */
 export type ToastTone = 'base' | 'ok' | 'bad';
 
+/**
+ * **How long a message stays, and whether it can be closed** — apart from its colour, because a
+ * reason the player must read is not always a failure.
+ *
+ * - `brief` — 9.2's toast: a sentence the player need not act on, held `motion.hold.toast`, with
+ *   no control, never blocking a tap.
+ * - `read` — a reason the player must read: why what they pressed did not go through. Held
+ *   `motion.hold.notice`, with a close control (the bug report's P2 on informational banners).
+ *
+ * A failure (`bad`) is always `read`; a neutral refusal — *one at a time*, a link that no longer
+ * works — asks for it, and keeps its neutral colour.
+ */
+export type ToastHold = 'brief' | 'read';
+
 export interface Toast {
   readonly id: string;
   readonly message: string;
   readonly tone: ToastTone;
+  readonly hold: ToastHold;
   /**
    * Whether this message may wait its turn. `queued` everywhere; `interrupting` is the send
    * confirmation and nothing else — see the module docblock, and `the-words.md` §20.10, where
@@ -67,6 +82,8 @@ export interface Toast {
 export interface ToastRequest {
   readonly message: string;
   readonly tone?: ToastTone;
+  /** `read` for a reason the player must read; a `bad` message is `read` whatever this says. */
+  readonly hold?: ToastHold;
   readonly politeness?: Announcement;
 }
 
@@ -84,9 +101,15 @@ let nextId = 0;
 
 export const useToastQueue = create<ToastQueueState>((set) => ({
   queue: [],
-  show: ({ message, tone = 'base', politeness = 'queued' }) =>
+  show: ({ message, tone = 'base', hold = 'brief', politeness = 'queued' }) =>
     set((state) => {
-      const toast: Toast = { id: `toast-${(nextId += 1)}`, message, tone, politeness };
+      const toast: Toast = {
+        id: `toast-${(nextId += 1)}`,
+        message,
+        tone,
+        hold: tone === 'bad' ? 'read' : hold,
+        politeness,
+      };
       // **An interrupting message takes the head, and it is not only an announcement flag.**
       // §20.10's exception is that the send confirmation *"does not queue behind anything,
       // because there is nothing left on screen to tell the listener the challenge went"* —

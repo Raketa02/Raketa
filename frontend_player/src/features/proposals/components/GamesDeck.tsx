@@ -305,7 +305,7 @@ export function GamesDeck({
   const land = (said: DeckExit, card: DeckCard): DragVerdict => {
     if (leaving !== undefined) return 'withheld';
     if (said === 'yes' && fill.held(card)) {
-      showToast({ message: FILL_COPY.undo.oneAtATime });
+      showToast({ message: FILL_COPY.undo.oneAtATime, hold: 'read' });
       return 'withheld';
     }
     if (putBack.has(card.proposalId)) setPutBack((held) => without(held, card.proposalId));

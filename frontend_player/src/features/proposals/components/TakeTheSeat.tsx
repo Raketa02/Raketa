@@ -55,7 +55,7 @@ export function TakeTheSeat({
   const take = () => {
     if (counting) return;
     if (fill.held(seat)) {
-      showToast({ message: FILL_COPY.undo.oneAtATime });
+      showToast({ message: FILL_COPY.undo.oneAtATime, hold: 'read' });
       return;
     }
     if (fill.setUpFirst(() => takeLater.current())) return;

@@ -11,7 +11,7 @@
  * message that still interrupts has to be a decision rather than a call site.
  */
 
-import { act, render as renderTree, screen } from '@testing-library/react-native';
+import { act, fireEvent, render as renderTree, screen } from '@testing-library/react-native';
 import { AccessibilityInfo, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
@@ -205,5 +205,87 @@ describe('the host', () => {
     expect(fills).toEqual(
       expect.arrayContaining([expect.objectContaining({ backgroundColor: expected })]),
     );
+  });
+});
+
+describe('a failure the player must read', () => {
+  it('stays for the notice hold, not the toast’s, and the player can close it before then', () => {
+    render();
+
+    act(() => {
+      showToast({ message: 'Payments can’t be reached right now.', tone: 'bad' });
+    });
+    act(() => jest.advanceTimersByTime(theme.motion.hold.toast));
+
+    expect(drawn('Payments can’t be reached right now.')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Dismiss this message' }));
+
+    expect(drawn('Payments can’t be reached right now.')).toBeNull();
+  });
+
+  it('leaves on its own once the notice hold has passed', () => {
+    render();
+
+    act(() => {
+      showToast({ message: 'Payments can’t be reached right now.', tone: 'bad' });
+    });
+    act(() => jest.advanceTimersByTime(theme.motion.hold.notice));
+
+    expect(drawn('Payments can’t be reached right now.')).toBeNull();
+  });
+
+  it('a success keeps the short hold and no close control, as before', () => {
+    render();
+
+    act(() => {
+      showToast({ message: 'Saved to your profile', tone: 'ok' });
+    });
+
+    expect(screen.queryByRole('button', { name: 'Dismiss this message' })).toBeNull();
+    hold();
+    expect(drawn('Saved to your profile')).toBeNull();
+  });
+});
+
+describe('a neutral refusal the player must read', () => {
+  const ONE_AT_A_TIME = 'One game at a time — wait for this one to book.';
+
+  it('keeps its neutral colour, stays for the notice hold, and can be closed', () => {
+    render();
+
+    act(() => {
+      showToast({ message: ONE_AT_A_TIME, hold: 'read' });
+    });
+    expect(useToastQueue.getState().queue[0]?.tone).toBe('base');
+
+    act(() => jest.advanceTimersByTime(theme.motion.hold.toast));
+    expect(drawn(ONE_AT_A_TIME)).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Dismiss this message' }));
+    expect(drawn(ONE_AT_A_TIME)).toBeNull();
+  });
+
+  it('leaves on its own once the notice hold has passed', () => {
+    render();
+
+    act(() => {
+      showToast({ message: ONE_AT_A_TIME, hold: 'read' });
+    });
+    act(() => jest.advanceTimersByTime(theme.motion.hold.notice));
+
+    expect(drawn(ONE_AT_A_TIME)).toBeNull();
+  });
+
+  it('a neutral sentence that asks nothing keeps the short hold and no close control', () => {
+    render();
+
+    act(() => {
+      showToast({ message: 'Posted — you’re In.' });
+    });
+
+    expect(screen.queryByRole('button', { name: 'Dismiss this message' })).toBeNull();
+    hold();
+    expect(drawn('Posted — you’re In.')).toBeNull();
   });
 });

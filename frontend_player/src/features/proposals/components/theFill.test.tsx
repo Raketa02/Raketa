@@ -326,6 +326,8 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
 
     sayYes();
     expect(toasts()).toEqual([[FILL.undo.oneAtATime, 'base']]);
+    // A refusal the player must read: held long, and closable — in its neutral colour.
+    expect(useToastQueue.getState().queue[0]?.hold).toBe('read');
     expect(screen.getByTestId(`game-card-${second.proposal_id}`)).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: COPY.no }));

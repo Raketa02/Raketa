@@ -149,12 +149,12 @@ function InvitationLink({ link }: { readonly link: LinkOf<'invite'> }) {
 
   useEffect(() => {
     if (failure !== null) {
-      showToast({ message: invitationErrorMessage('link')(failure) });
+      showToast({ message: invitationErrorMessage('link')(failure), hold: 'read' });
       letGoOf(link);
       return;
     }
     if (offeredClub !== undefined) offerAgain(offeredClub);
-    if (spent !== undefined) showToast({ message: LINK_STATE_MESSAGE[spent] });
+    if (spent !== undefined) showToast({ message: LINK_STATE_MESSAGE[spent], hold: 'read' });
     if (answered) letGoOf(link);
   }, [failure, offeredClub, spent, answered, link, offerAgain]);
 

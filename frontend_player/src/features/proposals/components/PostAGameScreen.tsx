@@ -254,7 +254,7 @@ export function PostAGameScreen({
     setOpen(undefined);
     const card = yesOnPost(row);
     if (fillYes.held(card)) {
-      showToast({ message: FILL_COPY.undo.oneAtATime });
+      showToast({ message: FILL_COPY.undo.oneAtATime, hold: 'read' });
       return;
     }
     const go = () => {
@@ -270,7 +270,7 @@ export function PostAGameScreen({
     setOpen(undefined);
     const seat = yesOnRow(row);
     if (fillYes.held(seat)) {
-      showToast({ message: FILL_COPY.undo.oneAtATime });
+      showToast({ message: FILL_COPY.undo.oneAtATime, hold: 'read' });
       return;
     }
     const go = () => {
