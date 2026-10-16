@@ -203,12 +203,10 @@ for app in "${SELECTED[@]}"; do
   [ "$app" = frontend_player ] || continue
 
   # -------------------------------------------------------------------------
-  # A shape the client renders, re-pointed from the evidence union (docs/adr/0106),
-  # which the player contract no longer publishes. **A shape is the API contract**:
-  # adding a field is an API release, because the client renders every field it is
-  # handed. The probe needs one schema the player document publishes and the
-  # player's mappers read, so it stays honest without naming a second list here.
-  # The player's blocked-players list is that schema: blockMappers reads it.
+  # A shape the client renders. **A shape is the API contract**: adding a field is
+  # an API release, because the client renders every field it is handed. The probe
+  # needs one schema the player document publishes and the player's mappers read;
+  # the blocked-players list is that schema, since blockMappers.ts reads it.
   # -------------------------------------------------------------------------
   echo
   echo "$app — a reshaped rendered shape"
@@ -232,9 +230,9 @@ import json, sys
 path = sys.argv[1]
 with open(path) as fh:
     doc = json.load(fh)
-variant = doc["components"]["schemas"]["BlockedPlayerSchema"]
-variant["properties"]["probe_slots"] = {"type": "integer", "title": "Probe Slots"}
-variant.setdefault("required", []).append("probe_slots")
+shape = doc["components"]["schemas"]["BlockedPlayerSchema"]
+shape["properties"]["probe_slots"] = {"type": "integer", "title": "Probe Slots"}
+shape.setdefault("required", []).append("probe_slots")
 with open(path, "w") as fh:
     json.dump(doc, fh, indent=2)
     fh.write("\n")
