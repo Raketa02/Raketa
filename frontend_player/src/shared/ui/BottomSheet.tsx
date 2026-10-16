@@ -61,7 +61,16 @@
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import { KEYBOARD_AVOIDANCE, dismissKeyboard } from '@/shared/lib/platform/keyboard';
 
 import { CloseControl } from './CloseControl';
 import { ModalStage } from './ModalStage';
@@ -105,20 +114,36 @@ export function BottomSheet({
     moveAccessibilityFocus(visible ? heading : returnFocusTo);
   }, [visible, returnFocusTo]);
 
+  /**
+   * Every way out goes through here. A field in the sheet may still hold the keyboard — the card's
+   * fields do — and a window closed under a focused field is the crash the phone reported, so the
+   * keyboard goes first.
+   */
+  const dismiss = () => {
+    dismissKeyboard();
+    onClose();
+  };
+
   return (
     <ModalStage
       visible={visible}
       // Android's hardware back. iOS never asks.
-      onRequestClose={onClose}
+      onRequestClose={dismiss}
       animationType={reducedMotion ? 'none' : 'slide'}
       layer="sheet"
     >
-      <View style={s.stage} testID="bottom-sheet-stage">
+      {/* Lifted above the keyboard on iOS, where it covers a field at the bottom of the sheet;
+          Android resizes the window itself. */}
+      <KeyboardAvoidingView
+        style={s.stage}
+        behavior={KEYBOARD_AVOIDANCE}
+        testID="bottom-sheet-stage"
+      >
         {/* Dismissal, not a control: the sheet's close carries the name, and a second
             unnamed button spanning the screen is noise in the reading order. */}
         <Pressable
           style={s.scrim}
-          onPress={onClose}
+          onPress={dismiss}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />
@@ -134,12 +159,12 @@ export function BottomSheet({
               <View ref={heading} accessible accessibilityRole="header" style={s.titleBox}>
                 <Text style={s.title}>{title}</Text>
               </View>
-              <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
+              <CloseControl onPress={dismiss} accessibilityLabel={closeLabel} />
             </View>
           ) : (
             <>
               <View style={[s.head, s.headClose]}>
-                <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
+                <CloseControl onPress={dismiss} accessibilityLabel={closeLabel} />
               </View>
               {/* The mark is the thing the title is about, drawn — hidden by the caller, and the
                   heading is still the one element focus lands on. */}
@@ -155,11 +180,16 @@ export function BottomSheet({
           {/* `flexShrink` is what lets the cap apply to this rather than to the sheet's
               last child: without it the ScrollView takes its content's full height and the
               overflow happens one level up, where nothing can scroll it. */}
-          <ScrollView style={s.body} contentContainerStyle={s.bodyContent}>
+          <ScrollView
+            style={s.body}
+            contentContainerStyle={s.bodyContent}
+            // A tap on a field or a button while the keyboard is up reaches it, not the keyboard.
+            keyboardShouldPersistTaps="handled"
+          >
             {children}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </ModalStage>
   );
 }

@@ -13,7 +13,21 @@
  * one prop, and a wrapper would be a second component around a first one that already exists.
  */
 
-import { Platform } from 'react-native';
+import { Keyboard, Platform } from 'react-native';
+
+import { releaseCardFocus } from './payments';
 
 /** Pass to `KeyboardAvoidingView`'s `behavior`. `undefined` is correct on Android. */
 export const KEYBOARD_AVOIDANCE = Platform.OS === 'ios' ? ('padding' as const) : undefined;
+
+/**
+ * **Hide the keyboard without sending a native blur to Stripe's card field.** Every sheet closes
+ * through this, and a sheet holding the card field is where the crash came from: `Keyboard.dismiss()`
+ * blurs whatever React Native records as focused, and on iOS, under the New Architecture, a blur
+ * sent to the card field traps when its view is the legacy interop one (#552). So the card field's
+ * focus record is released first, and the dismissal then finds nothing of the card's to blur.
+ */
+export function dismissKeyboard(): void {
+  releaseCardFocus();
+  Keyboard.dismiss();
+}

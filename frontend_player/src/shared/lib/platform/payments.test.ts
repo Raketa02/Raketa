@@ -8,6 +8,8 @@
 
 import TextInputState from 'react-native/Libraries/Components/TextInput/TextInputState';
 
+import { dismissKeyboard } from './keyboard';
+
 import {
   bankAnswerOf,
   devicePayments,
@@ -247,5 +249,25 @@ describe('starting the provider for the laptop’s placeholder key', () => {
 
     await expect(fresh?.devicePayments.prepare('pk_fake_raketa')).resolves.toBe(true);
     expect(sdk.initStripe).not.toHaveBeenCalled();
+  });
+});
+
+describe('dismissing the keyboard while the card field holds focus', () => {
+  it('clears the card field’s focus record before the keyboard is dismissed', () => {
+    const { Keyboard } = jest.requireActual<typeof import('react-native')>('react-native');
+    const order: string[] = [];
+    const card = {};
+    focus.blurInput.mockClear();
+    focus.blurInput.mockImplementation(() => order.push('release'));
+    jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => order.push('dismiss'));
+    focus.currentlyFocusedInput.mockReturnValue(card);
+    rememberCardFocus();
+
+    dismissKeyboard();
+
+    expect(focus.blurInput).toHaveBeenCalledWith(card);
+    expect(order).toEqual(['release', 'dismiss']);
+    jest.restoreAllMocks();
+    focus.blurInput.mockImplementation(() => undefined);
   });
 });
