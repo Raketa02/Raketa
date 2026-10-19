@@ -27,8 +27,14 @@
       "Read(./node_modules/**)",
       "Read(./.expo/**)",
       "Read(./android/**)",
-      "Read(./ios/**)"
+      "Read(./ios/**)",
+      "mcp__stripe__send_money",
+      "mcp__stripe__transfer_money",
+      "mcp__stripe__convert_currency",
+      "mcp__stripe__setup_recipient",
+      "mcp__stripe__atlas_company_formation"
     ],
+    "ask": ["mcp__stripe__stripe_api_write"],
     "additionalDirectories": [".."]
   },
   "hooks": {
