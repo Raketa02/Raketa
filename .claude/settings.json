@@ -38,7 +38,17 @@
       "Read(./**/*.jks)",
       "Read(./.venv/**)",
       "Read(./pgdata/**)",
-      "Read(./**/node_modules/**)"
+      "Read(./**/node_modules/**)",
+      "mcp__stripe__send_money",
+      "mcp__stripe__transfer_money",
+      "mcp__stripe__convert_currency",
+      "mcp__stripe__setup_recipient",
+      "mcp__stripe__atlas_company_formation",
+      "mcp__stripe-club__send_money",
+      "mcp__stripe-club__transfer_money",
+      "mcp__stripe-club__convert_currency",
+      "mcp__stripe-club__setup_recipient",
+      "mcp__stripe-club__atlas_company_formation"
     ]
   },
   "hooks": {
