@@ -3,6 +3,14 @@
     "stripe": {
       "type": "http",
       "url": "https://mcp.stripe.com/"
+    },
+    "stripe-club": {
+      "type": "http",
+      "url": "https://mcp.stripe.com/",
+      "headers": {
+        "Authorization": "Bearer ${STRIPE_MCP_AGENT_KEY}",
+        "Stripe-Account": "${STRIPE_MCP_CLUB_ACCOUNT}"
+      }
     }
   }
 }
