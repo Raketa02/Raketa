@@ -291,6 +291,7 @@ def test_the_walk_has_something_to_walk():
         "cohort.py",
         "groups.py",
         "guard.py",
+        "money.py",
         "official_groups.py",
         "payments.py",
         "photos.py",
@@ -994,6 +995,9 @@ async def test_the_command_seeds_a_real_database_and_is_idempotent(tmp_path):
         "JWT_SECRET_KEY": "test-secret-do-not-use-in-prod",
         "WRITER_DB_URL": url,
         "DB_SSL_MODE": "disable",
+        # The fake, whatever a developer's `.env` selects: on Stripe the seed
+        # asks for onboarded accounts first (#712).
+        "PAYMENTS_PROVIDER": "fake",
         # The suite's work factor. A first run registers sixty-three accounts,
         # which is twelve seconds of hashing at production's strength.
         "BCRYPT_ROUNDS": str(BCRYPT_MINIMUM_ROUNDS),

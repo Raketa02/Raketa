@@ -5,7 +5,7 @@ the way the dealer makes a pick — ``MakeProposal``, at an hour its club sells
 padel — dealt to her and three of *Padel po pracy*'s crowd, and then said yes
 to through ``SayYes``, the use case the phone's swipe runs, her yes last. So
 the last yes **books** it, at any club — no club confirms a game (#669): every
-seat held together through the run's own fake provider — **taken at once** for
+seat held together through the run's own provider — **taken at once** for
 the game on the day, which is after its cut-off, and **held until the cut-off**
 for next week's (#637) — a Booking on the first free court, the ordinary Game
 it opens and its chat, and a receipt for each of the four whose share was
@@ -40,6 +40,8 @@ hours on a Visa, so each seat is **checked** at the fill — held for a moment a
 let go — and held again at its **Holding time**, four days before the
 cut-off, which the console's *hold the shares* runs. The four have no game that
 week and no yes at the hour, so the fill moves nothing another layer seeded.
+**On the Stripe sandbox every hold lasts 7 days**, so the hour's cut-off is
+more than eight days off there (``money.far_ahead``, #712).
 
 **Re-running books nothing twice**: an hour she already has a booked game at is
 left as it is, a far-ahead hour the crowd already booked is left as it is, and
@@ -63,7 +65,6 @@ from app.bootstrap.composition import (
     build_court_hours,
     build_domain_event_store,
     build_event_publisher,
-    build_fake_payments,
     build_holding_times,
     build_make_proposal,
     build_player_bookings,
@@ -84,7 +85,6 @@ from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     MakeProposalCommand,
 )
-from app.modules.payments.domain.seat_charge import HOLDING_LEAD
 from app.modules.proposals.domain.deck import (
     DECK_HORIZON,
     GAME_LENGTH,
@@ -96,6 +96,7 @@ from app.modules.proposals.domain.proposer import CourtHourOnSale
 from app.modules.users.domain.value_objects import Email
 from app.seeds.clock import FixedClock
 from app.seeds.clubs import SEED_CLUBS, SeedClub, desk_email
+from app.seeds.money import THE_FAKE, SeedMoney
 from app.seeds.proposals import (
     GAMES_CLUB,
     GAMES_KIND,
@@ -110,11 +111,6 @@ from app.seeds.proposals import (
 NEXT_WEEK_CLUB: Final = next(
     club for club in SEED_CLUBS if club.name == "Kazimierz Padel"
 )
-
-#: How far ahead of the run the far-ahead game's cut-off is, at least: past
-#: the Holding time by a day, so a Visa's hold — 4 days 18 hours — cannot
-#: reach it, and every seat is checked (#639).
-FAR_AHEAD: Final = HOLDING_LEAD + timedelta(days=1)
 
 #: How long before its release time a game inside its club's release lead was
 #: filled: the hour was on sale then, with time to fill it (#670).
@@ -195,14 +191,15 @@ async def book_her_games(
     settings: Settings,
     now: Instant,
     seeded: SeededProposals,
+    money: SeedMoney = THE_FAKE,
 ) -> SeededBookings:
     """Book her two games and read her receipts. **After the proposals layer**,
     whose group, crowd and answered picks it reads and keeps out of the way of."""
 
     clock = FixedClock(at=now)
-    # The run's own provider: every seeded card is one this fake answers as
-    # ``A_CARD``, and the outbox the seed drains takes its holds.
-    provider = build_fake_payments()
+    # The run's own provider: on the fake, every seeded card is one it answers
+    # as ``A_CARD``; and the outbox the seed drains takes its holds.
+    provider = money.provider()
     async with session_factory() as session:
         found = await her_games_group(session)
         if found is None:
@@ -256,6 +253,7 @@ async def book_her_games(
             pool_id=group_id,
             club_id=club_id,
             on_sale=hours_on_sale,
+            far_ahead=money.far_ahead,
             taken=[
                 *(booking.start for booking in bookings),
                 *(pick.start for pick in seeded.picks),
@@ -280,12 +278,13 @@ async def _the_crowd_far_ahead(
     pool_id: UUID,
     club_id: UUID,
     on_sale: Sequence[CourtHourOnSale],
+    far_ahead: timedelta,
     taken: Sequence[Instant],
     now: Instant,
 ) -> SeededFarAhead:
     """Four of the crowd at Bonarka's first padel hour whose cut-off is more
-    than ``FAR_AHEAD`` off — every seat checked at the fill (#639) — or the
-    game an earlier run booked there."""
+    than ``far_ahead`` off — past every hold the provider makes, so every seat
+    is checked at the fill (#639) — or the game an earlier run booked there."""
 
     terms = (await build_club_terms(session).of([club_id], now=now)).get(club_id)
     if terms is None:
@@ -295,7 +294,7 @@ async def _the_crowd_far_ahead(
         (
             hour.start
             for hour in on_sale
-            if hour.start - notice >= now + FAR_AHEAD
+            if hour.start - notice >= now + far_ahead
             and not any(abs(hour.start - other) < GAME_LENGTH for other in taken)
         ),
         None,
@@ -303,7 +302,7 @@ async def _the_crowd_far_ahead(
     if start is None:
         raise NotEnoughToBook(
             f"{GAMES_CLUB.name} sells no padel hour whose cut-off is "
-            f"{FAR_AHEAD.days} days past "
+            f"{far_ahead.days} days past "
             f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
         )
     pools = build_pools(session)

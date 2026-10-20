@@ -158,7 +158,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `SeatPaymentChanged`) through `ReceivePaymentNotice`. Seeded by `app/seeds/payments.py`:
   every named account and cohort member saves a fake card through the three use cases — the
   protagonist the mock's Visa •••• 4312, two through the wallets — and `brand-new-player` has
-  none.
+  none. **On the Stripe sandbox** (#712) the same three save Stripe's test card for what each
+  declared card does, and every seeded share moves on its club's own account (`seeds.md`).
 - **A club connects payments through the provider's pages, and the arrow runs
   `payments → clubs`** (#537). The club's account at the provider is recorded on its **Club
   courts** stream (`clubs/domain/payments_account.py`) — `PaymentsAccountOpened`, once, and

@@ -45,6 +45,10 @@ desk would have left, and nothing opens a table.
   Wisła Park's is told apart by ``HeedPaymentsAccount``, the use case the
   provider's notice runs. **A club with no account yet is connected on any
   run**, so a database seeded before payments existed goes live on the next.
+  **On the Stripe sandbox** (#712, ``money.py``) a ready club is connected to
+  the account a person onboarded for it, and reads ready because Stripe says
+  so; Wisła Park opens a new account and stays as Stripe opened it, *not
+  started*.
 
 **The exception is placed from the run's own clock**, a few days ahead, so a
 fresh run always shows one on the list; and **re-running adds nothing to a
@@ -61,6 +65,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
+from functools import partial
 from typing import Final, final
 from uuid import UUID
 
@@ -73,10 +78,8 @@ from app.bootstrap.composition import (
     build_court_bookings,
     build_domain_event_store,
     build_event_publisher,
-    build_fake_payments,
     build_mail_queue,
     build_onboarding_pages,
-    build_payments_accounts,
     build_sellable_court_hours,
     build_unit_of_work,
 )
@@ -111,6 +114,7 @@ from app.modules.player_profile.domain.weekly_hours import WEEKEND_DAYS
 from app.modules.users.domain.value_objects import Email
 from app.seeds.clock import FixedClock
 from app.seeds.clubs import SEED_CLUBS, SeedClub, SeededClubs, desk_email
+from app.seeds.money import THE_FAKE, SeedMoney
 
 #: How far ahead the fortnight the self-check reads is — a deck's own horizon.
 HORIZON: Final = timedelta(days=14)
@@ -335,6 +339,17 @@ assert sorted(entry.club for entry in SEED_CLUB_COURTS) == sorted(
 ), "every seeded club is declared once in SEED_CLUB_COURTS"
 
 
+def declared_ready() -> tuple[str, ...]:
+    """The clubs whose payments the seed declares ready — each on a sandbox
+    account a person onboarded, when the run is on Stripe (#712)."""
+
+    return tuple(
+        entry.club
+        for entry in SEED_CLUB_COURTS
+        if entry.payments is ClubAccountStatus.READY
+    )
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class SeededClubCourts:
@@ -361,11 +376,12 @@ async def write_the_club_courts(
     settings: Settings,
     now: Instant,
     clubs: SeededClubs,
+    money: SeedMoney = THE_FAKE,
 ) -> SeededCourts:
     """Set every seeded club up as declared, unless its desk already has.
 
     One session for the layer, and each act commits through its own unit of
-    work, as the club website's would.
+    work, as the club website's would. Its desks walk ``money``'s pages.
     """
 
     signed_up = {entry.club.name for entry in clubs.clubs}
@@ -385,14 +401,15 @@ async def write_the_club_courts(
         )
         uow = build_unit_of_work(session)
         bookings = build_court_bookings(session)
-        # The run's own provider: a fake that finishes a club's onboarding when
-        # told to, and knows nothing a laptop's API holds (``payments.py``).
-        provider = build_fake_payments()
+        # The run's own provider's pages: on the fake, a fake that finishes a
+        # club's onboarding when told to; on the sandbox, the accounts a person
+        # onboarded (``money.py``).
+        provider_pages = money.pages()
         pages = build_onboarding_pages(settings)
         connect = ConnectPayments(
             clubs=club_repository,
             courts=courts,
-            payments_accounts=build_payments_accounts(provider),
+            payments_accounts=provider_pages.accounts,
             pages=pages,
             uow=uow,
             clock=clock,
@@ -401,7 +418,7 @@ async def write_the_club_courts(
             clubs=club_repository,
             club_accounts=accounts,
             courts=courts,
-            payments_accounts=build_payments_accounts(provider),
+            payments_accounts=provider_pages.accounts,
             mail=build_mail_queue(session),
             pages=pages,
             clock=clock,
@@ -434,17 +451,19 @@ async def write_the_club_courts(
                 # pages — finished in one visit for a club that is ready, and
                 # left needing more for one that is not, which the provider's
                 # notice then says.
-                ready = declared.payments is ClubAccountStatus.READY
-                provider.onboarding_completes = ready
-                await connect.execute(
-                    ConnectPaymentsCommand(
-                        club_id=club_id, email=desk_email(_seed_club(declared.club))
-                    )
+                noticed = await provider_pages.walk(
+                    club_id,
+                    as_far_as=declared.payments,
+                    connect=partial(
+                        connect.execute,
+                        ConnectPaymentsCommand(
+                            club_id=club_id,
+                            email=desk_email(_seed_club(declared.club)),
+                        ),
+                    ),
                 )
-                if not ready:
-                    account = provider.account_opened_for(club_id)
-                    provider.club_account_is(account, declared.payments)
-                    await heed.execute(account)
+                if noticed is not None:
+                    await heed.execute(noticed)
                     await uow.commit()
             club = await courts.load(club_id)
             offers = await build_sellable_court_hours(session).between(

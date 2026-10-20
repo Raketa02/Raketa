@@ -7,12 +7,15 @@ Payment method stream holds the setup, the terms accepted before anything was
 saved, and the save — exactly what a request writes. Nothing here opens a
 table.
 
-**Through the fake provider, and the seed supplies what the phone typed**, as it
-supplies the clock and a photograph's verdict: a card is typed into the
-provider's own fields on a phone and never reaches the backend, so the fake is
-told which of its cards was entered. The ids on the streams are the fake's
-(``pm_fake_…``), which a laptop's API — on the fake as well — answers as the
-card every seed saves.
+**Through the run's provider, and the seed supplies what the phone typed**, as
+it supplies the clock and a photograph's verdict: a card is typed into the
+provider's own fields on a phone and never reaches the backend. On the fake,
+the fake is told which of its cards was entered, and the ids on the streams are
+the fake's (``pm_fake_…``), which a laptop's API — on the fake as well — answers
+as the card every seed saves. **On the Stripe sandbox** (#712, ``money.py``) the
+setup is confirmed server-side with Stripe's test card for what the declared
+card does, so every player has a customer and a card Stripe knows — Visa
+•••• 4242 for one that pays, whatever brand and wallet the mock draws.
 
 **The arrangement is for the screens a developer signs in to.** The default
 protagonist's card is the mock's *Card •••• 4312*; ``rated-in-every-sport``
@@ -39,7 +42,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
-    build_fake_payments,
     build_payment_method_repository,
     build_unit_of_work,
     build_user_repository,
@@ -63,6 +65,7 @@ from app.seeds.catalog import (
     THE_POPULATED_PLAYER,
 )
 from app.seeds.clock import FixedClock
+from app.seeds.money import THE_FAKE, SeedMoney
 
 #: Whose card is not ``A_CARD``, and what it is.
 SEEDED_CARDS: Final[dict[str, EnteredCard]] = {
@@ -94,6 +97,8 @@ class SeededPaymentMethod:
 @dataclass(frozen=True, slots=True)
 class SeededPaymentMethods:
     methods: tuple[SeededPaymentMethod, ...]
+    #: Where they were saved — the run's provider, in the report's words.
+    where: str = THE_FAKE.where
 
 
 async def write_the_payment_methods(
@@ -101,18 +106,21 @@ async def write_the_payment_methods(
     *,
     now: Instant,
     cohort: Sequence[tuple[str, UUID]],
+    money: SeedMoney = THE_FAKE,
 ) -> SeededPaymentMethods:
     """Save a card for every named account but the ones left without, and for
-    every cohort member — ``cohort`` is each member's handle and player id.
+    every cohort member — ``cohort`` is each member's handle and player id —
+    typed into ``money``'s phone.
 
     **After the accounts and the cohort**, which it reads and never writes.
     Nothing below reads a method yet, so its position among the later layers is
     free; it runs early so a game the later tickets seed can be paid for.
     """
 
-    # The fake, from the composition root as every adapter here is: the one
-    # thing the seed supplies is what each player's phone typed into it.
-    provider = build_fake_payments()
+    # The run's provider, from the composition root as every adapter here is:
+    # the one thing the seed supplies is what each player's phone typed into it.
+    phone = money.phone()
+    provider = phone.provider
 
     async def saved(session: AsyncSession, player_id: UUID, card: EnteredCard) -> bool:
         """One player through the setup, unless a method is saved already — and
@@ -137,7 +145,7 @@ async def write_the_payment_methods(
         opened = await StartPaymentSetup(
             methods=_methods(session), provider=provider, uow=uow, clock=clock
         ).execute(player_id)
-        provider.phone_enters(opened.setup_id, card)
+        await phone.enters(opened.setup_id, card)
         await AcceptPaymentTerms(
             methods=_methods(session), provider=provider, uow=uow, clock=clock
         ).execute(
@@ -181,7 +189,7 @@ async def write_the_payment_methods(
                 who=who, player_id=player_id, card=card, saved=was_saved
             )
         )
-    return SeededPaymentMethods(methods=tuple(methods))
+    return SeededPaymentMethods(methods=tuple(methods), where=money.where)
 
 
 def _methods(session: AsyncSession) -> PaymentMethodRepository:
@@ -197,10 +205,15 @@ def payment_method_lines(seeded: SeededPaymentMethods) -> list[str]:
 
     saved = sum(1 for method in seeded.methods if method.saved)
     lines = [
-        "Payment methods (fake provider)",
+        f"Payment methods ({seeded.where})",
         f"  {saved} saved by this run, "
         f"{sum(1 for m in seeded.methods if m.card is not None)} players with one",
     ]
+    if seeded.where != THE_FAKE.where:
+        lines.append(
+            "  each is Stripe's test card for what it does — Visa •••• 4242 for one "
+            "that pays; the cards below are what the mock declares"
+        )
     for method in seeded.methods:
         if method.who in SEEDED_CARDS or method.card is None:
             lines.append(f"  {method.who}: {_described(method.card)}")

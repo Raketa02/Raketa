@@ -504,6 +504,13 @@ through that context's own use cases. Conversations is on neither side of that w
 and that is the point: the seed never writes one, and the rooms in the database are there
 because the outbox delivered what the others wrote.
 
+**On the Stripe sandbox the seed moves its money through Stripe** (#712): with
+`PAYMENTS_PROVIDER=stripe`, a test key, and `SEED_STRIPE_CLUB_ACCOUNTS` naming the sandbox
+account a person onboarded for each club the seed declares ready — one each — every seeded
+card, club account and share is one Stripe knows, so a multi-player money story is walkable
+from two phones and the console. Without them it refuses before writing anything. How to
+set it up: `.claude/rules/seeds.md`.
+
 Six rules hold this together, and each exists because of a specific way seed data goes
 wrong:
 

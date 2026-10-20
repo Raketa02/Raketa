@@ -77,6 +77,7 @@ aggregate.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from os import environ
 from typing import Sequence
 from uuid import UUID
 
@@ -171,6 +172,7 @@ from app.seeds.administrators import (
 from app.seeds.club_courts import (
     SeededCourts,
     club_courts_lines,
+    declared_ready,
     write_the_club_courts,
 )
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
@@ -208,6 +210,7 @@ from app.seeds.cohort import (
     CohortMember,
 )
 from app.seeds.guard import refuse_unless_seedable
+from app.seeds.money import SeedMoney, seed_money
 from app.seeds.photos import (
     SEED_IMAGE_MEDIA_TYPE,
     DeclaredPhotoReview,
@@ -1186,7 +1189,9 @@ class SeedReport:
     photographs: bool = True
 
 
-async def run(settings: Settings | None = None) -> SeedReport:
+async def run(
+    settings: Settings | None = None, *, money: SeedMoney | None = None
+) -> SeedReport:
     """Open a connection of this command's own, seed, assert, and close it.
 
     The guard is re-checked against the settings actually used. Importing this
@@ -1203,10 +1208,26 @@ async def run(settings: Settings | None = None) -> SeedReport:
     an engine that has been retuned, a ruleset whose floor has moved, and a
     calendar that has walked past the newcomer window all announce themselves on
     a run with nothing to do.
+
+    **Its money moves through one provider, chosen before anything is
+    written** (#712, ``money.py``): the fake, or the Stripe sandbox the settings
+    select — refused there, by name, when a test key or an onboarded account is
+    missing. A caller may hand one in, and closes it then.
     """
 
     settings = settings or get_settings()
     refuse_unless_seedable(settings)
+    if money is not None:
+        return await _seed_with(settings, money)
+    money = await seed_money(settings, environ, ready=declared_ready())
+    try:
+        return await _seed_with(settings, money)
+    finally:
+        await money.close()
+
+
+async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
+    """Every layer, its money moved through ``money``, then the screens."""
 
     clock = build_clock()
     now = clock.now()
@@ -1241,6 +1262,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             session_factory,
             now=now,
             cohort=[(member.member.handle, member.player_id) for member in members],
+            money=money,
         )
         # **The clubs next, before anything that could stand at one.** A club
         # reads nobody, and a group needs a home club.
@@ -1249,7 +1271,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # below reads a court yet and a court changes nothing any player-side
         # layer reads, so like the groups its position after its club is free.
         club_courts = await write_the_club_courts(
-            session_factory, settings=settings, now=now, clubs=clubs
+            session_factory, settings=settings, now=now, clubs=clubs, money=money
         )
         # **The groups straight after their clubs**, created and joined by the
         # named accounts. Nothing below reads a group and a group changes nothing
@@ -1280,6 +1302,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             now=now,
             games=PLAYED_GAMES,
             named=ACCOUNTS,
+            money=money,
         )
         # **After the games and before anything reads a record**, because a card
         # is drawn for a court that is over: nothing here arranges an evening,
@@ -1297,12 +1320,17 @@ async def run(settings: Settings | None = None) -> SeedReport:
             settings=settings,
             now=now,
             cohort=[(member.member.handle, member.player_id) for member in members],
+            money=money,
         )
         # **Her booked games, after the games still filling** (#541): seated
         # from the crowd that layer gathered, out of the way of the yeses it
         # seeded, and booked by the last yes as a phone's is.
         bookings = await book_her_games(
-            session_factory, settings=settings, now=now, seeded=proposals
+            session_factory,
+            settings=settings,
+            now=now,
+            seeded=proposals,
+            money=money,
         )
         # **Her rescues, after her booked games** (#545): seated from the crowd
         # members with no game that week, at hours of her week clear of every
@@ -1313,6 +1341,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             now=now,
             seeded=proposals,
             bookings=bookings,
+            money=money,
         )
         # **Her post, after her rescues** (#546): the last game she is on, at an
         # hour of her week clear of every game and yes the layers above seeded.
@@ -1330,7 +1359,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # assertions read the real path, and the real path has a poller in
         # front of it.
         rooms = await open_the_rooms(
-            session_factory, settings=settings, now=now
+            session_factory, settings=settings, now=now, money=money
         )
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.

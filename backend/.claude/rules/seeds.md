@@ -76,6 +76,44 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
       (#613);
     - a confirmed counted result of hers for the catch-up to fold;
     - a rater who rated her on one of her evenings.
+- **On the Stripe sandbox the seed moves its money through Stripe** (#712,
+  `app/seeds/money.py`). On the fake nothing changed: each layer asks for a fake of its
+  own, as before. With `PAYMENTS_PROVIDER=stripe` and a test key, every layer that moves
+  money — the cards, the clubs' accounts, every seeded game's shares and the outbox drain
+  — gets the run's one Stripe adapter from the composition root, and no module but
+  `money.py` names a provider builder (`test_no_layer_builds_a_provider_of_its_own`). Two
+  stand-ins play what a person does on Stripe's own pages:
+  - **the phone** confirms each setup server-side with Stripe's test PaymentMethod for
+    what the declared card does (`SANDBOX_METHODS`: the demand suite's
+    `STRIPE_TEST_METHODS` keyed by behaviour, held equal by a test) — so a card pays, or
+    declines later, as declared, and reads Visa •••• 4242 whatever brand, last four and
+    wallet the mock draws;
+  - **the onboarding pages**: a ready club is connected to the account a person
+    onboarded for it (`OnboardedAccounts`), named in `SEED_STRIPE_CLUB_ACCOUNTS` —
+    `Club name=acct_…` pairs separated by commas, read from the process environment like
+    `SEED_CENTRE`, never from `Settings` — and reads ready because Stripe says so. Wisła
+    Park opens a new account and stays *not started*.
+
+  **How**: onboard one sandbox account per ready club — Ogrody 33, Centrum Ruchu,
+  Kazimierz Padel, Bonarka Arena, Zabłocie Sport, Prądnik Tennis, Nowa Huta Squash — in
+  Stripe's hosted pages; put `PAYMENTS_PROVIDER=stripe`, the test keys and the mapping in
+  `.env.docker`; then `make down-v && make up && make seed` (`make seed-host` takes the
+  mapping from the shell). **One account per club, not shared**: the store holds one club
+  per provider account (`club_payments_accounts`' primary key), so a second club on one
+  account would fail half way, and the run refuses it first. **Refused before anything is
+  written**, by name: a key that is not a test key; the mapping unset, malformed, naming
+  a club not declared ready, missing a ready one, or giving two clubs one account; an
+  account whose charges or payouts the sandbox has not enabled. **A sandbox hold lasts
+  7 days** (measured on its Visa; a live Visa's lasts 4 days 18 hours), so the crowd's far-ahead game looks more than
+  eight days ahead there (`OnTheSandbox.far_ahead`) — five, the fake's, would hold its
+  seats instead of checking them. **Two runs within the hour stay correct**: a key is the
+  act and the hour, and every id it carries — a player, a club, a game, a charge — is
+  minted by the store, never chosen by the seed, so a fresh store asks Stripe no key an
+  earlier one asked (`tests/api/test_seed_money.py` runs the whole seed twice at one
+  instant through one fake and finds none in common). Out of reach there: the console's
+  provider controls (`provider_not_the_fake`) and anything measured in days. Stripe is
+  asked by `tests/api/test_seed_on_the_sandbox.py` only where the test keys and the
+  mapping are both placed, and skipped by name otherwise.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

@@ -105,4 +105,6 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   nothing of `payments`. Seeded by `app/seeds/club_courts.py`: every club ready through
   `ConnectPayments` on a fake that finishes onboarding on the link, Wisła Park left
   *needs more details* through `HeedPaymentsAccount`, and a club with no account is
-  connected on any run.
+  connected on any run. **On the Stripe sandbox** (#712) a ready club is connected to the
+  account a person onboarded for it — one each, since an account is the projection's key —
+  and Wisła Park's new account stays *not started* (`seeds.md`).

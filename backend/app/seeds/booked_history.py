@@ -6,7 +6,7 @@ she reads about herself, and every declared game the runner hands in: the
 cohort's own (``PLAYED_GAMES``). Each is a game the way the Games deck makes
 one — ``MakeProposal`` at an hour Ogrody 33 sells, then ``SayYes`` from
 everybody on it, so the last yes **books** it: the seats held through the
-run's own fake provider, a Booking on a free court and the ordinary Game it
+run's own provider, a Booking on a free court and the ordinary Game it
 opens — and **the cut-off job runs at the club's cut-off**, as the API's would
 have, so every past game's shares are taken and settled (#637). Then the result
 is stated and answered through ``games``' own two acts. Nothing here opens a
@@ -62,7 +62,6 @@ from app.bootstrap.composition import (
     build_court_hours,
     build_domain_event_store,
     build_event_publisher,
-    build_fake_payments,
     build_game_repository,
     build_group_code_minter,
     build_home_clubs,
@@ -89,6 +88,7 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.ports import GameRepository
 from app.modules.games.domain.results import Score, SetScore
+from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.groups.application.commands import CreatePlayerGroupCommand
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.domain.value_objects import GroupName, JoinPolicy
@@ -102,6 +102,7 @@ from app.seeds.bookings import all_say_yes, club_id_of, the_cut_off_came
 from app.seeds.catalog import THE_POPULATED_PLAYER, SeedAccount
 from app.seeds.clock import FixedClock, days_before
 from app.seeds.clubs import SEED_CLUBS
+from app.seeds.money import THE_FAKE, SeedMoney
 from app.seeds.cohort import (
     COHORT,
     PROTAGONIST_HANDLE,
@@ -431,13 +432,15 @@ async def write_the_played_history(
     now: Instant,
     games: Sequence[PlayedGame] = (),
     named: Sequence[SeedAccount] = (),
+    money: SeedMoney = THE_FAKE,
 ) -> SeededHistory:
     """Write every declared game and her evenings, oldest first, then what her
     opponents said about her.
 
     ``games`` are the declared games the runner hands in; ``named`` are the
-    accounts besides the cohort they may name. **After the cohort, the cards,
-    the clubs and their courts**, which it reads and never writes."""
+    accounts besides the cohort they may name; every seat is held through
+    ``money``'s provider. **After the cohort, the cards, the clubs and their
+    courts**, which it reads and never writes."""
 
     planned = _plan(games, now=now)
     async with session_factory() as session:
@@ -485,6 +488,7 @@ async def write_the_played_history(
                 game_ids[one.order] = await _book(
                     session,
                     settings,
+                    provider=money.provider(),
                     group_id=groups[sport][0],
                     club_id=club_id,
                     sport=sport,
@@ -626,6 +630,7 @@ async def _book(
     session: AsyncSession,
     settings: Settings,
     *,
+    provider: PaymentProvider,
     group_id: UUID,
     club_id: UUID,
     sport: Sport,
@@ -640,7 +645,7 @@ async def _book(
         session,
         settings=settings,
         clock=FixedClock(at=made_at),
-        provider=build_fake_payments(),
+        provider=provider,
         pool_id=group_id,
         club_id=club_id,
         start=start,

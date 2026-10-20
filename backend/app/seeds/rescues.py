@@ -46,7 +46,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_booked_games,
     build_club_terms,
-    build_fake_payments,
     build_leave_the_game,
     build_players_in_play,
     build_pools,
@@ -73,6 +72,7 @@ from app.seeds.bookings import (
     when_it_fills,
 )
 from app.seeds.clock import FixedClock
+from app.seeds.money import THE_FAKE, SeedMoney
 from app.seeds.proposals import (
     GAMES_CLUB,
     GAMES_SPORT,
@@ -115,12 +115,13 @@ async def seed_the_rescues(
     now: Instant,
     seeded: SeededProposals,
     bookings: SeededBookings,
+    money: SeedMoney = THE_FAKE,
 ) -> SeededRescues:
     """Her two rescues — **after her booked games**, whose hours, crowd and
     weeks it reads and keeps out of the way of."""
 
     clock = FixedClock(at=now)
-    provider = build_fake_payments()
+    provider = money.provider()
     async with session_factory() as session:
         found = await her_games_group(session)
         if found is None:

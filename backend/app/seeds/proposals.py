@@ -52,7 +52,6 @@ from app.bootstrap.composition import (
     build_group_code_minter,
     build_home_clubs,
     build_player_fit,
-    build_fake_payments,
     build_propose_games,
     build_proposal_directory,
     build_proposal_repository,
@@ -70,6 +69,7 @@ from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.domain.value_objects import GroupName, JoinPolicy
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import AnswerProposalCommand
+from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.proposals.application.propose_games import Proposed
 from app.modules.proposals.domain.proposal import Origin, Proposal
 from app.modules.users.domain.value_objects import Email
@@ -77,6 +77,7 @@ from app.seeds.catalog import THE_POPULATED_PLAYER
 from app.seeds.clock import FixedClock
 from app.seeds.clubs import SEED_CLUBS, desk_email
 from app.seeds.groups import group_repository, group_run_by, join_group
+from app.seeds.money import THE_FAKE, SeedMoney
 
 #: The group the games are dealt in, and where it plays.
 GAMES_GROUP: Final = "Padel po pracy"
@@ -137,6 +138,7 @@ async def write_the_proposals(
     settings: Settings,
     now: Instant,
     cohort: Sequence[tuple[str, UUID]],
+    money: SeedMoney = THE_FAKE,
 ) -> SeededProposals:
     """Gather the group, run the proposer over every pool, then answer four of
     her picks.
@@ -174,7 +176,12 @@ async def write_the_proposals(
             for player in named[:in_count]:
                 if player not in proposal.yeses:
                     await _says_yes(
-                        session, clock, settings, proposal.proposal_id, player
+                        session,
+                        clock,
+                        settings,
+                        money.provider(),
+                        proposal.proposal_id,
+                        player,
                     )
             picks.append(
                 SeededPick(
@@ -333,14 +340,15 @@ async def _says_yes(
     session: AsyncSession,
     clock: FixedClock,
     settings: Settings,
+    provider: PaymentProvider,
     proposal_id: UUID,
     player: UUID,
 ) -> YesAnswer:
     """The swipe the phone's yes runs — and, when it is the last, the fill,
-    through the run's own fake (``payments.py``)."""
+    through the run's own provider (``money.py``)."""
 
     return await build_say_yes(
-        session, clock=clock, provider=build_fake_payments(), settings=settings
+        session, clock=clock, provider=provider, settings=settings
     ).execute(AnswerProposalCommand(proposal_id=proposal_id, player_id=player))
 
 

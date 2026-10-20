@@ -53,7 +53,6 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
-    build_fake_payments,
     build_recording_push,
     build_member_faces,
     build_membership,
@@ -86,6 +85,7 @@ from app.modules.conversations.domain.paging import PAGE_LIMIT_DEFAULT
 from app.seeds.clock import FixedClock
 from app.seeds.catalog import THE_POPULATED_PLAYER
 from app.seeds.cohort import PLAYED_GAMES, SEED_EMAIL_DOMAIN
+from app.seeds.money import THE_FAKE, SeedMoney
 
 #: How many entries the pageable room carries. **One page and a little**, so the
 #: newest page is full and there is genuinely a page behind it — a room of
@@ -161,6 +161,8 @@ class SeededRooms:
 
 async def deliver_everything_told(
     session_factory: async_sessionmaker[AsyncSession],
+    *,
+    money: SeedMoney = THE_FAKE,
 ) -> int:
     """Drain the outbox in process, until a round delivers nothing.
 
@@ -180,11 +182,11 @@ async def deliver_everything_told(
     process passes the real publisher (``app/core/lifespan.py``), and the
     parameter is required at both so the difference stays written down.
 
-    **Its cards are the fake's**, for the same reason: the seed saves every card
-    it saves through a fake (``app/seeds/payments.py``), so a card it replaced is
-    released at one — and a laptop's API, whose worker drains the rows it wrote
-    itself within the second, is on the fake as well unless somebody placed
-    Stripe keys.
+    **Its money is the run's** (``money.py``), for the same reason: a share the
+    seed held is taken, let go or given back where it was held, and a card it
+    replaced is released where it was saved — on the fake, or on the Stripe
+    sandbox (#712). A laptop's API, whose worker drains the rows it wrote itself
+    within the second, holds the same provider unless its settings differ.
     """
 
     runtime = get_event_runtime()
@@ -196,7 +198,7 @@ async def deliver_everything_told(
                 clock=build_clock(),
                 batch_size=200,
                 nudges=build_nobody_is_following(),
-                payments=build_fake_payments(),
+                payments=money.provider(),
                 # Nobody seeded has a phone, so nothing is pushed — and a
                 # notice is still given, and listed (#549).
                 push=build_recording_push(),
@@ -212,10 +214,11 @@ async def open_the_rooms(
     *,
     settings: Settings,
     now: Instant,
+    money: SeedMoney = THE_FAKE,
 ) -> SeededRooms:
     """Deliver, say something, sweep, and read every claim back off the real path."""
 
-    delivered = await deliver_everything_told(session_factory)
+    delivered = await deliver_everything_told(session_factory, money=money)
 
     async with session_factory() as session:
         rooms = await every_room_in_the_database(session, settings=settings, now=now)
