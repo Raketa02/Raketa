@@ -56,9 +56,10 @@
  *
  * `DeckStage` — the pan gesture, the stamps, the fly-off, the arrival, the haptic — with the two
  * cards behind now fading as they shrink (Q90), and `DeckAnswers` under it: ✕ is *Not this time*,
- * the ball is *I'm in*, **i** opens the game's details (A2.2). Both were built for Players' deck and
- * came here with the interstitial in #574, since this is the deck that stays. The stamps are this
- * deck's words, *I'M IN* carrying the share whenever the yes charges at once (Q72).
+ * the ball is *I'm in* on every card, **i** opens the game's details (A2.2). Both were built for
+ * Players' deck and came here with the interstitial in #574, since this is the deck that stays. The
+ * stamps are this deck's words, each carrying the card's share: *PAY* when the yes charges at once
+ * and *I'M IN* on a vote (Q124).
  *
  * ## Answering: the card flies on the press, and the server settles it
  *

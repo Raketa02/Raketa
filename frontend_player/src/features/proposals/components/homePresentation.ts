@@ -313,7 +313,7 @@ export function bookedTime(
  * *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came back, *A seat
  * was empty* (§14.1). A full game gone back to filling is the share nobody pays over the card's
  * *1 seat open · books when it's full · nobody paid* (Q106). **A rescue
- * seen from outside** (A4.3) is the share *I'm in* would pay over how long the seat is offered — the
+ * seen from outside** (A4.3) is the share *Pay* would take over how long the seat is offered — the
  * *Seats to fill* row's own words — or, while a refused rescuer's seat is kept for them, their time:
  * *Fix your card by 14:40 to take the seat* (#640).
  */

@@ -18,16 +18,17 @@ import {
   fillingStatus,
   gameDayWords,
   inOnGameLine,
+  payLabel,
+  paySpoken,
   refusalMessage,
   ribbonWords,
-  seatButtonLabel,
-  seatButtonSpoken,
   segmentLabel,
   shareAside,
   sidesSpoken,
   stampsFor,
   tileLabel,
   vsLine,
+  yesButtonLabel,
 } from './deckPresentation';
 
 function person(name: string, extra: Partial<DeckPerson> = {}): DeckPerson {
@@ -109,26 +110,37 @@ describe('the sides', () => {
   });
 });
 
-describe('the stamps', () => {
+describe('the stamps (Q124)', () => {
   const card = { shareGrosze: 3200 } as DeckCard;
 
-  it('carry the share only when the yes charges at once', () => {
+  it('say Pay with the share when the yes charges at once', () => {
     expect(stampsFor(card, true)).toEqual({
+      yes: { words: 'Pay', figure: '32 zł' },
+      no: { words: 'Not this time' },
+    });
+  });
+
+  it('say I’m in with the share on a vote, so the word tells it from a payment', () => {
+    expect(stampsFor(card, false)).toEqual({
       yes: { words: 'I’m in', figure: '32 zł' },
       no: { words: 'Not this time' },
     });
-    expect(stampsFor(card, false).yes).toEqual({ words: 'I’m in' });
   });
 });
 
-describe('a rescue’s I’m in (A3.1, A4.3, A5.3)', () => {
+describe('a button that moves money says Pay (Q124)', () => {
   it('draws the share, and says aloud whether it is held until the cut-off or paid now (Q113)', () => {
-    expect(seatButtonLabel('27 zł')).toBe('I’m in · 27 zł');
-    expect(seatButtonSpoken('27 zł', true)).toBe('I’m in, 27 zł held until the cut-off');
-    expect(seatButtonSpoken('27 zł', false)).toBe('I’m in, 27 zł paid now');
+    expect(payLabel('27 zł')).toBe('Pay 27 zł');
+    expect(paySpoken('27 zł', true)).toBe('Pay 27 zł, held until the cut-off');
+    expect(paySpoken('27 zł', false)).toBe('Pay 27 zł, paid now');
   });
 
-  it('names the deck’s I’m in the same on a Seat open card, and plainly on any other', () => {
+  it('is the yes on a game whose yes charges at once, and I’m in on a vote', () => {
+    expect(yesButtonLabel(true, '32 zł')).toBe('Pay 32 zł');
+    expect(yesButtonLabel(false, '32 zł')).toBe('I’m in');
+  });
+
+  it('leaves the deck’s ball I’m in — on a Seat open card saying what the share does, plainly on any other', () => {
     const rescue = { type: 'SEAT_OPEN', shareGrosze: 2700 } as const;
     expect(answerLabels({ ...rescue, noFreeCancellation: false })).toEqual({
       pass: 'Not this time',

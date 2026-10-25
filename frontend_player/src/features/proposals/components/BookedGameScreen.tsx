@@ -50,12 +50,12 @@
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
  *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share
- *   and how long the seat is offered, and a volt ***I'm in · 27 zł*** (`TakeTheSeat`) — no Chat, no
+ *   and how long the seat is offered, and a volt ***Pay 27 zł*** (`TakeTheSeat`, Q124) — no Chat, no
  *   Leave. Taking the seat leaves this screen for the group under *It's a game!*; a seat that has
  *   gone meanwhile says so in one sentence (`offer`). **A rescuer whose card was refused** (#640)
  *   reads their kept seat's time, *Fix your card by 14:40 to take the seat*, and while their *TO
  *   CONFIRM* row holds the payment, ***Fix your card*** (or ***Confirm your payment*** after the
- *   cut-off) stands where *I'm in* stood: the join again is that confirmation.
+ *   cut-off) stands where *Pay* stood: the join again is that confirmation.
  *
  * ## The chat is reached from here — and from Home's bubble
  *
@@ -231,7 +231,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   // Neither Chat nor Leave for a rescue seen from outside (A4.3): the reader is not in the game.
   const chat = rescue === undefined && chatIsOpen(game) ? room.conversationId : undefined;
   const act = resultActOf(game, { atTheCourt: tapsAreOpen(game.startsAt, now) });
-  // A rescue's own seat — what I'm in takes, and what a refused rescuer's confirmation is for.
+  // A rescue's own seat — what Pay takes, and what a refused rescuer's confirmation is for.
   const seat = yesOnRescue({ bookingId: game.bookingId, sides: game.sides });
   const leaveHere = () => {
     if (here.current) router.back();

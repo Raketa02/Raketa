@@ -28,7 +28,7 @@ its line under it say it, and the first yes's payment setup says the rest.
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
 `rowsOf` puts **the side with more people In on top, yours on a tie**, and within a row the people In,
 then you, then the rest — the one rule every mock (2–8, 10) agrees with; `ribbonOf`, `courtTagOf`,
-`chargesAtOnce` (the stamp's price: _Book it now_ — always, since #676 — or a rescue),
+`chargesAtOnce` (whether a yes says _Pay_: _Book it now_ — always, since #676 — or a rescue, Q124),
 `countdownOf` (under 24 h, floored), `standingCards` (a card past its deadline leaves silently), `weekCapOf` (the fortnight's capped weeks) and `refusalOutcome`.
 
 **The kind is the switch's, corrected by the intent.** The group page's Competitive · For fun switch
@@ -45,9 +45,9 @@ same thing.
 
 **The stage was built for the Players deck, and lives here.** `DeckStage`, `DeckAnswers` and the
 interstitial moved from `play` with their words in #574, since this is the deck that stays, with
-the two things that differ handed in: the stamps' words (_I'm in_ / _Not this time_, the share after
-_I'm in_ when the yes charges at once) and the three buttons' names (_I'm in_, _Not this time_, _Game
-details_). The stage's cards behind now fade as well as shrink (Q90), for both decks.
+the two things that differ handed in: the stamps' words (_I'm in_ / _Not this time_, and _Pay_ when
+the yes charges at once, every yes with the share after it since Q124) and the three buttons' names
+(_I'm in_, _Not this time_, _Game details_). The stage's cards behind now fade as well as shrink (Q90), for both decks.
 
 **An answer flies on the press and the server settles it.** The card in flight is held by `GamesDeck`
 (component state), so a re-read landing mid-flight cannot pull it off the stage; when it has flown it
@@ -384,7 +384,7 @@ only rescues — booked games that lost a player, the reader fits and is free fo
 leaving at its deadline on the read's clock (`standingSeats`). A row (`SeatToFillRow`, framed `coral`):
 _Padel · Saturday 16:00_ (_· friendly_ for For fun), the club and, bold, _fills by Fri 16:00_ before
 the cut-off or _offered until the start_ after it — the read says which; the players' posters (a hold
-opens the record), a dashed **?** per open seat, and a volt **I'm in · 27 zł**. _You're In_ is the
+opens the record), a dashed **?** per open seat, and a volt **Pay 27 zł**. _You're In_ is the
 reader's live yeses in this group and sport (`yesesIn`); a row (`YoureInRow`, framed `mint`) is the
 yes's game, club and _book by Sat 13:00_ with **its squares read off the game's own details**
 (`useProposal`: everybody In, then the open seats dashed) and _Withdraw_ **only once those details
@@ -422,7 +422,7 @@ other's rows; the starting card only once both have said there is nothing.
 row's upper block push `/play/group/[groupId]/rescue/[bookingId]` — under Play, so _back_ is the
 group — which mounts `BookedGameScreen` with `offer`: the read carries `rescue`, and the screen draws
 the players _paid_, the reader's dashed seat, WHERE with the court, the share with how long the seat
-is offered, and a volt **I'm in · 27 zł** (`TakeTheSeat`, the row's door too; spoken by what the share
+is offered, and a volt **Pay 27 zł** (`TakeTheSeat`, the row's door too; spoken by what the share
 does since [#645](https://github.com/Raketa02/Raketa/issues/645), below) — no Chat, no Leave, no
 _new_ marked. A seat gone before the read says _This seat isn't offered to you any more._
 
@@ -546,8 +546,8 @@ _Nobody who fits is free then_, a courtless one _No court is free then — every
 — and is read for the controls the grid was read with: the headline (_5 of your best fits free
 then_, _only 2 fit · may not fill_ where a court is free and fewer than a full game are, each with
 _· outside your hours_), the fits (7.16's card panels, the name whole, _2,75 · 93_), the free courts
-home club first with their own _4 free_, and **Already happening here**: rescues (_I'm in · 30 zł_)
-then posts still filling (no court number, _I'm in_). **A court tapped is the pick**, replacing the
+home club first with their own _4 free_, and **Already happening here**: rescues (_Pay 30 zł_)
+then posts still filling (no court number, _I'm in_, and _Pay 32 zł_ on a post's last seat, Q124). **A court tapped is the pick**, replacing the
 last, and the sheet closes so the ringed cell and the open button are what follows; on the picked
 cell the row says so and _Remove this pick_ sits at the foot. **A court nobody who fits is free at is
 shut** (`courtPickable`, §9.1 step 5's _nobody who fits free: cannot be picked_): the slot lists every
@@ -966,7 +966,7 @@ A4.1, A4.3, A5.3, A7.3, A8; story S-01A's F-LEAVE-6.1). Paula's card is refused 
 yes fills Thursday's game, a week before the cut-off. Nothing is being taken, so she is told _Your
 card didn't go through — fix it to keep your seat. Nothing is paid now._, and her card, her _TO
 CONFIRM_ row and her sheet read _Fix your card by 14:40_. On Monday Diego goes for the seat Kuba freed on
-Thursday's 19:00: his _I'm in · 27 zł_ is said _held until the cut-off_, and once in he reads _27 zł ·
+Thursday's 19:00: his _Pay 27 zł_ is said _held until the cut-off_, and once in he reads _27 zł ·
 free to leave until Wed 19:00_, like everyone in the game. **Why**: the product
 owner ruled that before the cut-off nothing is taken, only held, so a refused card is fixed, never
 paid (Q113); after it, money is taken at once, and the words stay #630's.
@@ -1000,11 +1000,12 @@ paid (Q113); after it, money is taken at once, and the words stay #630's.
   is a `SeatAtStake`, _yours_ or _aRescue_, the notice's two endings; `seatKeptBy` words it), and
   **Fix your card** under the game card opens the confirmation, as _Confirm your payment_ did on a
   game waiting for one payment.
-- **A rescue's _I'm in · 27 zł_ says what the share does** (`seatButtonSpoken`): _I'm in, 27 zł held
-  until the cut-off_ while it is ahead, _I'm in, 27 zł paid now_ after it — on a _Seats to fill_ row,
-  a rescue's details and the slot sheet (each offer's `fillsByTheCutOff`, the row leaving at its
-  deadline), and the deck's _I'm in_ under a _Seat open_ card (`answerLabels`, off the card's
-  `noFreeCancellation`). The drawn words stay _I'm in · 27 zł_ (A3.1: _its spoken name says which_).
+- **A rescue's _Pay 27 zł_ says what the share does** (`paySpoken`): _Pay 27 zł, held until the
+  cut-off_ while it is ahead, _Pay 27 zł, paid now_ after it — on a _Seats to fill_ row, a rescue's
+  details and the slot sheet (each offer's `fillsByTheCutOff`, the row leaving at its deadline); and
+  the deck's _I'm in_ under a _Seat open_ card says the same after its own word, _I'm in, 27 zł held
+  until the cut-off_ (`answerLabels`, off the card's `noFreeCancellation`). The drawn words were _I'm
+  in · 27 zł_ until #719 made them _Pay 27 zł_ (A3.1: _its spoken name says which_).
   Once in, Home and the details read the game as any player's (#642's held, checked or taken).
 - **A refused rescuer keeps the seat for 30 minutes** (#640). The toast says _Your card didn't go
   through — fix it to take the seat. Nothing is paid now._ (after the cut-off _Your payment didn't go
@@ -1123,3 +1124,27 @@ reader first, soonest first among two, ahead of the usual order, and the phone d
 the order served without re-sorting them (`groupGames.test.tsx`). **No flag crosses the wire** for
 it; the owed card carries no mark, and the one lift the phone makes is the card a notice opened
 (`withOnTop`), as it was before.
+
+**A yes that moves money says Pay, and every yes's stamp carries its share**
+([#719](https://github.com/Raketa02/Raketa/issues/719); Q124, the mechanics §6.5 and §8.1, the screens
+A2.2, A3.1, A4.2, A4.3, A5.3; story S-16A's F-DECK-34.1 and F-FILL-1.1). Ivan drags a Bonarka card his
+yes would only add to and reads **I'M IN · 40 zł**; Marta drags the card her yes would book and reads
+**PAY · 40 zł**, and a _Seat open_ card reads the same. **Why**: the product owner ruled that the
+control that binds a player to pay says _Pay_, and that a vote shows its price too, so the word and
+not the price tells a vote from a payment; a lawyer is asked whether the swipe can be the order (§12.5,
+O3). **Where it shows**: the stamp is `stampsFor` — _Pay_ where `chargesAtOnce`, _I'm in_ elsewhere,
+the card's share after either, the figure never uppercased. Every button that moves money reads
+`payLabel` — _Pay 27 zł_: the _Seats to fill_ row and a rescue's details (`TakeTheSeat`), the slot
+sheet's rescues, a post's last seat on the slot sheet, and the details of a game whose yes takes the
+last seat. The last two follow the fill's own rule, `chargesAtOnce` over `yesOnPost` and
+`yesOnDetails`, through `yesButtonLabel`, so the button says _Pay_ exactly where the yes counts ten
+seconds behind _Undo_. **Unchanged**: the deck's ball is _I'm in_ on every card, its name too — on a
+_Seat open_ card still _I'm in, 27 zł held until the cut-off_ — the pill is _Booking in 10 s_, the
+busy button _Booking…_, _Not this time_ is as it was, and a _Court available_ game's details and Post
+a game's own post button keep their words. **The longest stamp fits**: _I'M IN · 32,50 zł_ is held
+to the narrowest phone's card by `deckStampFit.test.ts`, on one line and inside the card tilted,
+measured off the fonts in the bundle, with room for a share of three figures. **Calls made without a
+ruling**: a button that had no spoken tail keeps none, so a post's last seat and a _Book it now_
+game's details are spoken _Pay 32 zł_, where the rescue's doors say what the share does. **Nothing
+here has been seen on a device**: the stamp on every card, and _Pay_ on the rows, the sheet and the
+details, want a look.

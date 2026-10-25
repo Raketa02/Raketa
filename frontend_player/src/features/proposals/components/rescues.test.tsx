@@ -5,7 +5,7 @@
  * mechanics §10.1; the backend's #545).
  *
  * **What the share does** ([#645](https://github.com/Raketa02/Raketa/issues/645); Q113): before
- * the club's cut-off *I'm in · 27 zł* is said *held until the cut-off*, and once in, the rescuer
+ * the club's cut-off *Pay 27 zł* is said *held until the cut-off*, and once in, the rescuer
  * reads the game as everybody does — held, free to leave until the cut-off; after it, *paid now*.
  * **A rescuer whose card is refused** keeps the seat for 30 minutes (#640), told to fix the card
  * before the cut-off, to confirm the payment after it, *to take the seat*.
@@ -77,9 +77,16 @@ const FILL = FILL_COPY;
 const PAST_THE_FLIGHT = 400;
 const SECOND = 1_000;
 
-/** *I'm in · 27 zł* aloud, before the club's cut-off and after it (Q113). */
+/**
+ * The deck's ball on a *Seat open* card, aloud before the club's cut-off and after it (Q113) — *I'm
+ * in* on every card, even one whose yes moves money: the stamp is what says *PAY* (Q124).
+ */
 const HELD_UNTIL_THE_CUT_OFF = 'I’m in, 27 zł held until the cut-off';
 const PAID_NOW = 'I’m in, 27 zł paid now';
+
+/** The rescue's details' *Pay 27 zł*, aloud the same way (Q113, Q124). */
+const PAY_HELD_UNTIL_THE_CUT_OFF = 'Pay 27 zł, held until the cut-off';
+const PAY_PAID_NOW = 'Pay 27 zł, paid now';
 
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
@@ -248,7 +255,7 @@ const theTenSeconds = () => act(() => jest.advanceTimersByTime(10 * SECOND));
 // ---------------------------------------------------------------------------
 
 describe('a Seat open card in the deck (A2.3, mock 2)', () => {
-  it('draws the players paid, your dashed seat, the court booked with its number and the price on the stamp', async () => {
+  it('draws the players paid, your dashed seat, the court booked with its number and Pay with the share on the stamp', async () => {
     await openGames([rescueCard()]);
 
     expect(await screen.findByRole('header', { name: /^Seat open · court booked/ })).toBeTruthy();
@@ -259,7 +266,7 @@ describe('a Seat open card in the deck (A2.3, mock 2)', () => {
     expect(
       screen.getByLabelText('Booked, 27 zł, Saturday 16:00 · Ogrody 33 · Court 6'),
     ).toBeTruthy();
-    expect(screen.getByText('I’m in · 27 zł', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Pay · 27 zł', HIDDEN_TOO)).toBeTruthy();
   });
 
   it('says You? with the share while another seat is open too', async () => {
@@ -469,7 +476,7 @@ describe('the rescue seen from outside (A4.3)', () => {
     return card;
   }
 
-  it('opens from the i: the players paid, your dashed seat, the court, how long it is offered, and I’m in — no Chat, no Leave', async () => {
+  it('opens from the i: the players paid, your dashed seat, the court, how long it is offered, and Pay — no Chat, no Leave', async () => {
     await openRescue();
 
     expect(screen.getByText('Seat open')).toBeTruthy();
@@ -478,7 +485,8 @@ describe('the rescue seen from outside (A4.3)', () => {
     expect(screen.getByLabelText('Where, Ogrody 33, Court 6 · 3,1 km')).toBeTruthy();
     // The card's deadline is the cut-off, 21 hours after the read: Thursday 07:00 in Warsaw.
     expect(screen.getByLabelText('Your share, 27 zł, fills by Thu 07:00')).toBeTruthy();
-    expect(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF })).toBeTruthy();
+    expect(screen.getByText('Pay 27 zł')).toBeTruthy();
+    expect(screen.getByRole('button', { name: PAY_HELD_UNTIL_THE_CUT_OFF })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Chat' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Leave the game' })).toBeNull();
   });
@@ -486,7 +494,7 @@ describe('the rescue seen from outside (A4.3)', () => {
   it('takes the seat from there: ten seconds, the booking’s seat, It’s a game!, and back to the group', async () => {
     const card = await openRescue();
 
-    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
+    fireEvent.press(screen.getByRole('button', { name: PAY_HELD_UNTIL_THE_CUT_OFF }));
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
     expect(screen.getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
@@ -517,13 +525,13 @@ describe('the rescue seen from outside (A4.3)', () => {
 // ---------------------------------------------------------------------------
 
 describe('what taking the seat does with the share (#645; Q113)', () => {
-  it('says I’m in on the card is held until the cut-off before it, and paid now after it', async () => {
+  it('says the ball on the card is held until the cut-off before it, and paid now after it', async () => {
     await openGames([rescueCard()]);
     expect(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF })).toBeTruthy();
     expect(screen.queryByRole('button', { name: PAID_NOW })).toBeNull();
   });
 
-  it('says paid now on a seat offered after the cut-off — the card and its details', async () => {
+  it('says paid now on a seat offered after the cut-off — the card’s ball and the details’ Pay', async () => {
     const card = lateRescue();
     stubBooking(transport, {
       ...rescueDetails(card),
@@ -534,7 +542,7 @@ describe('what taking the seat does with the share (#645; Q113)', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
     expect(await screen.findByLabelText('Your share, 27 zł, offered until the start')).toBeTruthy();
-    expect(screen.getByRole('button', { name: PAID_NOW })).toBeTruthy();
+    expect(screen.getByRole('button', { name: PAY_PAID_NOW })).toBeTruthy();
   });
 
   /** Once in, the rescuer is any player: held until the cut-off, and free to leave until then. */
@@ -669,7 +677,7 @@ describe('a rescuer whose card is refused keeps the seat for 30 minutes (#640, #
     ]);
   });
 
-  it('reads the kept seat on the rescue’s details, its confirmation where I’m in stood', async () => {
+  it('reads the kept seat on the rescue’s details, its confirmation where Pay stood', async () => {
     const card = rescueCard();
     stubSeatCharge(card);
     stubBooking(transport, {
@@ -703,7 +711,7 @@ describe('a rescuer whose card is refused keeps the seat for 30 minutes (#640, #
     expect(
       await screen.findByLabelText('Your share, 27 zł, Fix your card by 10:30 to take the seat'),
     ).toBeTruthy();
-    expect(screen.queryByRole('button', { name: HELD_UNTIL_THE_CUT_OFF })).toBeNull();
+    expect(screen.queryByRole('button', { name: PAY_HELD_UNTIL_THE_CUT_OFF })).toBeNull();
     fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.title.FIX_THE_CARD }));
 
     expect(

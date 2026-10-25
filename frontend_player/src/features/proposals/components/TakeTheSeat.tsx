@@ -1,9 +1,10 @@
 /**
- * ***I'm in · 27 zł* on a rescue** — a booked game's open seat taken at once
+ * ***Pay 27 zł* on a rescue** — a booked game's open seat taken at once
  * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3.1, A4.3; the mechanics
- * §10.1), from a rescue's details and from a *Seats to fill* row. **Its name says what the share
- * does** (#645; Q113): *I'm in, 27 zł held until the cut-off* while the cut-off is ahead — held
- * like every seat's, and free to leave until then — and *I'm in, 27 zł paid now* after it.
+ * §10.1), from a rescue's details and from a *Seats to fill* row: it moves money, so it says *Pay*
+ * (Q124). **Its name says what the share does** (#645; Q113): *Pay 27 zł, held until the cut-off*
+ * while the cut-off is ahead — held like every seat's, and free to leave until then — and *Pay 27
+ * zł, paid now* after it.
  *
  * **The fill is the deck's** (`useFillYes`): with nothing saved the payment setup opens first and the
  * join lands once a method is; every rescue join counts ten seconds behind *Undo* (Q74) — the button
@@ -20,7 +21,7 @@ import type { DealtIn, YesOn } from '../domain/fill';
 import { useFillYes } from '../hooks/useFillYes';
 import { useLatest } from '../hooks/useLatest';
 
-import { seatButtonLabel, seatButtonSpoken } from './deckPresentation';
+import { payLabel, paySpoken } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 
 export interface TakeTheSeatProps {
@@ -66,8 +67,8 @@ export function TakeTheSeat({
 
   return (
     <Button
-      label={seatButtonLabel(share)}
-      accessibilityLabel={seatButtonSpoken(share, heldUntilTheCutOff)}
+      label={payLabel(share)}
+      accessibilityLabel={paySpoken(share, heldUntilTheCutOff)}
       variant="volt"
       size={size}
       busy={counting}

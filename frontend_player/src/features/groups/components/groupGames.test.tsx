@@ -483,7 +483,7 @@ describe('the card', () => {
     expect(screen.queryByText(/asked|no answer yet|^friend$/i, HIDDEN_TOO)).toBeNull();
   });
 
-  it('says you complete it, and a Book it now court carries its price on the stamp', async () => {
+  it('says you complete it, and a Book it now stamp says Pay with its share — the ball stays I’m in', async () => {
     const card = deckCard({
       in_count: 3,
       open_seats_after_your_yes: 0,
@@ -502,16 +502,19 @@ describe('the card', () => {
     ).toBeTruthy();
 
     dragTo(tile(KAROL().player_id), commit / 2);
-    expect(screen.getByText('I’m in · 32 zł', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Pay · 32 zł', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByText('Not this time', HIDDEN_TOO)).toBeTruthy();
     release(tile(KAROL().player_id));
+    // The stamp under the thumb says Pay; the ball is named I'm in on every card (Q124).
+    expect(screen.getByRole('button', { name: COPY.yes })).toBeTruthy();
   });
 
-  it('prices no stamp on a free vote', async () => {
+  it('prices a free vote’s stamp too, as I’m in — the word, not the price, tells it from a payment', async () => {
     await openGames(groupDeck({ cards: [deckCard()] }));
 
     await screen.findByLabelText(COPY.details);
-    expect(screen.queryByText(/I’m in · /, HIDDEN_TOO)).toBeNull();
+    expect(screen.getByText('I’m in · 32 zł', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.queryByText(/^Pay · /, HIDDEN_TOO)).toBeNull();
   });
 
   it('draws a challenge by name, and the group’s once the poster withdrew', async () => {
@@ -530,14 +533,14 @@ describe('the card', () => {
     expect(screen.getByText('The group challenged you', HIDDEN_TOO)).toBeTruthy();
   });
 
-  it('draws a rescue’s ribbon, its Booked court and a price on the stamp', async () => {
+  it('draws a rescue’s ribbon, its Booked court and Pay with its share on the stamp', async () => {
     await openGames(groupDeck({ cards: [rescueCard({ deadline: hoursAfterRead(48) })] }));
 
     expect(await screen.findByRole('header', { name: 'Seat open · court booked' })).toBeTruthy();
     expect(
       screen.getByLabelText('Booked, 27 zł, Saturday 16:00 · Ogrody 33 · Court 6'),
     ).toBeTruthy();
-    expect(screen.getByText('I’m in · 27 zł', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Pay · 27 zł', HIDDEN_TOO)).toBeTruthy();
   });
 
   it('counts down under a day, and in minutes under an hour', async () => {

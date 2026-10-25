@@ -698,7 +698,7 @@ describe('a payment that did not go through is confirmed on the same payment (§
 // The game's details
 // ---------------------------------------------------------------------------
 
-describe('I’m in on a game’s details', () => {
+describe('Pay on a game’s details, where the yes takes the last seat (Q124)', () => {
   /** Q113: the fill holds every share and books the court; the club's cut-off takes them. */
   it('draws no paragraph about what a yes costs on a filling game: the share line says it', async () => {
     const card = bookItNow();
@@ -725,7 +725,10 @@ describe('I’m in on a game’s details', () => {
       expect(screen).toHavePathname(`/play/group/${CREW.id}/game/${card.proposal_id}`),
     );
 
-    fireEvent.press(await screen.findByRole('button', { name: COPY.yes }));
+    // The last seat's yes books the game and moves money, so it says Pay with the share.
+    expect(await screen.findByText('Pay 32 zł')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: COPY.yes })).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Pay 32 zł' }));
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
     expect(screen.getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
@@ -743,7 +746,7 @@ describe('I’m in on a game’s details', () => {
     await openGames([card]);
     transport.on('POST', yesPath(card.proposal_id), () => errorResponse(409, 'proposal_is_full'));
     fireEvent.press(screen.getByRole('button', { name: COPY.details }));
-    fireEvent.press(await screen.findByRole('button', { name: COPY.yes }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Pay 32 zł' }));
 
     act(() => jest.advanceTimersByTime(10 * SECOND));
 

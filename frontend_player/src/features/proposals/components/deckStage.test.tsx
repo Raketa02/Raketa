@@ -23,7 +23,7 @@
 
 import { act, render, screen, within } from '@testing-library/react-native';
 import { useEffect } from 'react';
-import { Text, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
 
 import { HapticsProvider } from '@/shared/lib/platform';
 import { ReducedMotionProvider, theme } from '@/shared/ui';
@@ -486,15 +486,28 @@ describe('the stamps', () => {
     expect(screen.getByText('Not today', HIDDEN_TOO)).toBeTruthy();
   });
 
-  /** #553: a Games yes that charges at once carries its price after the words (Q72). */
+  /** #553: a Games yes carries its price after the words — *PAY · 32 zł* (Q124). */
   it('draw a figure after the words when one is handed in', () => {
     drawStage({
-      stamps: { yes: { words: 'I’m in', figure: '32 zł' }, no: { words: 'Not this time' } },
+      stamps: { yes: { words: 'Pay', figure: '32 zł' }, no: { words: 'Not this time' } },
     });
 
     const yes = screen.getByTestId('deck-stamp-yes', HIDDEN_TOO);
-    expect(within(yes).getByText('I’m in · 32 zł', HIDDEN_TOO)).toBeTruthy();
+    expect(within(yes).getByText('Pay · 32 zł', HIDDEN_TOO)).toBeTruthy();
     const no = screen.getByTestId('deck-stamp-no', HIDDEN_TOO);
     expect(within(no).getByText('Not this time', HIDDEN_TOO)).toBeTruthy();
+  });
+
+  it('shout the words and leave the figure as it is written — zł is a unit', () => {
+    drawStage({
+      stamps: { yes: { words: 'I’m in', figure: '32,50 zł' }, no: { words: 'Not this time' } },
+    });
+
+    const yes = screen.getByTestId('deck-stamp-yes', HIDDEN_TOO);
+    const caseOf = (text: string) =>
+      StyleSheet.flatten(within(yes).getByText(text, HIDDEN_TOO).props.style as TextStyle)
+        .textTransform;
+    expect(caseOf('I’m in · 32,50 zł')).toBe('uppercase');
+    expect(caseOf('· 32,50 zł')).toBe('none');
   });
 });

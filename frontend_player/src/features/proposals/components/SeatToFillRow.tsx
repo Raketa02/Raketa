@@ -7,12 +7,12 @@
  * ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   coral, 1.5pt
  * ┃ Padel · Saturday 16:00                    ┃   the title — and the door to the details
  * ┃ Ogrody 33 · fills by Fri 16:00            ┃   the club, and how long, bold
- * ┃ [KT] [AK] [KW] [?]         [ I'm in · 27 zł ] ┃  the paid posters, the open seats, the join
+ * ┃ [KT] [AK] [KW] [?]            [ Pay 27 zł ] ┃  the paid posters, the open seats, the join
  * ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  * ```
  *
  * **The upper block opens the rescue's details** — the booked game seen from outside (A4.3) — and
- * ***I'm in · 27 zł*** takes the seat (`TakeTheSeat`): ten seconds behind *Undo*, the charge, *It's
+ * ***Pay 27 zł*** takes the seat (`TakeTheSeat`, Q124): ten seconds behind *Undo*, the charge, *It's
  * a game!*, and the game in Home; a lost race says *Someone just took it*. The subtitle is the read's:
  * *fills by Fri 16:00* for a seat that opened before the cut-off, *offered until the start* for one
  * that opened after it. **At its deadline the row leaves** (`standingSeats`) — at the cut-off a

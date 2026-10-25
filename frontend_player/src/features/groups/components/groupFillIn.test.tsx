@@ -195,8 +195,10 @@ describe('the Fill in tab (mock 11)', () => {
     expect(within(rescue).getByText('fills by Fri 16:00')).toBeTruthy();
     expect(within(rescue).getAllByTestId(/^fill-in-poster-/)).toHaveLength(3);
     expect(within(rescue).getByText(COPY.openSeat)).toBeTruthy();
+    // It moves money, so it says Pay (Q124), and aloud what the share does (Q113).
+    expect(within(rescue).getByText('Pay 27 zł')).toBeTruthy();
     expect(
-      within(rescue).getByRole('button', { name: 'I’m in, 27 zł held until the cut-off' }),
+      within(rescue).getByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
     ).toBeTruthy();
 
     expect(await screen.findByRole('header', { name: 'You’re In · 1' })).toBeTruthy();
@@ -346,7 +348,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     await openFillIn(() => (taken ? [] : [row]));
 
     fireEvent.press(
-      await screen.findByRole('button', { name: 'I’m in, 27 zł held until the cut-off' }),
+      await screen.findByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
     );
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
@@ -377,7 +379,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     await openFillIn(() => (taken ? [] : [row]));
 
     fireEvent.press(
-      await screen.findByRole('button', { name: 'I’m in, 27 zł held until the cut-off' }),
+      await screen.findByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
     );
     act(() => jest.advanceTimersByTime(10 * SECOND));
 
@@ -389,13 +391,13 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     await waitFor(() => expect(screen.queryByTestId(`seat-to-fill-${row.booking_id}`)).toBeNull());
   });
 
-  it('says offered until the start once the cut-off has passed — and I’m in is paid now (Q113)', async () => {
+  it('says offered until the start once the cut-off has passed — and Pay is paid now (Q113)', async () => {
     await openFillIn(() => [
       seatToFill({ fills_by_the_cut_off: false, deadline: '2026-10-03T14:00:00Z' }),
     ]);
 
     expect(await screen.findByText(COPY.offeredUntilTheStart)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'I’m in, 27 zł paid now' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pay 27 zł, paid now' })).toBeTruthy();
   });
 
   it('opens the rescue’s details from its upper block — the game seen from outside', async () => {

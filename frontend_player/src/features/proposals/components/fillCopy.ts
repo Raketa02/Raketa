@@ -20,7 +20,7 @@ export const FILL_COPY = {
     action: 'Undo',
     /** The button, spoken — what it undoes. */
     actionSpoken: 'Undo the booking',
-    /** *I'm in* on a game's details while its yes counts down. */
+    /** A *Pay 32 zł* button while its yes counts down — on a game's details, and a rescue's. */
     booking: 'Booking…',
     /** A second yes that would move money, while one counts already. */
     oneAtATime: 'One booking at a time — undo this one or let it go through first.',

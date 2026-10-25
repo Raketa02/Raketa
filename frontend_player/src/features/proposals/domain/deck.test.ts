@@ -1,6 +1,6 @@
 /**
  * The rules a dealt card is drawn by — which row is on top, what the ribbon and the court block
- * say, when the stamp carries a price, how long the card has, and what an answer does to the deck.
+ * say, when a yes says Pay, how long the card has, and what an answer does to the deck.
  */
 
 import {
@@ -165,7 +165,7 @@ describe('the court block and the stamp', () => {
     expect(courtTagOf(card({ type: 'SEAT_OPEN', court: 'BOOKED' }))).toBe('booked');
   });
 
-  it('prices the stamp only when the yes charges at once', () => {
+  it('charges at once — and so says Pay — on Book it now and a rescue, never on a vote (Q124)', () => {
     expect(chargesAtOnce(card())).toBe(false);
     expect(chargesAtOnce(card({ court: 'BOOK_IT_NOW' }))).toBe(true);
     expect(chargesAtOnce(card({ type: 'SEAT_OPEN', court: 'BOOKED' }))).toBe(true);

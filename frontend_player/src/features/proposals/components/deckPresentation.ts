@@ -351,42 +351,60 @@ export function courtSpoken(
 // The stamps and the answers
 // ---------------------------------------------------------------------------
 
-/** Between a stamp's words and its figure — the mocks' middle dot: *I'M IN · 32 zł*. */
+/** Between a stamp's words and its figure — the mocks' middle dot: *PAY · 32 zł*. */
 export const STAMP_JOIN = ' · ';
 
 /**
- * The stamps a card is swiped under: *I'M IN* — with the price when the yes charges at once (Q72)
- * — and *NOT THIS TIME*.
+ * The stamps a card is swiped under (Q124): ***PAY · 32 zł*** when the yes charges at once — *Book
+ * it now*, or a rescue — and ***I'M IN · 32 zł*** on a vote, so the word, not the price, tells a
+ * vote from a payment; and *NOT THIS TIME*. The share is the card's own, fixed when it was made.
  */
 export function stampsFor(card: DeckCard, charges: boolean) {
   return {
-    yes: charges ? { words: COPY.yes, figure: shareWords(card) } : { words: COPY.yes },
+    yes: { words: charges ? COPY.pay : COPY.yes, figure: shareWords(card) },
     no: { words: COPY.no },
   } as const;
 }
 
-/** *I'm in · 27 zł* — a rescue's door: the seat taken at once, the game being booked (A3.1, A4.3). */
-export function seatButtonLabel(share: string): string {
-  return `${COPY.yes}${DOT}${share}`;
+/**
+ * *Pay 27 zł* — **a button that moves money** (Q124): a rescue's door, the seat taken at once (A3.1,
+ * A4.3), and a yes that books the game.
+ */
+export function payLabel(share: string): string {
+  return `${COPY.pay} ${share}`;
+}
+
+/** What a share taken now does: *held until the cut-off* before the club's cut-off, *paid now* after. */
+function whatTheShareDoes(heldUntilTheCutOff: boolean): string {
+  return heldUntilTheCutOff ? COPY.heldUntilTheCutOff : COPY.paidNow;
 }
 
 /**
- * *I'm in, 27 zł held until the cut-off* — the same door aloud, saying what the share does (Q113):
+ * *Pay 27 zł, held until the cut-off* — a rescue's door aloud, saying what the share does (Q113):
  * held on the card until the club's cut-off while it is ahead, as every seat's is, and *paid now*
  * after it, when a join is taken at once (the screens A3.1, A4.3, A5.3).
  */
-export function seatButtonSpoken(share: string, heldUntilTheCutOff: boolean): string {
-  return `${COPY.yes}, ${share} ${heldUntilTheCutOff ? COPY.heldUntilTheCutOff : COPY.paidNow}`;
+export function paySpoken(share: string, heldUntilTheCutOff: boolean): string {
+  return `${payLabel(share)}, ${whatTheShareDoes(heldUntilTheCutOff)}`;
+}
+
+/**
+ * **The yes on a game's details and on a sheet's post** — *Pay 32 zł* when the yes charges at once,
+ * because it takes the last seat and books the game (Q124), and *I'm in* on a vote.
+ */
+export function yesButtonLabel(charges: boolean, share: string): string {
+  return charges ? payLabel(share) : COPY.yes;
 }
 
 /** The three buttons' names — the game's, where Players names the person. */
 export const ANSWER_LABELS = { pass: COPY.no, accept: COPY.yes, record: COPY.details } as const;
 
 /**
- * **The three buttons' names for the card on top** — and on a *Seat open* card, *I'm in* says what
- * the share does, as the rescue's other doors do (`seatButtonSpoken`, Q113): held until the cut-off
- * while it is ahead, paid now after it. The card leaves the deck at its cut-off, so a card the read
- * dealt before it is a card before it.
+ * **The three buttons' names for the card on top.** The ball is *I'm in* on every card, even one
+ * whose yes moves money — the stamp under the thumb is what says *PAY* (Q124) — and on a *Seat
+ * open* card it says what the share does, as the rescue's other doors do (Q113): *I'm in, 27 zł
+ * held until the cut-off* while it is ahead, paid now after it. The card leaves the deck at its
+ * cut-off, so a card the read dealt before it is a card before it.
  */
 export function answerLabels(card: Pick<DeckCard, 'type' | 'shareGrosze' | 'noFreeCancellation'>): {
   readonly pass: string;
@@ -394,7 +412,8 @@ export function answerLabels(card: Pick<DeckCard, 'type' | 'shareGrosze' | 'noFr
   readonly record: string;
 } {
   if (!isRescue(card)) return ANSWER_LABELS;
-  return { ...ANSWER_LABELS, accept: seatButtonSpoken(shareWords(card), !card.noFreeCancellation) };
+  const accept = `${COPY.yes}, ${shareWords(card)} ${whatTheShareDoes(!card.noFreeCancellation)}`;
+  return { ...ANSWER_LABELS, accept };
 }
 
 /**

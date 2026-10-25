@@ -859,12 +859,14 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     expect(within(rescueRow).getByText('Centrum Ruchu · Court 2 · 30 zł each')).toBeTruthy();
     expect(within(rescueRow).getByText('2 seats')).toBeTruthy();
     expect(within(rescueRow).getByLabelText('any level, you are free')).toBeTruthy();
+    // A rescue's join moves money, so it says Pay (Q124), and aloud what the share does (Q113).
+    expect(within(rescueRow).getByText('Pay 30 zł')).toBeTruthy();
     expect(
-      within(rescueRow).getByRole('button', { name: 'I’m in, 30 zł held until the cut-off' }),
+      within(rescueRow).getByRole('button', { name: 'Pay 30 zł, held until the cut-off' }),
     ).toBeTruthy();
     expect(
       within(screen.getByTestId(`slot-rescue-${late.booking_id}`)).getByRole('button', {
-        name: 'I’m in, 27 zł paid now',
+        name: 'Pay 27 zł, paid now',
       }),
     ).toBeTruthy();
     const postRow = screen.getByTestId(`slot-post-${post.proposal_id}`);
@@ -873,6 +875,21 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     ).toBeTruthy();
     expect(within(postRow).queryByText(/Court/)).toBeNull();
     expect(within(postRow).getByRole('button', { name: PROPOSALS_COPY.yes })).toBeTruthy();
+  });
+
+  it('says Pay with the share on a post’s last seat, because the yes that takes it books the game (Q124)', async () => {
+    await openPosting();
+    const last = postStillFilling({ open_seats: 1 });
+    const filling = postStillFilling({ open_seats: 2 });
+    stubPostingSlot(transport, CREW.id, postingSlot({ posts: [last, filling] }));
+
+    fireEvent.press(cellOf(SAT, 'EVENING'));
+
+    const lastRow = await screen.findByTestId(`slot-post-${last.proposal_id}`);
+    expect(within(lastRow).getByRole('button', { name: 'Pay 32 zł' })).toBeTruthy();
+    expect(within(lastRow).queryByRole('button', { name: PROPOSALS_COPY.yes })).toBeNull();
+    const fillingRow = screen.getByTestId(`slot-post-${filling.proposal_id}`);
+    expect(within(fillingRow).getByRole('button', { name: PROPOSALS_COPY.yes })).toBeTruthy();
   });
 
   it('joins a post still filling — a free yes — and lands on Fill in', async () => {
@@ -924,7 +941,7 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     fireEvent.press(cellOf(SAT, 'EVENING'));
 
     fireEvent.press(
-      await screen.findByRole('button', { name: 'I’m in, 27 zł held until the cut-off' }),
+      await screen.findByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
     );
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));

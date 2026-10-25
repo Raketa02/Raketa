@@ -368,13 +368,13 @@ deck's client-only concepts are listed here; the yes that fills a game is
   ADR-0094 spent a type on. It began on Find a game and came to `features/proposals` with the
   deck in #574. _Avoid_: "the intent prompt" — it gates the deck rather than offering
   something beside it; "onboarding step", which it is not and must not become.
-- **The stamps** — _I'M IN_ and _NOT THIS TIME_, two outlined words a Games card wears under
+- **The stamps** — the yes stamp and _NOT THIS TIME_, two outlined words a Games card wears under
   the thumb, one volt and one white, tilted, **invisible at rest**, fading in with the drag and
   full at the threshold (95pt) where a release commits the answer in the drag's direction
   ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3). The
-  drawing is `DeckStage`'s and the words are the caller's — the two buttons' own (`stampsFor`,
-  `ANSWER_LABELS`), so what a drag reveals and what a listener hears cannot drift — and a yes
-  that charges at once carries its price after `STAMP_JOIN`: _I'M IN · 32 zł_. They are
+  drawing is `DeckStage`'s and the words are the caller's (`stampsFor`): the yes reads _PAY_ where
+  it charges at once and _I'M IN_ on a vote, the card's share after `STAMP_JOIN` either way —
+  _PAY · 32 zł_ (Q124) — while the ball under the stage stays _I'm in_ (`ANSWER_LABELS`). They are
   **feedback and never controls**: hidden from assistive technology and unspoken. The three
   round buttons under the stage — ✕, i and a drawn tennis ball (`DeckAnswers`) — are the path
   that is never removed. _Avoid_: "swipe buttons"; a stamp that is pressable; a stamp without

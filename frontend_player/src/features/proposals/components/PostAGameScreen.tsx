@@ -36,9 +36,9 @@
  * many best fits have it, and the player is back on the group's page — which went to Fill in when this
  * screen opened, so *You're In* is where they land, by this or by any way back.
  *
- * **Joining from a sheet** is the fill's, as every yes is: a rescue's *I'm in · 30 zł* counts its ten
- * seconds behind *Undo* and pays; a post's *I'm in* is a free vote — or, on its last seat, the fill
- * too (`waitsForUndo` on *Book it now*). The sheet closes first, then the player goes back to Fill
+ * **Joining from a sheet** is the fill's, as every yes is: a rescue's *Pay 30 zł* counts its ten
+ * seconds behind *Undo* and pays; a post's *I'm in* is a free vote — or, on its last seat, *Pay 32
+ * zł* and the fill too (`waitsForUndo` on *Book it now*, Q124). The sheet closes first, then the player goes back to Fill
  * in, the toast following them there.
  */
 

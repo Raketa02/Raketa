@@ -12,7 +12,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { DeckCard, DeckPerson } from './deck';
+import { chargesAtOnce, type DeckCard, type DeckPerson } from './deck';
 import { deadlineOf, type Deadline, type SeatAtStake } from './home';
 import type { LiveYes } from './liveYes';
 import type { GameKind, PaymentRefusal, TimeTo } from './vocabulary';
@@ -44,10 +44,12 @@ export const UNDO_WINDOW_MS = 10_000;
 /**
  * **Whether a yes on this card waits behind *Undo*** — a yes on *Book it now*, which fills the game
  * and charges everyone, and **every** rescue join, which pays at once (Q74). Any other yes is a
- * free vote, sent at once and withdrawn free from *You're In*.
+ * free vote, sent at once and withdrawn free from *You're In*. It is the yes that charges at once,
+ * the one that says *Pay* (`chargesAtOnce`, Q124), read through one rule so what counts ten seconds
+ * and what says *Pay* cannot drift apart.
  */
 export function waitsForUndo(card: Pick<DeckCard, 'type' | 'court'>): boolean {
-  return isRescue(card) || card.court === 'BOOK_IT_NOW';
+  return chargesAtOnce(card);
 }
 
 /**

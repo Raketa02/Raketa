@@ -15,9 +15,9 @@
  * ALREADY HAPPENING HERE
  * ┌ Padel · Sunday 20:00                         [2 seats] ┐
  * │ Centrum Ruchu · Court 2 · 30 zł each                   │   a rescue: pays at once
- * │ [KW][AK][?][?]  any level ✓ · you are free ✓ [I'm in · 30 zł]
+ * │ [KW][AK][?][?]  any level ✓ · you are free ✓   [Pay 30 zł]
  * └────────────────────────────────────────────────────────┘
- * (a post still filling: its poster, no court number, I'm in)
+ * (a post still filling: its poster, no court number, I'm in — Pay 32 zł on its last seat)
  * [ Remove this pick ]                                         on the picked cell only
  * ```
  *
@@ -25,9 +25,10 @@
  * slot's read, asked for the controls the grid was read with; nothing is re-derived. **A court
  * tapped is the pick** — one hour, one court, replacing the last — and the sheet closes on it so the
  * cell's ring and ✓ and the enabled button are what the player sees next; on the picked cell the
- * picked row says so and *Remove this pick* sits at the foot. **Joining** — a rescue's *I'm in · 30
- * zł*, a post's *I'm in* — is the screen's to do (`onJoinRescue`, `onJoinPost`): it closes this sheet
- * first, so the payment setup or a confirmation never opens over it.
+ * picked row says so and *Remove this pick* sits at the foot. **Joining** — a rescue's *Pay 30 zł*,
+ * a post's *I'm in* — is the screen's to do (`onJoinRescue`, `onJoinPost`): it closes this sheet
+ * first, so the payment setup or a confirmation never opens over it. **A post's last seat says *Pay
+ * 32 zł*** (Q124), because the yes that takes it books the game (`yesOnPost`, `chargesAtOnce`).
  *
  * The ticks after *any level* and *you are free* are drawn (Feather) — Archivo has no ✓ — and the
  * line is true of every row: the read lists only games the poster fits and is free for.
@@ -43,11 +44,13 @@ import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { BottomSheet, Button, Note, PHOTO_PANEL, PhotoPanel, Tag, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import { chargesAtOnce } from '../domain/deck';
 import type { SeatToFill } from '../domain/fillIn';
 import {
   courtPickable,
   isPicked,
   isPickedCourt,
+  yesOnPost,
   type CellAt,
   type FreeCourt,
   type PostingAsk,
@@ -58,7 +61,7 @@ import {
 } from '../domain/posting';
 import { usePostingSlot } from '../hooks/usePosting';
 
-import { LINE_JOIN, clubName, seatButtonLabel, seatButtonSpoken } from './deckPresentation';
+import { LINE_JOIN, clubName, payLabel, paySpoken, yesButtonLabel } from './deckPresentation';
 import { FillInSquares } from './FillInSquares';
 import { POSTING_COPY } from './postingCopy';
 import {
@@ -79,7 +82,6 @@ import {
   seatsTag,
   slotHeadline,
 } from './postingPresentation';
-import { PROPOSALS_COPY } from './proposalsCopy';
 import { ReadFailed } from './ReadFailed';
 
 const COPY = POSTING_COPY.sheet;
@@ -216,8 +218,8 @@ function SlotBody({
                 }
                 act={
                   <Button
-                    label={seatButtonLabel(share)}
-                    accessibilityLabel={seatButtonSpoken(share, row.fillsByTheCutOff)}
+                    label={payLabel(share)}
+                    accessibilityLabel={paySpoken(share, row.fillsByTheCutOff)}
                     variant="volt"
                     size="md"
                     onPress={() => onJoinRescue(row)}
@@ -247,7 +249,10 @@ function SlotBody({
                 }
                 act={
                   <Button
-                    label={PROPOSALS_COPY.yes}
+                    label={yesButtonLabel(
+                      chargesAtOnce(yesOnPost(post)),
+                      formatZloty(post.shareGrosze),
+                    )}
                     variant="volt"
                     size="md"
                     onPress={() => onJoinPost(post)}

@@ -96,9 +96,9 @@
  * Players' *Let's play* / *Not today* and a group's Games deck's *I'm in* / *Not this time*
  * ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.2) are one stage with two
  * pairs of words, so the words are the caller's — `stamps` — and the drawing is this file's. A
- * Games yes that charges at once carries its price beside the words (*I'M IN · 32 zł*, Q72): the
- * words are uppercased by the stamp's style and the figure is not, because a figure is mono and
- * `zł` is not a word to shout.
+ * Games yes carries its price beside the words (*PAY · 32 zł*, *I'M IN · 32 zł*, Q124): the words
+ * are uppercased by the stamp's style and the figure is not, because a figure is mono and `zł` is
+ * not a word to shout.
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -141,17 +141,26 @@ const LIFT_SHARE = 0.3;
 /**
  * The stamps' own drawing: a 3pt outline, a 12° tilt away from the card's centre, inset a large
  * step from the card's edge, and **90pt down** — under the Level's block, where the two swipe
- * mocks put them and clear of the mark either way. The drawing's own numbers, as the yes
- * ground's glow keeps its centre and reach; the words and the type role are the theme's.
+ * mocks put them and clear of the mark either way — with the words a step in from the outline. The
+ * drawing's own numbers, as the yes ground's glow keeps its centre and reach; the words and the
+ * type role are the theme's. Exported for `deckStampFit.test.ts`, which holds the longest stamp,
+ * *I'M IN · 32,50 zł*, to the narrowest phone's card.
  */
-const STAMP = { stroke: 3, tilt: 12, inset: theme.space.xl, top: 90 } as const;
+export const STAMP = {
+  stroke: 3,
+  tilt: 12,
+  inset: theme.space.xl,
+  top: 90,
+  padX: theme.space.md,
+  padY: theme.space.xs,
+} as const;
 
 /** What the screen answers when a drag commits — whether the card may fly. */
 export type DragVerdict = 'taken' | 'withheld';
 
 /**
  * What one stamp says — the answer's words, uppercased by the stamp, and a figure after them that
- * is not: *I'M IN · 32 zł*.
+ * is not: *PAY · 32 zł*.
  */
 export interface StampWords {
   readonly words: string;
@@ -460,8 +469,8 @@ const s = StyleSheet.create({
     top: STAMP.top,
     borderWidth: STAMP.stroke,
     borderRadius: theme.radius.btn,
-    paddingVertical: theme.space.xs,
-    paddingHorizontal: theme.space.md,
+    paddingVertical: STAMP.padY,
+    paddingHorizontal: STAMP.padX,
   },
   stampLeft: { left: STAMP.inset },
   stampRight: { right: STAMP.inset },

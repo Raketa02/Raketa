@@ -7,7 +7,7 @@
  * SEATS TO FILL · 1
  * ┏ Padel · Saturday 16:00 ━━━━━━━━━━━━━━━━━━━━━━┓   coral
  * ┃ Ogrody 33 · fills by Fri 16:00               ┃
- * ┃ [KT] [AK] [KW] [?]          [ I'm in · 27 zł ] ┃
+ * ┃ [KT] [AK] [KW] [?]               [ Pay 27 zł ] ┃
  * ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  * YOU'RE IN · 1
  * ┏ Padel · Saturday 15:00 ━━━━━━━━━━━━━━━━━━━━━━┓   mint

@@ -7,7 +7,7 @@
  * over it. **Nothing the server decides is re-derived here** — the order, the sides, the forecast,
  * the grade and the shades are the read's (`ReadGroupDeck`, #539). What is decided here is only
  * how a card that has been dealt is *drawn*: which side is the top row, whether the ribbon counts
- * down, which tag the court block wears, and whether the stamp carries a price.
+ * down, which tag the court block wears, and whether a yes says *Pay* (Q124).
  *
  * **How many stand on a side is handed in**, as the group page's rules take the court's seats: it
  * is drawn knowledge (`courtSeatCount`, `shared/ui`), and a second table of seats here would be a
@@ -253,9 +253,9 @@ const COURT_TAG: Readonly<Record<CourtState, CourtTag>> = {
 };
 
 /**
- * **Whether a yes on this card charges at once** — and so whether the stamp carries the price:
- * *Book it now*, or a rescue (Q72). A full game books at once at every club (ADR-0196, #676), so a
- * *Book it now* stamp always carries it.
+ * **Whether a yes on this card charges at once** — and so whether it says *Pay*, on the stamp and on
+ * a button (Q124): *Book it now*, or a rescue. A full game books at once at every club (ADR-0196,
+ * #676), so a *Book it now* yes always does. A vote's stamp carries the price too, as *I'm in*.
  */
 export function chargesAtOnce(card: Pick<DeckCard, 'type' | 'court'>): boolean {
   return card.type === 'SEAT_OPEN' || card.court === 'BOOK_IT_NOW';

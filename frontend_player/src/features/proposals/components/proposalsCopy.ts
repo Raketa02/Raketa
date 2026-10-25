@@ -46,8 +46,9 @@ export const PROPOSALS_COPY = {
   /** Under *You complete it* on a rescue's seat — the share, and that the court is already booked. */
   courtBooked: 'court booked',
   /**
-   * A rescue's *I'm in · 27 zł*, aloud (Q113; the screens A3.1, A4.3, A5.3): what the share does —
-   * held until the club's cut-off before it, as every seat's is, and taken at once after it.
+   * A rescue's *Pay 27 zł*, aloud (Q113, Q124; the screens A3.1, A4.3, A5.3) — and the deck's *I'm
+   * in* on a *Seat open* card: what the share does — held until the club's cut-off before it, as
+   * every seat's is, and taken at once after it.
    */
   heldUntilTheCutOff: 'held until the cut-off',
   paidNow: 'paid now',
@@ -56,9 +57,17 @@ export const PROPOSALS_COPY = {
   /** A booked game's seat whose share was taken — beside the Level (details 8, #556). */
   paid: 'paid',
   versus: 'vs',
-  /** The two answers, as the stamps and the buttons say them. */
+  /**
+   * The two answers, as the stamps and the buttons say them — *I'm in* on a vote and on the deck's
+   * ball whatever the card.
+   */
   yes: 'I’m in',
   no: 'Not this time',
+  /**
+   * **A yes that moves money** (Q124) — the stamp's *PAY · 32 zł* on a yes that books at once or
+   * takes a seat, and every button that does: *Pay 27 zł*.
+   */
+  pay: 'Pay',
   details: 'Game details',
   kind: {
     competitive: 'Competitive',

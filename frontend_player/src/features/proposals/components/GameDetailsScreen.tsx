@@ -17,7 +17,8 @@
  *                                                     until 14:40 · Nobody pays until it's in
  * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
  * ┌ Slim overlap … the grid ────────────────────┐   once two are In: alone, who is free says nothing
- * [ I'm in ]  [ Not this time ]     — or [ Withdraw ], [ Leave the game ], [ Confirm your payment ]
+ * [ I'm in ]  [ Not this time ]     — Pay 32 zł on the last seat; or [ Withdraw ], [ Leave the game ],
+ *                                     [ Confirm your payment ]
  * ```
  *
  * ## One read, and the server says what the reader may do
@@ -40,10 +41,11 @@
  *   (`refusalMessage`, `refusalOutcome`): a refusal the player can mend is a toast and the screen
  *   stays; a game that is over, full or no longer theirs is a toast and *back*. *Not this time* is
  *   final, so it goes back too. **The fill is the deck's** (`useFillYes`): *I'm in* with nothing
- *   saved opens the payment setup first; on the last seat it counts ten seconds behind *Undo* —
- *   *I'm in* busy meanwhile — and a yes that books the game leaves this screen under *It's a game!*.
- *   What the last seat does is the deck's own rule read off the seats and the In count
- *   (`courtOfDetails`), because the details carry no court state.
+ *   saved opens the payment setup first; on the last seat it reads ***Pay 32 zł***, because that yes
+ *   books the game and moves money (Q124), and counts ten seconds behind *Undo* — busy meanwhile —
+ *   and a yes that books the game leaves this screen under *It's a game!*. What the last seat does
+ *   is the deck's own rule read off the seats and the In count (`courtOfDetails`), because the
+ *   details carry no court state.
  * - **Withdraw** while the reader is In — free and silent.
  * - **Leave the game** in its place while the full game waits for one payment (#625): the sheet says
  *   nobody has paid and leaving withdraws the yes, and it is sent as the withdrawal, which puts the
@@ -80,7 +82,14 @@ import {
 import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { foldOf, peopleOn, refusalOutcome, rowsOf, type DeckPerson } from '../domain/deck';
+import {
+  chargesAtOnce,
+  foldOf,
+  peopleOn,
+  refusalOutcome,
+  rowsOf,
+  type DeckPerson,
+} from '../domain/deck';
 import {
   completesTheGame,
   detailsCanRunOut,
@@ -107,6 +116,7 @@ import {
   refusalMessage,
   shareWords,
   timeWords,
+  yesButtonLabel,
 } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { PROPOSAL_STATUS_INK, sportWords } from './homePresentation';
@@ -303,7 +313,7 @@ function Details({
             <View style={s.answers}>
               {actions.includes('YES') ? (
                 <Button
-                  label={COPY.yes}
+                  label={yesButtonLabel(chargesAtOnce(yesOn), shareWords(details))}
                   size="lg"
                   busy={counting || (answer.isPending && answer.variables?.said === 'yes')}
                   busyLabel={counting ? FILL_COPY.undo.booking : undefined}
