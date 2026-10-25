@@ -22,6 +22,10 @@
 > always name the same sides (mocks 3, 6, 7 disagree — Q70); a tile has no *asked / no answer
 > yet* tag (mocks 4, 5, 6, 8, 10 — Q69); a post that is still filling shows no court number and
 > its button reads *I'm in* (mock 35 — Q79).
+>
+> **A later ruling the mocks predate (Q124):** a yes that moves money says *Pay* — its stamp
+> *PAY · 32 zł*, its buttons *Pay 27 zł*, a post's last seat included — and a vote's stamp carries
+> the share, *I'M IN · 32 zł*. Wherever a mock prints *I'm in · 27 zł* on a button, read *Pay 27 zł*.
 
 ---
 
@@ -62,7 +66,8 @@ the arrival animation, the haptic tick — and nothing else of that screen. One 
 cards peeking behind the top card **fade as well as shrink** (they used to only shrink) (Q90).
 Both now live in `frontend_player/src/features/proposals/components/`, since the Players deck was
 removed (#569). The three buttons under the card are `DeckAnswers`: **✕** (= swipe left), **i** (= the game
-details), the coral ball (= swipe right).
+details), the coral ball (= swipe right). The ball's name stays **I'm in** on every card, even one
+whose yes moves money (Q124): the stamp under the thumb is what says *PAY*.
 
 - **Swipe right / the ball** — yes. **Swipe left / ✕** — no.
 - **Tap a player tile** — that player's record (the existing `PlayerRecordSheet`).
@@ -81,7 +86,7 @@ Dark card, top to bottom:
 | **Balance forecast** | percentage (green / amber / red by today's tones) + the bar | The bar names **the same sides as the rows, your side on the left** (light half). Computed for this version. Existing `BalanceBar`, `onDark`. |
 | **Overlap grid** | *High / Good / Slim overlap* over 7 day columns × 3 range rows | Ranges **Morning 07–12 · Afternoon 12–17 · Evening 17–23**. Bright volt = everyone on the card free for at least one whole hour in the range; dim olive = all but one; dark = fewer. The game's range is ringed in coral. Today's column letter is white. Label colours: volt for High and Good, amber for Slim. |
 | **Court block** | state tag · share (volt, mono) · *Saturday 16:00 · Ogrody 33* (+ *· Court 6 · indoor* once booked) · *Indoor* or *Outdoor* when every free court the card could be booked on is of that kind, nothing when they are mixed ([the mechanics §5.2](the-mechanics.md#52-what-a-card-promises), Q122) | Tag: **Court available** (grey — your yes is a free vote; dashed block border), **Book it now** (green — your yes fills it and holds everyone's share after the undo, at every club since Q121; solid green border), **Booked** (volt — a rescue; solid border). *Tomorrow* / *Today* for near days. **no free cancellation** in amber after the club's cut-off (mock 6). |
-| **Stamps** | **I'M IN** (right) / **NOT THIS TIME** (left), fading in while dragging | **I'M IN · 32 zł** whenever the yes books at once: *Book it now* or a rescue (Q72). It holds the share until the club's cut-off, or takes it at once after the cut-off (Q113). Every club books at once since Q121, so the stamp always shows the price (at an *On request* club it showed none). |
+| **Stamps** | the yes stamp (right) / **NOT THIS TIME** (left), fading in while dragging | The yes stamp is one of two, each with the card's share, fixed when the card was made (Q124): **I'M IN · 32 zł** on a vote (*Court available*), and **PAY · 32 zł** when the yes books at once (*Book it now*) or takes a seat (*Seat open*). PAY holds the share until the club's cut-off, or takes it at once after the cut-off (Q113). The ball under the card stays *I'm in* and the pill stays *Booking in 10 s*. (Until Q124 a vote's stamp read *I'M IN* with no price and a booking's *I'M IN · 32 zł*, Q72.) |
 
 **Per type:**
 
@@ -148,7 +153,7 @@ Coral 1.5 pt border.
   until the start*** after it. Switches by itself at the cut-off.
 - **Squares** — the booked players' small posters, then one dashed **?** per open seat. Long-press
   a poster → record.
-- **I'm in · 27 zł** (volt) — takes the seat: the 10-second undo, the share held until the cut-off
+- **Pay 27 zł** (volt, Q124) — takes the seat: the 10-second undo, the share held until the cut-off
   (taken at once after it), **It's a game!**, and the game is in Home. Its spoken name says which:
   *held until the cut-off* before it, *paid now* after it (Q113). Lost race → toast *"Someone just
   took it"*.
@@ -224,13 +229,14 @@ the club*, *nobody pays until Bonarka Arena confirms* with *Bonarka Arena answer
 **overlap grid** follows the forecast; then one plain paragraph: *"Your yes
 costs nothing until everybody is in. When the last yes lands, everyone's share is held and the
 court is booked; it's taken at the club's cut-off."* (Q113) Actions at the bottom: **I'm in** / **Not this time** if you haven't
-answered, **Withdraw** if you're In — while it waits for one payment, **Leave the game** with its
-sheet ([the mechanics §13](the-mechanics.md#13-leaving-a-game)). No Chat.
+answered, or **Pay 30 zł** / **Not this time** on a *Book it now* game, whose last seat your yes
+takes (Q124); **Withdraw** if you're In; and while it waits for one payment, **Leave the game** with
+its sheet ([the mechanics §13](the-mechanics.md#13-leaving-a-game)). No Chat.
 
 ### A4.3 A rescue seen from outside (Q96)
 
 The booked layout with the dashed *You?* tile, the court number, *Paid* players, and a volt
-**I'm in · 27 zł** at the bottom, spoken *held until the cut-off* before it and *paid now* after it
+**Pay 27 zł** (Q124) at the bottom, spoken *held until the cut-off* before it and *paid now* after it
 (Q113). No Chat, no Leave.
 
 ### A4.4 The chat
@@ -294,9 +300,10 @@ A bottom sheet (on `ModalStage`, never a React Native `Modal`):
   *2,4 km · 27 zł if it fills · book by Saturday 15:00*, its own *"4 free"* (Q77), and *27 zł
   each*. Tap → picks it (ring + ✓ on the cell); a new pick replaces the old.
 - **ALREADY HAPPENING HERE** — first **rescues** you fit (*Padel · Sunday 20:00*, *Kuba · Centrum
-  Ruchu · Court 2 · 30 zł each*, the squares, *any level ✓ · you are free ✓*, **I'm in · 30 zł**,
+  Ruchu · Court 2 · 30 zł each*, the squares, *any level ✓ · you are free ✓*, **Pay 30 zł**,
   spoken *held until the cut-off* before it and *paid now* after it, as on [A3.1](#a31-seats-to-fill--n--the-rescue-row-mock-12)
-  — Q113); then **posts still filling** you fit (no court number, **I'm in**) (Q79, Q93).
+  — Q113, Q124); then **posts still filling** you fit (no court number, **I'm in**; **Pay 27 zł** on
+  a post's last seat, because your yes fills it — Q124) (Q79, Q93).
 
 ### A5.4 Post — you're In (mock 33)
 

@@ -325,6 +325,15 @@ only the last seat (Q74); since Q113 they hold the share, or take it after the c
 nothing is held or taken until the ten seconds are up. Any other yes is only a vote, and you can withdraw
 it free from **Fill in › You're In** until its game fills.
 
+**The control that moves money says Pay** (Q124). On the deck the stamp under your thumb reads
+***PAY · 40 zł*** ([§8.1](#81-the-three-card-types)). Every button that moves money reads
+***Pay 40 zł***: the Fill in seat row ([§10.1](#101-seats-to-fill--the-rescue-board)), a rescue's
+details and the details of a *Book it now* game ([§14.2](#142-the-game-details)), and Post a game's
+sheet, on a rescue or on a post's last seat ([§9.1](#91-the-steps)). The figure is always the share.
+**Two controls keep their words:** the deck's ball button is ***I'm in*** whatever the card, and
+the pill reads ***Booking in 10 s***. A vote's stamp carries the price too, as *I'M IN · 40 zł*, so the
+word, not the price, tells a vote from a payment. The words are English until the app is translated.
+
 ### 6.6 Limits
 
 - **Live yeses:** **no cap** (Q97). A yes can only book within your games per week and one
@@ -408,10 +417,18 @@ Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-scr
   when the cut-off has passed.
 - **The ribbon countdown** — only when the deadline is under 24 h: *21 h 00*, then *45 min*,
   coral under an hour (Q72).
-- **The stamps** — I'M IN / NOT THIS TIME while dragging; **I'M IN · 32 zł** whenever the yes
-  books at once (Book it now, or a rescue): it holds the share until the cut-off, or takes it at
-  once after the cut-off. Every club books at once since Q121, so the stamp always carries the
-  price; at an *On request* club it used to carry none, because the hold waited for the club.
+- **The stamps** — while dragging, **NOT THIS TIME** on the left, and on the right one of two,
+  each with the share (Q124):
+  - **I'M IN · 32 zł** on a vote: a yes that only adds to a game still filling (*Court
+    available*). Nothing is held until the game fills.
+  - **PAY · 32 zł** on a yes that books at once (*Book it now*) or takes a seat (*Seat open*). It
+    holds the share until the cut-off, or takes it at once after the cut-off.
+
+  The share is the card's own, fixed when the card was made ([§5.2](#52-what-a-card-promises)).
+  The deck's ball button stays *I'm in* and the pill stays *Booking in 10 s*
+  ([§6.5](#65-undo)). Until Q124 a vote's stamp read *I'M IN* with no price, and a yes that booked
+  at once read *I'M IN · 32 zł* (Q72); at an *On request* club it carried none, because the hold
+  waited for the club.
 
 ### 8.2 The order
 
@@ -480,10 +497,11 @@ The **Post a game** button in Fill in walks through:
 6. **Court** — tapping a cell opens its sheet: your best fits free then, and the **free courts**
    in that range, home club first — each with its hour, club, distance, share, book-by and its
    own *"n free"*. Tapping a court picks it (one hour, one court). **Already happening here**
-   lists, first, **rescues** at that time you fit (**I'm in · 27 zł**, booked at once: held until
+   lists, first, **rescues** at that time you fit (**Pay 27 zł**, booked at once: held until
    the cut-off, or paid at once after it) and then
-   **posts still filling** you fit (**I'm in**, free until it fills), so you can join instead of
-   duplicating (Q79, Q93).
+   **posts still filling** you fit (**I'm in**, free until it fills; **Pay 27 zł** on a post's
+   last seat, because your yes fills it), so you can join instead of duplicating (Q79, Q93,
+   Q124).
 7. **Post — you're In** — disabled until a court is picked. There is no review card; posting is
    your yes. Guards, each explained under the button: a saved payment method (the setup opens
    if missing), at most 2 live posts, and your games per week (Q80).
@@ -527,7 +545,7 @@ seat in singles, one to three in doubles — **before or after the cut-off**.
   **free for that hour**.
 - The same seat is also dealt as a **Seat open** card to the best fits' decks, and announced to
   people who switched on **Fill in alerts** ([§17.2](#172-notifications)).
-- **I'm in · 30 zł** takes the seat at once, because the game already exists. The money follows
+- **Pay 30 zł** (Q124) takes the seat at once, because the game already exists. The money follows
   the game's: before the cut-off your share is held, or checked and held at the holding time, and
   you are free to leave until the cut-off like everyone else; after it your share is taken at once
   ([§12.2](#122-when-a-game-fills), Q113). Every rescue join gets the 10-second undo
@@ -797,6 +815,21 @@ deduction is such a charge, **the fallback is everything back on personal EU car
 cards and cards from outside the EU keep the rule. No figure is ever an estimate
 ([§12.3](#123-leaving-before-and-after-the-cut-off)).
 
+**Two more questions for that review (Q124).** A swipe is the order, and Polish law reads only the
+words on the control that binds a consumer to pay: they must say *"zamówienie z obowiązkiem
+zapłaty"* or an equivalent, or no contract is made (art. 17 ust. 3–4 of the consumer rights act).
+The EU Court applies this even when payment falls due only after a later condition (C-400/22), and
+judges only the words on the control itself (C-249/21). No authority has ruled on a swipe.
+
+1. **Can a swipe whose stamp reads *PAY · 40 zł* be the order under art. 17?**
+2. **Does a vote whose stamp reads *I'M IN · 40 zł* bind the player to the share taken at the
+   cut-off?**
+
+**If the answer to (1) is no, the agreed fallback** is that a money-moving yes opens a confirm
+screen with a ***Pay 40 zł*** button. **The words count legally only in Polish.** The app shows
+English until it is translated, so the translation must land before a real club takes a player's
+money.
+
 ### 12.6 The club's money
 
 The club is paid **after the game is played**, as a normal payout. A share is the club's money
@@ -933,11 +966,12 @@ The same screen serves two more readers (Q75, Q96):
   number, and *Indoor* or *Outdoor* when every free court it could be booked on is of that kind
   (Q122); the money row reads *"30 zł if it fills · book by Sat 13:00"*; the overlap grid and one
   plain paragraph on what a yes means follow; the actions are **I'm in / Not this time**, or
-  **Withdraw** if you are In — while it waits for one payment, **Leave the game** with its sheet
+  **Pay 30 zł / Not this time** on a *Book it now* game, whose last seat your yes takes (Q124);
+  **Withdraw** if you are In; and while it waits for one payment, **Leave the game** with its sheet
   ([§13](#13-leaving-a-game)). No Chat. Until Q121 it could also read *Waiting for the club*, with
   *nobody pays until Bonarka confirms* and *Bonarka answers by 20:45*.
 - **A rescue, seen by a member who is not in it** (a Seat open card or a Seats to fill row):
-  the paid tiles, the dashed *You?* tile, the court number, and **I'm in · 27 zł** — said as
+  the paid tiles, the dashed *You?* tile, the court number, and **Pay 27 zł** (Q124) — said as
   *held until the cut-off* before it, and *paid now* after it (Q113). No Chat, no Leave.
 
 ### 14.3 The chat
@@ -1693,7 +1727,11 @@ To settle with Stripe (and a lawyer) before building payments:
   disclosure is reviewed there. **The clause after the cut-off waits for the lawyer** (Q113): a
   late leaver whose seat is taken gets the share back less exactly what was kept on their own
   payment. If the lawyer finds that deduction a charge for using a personal card issued in the EU
-  (art. 37a ust. 3 UUP), the fallback is everything back on those cards.
+  (art. 37a ust. 3 UUP), the fallback is everything back on those cards. **Two more questions
+  since Q124:** whether a swipe stamped *PAY · 40 zł* is an order under art. 17 (if not, a
+  money-moving yes opens a confirm screen with a *Pay 40 zł* button), and whether a vote stamped
+  *I'M IN · 40 zł* binds the voter. The words count only in Polish, so the app's translation lands
+  before a real club takes a player's money.
 - **O4 — Apple Pay** for one-off charges without the player present: test before launch.
 - **O5 — The club's receipts and invoices.** The club is the seller, so the Polish rules on fiscal
   receipts and invoices for online sales apply to the club. Confirm with a lawyer or accountant what
@@ -2028,14 +2066,14 @@ Aug–Sep 2026).
 | 69 | The *asked / no answer yet* tag is removed. |
 | 70 | Rows are sides; the *vs* line and the bar name the same sides, yours on the left; a rescuer takes the leaver's seat and side. |
 | 71 | Card and posting grid use ranges Morning 07–12, Afternoon 12–17, Evening 17–23; bright / dim / ringed; today's High / Good / Slim grading. |
-| 72 | The stamp shows the price when the yes charges at once; countdown *21 h 00* / *45 min*, coral under 1 h; tile → record, card or **i** → details. |
+| 72 | The stamp shows the price when the yes charges at once; countdown *21 h 00* / *45 min*, coral under 1 h; tile → record, card or **i** → details. → amended by Q124 |
 | 73 | A week at its games-per-week cap is not dealt, with a slim line at the top of the deck. |
 | 74 | Every action that moves money gets the 10-second undo, including every rescue join (amends Q65). |
 | 75 | Game details serve a game that is still filling. |
 | 76 | You're In holds picks, challenges and posts; a rescue join goes to Home. |
 | 77 | The posting grid is 7 days × 3 ranges, grouping real hourly overlaps. |
 | 78 | The posting level range defaults to the engine's range for the kind, narrowed in 0,05 steps. |
-| 79 | Joining someone else's post from the sheet is allowed if you fit; *I'm in*, no court number. |
+| 79 | Joining someone else's post from the sheet is allowed if you fit; *I'm in*, no court number. → amended by Q124 (a post's last seat reads *Pay*) |
 | 80 | Gender filters count members with a gender set; Mixed pairs only in doubles; sport chips; the draft is kept; three guards on Post. |
 | 81 | *Your week* is 7 × 16 hours, tap and drag, no templates, onboarding and You. |
 | 82 | Payment setup order: choose → card details (Stripe's fields) → accept the terms → confirm with your bank; only the phone's wallet shows. |
@@ -2080,3 +2118,4 @@ Aug–Sep 2026).
 | 121 | (2026-10-12, reverses Q1 and Q12, amends Q43's minimum notice and time to confirm, and ends On request's own rules — Q98, Q103's club half, Q104's and Q106's *asked again*, Q105, Q109's and Q112's club's yes, and Q113's *at an On request club's yes*; replaces PRD [#530](https://github.com/Raketa02/Raketa/issues/530)'s out-of-scope *live link to a club's own booking system — the Instant way, automated, later*; ruled by the product owner from story S-01E, [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776), F-REQUEST-3.1 and F-REQUEST-23.1, with F-REQUEST-44.1 and 45.1; specified by [#667](https://github.com/Raketa02/Raketa/issues/667); recorded by [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1) *Does a club choose how it works with Raketa?* **No: Only Raketa is the one way, until Raketa is the club's booking software.** *Instant* and *On request* are removed everywhere — the club website, the player app, the backend, the test console, the seed and these documents — with the choice, its setup step (five steps become four), the minimum notice and the time to confirm. **A full game books the moment its last yes lands, at every club**: requests, Accept and Refuse, *Waiting for the club*, *answers by*, *Waiting for you* and its badge, *Accepted · waiting for one player's payment*, *said no* and *didn't answer in time*, the request-timeout job, the three request notices and the desk's request emails go. A player whose card is refused at the fill keeps their time to fix the card, or to pay. **The book-by is always the release time**, so no game fills later than a day before its start, and by default three; rescues are unaffected, and only a club whose cut-off is longer than its release lead still deals a card past its cut-off. Raketa settings are the release lead, the cut-off, other clubs' courts and pause; the Overview, once live, says so and links to today's Bookings. *Double booking* stays as a cancel reason. **Raketa will become the club's booking software**: one calendar for the desk, the phone, walk-ins, season bookings, players' own bookings and the Games deck, its shape decided in its own grilling. **Calls made without a ruling** (ADR-0196 §7): the release lead keeps its 1–13 days (the alternative, a lead in hours down to 2 h, is a one-line change); the Overview once live; *double booking* stays; a clean cut, the local store reset and a migration dropping only what requests used; every seeded club Only Raketa, one with both kinds of court at the same hours. **Evidence:** Kazimierz Padel opens at 16:00, so a game that filled at 10:15 read *Kazimierz Padel answers by 11:15*, ran out, and was called off before the desk opened, and the desk had to watch the website all day. No court platform makes a club confirm a booking: Playtomic, MATCHi, Padel Mates, Eversports, ClubSpark, tenis4U, Playmore and kluby.org confirm at once, and Playmore's open games book the court when posted — *"Komplet graczy - gra potwierdzona, kort opłacony w całości"* ([Playmore](https://join.playmore.pl/gry-otwarte/)); the one exception, CourtReserve's opt-in approval, is used *"to … control guest bookings, or review certain membership types"* ([CourtReserve](https://help.courtreserve.com/en/articles/4299937-optional-approval-processes-in-courtreserve)). No competitor relies on a desk closing hours by hand, and every one effortless for the club has one calendar: Playtomic Manager takes *"incoming reservations seamlessly, both online and offline"* ([Playtomic](https://helpmanager.playtomic.com/hc/en-gb/articles/20535516949009)), and MATCHi rejects *"a slot that's already taken"* when Matchable writes to it ([MATCHi](https://matchi.zendesk.com/hc/en-gb/articles/27989311536029)). Kraków's tenis4U, Playmore and kluby.org publish no API, feed or calendar export; tenis4U's terms forbid software reading the site, *"do automatycznego lub ręcznego pobierania fragmentów lub całości strony"* ([tenis4U regulamin, §7](https://tenis4u.pl/regulamin/)), and its player app already carries *"Otwarte sparingi"* and *"Rezerwacje współdzielone"*. |
 | 122 | (2026-10-12, amends §16.4's *Move* and §16.9's cancel, which always called the game off; ruled by the product owner from story S-01E, [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776), F-REQUEST-22.1; specified by [#667](https://github.com/Raketa02/Raketa/issues/667); recorded by [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2 and §4) *Must a club's cancel throw the game away?* **No: a free court of the same club absorbs it when nothing about the game changes — a move by cancel.** Raketa first looks at the same club for a free court with the same sport, day, hour and price, of the same kind or indoor for an outdoor game, and indoor only for *weather*; the same kind first, then indoor, in the club's court order. The game moves there: every hold or taken share stays as it was, nothing is refunded or let go, nobody is owed a card or swipes anything, and every player is told *Game moved* — *Bonarka Arena moved your game to Court 3 · Thu 19:00* / *Court 2 can't be played · Padel · indoor · nothing else changes*. The cancel dialog previews it and offers *Cancel the game anyway*, and the cancel decides afresh when the club confirms. Otherwise the game is called off as before, and its players are owed a card (Q123). The club's own *Move* offers only the same kind, or indoor for an outdoor game, and tells the players with the same notice, *Padel · indoor · nothing else changes*. **Players see the kind of court**: a booked game always (*Court 3 · indoor*), and a card when every free court it could be booked on is of one kind; it is not a preference or a filter. A change of club, day, hour, price, or from indoor to outdoor is always a new card. **Calls made without a ruling** (ADR-0196 §7): the same price kept as a condition though price is per club and sport; the kind on a card only when certain; a weather cancel moves only indoors; the same kind before indoor; the preview and *Cancel the game anyway*; *Move* keeps the kind and tells the players; *Game moved* always on, opening the booked game, not emailed. **Evidence:** on Thursday at 15:00 the lights on Bonarka Arena's Court 2 failed; Court 3 was free at 19:00 at the same 160 zł, *Cancel* never offered it, and four 40 zł holds were let go. The club website's help said a court's indoor or outdoor was *shown on a player's card*, and nothing showed it. Playtomic picks an open match's court itself — *"the system automatically assigns courts as the match time approaches"* ([Playtomic](https://helpmanager.playtomic.com/hc/en-gb/articles/20534737902353)) — and cancels only if *"The court becomes unavailable at the club"* ([Playtomic](https://playerhelp.playtomic.com/hc/en-gb/articles/19831672824465)). |
 | 123 | (2026-10-12, amends Q107's source and §8.2's order, and lifts the build's rule *never at the club and hour that turned them down*, written for a refusal by [#543](https://github.com/Raketa02/Raketa/issues/543) and applied to a cancel by [#547](https://github.com/Raketa02/Raketa/issues/547); ruled by the product owner from story S-01E, [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776), F-REQUEST-22.1; specified by [#667](https://github.com/Raketa02/Raketa/issues/667); recorded by [ADR-0196](../../adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §3) *Which new card does a club's cancel owe, and where is it?* **The closest game to the lost one, first in the deck.** The **owed card** is chosen at (1) the same club, day and hour, on the other kind of court or at a new price; (2) for a player group only, another club at the same day and hour, nearest first; (3) the closest hour in time, the home club first. An official group stays at its home club unless its courts are full. The *never at this club and hour* rule goes entirely, because a refusal was its only other source. It is an ordinary card, its players free and fit, each of them swiping it; a game no hour is found for stays owed until its old hour passes. It is first in the group deck of each player it is owed to, whenever they open it, until they answer it or it is gone, soonest first among owed cards, with no mark for anybody; other members' decks are unaffected. The cancel notice gains *We'll look for another game for you first*, as the email already said; *Your new game* opens the deck on the card, and for a card at the same club and hour names the kind. **Calls made without a ruling** (ADR-0196 §7): the cancel notice's line; the rule lifted entirely, not only for a cancel; first for each player it is owed to, soonest first, unmarked even with push off; the card records the players it is owed to, and the deck orders by that. **Evidence:** after Bonarka's cancel, Marta's new card could never be Bonarka at Thursday 19:00, though the same hour there on another court was the closest game to the one she lost, and it landed eleventh of 33 in her deck, behind every card dealt to her before it, while the email promised *We'll look for another game for you first*. |
+| 124 | (2026-10-25, amends Q72, and Q79's *I'm in* on a post's last seat; ruled by the product owner from story S-16A, [#713](https://github.com/Raketa02/Raketa/issues/713#issuecomment-6400470479), F-DECK-34.1 and F-FILL-1.1; specified by [#717](https://github.com/Raketa02/Raketa/issues/717)) *What does the control that binds a player to pay say?* **Pay, with the share, and a vote shows the share too.** The swipe stays the order. A yes that books at once (*Book it now*) or takes a *Seat open* is stamped **PAY · 40 zł**. A vote (*Court available*) is stamped **I'M IN · 40 zł**, reversing Q72's *no price on a vote*: the word, not the price, now tells a vote from a payment. The share is the card's own, fixed when the card was made. Every button that moves money reads **Pay 40 zł**: the Fill in seat row, a rescue's details, Post a game's sheet (a rescue, and a post's last seat) and the details of a *Book it now* game. **Unchanged:** *NOT THIS TIME*, the deck's ball button (*I'm in*) and the pill (*Booking in 10 s*). The words are English, and Polish comes with the app's translation. A lawyer is asked two questions before launch ([§12.5](#125-saving-a-payment-method-and-the-terms), O3): can a swipe stamped *PAY · 40 zł* be the order under art. 17, and does a vote stamped *I'M IN · 40 zł* bind the player to the share taken at the cut-off? If the first is no, the agreed fallback is a confirm screen with a *Pay 40 zł* button on every money-moving yes. **Evidence:** a vote binds a later 40 zł charge that needs no further press, yet the build stamped it *I'M IN*, with no price and no word of paying, and stamped even the yes that books *I'M IN · 40 zł*. Polish law wants the control that binds a consumer to pay marked *"zamówienie z obowiązkiem zapłaty"* or an equivalent, or *"umowa nie zostaje zawarta"*, and the club, as the seller, carries that risk ([art. 17 ust. 3–4](https://api.sejm.gov.pl/eli/acts/DU/2026/1244/text.pdf)). The EU Court applies the rule *"even where the consumer is required to pay … only after a subsequent condition has been satisfied"* ([C-400/22](http://publications.europa.eu/resource/celex/62022CJ0400)), here the game filling, and counts *"only the words that appear on that button or that similar function"* ([C-249/21](http://publications.europa.eu/resource/celex/62021CJ0249)). UOKiK accepts *"kup teraz"*, *"zapłać teraz"* and *"potwierdź zakup"*, and rejects *"zarejestruj"*, *"potwierdź"* and *"zamów teraz"* ([UOKiK](https://prawakonsumenta.uokik.gov.pl/pytania-i-odpowiedzi/prawo-do-informacji/)). The Commission's guidance names *"buy now"*, *"pay now"* and *"confirm purchase"*, and wants the label *"on the button itself or immediately next to it"* ([2021/C 525/01](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:52021XC1229(04))). No authority has ruled on a swipe or a gesture. |
