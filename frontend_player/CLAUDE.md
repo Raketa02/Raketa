@@ -160,7 +160,10 @@ src/
   inlined in a component. That includes accessibility names.
 - **Every pressable primitive in `shared/ui/` requires a name** (`accessibilityLabel` or
   `label`). The right answer to a new tappable primitive is a required prop on it, not a wider
-  lint selector.
+  lint selector. **For screen readers, the name is the whole job, for now**
+  ([ADR-0198](../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md)): the
+  app is built for ordinary touch, so a new screen keeps what the primitives already do and adds
+  no announcement or setting-driven timing of its own.
 - **Uniform-strict escape hatch:** where a feature has no business rule, `use-cases/` may be
   pass-throughs and `domain/` just types. Keep the folders; do not invent invariants to fill
   them.

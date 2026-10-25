@@ -1,6 +1,11 @@
 # ADR-0012 — A locked design system for the player app, translated from web prototype to native
 
-- **Status:** Accepted
+- **Status:** Accepted — **its *Consequences*' *AA-conformant … and screen-reader navigable from
+  its first screen* amended 2026-10-25 by
+  [ADR-0198](0198-the-player-app-is-not-built-for-screen-readers-for-now.md).** For now the app is
+  not built for screen readers or the phone's accessibility settings, and nothing already built is
+  removed. AA contrast, 44 × 44 pt targets and a name on every pressable stand. A dated note marks
+  the passage below.
 - **Date:** 2026-08-12
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0011** (the club console's design system), removed in the 2026-08-25 reset. Every comparison to the club console below is a comparison to a system that no longer ships; this ADR's own rules for the player app are unchanged. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
@@ -115,6 +120,9 @@ but the values are duplicated deliberately — no shared package, no cross-impor
 - The app is AA-conformant, thumb-reachable and screen-reader navigable from its first
   screen, rather than after an audit that finds four white-on-coral labels and an invisible
   empty-seat marker.
+  > **Amended 2026-10-25 by [ADR-0198](0198-the-player-app-is-not-built-for-screen-readers-for-now.md).**
+  > *AA contrast* and *thumb-reachable* stand. *Screen-reader navigable* no longer does, and nor
+  > does full AA conformance: the fixed ten seconds of *Undo* miss WCAG 2.2.1.
 - A rule learned in the club app mostly transfers: same palette meanings, same Rule C, same
   card/note/row vocabulary. The instruction surface across two stacks is smaller than two.
 

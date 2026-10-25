@@ -339,6 +339,11 @@ shape (ADR-0106 §5).
 Decided by
 [What each Play control announces](https://github.com/Raketa02/Raketa/issues/236).
 
+> **Paused in part 2026-10-25 by [ADR-0198](../../adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md).**
+> A new control still gets its name, written here. The live regions, the politeness rules and the
+> collapse conditions (§20.9–§20.11) are not asked of new work: for now the app is built for
+> ordinary touch. What is built stays.
+
 `design-system.md` [Part 13](../../../frontend_player/docs/design-system.md#part-13--accessibility)
 is the **requirement** — names on everything tappable, `accessibilityState` on selected
 chips, modal semantics on the sheet, an announcement on every toast, and *"never colour as

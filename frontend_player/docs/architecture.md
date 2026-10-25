@@ -761,6 +761,11 @@ Every reusable component supports VoiceOver and TalkBack: labels, roles, scalabl
 Test on both platforms — the semantics differ. See the design system for the app's
 specific rules.
 
+> **Paused 2026-10-25 by [ADR-0198](../../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md).**
+> For now the app is built for ordinary touch. A new component still carries a name and keeps the
+> 44 × 44pt target, and nothing else is built or tested for VoiceOver, TalkBack or a phone
+> accessibility setting. What is already built stays.
+
 ### Internationalization readiness
 
 Never branch on a user-visible string. `status === MatchStatus.Cancelled`, not
