@@ -26,6 +26,10 @@
 > **A later ruling the mocks predate (Q124):** a yes that moves money says *Pay* — its stamp
 > *PAY · 32 zł*, its buttons *Pay 27 zł*, a post's last seat included — and a vote's stamp carries
 > the share, *I'M IN · 32 zł*. Wherever a mock prints *I'm in · 27 zł* on a button, read *Pay 27 zł*.
+>
+> **A later ruling the mocks predate (Q125):** a group page has three tabs, *Games · Fill in · Friends*, and the group's
+> header opens *Info* as its own screen ([A1](#a1-where-things-live)). Wherever a mock draws a fourth
+> tab, *Info*, read three.
 
 ---
 
@@ -38,9 +42,27 @@
   were the older loop, hidden behind a *Classic play* flag and then removed on 2026-10-06
   ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 - **Group page** (mock 1): header (back, monogram, name, *n members · home club*, the sport pill
-  on the right), then the tabs **Games · Fill in · Friends · Info**:
+  on the right), then the tabs **Games · Fill in · Friends** (Q125; the mocks draw a fourth, *Info*):
   - **Games** badge — cards where somebody is already In with you (mock 1: *Games 4*).
   - **Fill in** badge — the number of *Seats to fill* rows (mock 11: *Fill in 1*).
+  - **The header opens Info** (Q125). The monogram, the name with its official mark and *n members ·
+    home club* are one button, which pushes **Info** over the page as its own screen. The back arrow
+    and the sport pill keep their own taps; while the sport filter's bar is open it covers the
+    monogram, and a tap there goes to the bar.
+  - **The Owner's count of waiting requests** sits on the monogram's corner: the badge the Info tab
+    carried, with the same count, and only the Owner sees it.
+- **Info** is the group's own screen, with its content unchanged (play 57–60 in
+  [the play-groups mocks](../play-groups/README.md#which-mocks-draw-which-area)): the link card with **Share** and
+  **Copy**, the Owner's *Want to join · N*, the members row that opens **Members**, and the Owner's
+  **Edit group**, with *Leave the group* / *Delete the group* at the screen's foot, outside what
+  scrolls. Its header is the page's own without the sport pill, and it is not a button. Back returns
+  to the tab the player left.
+  - **Re-reads.** Info re-reads the group when it opens, on a pull, and on coming back from Members
+    or Edit group. The page's pull on Games and Fill in re-reads the group and its games; Friends has
+    no pull. The page doesn't re-read on coming back from Info, because Edit group already writes the
+    group into the page's read.
+  - **A member who must add a sport** sees *Add a sport* on all three tabs. The header still opens
+    Info, and the way out is there.
 - **The Competitive / For fun switch** (mock 9) sits under the tabs on **Games**:
   *Competitive · 7* / *For fun · 1* — the number is the cards of that kind in this group and
   sport. It stays where it is today on **Friends** too (out of scope). A player whose intent is
