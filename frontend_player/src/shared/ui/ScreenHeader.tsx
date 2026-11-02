@@ -60,6 +60,21 @@
  * carrying a role and no words is a stop a listener lands on and hears nothing from, and the
  * toggle's own segments are the first thing the screen has to say.
  *
+ * ## A header that names a thing can be the door to it
+ *
+ * A group's page opens the group's Info from its header (Q125, as WhatsApp, Telegram and iMessage
+ * open a group's info): the tile, the name and the line under it are one target. With `onPress`
+ * **the whole row is the button** and the back control and the right slot keep their own presses —
+ * they are the deeper responders, so a touch on either is theirs and a touch anywhere else in the
+ * row is the header's. The row is pressed rather than a box round the lead and the words because
+ * the lead must stay **a direct child of the row**: the group page's sport filter measures the tile
+ * against the header's own left edge (`SportFilterPage`'s `cover`), and a box would move its origin.
+ * The row dims while it is pressed — 6.6's opacity, the back control's own.
+ *
+ * **The named element is a `button` then, not a `header`**, carrying `pressHint` — a listener has to
+ * hear that it does something. The row itself is not an element, so the back control and the right
+ * slot are still stops of their own.
+ *
  * The eyebrow labels a region you are READING. It is not `flab`, which labels a control
  * you are about to OPERATE — the two are not interchangeable (design-system 3.3).
  */
@@ -69,7 +84,7 @@ import type { ReactNode } from 'react';
 
 import { theme } from './theme';
 
-export interface ScreenHeaderProps {
+interface ScreenHeaderSlots {
   /** The h1. Absent on a screen the design draws without one — the eyebrow is the heading then. */
   readonly title?: string;
   /**
@@ -115,6 +130,22 @@ export interface ScreenHeaderProps {
   readonly compact?: boolean;
 }
 
+/**
+ * **The header is a button** — a group's page, whose header opens Info (Q125). The whole row answers
+ * but for the back control and the right slot; the named element becomes a `button`. See the module
+ * note. A pressable header **has a title**, which names the button, and says what it opens: a row
+ * that could be pressed with nothing to call it is the unnamed pressable `shared/ui` refuses.
+ */
+interface PressableHeader {
+  readonly title: string;
+  readonly onPress: () => void;
+  /** What pressing the header opens, spoken after its name — *Opens Info*. */
+  readonly pressHint: string;
+}
+
+export type ScreenHeaderProps = ScreenHeaderSlots &
+  (PressableHeader | { readonly onPress?: undefined; readonly pressHint?: undefined });
+
 export function ScreenHeader({
   title,
   titleLabel,
@@ -126,11 +157,13 @@ export function ScreenHeader({
   onBack,
   backLabel = 'Back',
   compact = false,
+  onPress,
+  pressHint,
 }: ScreenHeaderProps) {
   const lines = compact ? 1 : undefined;
 
-  return (
-    <View style={s.header}>
+  const row = (
+    <>
       {onBack !== undefined ? (
         <Pressable
           accessibilityRole="button"
@@ -160,8 +193,10 @@ export function ScreenHeader({
         {title === undefined && eyebrow === undefined ? null : (
           <View
             accessible
-            accessibilityRole="header"
+            // A header that opens something is a button to a listener (see the module note).
+            accessibilityRole={onPress === undefined ? 'header' : 'button'}
             {...(titleLabel === undefined ? {} : { accessibilityLabel: titleLabel })}
+            {...(pressHint === undefined ? {} : { accessibilityHint: pressHint })}
             style={s.named}
           >
             {title === undefined ? (
@@ -191,7 +226,21 @@ export function ScreenHeader({
       </View>
 
       {right !== undefined ? <View style={s.right}>{right}</View> : null}
-    </View>
+    </>
+  );
+
+  return onPress === undefined ? (
+    <View style={s.header}>{row}</View>
+  ) : (
+    // Not an element of its own: the named block inside is the button a listener lands on, and
+    // the back control and the right slot stay stops of their own.
+    <Pressable
+      accessible={false}
+      onPress={onPress}
+      style={({ pressed }) => [s.header, pressed ? s.headerPressed : undefined]}
+    >
+      {row}
+    </Pressable>
   );
 }
 
@@ -203,6 +252,7 @@ const s = StyleSheet.create({
     paddingHorizontal: theme.size.gutter,
     paddingVertical: theme.space.md,
   },
+  headerPressed: { opacity: 0.7 },
   titles: { flex: 1, gap: theme.space.xxs },
   eyebrow: {
     ...theme.type.eyebrow,

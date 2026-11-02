@@ -418,7 +418,7 @@ async function openPage(
   await onPlay();
   fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${group.name}, `) }));
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${group.id}`));
-  await screen.findByRole('header', { name: new RegExp(`^${group.name}`) });
+  await screen.findByRole('button', { name: new RegExp(`^${group.name}`) });
 }
 
 const tab = (name: string, selected?: boolean) =>
@@ -427,6 +427,12 @@ const tab = (name: string, selected?: boolean) =>
 async function openTab(name: string) {
   fireEvent.press(await tab(name));
   expect(await tab(name, true)).toBeTruthy();
+}
+
+/** Info, from the page's header (Q125) — found by what it opens, as the list's card is named too. */
+async function openInfo(group: Wire['MyGroupSchema'] = O3_MINE) {
+  fireEvent.press(await screen.findByHintText(COPY.group.openInfo));
+  await waitFor(() => expect(screen).toHavePathname(`/play/group/${group.id}/info`));
 }
 
 function barOptions(): string[] {
@@ -445,7 +451,7 @@ describe('an official group’s header', () => {
     await openPage();
 
     expect(
-      screen.getByRole('header', { name: 'Ogrody 33 Club, official, 12 members · Ogrody 33' }),
+      screen.getByRole('button', { name: 'Ogrody 33 Club, official, 12 members · Ogrody 33' }),
     ).toBeTruthy();
     // The header's mark, and the list card's under the page — a page pushed over the list leaves
     // the list's card mounted beneath it, and that card carries the mark too.
@@ -458,7 +464,7 @@ describe('an official group’s header', () => {
     await openPage(mine, pageOf(mine, { administrator_name: null }));
 
     expect(
-      screen.getByRole('header', { name: /^Ogrody wieczorem/ }).props.accessibilityLabel,
+      screen.getByRole('button', { name: /^Ogrody wieczorem/ }).props.accessibilityLabel,
     ).toBeUndefined();
     expect(officialMarks()).toHaveLength(0);
   });
@@ -525,11 +531,12 @@ describe('an official group’s page for a player rated in none of its sports', 
     expect(screen.queryByText(COPY.friends.competitive)).toBeNull();
   });
 
-  it('keeps Info — the group, its dots and the way out', async () => {
+  // Q125: the header still opens Info, and the way out is there — it is not a sport's.
+  it('keeps Info, through the header — the group, its dots and the way out', async () => {
     await openPage();
     await screen.findByText(ADD_HEADLINE);
 
-    await openTab(COPY.group.tabs.info);
+    await openInfo();
 
     expect(
       await screen.findByRole('button', {
@@ -553,7 +560,7 @@ describe('an official group’s page for a player rated in none of its sports', 
 
   it('shows the card on Members too, where the list is drawn for a sport', async () => {
     await openPage();
-    await openTab(COPY.group.tabs.info);
+    await openInfo();
 
     fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
@@ -647,7 +654,7 @@ function stubMembers(members: readonly Wire['GroupMemberSchema'][]) {
 
 async function openMembers(page: Wire['GroupResponse'] = pageOf(O3_MINE)) {
   await openPage(O3_MINE, page);
-  await openTab(COPY.group.tabs.info);
+  await openInfo();
   fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
 }
@@ -729,7 +736,7 @@ describe('Members of an official group', () => {
       }),
     );
     await openPage();
-    await openTab(COPY.group.tabs.info);
+    await openInfo();
     fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
 

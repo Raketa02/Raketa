@@ -297,7 +297,7 @@ const PAGE: Wire['GroupResponse'] = {
   ],
 };
 
-describe('the Info tab’s members row', () => {
+describe('Info’s members row', () => {
   it('reads the faces in the order served, the photograph only where there is one', () => {
     expect(toGroup(PAGE).memberFaces).toEqual([
       { playerId: 'p1', name: 'Karol Tomczak', photoUrl: 'https://photos.test/f1' },

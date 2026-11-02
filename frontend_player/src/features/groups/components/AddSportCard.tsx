@@ -4,9 +4,10 @@
  * ([#519](https://github.com/Raketa02/Raketa/issues/519), PRD #500 story 57): *This group plays
  * padel*, *Add padel to your Skill passport to see its games.*, and a button per sport it plays.
  *
- * An official group plays what it declares (ADR-0183 §3, §6), and every tab but Info is drawn for
- * one of those sports, so a member rated in none of them has nothing those tabs could draw. **Info
- * stays** — the group, its dots and the way out are not a sport's.
+ * An official group plays what it declares (ADR-0183 §3, §6), and each of the page's three tabs is
+ * drawn for one of those sports, so a member rated in none of them has nothing those tabs could
+ * draw. **Info stays**, opened from the header as ever (Q125) — the group, its dots and the way out
+ * are not a sport's.
  *
  * **Each button is the Skill passport's *Add a sport*** — onboarding's `useAddASport`, the second
  * door into the onboarding pass (ADR-0179 §3) — for that one sport: it starts the questionnaire and

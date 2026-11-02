@@ -1,11 +1,11 @@
 /**
  * **The groups feature's only public surface** — Play › Groups, New group, Join a group, a
- * group's page, its Friends screen, Members and Edit group
+ * group's page, its Friends screen, Info (Q125), Members and Edit group
  * ([#512](https://github.com/Raketa02/Raketa/issues/512),
  * [#513](https://github.com/Raketa02/Raketa/issues/513),
  * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500).
  *
- * The Play tab's segment is the shell's, and it draws `GroupsSection` under *Groups*; the six
+ * The Play tab's segment is the shell's, and it draws `GroupsSection` under *Groups*; the seven
  * screens are mounted by their route files under `play/`, and the page's routes check their params
  * here first. What is exported is what has a caller outside this folder.
  */
@@ -15,6 +15,7 @@ export { NewGroupScreen } from './components/NewGroupScreen';
 export { JoinGroupScreen } from './components/JoinGroupScreen';
 export { GroupScreen } from './components/GroupScreen';
 export { FriendsScreen } from './components/FriendsScreen';
+export { GroupInfoScreen } from './components/GroupInfoScreen';
 export { MembersScreen } from './components/MembersScreen';
 export { EditGroupScreen } from './components/EditGroupScreen';
 /** ***Post a game*** over a group's page (#558) — `proposals`' screen, handed what the group knows. */

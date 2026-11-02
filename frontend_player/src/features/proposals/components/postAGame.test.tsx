@@ -289,6 +289,20 @@ describe('opening Post a game (mock 14, A5)', () => {
     expect(await screen.findByRole('button', { name: /^Fill in/, selected: true })).toBeTruthy();
   });
 
+  // Q125: Info is pushed over the page, so the page's tab is still the one Post a game turned it to.
+  it('leaves the page on Fill in under Info, so back from Info is Fill in too', async () => {
+    await openPosting();
+    fireEvent.press(screen.getByLabelText(COPY.back));
+    expect(await screen.findByRole('button', { name: /^Fill in/, selected: true })).toBeTruthy();
+
+    fireEvent.press(await screen.findByHintText(GROUPS_COPY.group.openInfo));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}/info`));
+    fireEvent.press(await screen.findByRole('button', { name: GROUPS_COPY.info.back }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+    expect(await screen.findByRole('button', { name: /^Fill in/, selected: true })).toBeTruthy();
+  });
+
   it('is Nothing picked right now’s third door, and back from it is Fill in too (Q96)', async () => {
     serveTheCrew();
     await openThePage();

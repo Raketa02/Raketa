@@ -15,8 +15,11 @@ import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
 import type { Group, GroupPerson, SportRoster } from './group';
 
-/** The group page's four tabs. It always opens on Games (ADR-0188 §5: which tab is not kept). */
-export const GROUP_TABS = ['games', 'fillIn', 'friends', 'info'] as const;
+/**
+ * The group page's three tabs, each drawn for a sport (Q125: Info is the group's own screen, opened
+ * from the header). It always opens on Games (ADR-0188 §5: which tab is not kept).
+ */
+export const GROUP_TABS = ['games', 'fillIn', 'friends'] as const;
 
 export type GroupTab = (typeof GROUP_TABS)[number];
 

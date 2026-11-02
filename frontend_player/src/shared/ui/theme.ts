@@ -672,8 +672,9 @@ const size = {
   chip: 27,
   chipSm: 25,
   seg: 25,
-  /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529): the
-   *  group page's Info tab, counting the requests waiting on an Owner. **16, and it is
+  /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529),
+   *  `CornerBadge`: a group page's Games and Fill in, and the group's tile on its page and on Info,
+   *  counting the requests waiting on an Owner (Q125). **16, and it is
    *  `num.tiny`'s own line box**, the digit role one step under the tab bar's `num.xs` — the
    *  segment's label is 10,5 where the tab bar's is 12, so the mark comes down with it rather
    *  than standing a size above the word it sits on. The fill, the white digit, the pill and the
@@ -879,7 +880,7 @@ const size = {
    *  `chip` + 2 × 9 is 45 — so the bar is a reachable target tall and each pill's `hit.chip`
    *  ends at the bar's edge rather than past it, where Android would never deliver the touch.
    *
-   *  The Info tab's members row (#514, play 58–60) stacks up to five faces: `stackFace` is each
+   *  Info's members row (#514, play 58–60) stacks up to five faces: `stackFace` is each
    *  one, 28 — the monogram's row size, and what the mocks draw beside the row's `cardTitle` —
    *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
    *  the card-coloured ring that keeps one face from merging into the next. */

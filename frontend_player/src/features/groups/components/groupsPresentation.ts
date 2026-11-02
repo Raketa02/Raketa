@@ -158,11 +158,6 @@ export function fillInTabLabel(seats: number): string {
   return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'seat', 'seats')} to fill`;
 }
 
-/** *Info, 2 requests waiting* — the group page's Info tab, spoken with its count (#529). */
-export function infoTabLabel(waiting: number): string {
-  return `${GROUPS_COPY.group.tabs.info}, ${counted(waiting, 'request', 'requests')} waiting`;
-}
-
 /**
  * A home-club search result's head, spoken — the whole head is the one tap. The groups drawn under
  * it are rows of their own and speak for themselves.
@@ -270,7 +265,7 @@ export function shareMessage(groupName: string, link: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// The Info tab, Members and Edit group (#514)
+// Info, Members and Edit group (#514)
 // ---------------------------------------------------------------------------
 
 /**
@@ -450,14 +445,24 @@ export const EDIT_REFUSALS = {
 } as const satisfies Readonly<Record<string, string>>;
 
 /**
- * *Ogrody 33 Club, official, 12 members · Ogrody 33* — an official group's header, spoken: the
- * mark beside the name has no words of its own, so the header says it (#529).
+ * **A group's header, spoken, where its drawn words are not the whole of it** — on its page and on
+ * Info. An official group's mark has no words of its own, so the header says *official* (#529),
+ * and the Owner's count of waiting requests on the tile is said after the line under the name
+ * (Q125, the Info tab's count before it): *Ogrody 33 Club, official, 12 members · Ogrody 33, 2
+ * requests waiting*. `undefined` where the name and the line are all there is, so the header is
+ * named by its drawn words rather than labelled with them (`ScreenHeader`'s rule).
  */
-export function groupHeaderLabel(group: Pick<Group, 'name' | 'memberCount' | 'homeClub'>): string {
+export function groupHeaderLabel(
+  group: Pick<Group, 'kind' | 'name' | 'memberCount' | 'homeClub'>,
+  waiting = 0,
+): string | undefined {
+  const official = group.kind === 'OFFICIAL';
+  if (!official && waiting === 0) return undefined;
   return [
     group.name,
-    GROUPS_COPY.official,
+    ...(official ? [GROUPS_COPY.official] : []),
     membersAtClub(group.memberCount, group.homeClub.name),
+    ...(waiting > 0 ? [`${counted(waiting, 'request', 'requests')} waiting`] : []),
   ].join(', ');
 }
 

@@ -1,6 +1,7 @@
 /**
- * **A group's Info tab and Members, walked** — the link card, *Want to join*, the members row,
- * Edit group, leaving and deleting, and Members with its press and hold
+ * **A group's Info and Members, walked** — Info opened from the page's header (Q125), the link
+ * card, *Want to join* and the Owner's count on the tile, the members row, Edit group, leaving and
+ * deleting, the re-reads, and Members with its press and hold
  * ([#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 71–84; play mocks
  * 57–61, club 20).
  *
@@ -332,15 +333,21 @@ afterEach(async () => {
 
 const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
 
-/** A tab by its name — the start of it: Info adds how many are waiting to join (#529). */
+/** A tab by its name — the start of it: Games and Fill in add their counts. */
 const tab = (name: string, selected?: boolean) =>
   screen.findByRole('button', {
     name: new RegExp(`^${name}`),
     ...(selected === undefined ? {} : { selected }),
   });
 
-/** Serve the group, land on its page and open Info. */
-async function openInfo(setup: CrewSetup) {
+const PAGE_PATH = `/play/group/${GROUP_ID}`;
+const INFO_PATH = `${PAGE_PATH}/info`;
+
+/** The page's header, by what it opens — the list's card under the page is named by the group too. */
+const pageHeader = () => screen.findByHintText(COPY.group.openInfo);
+
+/** Serve the group and land on its page. */
+async function openPage(setup: CrewSetup) {
   const server = crew(setup);
   server.install(transport);
   await launchSignedIn();
@@ -348,10 +355,27 @@ async function openInfo(setup: CrewSetup) {
   fireEvent.press(
     await screen.findByRole('button', { name: new RegExp(`^${server.state.name},`) }),
   );
-  await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
-  fireEvent.press(await tab('Info'));
-  expect(await tab('Info', true)).toBeTruthy();
+  await waitFor(() => expect(screen).toHavePathname(PAGE_PATH));
   return server;
+}
+
+/** Open Info from the page's header (Q125) — its own screen, headed by the group. */
+async function openInfoFromThePage(name = 'Kazimierz crew') {
+  fireEvent.press(await pageHeader());
+  await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
+  expect(await screen.findByRole('header', { name: new RegExp(`^${name}`) })).toBeTruthy();
+}
+
+/** Serve the group, land on its page and open Info. */
+async function openInfo(setup: CrewSetup) {
+  const server = await openPage(setup);
+  await openInfoFromThePage(server.state.name);
+  return server;
+}
+
+async function backToThePage() {
+  fireEvent.press(await screen.findByRole('button', { name: COPY.info.back }));
+  await waitFor(() => expect(screen).toHavePathname(PAGE_PATH));
 }
 
 const membersRow = (label: RegExp) => screen.findByRole('button', { name: label });
@@ -496,7 +520,7 @@ describe('Want to join', () => {
     await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
 
     await membersRow(/^8 members/);
-    // Once for the tab's count as the page opened, and again as Info was come to.
+    // Once for the tile's count as the page opened, and again as Info opened.
     await waitFor(() =>
       expect(transport.requestsTo('GET', `${GROUP_PATH}/requests`)).toHaveLength(2),
     );
@@ -576,42 +600,99 @@ describe('Want to join', () => {
   });
 });
 
-describe('the Info tab’s count', () => {
+// #529 D6: the Owner could not tell from the page that anybody was waiting. Q125 moved the count
+// from the Info tab to the group's tile.
+describe('the Owner’s count on the tile', () => {
   const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
-  const infoTab = () => screen.findByRole('button', { name: /^Info/ });
+  const tileCount = (count: string) =>
+    within(screen.getByTestId('group-header-tile')).queryByText(count, {
+      includeHiddenElements: true,
+    });
 
-  // #529 D6: the Owner could not tell from the page that anybody was waiting.
-  it('says how many are waiting to join, for the Owner, from any tab', async () => {
-    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL, TOMASZ] });
-    fireEvent.press(await tab('Games'));
+  it('says how many are waiting to join on the page’s header, from any tab', async () => {
+    await openPage({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL, TOMASZ] });
 
-    expect(await screen.findByRole('button', { name: 'Info, 2 requests waiting' })).toBeTruthy();
-    expect(within(await infoTab()).getByText('2', { includeHiddenElements: true })).toBeTruthy();
+    const waiting = 'Kazimierz crew, 8 members · Centrum Ruchu, 2 requests waiting';
+    expect(await screen.findByRole('button', { name: waiting })).toBeTruthy();
+    expect(tileCount('2')).toBeTruthy();
+
+    fireEvent.press(await tab('Friends'));
+    await tab('Friends', true);
+    expect(screen.getByRole('button', { name: waiting })).toBeTruthy();
+    expect(tileCount('2')).toBeTruthy();
   });
 
-  it('counts down as the Owner answers, and goes when nobody is waiting', async () => {
+  it('counts down as the Owner answers on Info, and the page says so on the way back', async () => {
     await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL, TOMASZ] });
 
     fireEvent.press(await screen.findByRole('button', { name: 'Approve Michał Rogalski' }));
-    expect(await screen.findByRole('button', { name: 'Info, 1 request waiting' })).toBeTruthy();
+    expect(
+      await screen.findByRole('header', {
+        name: 'Kazimierz crew, 9 members · Centrum Ruchu, 1 request waiting',
+      }),
+    ).toBeTruthy();
+    await backToThePage();
+    expect(
+      await screen.findByRole('button', {
+        name: 'Kazimierz crew, 9 members · Centrum Ruchu, 1 request waiting',
+      }),
+    ).toBeTruthy();
+    expect(tileCount('1')).toBeTruthy();
 
+    await openInfoFromThePage();
     fireEvent.press(await screen.findByRole('button', { name: 'Decline Tomasz Król' }));
-    expect(await screen.findByRole('button', { name: 'Info' })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(/^Want to join/)).toBeNull());
+    await backToThePage();
+
+    // The drawn words are the whole name again, and nothing is on the tile.
+    await waitFor(async () =>
+      expect((await pageHeader()).props.accessibilityLabel).toBeUndefined(),
+    );
+    expect(tileCount('1')).toBeNull();
   });
 
   it('is nobody’s but the Owner’s', async () => {
-    await openInfo({ members: KAZIMIERZ, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL] });
+    await openPage({ members: KAZIMIERZ, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL] });
 
-    await membersRow(/^8 members/);
-    expect(screen.getByRole('button', { name: 'Info' })).toBeTruthy();
+    expect((await pageHeader()).props.accessibilityLabel).toBeUndefined();
+    expect(tileCount('1')).toBeNull();
+    expect(transport.requestsTo('GET', `${GROUP_PATH}/requests`)).toHaveLength(0);
+  });
+});
+
+describe('the Info screen', () => {
+  const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
+
+  // Q125: the page's header without the sport pill, and not a door to anything.
+  it('is headed by the page’s header without the pill, and the header presses nothing', async () => {
+    await openInfo({ members: KAZIMIERZ });
+
+    const header = screen.getByRole('header', { name: /^Kazimierz crew/ });
+    expect(within(header).getByText('8 members · Centrum Ruchu')).toBeTruthy();
+    expect(screen.getByTestId('group-header-tile')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Sport: /)).toBeNull();
+    expect(screen.queryByHintText(COPY.group.openInfo)).toBeNull();
+  });
+
+  it('draws the link card, Want to join, the members row and Edit group, in that order', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL] });
+    await screen.findByRole('header', { name: 'Want to join · 1' });
+
+    const names = within(screen.getByTestId('group-info-body'))
+      .getAllByRole('button')
+      .map((node) => (node.props.accessibilityLabel as string | undefined) ?? '');
+    const at = (name: RegExp) => names.findIndex((each) => name.test(each));
+    expect(at(/^Share the link$/)).toBeGreaterThanOrEqual(0);
+    expect(at(/^Share the link$/)).toBeLessThan(at(/^Approve Michał Rogalski$/));
+    expect(at(/^Approve Michał Rogalski$/)).toBeLessThan(at(/^8 members, /));
+    expect(at(/^8 members, /)).toBeLessThan(at(/^Edit group/));
   });
 });
 
 describe('pulling Info', () => {
   const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
-  // The page's own — the Groups list under it has a pull of its own (#529).
-  const pageBody = () => within(screen.getByTestId('group-page-body'));
-  const pull = () => fireEvent(pageBody().UNSAFE_getByType(RefreshControl), 'refresh');
+  const infoBody = () => within(screen.getByTestId('group-info-body'));
+  const pull = () => fireEvent(infoBody().UNSAFE_getByType(RefreshControl), 'refresh');
 
   // #529: a request that arrived while the page was open reached it only by leaving and coming back.
   it('re-reads the group and who is waiting', async () => {
@@ -630,55 +711,94 @@ describe('pulling Info', () => {
     });
 
     expect(await screen.findByRole('header', { name: 'Want to join · 2' })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Info, 2 requests waiting' })).toBeTruthy();
+    expect(
+      await screen.findByRole('header', {
+        name: 'Kazimierz crew, 7 members · Centrum Ruchu, 2 requests waiting',
+      }),
+    ).toBeTruthy();
     expect(await membersRow(/^7 members,/)).toBeTruthy();
     await waitFor(() =>
-      expect(pageBody().UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
+      expect(infoBody().UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
     );
-  });
-
-  // Info, Games and Fill in pull; Friends, drawn by the page's scroller too, does not.
-  it('is not Friends’', async () => {
-    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
-    fireEvent.press(await tab('Friends'));
-    await tab('Friends', true);
-
-    expect(pageBody().UNSAFE_queryByType(RefreshControl)).toBeNull();
   });
 });
 
-// #529 F2: what another phone changed reached Info only by a pull. Coming back to it is a look too.
-describe('coming back to Info', () => {
+// Games and Fill in pull on the page (`groupGames`, `groupFillIn`); Friends, drawn by the page's
+// scroller too, does not.
+describe('pulling the page', () => {
+  it('is not Friends’', async () => {
+    await openPage({ members: KAZIMIERZ });
+    fireEvent.press(await tab('Friends'));
+    await tab('Friends', true);
+
+    expect(
+      within(screen.getByTestId('group-page-body')).UNSAFE_queryByType(RefreshControl),
+    ).toBeNull();
+  });
+});
+
+// #529 F2: what another phone changed reached Info only by a pull. Opening it, and coming back to
+// it, are looks too (Q125).
+describe('Info re-reads', () => {
   const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
 
-  it('re-reads the group and who is waiting, from another tab', async () => {
-    const server = await openInfo({
+  it('the group and who is waiting when it opens', async () => {
+    const server = await openPage({
       members: OWNED,
       policy: 'PEOPLE_I_APPROVE',
       requests: [MICHAL],
     });
-    expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
-    fireEvent.press(await tab('Games'));
-    await tab('Games', true);
+    await screen.findByRole('button', { name: /, 1 request waiting$/ });
 
     // Tomasz asks on his phone, and Karol leaves on his, while this one is on Games.
     server.state.waiting.push(TOMASZ);
     server.leave(KAROL);
-    fireEvent.press(await tab('Info'));
+    await openInfoFromThePage();
 
     expect(await screen.findByRole('header', { name: 'Want to join · 2' })).toBeTruthy();
     expect(await membersRow(/^7 members,/)).toBeTruthy();
   });
 
-  it('re-reads them on the way back from Members', async () => {
+  it('them on the way back from Members', async () => {
     const server = await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
     await openMembers();
 
     server.state.waiting.push(TOMASZ);
     fireEvent.press(screen.getByRole('button', { name: COPY.members.back }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
 
     expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
+  });
+
+  it('them on the way back from Edit group', async () => {
+    const server = await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
+    fireEvent.press(await screen.findByRole('button', { name: /^Edit group,/ }));
+    await waitFor(() => expect(screen).toHavePathname(`${PAGE_PATH}/edit`));
+
+    server.state.waiting.push(TOMASZ);
+    fireEvent.press(await screen.findByRole('button', { name: COPY.editGroup.back }));
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
+
+    expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
+  });
+
+  // Only Info re-read on a return, and Info is its own screen now: the page reads nothing on the
+  // way back from it.
+  it('alone — the page reads nothing on the way back from it', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
+    await screen.findByRole('header', { name: /^Kazimierz crew/ });
+    const reads = () =>
+      transport.requestsTo('GET', GROUP_PATH).length +
+      transport.requestsTo('GET', `${GROUP_PATH}/requests`).length;
+    await waitFor(() => expect(transport.requestsTo('GET', GROUP_PATH)).toHaveLength(2));
+    const before = reads();
+
+    await backToThePage();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(reads()).toBe(before);
   });
 });
 
@@ -706,7 +826,7 @@ describe('Edit group', () => {
     expect(screen.queryByRole('button', { name: /^Edit group/ })).toBeNull();
   });
 
-  it('renames the group, and the page says so when you go back', async () => {
+  it('renames the group, and Info and the page say so on the way back', async () => {
     await openInfo({ members: OWNED });
     await openEdit();
 
@@ -727,8 +847,10 @@ describe('Edit group', () => {
     ]);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.editGroup.back }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
     expect(await screen.findByRole('header', { name: /^Kazimierz padel/ })).toBeTruthy();
+    await backToThePage();
+    expect(within(await pageHeader()).getByText('Kazimierz padel')).toBeTruthy();
   });
 
   it('switched to Anyone, lets everybody waiting in and shows who', async () => {
@@ -753,7 +875,7 @@ describe('Edit group', () => {
     ).toEqual(['Michał Rogalski', 'Tomasz Król']);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.editGroup.back }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
     expect(await membersRow(/^10 members, plays Padel, Tennis, anyone can join$/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByText(/^Want to join/)).toBeNull());
   });
@@ -807,25 +929,27 @@ describe('leaving and deleting', () => {
     fireEvent.press(sheet.getByRole('button', { name: act }));
   }
 
-  // #529 F1: the way out stands at the page's foot, however long Info is, and never scrolls away.
+  // #529 F1: the way out stands at Info's foot, however long Info is, and never scrolls away.
   it.each([
     ['Leave', { members: KAZIMIERZ }, COPY.info.leave],
     ['Delete', { name: 'My raketa group', members: [ME] }, COPY.info.delete],
-  ] as const)('pins %s under the page, outside what scrolls', async (_, setup, door) => {
+  ] as const)('pins %s under Info, outside what scrolls', async (_, setup, door) => {
     await openInfo(setup);
 
     expect(await screen.findByRole('button', { name: door })).toBeTruthy();
-    const scrolled = within(screen.getByTestId('group-page-body'));
+    const scrolled = within(screen.getByTestId('group-info-body'));
     expect(scrolled.getByRole('button', { name: / members?, / })).toBeTruthy();
     expect(scrolled.queryByRole('button', { name: door })).toBeNull();
   });
 
-  it('is Info’s alone', async () => {
-    await openInfo({ members: KAZIMIERZ });
-    fireEvent.press(await tab('Games'));
-    await tab('Games', true);
+  it('is Info’s alone — no tab of the page draws it', async () => {
+    await openPage({ members: KAZIMIERZ });
 
-    expect(screen.queryByRole('button', { name: COPY.info.leave })).toBeNull();
+    for (const name of ['Games', 'Fill in', 'Friends']) {
+      fireEvent.press(await tab(name));
+      await tab(name, true);
+      expect(screen.queryByRole('button', { name: COPY.info.leave })).toBeNull();
+    }
   });
 
   // #529 F5: a leave the network was holding went on waiting after the sheet was closed, and left
@@ -854,7 +978,7 @@ describe('leaving and deleting', () => {
       await comeBackOnline();
 
       expect(leaves()).toHaveLength(0);
-      expect(screen).toHavePathname(`/play/group/${GROUP_ID}`);
+      expect(screen).toHavePathname(INFO_PATH);
     });
 
     it('still leaves once the phone is back, when the sheet was left open', async () => {
@@ -893,7 +1017,7 @@ describe('leaving and deleting', () => {
 
     await waitFor(() => expect(screen.queryByTestId('bottom-sheet')).toBeNull());
     expect(server.state.deleted).toBe(false);
-    expect(screen).toHavePathname(`/play/group/${GROUP_ID}`);
+    expect(screen).toHavePathname(INFO_PATH);
   });
 
   it('lets a member leave, after saying how to come back, and lands on the list', async () => {
@@ -1016,7 +1140,8 @@ describe('Members', () => {
     expect(memberIds()).toEqual([ME.id, KAROL.id, MAREK.id]);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.members.back }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
+    await backToThePage();
     expect(await screen.findByRole('button', { name: 'Sport: Tennis' })).toBeTruthy();
   });
 

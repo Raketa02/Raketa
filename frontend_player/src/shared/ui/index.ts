@@ -40,6 +40,7 @@ export {
 export { Card, PressableCard, type CardProps, type PressableCardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
 export { CloseControl, type CloseControlProps } from './CloseControl';
+export { CornerBadge, type CornerBadgeProps } from './CornerBadge';
 export { CountBadge, type CountBadgeProps, type CountBadgeTone } from './CountBadge';
 export {
   ConfidenceRing,

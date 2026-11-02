@@ -124,7 +124,7 @@ of the old line is the settings' to say. The faces are the five newest and _+N_ 
 group's count** (`playersStack`), so a player a block hides is counted all the same.
 
 **The card says _members_, as Info's does** (#529, the product owner's ask, 2026-10-02). It said _N
-players_, club 18–19's word, where a member opening the same group's Info tab reads _N members_ on
+players_, club 18–19's word, where a member opening the same group's Info reads _N members_ on
 the same drawing — and the people in an official group are its members exactly as a player group's
 are. The count is now `groups`' own `membersLine`, so the two cards cannot drift, and the card took
 the name with it: `PlayersCard` is `MembersCard`, its faces `members-face-`. The read's `players`

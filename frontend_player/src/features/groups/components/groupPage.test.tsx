@@ -399,13 +399,89 @@ describe('the fast filter', () => {
 });
 
 describe('the tab bar', () => {
-  it('is Games · Fill in · Friends · Info, with no counts, and opens on Games', async () => {
+  // Q125: Info is the group's own screen, opened from the header — not a fourth tab.
+  it('is Games · Fill in · Friends, with no counts, and opens on Games', async () => {
     await openGroup();
 
     expect(await tab('Games', true)).toBeTruthy();
     expect(await tab('Fill in', false)).toBeTruthy();
     expect(await tab('Friends', false)).toBeTruthy();
-    expect(await tab('Info', false)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Info/ })).toBeNull();
+  });
+});
+
+describe('the header', () => {
+  const INFO_PATH = `/play/group/${MY_RAKETA_GROUP.id}/info`;
+  /** The page's header, by what it opens — the list's card under the page is named by the group too. */
+  const header = () => screen.findByHintText(COPY.group.openInfo);
+
+  async function backFromInfo() {
+    fireEvent.press(await screen.findByRole('button', { name: COPY.info.back }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
+  }
+
+  it('is one button, named by the group and the line under it', async () => {
+    await openGroup();
+
+    const named = await header();
+    expect(named.props.accessibilityRole).toBe('button');
+    expect(within(named).getByText(MY_RAKETA_GROUP.name)).toBeTruthy();
+    expect(within(named).getByText('1 member · Bonarka Arena')).toBeTruthy();
+  });
+
+  // Q125: the tile, the name and the line under it are one door, the WhatsApp header's.
+  it.each([
+    ['the tile', () => screen.getByTestId('group-header-tile')],
+    [
+      'the name',
+      () => within(screen.getByHintText(COPY.group.openInfo)).getByText('my raketa group'),
+    ],
+    [
+      'the line under it',
+      () => within(screen.getByHintText(COPY.group.openInfo)).getByText('1 member · Bonarka Arena'),
+    ],
+  ])('opens Info from %s', async (_where, target) => {
+    await openGroup();
+    await header();
+
+    fireEvent.press(target());
+
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
+  });
+
+  it('leaves the back arrow and the sport pill their own taps', async () => {
+    await openGroup();
+
+    await unfold('Padel');
+    expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`);
+    fireEvent.press(within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Padel' }));
+
+    fireEvent.press(screen.getByRole('button', { name: COPY.group.back }));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+  });
+
+  // The open bar covers the tile (#529 E2) over a backdrop across the page, so a tap on the tile's
+  // place lands on the backdrop. The renderer does no hit-testing: this proves what the backdrop
+  // does, and that it is there — the layering is asked for a look on a device.
+  it('lays a backdrop over the page while the sport bar is open, which folds the bar and opens nothing', async () => {
+    await openGroup();
+    await unfold('Padel');
+
+    fireEvent.press(screen.getByTestId('sport-filter-backdrop', { includeHiddenElements: true }));
+
+    expect(screen.queryByTestId('sport-bar')).toBeNull();
+    expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`);
+  });
+
+  it('brings the player back from Info to the tab they left', async () => {
+    await openGroup();
+    await openTab('Friends');
+
+    fireEvent.press(await header());
+    await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
+    await backFromInfo();
+
+    expect(await tab('Friends', true)).toBeTruthy();
   });
 });
 

@@ -16,6 +16,7 @@ import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-lib
 import { Linking } from 'react-native';
 
 import { gameKeys } from '@/features/games/types';
+import { GROUPS_COPY } from '@/features/groups/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { doorRowLabel, theme } from '@/shared/ui';
@@ -1010,6 +1011,38 @@ describe('the recent notices, behind the bell on Home', () => {
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
 
     // The card the notice was about is the one on top: its details are the ones the deck opens.
+    fireEvent.press(await screen.findByRole('button', { name: 'Game details' }));
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${waiting.proposal_id}`),
+    );
+  });
+
+  // Q125: Info is pushed over the page, so the deck it was opened at is still the page under it.
+  it('keeps the deck at the card under Info — back from Info, the card is still on top', async () => {
+    const first = deckCard();
+    const waiting = deckCard({ open_seats_after_your_yes: 0, court: 'BOOK_IT_NOW' });
+    stubNotices(transport, [
+      notice({
+        kind: 'YOU_COMPLETE_IT',
+        title: 'You complete it',
+        opens: 'DECK',
+        game_id: waiting.proposal_id,
+      }),
+    ]);
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', `/api/v1/groups/${CREW_ID}`, () => json(CREW_PAGE));
+    stubGroupDeck(transport, CREW_ID, groupDeck({ cards: [first, waiting] }));
+    stubProposal(transport, waiting.proposal_id, proposalDetails(waiting, { pool_id: CREW_ID }));
+    await onTheList(DECK_READ_AT);
+    fireEvent.press(await screen.findByRole('button', { name: /^You complete it/ }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
+
+    fireEvent.press(await screen.findByHintText(GROUPS_COPY.group.openInfo));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}/info`));
+    fireEvent.press(await screen.findByRole('button', { name: GROUPS_COPY.info.back }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
+
+    expect(await screen.findByRole('button', { name: /^Games/, selected: true })).toBeTruthy();
     fireEvent.press(await screen.findByRole('button', { name: 'Game details' }));
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${waiting.proposal_id}`),

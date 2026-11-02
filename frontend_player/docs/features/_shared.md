@@ -226,6 +226,16 @@ an `h2` title and a sub-line each ending in an ellipsis, for a header that names
 than a screen (10.3). `theme.ts` gained `MONOGRAM_HUES` beside `POSTER_HUES` and
 `size.monogram` (7.20). All recorded in design-system Part 16.
 
+**A header can be the door to what it names, and the segment's badge is a primitive**
+([#721](https://github.com/Raketa02/Raketa/issues/721), Q125). `ScreenHeader` gained **`onPress`**,
+which takes a `title` and a **`pressHint`** with it, so a pressable header is never unnamed: the
+whole row is the button but for the back control and the right slot, which keep their own taps as
+the deeper responders, and the named element is a `button` rather than a `header`. The row is
+pressed rather than a box round the lead because the group page's sport filter measures the lead
+against the row's left edge. **`CornerBadge`** is `Segment`'s private badge lifted out — the Chats
+badge at `size.segmentBadge` over a box's top-right corner — so a group's tile can carry the Owner's
+count of waiting requests that the Info tab carried, in the same mark (10.3, 7.21, Part 16).
+
 **The sixth port is the share sheet, the clipboard writes, and a group page's pieces**
 ([#513](https://github.com/Raketa02/Raketa/issues/513)). `shared/lib/platform/share.ts` wraps
 **React Native's own `Share`** — one verb, `shareText`, never rejecting, because closing the sheet

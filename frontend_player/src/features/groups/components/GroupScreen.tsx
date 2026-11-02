@@ -1,7 +1,7 @@
 /**
- * **A group's page** — its header with the sport filter, the four tabs, Games, Fill in and
- * Friends in the state of a group that is just starting (play 14–17, 39–55; #512, #513), and Info
- * (play 57–60; [#514](https://github.com/Raketa02/Raketa/issues/514)).
+ * **A group's page** — its header with the sport filter, and three tabs, Games, Fill in and
+ * Friends (play 14–17, 39–55; #512, #513; Q125), each drawn for a sport. **The header is the door
+ * to Info** (`GroupHeader`), the group's own screen since Q125.
  *
  * Reached from a card on the Groups list, and **replacing** New group once a group is created, so
  * *back* from here is the list either way. A group created a moment ago is drawn at once — the
@@ -13,14 +13,17 @@
  * them at once.
  *
  * **The filter's bar floats over the header and the page under it** — `SportFilterPage`'s, which
- * Members shares. On an official group it lists only the sports the group declares (#519); a
- * member rated in none of them gets `AddSportCard` in place of Games, Fill in and Friends, and
- * Info as it is — the way out is not a sport's.
+ * Members shares — so while it is open, a tap on the tile is the bar's rather than Info's. On an
+ * official group it lists only the sports the group declares (#519); a member rated in none of them
+ * gets `AddSportCard` on all three tabs, and the header still opens Info, where the way out is — it
+ * is not a sport's.
  *
- * **The Info tab counts the requests waiting on an Owner** (#529): the Chats badge at the segment's
- * size over the tab's corner, from every tab, and spoken with the tab's name — so an Owner on Games
- * knows somebody is asking without opening Info. Nobody else's page reads the requests, so nobody
- * else's tab carries a count.
+ * **The header opens Info** (Q125): the tile, the name with the official mark and *N members · Home
+ * club* are one button, and the back arrow and the pill keep their own taps. Info is pushed over the
+ * page, so the page — and the tab it is on — is still here when the player comes back. **The Owner's
+ * count of waiting requests is on the tile's corner** (#529), the Info tab's until Q125, from every
+ * tab and spoken with the header — so an Owner on Games knows somebody is asking without opening
+ * Info. Nobody else's page reads the requests, so nobody else's tile carries a count.
  *
  * **The Games tab counts the cards where somebody is already In with you** (#553, the screens A1,
  * mock 1's *Games 4*): the same badge, off the deck's own read — the one the tab draws, for the
@@ -34,7 +37,8 @@
  *
  * **Which tab it is on is the page's store** (`groupTab.store`, #558) rather than its state, because
  * *Post a game* turns it to Fill in from over the page, so every way back lands on *You're In*; the
- * entry, and the post's draft with it, go when the page does.
+ * entry, and the post's draft with it, go when the page does. A screen pushed over the page — Info,
+ * a game's details — leaves it where it was, so back is the tab the player left.
  *
  * **Games lays itself out** (#553): the deck fills the page between the switch and its three
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
@@ -45,16 +49,13 @@
  * stands on that sport until the player picks another — never saved as a pick — the switch moves
  * to the card's kind, the page is on Games, and the deck draws the card first while it is dealt.
  *
- * **Info re-reads on a pull, and each time it is come back to** (#529) — the group, who is waiting
- * and the members row with it — from another tab or from a screen pushed over the page (Members,
- * Edit group), so what another phone changed meanwhile is on it without a pull. Only Info is read
- * again on the way back: the other three tabs are drawn for a sport and read their own rows.
- *
- * **Games and Fill in pull too** — the group, for the header and the starting cards, and every read
+ * **Games and Fill in pull** — the group, for the header and the starting cards, and every read
  * `proposals` draws the two tabs from (`useRereadGroupGames`): the decks, Fill in, *You're In*'s
- * yeses and their games. One control and one spinner for the page, re-reading what the tab on
- * screen draws; Fill in's is the page's scroller's, and Games', which lays itself out, is handed
- * to the deck, which puts it on whichever scroller it is in. Friends keeps none.
+ * yeses and their games. One control and one spinner for the page; Fill in's is the page's
+ * scroller's, and Games', which lays itself out, is handed to the deck, which puts it on whichever
+ * scroller it is in. Friends keeps none. **The page does not re-read on the way back** — it did for
+ * Info alone, which re-reads itself now (Q125); the three tabs are drawn for a sport and read their
+ * own rows.
  *
  * **Every state has its drawing.** While the read is on its way the header has only its way back.
  * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
@@ -76,70 +77,48 @@ import {
   useRereadGroupGames,
 } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
-import { useOnReturn } from '@/shared/lib/platform';
-import { ScreenHeader, Segment, theme, type SegmentOption } from '@/shared/ui';
+import { Segment, theme, type SegmentOption } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
 import type { DeckArrival } from '../schemas/groupRouteParams';
-import { useGroup, useGroupReread, useJoinRequests } from '../hooks/useGroups';
+import { useGroup, useGroupReread } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
 import { useGameIntent } from '../store/gameIntent.store';
 import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';
-import { ExitDoor } from './ExitDoor';
 import { FillInTab, PostAGame } from './FillInTab';
 import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
-import { GroupMonogram } from './GroupMonogram';
+import { GroupHeader } from './GroupHeader';
+import { groupInfoRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
-import {
-  fillInTabLabel,
-  gamesTabLabel,
-  groupHeaderLabel,
-  infoTabLabel,
-  membersAtClub,
-} from './groupsPresentation';
-import { InfoTab } from './InfoTab';
-import { OfficialMark } from './OfficialMark';
+import { fillInTabLabel, gamesTabLabel } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
 import { SportFilterPage } from './SportFilterPage';
 
 const COPY = GROUPS_COPY.group;
 
-/** The four tabs' words — read at load, so from the import-free copy module (`groupsCopy.ts`). */
-const TABS = GROUP_TABS.map((key) => ({ key, label: GROUPS_COPY.group.tabs[key] }));
-
-/** The four tabs, Info carrying how many are waiting on an Owner. */
-function useGroupTabs(groupId: string, isOwner: boolean): readonly SegmentOption<GroupTab>[] {
-  const requests = useJoinRequests(groupId, isOwner);
-  // The Owner's alone: a page read after the reader stopped owning the group keeps no count, even
-  // with an old answer still cached under the key.
-  const waiting = isOwner ? (requests.data?.length ?? 0) : 0;
-
-  return TABS.map((option) =>
-    option.key !== 'info' || waiting === 0
-      ? option
-      : { ...option, badge: waiting, accessibilityLabel: infoTabLabel(waiting) },
-  );
-}
+/** The three tabs' words — read at load, so from the import-free copy module (`groupsCopy.ts`). */
+const TABS: readonly SegmentOption<GroupTab>[] = GROUP_TABS.map((key) => ({
+  key,
+  label: GROUPS_COPY.group.tabs[key],
+}));
 
 interface GroupTabsProps {
   readonly groupId: string;
-  readonly isOwner: boolean;
   readonly selected: GroupTab;
   readonly onSelect: (tab: GroupTab) => void;
 }
 
 /** The tab bar — with Games' and Fill in's counts once there is a sport to read them for. */
 function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
-  const tabs = useGroupTabs(props.groupId, props.isOwner);
   return sport === undefined ? (
-    <Segment options={tabs} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
+    <Segment options={TABS} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
   ) : (
-    <TabsWithCounts {...props} tabs={tabs} sport={sport} />
+    <TabsWithCounts {...props} sport={sport} />
   );
 }
 
@@ -147,13 +126,12 @@ function TabsWithCounts({
   groupId,
   selected,
   onSelect,
-  tabs,
   sport,
-}: GroupTabsProps & { readonly tabs: readonly SegmentOption<GroupTab>[]; readonly sport: Sport }) {
+}: GroupTabsProps & { readonly sport: Sport }) {
   const chosen = useGameIntent((state) => state.intent);
   const games = useGamesBadge(groupId, sport, chosen);
   const seats = useFillInBadge(groupId, sport);
-  const counted = tabs.map((option) => {
+  const counted = TABS.map((option) => {
     if (option.key === 'games' && games > 0) {
       return { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) };
     }
@@ -180,9 +158,9 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
   const setTab = (next: GroupTab) => show(groupId, next);
   const reread = useGroupReread(groupId);
   const rereadGames = useRereadGroupGames(groupId);
-  // Info is the group's; Games and Fill in are the group's and the games drawn on them.
+  // The group, for the header and the starting cards, and the games drawn on Games and Fill in.
   const { refreshing, pull } = usePull(() =>
-    tab === 'info' ? reread() : Promise.all([reread(), rereadGames()]).then(() => undefined),
+    Promise.all([reread(), rereadGames()]).then(() => undefined),
   );
   // The Shell's control, drawn as the Shell draws it.
   const pullControl = (
@@ -194,16 +172,6 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
       progressBackgroundColor={theme.color.paper}
     />
   );
-
-  // Coming back to Info is a look at it, so it is read again — from another tab, or back from a
-  // screen pushed over the page.
-  function select(next: GroupTab) {
-    if (next === 'info' && tab !== 'info') void reread();
-    setTab(next);
-  }
-  useOnReturn(() => {
-    if (tab === 'info') void reread();
-  });
 
   // A notice's card: the deck, in the card's kind. Before the deck is drawn — it waits for the sport,
   // which is read off the phone — so it is never read for one kind and then another.
@@ -231,29 +199,13 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
         {...(arrival === undefined ? {} : { opening: arrival.sport })}
         header={(pill, cover) => (
-          <ScreenHeader
-            compact
-            onBack={() => router.back()}
+          <GroupHeader
+            groupId={groupId}
+            group={group}
             backLabel={COPY.back}
-            lead={
-              group === undefined
-                ? undefined
-                : // The open bar covers the tile whole or not at all (#529).
-                  cover(<GroupMonogram monogram={group.monogram} size="header" />)
-            }
-            title={group?.name}
-            subline={
-              group === undefined
-                ? undefined
-                : membersAtClub(group.memberCount, group.homeClub.name)
-            }
-            {...(group?.kind === 'OFFICIAL'
-              ? {
-                  titleMark: <OfficialMark fontSize={theme.type.h2.fontSize} />,
-                  titleLabel: groupHeaderLabel(group),
-                }
-              : {})}
-            right={group === undefined ? undefined : pill}
+            pill={pill}
+            cover={cover}
+            onOpen={() => router.push(groupInfoRoute(groupId))}
           />
         )}
       >
@@ -272,13 +224,7 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
             )
           ) : (
             <>
-              <GroupTabs
-                groupId={groupId}
-                isOwner={group.isOwner}
-                sport={playing}
-                selected={tab}
-                onSelect={select}
-              />
+              <GroupTabs groupId={groupId} sport={playing} selected={tab} onSelect={setTab} />
               {tab === 'games' && playing !== undefined ? (
                 // The deck lays itself out — see the module note.
                 <View style={s.fill}>
@@ -295,22 +241,13 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
                   contentContainerStyle={s.body}
                   refreshControl={tab === 'friends' ? undefined : pullControl}
                 >
-                  {/* Info is about the group rather than a sport, so it never waits for the filter. */}
-                  {tab === 'info' ? (
-                    <InfoTab group={group} />
-                  ) : toAdd.length > 0 ? (
+                  {toAdd.length > 0 ? (
                     <AddSportCard sports={toAdd} />
                   ) : sport === undefined ? null : (
                     <TabBody tab={tab} group={group} sport={sport} />
                   )}
                 </ScrollView>
               )}
-              {/* Info's way out, at the page's foot and never scrolled away (#529). */}
-              {tab === 'info' ? (
-                <View style={s.exit}>
-                  <ExitDoor group={group} />
-                </View>
-              ) : null}
               {tab === 'fillIn' && toAdd.length === 0 ? (
                 <View style={s.postAGame}>
                   <PostAGame groupId={groupId} />
@@ -330,7 +267,7 @@ function TabBody({
   group,
   sport,
 }: {
-  readonly tab: Exclude<GroupTab, 'info'>;
+  readonly tab: GroupTab;
   readonly group: Group;
   readonly sport: Sport;
 }) {
@@ -349,12 +286,6 @@ const s = StyleSheet.create({
   tabs: { marginHorizontal: theme.size.gutter },
   fill: { flex: 1 },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
-  // Under the scroll rather than over it, so nothing on Info is ever behind the door.
-  exit: {
-    paddingHorizontal: theme.size.gutter,
-    paddingTop: theme.space.sm,
-    paddingBottom: theme.size.gutter,
-  },
   // Over the page's bottom corner, at the gutter (play 46).
   postAGame: { position: 'absolute', right: theme.size.gutter, bottom: theme.size.gutter },
 });

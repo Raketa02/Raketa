@@ -54,8 +54,10 @@ export const GROUPS_COPY = {
     refused: {
       group_not_found: 'This group isn’t one of yours.',
     },
-    /** The page's four tabs (play 43) — no counts: nothing claims news that does not exist. */
-    tabs: { games: 'Games', fillIn: 'Fill in', friends: 'Friends', info: 'Info' },
+    /** The page's three tabs (Q125) — no counts: nothing claims news that does not exist. */
+    tabs: { games: 'Games', fillIn: 'Fill in', friends: 'Friends' },
+    /** The header is the door to Info (Q125): the tile, the name and the line under it. */
+    openInfo: 'Opens Info',
   },
   /** The fast filter (play 41–42). */
   filter: {
@@ -103,8 +105,9 @@ export const GROUPS_COPY = {
     copied: 'Link copied',
     notCopied: 'Couldn’t copy the link',
   },
-  /** The Info tab (play 57–60, club 20; #514). */
+  /** Info, the group's own screen, opened from the page's header (play 57–60, club 20; #514, Q125). */
   info: {
+    back: 'Back to the group',
     /** The members row's policy line — who answers a request, from where the reader stands. */
     anyoneCanJoin: 'anyone can join',
     /** A search row's line for a group that asks — whoever answers (#529). */

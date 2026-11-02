@@ -1,5 +1,5 @@
 /**
- * **Joining a group, creating one, and the Info tab's four writes** — and what each does to the
+ * **Joining a group, creating one, and Info's four writes** — and what each does to the
  * cache.
  *
  * ## A join rewrites the row it came from, everywhere it is cached
@@ -210,7 +210,7 @@ export function useEditGroup(groupId: string) {
 }
 
 /**
- * *Leave the group* or *Delete the group* — whichever door the Info tab drew.
+ * *Leave the group* or *Delete the group* — whichever door Info drew.
  *
  * **Offline, the act waits for the network, as every write here does — and closing the sheet takes
  * it back** (`takeBack`, #529). A paused mutation is not the sheet's: `reset` only lets go of it, and

@@ -167,9 +167,9 @@ of the back arrow, which stands a `space.sm` gap before the tile. Sports that wo
 tile open the bar that far; sports that stop short of it end the bar where they do. Members has no
 tile and covers nothing.
 
-**Four tabs, no counts, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which
-tab nowhere). Games, Fill in and Friends are each drawn for the filter's sport; Info is
-[#514](https://github.com/Raketa02/Raketa/issues/514)'s, below. **Every starting
+**Three tabs, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which tab nowhere;
+Q125). Games, Fill in and Friends are each drawn for the filter's sport; Info is the group's own
+screen, opened from the header (below). **Every starting
 tab has one dark card whose remedy is the link** (`LinkCard`): a headline, what the app is waiting
 for, and **Share the link** (volt) beside **Copy link** (`onDark`). Share hands the phone's own
 sheet one sentence — _Join my raketa group on Raketa: <link>_, the administrator's WhatsApp words
@@ -229,28 +229,51 @@ than the mocks' coral pill with a glow: the pill is the chip's and the yes scree
 been seen on a device** — the unfold's pace, and whether four sports fit the bar on a 320pt phone,
 are asked for a look.
 
-**Info is the group rather than a sport of it** ([#514](https://github.com/Raketa02/Raketa/issues/514),
-stories 71–79; play 57–60, club 20). Top to bottom: **the link card** — the link in mono on one line,
-cut in the middle so its code stays in view, and **Share** and **Copy** beside it, drawn short and
-spoken whole (_Share the link_, _Copy link_), the same two doors as every other dark card on the page;
-**Want to join · N**, the Owner's; **the members row**; and **Edit group**, the Owner's. **The way
-out stands at the page's foot**, under what scrolls rather than in it (#529 F1), so it is in the same
-place however long the queue above it grows; the group page draws it, because the page owns the
-scroll. Info never waits for the filter's sport, because nothing on it is drawn for one.
+**The header opens Info** (Q125, the product owner's ruling of 2026-11-02, [#721](https://github.com/Raketa02/Raketa/issues/721)).
+Info was a fourth tab; the page now carries only the three tabs drawn for a sport, and Info — about
+the group, not one of its sports — opens from the group's own header, as WhatsApp, Telegram and
+iMessage open a group's info. **The tile, the name with the official mark and _N members · Home
+club_ are one button** (`GroupHeader` over `ScreenHeader`'s `onPress`), spoken by the group's name
+with the hint _Opens Info_: the whole header rather than the tile alone, because the tile is a small
+target. **The back arrow and the sport pill keep their own taps** — the header's row is the button
+and they are the deeper responders, which leaves the tile a direct child of the row, where the
+filter's `cover` measures it. **While the filter's bar is open it covers the tile**, over a backdrop
+across the page, so a tap there is the bar's. Info is **pushed over the page** at
+`/play/group/[groupId]/info`, so the page stays mounted under it with its tab in `groupTab.store`:
+**back from Info is the tab the player left** — Fill in after _Post a game_, the deck at a notice's
+card. Members and Edit group are pushed over Info now, so back from each is Info. **Not seen on a
+device**: the row's pressed look, and the badge on the 36pt tile and beside the open bar, are asked
+for a look.
 
-**The Info tab counts the requests waiting on an Owner, and Info re-reads on a pull**
-([#529](https://github.com/Raketa02/Raketa/issues/529) D6). The count is the Chats badge at the
-segment's size (`Segment`'s `badge`, `size.segmentBadge`) over the tab's top-right corner, drawn from
-every tab and spoken with the tab's name (_Info, 2 requests waiting_), so an Owner on Games knows
-somebody is asking. It reads the Owner's requests under the same key as _Want to join_, so the page
-now asks for them as it opens rather than when Info is opened, and an answer that takes a row takes
-it off the count in the same frame. Nobody but the Owner reads the requests, so nobody else's tab
-carries a count. **A pull on Info** re-reads the group and everything read under it that is on
-screen — who is waiting, the members row, the count. Games and Fill in pull too since 2026-10-12
-(below); Friends keeps none. **So does coming back to Info** (#529 F2): from another tab, and from a
-screen pushed over the page (Members, Edit group, by `useOnReturn`), so what another phone changed
-meanwhile is on it without a pull. The first look at Info re-reads what the page asked for as it opened; that
-is one more read of the group and the requests, paid on a tap.
+**Info is the group rather than a sport of it** ([#514](https://github.com/Raketa02/Raketa/issues/514),
+stories 71–79; play 57–60, club 20), and its own screen since Q125 (`GroupInfoScreen`). **Its header is
+the page's without the sport pill, and presses nothing**; its body is unchanged. Top to bottom: **the
+link card** — the link in mono on one line, cut in the middle so its code stays in view, and
+**Share** and **Copy** beside it, drawn short and spoken whole (_Share the link_, _Copy link_), the
+same two doors as every other dark card on the page; **Want to join · N**, the Owner's; **the
+members row**; and **Edit group**, the Owner's. **The way out stands at the screen's foot**, under
+what scrolls rather than in it (#529 F1), so it is in the same place however long the queue above it
+grows, and success lands on the Groups list past the page (`dismissTo`). Info never waits for the
+filter's sport, because nothing on it is drawn for one.
+
+**The Owner's count of waiting requests is on the tile's corner** ([#529](https://github.com/Raketa02/Raketa/issues/529)
+D6; the Info tab's until Q125). It is the badge the tab carried — the Chats badge at the segment's
+size, `CornerBadge` (lifted out of `Segment`, which draws it over Games and Fill in), `size.segmentBadge`
+— over the tile's top-right corner, on the page from every tab and on Info's header, and **spoken
+with the header** (_Kazimierz crew, 8 members · Centrum Ruchu, 2 requests waiting_), so an Owner on
+Games knows somebody is asking. It reads the Owner's requests under the same key as _Want to join_,
+so the page asks for them as it opens, and an answer that takes a row on Info takes it off the tile
+in the same frame — the page shows the new count on the way back. Nobody but the Owner reads the
+requests, so nobody else's tile carries a count. A player group's header with no count is named by
+its drawn words, not labelled with them (`groupHeaderLabel`).
+
+**Info re-reads when it opens, on a pull, and on coming back to it** (#529 F2, Q125) — the group and
+everything read under it that is on screen: who is waiting, the members row, the count. Opening it
+re-reads what the page asked for as it opened, one more read of the group and the requests paid on a
+tap, because what another phone changed meanwhile has to be on it without a pull; coming back from
+Members or Edit group is `useOnReturn`. **The page no longer re-reads on a return**: only Info did,
+and Info is its own screen now; what Info's writes change they write into the group's read, which the
+page draws too. Games and Fill in pull (below); Friends keeps none.
 
 **The members row is the server's faces and the phone's arithmetic** (`domain/groupInfo.ts`'
 `membersRow`). The group's read serves up to five faces of everybody but the reader in Members' order
@@ -391,7 +414,7 @@ create do; no act here says so beside itself yet. **Nothing here has been seen o
 official group is a Group, so the tile, the dots, the group forms' two cards, the request row, a
 failed read, the row face, the stacked faces and the words they share are exported for that one
 caller, and the dependency points one way. Four changes made the lending possible without changing
-what this feature draws: **the members row's faces left `InfoTab`** for `FaceStack`, which the members
+what this feature draws: **the members row's faces left `InfoTab`** (now `GroupInfoScreen`) for `FaceStack`, which the members
 card on an official group's page draws too; **the request row left `WantToJoin`** for `RequestRow`,
 which answers nothing itself — the two taps are props, so an Owner's queue and an Administrator's each
 answer through their own routes, as #514's handover suggested; **_Who can join_ can be drawn without its _no sport to pick_ note**
@@ -440,9 +463,9 @@ handed the group's `declaredSports` (absent on a player group), so the filter li
 reader is rated in **among them** and opens on one of them whatever was picked elsewhere; opening is
 not picking, so the phone keeps what the player last picked. **A member rated in none of them**
 gets `AddSportCard` — _This group plays padel_ / _Add padel to your Skill passport to see its games._
-— in place of Games, Fill in and Friends, and of Members' list, with no pill and no _+ Post a game_.
-**Info is drawn as ever**, because the way out is not a sport's: a member who cannot play a group's
-sports must still be able to leave it. Each of its buttons, one per sport the group plays, is the
+— on all three tabs, and in place of Members' list, with no pill and no _+ Post a game_. **The header
+still opens Info**, because the way out is not a sport's: a member who cannot play a group's sports
+must still be able to leave it. Each of its buttons, one per sport the group plays, is the
 Skill passport's _Add a sport_ for that sport (`useAddASport`), so the questionnaire is onboarding's
 and the pass ends where every pass begun there does — on the passport, not back on the group. A
 declared list this build can name none of — an older build after a sport is added — is carried as
@@ -472,7 +495,7 @@ store, which Friends' switch shares, so one choice is one choice on both tabs �
 to draw while the segment deals nothing. **The starting card is unchanged** (_Just you so far_, _3 of
 4_, _Nothing picked right now_), and _Nothing picked right now_ gains a third door under the link's
 two, _Post a game_ — Fill in's own `PostAGame`, in `LinkCard`'s `foot`, open since #558. **The tab bar counts Games** — the cards somebody is already In on with you, off
-the same deck read the tab draws (`useGamesBadge`), in the Info badge's mark and spoken _Games, 4 with
+the same deck read the tab draws (`useGamesBadge`), in the requests count's mark and spoken _Games, 4 with
 somebody In_; and Fill in counts its _Seats to fill_ (below). **Games lays itself out**:
 the deck fills the page between its switch and its three buttons, so `GroupScreen` draws it outside
 the page's scroller, and the deck scrolls itself in the states that are not a deck. Every suite that
@@ -492,8 +515,8 @@ for it. The tab's walk is `groupFillIn.test.tsx`; the board's record is [`propos
 **Games and Fill in re-read on a pull** (2026-10-12, asked by the product owner). Until then only Info
 pulled, and a game posted, a seat offered or a card filled on another phone reached the two tabs only
 on a refocus or an answer's re-read. **One control and one spinner for the page** (`usePull`, the
-Shell's drawing), re-reading what the tab on screen draws: on Info the group, as before; on Games and
-Fill in the group — the header's count and the starting cards' roster — and every read `proposals`
+Shell's drawing), re-reading on Games and Fill in the group — the header's count and the starting
+cards' roster — and every read `proposals`
 draws the two tabs from (`useRereadGroupGames`: the decks, Fill in, _You're In_'s yeses and their
 games), of which only those on screen go out at once. **Fill in's control is the page's scroller's**;
 **Games' is handed to the deck**, which lays itself out and puts it on whichever scroller it is in —

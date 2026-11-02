@@ -15,6 +15,7 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
@@ -79,7 +80,7 @@ export function useGroupMembers(groupId: string, sport: Sport) {
 /**
  * **The Owner's read** — anybody else is refused (`not_the_group_owner`), so it is asked only
  * `enabled` for the Owner, and a read that can only be refused is never asked. Two surfaces read
- * it under one key: *Want to join* on Info, and the Info tab's count on every tab (#529) — so an
+ * it under one key: *Want to join* on Info, and the count on the group's tile (#529, Q125) — so an
  * answer that takes a row takes it off the count in the same frame.
  */
 export function useJoinRequests(groupId: string, enabled = true) {
@@ -100,11 +101,32 @@ export function useMyGroupsReread(): () => Promise<void> {
 }
 
 /**
- * **Info's pull** — the group, and everything read under it that is on screen: who is waiting,
- * and so the tab's count. What is not on screen is marked stale and read when it is next looked
- * at. Resolves once the re-reads have landed, refused or not — a refusal is the read's own to say.
+ * **The group's re-read** — the group, and everything read under it that is on screen: who is
+ * waiting, and so the tile's count. What is not on screen is marked stale and read when it is next
+ * looked at. Resolves once the re-reads have landed, refused or not — a refusal is the read's own
+ * to say. Info's pull and the page's (with its games) hand it to `usePull`. One function for as long
+ * as the group is the same, so an effect may depend on it.
  */
 export function useGroupReread(groupId: string): () => Promise<void> {
   const client = useQueryClient();
-  return () => client.invalidateQueries({ queryKey: groupKeys.detail(groupId) });
+  return useCallback(
+    () => client.invalidateQueries({ queryKey: groupKeys.detail(groupId) }),
+    [client, groupId],
+  );
+}
+
+/**
+ * **Info's read** (Q125) — the group, read again **when Info opens** and **each time it is come back
+ * to** from Members or Edit group, so what another phone changed meanwhile is on it without a pull
+ * (#529 F2). Opening it re-reads what the page asked for as it opened: one more read of the group
+ * and the requests, paid on a tap. Hands back the re-read for Info's pull.
+ */
+export function useGroupInfo(groupId: string) {
+  const read = useGroup(groupId);
+  const reread = useGroupReread(groupId);
+  useEffect(() => {
+    void reread();
+  }, [reread]);
+  useOnReturn(() => void reread());
+  return { read, reread };
 }

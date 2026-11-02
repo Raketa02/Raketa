@@ -22,6 +22,7 @@ import {
   friendsPicked,
   gamesHeadline,
   gamesLine,
+  groupHeaderLabel,
   groupRowMeta,
   membersAtClub,
   membersLine,
@@ -164,7 +165,42 @@ describe('the group page’s sentences', () => {
   });
 });
 
-describe('the Info tab', () => {
+describe('a group’s header, spoken', () => {
+  const KAZIMIERZ = {
+    kind: 'PLAYER',
+    name: 'Kazimierz crew',
+    memberCount: 8,
+    homeClub: { id: 'club-centrum', name: 'Centrum Ruchu' },
+  } as const;
+  const OGRODY_33 = {
+    ...KAZIMIERZ,
+    kind: 'OFFICIAL',
+    name: 'Ogrody 33 Club',
+    memberCount: 12,
+    homeClub: { id: 'club-ogrody', name: 'Ogrody 33' },
+  } as const;
+
+  it('is the drawn words alone for a player group nobody is waiting on', () => {
+    expect(groupHeaderLabel(KAZIMIERZ)).toBeUndefined();
+    expect(groupHeaderLabel(KAZIMIERZ, 0)).toBeUndefined();
+  });
+
+  it('says official, which the mark beside the name draws without words', () => {
+    expect(groupHeaderLabel(OGRODY_33)).toBe('Ogrody 33 Club, official, 12 members · Ogrody 33');
+  });
+
+  // Q125: the Owner's count moved from the Info tab to the tile, and is spoken with the header.
+  it('says how many are waiting on the Owner, which the tile’s badge draws', () => {
+    expect(groupHeaderLabel(KAZIMIERZ, 1)).toBe(
+      'Kazimierz crew, 8 members · Centrum Ruchu, 1 request waiting',
+    );
+    expect(groupHeaderLabel(OGRODY_33, 2)).toBe(
+      'Ogrody 33 Club, official, 12 members · Ogrody 33, 2 requests waiting',
+    );
+  });
+});
+
+describe('Info', () => {
   it('shows the link without its scheme', () => {
     expect(linkShown('https://raketa.app/join/K7PQ2MXA')).toBe('raketa.app/join/K7PQ2MXA');
     expect(linkShown('http://localhost:3000/join/K7PQ2MXA')).toBe('localhost:3000/join/K7PQ2MXA');

@@ -17,7 +17,7 @@
  * never unique — so the create is never retried, and the form's button is busy while it is in
  * flight (`useCreateGroup`).
  *
- * The Info tab's writes (#514) are each safe to repeat by the route's own word: approving
+ * Info's writes (#514) are each safe to repeat by the route's own word: approving
  * somebody already in and declining a request that is not waiting change nothing, saving what the
  * group already says records nothing, and a second *Leave* or *Delete* meets `group_not_found`.
  * None is retried all the same — every mutation's rule — and each control is busy in flight.

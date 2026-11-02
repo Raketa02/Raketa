@@ -39,6 +39,7 @@ import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
 import JoinGroupRoute from '@/app/(app)/(tabs)/play/join';
 import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]/index';
 import GroupFriendsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/friends';
+import GroupInfoRoute from '@/app/(app)/(tabs)/play/group/[groupId]/info';
 import GroupMembersRoute from '@/app/(app)/(tabs)/play/group/[groupId]/members';
 import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
 import GameDetailsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/game/[proposalId]';
@@ -143,6 +144,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/join': JoinGroupRoute,
   '(app)/(tabs)/play/group/[groupId]/index': GroupRoute,
   '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
+  '(app)/(tabs)/play/group/[groupId]/info': GroupInfoRoute,
   '(app)/(tabs)/play/group/[groupId]/members': GroupMembersRoute,
   '(app)/(tabs)/play/group/[groupId]/edit': GroupEditRoute,
   '(app)/(tabs)/play/group/[groupId]/game/[proposalId]': GameDetailsRoute,

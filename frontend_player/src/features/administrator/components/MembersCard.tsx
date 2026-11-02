@@ -2,7 +2,7 @@
  * **The members card** — how many, and how much of the group has arrived (club 11, 18, 19; PRD
  * #500 story 130; #529).
  *
- * Info's members row's drawing — the door to **Members** a member has on a player group's Info tab
+ * Info's members row's drawing — the door to **Members** a member has on a player group's Info
  * — on the Administrator's page: up to five stacked faces, the newest first, *+N* for everybody
  * else, *N members*, and a chevron. **A tap opens Members**, the member's own screen (the rows, the
  * score tags, a tap on a row opening the record), so the Administrator sees who is in by sport and

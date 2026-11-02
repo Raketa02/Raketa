@@ -17,8 +17,8 @@
  * player meets it, on the screens that draw one.
  */
 
-import { render, screen, within } from '@testing-library/react-native';
-import { StyleSheet, Text, type TextStyle } from 'react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 
 import { ScreenHeader } from './ScreenHeader';
 import { theme } from './theme';
@@ -117,6 +117,74 @@ describe('what the header is called', () => {
     // it is found the way every other named thing in this app is, and the drawn line is not.
     expect(screen.getByLabelText('tomek.p and ola.k, Padel, planning')).toBe(header);
     expect(screen.queryByLabelText('tomek, ola')).toBeNull();
+  });
+});
+
+describe('a header that is a button', () => {
+  /**
+   * A group's page opens its Info from its header (Q125): the tile, the name and the line under
+   * it are one door, and what a listener lands on says that it does something rather than only
+   * what the screen is.
+   */
+  function drawPressable(onPress: () => void, onBack = noop, onPill = noop) {
+    render(
+      <ScreenHeader
+        compact
+        title="Kazimierz crew"
+        subline="8 members · Centrum Ruchu"
+        lead={<View testID="tile" />}
+        onBack={onBack}
+        backLabel="Back to Groups"
+        right={
+          <Pressable accessibilityRole="button" accessibilityLabel="Sport: Padel" onPress={onPill}>
+            <Text>Padel</Text>
+          </Pressable>
+        }
+        onPress={onPress}
+        pressHint="Opens Info"
+      />,
+    );
+  }
+
+  it('is one button, named by its words, with what it opens as its hint', () => {
+    drawPressable(noop);
+
+    const named = screen.getByRole('button', { name: /^Kazimierz crew/ });
+    expect(named.props.accessibilityHint).toBe('Opens Info');
+    expect(within(named).getByText('8 members · Centrum Ruchu')).toBeTruthy();
+    expect(screen.queryByRole('header')).toBeNull();
+  });
+
+  it('is pressed from the lead, the title or the sub-line alike', () => {
+    const onPress = jest.fn();
+    drawPressable(onPress);
+
+    fireEvent.press(screen.getByTestId('tile'));
+    fireEvent.press(screen.getByText('Kazimierz crew'));
+    fireEvent.press(screen.getByText('8 members · Centrum Ruchu'));
+
+    expect(onPress).toHaveBeenCalledTimes(3);
+  });
+
+  it('leaves the back control and the right slot their own presses', () => {
+    const onPress = jest.fn();
+    const onBack = jest.fn();
+    const onPill = jest.fn();
+    drawPressable(onPress, onBack, onPill);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Back to Groups' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Sport: Padel' }));
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onPill).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('is a heading, and no button, where the screen gives it nothing to open', () => {
+    render(<ScreenHeader compact title="Kazimierz crew" subline="8 members · Centrum Ruchu" />);
+
+    expect(screen.getByRole('header', { name: /^Kazimierz crew/ })).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 

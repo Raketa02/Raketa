@@ -65,8 +65,9 @@ licence for a second dark surface.
 - **Colour is picked by meaning:** coral = the one accent · mint = settled · amber =
   reversible, not yet wrong · red = ended badly · info = explanation, not status.
 - **§1.2's coral list is closed at six** — primary button, active tab, level mark, onboarding
-  progress fill, hot tag, the tab bar's badge (the same mark at a segment's size counts an Owner's
-  requests on a group's Info tab — one meaning, two surfaces). A sixth-and-a-half is not a
+  progress fill, hot tag, the tab bar's badge (the same mark at a segment's size, `CornerBadge`,
+  counts a group page's Games and Fill in and an Owner's requests on the group's tile — one
+  meaning, every surface). A sixth-and-a-half is not a
   taste call: pick the meaning and you will land on `amber` or on `ink`, which is where the
   row stripe and the rail's current dot both landed.
 - **A `Tag`'s dot is the sport's and only the sport's — except on Home's game card, where it is

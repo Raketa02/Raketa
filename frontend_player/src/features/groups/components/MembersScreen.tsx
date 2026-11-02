@@ -2,9 +2,9 @@
  * **Members** — who in the group the reader could play the filter's sport with (play 61;
  * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 80–84).
  *
- * Pushed over a group's page from Info's members row. The header is *Members · N* and **the sport
- * pill, sharing the filter's one state** (`SportFilterPage`): a sport picked here is the page's
- * sport when the player goes back. **N is how many rows the list draws for the pill's sport**, so
+ * Pushed over Info from its members row (Q125). The header is *Members · N* and **the sport pill,
+ * sharing the filter's one state** (`SportFilterPage`): a sport picked here is the group page's
+ * sport when the player goes back to it. **N is how many rows the list draws for the pill's sport**, so
  * it moves when the sport does — the title reads the list's own query, one key and one request —
  * and the title is the word alone until the list is in, or where there is no sport to list. It
  * carries no eyebrow — the group's name and count over it said nothing the page it was pushed from

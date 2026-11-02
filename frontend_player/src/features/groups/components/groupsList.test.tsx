@@ -247,7 +247,10 @@ describe('a group’s page', () => {
   it('is headed by the name and N members · home club, each on one line', async () => {
     await openGroup(OGRODY_OPEN_PLAY);
 
-    const header = await screen.findByRole('header', { name: /Ogrody open play/ });
+    // A button since Q125 — it opens Info — found by what it opens: the list's card under the page
+    // is named by the group too.
+    const header = await screen.findByHintText(GROUPS_COPY.group.openInfo);
+    expect(header.props.accessibilityRole).toBe('button');
     expect(within(header).getByText('Ogrody open play').props.numberOfLines).toBe(1);
     expect(within(header).getByText('8 members · Ogrody 33').props.numberOfLines).toBe(1);
   });

@@ -52,15 +52,23 @@ export function groupFriendsRoute(groupId: string, sport: Sport) {
 }
 
 /**
- * **Members** (play 61), pushed over a group's page from Info's members row. No sport in the
- * route: the page shares the fast filter's one state, so it opens on the sport the group page is
- * on and a pick there is the page's too.
+ * **Info** (play 57–60), the group's own screen — pushed over its page from the page's header
+ * (Q125), so *back* is the page, on the tab the player left.
+ */
+export function groupInfoRoute(groupId: string) {
+  return { pathname: '/play/group/[groupId]/info', params: { groupId } } as const;
+}
+
+/**
+ * **Members** (play 61), pushed over Info from its members row. No sport in the route: it shares
+ * the fast filter's one state with the group's page, so it opens on the sport the page is on and a
+ * pick there is the page's too.
  */
 export function groupMembersRoute(groupId: string) {
   return { pathname: '/play/group/[groupId]/members', params: { groupId } } as const;
 }
 
-/** **Edit group**, pushed over a group's page from Info's Edit group row — the Owner's. */
+/** **Edit group**, pushed over Info from its Edit group row — the Owner's. */
 export function groupEditRoute(groupId: string) {
   return { pathname: '/play/group/[groupId]/edit', params: { groupId } } as const;
 }

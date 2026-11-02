@@ -1,7 +1,7 @@
 /**
  * **Want to join · N** — an official group's queue, between the link card and the players (club 18,
  * 20; PRD #500 story 129). **Club 20's card, everywhere**: the same row an Owner answers on a player
- * group's Info tab (`groups`' `RequestRow`) — face, whole Name, every sport with its Level — with
+ * group's Info (`groups`' `RequestRow`) — face, whole Name, every sport with its Level — with
  * **✕** and **Approve**, answered through the Administrator's own routes.
  *
  * **An answer takes its row at once** (`useAnswerAsAdministrator`): the tap ends the request

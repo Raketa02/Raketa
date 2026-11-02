@@ -1,6 +1,9 @@
 /**
  * **Info** — the group itself rather than a sport of it (play 57–60, club 20;
- * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 71–79). Top to bottom:
+ * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 71–79), **its own screen
+ * since Q125**: pushed over the group's page from the page's header, so *back* is the page, on the
+ * tab the player left. Its header is the page's without the sport pill, and presses nothing
+ * (`GroupHeader`). Top to bottom:
  *
  * - **The link card** — dark, the link in mono, and **Share** and **Copy** beside it: the link is
  *   always one tap away (story 71).
@@ -9,27 +12,41 @@
  *   approves joins, and a chevron: the door to **Members** (story 72).
  * - **Edit group** — the Owner's, a door row (story 75).
  *
- * **The way out is not here**: *Delete the group* or *Leave the group* (`ExitDoor`) stands at the
- * page's foot under Info, outside what scrolls, so it is always in the same place however long the
- * queue above it is (#529). The group page draws it, because the page owns the scroll.
+ * **The way out stands at the screen's foot**: *Delete the group* or *Leave the group* (`ExitDoor`),
+ * outside what scrolls, so it is always in the same place however long the queue above it is
+ * (#529). Success lands on the Groups list, past the page.
  *
- * **Info is not drawn for a sport**: the members row counts everybody, and Members opens on the
- * filter's sport. Nothing on it is computed on the phone — who owns the group, who has been in
- * longest and which faces come first are all the server's — and a block hides nobody on it
- * (ADR-0193 §2).
+ * **Info re-reads when it opens, on a pull, and each time it is come back to** from Members or Edit
+ * group (#529, Q125; `useGroupInfo`) — the group, who is waiting and the members row with it — so
+ * what another phone changed meanwhile is on it without a pull. The page it was opened from does not re-read on
+ * the way back: what Info writes, it writes into the group's read, which the page draws too.
+ *
+ * **Info is not drawn for a sport**, so it never waits for the filter: the members row counts
+ * everybody, and Members opens on the filter's sport. A member who must add a sport to see an
+ * official group's games reaches it — and the way out — as every member does. Nothing on it is
+ * computed on the phone — who owns the group, who has been in longest and which faces come first
+ * are all the server's — and a block hides nobody on it (ADR-0193 §2). Every state has its drawing,
+ * as the page's: while the read is on its way the header has only its way back, and a failure says
+ * why and offers the retry.
  */
 
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { codeMessage } from '@/shared/errors';
 import { Card, DarkCard, DoorRow, PressableCard, theme } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
 import { membersRow, readerFace } from '../domain/groupInfo';
+import { useGroupInfo } from '../hooks/useGroups';
+import { usePull } from '../hooks/usePull';
 import { useReaderId } from '../hooks/useReaderId';
 
+import { ExitDoor } from './ExitDoor';
 import { FaceStack } from './FaceStack';
+import { GroupHeader } from './GroupHeader';
 import { GroupLinkActions } from './GroupLinkActions';
 import { groupEditRoute, groupMembersRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
@@ -40,12 +57,60 @@ import {
   membersLine,
   membersRowLabel,
 } from './groupsPresentation';
+import { ReadFailure } from './ReadFailure';
 import { SportDots } from './SportDots';
 import { WantToJoin } from './WantToJoin';
 
 const COPY = GROUPS_COPY.info;
 
-export function InfoTab({ group }: { readonly group: Group }) {
+export function GroupInfoScreen({ groupId }: { readonly groupId: string }) {
+  // Re-read as it opens and as it is come back to — `useGroupInfo`'s.
+  const { read, reread } = useGroupInfo(groupId);
+  const group = read.data;
+  const { refreshing, pull } = usePull(reread);
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <GroupHeader groupId={groupId} group={group} backLabel={COPY.back} />
+      {group === undefined ? (
+        read.error === null ? null : (
+          <View style={s.body}>
+            <ReadFailure
+              error={read.error}
+              message={codeMessage(GROUPS_COPY.group.refused, read.error)}
+              onRetry={() => void read.refetch()}
+            />
+          </View>
+        )
+      ) : (
+        <>
+          <ScrollView
+            testID="group-info-body"
+            contentContainerStyle={s.body}
+            refreshControl={
+              // The Shell's control, drawn as the Shell draws it.
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={pull}
+                tintColor={theme.color.muted}
+                colors={[theme.color.muted]}
+                progressBackgroundColor={theme.color.paper}
+              />
+            }
+          >
+            <InfoBody group={group} />
+          </ScrollView>
+          {/* The way out, at the screen's foot and never scrolled away (#529). */}
+          <View style={s.exit}>
+            <ExitDoor group={group} />
+          </View>
+        </>
+      )}
+    </SafeAreaView>
+  );
+}
+
+function InfoBody({ group }: { readonly group: Group }) {
   return (
     <>
       <InfoLinkCard group={group} />
@@ -127,6 +192,14 @@ function MembersRow({ group }: { readonly group: Group }) {
 }
 
 const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: theme.color.paper },
+  body: { padding: theme.size.gutter, gap: theme.space.sm },
+  // Under the scroll rather than over it, so nothing on Info is ever behind the door.
+  exit: {
+    paddingHorizontal: theme.size.gutter,
+    paddingTop: theme.space.sm,
+    paddingBottom: theme.size.gutter,
+  },
   linkCard: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   link: { ...theme.num.s, color: theme.color.surface, flex: 1 },
   membersCard: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
