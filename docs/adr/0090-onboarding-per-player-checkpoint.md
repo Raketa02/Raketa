@@ -3,7 +3,14 @@
 - **Status:** Accepted — **the entry gate's list amended 2026-09-15 by
   [ADR-0171](0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md) §3**: a
   fifth destination, *no name → the naming step*, read **first**, and passing the narrowed
-  invariant's test the way the Player profile does. Everything else here stands.
+  invariant's test the way the Player profile does. **Its Part 1 and two of the gate's
+  destinations taken out 2026-11-03 by [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §1**: onboarding is
+  the naming and the six profile steps, and the questionnaire is reached where play begins. The
+  gate loses *unfinished run → resume* and *no ratings → welcome*, and reads the profiles, then
+  *no nickname* ([ADR-0199](0199-a-player-is-known-by-their-nickname.md) §3), then *no Player profile*, then the
+  app. *A profile with zero ratings* is now the common shape rather than one the flow cannot
+  produce. Everything else here stands: the profile's checkpoint, its client-held draft and its
+  one commit.
 - **Date:** 2026-08-25
 - **The entry gate gains one read ahead of all five destinations, from [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §3** (2026-09-25): the account's profiles — administrator-only goes to the administrator area and skips onboarding; two profiles open in the last used. Its first destination reads *not named in full* (§4).
 

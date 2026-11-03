@@ -1,6 +1,9 @@
 # ADR-0185 — One account holds several profiles, and a password change signs out everywhere
 
-- **Status:** Accepted
+- **Status:** Accepted — **its §4 amended 2026-11-03 by [ADR-0199](0199-a-player-is-known-by-their-nickname.md)** §3–§4: an account
+  an Invitation opens holds no player name, the name the club typed stays on the Administrator, and
+  the naming asks for a nickname alone. The gate's first player destination reads *no nickname*.
+  Everything else stands.
 - **Date:** 2026-09-25
 - **Amends [ADR-0004](0004-jwt-access-with-rotating-refresh-tokens.md)** in two places, and
   takes the "new decision" its *Harder* reserved:

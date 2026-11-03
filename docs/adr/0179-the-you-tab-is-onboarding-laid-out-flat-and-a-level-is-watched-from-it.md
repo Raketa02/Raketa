@@ -1,6 +1,13 @@
 # ADR-0179 — The You tab is onboarding laid out flat, and a level is watched from it
 
-- **Status:** Accepted
+- **Status:** Accepted — **its §3 amended 2026-11-03 by [ADR-0200](0200-a-level-is-asked-where-play-begins.md)** §5: a pass
+  begins at a group's tab, at Home or at the Skill passport, and ends where it began, *Done for now*
+  included; an unfinished run is never forced, because the gate's *resume* branch is gone. **§2's
+  *Where you play* row and §8's *Not `has_location`* amended 2026-11-03 by ADR-0200 §10**: an area
+  is still required, and a club picked by hand (*Pick a club near where you play*) stands in for a
+  reading; the screen offers both. **§1's *Finding players* renamed *Your games* 2026-11-03 by
+  ADR-0200 §10.** **§1's *Name* row is *Nickname*** from
+  [ADR-0199](0199-a-player-is-known-by-their-nickname.md) §3, edited by §7's same act, which stands.
 - **Date:** 2026-09-17
 - **§2's *Player reliability* row amended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §1 and §6. The screen
   draws the **figure, its band word** (*Very high · High · Medium · Low*) and *New*, then four

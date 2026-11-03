@@ -4,6 +4,11 @@
   `play_intent_not_declared`* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §2: the deck reads no
   declaration and deals under one ruler. `DECK` stays in the closed five for the events that
   carry it.
+  **The Context's ordering constraint (3, *a profile therefore does not exist until every rating
+  already does*) amended 2026-11-03 by [ADR-0200](0200-a-level-is-asked-where-play-begins.md)**: onboarding no longer
+  rates, so a profile now exists before any rating. The decision it argued for, intent in its own
+  aggregate, stands. The Decision's *declared at the tail of every rating run* no longer describes
+  the app: intent is declared on the group deck's declaration step and on the You tab.
 - **Date:** 2026-08-26
 
 > **Overrules two recommendations in the matchmaking input document**

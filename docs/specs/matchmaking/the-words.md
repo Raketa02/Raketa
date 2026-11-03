@@ -222,39 +222,43 @@ skill card draws the range as a bracket under the level bar and says it `Likely 
 
 ## 15. Names
 
-A player has a **Name** — free text, **2–64 characters**, spaces allowed, never unique — and a
-**Nickname**, a unique handle that is drawn as `@nickname` under the name on the You tab and on
-the record screen and is **said nowhere**
-([ADR-0171](../../adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
-**The name is what every sentence says**, and ADR-0107 §4's rule reads on it: *every sentence
-naming somebody uses the whole name or names nobody — the prototype's `split(' ')[0]` has nothing
-behind it here, and inventing a first name is the product addressing a person by a name they
-never gave it.* A name the player typed with a space in it is a name they gave; a first name cut
-out of it by a sentence is not.
+> **Rewritten 2026-11-03 by [ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)**, which supersedes
+> [ADR-0171](../../adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
+> the Name is retired, and the nickname is what is said.
 
-> **One `playerName()`: the name, whole, and `You` for yourself.** Every sentence, toast and
-> spoken name that names somebody goes through it. No sentence, row, card, sheet, toast, seat
-> label or spoken name carries the nickname.
+A player is known in Raketa by one thing: their **Nickname**, a unique handle of **2–64
+characters** from `[A-Za-z0-9_.-]`, which they chose and can change at any time. **The nickname is what every
+sentence says, and it is never written with an @**: *ania.k put a score up*, *Hi ania.k*, a card
+that draws **ania.k** large with nothing under it. ADR-0107 §4's rule reads on it: *every sentence
+naming somebody uses the whole handle or names nobody — the prototype's `split(' ')[0]` has nothing
+behind it here, and inventing a first name is the product addressing a person by a name they
+never gave it.* Nothing cuts a first name out of *ania.k*.
+
+> **One `playerName()`: the nickname, whole, and `You` for yourself.** Every sentence, toast,
+> notice, spoken name and email that names somebody goes through it. Nothing — no sentence, row,
+> card, sheet, toast, seat label or spoken name — puts an `@` in front of it.
 
 **The result screens name a person only where a person acted**
 ([ADR-0141](../../adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A games seat
-carries a name and nothing else about its occupant, so the row's eyebrow says *who you
+carries a nickname and nothing else about its occupant, so the row's eyebrow says *who you
 played* — the fact that tells two padel games in a week apart, where a duration cannot — and two
-sentences name somebody: *{name} put a score up* and *{name} agreed with your score*. **The two
-columns of a score stay sides.** A score is a **side's** claim, capped one per side and
-answerable by either of the two who played it, so a column headed with a name would charge a
+sentences name somebody: *{nickname} put a score up* and *{nickname} agreed with your score*.
+**The two columns of a score stay sides.** A score is a **side's** claim, capped one per side and
+answerable by either of the two who played it, so a column headed with a nickname would charge a
 doubles score to one of them and a listener reading a set cell by cell would hear the wrong
 person's six.
 
 **A seat label may truncate visually; a sentence may not, and a spoken name never does.**
 ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents nothing,
-and the accessible name carries the whole name, which is where the rule actually bites. A list
-truncates by dropping whole names (*Laia Quintana +2*), never by shortening one; where a box draws
-the **stem** (ADR-0157) it is cut at the name's first break — a dot or a space — so *Diego
-Fabregat* draws *Diego* there; what a box does past that, its own ellipsis, is that box's
-business. **The two initials over a generated poster are the one derived form** —
+and the accessible name carries the whole nickname, which is where the rule actually bites. A list
+truncates by dropping whole nicknames (*laia.q +2*), never by shortening one; where a box draws
+the **stem** (ADR-0157) it is cut at the nickname's first dot, so *diego.f* draws *diego* there;
+what a box does past that, its own ellipsis, is that box's business. **The two initials over a
+generated poster are the one derived form** —
 [ADR-0167](../../adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3's
-exception, cut from the name at the same break (*Ania Kowalska* → `AK`), its fence unchanged.
+exception, cut from the nickname: its first character, then the first character after its first
+`.`, `_` or `-`, else its second (*ania.k* → `AK`, *kuba* → `KU`, *dorota_w* → `DW`), its fence
+unchanged.
 
 **`{list}` — a list inside a sentence — is joined with commas and a final *and***, and nothing
 is dropped: `where and the hour`, `where, the day and the hour` on the checklist that first
@@ -262,9 +266,10 @@ wrote it (§22.6, gone with Classic play), and every list a sentence or a spoken
 the typists in a room, the people marked as not coming, the two sides of a forecast. One join,
 in `sentenceList.ts`.
 
-> **Elsewhere in this file, *handle* is the word of the day the section was written**, and names
-> what this section now calls the name — a `tomek.p` in an example is a seeded handle from before
-> ADR-0171. Every rule those sections cite is this one, and none of them is changed by the word.
+> **Elsewhere in this file, and in every spec, a player is named as the day it was written spelled
+> them.** A `tomek.p` is a seeded handle from before ADR-0171; *Diego Fabregat* or *Oscar Bertran*
+> is a name from ADR-0171's two months. Both read as nicknames now — *oscar.b left your game* —
+> and every rule those sections cite is this one, unchanged by the word.
 
 **§B16's side-name formatter is redrawn, not kept.** *"You + Marek"* is a layout that assumed
 short words; at 64 characters the 46px seat is the binding constraint (§G5 already lists the
@@ -735,7 +740,7 @@ retired with the press):
 The body still says what the ghost's says about the strands — the same fact about the same people:
 neither an evening nor a game that never happened, so nothing anybody is measured on moves — and
 the heading is the shortage's on both, because both are one. `{name}` is `called_off_by`'s
-whole name (§15).
+whole nickname (§15).
 
 **One word: called off.** The tag, the headings and every sentence in this section use it;
 ***cancel* appears nowhere** — not on a control, not in a sentence, not in a code — and *Call
@@ -992,25 +997,30 @@ anything else.
 > **Amended 2026-10-11** by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §1 and §6: Player
 > reliability is points, read with a band, and its screen carries the reliability filter. The
 > rows marked *(ADR-0195)* below say the new words; the words they replace are retired.
+>
+> **Amended 2026-11-03** by [ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md) and
+> [ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §10: *Finding players* is *Your
+> games*, the *Name* row is *Nickname* and draws no `@`, and *Where you play* offers a picked club.
+> The rows marked *(ADR-0199)* or *(ADR-0200)* say the new words.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The tab | `You` | the shell's; the eyebrow `Player profile` went in #529 (2026-10-02) |
-| The three group titles | `Playing` · `Finding players` · `On your card` | `flab`, uppercase by style; the shell's |
+| The three group titles | `Playing` · `Your games` · `On your card` | `flab`, uppercase by style; the shell's |
 | The rows, Playing | `Skill passport` · `Player reliability` · `What kind of game` | |
-| The rows, Finding players | `Your week` · `Where you play` · `Who you play with` | |
-| The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Name` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
+| The rows, Your games | `Your week` · `Where you play` · `Who you play with` | *(ADR-0200)* the group was `Finding players`; it also titles its screens' eyebrow |
+| The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Nickname` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
 | Live line, passport | `{sport} {level}` joined by ` · ` | one per rating, the registry's order |
 | Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Raketa02/Raketa/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
 | Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
 | Live line, week | `{n} slots ticked` · `Nothing ticked — we do not know when you play` | |
-| Live line, area | `Area set · updates when you open Raketa` | the one state — a profile cannot be committed without an area |
+| Live line, area | `Area set · updates when you open Raketa` | the one state — a profile cannot be committed without an area, a reading or *(ADR-0200)* a picked club; the words for a picked club on a phone without permission, which the cold start never updates, are [#733](https://github.com/Raketa02/Raketa/issues/733)'s |
 | Live line, who you play with | `Matched with anyone` · `… women only` · `… men only` | **the preference only** — the gender is drawn on its own screen and nowhere else on the tab |
 | Live line, record | `Your player record, as a stranger reads it` | |
 | Live line, photos | `{n} of 3 · profile photo on court` · `{n} of 3 · profile photo not checked as on court` · `None — a court poster stands in` | |
 | Live line, tags | `{n} of 6 · {first}, {second}, +{rest}` | the names, not the emoji |
 | Live line, intro | `“{intro}”` · `None — say it in your own words` | the second quotes the step's title |
-| Live line, name | `{name} · @{nickname}` | the tab is one of the two places the handle is drawn (§15) |
+| Live line, nickname | `{nickname}` | *(ADR-0199)* no `@` and no second line (§15); `{name} · @{nickname}` retired with the Name |
 | Passport, a card's status chip | `Initial estimate` · `Calibrating` · `Stable` | `ratingStatusLabel`, cited; drawn as a `Tag`, not a row — the result card's *Rating status* row stays under the bar as well |
 | Passport, add a sport | `Add a sport` · `One questionnaire, one rating. Nothing you already hold changes.` · chip `Rate {sport}` | the chip begins a pass of one sport (ADR-0179 §3) |
 | Passport, the ladder | `The ladder` · `{edges}` · `{band} · you ({sports})` · *the band's meaning* | `bandPresentation`'s meanings, cited |
@@ -1021,12 +1031,12 @@ anything else.
 | Reliability, a player someone filters out | `Some players in your groups play only with {band} reliability or above. At {floor} you're dealt with everyone again.` | *(ADR-0195)* names nobody; `{floor}` is the lowest band floor among the filters that hide them ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
 | What kind of game, under the title | `This changes how people find you` | replaces the section's heading and body; the footnote for an undeclared sport is #296's, cited |
 | Your week, the buttons | `Save your week` · `Saved` · `Clear all` | the grid's footnote is the step's, cited |
-| Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Read my area again` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went |
+| Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
 | Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
 | Photos | *the step's, whole* | title `Your court photos`; eyebrow `On-court only — up to three`; no *Continue* |
 | Tags, the button | `Save` · `Saved` · `Pick {n} more tag(s) to save` | the step's *to continue* becomes *to save* |
 | Intro, the buttons | `Save` · `Saved` · `Remove intro` | |
-| Name, the refusal | `That nickname is taken. Pick another.` | `authErrorMessage`'s, cited; the server's code |
+| Nickname, the refusal | `That nickname is taken. Pick another.` | `authErrorMessage`'s, cited; the server's code |
 | The foot | `Sign out` | the account panel's, as today |
 
 **What is cited.** The steps' eyebrows lose their *Step N of 8* and keep their bounds; the

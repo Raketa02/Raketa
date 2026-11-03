@@ -5,9 +5,9 @@ issue, a test, a type, a refactor proposal — use the term as defined here. Eve
 obeys this file; see [`CONTEXT-MAP.md`](CONTEXT-MAP.md) for how the vocabulary is
 split, and [`docs/adr/`](docs/adr/) for the decisions behind these terms.
 
-Raketa is a racket-sport platform. Today a player signs up, answers a questionnaire that gives
-them a **Skill rating** per sport, joins **Groups**, and is dealt games by their group's Games
-deck — the last yes books a club's court and charges every seat — while a **Club** runs its
+Raketa is a racket-sport platform. Today a player signs up, picks a nickname, joins **Groups**,
+answers a questionnaire for a **Skill rating** in a sport where a group first asks for one, and is
+dealt games by their group's Games deck — the last yes books a club's court and charges every seat — while a **Club** runs its
 courts, bookings and money on its website. That is served by the **player app**, the **club
 website**, the **public site** and one **backend** built on Clean Architecture (hexagonal ports &
 adapters), DDD, and event sourcing.
@@ -87,7 +87,7 @@ A rating is **never only a number**.
 - **Band** — one of four named ranges, deliberately uneven in width, each with a
   plain-language meaning: **New** 1,0–1,5 · **Developing** 1,6–2,6 · **Established**
   2,7–3,8 · **Advanced** 3,9–5,0.
-- **Rating status** — **Initial Estimate** (onboarding output, no counted matches) →
+- **Rating status** — **Initial Estimate** (the questionnaire's output, no counted matches) →
   **Calibrating** (real matches started, still moving) → **Stable**. **A count opens the
   door and certainty closes it** ([ADR-0139](docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)):
   the *first* confirmed counted result leaves Initial Estimate, and Stable is reached when
@@ -112,12 +112,17 @@ A rating is **never only a number**.
   at the average of its Levels, so **everybody on a side moves by the same amount** — a partner
   is not somebody you are rated against — while each of them keeps the certainty they had. And
   **a four is half the evidence about any one of the four**.
-  **No single evening moves a Level further than the ceiling** — a brake, because onboarding's
+  **No single evening moves a Level further than the ceiling** — a brake, because the questionnaire's
   uncertainty is a floor rather than a measurement and silence confirms a score nobody read.
   Decided by [ADR-0139](docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md).
 - **Volatility** — how fast the estimate currently appears to be moving.
 - **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
-  player and one sport.
+  player and one sport. **Started where play begins, never at sign-up** ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md)):
+  a player group's door (*Get your level*) for a player rated in nothing, an official group's own
+  card and Post a game's (*Rate padel*), *+ Another sport* at the end of a group's sport chip, the
+  Home card, and the **Skill passport**'s *Add a sport*. Its result returns to wherever it was
+  started. A run left unfinished is never forced on anybody: the door and the Home card offer to
+  carry it on (not yet built — [#729](https://github.com/Raketa02/Raketa/issues/729), [#730](https://github.com/Raketa02/Raketa/issues/730), [#731](https://github.com/Raketa02/Raketa/issues/731)).
 - **Transcript** — the answers a run has given, in order, each as a question and the option
   chosen for it. It is what the engine reads and the *only* thing it reads: given the same
   transcript the engine always returns the same next question and the same rating. It is a
@@ -158,8 +163,10 @@ A rating is **never only a number**.
   matched with, never where they sit.
 - **Skill passport** — the You tab's screen listing every Skill rating a player holds, one
   result card per sport with the record's blocks under it: a document a player **reads and cannot
-  write**. *Add a sport* on it starts one questionnaire for an unrated sport and ends back on it
-  ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §3).
+  write**. *Add a sport* on it starts one questionnaire for an unrated sport, and the result
+  returns to the passport, because a result returns to wherever its questions were started
+  ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §3,
+  [ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §5).
 
 **Invariants**
 - **A level is proved, never declared.** Not by the player, not by staff, not by a club.
@@ -177,9 +184,9 @@ A rating is **never only a number**.
 - **A contradiction is never resolved by picking a side.** It widens the range and raises
   calibration priority; it never moves the player up or down, and it never accuses them.
   Resolution has no direction, which is what stops under-reporting being profitable.
-- **Onboarding cannot produce confidence above 30%.** The questionnaire is the entire
-  evidence surface and self-report has an irreducible ceiling, enforced as a floor on σ
-  rather than as a display cap. Everyone leaves onboarding as an *Initial Estimate*.
+- **The questionnaire cannot produce confidence above 30%.** It is the entire evidence
+  surface and self-report has an irreducible ceiling, enforced as a floor on σ rather than as a
+  display cap. Every rating it produces is an *Initial Estimate*.
 - **A rating explains itself, and the explanation is computed, never authored.** Which way
   a kind of evidence pulled is decided by comparing it against the estimate, and which
   reason is given for the confidence is decided by whichever thing widened the range most.
@@ -245,29 +252,30 @@ Identity and account state.
   club's official groups and holds no power over the platform or over any account, and becoming
   one changes no `Authority`.
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
-- **Name** — value object. *What a player is called.* Free text: trimmed, runs of whitespace
-  collapsed to one space, 2–64 chars, **never unique** — two players may share one,
-  and it is checked against nobody. **The name is what every screen says**: every sentence, row,
-  card, sheet, toast, seat label and spoken name uses the whole name or names nobody; the two
-  initials over a generated poster stay the one derived form
-  ([ADR-0167](docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3),
-  cut from it. Null until the **naming**
-  ([ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)) —
-  except on an account an **Invitation** created, which carries **the name the club typed** from
-  the start and no Nickname
-  ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §4).
-- **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`, **unique**. A **handle**:
-  shown as `@nickname` under the name on a player's record and on their own You tab, and **said
-  nowhere** — never in a sentence, on a row, a card, a sheet, a toast, a seat label or a spoken
-  name. Null until the naming.
-- **The naming** — the one act that names a player: name and nickname together, asked in
+- **Name** — *retired 2026-11-03* ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md), superseding
+  [ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+  A player has no Name in Raketa, only a **Nickname** (not yet built —
+  [#724](https://github.com/Raketa02/Raketa/issues/724), [#728](https://github.com/Raketa02/Raketa/issues/728)). The name a club types when it invites
+  somebody is the **Administrator**'s (Administrators), never a player's. _Avoid_: a player's
+  *name*, *real name*, *display name*.
+- **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`, **unique**. A handle, and
+  **what every screen says**: every sentence, row, card, sheet, toast, notice, seat label, spoken
+  name and email names a player by their whole nickname or names nobody, and **never with an @** —
+  *ania.k put a score up*, *Hi ania.k*. The two initials over a generated poster stay the one
+  derived form ([ADR-0167](docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3),
+  cut from it: its first character, then the first character after its first `.`, `_` or `-`,
+  else its second (*ania.k* → `AK`, *kuba* → `KU`). **Changeable at any time** by the naming, for
+  as long as nobody else holds the new one, and everybody reads the new one from their next read.
+  Null until the naming ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md)).
+- **The naming** — the one act that names a player: **a nickname, and nothing else**, asked in
   onboarding's first step (*How should people see you?*) and never at sign-up, **repeatable** (a
-  later change is the same act), refused with `NicknameAlreadyTaken` when the handle is another
-  player's. Sign-up asks for credentials only — email, password, the Adult attestation — and a
-  `User` is created unnamed. Its step is reached while the account is **not named in full** and
-  asks only for what is missing: an account an Invitation created is asked for the nickname
-  alone, and the act still carries both (ADR-0185 §4). `/users/me` carries the name and the
-  nickname each on its own, so the step can tell which is missing.
+  later change from the You tab is the same act), refused with `NicknameAlreadyTaken` when
+  another account holds it. Sign-up asks for credentials only — email, password, the Adult
+  attestation — and a `User` is created without a nickname. Its step is reached while the account
+  has **no nickname**, an account an Invitation opened included, which reads *Pick a nickname —
+  it's how players will see you.*
+  ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §4,
+  amended by [ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). `/users/me` carries the nickname and no name.
 - **RawPassword** — the plaintext at the boundary; 8–128 chars with ≥1 letter and ≥1
   digit. Carrying it as a type is what prevents hashing an unchecked string.
 - **HashedPassword** — non-empty bcrypt hash; the only password form ever persisted.
@@ -296,13 +304,16 @@ Identity and account state.
     the one thing an attestation must not do. **Carries no nickname** since ADR-0171: the
     account is registered unnamed, and the version did not move because no store outlives the
     branch that changed the shape.
-  - **UserNamed** — `users.user_named` / v1 — the naming, carrying the **Name** and the
-    **Nickname** together; the fold keeps the latest.
+  - **UserNamed** — `users.user_named` / **v2** — the naming, carrying the **Nickname** alone;
+    the fold keeps the latest. v1 carried a Name beside it and is read with the name ignored
+    ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md) §6, not yet built — [#724](https://github.com/Raketa02/Raketa/issues/724)).
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
-  - **AccountOpenedByInvitation** — `users.account_opened_by_invitation` / v1 — the other way
-    a stream begins: an account an **Invitation** opened when its person set a password,
-    carrying **the name the club typed**, the hash, and **no Nickname and no attestation**.
+  - **AccountOpenedByInvitation** — `users.account_opened_by_invitation` / **v2** — the other
+    way a stream begins: an account an **Invitation** opened when its person set a password,
+    carrying the hash and **no player name, no Nickname and no attestation**. The name the club
+    typed is the Administrator's. v1 carried it and is read with it ignored (ADR-0199 §4, not yet
+    built — [#724](https://github.com/Raketa02/Raketa/issues/724)).
   - **AdultAttested** — `users.adult_attested` / v1 — the Adult attestation given after the
     account was opened, at *Start playing*. Recorded once.
   - **PasswordChanged** — `users.password_changed` / v1 — a new password and the instant every
@@ -315,7 +326,7 @@ Identity and account state.
 - Email and nickname are **unique**, and each is read by the act that carries it —
   `RegisterUser` reads the email before insert and raises `EmailAlreadyRegistered`; the naming
   reads the nickname and raises `NicknameAlreadyTaken` (a domain conflict, not a database
-  constraint violation). **The name is never checked against anybody.**
+  constraint violation).
 - **Signing up requires an Adult attestation, and a default is not one.** `RegisterUser`
   refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email, so a
   caller who answered nothing learns nothing about whether it is taken. An account an Invitation
@@ -421,11 +432,16 @@ of the code because this file asks for them in that order.
   19:00–20:00. The finest precision the platform holds about when a player wants to play.
 - **Location area** — where a player plays, held coarsely: a cell about a kilometre across,
   rounded to on the way in. The precise fix that produced it is never a shareable value; what
-  reads it is the distance to a club. **It
+  reads it is the distance to a club, and the nearest-first order of a club search. **Required**:
+  no Player profile exists without one. It is set by **a reading of the phone** or, when the
+  player refuses the phone's permission, by **a Club they pick** (*Pick a club near where you
+  play*): that club's point on the map, rounded to the same cell. An unknown club is refused
+  ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §10, not yet built — [#726](https://github.com/Raketa02/Raketa/issues/726), [#733](https://github.com/Raketa02/Raketa/issues/733)). **It
   moves on a cold start**: the app re-reads the phone silently when it is launched, and after a
   day in the background, and the cell changes if the fix falls outside it — never merely on
   foreground, never with a prompt, and never when the permission has since been revoked
-  ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6).
+  ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6). So a
+  club-picked area stays until the phone has permission, and the first reading then replaces it.
 - **Gender** — `WOMAN`, `MAN` or `PREFER_NOT_TO_SAY`, held on the Player profile. **Per
   person, never per sport**, self-declared and freely changed. It is a statement about **which
   courts a player wishes to share**, not a ruling by the platform on who anybody is:
@@ -448,9 +464,10 @@ of the code because this file asks for them in that order.
 - **Play intent** — what kind of game a player wants in **one sport**: `COMPETITIVE`,
   `FOR_FUN` or `NO_PREFERENCE`. **Declared, per sport, and never inferred.** `NO_PREFERENCE`
   is an explicit answer and never a null — *either suits me* and *I never opened that screen*
-  are different facts. Declared at the tail of every rating run that produced a rating, on the
-  group deck's declaration step and on the You tab
-  ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md)). A group
+  are different facts. Declared on the group deck's declaration step — asked once, inline, the
+  first time a player opens Games for a sport without one — and on the You tab
+  ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md), its ask at
+  the tail of a rating run corrected by [ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md)). A group
   deck deals no card of a kind the player's intent does not want.
 - **Play intent declaration** — the **event-sourced aggregate** that holds one, one stream per
   `(player, sport)`. Separate from the Player profile, which stays free of a sport dimension.
@@ -460,7 +477,8 @@ of the code because this file asks for them in that order.
 - **Profile photo** — the first of a player's photos, and the one a face on a card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
-- **Intro** — **one line a player writes about themselves**: at most 100 characters, no line
+- **Intro** — **one line a player writes about themselves**: at most **250** characters
+  ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §9, not yet built — [#726](https://github.com/Raketa02/Raketa/issues/726), [#733](https://github.com/Raketa02/Raketa/issues/733)), no line
   breaks, any language, one per player, and **optional** — a player who wrote none has none,
   not an empty one. The first player-authored free text the platform shows to a stranger, and
   the fence is at the write: a phone number, an email, a URL or a handle is **refused**, because
@@ -480,7 +498,7 @@ of the code because this file asks for them in that order.
   own photograph, and **another player** is shown only the pass — nothing may tell one player
   that another player's photograph was doubted. **The confidence behind it never crosses on any
   route**, to either of them.
-- **Profile commit** — the single idempotent request that ends onboarding's second part,
+- **Profile commit** — the single idempotent request that ends onboarding's profile steps,
   carrying every answer at once. Nothing is written before it, so leaving mid-part
   restarts at step 1 ([ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md)). Keyed
   by a client-supplied **idempotency key**, which the creating event carries so a retry is
@@ -574,8 +592,8 @@ about blocks, and the record asks only about the reader's own. The player app's 
 - **Blocker** / **blocked** — the two sides of the ordered pair. The blocker can see their own
   block. The blocked person can never discover it.
 - **Own block** — a block the reader made: the only kind of block a response may carry. Two reads
-  carry it, **Blocked players** (the caller's own blocks, each with the person's name, photo and
-  when) and the **player record** (whether the reader blocked its subject). _Avoid_: a field that
+  carry it, **Blocked players** (the caller's own blocks, each with the person's nickname, photo
+  and when) and the **player record** (whether the reader blocked its subject). _Avoid_: a field that
   answers *either way round*, which would tell the blocked person.
 - **Block events** (durable name / version):
   - **PlayerBlocked** — `blocks.player_blocked` / v2 — the pair. **No reason, no free text, and no
@@ -1507,7 +1525,9 @@ Official group per WhatsApp group and post its link there.
   of anybody on it without being a Group member; can neither delete one nor stop running one.
   Removal ends it on the next request, leaves the person's player side untouched, and is
   **emailed** to them — *removed*, or *invitation withdrawn* for somebody who never took it up
-  (ADR-0191 §4).
+  (ADR-0191 §4). **It carries the name the club typed**, which the club's own pages and the
+  Administrator's own emails use, and which *… runs this group* says until the person has a
+  **Nickname** ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md) §4); no player surface says it otherwise.
   **Collisions, recorded:** an Administrator is **not the `ADMIN` Authority** and holds no power
   over the platform or any account; the **admin** tag on a Members list is **copy** for *runs this
   group*, not a role; and *Administrator* in the app's profile switcher is **UI vocabulary** for
@@ -1515,8 +1535,9 @@ Official group per WhatsApp group and post its link there.
   staff, group admin.
 - **Invitation** — the club naming a person as Administrator, **by name and email and nothing
   else**: the club never sets, sees or handles a password or a code. Delivered by email as a
-  button and an **8-character code**, valid **72 hours** and resendable. A **new person** sets a password through it and gets an account under the
-  name the club typed, with no Nickname and no Adult attestation; an **existing account** accepts
+  button and an **8-character code**, valid **72 hours** and resendable. A **new person** sets a password through it and gets an account that holds
+  **no player name** — the name the club typed stays on the Administrator (ADR-0199 §4) — and no
+  Nickname and no Adult attestation; an **existing account** accepts
   it from the app, with no password step. _Avoid_: invite code (the code is one half of it),
   *join request* (that is a player asking a group), onboarding.
 - **Administrator events** (durable name / version) — never a link, a code or a ticket:
@@ -1892,8 +1913,9 @@ keeps it since [#621](https://github.com/Raketa02/Raketa/issues/621), and the ph
 told by the other contexts and tells none of them.
 
 - **Notice** — one thing a player was told about their games — a game booked, a payment to
-  confirm, a game called off, a seat left, a card that needs only them — in the server's words, at
-  the moment it happened. It is shown as a **banner** while the app is open, pushed once push is
+  confirm, a game called off, a seat left, a card that needs only them, a level they need before
+  any game can be dealt to them (*Get your level*, below) — in the server's words, at the moment it
+  happened. It is shown as a **banner** while the app is open, pushed once push is
   on, emailed when it is about money, and kept in the **recent notices**: the
   list behind the bell on Home, the newest 30. Most kinds are **always on**; three are the player's
   choice (*You complete it*, *Challenges for you*, *Fill in alerts*), capped per day and bundled.
@@ -1930,6 +1952,13 @@ told by the other contexts and tells none of them.
   until push reaches both phones, which a human sets up
   ([#665](https://github.com/Raketa02/Raketa/issues/665)) and the player app switches on
   ([#666](https://github.com/Raketa02/Raketa/issues/666)).
+- **Get your level** — an always-on notice, *Get your level so your groups can deal you games.*,
+  told **once per account, ever**: to an account that is a **Group member** of at least one group
+  (player or official), whose first group join was at least 24 hours ago, and which holds no Skill
+  rating. It names no group and no sport, opens **Home**, and is never emailed. A timed job tells
+  it under a per-account key, so no process tells it twice; Groups answers when the account first
+  joined a group. Decided by [ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §7, not yet built
+  ([#727](https://github.com/Raketa02/Raketa/issues/727), [#731](https://github.com/Raketa02/Raketa/issues/731)).
 
 ## Cross-cutting concepts
 

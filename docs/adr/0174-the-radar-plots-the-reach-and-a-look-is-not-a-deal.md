@@ -11,6 +11,9 @@
   2026-09-17 by ADR-0177
   §2**: at the floor only, players too close to tell apart fold into a stack a tap opens;
   above it the blob is still the truth. §1–§6, the rest of §7 and the rest of §8 stand.
+  **§6 noted 2026-11-03 by [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §10** (the note under §6): the
+  refresh still runs, no deck deals around the cell any more, and a club picked by hand stands in
+  for a reading until the phone has permission.
 - **Date:** 2026-09-16
 - **Supersedes, by named sentence:**
   - [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §9's *"The toggle
@@ -265,6 +268,14 @@ next cold start at home moves her back. The deck's next hand deals around the ne
 is reset. **You** carries one static sentence — *Your area updates each time you open Raketa;
 it is never finer than about a kilometre.* — because silent motion with no written trace is the
 one thing that would surprise a careful player.
+
+> **Note — 2026-11-03 ([ADR-0200](0200-a-level-is-asked-where-play-begins.md) §10).** The refresh still runs as
+> written: on every cold start, and on a return after more than a day. **No deck deals around the
+> cell any more.** The Players deck went with Classic play, and inside a group distance decides only
+> which clubs a player group plays at. A player who refused location may now hold an area picked
+> from a club; the first cold start with permission replaces it with the phone's reading, and
+> nothing moves it before then. The You sentence above describes a reading, not a picked club, and
+> its words for that case are [#733](https://github.com/Raketa02/Raketa/issues/733)'s.
 
 ### 7. The screen, as the mocks draw it
 

@@ -32,18 +32,25 @@ tab is a new drawn object.
 
 ### 1.1 What onboarding collects, in order
 
+> **Amended 2026-11-03** ([ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §1, [ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md) §3). Onboarding is sign-up,
+> the naming (a nickname alone) and the six profile steps, and it ends on Home. The questionnaire
+> and the Play intent are no longer onboarding's: a level is asked where play begins, and the
+> intent on the group deck. They are listed last, under that heading. The *Changeable later?*
+> column is as investigated on 2026-09-17; every row has had a route since #466–#473.
+
 | Step | Fact | Where it is written | Changeable later? |
 | --- | --- | --- | --- |
 | Sign-up | email, password, **Adult attestation** | `POST /users` | No route for email or password; the attestation is a precondition of holding an account, never re-asked |
-| The naming | **Name** and **Nickname** | `PUT /users/me/name` — *repeatable* | Yes — the route exists; ADR-0171 explicitly left the You-tab screen as a follow-up |
-| The questionnaire, per sport | **Skill rating** — Level, uncertainty, band, status | Completion of an Assessment | **Never.** Only a confirmed counted result moves a Level. A *new* sport can be rated — §3.1 |
-| The tail of every rating run | **Play intent**, per sport | `PUT /play-intents/{sport}` | Yes — already a section on You (#296) |
-| Social step 1 · tags | 2–6 **Social tags** from a closed vocabulary | the profile commit | Aggregate method exists, **no route** |
-| Social step 2 · intro | one line, ≤ 100 characters, fenced against contact | the profile commit | **No change method and no route** — ADR-0170 §5 |
-| Social step 3 · photos | up to three, first is the profile photo, each on-court-checked | `POST /photos`, then the commit | Aggregate method exists, **no route** |
-| Social step 4 · availability | the 7 × 3 **Availability grid** | the profile commit | Yes — `PUT /players/me/availability` |
-| Social step 5 · location | the coarse **Location area** | the profile commit | Yes — `PUT /players/me/location`, but it is *the cold start's write, and no screen's* |
-| Social step 6 · gender | **Gender** and **Gender preference** | the profile commit | Aggregate methods exist, **no route**, and the values are **never served back** |
+| The naming · *How should people see you?* | **Nickname** — the Name was retired by ADR-0199 | `PUT /users/me/name` — *repeatable*, a nickname alone | Yes — the *Nickname* row (§3.13), at any time, while nobody else holds the new one |
+| Profile step 1 of 6 · tags | 2–6 **Social tags** from a closed vocabulary | the profile commit | Aggregate method exists, **no route** |
+| Profile step 2 · intro | one line, ≤ 250 characters (ADR-0200 §9), fenced against contact | the profile commit | **No change method and no route** — ADR-0170 §5 |
+| Profile step 3 · photos | up to three, first is the profile photo, each on-court-checked | `POST /photos`, then the commit | Aggregate method exists, **no route** |
+| Profile step 4 · availability | the 7 × 3 **Availability grid** (hours per weekday since ADR-0189 §5) | the profile commit | Yes — `PUT /players/me/availability` |
+| Profile step 5 · location | the coarse **Location area** — a reading of the phone, or, after a refusal, a club the player picks (§3.6) | the profile commit | Yes — `PUT /players/me/location`, but it is *the cold start's write, and no screen's* |
+| Profile step 6 · gender | **Gender** and **Gender preference** | the profile commit | Aggregate methods exist, **no route**, and the values are **never served back** |
+| *Then Home.* | | | |
+| **Where play begins, not onboarding** · the questionnaire, per sport | **Skill rating** — Level, uncertainty, band, status | Completion of an Assessment, started from a player group's door, an official group's card, *+ Another sport*, the Home card or the passport (ADR-0200 §2–§7) | **Never.** Only a confirmed counted result moves a Level. A *new* sport can be rated — §3.1 |
+| **Where play begins, not onboarding** · the group deck, once per sport | **Play intent**, per sport | `PUT /play-intents/{sport}` | Yes — already a section on You (#296) |
 
 ### 1.2 The promises the app has already made
 
@@ -84,17 +91,19 @@ missing is a door to them from the tab.**
 
 ```
 ScreenHeader      eyebrow PLAYER PROFILE · h1 You
-  header card     dark card: photo or poster · name · @nickname · intro · sport pills · score ring
+  header card     dark card: photo or poster · nickname · intro · sport pills · score ring
                   → taps open §3.9 How others see you
 
   PLAYING         Skill passport · Player reliability · What kind of game
-  FINDING PLAYERS Your week · Where you play · Who you play with
-  ON YOUR CARD    How others see you · Photos · Tags · Intro · Name
+  YOUR GAMES      Your week · Where you play · Who you play with
+  ON YOUR CARD    How others see you · Photos · Tags · Intro · Nickname
 
   Sign out        AccountPanel's button, at the foot — as today
 ```
 
-Three groups, because the rows answer three different questions: *what has the platform
+The middle group was called *Finding players* until [ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §10 renamed it **Your games**:
+nothing on it finds players any more. Three groups, because the rows answer three different
+questions: *what has the platform
 concluded about me* (read-only), *what does a proposed game read about me* (declarations the
 new games read: the proposer reads the week and the Play intent, the pair rule on every court
 reads the gender preference, and every distance to a club is measured from the Location area),
@@ -111,13 +120,13 @@ were on the first draft and are out — §4 says why and what each would need.
 | Player reliability | `75 · High` · `100 · New` (since ADR-0195, written in from #660's sheet head; it read `92 of 100 · 3 things counted`) | the figure and its band, the four counts, the reliability filter | the filter only | read exists; one decision (§5.3); the filter's route is #661's |
 | What kind of game | `Padel Competitive · Tennis For fun · Squash not set` | one row per rated sport, expands to the three answers | in place, `PUT /play-intents/{sport}` | **built** |
 | Your week | `10 slots ticked` | the availability grid as the step draws it, *Save* / *Clear all* | `PUT /players/me/availability` on *Save* | route exists, screen missing |
-| Where you play | `Area set · updates when you open Raketa` | *Your area is set*, *Read my area again*, the permission states | `PUT /players/me/location` | route exists, screen missing |
+| Where you play | `Area set · updates when you open Raketa` | *Your area is set*, then *Use my location* and *Pick a club near where you play* (§3.6) | `PUT /players/me/location`, with a reading or a `club_id` | route exists, screen missing; the club form is #726's |
 | Who you play with | `Matched with anyone` | the gender step's two radio groups, each with *Save*; the reach sentence at the press | two new `PUT`s | **needs a decision** (§5.2) and two routes |
 | How others see you | `Your player record, as a stranger reads it` | `PlayerRecordSheet` for yourself, section for section | none — the doors are the rows below | **built**, needs a door |
 | Photos | `2 of 3 · profile photo on court` | the photos step as it is: tiles, add, promote, hold for options, the flagged notice | `POST /photos`, then `PUT /players/me/photos` on every change | needs a route and the read |
 | Tags | `4 of 6 · Stays for a drink, Plays to win, +2` | the tags step as it is, with *Save* | `PUT /players/me/social-tags` | needs a route and the read |
 | Intro | `“Will travel for a hard game.”` | the intro step's box with its counter and fence, *Save* / *Remove intro* | `PUT /players/me/intro` | needs an aggregate change + route, ADR-0170 §5 |
-| Name | `Tomek Kowalski · @tomek.k` | the naming screen, pre-filled | `PUT /users/me/name` | route exists, screen exists (`NamingScreen`), needs a door |
+| Nickname | `tomek.k` | the naming screen's one field, pre-filled | `PUT /users/me/name`, a nickname alone | route exists, screen exists (`NamingScreen`), needs a door; was *Name* until ADR-0199 |
 
 ## 3. Each row
 
@@ -283,7 +292,10 @@ being free is a claim a week has to make; a card with a blank week on it grades 
 ### 3.6 Where you play — the Location area
 
 **What it is.** A cell about a kilometre across, rounded to on the way in; the precise fix is
-never stored. It moves silently on a cold start and after a day in the background.
+never stored. It moves silently on a cold start and after a day in the background. **It is set
+one of two ways** ([ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §10): by a
+reading of the phone, or — when the player refuses the phone's permission — by **a club they
+pick**, whose point on the map becomes the area, rounded to the cell like any reading.
 
 **What opens.** No map, no name, no coordinates — nothing on this platform can turn the cell into
 a neighbourhood and the screen does not pretend to. Two things:
@@ -292,21 +304,35 @@ a neighbourhood and the screen does not pretend to. Two things:
   area updates each time you open Raketa; it is never finer than about a kilometre*. **It is the
   only state**: onboarding cannot finish without an area (*the one answer setting up cannot
   finish without*, the last step's own words), so every profile the tab can read holds one;
-- **Read my area again** — the control from the location step, in its three permission states
+- **Read my area again** (***Use my location*** since ADR-0200, as the step says it) — the
+  control from the location step, in its three permission states
   (*Raketa cannot see where you play · Location is turned off for Raketa → Open Settings*, and
   the plain control).
+
+**Since ADR-0200, the screen offers both ways**, as the location step does: ***Use my location***
+(the control above, under the step's label), and ***Pick a club near where you play***, which searches Raketa's clubs by name or district —
+nearest first when an area is held, A–Z when none is. The state stays the only state, because a
+profile still cannot be committed without an area; the step now reaches one even after a refusal,
+through a picked club.
 
 **How the update happens.** Pressing the control reads the phone once, coarsens on the client
 exactly as the step does, and sends `PUT /players/me/location`. A fix that rounds to the cell
 already held records nothing and answers `204`. The route exists, written for the cold start; a
 screen calling it is the same request with a person behind it.
 
+**A picked club sends the club, never a coordinate**: the same route, and the profile commit,
+carry either `latitude` and `longitude` or a `club_id`, exactly one of the two. The server stores
+that club's point rounded to the cell, and refuses an unknown club. The phone never holds a club's
+coordinates. A club-picked area stays until the phone has permission: the next cold start that
+can read the phone replaces it ([#726](https://github.com/Raketa02/Raketa/issues/726), [#733](https://github.com/Raketa02/Raketa/issues/733)).
+
 **What changes.** The distance to the club this player reads on a game's details, a booked game
 and *Post a game*'s clubs, all measured from the cell; the nearest-first order of *New group*'s
 home-club search and of the search for a group to join; and *In your area* on a record that
 names them. Nothing else moves — no reset, no prompt.
 
-**What it needs from the contract.** Nothing. The first draft asked the read for
+**What it needs from the contract.** Nothing, as first written; since ADR-0200, the location
+write's `club_id` form (#726). The first draft asked the read for
 `has_location`; it would always be true, and a flag that cannot be false is a branch nobody
 tests. The screen branches on the permission state alone, which is the device's.
 
@@ -352,8 +378,8 @@ else**, exactly as a court opens it today:
 
 1. `RecordHeader` — the `PhotoPanel` at record size (the photograph or the generated poster,
    the flat scrim, the ON COURT mark where the photo passed, the resolved sport's Level over
-   it), and beside it the name with *(you)*, the `@nickname`, the intro, and one sport pill per
-   rated sport. No distance line and no fit pill, because `is_self` says so.
+   it), and beside it the nickname with *(you)* (no `@` line since ADR-0199), the intro, and one
+   sport pill per rated sport. No distance line and no fit pill, because `is_self` says so.
 2. `SkillCard` — `PADEL · 2,71 · 61% sure` over the level bar with its band names.
 3. `RecordBlocks` — *Player reliability · Last 5 · Counted*.
 4. `RecordCard` — the metered strands, *Opponent variety*, *Sportsmanship, by players*.
@@ -417,14 +443,17 @@ scored**, and no proposal reads one. **A tag is not an intent**: `HERE_TO_COMPET
 
 ### 3.12 Intro
 
-**What it is.** One line, at most 100 code points, no line breaks, any language, optional — a
+**What it is.** One line, at most **250** code points (100 until
+[ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §9), no line breaks, any
+language, optional — a
 player who wrote none has none. Fenced at the write: a phone number, an email, a URL or a handle
 is refused.
 
 **What opens.** The intro step's box with its label (*Your intro*), placeholder, counter
-(`27 / 100`), hint (*One line, up to 100 characters. Optional.*) and rule (*Other players read
+(`27 / 250`) and hint, then *Save* and *Remove intro*. **The rule line** (*Other players read
 this on your card. Leave out phone numbers, emails, links and handles — people reach you in the
-chat*), then *Save* and *Remove intro*. The two shape refusals (*too long*, *multiline*) shut
+chat*) **is gone since ADR-0200 §9**: the contact rule is said only when broken, as the
+refusal. The two shape refusals (*too long*, *multiline*) shut
 *Save* before anything is sent; `contains_contact` is the server's pattern and lands as the coral
 note on the reply.
 
@@ -434,27 +463,30 @@ are frozen reads as a bug… it becomes editable the day a profile-edit surface 
 three, as one piece of work."* This tab is that surface, so the intro's write ships with the tags'
 and the photos' — an aggregate change (`IntroChanged`) plus its route.
 
-**What changes.** The line under the name on this player's record, and on their own header card
+**What changes.** The line under the nickname on this player's record, and on their own header card
 on this tab, from the next read.
 
-### 3.13 Name
+### 3.13 Nickname
 
-**What it is.** The **Name** — free text, 2–64 characters, never unique, *what every sentence
-says* — and the **Nickname** — a unique handle, `[A-Za-z0-9_.-]`, drawn as `@nickname` on the
-record and on this tab and said nowhere.
+> **The row was *Name* until [ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)**, which retired the Name. It is the
+> **Nickname** row now, and its screen has one field.
 
-**What opens.** `NamingScreen` (#451) pre-filled: the two fields under their labels (*Name* ·
-*Nickname*) and *Save*. No sentence explains the two; the naming step's own question does not
-need repeating on a screen that only edits the answer.
+**What it is.** The **Nickname** — a unique handle, 2–64 characters, `[A-Za-z0-9_.-]`, and *what
+every sentence says*, never with an `@`. Changeable at any time, while nobody else holds the new
+one.
 
-**How the update happens.** `PUT /users/me/name` carries both; the naming is *repeatable — a
+**What opens.** `NamingScreen` (#451) pre-filled: one field under its label (*Nickname*) and
+*Save*. No sentence explains it; the naming step's own question does not need repeating on a
+screen that only edits the answer. The rule sentence is drawn only as the field's error.
+
+**How the update happens.** `PUT /users/me/name` carries the nickname alone; the naming is *repeatable — a
 later change is the same act*, keeping your own nickname is admitted, and **another player's is
 refused by the server** with `409 nickname_already_taken`, drawn in the app's own words — *That
 nickname is taken. Pick another.* — under the field. The check is the server's on *Save*, never a
 client-side lookup while typing. The client re-reads `GET /users/me` before returning.
 
-**What changes.** Every sentence, row, card, sheet, toast and seat label that names this player,
-from the next read; the two initials over a generated poster; the handle on the record and here.
+**What changes.** Every sentence, row, card, sheet, toast, notice, seat label and email that names
+this player, from the next read, and the two initials over a generated poster.
 
 ## 4. Considered and left out
 

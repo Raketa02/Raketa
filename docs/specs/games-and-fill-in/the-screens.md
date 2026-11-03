@@ -30,6 +30,12 @@
 > **A later ruling the mocks predate (Q125):** a group page has three tabs, *Games · Fill in · Friends*, and the group's
 > header opens *Info* as its own screen ([A1](#a1-where-things-live)). Wherever a mock draws a fourth
 > tab, *Info*, read three.
+>
+> **A later ruling the mocks predate (Q126):** a player is named by their **nickname**, never with
+> an @ ([ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)), so wherever a mock prints a name — *Karol T.*, *Oscar
+> Bertran* — read a nickname. And a level is asked where play begins: a member rated in nothing
+> meets one door on a player group's tabs, Post a game and Members, which no mock draws
+> ([A1](#a1-where-things-live), [A2.1](#a21-states)).
 
 ---
 
@@ -63,6 +69,27 @@
     group into the page's read.
   - **A member who must add a sport** sees *Add a sport* on all three tabs. The header still opens
     Info, and the way out is there.
+- **A member rated in nothing** (Q126, [ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §2–§6). Sign-up asks no skill
+  question, so this is the common first visit.
+  - **In a player group**, **Games, Fill in, Friends, Post a game and Members** each show one door
+    in place of their content: ***Get your level — pick the sports you play, a few questions
+    each***. It opens *Which sports do you play?* over every sport, with nothing ticked. After each
+    sport, *Your rating* offers ***Rate {next sport}*** and ***Done for now***; the last offers
+    ***Back to {group name}***, which returns to the tab the door was on. With a run left halfway,
+    the door reads ***Carry on with your {sport} questions — you're on question {n}*** and opens
+    that run. The app never opens on the questions by itself.
+  - **In an official group**, rated in none of its sports, every tab keeps the group's own card,
+    *This group plays padel · Add padel to your Skill passport to see its games. · [Rate padel]*,
+    offering only its sports; its buttons now return to the group with the chip on the sport just
+    rated, not to the Skill passport.
+  - **Members** still lists only members rated in the sport, so an unrated member is absent from
+    everybody's list. Her own Members screen in a player group shows the door in place of the list
+    *(a call made in the spec, not grilled)*.
+- **The sport pill** is drawn only once the member holds a rating, and lists only the sports she is
+  rated in. While a sport is left to offer, it ends with ***+ Another sport***, which opens the same
+  picker — over every sport she is unrated in, in a player group; over that group's sports she is
+  unrated in, in an official one — and returns to the group. Rated in everything there is to offer,
+  there is no *+ Another sport*.
 - **The Competitive / For fun switch** (mock 9) sits under the tabs on **Games**:
   *Competitive · 7* / *For fun · 1* — the number is the cards of that kind in this group and
   sport. It stays where it is today on **Friends** too (out of scope). A player whose intent is
@@ -75,11 +102,17 @@
 1. **Nothing to deal** — today's cards stay exactly as built: *Just you so far*, *3 of 4*,
    *Nothing picked right now*, with **Share the link** and **Copy link**. *Nothing picked right
    now* gains a third button, **Post a game** (Q96).
-2. **No intent for this sport** — the one-time inline question *Competitive / For fun / Either*
-   replaces the deck until answered.
-3. **Weekly cap reached** — a slim line above the deck: *"Your 2 games this week are booked —
+2. **Rated in nothing** (Q126) — in a player group, the door replaces the deck: *Get your level —
+   pick the sports you play, a few questions each* ([A1](#a1-where-things-live)). The questions
+   return here, and state 4 comes next. In an official group rated in none of its sports, the
+   group's own card instead.
+3. **A run left halfway** (Q126) — the same door, reading *Carry on with your padel questions —
+   you're on question 5*, and opening that run. Nothing else asks her to finish it.
+4. **No intent for this sport** — the one-time inline question *Competitive / For fun / Either*
+   replaces the deck until answered; for a member who has just rated, straight after the door.
+5. **Weekly cap reached** — a slim line above the deck: *"Your 2 games this week are booked —
    showing next week"* (Q73).
-4. **The deck** (mock 1).
+6. **The deck** (mock 1).
 
 ### A2.2 The deck stage
 
@@ -102,7 +135,7 @@ Dark card, top to bottom:
 | Part | What it shows | Rules |
 | --- | --- | --- |
 | **Ribbon** | *Picked for you* (dark teal) · *Kuba challenged you* / *The group challenged you* (dark teal) · *Seat open · court booked* (**coral**) | No *· friendly* — the segment already says it. On the right, **⏱ 21 h 00** only when the deadline is under 24 h (book-by; for a rescue the cut-off, then the start); *45 min* under an hour, coral. At the deadline the card leaves silently. |
-| **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, the player's **Name** (cut short visually, never an invented first name — ADR-0171; the mocks' *Karol T.* is mock data), level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) only once a friends feature exists (Q68). No other tag. On a rescue each player reads *2,75 · paid*. |
+| **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, the player's **nickname**, never with an @ (cut short visually, never an invented form — ADR-0199, which superseded ADR-0171; the mocks' *Karol T.* is mock data), level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) only once a friends feature exists (Q68). No other tag. On a rescue each player reads *2,75 · paid*. |
 | **Your tile** | *You*, your level | When your yes would fill the game: **You complete it** in volt (mocks 3, 7). On a rescue your seat is the **dashed** tile: *You complete it · 27 zł · court booked* (mock 2), or *You? · 27 zł* when more than one seat is open. |
 | **vs line** | *KAROL + YOU VS ANIA + KUBA* | The top row is one side, the bottom row the other (Q70). |
 | **Balance forecast** | percentage (green / amber / red by today's tones) + the bar | The bar names **the same sides as the rows, your side on the left** (light half). Computed for this version. Existing `BalanceBar`, `onDark`. |
@@ -163,7 +196,9 @@ this game* — counting the yeses on every version.
 ## A3. Fill in (mock 11)
 
 Paper background; sections only when they have rows; the coral **+ Post a game** FAB (mock 14)
-floats bottom-right, always.
+floats bottom-right, always. **Rated in nothing**, in a player group, the tab is the door
+([A1](#a1-where-things-live), Q126) in place of both sections; the FAB still floats, and Post a
+game shows the same door.
 
 ### A3.1 SEATS TO FILL · N — the rescue row (mock 12)
 
@@ -278,7 +313,7 @@ draft kept while you stay in the group.
 
 | Section | Control | Behaviour |
 | --- | --- | --- |
-| **SPORT** | chip row, each with its sport colour dot and the count of group members rated in it (*Padel 10*) | Only sports you're rated in that the group plays. Selecting resets the level range and clears the pick. Rated in none: *"Get rated in padel to post here"* with a link to the questionnaire (Q80). |
+| **SPORT** | chip row, each with its sport colour dot and the count of group members rated in it (*Padel 10*) | Only sports you're rated in that the group plays. Selecting resets the level range and clears the pick. Rated in nothing, in a player group: the door ([A1](#a1-where-things-live), Q126). Rated in none of the group's sports: *"Get rated in padel to post here"* with its button per sport, as today, which now begins the questions and returns here (Q80, Q126). |
 | **KIND** | *Competitive* / *For fun · friendly* | Defaults to your intent. Re-filters the fits; the grid updates live. |
 | **WHO** | *Anyone / Men / Women / Mixed pairs* | *Mixed pairs* only for padel and badminton. Men / Women / Mixed count only members with a gender set; nobody whose own preference excludes the game is ever dealt it. |
 | **LEVEL** · *narrow it, not widen it* | two steppers | Seeded with **the engine's range for the kind** around your level (Q78). − / + move a bound 0,05 inward only; pushing outward bounces with *"You can narrow it, not widen it"*. |
@@ -337,7 +372,7 @@ method (the setup opens), two live posts already, games per week already booked 
 
 ## A6. The You tab: Your week (mock 36)
 
-In *Finding players*, and the same component in onboarding (replacing today's 7 × 3 step).
+In *Your games* (*Finding players* until Q126), and the same component in onboarding (replacing today's 7 × 3 step).
 **7 day columns (MON…SUN) × 16 hour rows (07:00…22:00)**, each cell one hour; mint = free. **Tap**
 toggles; **press and drag** paints (or clears, if the first cell was on) a run. At least one hour
 to continue in onboarding; *Save your week* on the You screen as today. No templates.
@@ -475,6 +510,13 @@ in both windows. The refused player's own card reads *Fix your card by 14:40* be
 Q113). At the end it becomes *Booked*, or *Seat open*. A card refused at the holding time leaves the
 game *Booked*: only its player's card reads *Fix your card by 14:40*.
 
+**Get your level** (Q126). While a player is a member of at least one group and holds no rating,
+Home shows a card: ***Get your level — your groups can't deal you games until you
+have one.*** It opens *Which sports do you play?*, and the questions return to Home. With a run
+left halfway it offers to carry on — *Carry on with your padel questions — you're on question 5* —
+and never to start again. Once she holds any rating, it is gone. The *Get your level* notice opens
+Home on this card.
+
 A **Called off** card says why, as the notice and the email do: short at the cut-off, the club's
 cancel with its reason, a payment that didn't come in time. The club's answer, *Kazimierz Padel said
 no* or *… didn't answer in time* (Q105), went with *On request* (Q121).
@@ -506,6 +548,7 @@ no* or *… didn't answer in time* (Q105), went with *On request* (Q121).
 | How did it go? (a Competitive game's hour ended, Q119, Q120) | ✓ | ✓ | — |
 | Is that right? (the other side put a score up) | ✓ | ✓ | — |
 | Were they there? (an absent player claimed *I was there*) | ✓ | ✓ | — |
+| Get your level — *Get your level so your groups can deal you games.*, once per account, ever, a day after a first group join while rated in nothing (Q126); opens Home | ✓ | ✓ | — |
 | You complete it · Challenges for you · Fill in alerts | ✓ if on | ✓ if on | — |
 
 Push goes through Expo's push service, switched on end to end on Android and iPhone since Q120: a
@@ -607,7 +650,7 @@ Three sections on one page.
 - **One day at a time**: *‹ Today ›* with a date picker; filters **All · Seat open · Called off**
   (*Waiting for you* went with *On request*, Q121). No *Check in* button (Q116).
 - **Row** (per booking): time + court and its kind (*Court 3 · indoor*, Q122) + sport + kind ·
-  the players (name, and their share *held* or
+  the players (nickname — Q126, *A player* for an account that reads as nobody — and their share *held* or
   *taken* — Q113; no *checked in ✓*, and nothing about who came or the score) · status tag · money (court price, collected, refunded) ·
   the group it came from · actions:
   - **Booked / Seat open** → **Move** and **Cancel**. Not possible after the start.

@@ -1,7 +1,8 @@
 # Raketa — Monorepo
 
-A racket-sport platform. **Today, end to end:** a player signs up, answers a questionnaire that
-gives them a Skill rating per sport, joins groups, and is proposed games — the last yes books a
+A racket-sport platform. **Today, end to end:** a player signs up, picks a nickname, joins
+groups, answers a questionnaire for a Skill rating in a sport where a group first asks for one,
+and is proposed games — the last yes books a
 club's court and charges every seat — while a club runs its courts, bookings and money on its
 website. **Independently deployable** apps share one repository and one domain language, and
 communicate **only over HTTP**. There are four

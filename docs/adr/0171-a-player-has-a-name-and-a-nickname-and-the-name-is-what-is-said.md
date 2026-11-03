@@ -1,6 +1,9 @@
 # ADR-0171 — A player has a name and a nickname, and the name is what is said
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0199](0199-a-player-is-known-by-their-nickname.md) — **in full, 2026-11-03**: the Name is retired, and the
+  Nickname is what every screen says, without an @. An account an Invitation opens holds no player
+  name. The text below is kept for why a name once looked right; where it and ADR-0199 disagree,
+  ADR-0199 decides.
 - **Date:** 2026-09-15
 - **§2 and §3 amended 2026-09-25 by [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §4**: an account an Invitation created carries the club-typed Name and no Nickname, so the naming step asks only for what is missing, and the gate's first destination reads *not named in full*. The naming stays one act.
 - **The You-tab edit this record did not decide is decided by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §7** — the same

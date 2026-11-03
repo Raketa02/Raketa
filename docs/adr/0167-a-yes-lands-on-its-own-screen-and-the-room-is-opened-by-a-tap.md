@@ -3,6 +3,10 @@
 - **Status:** Accepted — **§2's *the next dark screen argues for its own record, here* answered
   2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §7: the deck card is the second dark surface, a surface and not a
   screen, fenced as this one is.
+  **§3's cut amended 2026-11-03 by [ADR-0199](0199-a-player-is-known-by-their-nickname.md) §2**: the initials are cut
+  from the nickname, its first character and then the first character after its first `.`, `_` or
+  `-`, else its second (*ania.k* → `AK`, *kuba* → `KU`, *dorota_w* → `DW`). The tile's spoken name is
+  the whole nickname, and the fence stands.
 - **Date:** 2026-09-14
 - **Extended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the same screen, with the word *It's a game!*, greets the player whose yes (or rescue join) books a group game.
 - **Supersedes, by named sentence,**

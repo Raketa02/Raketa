@@ -1,6 +1,9 @@
 # ADR-0170 — A player may write one line, and it is read as their own
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1 and §2's *100 characters* amended 2026-11-03 by
+  [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §9**: an intro is up to 250 characters. One line,
+  optional and the contact fence stand. The step's paragraph of rules goes, and the contact rule is
+  said only when broken.
 - **Date:** 2026-09-14
 - **§5's *not editable yet* ended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §6** — the You tab is the surface that
   edits the intro, the tags and the photos as one piece of work; `IntroChanged` joins the stream.

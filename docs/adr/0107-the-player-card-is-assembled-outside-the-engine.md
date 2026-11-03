@@ -8,6 +8,9 @@
   [ADR-0171](0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)**: a player
   has a **Name**, and the rule reads *the whole name or nobody*; §4's argument — never invent a
   familiar form — stands whole, and §2's closed list carries the name where it carried the nickname.
+  **§4's sentence restored 2026-11-03 by [ADR-0199](0199-a-player-is-known-by-their-nickname.md)**, which retires the
+  Name: it reads as written, on the nickname and never with an @, and §2's list carries
+  the nickname again.
 - **Date:** 2026-08-26
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches are gone (#579), so no returned candidate carries a `player_card`: §1's seam after `matchfit`, *Why 78?*, the distance and bearing beside the card, the providers read at assembly and the copy kept in an unexpiring search record describe nothing that runs. What the card settled for every surface that shows one player to another stands. A photograph crosses as its stored `photo_id` beside a `photo_url` minted per response and written down nowhere, both omitted when there is none; there is no activity recency at any granularity (§3); and §4, as ADR-0171 reads it, is the whole name or nobody. The player record keeps a closed list of its own (ADR-0159), not this one.
