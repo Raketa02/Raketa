@@ -41,6 +41,11 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const ANSWERS_PATH = `/api/v1/assessments/${ASSESSMENT_ID}/answers`;
 const STEP_PATH = `/api/v1/assessments/${ASSESSMENT_ID}`;
+/**
+ * The run's own route — what the door's *Carry on* opens, and what a link to it opens. The gate
+ * resumes nothing any more (ADR-0200 §5, #730), so this is how a run left unfinished is reached.
+ */
+const RUN_ROUTE = `/question/${ASSESSMENT_ID}?sport=padel`;
 
 /** The opening question, which the engine asks of everyone. No tier: it routes, it rates. */
 const OPENING_QUESTION: Wire['QuestionResponse'] = {
@@ -163,15 +168,15 @@ afterEach(() => {
 });
 
 /**
- * Land on the opening question the way a returning player does — the gate finds an
- * unfinished padel run and resumes it. Resume is the shorter road to the loop and it
+ * Land on the opening question the way a returning player does — an unfinished padel run,
+ * opened at its route as *Carry on* opens it. It is the shorter road to the loop and it
  * exercises the same one screen; the walk in from the picker has its own test below.
  */
 async function resumeAtTheOpeningQuestion() {
-  stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+  stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
   transport.on('GET', STEP_PATH, () => json(OPENING));
 
-  await launchSignedIn();
+  await launchSignedIn(RUN_ROUTE);
 
   await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
   expect(await screen.findByText('Have you played padel before?')).toBeTruthy();
@@ -270,10 +275,10 @@ describe('the question screen', () => {
       // closing the app is the stream, so both come from it or neither does.
       transcript: transcriptOf(4),
     };
-    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () => json(resumed));
 
-    await launchSignedIn();
+    await launchSignedIn(RUN_ROUTE);
 
     expect(await screen.findByText('Question 5')).toBeTruthy();
     expect(screen.queryByText('Question 1')).toBeNull();
@@ -305,10 +310,10 @@ async function resumeFiveQuestionsIn() {
     questions_asked: 4,
     transcript: transcriptOf(4),
   };
-  stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+  stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
   transport.on('GET', STEP_PATH, () => json(resumed));
 
-  await launchSignedIn();
+  await launchSignedIn(RUN_ROUTE);
 
   expect(await screen.findByText('Question 5')).toBeTruthy();
 }
@@ -994,13 +999,11 @@ describe('finishing', () => {
   });
 
   it('walks the picker, both questions and out to the result', async () => {
-    stubGate();
+    stubGate({ hasPlayerProfile: true });
     transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
     transport.on('POST', '/api/v1/assessments', () => json(OPENING, 201));
 
-    await launchSignedIn();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    fireEvent.press(screen.getByLabelText('Get started'));
+    await launchSignedIn('/sports');
 
     expect(await screen.findByLabelText('Padel')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Padel'));
@@ -1027,11 +1030,11 @@ describe('finishing', () => {
   });
 
   it('leaves a resumed-but-finished run on the result rather than on a dead question', async () => {
-    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
-    // The gate saw a run in progress; by the time the screen read it, it was over.
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+    // The door saw a run in progress; by the time the screen read it, it was over.
     transport.on('GET', STEP_PATH, () => json(FINISHED));
 
-    await launchSignedIn();
+    await launchSignedIn(RUN_ROUTE);
 
     await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`));
   });

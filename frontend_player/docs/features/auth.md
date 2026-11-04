@@ -302,3 +302,8 @@ refresh token. Best-effort, as the revoke is — a player on a train still leave
 in `auth`'s api because the act is the sign-out's; registering the phone is `notifications`'. A session
 that ends by itself — a refused refresh — cannot sign a removal, and that phone stays registered to
 the last player until the next sign-in on it (`notifications.md`'s call 7).
+
+**The naming leads to the profile steps** ([#730](https://github.com/Raketa02/Raketa/issues/730),
+ADR-0200 §1). The step still hands the next destination back to the gate, which now answers _the
+six steps_ for an account sign-up created; the _Continue_ hint that promised _a few questions to
+find your level_ says _Next, what kind of player you are_.

@@ -5,8 +5,14 @@
  * client, error mapping, the mappers, the use-cases, the cache and the screens all run.
  *
  * Two operations with opposite consequences share one confirm, so most of what is
- * asserted here is the *difference* between them — what leaves the device, what the gate
- * answers afterwards, and what a relaunch does.
+ * asserted here is the *difference* between them — what leaves the device, where the player
+ * lands afterwards, and what a relaunch does. **Neither takes over a later launch**
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5, #730): the
+ * gate resumes no run, and a run left to continue later is offered where play begins, as *Carry
+ * on* (`theDoorWherePlayBegins.test`).
+ *
+ * Every pass here begins at Home — a run opened by its link with no pass running, or the picker
+ * opened with no group — so every way out of one lands on Home.
  */
 
 import { onlineManager } from '@tanstack/react-query';
@@ -17,6 +23,7 @@ import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  HOME_TAB_LINE,
   SPORTS_SERVED,
   launchSignedIn,
   runInProgress,
@@ -34,8 +41,7 @@ import {
 } from '@/test-support/transport';
 
 import { onboardingKeys } from '../hooks/onboardingKeys';
-import { useDeferredRuns } from '../store/deferredRuns.store';
-import { FROM_WELCOME } from '../domain/onboardingPass';
+import { FROM_HOME } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const PADEL_RUN = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
@@ -108,7 +114,7 @@ const PADEL_RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-/** The padel run finished, as the done screen reads it back to draw its card. */
+/** The padel run finished, as its own route reads it back. */
 const PADEL_FINISHED: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'completed',
@@ -145,7 +151,6 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
-  useDeferredRuns.getState().reset();
 });
 
 afterEach(() => {
@@ -156,38 +161,44 @@ afterEach(() => {
 
 /**
  * A relaunch: the process is gone, so the cache and every in-memory store go with it.
- * Nothing about the transcript ever lived on the device, which is the whole reason resume
+ * Nothing about the transcript ever lived on the device, which is the whole reason a run
  * survives one.
  */
 async function relaunch(initialUrl = '/') {
   cleanup();
   queryClient.clear();
   useOnboardingPass.getState().reset();
-  useDeferredRuns.getState().reset();
   resetSessionStatus();
   await launchSignedIn(initialUrl);
 }
 
-/** Land mid-run, the way the gate does: an unfinished padel assessment, resumed. */
+/** The run's own route — what *Carry on* opens, and what a link to it opens. */
+const PADEL_QUESTION = `/question/${PADEL_RUN}?sport=padel`;
+
+/** Land mid-run: an unfinished padel assessment, opened at its route with no pass running. */
 async function resumePadel(step = PADEL_OPENING) {
-  stubGate({ runs: [runInProgress('PADEL', PADEL_RUN)] });
+  stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', PADEL_RUN)] });
   transport.on('GET', stepPath(PADEL_RUN), () => json(step));
 
-  await launchSignedIn();
+  await launchSignedIn(PADEL_QUESTION);
 
   await waitFor(() => expect(screen).toHavePathname(`/question/${PADEL_RUN}`));
   expect(await screen.findByText(step.question?.text ?? '')).toBeTruthy();
 }
 
+/** Out of the questionnaire, on Home — where a pass begun there ends. */
+async function expectHome() {
+  expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+  expect(screen).toHavePathname('/');
+}
+
 /** Choose two sports and start the first, so there is a queue with a sport after padel. */
 async function walkInWithTwoSports() {
-  stubGate();
+  stubGate({ hasPlayerProfile: true });
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
   transport.on('POST', '/api/v1/assessments', () => json(PADEL_OPENING, 201));
 
-  await launchSignedIn();
-  await waitFor(() => expect(screen).toHavePathname('/welcome'));
-  fireEvent.press(screen.getByLabelText('Get started'));
+  await launchSignedIn('/sports');
 
   expect(await screen.findByLabelText('Padel')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Padel'));
@@ -328,25 +339,29 @@ describe('continuing later', () => {
 
     // Out of the questionnaire, and out of it against a server that still reports the
     // run as unfinished — because it is. Landing anywhere but back on the question is
-    // the whole test: the gate reads the player's decision as well as the server's fact.
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // the whole test: nothing on the way into the app resumes a run.
+    await expectHome();
     expect(transport.requestsTo('POST', abandonmentPath(PADEL_RUN))).toEqual([]);
     // Nothing at all was written. Not the abandonment, not anything else.
     expect(transport.requests.filter((r) => r.method !== 'GET')).toEqual([]);
   });
 
-  it('resumes at the outstanding question on the next launch, answers intact', async () => {
+  it('opens the next launch on Home, and the run where it was left, answers intact', async () => {
     // Two answers in already: the run's outstanding question is the second one, and that
-    // is where a relaunch has to land — not at the start of the questionnaire.
+    // is where opening it again has to land — not at the start of the questionnaire.
     await resumePadel(PADEL_SECOND);
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Continue later\./));
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await expectHome();
 
+    // A relaunch is the app, not the questions (ADR-0200 §5).
     await relaunch();
+    await expectHome();
+    expect(screen.queryByText(/controlled overhead/)).toBeNull();
 
-    // The deferral died with the process, which is exactly what makes this true. The
-    // transcript never lived on the device either — the server reproduces the question.
+    // Opened again — as *Carry on* opens it — the transcript never lived on the device, and
+    // the server reproduces the question.
+    await relaunch(PADEL_QUESTION);
     await waitFor(() => expect(screen).toHavePathname(`/question/${PADEL_RUN}`));
     expect(
       await screen.findByText(
@@ -388,64 +403,49 @@ describe('abandoning a sport', () => {
     expect(screen.getByText('Tennis · Rating 2 of 2')).toBeTruthy();
   });
 
-  it('ends onboarding when it was the only sport', async () => {
+  it('goes back where the pass began when it was the only sport', async () => {
     await resumePadel();
     stubAbandonment(PADEL_RUN);
 
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
 
-    // Onboarding ends and the entry gate answers for an unrated player with no run left,
-    // exactly as it does from the result screen. There is nowhere else this can go: the
-    // run produced nothing, so `/done` would have only its empty state to show, and
-    // answering *stop* with two more screens is the wrong response to what was asked.
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // The pass ends where it began — Home, for a run opened with no pass running — exactly as
+    // it does from the result screen.
+    await expectHome();
     expect(transport.requestsTo('POST', abandonmentPath(PADEL_RUN))).toHaveLength(1);
     // Nothing was started in its place: there was nothing after it in the queue.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
   });
 
-  it('leaves through the done screen when the run already produced a rating', async () => {
+  it('goes back where the pass began when the last sport is stopped after one was rated', async () => {
     // Padel was rated in this pass; tennis is the last sport, and the player stops there.
-    // Abandoning is still the end of the run, so the closing screens are still owed: the
-    // done screen accounts for the rating they did make, and the data screen says what
-    // was kept and that no one can hand-edit a Level. Ending on an abandonment is not a
-    // reason to be told none of it.
-    //
-    // The pass is begun over **both** sports, which is what makes tennis part of it. It
-    // used to be enough to record padel into a pass with an empty queue, because the
-    // resumed tennis run then borrowed whatever pass was lying around. It no longer is,
-    // and that is the point: an earlier walk's ratings do not follow a player into a run
-    // they resumed after it — see the two-passes test below for that case.
-    useOnboardingPass.getState().begin(['padel', 'tennis'], FROM_WELCOME);
+    // Abandoning is still the end of the run, and the pass ends where it began, whatever it
+    // produced (ADR-0200 §5) — no summary of the walk any more, and no data screen.
+    useOnboardingPass.getState().begin(['padel', 'tennis'], FROM_HOME);
     useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
-    // A player who finished setting up long ago and came back for one more sport. Without
-    // that, the way out of the last sport is onboarding's *second part* rather than the
-    // closing screens — which is a different walk, with its own suite.
     stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)], hasPlayerProfile: true });
     transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));
     transport.on('GET', stepPath(PADEL_RUN), () => json(PADEL_FINISHED));
     stubAbandonment(TENNIS_RUN);
 
-    await launchSignedIn();
+    await launchSignedIn(`/question/${TENNIS_RUN}?sport=tennis`);
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_RUN}`));
 
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Tennis\./));
 
-    await waitFor(() => expect(screen).toHavePathname('/done'));
-    // The abandonment still happened — this is a different destination, not a different
-    // operation. The tennis run is ended on the server exactly as before.
+    await expectHome();
     expect(transport.requestsTo('POST', abandonmentPath(TENNIS_RUN))).toHaveLength(1);
   });
 
-  it('leaves cleanly even when the gate still has an answer cached', async () => {
+  it('leaves cleanly even when the run is still cached as unfinished', async () => {
     await resumePadel();
     stubAbandonment(PADEL_RUN);
 
-    // A warm gate: the launch answer is still in the cache and it says this run is
-    // unfinished. That was true a moment ago and is about to stop being true.
+    // A warm cache: the door's read still says this run is unfinished. That was true a
+    // moment ago and is about to stop being true.
     queryClient.setQueryData(onboardingKeys.runInProgress(), {
       assessmentId: PADEL_RUN,
       sport: 'padel',
@@ -454,28 +454,34 @@ describe('abandoning a sport', () => {
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    // Not even briefly: a stale "resume" would put the player back on a question
-    // belonging to a run that no longer exists.
+    await expectHome();
+    // Not even briefly back on a question belonging to a run that no longer exists.
     expect(screen.queryByText('Have you played padel before?')).toBeNull();
+    // And the cached answer is gone rather than kept: the door must not offer *Carry on* for
+    // a run that has ended.
+    expect(queryClient.getQueryData(onboardingKeys.runInProgress())).toBeUndefined();
   });
 
   it("touches no other sport's assessment", async () => {
     // Rated at padel already, and half way through a tennis run that is not this one.
-    stubGate({ ratings: [PADEL_RATING], runs: [runInProgress('TENNIS', TENNIS_RUN)] });
+    stubGate({
+      ratings: [PADEL_RATING],
+      hasPlayerProfile: true,
+      runs: [runInProgress('TENNIS', TENNIS_RUN)],
+    });
     transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));
     stubAbandonment(TENNIS_RUN);
 
-    await launchSignedIn();
+    await launchSignedIn(`/question/${TENNIS_RUN}?sport=tennis`);
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_RUN}`));
 
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Tennis\./));
 
-    // Into the app: this pass produced nothing, so there is no account to give. The padel
-    // rating is older than this run — the player never answered a padel question today —
-    // and abandoning tennis did not cost them the sport they were already rated at.
-    await waitFor(() => expect(screen).toHavePathname('/'));
+    // Into the app, where the pass began. The padel rating is older than this run — the
+    // player never answered a padel question today — and abandoning tennis did not cost them
+    // the sport they were already rated at.
+    await expectHome();
 
     // One abandonment, naming one run. Nothing was sent about padel, whose rating and
     // whose stream are none of this operation's business.
@@ -483,26 +489,24 @@ describe('abandoning a sport', () => {
     expect(abandonments.map((r) => r.path)).toEqual([abandonmentPath(TENNIS_RUN)]);
   });
 
-  it('is not resumed on a later launch, and the sport can be started again', async () => {
+  it('can be started again, from its first question', async () => {
     await resumePadel();
     stubAbandonment(PADEL_RUN);
 
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await expectHome();
 
-    // The run is over on the server, so the sport reports nothing in progress. The gate
-    // has no run to resume and no rating, so onboarding starts from the beginning.
+    // The run is over on the server, so the sport reports nothing in progress, and the
+    // picker starts a new one.
     transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
     const RESTARTED = opening(
       '3c2d1e0f-4a5b-4c6d-8e7f-9a0b1c2d3e4f',
       'Have you played padel before?',
     );
     transport.on('POST', '/api/v1/assessments', () => json(RESTARTED, 201));
-    await relaunch();
+    await relaunch('/sports');
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    fireEvent.press(screen.getByLabelText('Get started'));
     expect(await screen.findByLabelText('Padel')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Padel'));
     fireEvent.press(screen.getByLabelText('Rate 1 sport'));
@@ -539,7 +543,7 @@ describe('when abandoning does not go through', () => {
     stubAbandonment(PADEL_RUN);
     fireEvent.press(screen.getByLabelText(/^Stop rating Padel\./));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await expectHome();
     expect(transport.requestsTo('POST', abandonmentPath(PADEL_RUN))).toHaveLength(2);
   });
 
@@ -581,13 +585,13 @@ describe('a run abandoned elsewhere', () => {
     //
     // Reached the way it happens in life: a link to a run that is already over, with the
     // server reporting nothing in progress for the sport.
-    stubGate();
+    stubGate({ hasPlayerProfile: true });
     transport.on('GET', stepPath(PADEL_RUN), () => json(PADEL_ABANDONED));
 
-    await launchSignedIn(`/question/${PADEL_RUN}?sport=padel`);
+    await launchSignedIn(PADEL_QUESTION);
 
     // Straight out of the questionnaire, the same way abandoning from here leaves.
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await expectHome();
     expect(screen.queryByText('Your rating is ready')).toBeNull();
   });
 });

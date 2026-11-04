@@ -476,8 +476,8 @@ describe('killing the app mid-part', () => {
 
     await launchSignedIn();
 
-    // Step one, not step two: the Skill rating survived — it is what sends them back here
-    // rather than to welcome — and the answers did not.
+    // Step one, not step two: the gate sends a player with no Player profile back to the
+    // first step, and the answers did not survive.
     await waitFor(() => expect(screen).toHavePathname('/tags'));
     // Nothing picked: the control is still asking for the floor, and the two tags chosen on
     // the way through are gone with the process that held them.
@@ -491,10 +491,10 @@ describe('killing the app mid-part', () => {
  * of the part until 2026-09-10.
  *
  * Every step of this part `replace`s, so the group holds **one** history entry and the thing
- * under it is whatever was on screen before the part began: welcome, one push behind the
- * sport picker. Unclaimed, the system back popped to exactly there — past the step's own back
- * control, out of the part, and into a screen from which the only way back in is to rate
- * another sport. [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)
+ * under it is whatever was on screen before the part began — until #730 welcome, one push
+ * behind the sport picker. Unclaimed, the system back popped to exactly there — past the step's
+ * own back control, out of the part, and into a screen from which the only way back in was to
+ * rate another sport. [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)
  * forbids that in as many words: *"Back and forward move freely inside each part and never
  * cross between them."*
  *

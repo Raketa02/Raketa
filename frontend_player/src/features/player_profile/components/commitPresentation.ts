@@ -35,7 +35,7 @@ import { CHANGE_INTRO_LABEL, introRefusalSentence } from './introPresentation';
 /**
  * The finish itself — **the act, and nothing promised past it.** It used to name what was on
  * the other side (*show me players*); the Players deck that promise pointed at is gone, and
- * what follows the commit is what Raketa keeps and then the app.
+ * what follows the commit is Home (#730).
  */
 export const FINISH_LABEL = 'Finish';
 

@@ -12,15 +12,18 @@
  *
  * ## The entry gate
  *
- * The second redirect is onboarding's, and onboarding is **two parts** — so the gate has
- * five destinations rather than two: an account with no nickname goes to the naming step before
- * anything else ([ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md)
- * §3), an unfinished run resumes, no ratings goes to welcome, a rating with no Player profile
- * goes to the second part's first step, and only then does a player reach the app
- * ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+ * The second redirect is onboarding's, and **onboarding is a nickname and a profile**
+ * ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1) — so the gate
+ * has three destinations rather than two: an account with no nickname goes to the naming step
+ * before anything else ([ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md)
+ * §3), one with no Player profile goes to the profile steps from their first
+ * ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)), and only then does a
+ * player reach the app. **A rating and an unfinished run route nowhere** (#730): a level is asked
+ * where play begins, by a door on a group's tabs, and a run left halfway is offered there as
+ * *Carry on* — never forced on a launch.
  *
- * None of it is part of `SessionStatus`: making "has a rating" a session state would block
- * every cold launch on a network request, which is the opposite of what the bootstrap
+ * None of it is part of `SessionStatus`: making "has a Player profile" a session state would
+ * block every cold launch on a network request, which is the opposite of what the bootstrap
  * sequence exists to avoid.
  *
  * Where a player belongs is a rule, and it lives in the onboarding feature with its own
@@ -29,7 +32,7 @@
  *
  * ## An account that only runs a club's groups is sent to its area
  *
- * The gate reads the account's **profiles** ahead of all five destinations
+ * The gate reads the account's **profiles** ahead of all three destinations
  * ([ADR-0185](../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
  * §3): an account that holds nothing but administrator profiles has not asked to play, so it is
  * redirected to its **administrator area** — a sibling group, `(administrator)`, with its own two
@@ -52,14 +55,14 @@
  * ([#520](https://github.com/Raketa02/Raketa/issues/520)): Join a group with the link filled in, or a
  * sheet over the app. What each gets is the links feature's; this file only mounts the place.
  *
- * ## A pass that began at the passport ends on it
+ * ## A pass ends where it began
  *
- * The gate's app branch is where every onboarding pass ends, and a pass has an origin
+ * The gate's app branch is where every rating pass ends, and a pass has an origin
  * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §3): one begun at the Skill passport's *Add a sport* enters the app the way every pass
- * does — *See your ratings*, *continue later* and *abandon* all replace to `/` — and it is
- * this file, told the origin as the pass ends, that lays the You tab down and pushes the
- * passport over it. The shell's own move: the tab beneath, so *back* from the passport goes
+ * §3, amended by ADR-0200 §5): one begun on Home ends there, which is where `/` opens; one begun
+ * at the Skill passport's *Add a sport* enters the app the way every pass does — *See your
+ * ratings*, *continue later* and *abandon* all replace to `/` — and it is this file, told the
+ * origin as the pass ends, that lays the You tab down and pushes the passport over it. The shell's own move: the tab beneath, so *back* from the passport goes
  * where it came from. Which route the passport is belongs to
  * the feature that owns the screen, not to this file — the same seam `NAMING_STEP` and
  * `SOCIAL_STEPS_ENTRY` cross.
@@ -92,8 +95,8 @@ export default function AppLayout() {
   const entry = useEntryDecision();
   const pathname = usePathname();
 
-  // Where a pass that has just ended lands, by where it began. A welcome pass is already
-  // where the gate put it, and is never handed here; a passport pass goes back to the passport,
+  // Where a pass that has just ended lands, by where it began. A Home pass is already where
+  // `/` opens, and is never handed here; a passport pass goes back to the passport,
   // with the You tab laid down beneath it; a group's goes back to the group, on the tab it began
   // on and the sport it rated last, with Play beneath it.
   const land = useCallback(
@@ -109,7 +112,7 @@ export default function AppLayout() {
     [pathname],
   );
 
-  // A walk through onboarding is over when the player is in the app. Declared here because
+  // A rating pass is over when the player is in the app. Declared here because
   // this is the branch that knows it — one site, and the definition rather than a line
   // someone has to remember on each of the several ways out of the flow. Called before the
   // returns below, because a hook may not be conditional.
@@ -143,26 +146,15 @@ export default function AppLayout() {
       // takes Start playing's steps from here, the Adult attestation first (ADR-0185 §3).
       return <Redirect href={START_PLAYING_STEP} />;
     case 'naming':
-      // Before anything else: every destination after this one says the player's name. Which
-      // route that is belongs to the feature that owns the naming, not to this file.
+      // Before anything else: every destination after this one says the player's nickname.
+      // Which route that is belongs to the feature that owns the naming, not to this file.
       return <Redirect href={NAMING_STEP} />;
-    case 'welcome':
-      return <Redirect href="/welcome" />;
     case 'social-steps':
       // The first step, always — never the one they were on when they closed the app. The
-      // draft is client-held and starts empty, so the middle of the part is not a place a
+      // draft is client-held and starts empty, so the middle of the steps is not a place a
       // player can be resumed to. Which route that is belongs to the feature that owns the
-      // part, not to this file.
+      // steps, not to this file.
       return <Redirect href={SOCIAL_STEPS_ENTRY} />;
-    case 'resume':
-      return (
-        <Redirect
-          href={{
-            pathname: '/question/[assessmentId]',
-            params: { assessmentId: entry.run.assessmentId, sport: entry.run.sport },
-          }}
-        />
-      );
     case 'app':
       return (
         <>

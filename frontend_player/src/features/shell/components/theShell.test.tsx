@@ -17,7 +17,6 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
-import { onboardingKeys } from '@/features/onboarding/types';
 import {
   AREA_LINE,
   INTRO_TITLE,
@@ -549,13 +548,21 @@ describe('the shell survives the gate re-reading the player', () => {
     // The seed was honoured: the gate answered from it and asked the server nothing.
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(0);
 
-    // The seed goes stale — the app's `staleTime` is thirty seconds — and the next screen to
-    // read the player will send for a fresh copy. That refetch is a background one: the gate
-    // already has its answer, and it is not what this mount set out to replace.
-    // Advanced outside `act`: inside it, this harness runs every pending timer — Query's
-    // five-minute collection among them — rather than the thirty seconds asked for.
-    jest.advanceTimersByTime(31_000);
-    act(() => {});
+    // The seed goes stale — on a device, thirty seconds on, the app's `staleTime` — and the next
+    // screen to read the player will send for a fresh copy. That refetch is a background one: the
+    // gate already has its answer, and it is not what this mount set out to replace.
+    //
+    // Marked stale rather than waited out: the seed is written before `renderRouter` installs its
+    // fake timers, so its timestamp is on the previous test's clock, and how far that clock ran
+    // decided whether thirty-one seconds were enough. They were only while the gate's two retired
+    // reads (#730) spent half a minute of fake time on every launch. Nothing is refetched here —
+    // the gate observes the read, and only a screen mounting one more observer sends for it.
+    act(() => {
+      void queryClient.invalidateQueries({
+        queryKey: authKeys.currentUser(),
+        refetchType: 'none',
+      });
+    });
 
     pressTab('You');
 
@@ -587,17 +594,18 @@ describe('the shell survives the gate re-reading the player', () => {
     pressTab('You');
     await waitFor(() => expect(screen).toHavePathname('/you'));
 
-    let answerRatings = () => {};
+    // The gate's one read is the player (#730): the ratings and the run route nowhere now.
+    let answerMe = () => {};
     const held = new Promise<void>((resolve) => {
-      answerRatings = resolve;
+      answerMe = resolve;
     });
-    transport.on('GET', '/api/v1/ratings', async () => {
+    transport.on('GET', '/api/v1/users/me', async () => {
       await held;
-      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
+      return json<Wire['MeResponse']>({ ...GATE_USER, has_player_profile: true });
     });
 
     act(() => {
-      void queryClient.resetQueries({ queryKey: onboardingKeys.ratings() });
+      void queryClient.resetQueries({ queryKey: authKeys.currentUser() });
     });
 
     // Query tells its observers on a timer of its own, and the gate answers on the render that
@@ -610,7 +618,7 @@ describe('the shell survives the gate re-reading the player', () => {
     jest.advanceTimersByTime(10);
     act(() => {});
 
-    answerRatings();
+    answerMe();
 
     expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');

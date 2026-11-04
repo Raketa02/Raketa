@@ -41,7 +41,6 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 /**
@@ -257,7 +256,6 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
-  useDeferredRuns.getState().reset();
 });
 
 afterEach(() => {

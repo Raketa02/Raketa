@@ -5,9 +5,9 @@
  *
  * What is proved is the pass's *origin* doing its one job: the chip begins a pass of exactly one
  * sport at the question route, the questionnaire between is onboarding's own, and every way out
- * of it — *See your ratings*, *continue later*, *abandon* — lands back on the passport rather
- * than on the done screen, the data screen or the social steps. The admission rule keeps its
- * refusals on the way. The welcome-begun pass's suites are unchanged and stand beside this one.
+ * of it — *See your ratings*, *continue later*, *abandon* — lands back on the passport. The
+ * admission rule keeps its refusals on the way. Passes begun on a group are
+ * `aPassFromAGroup.test`'s and `theDoorWherePlayBegins.test`'s.
  *
  * Every assertion is about what a player can see or what left the device.
  */
@@ -19,6 +19,7 @@ import { ADD_A_SPORT, SKILL_PASSPORT_TITLE, rateSportChip } from '@/features/pla
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  HOME_TAB_LINE,
   SPORTS_SERVED,
   launchSignedIn,
   stubGate as stubGateWith,
@@ -36,7 +37,6 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { useDeferredRuns } from '../store/deferredRuns.store';
 import { FROM_THE_PASSPORT } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
@@ -151,7 +151,6 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
-  useDeferredRuns.getState().reset();
 });
 
 afterEach(() => {
@@ -164,7 +163,6 @@ async function relaunch() {
   cleanup();
   queryClient.clear();
   useOnboardingPass.getState().reset();
-  useDeferredRuns.getState().reset();
   resetSessionStatus();
   await launchSignedIn();
 }
@@ -329,7 +327,7 @@ describe('a pass begun at the passport', () => {
   );
 
   it(
-    'never shows the done screen, the data screen or the social steps',
+    'never shows the profile steps, or a summary of the pass',
     async () => {
       await onThePassport();
       await rateBadminton();
@@ -378,13 +376,13 @@ describe('leaving a pass begun at the passport', () => {
     await expectThePassport();
     // Nothing was written — not an abandonment, not anything else after the start.
     expect(transport.requests.filter((r) => r.method !== 'GET')).toHaveLength(1);
-    // And the gate left the deferred run alone: still on the passport a beat later, with
+    // And nothing took her back into the run: still on the passport a beat later, with
     // the chip offered again for a run the server still holds.
     expect(await screen.findByLabelText(rateSportChip('badminton'))).toBeTruthy();
     expect(screen).toHavePathname('/you/passport');
   });
 
-  it('resumes the deferred run on the next launch, as the gate resumes any other', async () => {
+  it('opens the next launch in the app, not in the run it left (ADR-0200 §5)', async () => {
     await onThePassport();
     await rateBadminton();
     openTheConfirm();
@@ -393,8 +391,9 @@ describe('leaving a pass begun at the passport', () => {
 
     await relaunch();
 
-    await waitFor(() => expect(screen).toHavePathname(`/question/${BADMINTON_RUN}`));
-    expect(await screen.findByText(PLAYED_QUESTION.text)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(screen.queryByText(PLAYED_QUESTION.text)).toBeNull();
   });
 
   it('returns to the passport on abandon, with the run ended and no card added', async () => {
@@ -419,14 +418,15 @@ describe('leaving a pass begun at the passport', () => {
 // ---------------------------------------------------------------------------
 
 describe('a link during a pass begun at the passport', () => {
-  it('sends a link naming another sport to welcome, not into the middle of the pass', async () => {
+  it('sends a link naming another sport back to the passport, not into the middle of the pass', async () => {
     stubGate({ ratings: THREE_RATED, hasPlayerProfile: true });
     // A pass of one sport is running from the passport, and the link names another.
     useOnboardingPass.getState().begin(['badminton'], FROM_THE_PASSPORT);
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // Out to the app's root, which ends the running pass — and a pass ends where it began.
+    await expectThePassport();
     expect(transport.requestsTo('GET', stepPath(STRANGE_LINK_ID))).toEqual([]);
   });
 });

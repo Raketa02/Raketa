@@ -6,14 +6,11 @@
  * detail this feature is free to change.
  */
 
-export { DataScreen } from './components/DataScreen';
-export { DoneScreen } from './components/DoneScreen';
 export { EntryUnavailableScreen } from './components/EntryUnavailableScreen';
 export { QuestionScreen } from './components/QuestionScreen';
 export { ResultScreen } from './components/ResultScreen';
 export { ReviewScreen } from './components/ReviewScreen';
 export { SportsPickerScreen } from './components/SportsPickerScreen';
-export { WelcomeScreen } from './components/WelcomeScreen';
 
 export type { SkillRating } from './domain/SkillRating';
 
@@ -28,8 +25,8 @@ export { onboardingKeys } from './hooks/onboardingKeys';
  * feature already owns. `sport.ts`'s own rule is that *the two spellings meet in `mappers/`,
  * and only there* — singular, which is what makes this a re-export rather than a promotion.
  *
- * The callers today are Play's sport chips (`useSkillRatings`, `toWireSport` on the search
- * request) and the Player profile's surface read (`toSport` over the declaration map).
+ * The callers today are a group's sport chip (`useSkillRatings`) and the Player profile's
+ * surface read (`toSport` over the declaration map).
  */
 export { useSkillRatings } from './hooks/useSkillRatings';
 export { toSport, toWireSport } from './mappers/onboardingMappers';
@@ -90,22 +87,21 @@ export {
 } from './hooks/useEntryDecision';
 
 /**
- * A walk through onboarding is over when the player is in the app. The gate is the one
- * place that knows they are, so it is the one place that says so — see the hook for why
- * this is the definition rather than a convention. **It hands the gate where the pass
- * began**, because a pass begun at the Skill passport ends on the passport
- * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §3), and which route that is belongs to the route file that lands it.
+ * A rating pass is over when the player is in the app. The gate is the one place that knows
+ * they are, so it is the one place that says so — see the hook for why this is the definition
+ * rather than a convention. **It hands the gate where the pass began**, because a pass ends
+ * where it began ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §5), and which route that is belongs to the route file that lands it.
  */
 export { useEndOnboardingPass, type PassLanding } from './hooks/useEndOnboardingPass';
 /**
- * **Where a pass began** — onboarding's own door, the Skill passport, or a group's tab
+ * **Where a pass began** — Home, the Skill passport, or a group's tab
  * ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5) — and what
  * the app lands once it ends (`PassReturn`).
  */
 export {
+  FROM_HOME,
   FROM_THE_PASSPORT,
-  FROM_WELCOME,
   fromAGroup,
   type PassOrigin,
   type PassReturn,
@@ -114,7 +110,17 @@ export {
 export { useReturningGroup } from './hooks/useReturningGroup';
 
 /**
- * **The second door into the pass** — the Skill passport's *Add a sport* (ADR-0179 §3), and an
+ * **The door where play begins** ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §2, §5, [#730](https://github.com/Raketa02/Raketa/issues/730)) — *Get your level*, or *Carry on
+ * with your padel questions — you're on question 5* — drawn by a player group's Games, Fill in and
+ * Friends, its *Post a game* and its Members for a player rated in nothing. The pass it begins
+ * returns to the door's origin; the card, its words and both reads are this feature's.
+ */
+export { LevelDoor } from './components/LevelDoor';
+export type { DoorOrigin } from './hooks/useLevelDoor';
+
+/**
+ * **A door into the pass for one sport** — the Skill passport's *Add a sport* (ADR-0179 §3), and an
  * official group's card (ADR-0200 §3). The button starts the sport's assessment through the
  * picker's own start, begins a pass of that one sport at the question route, and the pass ends
  * where the caller said it began. The act crosses the surface; the store does not.
@@ -123,10 +129,9 @@ export { useAddASport, type AddASport } from './hooks/useAddASport';
 export { STARTING_LABEL } from './components/startPresentation';
 
 /**
- * Whether a link may drop a player straight into a sport's questionnaire. A pass has two
- * doors — the picker and the passport's chip — and a link is neither: one naming a sport
- * outside the running pass sends the player to welcome rather than into the middle of a
- * flow with nothing honest to show.
+ * Whether a link may drop a player straight into a sport's questionnaire. Every door begins a
+ * pass, and a link is none of them: one naming a sport outside the running pass sends the
+ * player to Home rather than into the middle of a flow with nothing honest to show.
  */
 export { useOnboardingAdmission, type OnboardingAdmission } from './hooks/useOnboardingAdmission';
 

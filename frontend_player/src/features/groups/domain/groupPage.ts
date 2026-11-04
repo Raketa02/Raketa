@@ -85,6 +85,19 @@ export function sportsToAdd(
   return SPORTS.filter((sport) => declared.includes(sport));
 }
 
+/**
+ * **Whether the reader meets the door where play begins** — *Get your level*, in place of a player
+ * group's Games, Fill in and Friends, its *Post a game* and its Members
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2,
+ * [#730](https://github.com/Raketa02/Raketa/issues/730)). A player group plays whatever its members
+ * are rated in, so a reader rated in nothing has no sport for any of them. **Never an official
+ * group's reader**: it plays what it declares, and offers those sports on its own card
+ * (`sportsToAdd`, §3).
+ */
+export function needsALevel(rated: readonly Sport[], declared?: readonly Sport[]): boolean {
+  return declared === undefined && filterSports(rated).length === 0;
+}
+
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */
 export function rosterFor(
   group: Pick<Group, 'ratedBySport'>,

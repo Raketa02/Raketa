@@ -57,7 +57,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { sportColour } from '@/features/onboarding/types';
+import { LevelDoor, fromAGroup, sportColour } from '@/features/onboarding/types';
 import {
   PlayerRecordSheet,
   PlayerScoreTag,
@@ -112,7 +112,7 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
           />
         )}
       >
-        {(sport, toAdd) =>
+        {(sport, toAdd, needsALevel) =>
           group === undefined ? (
             read.error === null ? null : (
               <View style={s.body}>
@@ -127,6 +127,12 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
             // An official group the reader plays none of the sports of: no list is drawn for one.
             <View style={s.body}>
               <AddSportCard sports={toAdd} groupId={groupId} tab={pageTab} />
+            </View>
+          ) : needsALevel ? (
+            // A player group, and she is rated in nothing: Members lists only members rated in
+            // the sport, so she is on nobody's list — her own included — until she rates (#730).
+            <View style={s.body}>
+              <LevelDoor from={fromAGroup(groupId, pageTab)} />
             </View>
           ) : sport === undefined ? null : (
             <MembersList

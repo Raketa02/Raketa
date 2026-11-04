@@ -5,14 +5,14 @@
  * than one with a qualifier:
  *
  * - *Continue later* keeps the run in progress. Nothing is sent, nothing is lost, and the
- *   next launch lands back on the outstanding question.
+ *   door where play begins offers it again as *Carry on*, at the outstanding question
+ *   ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5).
  * - *Stop rating this sport* ends the run. Its answers are discarded and the sport is free
  *   to be rated again from the beginning.
  *
- * Both are reachable because either one alone breaks something. Without abandonment the
- * entry gate becomes a trap — a player who has decided against padel is routed into the
- * padel questionnaire on every launch, and the only escape is finishing a rating they did
- * not want. Without "continue later", any interruption costs every answer given, in a run
+ * Both are reachable because either one alone breaks something. Without abandonment a run a
+ * player has decided against would be offered as *Carry on* for good — the door never offers to
+ * start again. Without "continue later", any interruption costs every answer given, in a run
  * of up to ten questions.
  *
  * **The abandon control says what it discards, on the control itself.** This is the one

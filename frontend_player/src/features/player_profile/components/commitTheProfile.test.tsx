@@ -4,9 +4,11 @@
  * Driven through the real route tree with only the socket faked, like every other flow suite
  * here — the router, the http client, the mappers, the use case, the hooks, the draft and the
  * screens all run for real. What is being proved is the **part as a unit**: a player arrives
- * from the last result, answers six screens, changes their mind and finds their answers
- * where they left them, presses finish once on *Who you play with*, and every one of those
- * answers reaches the server in a single request that cannot be made twice.
+ * from the naming, answers six screens, changes their mind and finds their answers where they
+ * left them, presses finish once on *Who you play with*, and every one of those answers reaches
+ * the server in a single request that cannot be made twice — and lands on Home
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1, #730). The
+ * whole sign-up, in its eight screens, is `onboardingFlow.test`'s.
  *
  * **The finish is on *Who you play with*** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
  * the radius and the proposals question left the part, so the step that asks who a player is
@@ -28,7 +30,6 @@ import {
   launchSignedIn,
   HOME_TAB_LINE,
   resetLocation,
-  SPORTS_SERVED,
   stubGate as stubGateWith,
   stubLocation,
   stubProfileOptions,
@@ -40,7 +41,6 @@ import {
   json,
   networkFailure,
   neverResponds,
-  transcriptOf,
   type RecordedRequest,
   type Transport,
   type Wire,
@@ -52,9 +52,8 @@ import { FINISH_LABEL } from './commitPresentation';
 import { CHANGE_INTRO_LABEL, INTRO_FIELD_LABEL } from './introPresentation';
 
 const COMMIT_PATH = '/api/v1/players/me/profile';
-const PADEL_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 
-/** One rating: the first part is behind this player, and the second one is not. */
+/** One rating — which the steps neither need nor read: a level is asked where play begins. */
 const RATING: Wire['RatingResponse'] = {
   sport: 'PADEL',
   mu: 2.71,
@@ -314,10 +313,8 @@ describe('finishing the part', () => {
     await waitFor(() => expect(commits()).toHaveLength(1));
 
     expect(bodyOf(commits()[0])?.gender).toBe('PREFER_NOT_TO_SAY');
-    // The data screen, not the summary: a player reaches the second part *from* the
-    // summary now, so landing back on it would show the same account of the same walk
-    // twice — the second time after six questions that had nothing to do with it.
-    await waitFor(() => expect(screen).toHavePathname('/data'));
+    // And on to Home, as any finish is.
+    await waitFor(() => expect(screen).toHavePathname('/'));
   });
 
   it('says it is finishing rather than announcing itself disabled, while it is in flight', async () => {
@@ -456,7 +453,7 @@ describe('a double tap on the finish', () => {
     // one render behind the finger; the key is the defence.
     fireEvent.press(finish());
     fireEvent.press(finish());
-    await waitFor(() => expect(screen).toHavePathname('/data'));
+    await waitFor(() => expect(screen).toHavePathname('/'));
 
     // **Exactly one profile**, whatever reached the socket. Every request carried the same
     // key, so the server created one and answered the repeat with it; a key minted per press
@@ -506,7 +503,7 @@ describe('a failed commit', () => {
 
     stubCommit();
     fireEvent.press(finish());
-    await waitFor(() => expect(screen).toHavePathname('/data'));
+    await waitFor(() => expect(screen).toHavePathname('/'));
 
     // Two attempts, one key, one profile. The failed attempt may well have reached the
     // server and been recorded before the connection dropped; the retry replays it rather
@@ -610,35 +607,24 @@ describe('once the commit has landed', () => {
   async function commitAndLeave() {
     await reachTheFinish();
     fireEvent.press(finish());
-    // **The data screen, not the summary.** The ratings summary is the screen a player now
-    // enters the second part *from*, so the commit lands one screen further on: what Raketa
-    // keeps, and then the app.
-    await waitFor(() => expect(screen).toHavePathname('/data'));
+    // **Home, and nothing between.** *What Raketa keeps* stood here and recorded nothing.
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
   }
 
-  it('continues into what is kept, and then the app', async () => {
+  it('lands on Home', async () => {
     await commitAndLeave();
 
-    expect(screen.getByText('What we keep from setting up')).toBeTruthy();
-
-    fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
+    expect(screen.queryByText('What we keep from setting up')).toBeNull();
   });
 
-  it('offers no way back into the second part', async () => {
+  it('offers no way back into the steps', async () => {
     await commitAndLeave();
 
-    // Nothing behind the data screen: every move inside the part replaced, so there is no
-    // history entry holding one of the six, and the part itself is over.
+    // Every move inside the steps replaced, so there is no history entry holding one of the
+    // six, and the gate's profile branch is answered now.
     expect(screen.queryByLabelText(/^Back to /)).toBeNull();
-
-    fireEvent.press(screen.getByLabelText('Start playing'));
-
-    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
-    // The gate's fourth branch is answered now, so the way it used to turn this player round
-    // into the steps is closed.
-    expect(screen).toHavePathname('/');
+    expect(screen.queryByText(/^Setting up · Step/)).toBeNull();
   });
 
   it('lands a relaunch in the app rather than back in the steps', async () => {
@@ -657,121 +643,5 @@ describe('once the commit has landed', () => {
     // And no second commit was made on the way: nothing about launching writes anything.
     expect(commits()).toHaveLength(1);
     expect(keysCommitted.size).toBe(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Where the part is entered from
-// ---------------------------------------------------------------------------
-
-describe('arriving from the last result', () => {
-  const stepPath = (assessmentId: string) => `/api/v1/assessments/${assessmentId}`;
-
-  const OUTSTANDING: Wire['AssessmentStepResponse'] = {
-    assessment_id: PADEL_ID,
-    status: 'in_progress',
-    questions_asked: 0,
-    transcript: transcriptOf(0),
-    question: {
-      id: 'q-overhead',
-      category: 'Match execution',
-      tier: 'standard',
-      situation: 'A deep lob pushes you off the net',
-      text: 'How often do you play a controlled overhead?',
-      qualifier: 'A normal match against players at your level',
-      options: [
-        { id: 'rarely', text: 'Rarely' },
-        { id: 'usually', text: 'Usually' },
-      ],
-    },
-  };
-
-  const RESULT: Wire['ResultResponse'] = {
-    mu: 2.71,
-    sigma: 0.62,
-    confidence: 30,
-    confidence_ceiling: 30,
-    range: { low: 2.09, high: 3.33 },
-    band: { name: 'Established', lower: 2.65, upper: 3.85 },
-    status: 'initial_estimate',
-    questions_asked: 6,
-    engine_version: 'racketskill-v3',
-    calibration_priority: 'standard',
-    confidence_reason: {
-      key: 'limited-match-evidence',
-      sentence: 'We have not seen you play yet, so this is a starting estimate.',
-    },
-    factors: [{ key: 'match-execution', label: 'Match execution', direction: 'up', level: 3.1 }],
-    uncertainty_factors: [],
-  };
-
-  const FINISHED: Wire['AssessmentStepResponse'] = {
-    assessment_id: PADEL_ID,
-    status: 'completed',
-    questions_asked: RESULT.questions_asked,
-    transcript: transcriptOf(RESULT.questions_asked),
-    question: null,
-    result: RESULT,
-  };
-
-  it('shows the ratings the walk produced, then the six steps, and finishes on who you play with', async () => {
-    // The one walk that proves the order — a new player's sign-up, end to end. A player is
-    // owed the number they just spent a minute per sport producing **before** anything else
-    // is asked of them, so the result leads to the summary, the summary is the door into the
-    // second part, and the finish on *Who you play with* lands on what Raketa keeps.
-    stubGate();
-    stubProfileOptions(transport);
-    stubLocation(fakeLocation({ fix: FIX }));
-    stubCommit();
-    transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
-    transport.on('POST', '/api/v1/assessments', () => json(OUTSTANDING, 201));
-    transport.on('POST', `${stepPath(PADEL_ID)}/answers`, () => {
-      transport.on('GET', stepPath(PADEL_ID), () => json(FINISHED));
-      stubGate({ ratings: [RATING], hasPlayerProfile: false });
-      return json(FINISHED);
-    });
-
-    await launchSignedIn();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    fireEvent.press(screen.getByLabelText('Get started'));
-    await waitFor(() => expect(screen).toHavePathname('/sports'));
-    fireEvent.press(await screen.findByLabelText('Padel'));
-    fireEvent.press(screen.getByLabelText('Rate 1 sport'));
-
-    await waitFor(() => expect(screen).toHavePathname(`/question/${PADEL_ID}`));
-    fireEvent.press(await screen.findByLabelText('Usually'));
-    fireEvent.press(screen.getByLabelText('Confirm answer'));
-    await waitFor(() => expect(screen).toHavePathname(`/result/${PADEL_ID}`));
-
-    // The last sport leads to the summary, whatever else the player still owes.
-    fireEvent.press(await screen.findByLabelText('See your ratings'));
-    await waitFor(() => expect(screen).toHavePathname('/done'));
-
-    // With the rating this walk produced on it — the account the player earned, given to
-    // them at the moment they earned it rather than six screens later.
-    expect(await screen.findByLabelText('Padel level: 2,71')).toBeTruthy();
-
-    // And the summary is the door into the second part. The control says so, rather than
-    // saying *Continue* to somebody about to answer six more questions.
-    //
-    // Awaited, because *does this player still owe a profile* is a read, and until it lands
-    // the screen takes the fail-safe answer — *they are set up* — and offers the plain
-    // continue. That default is the safe one either way: it leads to the data screen and
-    // then to the gate, which turns a player who really is owed the part straight into it.
-    fireEvent.press(await screen.findByLabelText('Finish setting up'));
-    await waitFor(() => expect(screen).toHavePathname('/tags'));
-
-    await answerTheTags();
-    await walkOnToTheLastStep();
-    expect(screen.getByText('Who do you want to play with?')).toBeTruthy();
-    answerAboutYou();
-    fireEvent.press(finish());
-
-    // The commit lands on what is kept, not back on the summary they have already read.
-    await waitFor(() => expect(screen).toHavePathname('/data'));
-    expect(commits()).toHaveLength(1);
-    // And the body is the six steps' and nothing else: no radius, no proposals answer.
-    expect(bodyOf(commits()[0])).not.toHaveProperty('search_radius_km');
-    expect(bodyOf(commits()[0])).not.toHaveProperty('proposals_opt_in');
   });
 });

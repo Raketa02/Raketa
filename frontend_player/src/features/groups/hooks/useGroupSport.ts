@@ -5,7 +5,7 @@
  * §2, PRD #500 stories 52–58).
  *
  * Two reads meet here: the player's ratings, which say which sports the filter lists (onboarding's
- * `useSkillRatings`, already in the cache since the entry gate read it), and the sport last picked,
+ * `useSkillRatings`, read here first since the entry gate stopped reading it, #730), and the sport last picked,
  * off the phone. **Nothing is drawn until both are in** (§4: *no screen draws one choice and then
  * jumps to another*), so `sport` is `undefined` until then. The saved value is judged against the
  * ratings every time it is read — a sport the player is no longer rated in opens on the default —
@@ -15,6 +15,10 @@
  * lists only the rated ones among them and opens on one of them, whatever was picked elsewhere —
  * and the saved value stays what the player last picked, since opening is not picking. A reader
  * rated in none of them has no sport here, and `toAdd` names what they would add to have one.
+ *
+ * **A player group's reader rated in nothing meets the door** (ADR-0200 §2, #730): `needsALevel`
+ * says so, and the page draws *Get your level* in place of its tabs. The sport pill is drawn only
+ * once there is a rating to list (`sports` is empty until then), and lists only rated sports.
  *
  * The phone read is `usePlaySegment`'s posture, for its reasons: local, never waiting on the
  * network (`networkMode: 'always'`), once per account per session and kept for good, and every
@@ -29,7 +33,7 @@ import { useSkillRatings } from '@/features/onboarding/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { filterSports, openingSport, sportsToAdd } from '../domain/groupPage';
+import { filterSports, needsALevel, openingSport, sportsToAdd } from '../domain/groupPage';
 import { keepLastSport, readLastSport } from '../use-cases/lastSport';
 
 import { useReaderId } from './useReaderId';
@@ -44,6 +48,12 @@ export interface GroupSport {
    * rated in none of them (story 57); empty otherwise, and while either read is out.
    */
   readonly toAdd: readonly Sport[];
+  /**
+   * **Whether the reader meets the door where play begins** — a player group's reader rated in
+   * nothing (ADR-0200 §2, `needsALevel`); `false` while either read is out, and for an official
+   * group, which offers its own card instead.
+   */
+  readonly needsALevel: boolean;
   readonly choose: (sport: Sport) => void;
 }
 
@@ -93,13 +103,14 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 
   // `null` is a phone that answered *nothing saved*; `undefined` is one still being read.
   if (rated === undefined || (account !== undefined && picked === undefined)) {
-    return { sports: undefined, sport: undefined, toAdd: [], choose };
+    return { sports: undefined, sport: undefined, toAdd: [], needsALevel: false, choose };
   }
 
   return {
     sports: filterSports(rated, declared),
     sport: openingSport(rated, picked ?? undefined, declared, wanted),
     toAdd: sportsToAdd(rated, declared),
+    needsALevel: needsALevel(rated, declared),
     choose,
   };
 }
@@ -115,9 +126,15 @@ export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupS
   const [picked, setPicked] = useState<Sport>();
 
   if (declared === undefined) {
-    return { sports: undefined, sport: undefined, toAdd: [], choose: setPicked };
+    return {
+      sports: undefined,
+      sport: undefined,
+      toAdd: [],
+      needsALevel: false,
+      choose: setPicked,
+    };
   }
 
   const sport = picked !== undefined && declared.includes(picked) ? picked : declared[0];
-  return { sports: declared, sport, toAdd: [], choose: setPicked };
+  return { sports: declared, sport, toAdd: [], needsALevel: false, choose: setPicked };
 }

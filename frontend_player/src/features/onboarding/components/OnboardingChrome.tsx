@@ -11,8 +11,8 @@
  * design-system 12.1).
  *
  * So the strip under the header is a slot rather than a component. Screens with nothing to
- * measure — welcome, the picker, the result, the closing screens — pass nothing and draw a
- * header, which is what they always drew once the sports bar stopped being honest.
+ * measure — the picker, the review, the result — pass nothing and draw a header, which is
+ * what they always drew once the sports bar stopped being honest.
  *
  * The header's two slots are not the same thing and never were: the right slot is a way
  * *out* of the flow (the close control), and the left is the way *back* through it, which

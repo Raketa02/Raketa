@@ -1,10 +1,10 @@
 /**
- * Every Skill rating this player holds — the gate's "is this player rated at anything?"
- * and, later, the done screen's list.
+ * Every Skill rating this player holds — what a group's sport chip lists, and whether the door
+ * where play begins is drawn at all (ADR-0200 §2, §4).
  *
- * An unrated player is an **empty collection with a 200**, not an error: absence of a
- * rating is the normal state of a new account, and the gate would otherwise have to
- * recover from a failure to decide where to send someone.
+ * An unrated player is an **empty collection with a 200**, not an error: absence of a rating
+ * is the normal state of a new account — onboarding asks for none (#730) — and every screen
+ * reading it would otherwise have to recover from a failure to draw the commonest case.
  */
 
 import { listRatings as fetchRatings } from '../api/onboardingApi';

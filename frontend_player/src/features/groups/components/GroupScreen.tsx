@@ -44,6 +44,12 @@
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
  * not a deck — the question, the starting card.
  *
+ * **A player rated in nothing meets one door** (#730, ADR-0200 §2): in a player group, Games, Fill
+ * in and Friends each draw onboarding's `LevelDoor` in place of their content — *Get your level*,
+ * or *Carry on with your padel questions* with a run left halfway — and the pass it begins returns
+ * to the tab it stood on. No sport pill is drawn until she holds a rating, and *+ Post a game* is
+ * not floated over the door: one door, as an official group's card is one card.
+ *
  * **A rating pass begun on the page comes back to it** (#729, ADR-0200 §3, §5): the route hands in
  * the tab it began on and the sport it rated last, and the page opens on that tab, standing on that
  * sport — the notice's posture: the page stands on it until the player picks another, never saved
@@ -74,6 +80,7 @@ import { useEffect } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LevelDoor, fromAGroup } from '@/features/onboarding/types';
 import {
   FillInBoard,
   forgetPostDraft,
@@ -229,7 +236,7 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
           />
         )}
       >
-        {(sport, toAdd) => {
+        {(sport, toAdd, needsALevel) => {
           // The sport the three sport tabs are drawn for — none while the reader must add one.
           const playing = toAdd.length === 0 ? sport : undefined;
           return group === undefined ? (
@@ -263,12 +270,14 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
                 >
                   {toAdd.length > 0 ? (
                     <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
+                  ) : needsALevel ? (
+                    <LevelDoor from={fromAGroup(groupId, tab)} />
                   ) : sport === undefined ? null : (
                     <TabBody tab={tab} group={group} sport={sport} />
                   )}
                 </ScrollView>
               )}
-              {tab === 'fillIn' && toAdd.length === 0 ? (
+              {tab === 'fillIn' && toAdd.length === 0 && !needsALevel ? (
                 <View style={s.postAGame}>
                   <PostAGame groupId={groupId} />
                 </View>

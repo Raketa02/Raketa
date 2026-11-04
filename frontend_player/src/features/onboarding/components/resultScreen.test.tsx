@@ -138,14 +138,15 @@ afterEach(() => {
  * response, which is the point — a player who relaunches onto this screen sees the same.
  */
 async function arriveAtTheResult(result: Wire['ResultResponse'] = RESULT) {
-  stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+  stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
   transport.on('GET', STEP_PATH, () => json(OUTSTANDING));
   transport.on('POST', ANSWERS_PATH, () => {
     transport.on('GET', STEP_PATH, () => json(finished(result)));
     return json(finished(result));
   });
 
-  await launchSignedIn();
+  // The run's own route, as *Carry on* opens it — the gate resumes nothing (ADR-0200 §5).
+  await launchSignedIn(`/question/${ASSESSMENT_ID}?sport=padel`);
 
   expect(await screen.findByLabelText('Usually')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Usually'));
@@ -505,11 +506,8 @@ describe('nothing rests on colour', () => {
 /**
  * **The device's back button, on a rating a run has already produced.**
  *
- * Every screen in onboarding is reached by `replace`, so the group holds one history entry
- * and Android's back popped straight through it to the screen the part began on — welcome,
- * one push behind the sport picker, from which the only way forward is to rate a sport
- * again. [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back
- * and forward move freely inside each part and never cross between them."*
+ * Every screen in the questionnaire is reached by `replace`, so the group holds one history
+ * entry, and an unclaimed press would leave the app from under a rating just made.
  *
  * Neither screen draws a back control, so the press is claimed and nothing happens — the same
  * answer the missing control already gives. `pressHardwareBack` replays the press through

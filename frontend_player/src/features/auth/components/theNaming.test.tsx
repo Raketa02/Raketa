@@ -141,14 +141,13 @@ describe('the entry gate and the naming step', () => {
 
     await waitFor(() => expect(screen).toHavePathname('/name'));
     expect(screen.getByText(NAMING_TITLE)).toBeTruthy();
-    expect(screen.queryByText("Let's set you up")).toBeNull();
   });
 
-  it('sends a session whose player has no nickname to the naming step, and not to welcome', async () => {
+  it('sends a session whose player has no nickname to the naming step, and not to the steps', async () => {
     await launchUnnamed();
 
     expect(screen.getByText(NAMING_TITLE)).toBeTruthy();
-    expect(screen.queryByText("Let's set you up")).toBeNull();
+    expect(screen.queryByText('What kind of player are you?')).toBeNull();
     // One box, a Nickname — no Name, no hint under it, and no line under the title for an
     // account sign-up created.
     expect(screen.getByLabelText(NICKNAME_LABEL)).toBeTruthy();
@@ -177,17 +176,17 @@ describe('the entry gate and the naming step', () => {
     expect(screen.queryByLabelText('Name')).toBeNull();
   });
 
-  it('passes a named player to welcome without showing the step', async () => {
+  it('passes a named player to the profile steps without showing the step', async () => {
     stubGate();
 
     await launchSignedIn();
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
     expect(screen.queryByText(NAMING_TITLE)).toBeNull();
   });
 
   /**
-   * The nickname is asked before anything else — before an unfinished run, before the app —
+   * The nickname is asked before anything else — before the profile steps, before the app —
    * because every destination after it says the player's nickname. The flow cannot produce a
    * run by an account with none, and the gate routes it anyway rather than looping.
    */
@@ -289,11 +288,12 @@ describe('submitting the naming', () => {
 
   /**
    * **Submits, re-reads `/me`, and only then moves on** — ADR-0199 §3, as routing. The gate's
-   * answer for a player who has just named themselves and holds nothing else is welcome, and it
+   * answer for a player who has just named themselves and holds nothing else is the profile steps
+   * — *What kind of player are you?*, with no questionnaire before it (ADR-0200 §1) — and it
    * is the gate that answers: the step hands the next destination back to the one rule that
    * knows it.
    */
-  it('sends a nickname and nothing else, re-reads the player, and moves on to welcome', async () => {
+  it('sends a nickname and nothing else, re-reads the player, and moves on to the steps', async () => {
     await launchUnnamed();
     stubNaming({ nickname: 'ania.k' });
     stubNamed();
@@ -301,8 +301,8 @@ describe('submitting the naming', () => {
     fillNaming();
     fireEvent.press(screen.getByLabelText(CONTINUE.label));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.getByText("Let's set you up")).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+    expect(screen.getByText('What kind of player are you?')).toBeTruthy();
 
     // The naming is a nickname, and nothing else.
     const [naming] = transport.requestsTo('PUT', NAMING_PATH);
@@ -340,7 +340,7 @@ describe('submitting the naming', () => {
 
     answer(json<Wire['MeResponse']>({ ...GATE_USER, nickname: 'ania.k' }));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
   });
 
   /** The form trims before it sends, as the server's value object does. */
@@ -352,7 +352,7 @@ describe('submitting the naming', () => {
     fillNaming('  ania.k ');
     fireEvent.press(screen.getByLabelText(CONTINUE.label));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
     const [naming] = transport.requestsTo('PUT', NAMING_PATH);
     expect(naming?.body).toEqual({ nickname: 'ania.k' });
   });
@@ -387,7 +387,7 @@ describe('submitting the naming', () => {
     stubNamed();
     fireEvent.press(screen.getByLabelText(CONTINUE.label));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
     expect(transport.requestsTo('PUT', NAMING_PATH)).toHaveLength(2);
   });
 

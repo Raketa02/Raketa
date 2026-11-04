@@ -8,7 +8,7 @@
  * `authErrorMessage`.
  */
 
-/** The eyebrow over the title: the same word the sign-up form and welcome open with. */
+/** The eyebrow over the title: the same word the sign-up form and the sports picker open with. */
 export const NAMING_EYEBROW = 'Raketa';
 
 /**
@@ -23,12 +23,14 @@ export const NICKNAME_LABEL = 'Nickname';
 
 /**
  * The one control, and what it promises. *Continue* rather than *Save*: the naming is the
- * first step of a walk, and the sentence under the button is where the walk goes next.
+ * first step of a walk, and the sentence under the button is where the walk goes next — the
+ * profile steps, since a level is asked where play begins rather than here
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1, #730).
  */
 export const CONTINUE = {
   label: 'Continue',
   busyLabel: 'Saving…',
-  hint: 'Next, a few questions to find your level',
+  hint: 'Next, what kind of player you are',
 } as const;
 
 /**

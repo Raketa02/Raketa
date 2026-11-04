@@ -32,7 +32,7 @@ is referenced from the other by a sentence, not copied.
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
 | [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
 | [`notifications.md`](notifications.md)       | You › Account › Notifications, the phone's push, the in-app banner, the list behind the bell   |
-| [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
+| [`onboarding.md`](onboarding.md)             | The gate, the rating pass and its origins, the level door, the hardware back button            |
 | [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`proposals.md`](proposals.md)               | A group's Games deck and details; Games & money; the fill; Home's games; Fill in; posting      |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step that ends setting up, the commit                            |
@@ -60,9 +60,9 @@ startup sequence. Above that: the HTTP client with its 401 → refresh → retry
   and You are its compositions.
 - `auth` — sign up (with the **adult attestation**), sign in, session restore, the naming,
   Forgot password and invitations.
-- `onboarding` — the entry gate, welcome, the sports picker, the adaptive question loop, the
-  explained result, and the summary and data screens a player leaves through.
-- `player_profile` — onboarding's **second part**: six steps over a client-held draft and the
+- `onboarding` — the entry gate, the level door where play begins, the sports picker, the
+  adaptive question loop and the explained result.
+- `player_profile` — onboarding's **six steps**: a client-held draft and the
   one idempotent `POST /players/me/profile` that ends them, and the You tab's rows that edit the
   same facts afterwards.
 - `groups` — Play › Groups: New group, Join a group, a group's page, Friends, Members.

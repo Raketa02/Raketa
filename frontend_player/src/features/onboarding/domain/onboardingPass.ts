@@ -10,11 +10,10 @@
  * ## What a pass is
  *
  * **The sports chosen, in the order chosen, which of them produced a Skill rating — and
- * where the pass began.** The first two facts answer every question onboarding asks about
- * itself: the progress bar's numerator and denominator, which sport comes next, and whether
- * there is anything to account for on the way out. The third answers where the way out
- * leads: a pass has an **origin** — welcome, the Skill passport's *Add a sport*, or a group's
- * tab — and where it ends is read off it
+ * where the pass began.** The first two facts answer every question the questionnaire asks
+ * about itself: the eyebrow's numerator and denominator, which sport comes next, and which sport
+ * the way back stands on. The third answers where the way out leads: a pass has an **origin** —
+ * a group's tab, Home, or the Skill passport's *Add a sport* — and where it ends is read off it
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §3, amended by [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
  * §5). Everything between the two ends is the same walk.
@@ -30,9 +29,9 @@
  * is made of belongs to TanStack Query, and a copy here would be a second answer to what
  * this player is rated at, one of which would be stale (docs/architecture.md Part 8).
  *
- * **It does not hold Deferred runs.** A deferral's lifetime is the app session; a pass
- * ends when the player reaches the app. See `store/deferredRuns.store`, which says why
- * folding the two together would send a player straight back into the run they set aside.
+ * **It does not hold a run left halfway.** That is the server's, read by the door where play
+ * begins and offered as *Carry on* (ADR-0200 §5); nothing resumes a run on launch any more, so
+ * nothing on the device remembers one was set aside.
  *
  * ## Why the rules live here
  *
@@ -55,13 +54,15 @@ export interface RatedRun {
 }
 
 /**
- * Where a pass began — which is where it ends.
+ * Where a pass began — which is where it ends. **Every pass begins inside the app now**: the
+ * questionnaire left onboarding ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §1, [#730](https://github.com/Raketa02/Raketa/issues/730)), and onboarding's own door, *welcome*,
+ * went with it.
  *
- * `welcome` is onboarding proper: the picker's queue, or a run the entry gate resumed with no
- * picker in between, and it ends on the summary, the second part or the app. `passport` is
- * the Skill passport's *Add a sport*: a queue of one, begun at the question route, ending
- * back on the passport — never on the done screen, the data screen or the social steps,
- * because a Player profile already exists and those screens are onboarding's.
+ * `home` is Home (§7): the picker opened with no group to return to, and a run reached with no
+ * pass running — a link, which begins one of its own sport. It ends on Home, which is where the
+ * app opens. `passport` is the Skill passport's *Add a sport*: a queue of one, begun at the
+ * question route, ending back on the passport.
  *
  * `group` is a group's tab (ADR-0200 §5): an official group's card, *Post a game*'s, Members',
  * or the picker opened from the tab. It ends on that group, **on that tab**, with the chip on
@@ -70,18 +71,21 @@ export interface RatedRun {
  * way back is labelled, and a copy here would go stale the moment its Owner renamed it.
  */
 export type PassOrigin =
-  | { readonly kind: 'welcome' }
+  | { readonly kind: 'home' }
   | { readonly kind: 'passport' }
   | { readonly kind: 'group'; readonly groupId: string; readonly tab: GroupTab };
 
-/** Onboarding's own door: the picker's queue, or a run the gate resumed. Gone with #730. */
-export const FROM_WELCOME: PassOrigin = { kind: 'welcome' };
+/** Home — and a run reached with no pass running, which has nowhere else to have begun. */
+export const FROM_HOME: Extract<PassOrigin, { readonly kind: 'home' }> = { kind: 'home' };
 
 /** The Skill passport's *Add a sport*. */
 export const FROM_THE_PASSPORT: PassOrigin = { kind: 'passport' };
 
 /** A group's tab — the one the player was on when they pressed the door. */
-export function fromAGroup(groupId: string, tab: GroupTab): PassOrigin {
+export function fromAGroup(
+  groupId: string,
+  tab: GroupTab,
+): Extract<PassOrigin, { readonly kind: 'group' }> {
   return { kind: 'group', groupId, tab };
 }
 
@@ -102,12 +106,15 @@ export interface OnboardingPass {
 }
 
 /**
- * A pass over the sports chosen, with nothing rated yet, begun at one of the two doors.
+ * A pass over the sports chosen, with nothing rated yet, begun at one of its doors.
  *
- * A *new* queue is a new pass: whatever an earlier walk produced belongs to that walk,
- * and the closing screens account for this one. The origin is taken rather than defaulted
- * because it is what the ending reads, and a caller that did not say which door it is
- * would be a caller nobody asked.
+ * A *new* queue is a new pass: whatever an earlier walk produced belongs to that walk, and the
+ * way back accounts for this one. The origin is taken rather than defaulted because it is what
+ * the ending reads, and a caller that did not say which door it is would be a caller nobody asked.
+ *
+ * **An empty queue is a pass too**, and a deliberate one: the picker opened from a door and left
+ * before anything was chosen. It is begun and over at once, so the gate lands it where it began —
+ * the one way back the gate already knows.
  */
 export function begin(queue: readonly Sport[], origin: PassOrigin): OnboardingPass {
   return { origin, queue, rated: [] };
@@ -186,27 +193,24 @@ export type PassAdmission =
 /**
  * Whether a player may be dropped straight into this sport's questionnaire.
  *
- * **A pass has two doors, and a link is neither.** The legitimate ways onto a question are
- * the picker's queue, the passport's *Add a sport* — a pass of exactly one sport, which
- * admits exactly that sport — and the entry gate resuming an unfinished run. A link that
- * lands somewhere else — a hand-built URL, a stale notification, an invitation forwarded to
- * a player who never chose these sports — is not a shortcut into the middle of a flow, and
- * treating it as one is what produced a questionnaire with no honest progress to show. A
- * second door is not a shortcut (ADR-0179 §3).
+ * **Every door begins a pass, and a link is none of them.** The legitimate ways onto a question
+ * are the picker's queue, a card's or a chip's one sport — a pass of exactly one sport, which
+ * admits exactly that sport — and the door's *Carry on*, which begins a pass of the run's sport.
+ * A link that lands somewhere else — a hand-built URL, a stale notification — is not a shortcut
+ * into the middle of a flow, and treating it as one is what produced a questionnaire with no
+ * honest progress to show (ADR-0179 §3).
  *
  * The three answers are the three real situations:
  *
- * - **No pass** is the resume path. The gate redirects to an outstanding question with no
- *   picker in between, and that run is a genuine pass of one sport.
- * - **The sport is in the pass** is the ordinary case, every screen after either door.
- * - **A pass is running without this sport** cannot be reached by any flow the app has.
- *   The player goes back to the beginning, and if the run really was theirs the picker
- *   hands it straight back — starting a sport with an unfinished run returns that run.
+ * - **No pass** is a link with nothing running: that run is a genuine pass of one sport,
+ *   begun at Home, and it ends there.
+ * - **The sport is in the pass** is the ordinary case, every screen after any door.
+ * - **A pass is running without this sport** cannot be reached by any flow the app has. The
+ *   player goes back to Home, and the door there — or on any group — offers the run again.
  *
- * `start-over` must not send the player through the entry gate. The gate answers *resume*
- * for an outstanding run, which would redirect to this same question and ask this same
- * question again — a loop. Welcome is a screen, and it is also literally where onboarding
- * begins.
+ * `start-over` is Home through the entry gate, which no longer resumes anything, so there is no
+ * loop to fear: until #730 the gate answered *resume* for an outstanding run, and would have sent
+ * this same question back to itself.
  */
 export function admissionTo(pass: OnboardingPass | undefined, sport: Sport): PassAdmission {
   if (pass === undefined) return { kind: 'begin' };
@@ -217,20 +221,13 @@ export type PassDestination =
   /** The next sport the player chose. */
   | { readonly kind: 'rate'; readonly sport: Sport }
   /**
-   * The summary of what this pass produced — *your starting ratings*.
-   *
-   * **It is the end of the first part, not the end of onboarding.** What follows it is the
-   * done screen's to decide, because that is where the fact it turns on — whether this
-   * player still owes a Player profile — is read. This rule's job stops at *is there
-   * anything to account for*.
+   * Back on Home (ADR-0200 §5) — whatever the pass produced. *Your starting ratings*, the
+   * summary that used to stand here, repeated *Your rating* and went with #730.
    */
-  | { readonly kind: 'closing' }
-  /** Straight into the app. */
-  | { readonly kind: 'app' }
+  | { readonly kind: 'home' }
   /**
    * Back on the Skill passport the pass began from, with the new card drawn — or without
-   * it, when the one sport was abandoned. A profile exists, so the done screen, the data
-   * screen and the social steps are never this pass's (ADR-0179 §3).
+   * it, when the one sport was abandoned (ADR-0179 §3).
    */
   | { readonly kind: 'passport' }
   /**
@@ -244,43 +241,22 @@ export type PassDestination =
  *
  * Named on its own because it is asked twice — by a player pressing *done for now* with
  * sports still to go, and by `nextDestination` when there are none left — and one rule
- * answering both is what stops the two from drifting into different answers to *is there
- * anything to account for*.
+ * answering both is what stops the two from drifting apart.
  *
- * **A pass begun at the passport ends on the passport, whatever it produced.** There is no
- * account to give on a done screen — the passport *is* the account, and it draws the new
- * card itself — and there is no second part to enter, because a Player profile already
- * exists. Rated or abandoned, the player goes back to the screen they left. **A pass begun on a
- * group ends on the group** for the same reason (ADR-0200 §5): she was in the app, and the tab
- * is the screen she left.
- *
- * For a pass begun at welcome, two answers, and the question is only ever the one this
- * pass can answer by itself:
- *
- * - **Nothing rated in this pass → the app**, and the entry gate answers from there. There
- *   is no account to give, and this pass knows nothing about ratings an earlier walk made
- *   or about a part left unfinished; the gate knows both. Answering *stop* with screens
- *   about a walk that produced nothing would be the wrong response to what was asked.
- * - **Anything rated → the summary.** The ratings this walk produced are what the player
- *   just earned, and they see them at the moment they finish earning them.
- *
- * **Whether a Player profile is still owed is no longer read here.** It used to be: a
- * player without one was sent into the second part and shown their ratings only after the
- * commit, on the theory that the summary should follow the write that completes the
- * account. That put six more questions between a player and the number they had just spent
- * a minute per sport producing. The summary now comes first for everybody, and the done
- * screen is where the second part is entered from — one screen further on, where the
- * profile fact is read once and acted on once.
+ * **A pass ends where it began, whatever it produced** (ADR-0200 §5). Every pass begins inside
+ * the app now, so rated or abandoned, the player goes back to the screen they left: the group's
+ * tab, the passport — which draws the new card itself — or Home. **No pass at all is Home**:
+ * nothing began one, and Home is where the app opens.
  */
 export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
-  if (pass === undefined) return { kind: 'app' };
+  if (pass === undefined) return { kind: 'home' };
   switch (pass.origin.kind) {
     case 'passport':
       return { kind: 'passport' };
     case 'group':
       return { kind: 'group' };
-    case 'welcome':
-      return pass.rated.length === 0 ? { kind: 'app' } : { kind: 'closing' };
+    case 'home':
+      return { kind: 'home' };
   }
 }
 
@@ -288,23 +264,12 @@ export function stopDestination(pass: OnboardingPass | undefined): PassDestinati
  * Where the player goes once this sport is dealt with, however it was dealt with.
  *
  * **Finished and abandoned land in the same place**, which is why one rule answers for
- * both. Abandoning is the player saying stop, and it is still the end of that sport: if
- * any sport in the pass was rated, they leave the way the player who finished does — to the
- * summary of what this walk produced. Ending on an abandonment is not a reason to be told
- * none of that.
- *
- * **When the pass produced nothing, it goes straight to the app.** There is no account to
- * give, the done screen has only its empty state to show, and answering *stop* with two
- * more screens would be the wrong response to what the player just asked for. That branch
- * was an array length inside a screen callback until this module existed.
- *
- * **No pass at all is the same answer as a pass that produced nothing**, and for the same
- * reason: there is nothing to account for. This is what sends a player who abandons a
- * resumed run into the app rather than to a summary of the ratings an *earlier* walk
- * produced — that walk ended when they reached the app, and its ratings went with it.
+ * both. Abandoning is the player saying stop, and it is still the end of that sport: the next
+ * sport chosen is still offered, and after the last the player goes back where the pass began
+ * (`stopDestination`).
  */
 export function nextDestination(pass: OnboardingPass | undefined, sport: Sport): PassDestination {
-  if (pass === undefined) return { kind: 'app' };
+  if (pass === undefined) return stopDestination(pass);
 
   const at = pass.queue.indexOf(sport);
   const next = at === -1 ? undefined : pass.queue[at + 1];
@@ -316,13 +281,13 @@ export function nextDestination(pass: OnboardingPass | undefined, sport: Sport):
 /**
  * What the app lays down for a pass that has just ended, read off where it began.
  *
- * - **welcome → nothing.** Onboarding's pass is already where the entry gate put it.
+ * - **home → nothing.** Home is where the app opens, which is where every pass enters it.
  * - **passport → the passport**, the You tab beneath it (ADR-0179 §3).
  * - **group → that group, on the tab it began on, standing on the sport rated last**
  *   (ADR-0200 §3, §5). *The sport just rated* is the last in `rated`: the last sport of the
  *   queue when she finished, the one she stopped after on *Done for now*, the one before an
- *   abandoned sport. **None when nothing was rated** — continue later, or the one sport
- *   abandoned — and the page opens on the sport it always would.
+ *   abandoned sport. **None when nothing was rated** — continue later, the one sport
+ *   abandoned, or the picker turned back from — and the page opens on the sport it always would.
  *
  * Asked once, by the gate's app branch, as it ends the pass — so the screens between never
  * read it, and every way out of the pass lands through the same answer.
@@ -338,7 +303,7 @@ export type PassReturn =
 
 export function returnOf(pass: OnboardingPass): PassReturn | undefined {
   switch (pass.origin.kind) {
-    case 'welcome':
+    case 'home':
       return undefined;
     case 'passport':
       return { kind: 'passport' };

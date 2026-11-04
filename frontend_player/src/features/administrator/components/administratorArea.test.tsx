@@ -142,7 +142,7 @@ describe('the entry gate', () => {
     club().install(transport);
     await launchSignedIn();
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
     expect(transport.requestsTo('GET', GROUPS_PATH)).toHaveLength(0);
   });
 });
@@ -733,7 +733,6 @@ describe('removed, and the profile read says so first', () => {
       nickname: null,
       profiles: { ...ADMINISTRATOR_ONLY, administers: [] },
     });
-    const ratingsBefore = transport.requestsTo('GET', '/api/v1/ratings').length;
     await act(async () => {
       await queryClient.refetchQueries();
     });
@@ -742,8 +741,8 @@ describe('removed, and the profile read says so first', () => {
     expect(toasts()).toEqual([
       ['Ogrody 33 removed you as an administrator. You’re signed out.', 'base'],
     ]);
-    // Never handed to the gate, which would have asked the player's reads on the way to welcome.
-    expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(ratingsBefore);
+    // Never handed to the gate, which would have sent it into the player's profile steps.
+    expect(screen.queryByText('What kind of player are you?')).toBeNull();
   });
 });
 

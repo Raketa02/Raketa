@@ -11,12 +11,15 @@ describe('the last control on Your rating', () => {
     expect(lastControlLabel({ kind: 'group' }, undefined)).toBe('Back to the group');
   });
 
-  it.each([{ kind: 'passport' }, { kind: 'closing' }, { kind: 'app' }] as const)(
-    'is See your ratings for %p, whatever group is named',
-    (destination) => {
-      expect(lastControlLabel(destination, 'Padel at Kazimierz')).toBe('See your ratings');
-    },
-  );
+  it('is the passport’s own for a pass begun there, whatever group is named', () => {
+    // The Skill passport *is* your ratings.
+    expect(lastControlLabel({ kind: 'passport' }, 'Padel at Kazimierz')).toBe('See your ratings');
+  });
+
+  it('goes back to Home for a pass begun there, whatever group is named', () => {
+    // ADR-0200 §5 — and no summary any more: *Your starting ratings* went with #730.
+    expect(lastControlLabel({ kind: 'home' }, 'Padel at Kazimierz')).toBe('Back to Home');
+  });
 });
 
 describe('the next sport on Your rating', () => {

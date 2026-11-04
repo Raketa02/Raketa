@@ -5,9 +5,12 @@
  * mappers, the use-cases, the hooks, the store and the screens all run for real — so a
  * pass here means the flow works end to end minus the socket.
  *
- * The gate's outcomes are routing behaviour, so they are asserted as routing: which screen
- * a launch lands on. These tests live outside `src/app/` and import the route files, per
- * docs/architecture.md Part 16.
+ * **Onboarding is a nickname and a profile** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §1, [#730](https://github.com/Raketa02/Raketa/issues/730)): sign-up, the naming, the six profile
+ * steps and Home — eight screens, and no questionnaire. A level is asked where play begins, by the
+ * door on a group's tabs (`levelWherePlayBegins.test`). The gate's outcomes are routing behaviour,
+ * so they are asserted as routing: which screen a launch lands on. These tests live outside
+ * `src/app/` and import the route files, per docs/architecture.md Part 16.
  *
  * Every assertion is about what a player can see or what left the device. None reads a
  * store's internals or a hook's return shape.
@@ -26,15 +29,19 @@ import {
 import { queryClient } from '@/shared/lib/query-client';
 import { refreshTokens } from '@/features/auth/types';
 import {
+  GATE_USER,
   launchSignedIn,
   HOME_TAB_LINE,
   ONBOARDING_ROUTES,
+  resetLocation,
   runInProgress,
   RUNS_IN_PROGRESS_PATH,
   SPORTS_SERVED,
   stubGate as stubGateWith,
-  stubRunsInProgress,
+  stubLocation,
+  stubProfileOptions,
 } from '@/test-support/onboardingRouter';
+import { fakeLocation } from '@/test-support/platform';
 import {
   errorResponse,
   installTransport,
@@ -44,11 +51,14 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { onboardingKeys } from '../hooks/onboardingKeys';
-import { FROM_WELCOME } from '../domain/onboardingPass';
+import { FROM_HOME } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
+
+const ME_PATH = '/api/v1/users/me';
+const RATINGS_PATH = '/api/v1/ratings';
+const ASSESSMENTS_PATH = '/api/v1/assessments';
 
 const RATING: Wire['RatingResponse'] = {
   sport: 'PADEL',
@@ -81,9 +91,20 @@ const OPENING_STEP: Wire['AssessmentStepResponse'] = {
   },
 };
 
+/** The first profile step's eyebrow — where every launch owed the steps lands. */
+const STEP_ONE = /^Setting up · Step 1 of 6/;
+
 let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
+
+/** Nothing about the questionnaire was asked or shown on the way. */
+function expectNoQuestionnaire() {
+  expect(transport.requestsTo('GET', RATINGS_PATH)).toEqual([]);
+  expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toEqual([]);
+  expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toEqual([]);
+  expect(screen.queryByText('Which sports do you play?')).toBeNull();
+}
 
 beforeEach(async () => {
   transport = installTransport();
@@ -96,6 +117,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   transport.restore();
+  resetLocation();
   queryClient.clear();
   onlineManager.setOnline(true);
 });
@@ -111,310 +133,127 @@ describe('where a launch lands', () => {
     renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
 
     await waitFor(() => expect(screen).toHavePathname('/sign-in'));
-    // The gate's reads are authenticated, and firing them without a session would only
-    // ever produce a 401 for the rotation to chase.
+    // The gate's read is authenticated, and firing it without a session would only ever
+    // produce a 401 for the rotation to chase.
     expect(transport.requests).toHaveLength(0);
   });
 
-  it('sends a signed-in player with no ratings into onboarding', async () => {
-    stubGate();
-
-    await launchSignedIn();
-
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.getByText("Let's set you up")).toBeTruthy();
-  });
-
-  it('sends a player with no nickname yet to the naming step, before welcome', async () => {
+  it('sends a player with no nickname yet to the naming step, before anything else', async () => {
     // The gate's first destination (ADR-0199 §3): sign-up creates the account with no nickname,
-    // and every destination after this one says the player's nickname. What the step does is its own
-    // suite's, `theNaming.test.tsx`; this is the routing.
+    // and every destination after this one says the player's nickname. What the step does is its
+    // own suite's, `theNaming.test.tsx`; this is the routing.
     stubGate({ nickname: null });
 
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/name'));
     expect(screen.getByText('How should people see you?')).toBeTruthy();
-    expect(screen.queryByText("Let's set you up")).toBeNull();
   });
 
-  it('sends a player with a rating and a Player profile into the app', async () => {
-    stubGate({ ratings: [RATING], hasPlayerProfile: true });
-
-    await launchSignedIn();
-
-    // A player who finished onboarding lands here on every later launch. **Both** facts are
-    // what the gate reads now: a rating says the first part is behind them, and a committed
-    // Player profile says the second one is — so this is also the proof that neither part
-    // is re-offered to someone who has already been through it.
-    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
-    expect(screen).toHavePathname('/');
-    // Which player the gate let through. The landing is the Home tab now that the shell
-    // ships, and the account it let through is one tab along.
-    fireEvent.press(screen.getByLabelText('You'));
-    expect(await screen.findByLabelText(/^ada\./)).toBeTruthy();
-    // Not through onboarding, and not through the questionnaire it would have started.
-    expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
-  });
-
-  it('sends a registered player who has not been rated yet into onboarding', async () => {
-    // The other half of the same rule, and the case that makes it worth stating: signing
-    // up and closing the app leaves a player with an account and no rating, so the next
-    // launch owes them the questionnaire rather than the app.
-    stubGate({ ratings: [] });
-
-    await launchSignedIn();
-
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
-    // And **not** into the second part, which this player has no rating to have earned.
-    // They have no Player profile either, so the two branches are both live here and the
-    // order between them is what decides — ratings first, always.
-    expect(screen).not.toHavePathname('/tags');
-  });
-
-  it('sends a rated player with no Player profile into the social steps', async () => {
-    // The hole ADR-0090 closes, as routing. This player rated padel, reached the social
-    // steps and closed the app: they hold a rating, so the gate used to drop them into the
-    // app past the second part, permanently and with no route back to it.
-    stubGate({ ratings: [RATING], hasPlayerProfile: false });
+  it('sends a named player with no Player profile to the profile steps, from their first', async () => {
+    // Rated in nothing — the commonest shape there is, since sign-up asks no skill question —
+    // and still owed nothing but the six steps.
+    stubGate();
 
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
-    expect(screen.getByText('Setting up · Step 1 of 6')).toBeTruthy();
-    // The first step, never the one they were on. The draft is client-held and died with
-    // the process, so there is no middle of the part to be resumed to.
-    expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
+    expect(screen.getByText(STEP_ONE)).toBeTruthy();
+    expectNoQuestionnaire();
   });
 
-  it('resumes an unfinished run ahead of the social steps, not after them', async () => {
-    // Both of the later branches would answer for this player — they hold a rating and no
-    // profile — and neither may. Answers already given are never stranded behind a screen
-    // asking about something else.
-    stubGate({
-      ratings: [RATING],
-      hasPlayerProfile: false,
-      runs: [runInProgress('TENNIS', ASSESSMENT_ID)],
-    });
-    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
+  it('sends a player with a rating and a run left halfway to the profile steps all the same', async () => {
+    // Neither routes anywhere (ADR-0200 §1): the steps are what is owed, and the run waits for
+    // the door where play begins.
+    stubGate({ ratings: [RATING], runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
 
     await launchSignedIn();
 
-    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
-    expect(await screen.findByText('Recent activity')).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+    expect(screen.getByText(STEP_ONE)).toBeTruthy();
   });
 
-  it('enters the app on finishing, not back into onboarding off a stale gate read', async () => {
-    // The launch that cached the answer "no ratings". It is correct at the time, it is
-    // fresh for 30s, and it stays in the cache for five minutes — while the player spends
-    // several of those minutes actually doing the questionnaire.
-    // The profile is committed, which takes the second part out of this test's way: what is
-    // being pinned here is the *ratings* read going stale, and a gate that answered
-    // `social-steps` would prove it by accident, from the other branch.
+  it('sends a player with a Player profile into the app, rated in nothing', async () => {
     stubGate({ hasPlayerProfile: true });
 
     await launchSignedIn();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-
-    // The run finishes: the server now holds a rating, and completion marks the gate's two
-    // reads stale — which is all it can do, because the gate's queries are unmounted for
-    // the whole of onboarding and an invalidated query with no observers does not refetch.
-    //
-    // The re-read is **held open**, which is the whole point. On a phone it takes a round
-    // trip, and the question is what the gate does in the meantime: the stale copy still
-    // says "no ratings", and acting on it redirects into `(onboarding)` — which unmounts
-    // this layout and its queries, so the corrected answer never arrives and the player is
-    // left in the questionnaire for good. A test that lets the redirect happen and then
-    // waits for it to be undone proves nothing, because on a device it is not undone.
-    let answerRatings = () => {};
-    const held = new Promise<void>((resolve) => {
-      answerRatings = resolve;
-    });
-    transport.on('GET', '/api/v1/ratings', async () => {
-      await held;
-      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
-    });
-    stubRunsInProgress(transport, []);
-    queryClient.invalidateQueries({ queryKey: onboardingKeys.runInProgress() });
-    queryClient.invalidateQueries({ queryKey: onboardingKeys.ratings() });
-
-    // "Start playing".
-    router.replace('/');
-
-    // While the re-read is in flight the gate has no answer, and rendering nothing is the
-    // only honest thing to do with a question it cannot yet answer.
-    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
-    expect(screen).not.toHavePathname('/welcome');
-    expect(screen.queryByText("Let's set you up")).toBeNull();
-
-    answerRatings();
 
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
+    expectNoQuestionnaire();
+  });
+
+  it('opens the app normally on an unfinished run, and leaves it unread', async () => {
+    // **Leaving halfway never takes over the app** (ADR-0200 §5). The gate used to resume this
+    // run on every launch until it was finished; it is offered now where play begins, as
+    // *Carry on*, and nowhere else.
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+    transport.on('GET', `${ASSESSMENTS_PATH}/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
+
+    await launchSignedIn();
+
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(screen.queryByText('Have you played padel before?')).toBeNull();
+    expect(transport.requestsTo('GET', `${ASSESSMENTS_PATH}/${ASSESSMENT_ID}`)).toEqual([]);
   });
 
   it('waits for the re-read a device still holds the old answer for', async () => {
-    // The same defect as above, at the state a **phone** is actually in — and the reason
-    // the test above could not see it. `expo-router/testing-library` installs jest's fake
-    // timers, so Query's five-minute `gcTime` expires while `waitFor` advances the clock
-    // and the gate's entries are simply *gone* by the time onboarding ends. On a device
-    // they are not: onboarding takes a minute or two, the entries are merely stale, and
-    // Query hands the launch's "no ratings" straight back while the replacement is in
-    // flight. Every suite here stayed green while a real player was sent to welcome on
-    // finishing, three walks in a row.
-    //
-    // So the entry is put back the way a device holds it: the launch's own answer, marked
-    // stale by the completion that follows it.
-    stubGate({ hasPlayerProfile: true });
-
+    // The gate's one read, at the state a **phone** is actually in: the launch's own answer —
+    // *no Player profile* — still cached and merely stale, while the server now says the steps
+    // are done. Acting on the cached copy would redirect back into the steps, which unmounts this
+    // layout and cancels the re-read, so the stale copy would stand for good.
+    stubGate();
     await launchSignedIn();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
 
-    let answerRatings = () => {};
+    let answerMe = () => {};
     const held = new Promise<void>((resolve) => {
-      answerRatings = resolve;
+      answerMe = resolve;
     });
-    transport.on('GET', '/api/v1/ratings', async () => {
+    transport.on('GET', ME_PATH, async () => {
       await held;
-      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
+      return json<Wire['MeResponse']>({ ...GATE_USER, has_player_profile: true });
     });
-    stubRunsInProgress(transport, []);
+    // Everything stale, as a foreground leaves it.
+    void queryClient.invalidateQueries();
 
-    queryClient.setQueryData(onboardingKeys.ratings(), []);
-    queryClient.invalidateQueries({ queryKey: onboardingKeys.ratings() });
-
-    // "Start playing".
     router.replace('/');
 
-    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
-    // Answering from the cached copy is the whole defect, and it does not correct itself:
-    // the redirect unmounts this layout, unmounting cancels the re-read through the
-    // `signal`, and the stale copy stands — so the next attempt reads it again, and the
-    // one after that.
-    expect(screen).not.toHavePathname('/welcome');
-    expect(screen.queryByText("Let's set you up")).toBeNull();
+    await waitFor(() => expect(transport.requestsTo('GET', ME_PATH)).toHaveLength(2));
+    expect(screen).not.toHavePathname('/tags');
+    expect(screen.queryByText(STEP_ONE)).toBeNull();
 
-    answerRatings();
+    answerMe();
 
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
-  it('resumes an assessment that was left unfinished', async () => {
-    stubGate({ runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
-    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
-
-    await launchSignedIn();
-
-    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
-    // The category is the heading, and the sport comes back with it — a resumed run has
-    // no queue, because the queue was never persisted.
-    expect(await screen.findByText('Recent activity')).toBeTruthy();
-    expect(screen.getByText('Tennis · Rating 1 of 1')).toBeTruthy();
-  });
-
-  it('asks whether any run is unfinished with one request, not one per sport', async () => {
-    stubGate();
-
-    await launchSignedIn();
-
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    // The whole point of the collection form. Four requests on every cold launch, for an
-    // answer that is almost always "no", is what this replaced — so the count is the
-    // assertion, and asserting the *route* as well is what stops a fan-out reappearing
-    // under per-sport paths that this count would never see.
-    expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toHaveLength(1);
-    expect(
-      transport.requests.filter((request) => request.path.startsWith(RUNS_IN_PROGRESS_PATH)),
-    ).toHaveLength(1);
-  });
-
-  it('resumes the first run in registry order when two sports are unfinished', async () => {
-    const tennisRun = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
-    // Registry order — padel, tennis, squash, badminton — which is the order the server
-    // sends them in, and the order today's fan-out resolved ties by. Padel is first, so
-    // padel is what a player with both unfinished goes back to.
-    stubGate({
-      runs: [runInProgress('PADEL', ASSESSMENT_ID), runInProgress('TENNIS', tennisRun)],
-    });
-    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
-
-    await launchSignedIn();
-
-    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
-    expect(await screen.findByText('Padel · Rating 1 of 1')).toBeTruthy();
-    // And the run it did not route to is not read: the gate picks one, and only that one
-    // is re-read for its outstanding question.
-    expect(transport.requestsTo('GET', `/api/v1/assessments/${tennisRun}`)).toEqual([]);
-  });
-
-  it('says so rather than guessing, when the collection read answers the wrong shape', async () => {
-    stubGate();
-    // The route answers two shapes off one path, chosen by a parameter this call omits.
-    // A step arriving here is the route answering a question the gate did not ask, and
-    // reading it as an empty collection would send a player with an unfinished run past
-    // the gate — silently, and only for the player it hurts.
-    transport.on('GET', RUNS_IN_PROGRESS_PATH, () => json(OPENING_STEP));
-
-    await launchSignedIn();
-
-    expect(await screen.findByText("We couldn't pick up where you left off")).toBeTruthy();
-    expect(screen).not.toHavePathname('/welcome');
-  });
-
-  it('asks both gate questions at once rather than one after the other', async () => {
-    stubGate();
-
-    // Hold the ratings answer open. If the two reads were sequenced, nothing else would
-    // reach the socket until it came back — so the second read arriving *while this is
-    // still in flight* is the proof, and counting requests after both finished would
-    // prove nothing.
-    let answerRatings = () => {};
-    const held = new Promise<void>((resolve) => {
-      answerRatings = resolve;
-    });
-    transport.on('GET', '/api/v1/ratings', async () => {
-      await held;
-      return json<Wire['RatingsResponse']>({ ratings: [] });
-    });
-
-    await launchSignedIn();
-
-    await waitFor(() => expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toHaveLength(1));
-
-    answerRatings();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-  });
-
   it('says so, and offers a retry, when the gate cannot be read', async () => {
-    // A terminal failure rather than a dropped connection: a dropped connection is
-    // retried automatically with backoff, and this test is about the gate's behaviour
-    // rather than the retry policy's timing.
+    // A terminal failure rather than a dropped connection: a dropped connection is retried
+    // automatically with backoff, and this test is about the gate rather than the retry policy.
     stubGate();
-    transport.on('GET', '/api/v1/ratings', () => errorResponse(403, 'forbidden'));
+    transport.on('GET', ME_PATH, () => errorResponse(403, 'forbidden'));
 
     await launchSignedIn();
 
     expect(await screen.findByText("We couldn't pick up where you left off")).toBeTruthy();
-    // No guess in either direction: sending an unrated player into the app skips
-    // onboarding, and sending a rated one into onboarding re-rates them.
-    expect(screen).not.toHavePathname('/welcome');
+    // No guess in either direction: into the app skips the steps, and into the steps asks a
+    // set-up player again.
+    expect(screen).not.toHavePathname('/tags');
 
     stubGate();
     fireEvent.press(screen.getByLabelText('Try again'));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
   });
 
   it('sends the player to sign in when the gate 401s and the refresh is rejected', async () => {
-    // Coming back to the app after long enough that the access token expired and the
-    // refresh token is spent. The session really is over, and "your session has ended"
-    // behind a Try again button is the one thing a retry cannot fix — every press
-    // re-reads with credentials that no longer exist.
+    // The session really is over, and *your session has ended* behind a Try again button is
+    // the one thing a retry cannot fix.
     stubGate();
-    transport.on('GET', '/api/v1/ratings', () => errorResponse(401, 'unauthorized'));
-    transport.on('GET', RUNS_IN_PROGRESS_PATH, () => errorResponse(401, 'unauthorized'));
+    transport.on('GET', ME_PATH, () => errorResponse(401, 'unauthorized'));
     transport.on('POST', '/api/v1/auth/refresh', () => errorResponse(401, 'invalid_refresh_token'));
 
     await launchSignedIn();
@@ -424,32 +263,24 @@ describe('where a launch lands', () => {
   });
 
   it('sends the player to sign in when the gate is refused and there is no credential to rotate', async () => {
-    // The state a half-finished teardown used to leave: the keychain empty while the
-    // session machine still said `authenticated`. Every gate read then goes out with no
-    // Authorization header and is refused — and a 401 about no credential is one the
-    // rotation cannot classify, so nothing rotates and nothing ends.
-    //
-    // What the player saw was "your session has ended" above a Try again button, on a
-    // screen whose retry re-sent the same headerless request. The recovery is not a
-    // retry; it is admitting the session is over.
+    // The keychain empty while the session machine still says `authenticated`: the read goes
+    // out with no Authorization header and is refused, and the recovery is admitting the
+    // session is over, not a retry.
     stubGate();
-    transport.on('GET', '/api/v1/ratings', () => errorResponse(401, 'unauthorized'));
-    transport.on('GET', RUNS_IN_PROGRESS_PATH, () => errorResponse(401, 'unauthorized'));
+    transport.on('GET', ME_PATH, () => errorResponse(401, 'unauthorized'));
 
     renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
     setSessionStatus('authenticated');
 
     await waitFor(() => expect(screen).toHavePathname('/sign-in'));
     expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
-    // Nothing was rotated, because there was nothing to rotate it with.
     expect(transport.requestsTo('POST', '/api/v1/auth/refresh')).toEqual([]);
   });
 
   it('says it is waiting rather than rendering nothing, when launched offline', async () => {
     stubGate();
-    // `networkMode: 'online'` *pauses* a query instead of failing it, so the gate's two
-    // reads never resolve and never error. Without a branch for that, the app renders a
-    // blank screen for as long as the connection stays dead.
+    // `networkMode: 'online'` *pauses* a query instead of failing it, so without a branch for
+    // that the app renders a blank screen for as long as the connection stays dead.
     onlineManager.setOnline(false);
 
     await launchSignedIn();
@@ -461,13 +292,10 @@ describe('where a launch lands', () => {
 
     onlineManager.setOnline(true);
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
   });
 
   it('claims nothing was tried, and offers no retry for a query that resumes itself', async () => {
-    // The shipped bug this replaces: a paused query was converted into a synthesised
-    // `networkUnavailable()`, so the launch screen said "We couldn't reach Raketa" about a
-    // request that was never made, over a *Try again* that could not do anything.
     stubGate();
     onlineManager.setOnline(false);
 
@@ -480,68 +308,159 @@ describe('where a launch lands', () => {
     expect(screen.queryByLabelText('Try again')).toBeNull();
 
     onlineManager.setOnline(true);
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
   });
 });
 
 // ---------------------------------------------------------------------------
-// Welcome, the picker, and the first question
+// A sign-up, end to end
 // ---------------------------------------------------------------------------
 
-describe('walking into the questionnaire', () => {
-  async function reachThePicker() {
-    stubGate();
-    transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
+describe('a sign-up', () => {
+  const COMMIT_PATH = '/api/v1/players/me/profile';
+  const FIX = { latitude: 41.3874, longitude: 2.1686, accuracyMetres: 12 };
 
-    await launchSignedIn();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-
-    fireEvent.press(screen.getByLabelText('Get started'));
-    await waitFor(() => expect(screen).toHavePathname('/sports'));
+  /**
+   * The server behind Ania's sign-up: an account with no nickname, a naming that records one, and
+   * a commit that sets her up — each re-stubbing `/users/me` as the server would now answer it.
+   */
+  function stubAniasSignUp() {
+    transport.on('POST', '/api/v1/users', () =>
+      json<Wire['UserResponse']>({ ...GATE_USER, nickname: null }, 201),
+    );
+    transport.on('POST', '/api/v1/auth/login', () =>
+      json<Wire['TokenResponse']>({
+        access_token: 'access-1',
+        refresh_token: 'refresh-1',
+        token_type: 'bearer',
+        expires_in: 900,
+      }),
+    );
+    stubGate({ nickname: null });
+    transport.on('PUT', '/api/v1/users/me/name', () => {
+      stubGate({ nickname: 'ania.k' });
+      return json<Wire['UserResponse']>({ ...GATE_USER, nickname: 'ania.k' });
+    });
+    stubProfileOptions(transport);
+    stubLocation(fakeLocation({ fix: FIX }));
+    transport.on('POST', COMMIT_PATH, () => {
+      stubGate({ nickname: 'ania.k', hasPlayerProfile: true });
+      return json<Wire['PlayerProfileResponse']>(
+        {
+          player_id: GATE_USER.id,
+          social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+          photo_ids: [],
+          weekly_hours: [{ day: 3, hour: 19 }],
+          location: { latitude: 41.39, longitude: 2.17 },
+          created_at: '2026-11-04T10:00:00Z',
+          updated_at: '2026-11-04T10:00:00Z',
+        },
+        201,
+      );
+    });
   }
 
-  it('says what both parts of the walk are, and what Raketa is for', async () => {
-    stubGate();
-    await launchSignedIn();
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+  /** Every screen the walk stood on, in order, as the router reported it. */
+  const visited: string[] = [];
+  async function onTo(path: string) {
+    await waitFor(() => expect(screen).toHavePathname(path));
+    visited.push(path);
+  }
 
-    // The title names the whole walk rather than the questionnaire that opens it: the
-    // second part is six more screens, and a player told they were finding their level
-    // would think they had finished after the last rating.
-    expect(screen.getByText("Let's set you up")).toBeTruthy();
-    expect(
-      screen.getByText(/Answer a few sport questions to estimate your starting skill level/),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/then tell us a bit about yourself and how you like to play/),
-    ).toBeTruthy();
+  it('walks to Home in eight screens, with no questionnaire on the way', async () => {
+    visited.length = 0;
+    setSessionStatus('unauthenticated');
+    stubAniasSignUp();
 
-    // And what they are joining, which is the honest exchange for answering questions
-    // about yourself before you have seen anything.
-    expect(screen.getByText('Value')).toBeTruthy();
-    expect(screen.getByText('Find the right people to play with.')).toBeTruthy();
-    expect(screen.getByText('Mission')).toBeTruthy();
-    expect(
-      screen.getByText('Make playing racket sports more social, accessible and engaging.'),
-    ).toBeTruthy();
-    expect(screen.getByText('Vision')).toBeTruthy();
-    expect(screen.getByText('Build the social network for racket sports.')).toBeTruthy();
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: '/sign-up' });
 
-    // *Nothing here is permanent* and the note about answering for a normal match were both
-    // true and both cut: this screen's job is to get a player into the questionnaire, and
-    // the result screen says what a starting estimate is worth at the moment there is one to
-    // say it about.
-    expect(screen.queryByText('Nothing here is permanent')).toBeNull();
-    expect(screen.queryByText(/not your best day/)).toBeNull();
+    // 1. Sign-up.
+    await onTo('/sign-up');
+    fireEvent.changeText(screen.getByLabelText('Email'), 'ania@example.com');
+    fireEvent.changeText(screen.getByLabelText('Password'), 'hunter2hunter2');
+    fireEvent.changeText(screen.getByLabelText('Repeat password'), 'hunter2hunter2');
+    fireEvent.press(screen.getByLabelText('I am 18 or over'));
+    fireEvent.press(screen.getByLabelText('Create account'));
+
+    // 2. How should people see you? — one box, a Nickname.
+    await onTo('/name');
+    fireEvent.changeText(screen.getByLabelText('Nickname'), 'ania.k');
+    fireEvent.press(screen.getByLabelText('Continue'));
+
+    // 3. What kind of player are you? — straight after the naming: no values, no mission, no
+    // vision, and no sports.
+    await onTo('/tags');
+    expect(screen.getByText('What kind of player are you?')).toBeTruthy();
+    fireEvent.press(await screen.findByLabelText('Plays to win'));
+    fireEvent.press(screen.getByLabelText('Here to improve'));
+    fireEvent.press(screen.getByLabelText('Continue'));
+
+    // 4. Say it in your own words.
+    await onTo('/intro');
+    fireEvent.press(screen.getByLabelText('Next'));
+
+    // 5. Your court photos.
+    await onTo('/photos');
+    fireEvent.press(screen.getByLabelText('Continue'));
+
+    // 6. When do you usually play?
+    await onTo('/availability');
+    fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
+    fireEvent.press(screen.getByLabelText('Continue'));
+
+    // 7. Where do you play?
+    await onTo('/location');
+    fireEvent.press(screen.getByLabelText('Use my location'));
+    fireEvent.press(await screen.findByLabelText('Continue'));
+
+    // 8. Who do you want to play with? — and *Finish* lands on Home, with no data screen between.
+    await onTo('/gender');
+    fireEvent.press(screen.getByLabelText('Woman'));
+    fireEvent.press(screen.getByLabelText('Finish'));
+
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(visited).toEqual([
+      '/sign-up',
+      '/name',
+      '/tags',
+      '/intro',
+      '/photos',
+      '/availability',
+      '/location',
+      '/gender',
+    ]);
+    expect(transport.requestsTo('POST', COMMIT_PATH)).toHaveLength(1);
+    expectNoQuestionnaire();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The sports picker
+// ---------------------------------------------------------------------------
+
+describe('the sports picker', () => {
+  /** The picker opened with no group to return to — Home's (#731 draws its card). */
+  async function reachThePicker() {
+    stubGate({ hasPlayerProfile: true });
+    transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
+
+    await launchSignedIn('/sports');
+    expect(await screen.findByText('Which sports do you play?')).toBeTruthy();
+  }
+
+  it('ticks nothing for her: she chooses her sports herself', async () => {
+    await reachThePicker();
+
+    expect(await screen.findByLabelText('Padel')).toBeTruthy();
+    expect(screen.queryByText('Selected')).toBeNull();
+    expect(screen.getByLabelText('Choose a sport to continue')).toBeTruthy();
   });
 
   it('counts the sports chosen on the control that continues', async () => {
     await reachThePicker();
 
-    expect(await screen.findByLabelText('Padel')).toBeTruthy();
-    expect(screen.getByLabelText('Choose a sport to continue')).toBeTruthy();
-
-    fireEvent.press(screen.getByLabelText('Padel'));
+    fireEvent.press(await screen.findByLabelText('Padel'));
     expect(screen.getByLabelText('Rate 1 sport')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Tennis'));
@@ -555,155 +474,131 @@ describe('walking into the questionnaire', () => {
   it('says which sports are selected in words, not only by their border', async () => {
     await reachThePicker();
 
-    expect(await screen.findByLabelText('Padel')).toBeTruthy();
-    expect(screen.queryByText('Selected')).toBeNull();
-
-    fireEvent.press(screen.getByLabelText('Padel'));
+    fireEvent.press(await screen.findByLabelText('Padel'));
 
     expect(screen.getByText('Selected')).toBeTruthy();
-    // And as state to a screen reader, which is the half a border cannot carry.
     expect(screen.getByRole('button', { name: 'Padel', selected: true })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Tennis', selected: true })).toBeNull();
   });
 
   it('starts the first chosen sport and lands on its opening question', async () => {
     await reachThePicker();
+    transport.on('POST', ASSESSMENTS_PATH, () => json(OPENING_STEP, 201));
 
-    transport.on('POST', '/api/v1/assessments', () => json(OPENING_STEP, 201));
-
-    expect(await screen.findByLabelText('Tennis')).toBeTruthy();
     // Chosen second, so tennis is second in the queue — order is the only thing the
     // selection carries.
-    fireEvent.press(screen.getByLabelText('Padel'));
+    fireEvent.press(await screen.findByLabelText('Padel'));
     fireEvent.press(screen.getByLabelText('Tennis'));
     fireEvent.press(screen.getByLabelText('Rate 2 sports'));
 
     await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
 
-    const [started] = transport.requestsTo('POST', '/api/v1/assessments');
+    const [started] = transport.requestsTo('POST', ASSESSMENTS_PATH);
     expect(started?.body).toEqual({ sport: 'PADEL' });
-
     expect(await screen.findByText('Recent activity')).toBeTruthy();
-    // Which sport of how many, in the eyebrow and nowhere else: the indicator under the
-    // header measures the run's questions now, not the pass's sports (ADR-0020), and a
-    // filled rectangle was never readable at any font size anyway.
     expect(screen.getByText('Padel · Rating 1 of 2')).toBeTruthy();
-
     // The response *is* the next question, so it is written into the cache rather than
     // asked for a second time.
-    expect(transport.requestsTo('GET', `/api/v1/assessments/${ASSESSMENT_ID}`)).toEqual([]);
+    expect(transport.requestsTo('GET', `${ASSESSMENTS_PATH}/${ASSESSMENT_ID}`)).toEqual([]);
   });
 
   it('sends one start, however many times the control is pressed', async () => {
     await reachThePicker();
 
-    // Held open, so the second press lands while the first is still in flight.
     let answer = () => {};
     const held = new Promise<void>((resolve) => {
       answer = resolve;
     });
-    transport.on('POST', '/api/v1/assessments', async () => {
+    transport.on('POST', ASSESSMENTS_PATH, async () => {
       await held;
       return json(OPENING_STEP, 201);
     });
 
-    expect(await screen.findByLabelText('Padel')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Padel'));
+    fireEvent.press(await screen.findByLabelText('Padel'));
     fireEvent.press(screen.getByLabelText('Rate 1 sport'));
 
-    await waitFor(() =>
-      expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(1),
-    );
+    await waitFor(() => expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toHaveLength(1));
     fireEvent.press(screen.getByLabelText('Starting…'));
 
     answer();
     await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
-
-    // The blocked button is **UX, not correctness**, and the correctness now exists
-    // behind it: `POST /assessments` guards on an unfinished run, and the assessment's
-    // stream id is derived from (player, sport, attempt) so two starts that both read
-    // before either appends collide on one stream instead of stranding a second run.
-    expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(1);
+    expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toHaveLength(1);
   });
 
   it('never writes the sport selection to the server', async () => {
     await reachThePicker();
 
-    expect(await screen.findByLabelText('Squash')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Squash'));
+    fireEvent.press(await screen.findByLabelText('Squash'));
     fireEvent.press(screen.getByLabelText('Badminton'));
 
-    // The queue orders the next few assessments and is nothing else. Choosing sports is
-    // not a write, and there is no endpoint it could be one against.
     const writes = transport.requests.filter((request) => request.method !== 'GET');
     expect(writes).toEqual([]);
+  });
+
+  it('turns back to where it was opened from, having started nothing', async () => {
+    // Opened from inside the app, by `replace`, so there is nothing behind it to pop to: its
+    // back control is the way out, and it is Home for a picker opened with no group.
+    await reachThePicker();
+    fireEvent.press(await screen.findByLabelText('Padel'));
+
+    fireEvent.press(screen.getByLabelText('Back'));
+
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toEqual([]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Links into the middle of onboarding
+// Links into the middle of the questionnaire
 // ---------------------------------------------------------------------------
 
 /** Well-formed, and pointing at a run this player has no business being handed. */
 const STRANGE_LINK_ID = 'e5f6a7b8-9c0d-4e1f-8a2b-3c4d5e6f7a8b';
 
-describe('a link into the middle of onboarding', () => {
-  // A pass has two doors — the picker and the passport's *Add a sport* — and a link is
-  // neither. So surviving param validation is not the same as belonging here: a well-formed
-  // link naming a sport this player never chose is not a shortcut into a flow already
-  // under way, and drawing it a questionnaire meant drawing progress with no denominator.
-  it('sends a question link for a sport this player never chose back to the beginning', async () => {
-    stubGate();
-    // A pass is running over padel — the player is mid-onboarding — and the link names
-    // squash.
-    useOnboardingPass.getState().begin(['padel'], FROM_WELCOME);
+describe('a link into the middle of the questionnaire', () => {
+  // Every door begins a pass, and a link is none of them. So surviving param validation is not
+  // the same as belonging here: a well-formed link naming a sport outside the running pass is not
+  // a shortcut into a flow already under way.
+  it('sends a question link for a sport outside the running pass to Home, asking nothing', async () => {
+    stubGate({ hasPlayerProfile: true });
+    useOnboardingPass.getState().begin(['padel'], FROM_HOME);
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    // Turned away before anything was asked of the server, rather than after a request
-    // whose answer would have been rendered into a screen with nothing honest to show.
-    expect(transport.requestsTo('GET', `/api/v1/assessments/${STRANGE_LINK_ID}`)).toEqual([]);
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(transport.requestsTo('GET', `${ASSESSMENTS_PATH}/${STRANGE_LINK_ID}`)).toEqual([]);
   });
 
-  it('sends a result link for a sport this player never chose back to the beginning', async () => {
-    // A result is a screen inside onboarding, so it carries the same rule for the same
-    // reason — it belongs at the beginning, not at somebody's rating.
-    stubGate();
-    useOnboardingPass.getState().begin(['padel'], FROM_WELCOME);
+  it('sends a result link for a sport outside the running pass to Home', async () => {
+    stubGate({ hasPlayerProfile: true });
+    useOnboardingPass.getState().begin(['padel'], FROM_HOME);
 
     await launchSignedIn(`/result/${STRANGE_LINK_ID}?sport=squash`);
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(transport.requestsTo('GET', `/api/v1/assessments/${STRANGE_LINK_ID}`)).toEqual([]);
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(transport.requestsTo('GET', `${ASSESSMENTS_PATH}/${STRANGE_LINK_ID}`)).toEqual([]);
   });
 
-  it('welcomes back to the beginning rather than through the gate, so a real run cannot loop', async () => {
-    // The trap this avoids: the gate answers *resume* for an outstanding run, so sending
-    // a turned-away player through `/` would redirect them straight back to the question
-    // that turned them away. Welcome is a screen, and the picker hands the run back
-    // anyway — starting a sport with an unfinished run returns that run.
-    stubGate({ runs: [runInProgress('SQUASH', STRANGE_LINK_ID)] });
-    useOnboardingPass.getState().begin(['padel'], FROM_WELCOME);
+  it('stays on Home, rather than bouncing back to a run that is really unfinished', async () => {
+    // The trap this used to avoid by sending the player to welcome: the gate answered *resume*
+    // for an outstanding run. It resumes nothing now, so Home is as safe a place as any.
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('SQUASH', STRANGE_LINK_ID)] });
+    useOnboardingPass.getState().begin(['padel'], FROM_HOME);
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    // Still there a beat later: not bouncing between the gate and the question.
-    expect(await screen.findByLabelText('Get started')).toBeTruthy();
-    expect(screen).toHavePathname('/welcome');
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
   });
 
-  it('still admits a run resumed with no pass, which is the gate doing its job', async () => {
-    // The other side of the same rule, and the one that must not regress: the gate
-    // redirects to an outstanding question with no picker in between, and that run is a
-    // genuine pass of one sport.
-    stubGate({ runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
-    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
+  it('admits a run reached with no pass running, as a pass of one sport', async () => {
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
+    transport.on('GET', `${ASSESSMENTS_PATH}/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
 
-    await launchSignedIn();
+    await launchSignedIn(`/question/${ASSESSMENT_ID}?sport=tennis`);
 
-    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
     expect(await screen.findByText('Tennis · Rating 1 of 1')).toBeTruthy();
   });
 });

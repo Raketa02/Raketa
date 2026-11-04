@@ -4,8 +4,8 @@
  * Mid-pass there are two: the next sport the player chose, and stopping. On the last sport there
  * is one, and it names where it goes — read off where the pass began
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5): **back to
- * the group** for a pass begun on one, and *See your ratings* for the rest — onboarding's summary,
- * or the Skill passport, which *is* your ratings.
+ * the group** for a pass begun on one, **back to Home** for one begun there, and *See your
+ * ratings* for the Skill passport's, which *is* your ratings.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -38,6 +38,12 @@ export function doneForNowHint(next: Sport): string {
  * that waits.
  */
 export function lastControlLabel(destination: PassDestination, groupName?: string): string {
-  if (destination.kind !== 'group') return 'See your ratings';
-  return groupName === undefined ? 'Back to the group' : `Back to ${groupName}`;
+  switch (destination.kind) {
+    case 'group':
+      return groupName === undefined ? 'Back to the group' : `Back to ${groupName}`;
+    case 'passport':
+      return 'See your ratings';
+    default:
+      return 'Back to Home';
+  }
 }

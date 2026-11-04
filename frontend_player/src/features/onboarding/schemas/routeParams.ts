@@ -4,7 +4,7 @@
  * Every param arriving from a deep link, a push notification, a universal link or a
  * hand-typed URL is attacker-controlled — and expo-router hands them over as
  * `string | string[] | undefined` whatever the route declared. So a route validates before
- * it fetches, and a malformed link lands on welcome rather than in a request built from
+ * it fetches, and a malformed link lands on Home rather than in a request built from
  * someone else's input.
  *
  * The sport is a closed set and the assessment id is a UUID, which makes both of them

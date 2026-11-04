@@ -11,10 +11,17 @@
  * evidence.
  *
  * Continuing starts the first selected sport's assessment and lands on its opening
- * question. **Where the pass began is the route's to say**: onboarding's own picker, or one
- * opened from a group's tab (the door #730 draws there), whose pass returns to that tab. It is `replace`, not `push`: a player walks back through the questionnaire
- * with its own control (ADR-0020), and the system back gesture must not be a second,
- * unlabelled way out of the run.
+ * question. **Where the pass began is the route's to say**: a group's tab — the door where play
+ * begins ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2,
+ * [#730](https://github.com/Raketa02/Raketa/issues/730)) — whose pass returns to that tab, or Home.
+ * It is `replace`, not `push`: a player walks back through the questionnaire with its own control
+ * (ADR-0020), and the system back gesture must not be a second, unlabelled way out of the run.
+ *
+ * **It has a way back, now that it is opened from inside the app.** The door reaches it by
+ * `replace`, as every door into the questionnaire does, so there is nothing behind it to pop to —
+ * and a player who opened it and changed her mind would otherwise have no way out but choosing a
+ * sport. Back, the header's or the device's, **turns back**: a pass over nothing, begun and over at
+ * once, which the gate lands where it began — the group and the tab the door stood on, or Home.
  */
 
 import { useRouter } from 'expo-router';
@@ -23,10 +30,12 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { offlineMessage } from '@/shared/errors';
+import { useHardwareBack } from '@/shared/lib/platform';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import { toggleSport, type PassOrigin } from '../domain/onboardingPass';
+import { toggleSport } from '../domain/onboardingPass';
+import type { DoorOrigin } from '../hooks/useLevelDoor';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
@@ -38,10 +47,10 @@ import { STARTING_LABEL } from './startPresentation';
 
 export interface SportsPickerScreenProps {
   /**
-   * Where the pass begins, and so where it ends: onboarding's own door (welcome), or a group's
-   * tab (ADR-0200 §2, §5) — read by the route from its params, since the tab is the group's.
+   * Where the pass begins, and so where it ends: a group's tab (ADR-0200 §2, §5) — read by the
+   * route from its params, since the tab is the group's — or Home.
    */
-  readonly origin: PassOrigin;
+  readonly origin: DoorOrigin;
 }
 
 export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
@@ -60,6 +69,14 @@ export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
   const start = useStartAssessment();
 
   const [first] = queue;
+
+  // Turning back: a pass over nothing, which the gate ends on arrival and lands at its origin.
+  const turnBack = () => {
+    if (start.isPending) return;
+    beginPass([], origin);
+    router.replace('/');
+  };
+  useHardwareBack(turnBack);
 
   const begin = () => {
     if (first === undefined) return;
@@ -83,7 +100,7 @@ export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <OnboardingChrome eyebrow="Raketa" title="Which sports do you play?" />
+      <OnboardingChrome eyebrow="Raketa" title="Which sports do you play?" onBack={turnBack} />
 
       <ScrollView contentContainerStyle={s.content}>
         {/* Paused, not loading: `networkMode: 'online'` holds a query rather than

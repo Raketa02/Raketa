@@ -11,40 +11,34 @@
  *   only administrator profiles    -> the administrator area, before anything is asked of a player
  *   no profile at all              -> Start playing's first step, the Adult attestation
  *   no nickname                    -> the naming step, before anything else
- *   run in progress, not set aside -> resume it, at its outstanding question
- *   no ratings at all              -> onboarding, from welcome
- *   no Player profile              -> onboarding's second part, from its first step
+ *   no Player profile              -> the profile steps, from their first
  *   otherwise                      -> the app
+ *
+ * **Onboarding is a nickname and a profile**
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1,
+ * [#730](https://github.com/Raketa02/Raketa/issues/730)). The questionnaire left it: a level is
+ * asked where play begins — a group's tabs, *Post a game* and Members — so **zero ratings and an
+ * unfinished run route nowhere**, and neither is an input here. The gate used to answer *resume*
+ * for a run left halfway and *welcome* for a player rated in nothing; the first took over every
+ * launch until the run was finished, and the second put the questionnaire between sign-up and
+ * Home. A run left halfway is now offered where play begins, by the door that says *Carry on*
+ * (§5), and never forced.
  *
  * **The nickname is asked first, because every destination after it says the player's nickname**
  * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). Sign-up
- * creates the account with none; the naming step is onboarding's first screen, and the
- * questionnaire and every surface inside the app address the player by what it records.
- * A run half-answered by an account with no nickname cannot be produced by the flow — the naming
- * precedes welcome — but the gate does not assume it away, which is the lesson the fourth
- * destination wrote about itself below: a shape the flow cannot produce is still a shape the
- * gate must route, or it loops.
- *
- * **An unfinished run outranks an existing rating**, because a player rated at padel with
- * a tennis run half-answered should land back in the tennis questionnaire, not in the app
- * with those answers stranded.
- *
- * The first two inputs answer genuinely different questions and neither substitutes for
- * the other: one asks whether a *run* is unfinished, the other whether a *rating exists*.
- *
- * The third is the player's own decision, and it is the only reason this gate is not a
- * trap. A run they asked to come back to later is still unfinished — the server is right
- * — and resuming it the instant they leave would mean the questionnaire had no exit.
- * The deferral lasts one app session, so the next launch resumes exactly as it should;
- * the permanent way out is abandonment, which changes the run rather than the routing.
+ * creates the account with none; the naming step is onboarding's first screen, and the profile
+ * steps and every surface inside the app address the player by what it records. A Player profile
+ * held by an account with no nickname cannot be produced by the flow — the naming precedes the
+ * steps — but the gate does not assume it away: a shape the flow cannot produce is still a shape
+ * the gate must route, or it loops.
  *
  * ## The profiles are read first, because not every account has asked to play
  *
  * An account holds **profiles** — it may act as a player, and as the Administrator of each club
  * that named it ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
  * §1–§3). **An account that only runs a club's groups goes to its administrator area and is never
- * sent into onboarding**: it has not asked to play, and nothing below it — a nickname, a rating, a
- * run — is a question it owes an answer to. It is read ahead of the naming because an account an
+ * sent into onboarding**: it has not asked to play, and nothing below it — a nickname, a profile —
+ * is a question it owes an answer to. It is read ahead of the naming because an account an
  * Invitation opened holds no nickname (ADR-0199 §4), which for anybody who does play is the naming
  * still owed. The area opens on the first club it administers, in the
  * server's order; which one a person with two clubs opens on is the switcher's
@@ -64,33 +58,26 @@
  * — so once it attests and acts as a player the naming step is owed, as it is for every account
  * sign-up creates.
  *
- * ## The fourth destination, and why it is not the flag the glossary bans
+ * ## The profile steps, and why their destination is not the flag the glossary bans
  *
- * Onboarding is two parts ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)),
- * and **the part is the checkpoint unit**. The second part holds a client-side draft and
- * writes nothing until its final commit, so a player who reaches it and closes the app has
- * a Skill rating and no Player profile — and a gate reading only *is there a rating* sends
- * them into the app past the second part, permanently, with no route back to it.
+ * The profile steps hold a client-side draft and write nothing until their final commit
+ * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)), so a player who
+ * reaches them and closes the app has a nickname and no Player profile — and a gate that did not
+ * ask would send them into the app past the steps, permanently, with no route back to them.
  *
  * *Does a Player profile exist* is a per-player question with a per-player answer, which is
  * why it is allowed to be one. The glossary bans a per-player flag standing in for a fact
  * that is genuinely per sport, and its own test — *is this really asking whether a rating
  * exists for this sport?* — answers no here: tags, photos, a week, a location and who a
- * player plays with have no sport dimension at all.
- *
- * **It is read after ratings, never before.** The second part is only reachable once the
- * first has produced something, so a brand-new account — no ratings, no profile — belongs
- * at welcome. Reading the profile first would open the social steps to a player who has not
- * been rated, which is the one shape the flow cannot produce.
+ * player plays with have no sport dimension at all. **A Player profile with no rating is the
+ * common shape now** (ADR-0200, Consequences): it is read straight after the nickname, and a
+ * rating is no part of the answer.
  */
 
 import type { HeldProfiles, ProfileChoice } from '@/features/auth/types';
 
-import type { AssessmentRun } from './Assessment';
-import type { SkillRating } from './SkillRating';
-
 export type EntryDestination =
-  /** The authenticated tree. Onboarding is behind them, at least for one sport. */
+  /** The authenticated tree. Onboarding — a nickname and a profile — is behind them. */
   | { readonly kind: 'app' }
   /**
    * **The administrator area** of the club named — its own screens and its own tabs, outside the
@@ -107,16 +94,12 @@ export type EntryDestination =
    * get past: it submits the naming, re-reads the player, and only then moves on.
    */
   | { readonly kind: 'naming' }
-  /** Onboarding from the beginning: what it produces, then the sports picker. */
-  | { readonly kind: 'welcome' }
   /**
-   * Onboarding's second part, **from its first step**. Never from the middle: the draft is
-   * client-held and starts empty, so a player dropped at step four would commit a profile
-   * built from screens they never saw.
+   * The profile steps, **from their first**. Never from the middle: the draft is client-held and
+   * starts empty, so a player dropped at step four would commit a profile built from screens
+   * they never saw.
    */
-  | { readonly kind: 'social-steps' }
-  /** Straight back to the outstanding question of a run they already started. */
-  | { readonly kind: 'resume'; readonly run: AssessmentRun };
+  | { readonly kind: 'social-steps' };
 
 export interface EntryInput {
   /**
@@ -129,12 +112,8 @@ export interface EntryInput {
    * flag does not bite.
    */
   readonly named: boolean;
-  readonly ratings: readonly SkillRating[];
-  readonly runInProgress: AssessmentRun | undefined;
-  /** Runs the player chose to come back to later, since this launch. */
-  readonly deferredRunIds: readonly string[];
   /**
-   * Whether the second part has been committed. Served on the authenticated player rather
+   * Whether the profile steps have been committed. Served on the authenticated player rather
    * than fetched separately, and read from the profile's own event stream rather than from
    * a projection — so it is correct in the moment after the commit, which is exactly when
    * a lagging read model would send a player back into steps they just finished.
@@ -178,9 +157,6 @@ export function profileDestination(
 
 export function entryDestination({
   named,
-  ratings,
-  runInProgress,
-  deferredRunIds,
   hasPlayerProfile,
   profiles,
   lastProfile,
@@ -188,10 +164,6 @@ export function entryDestination({
   const byProfile = profileDestination(profiles, lastProfile);
   if (byProfile !== undefined) return byProfile;
   if (!named) return { kind: 'naming' };
-  if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
-    return { kind: 'resume', run: runInProgress };
-  }
-  if (ratings.length === 0) return { kind: 'welcome' };
   if (!hasPlayerProfile) return { kind: 'social-steps' };
   return { kind: 'app' };
 }

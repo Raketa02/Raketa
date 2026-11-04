@@ -29,29 +29,18 @@
  * it is a state transition on the server and there is nothing to undo — so only the
  * departure failed, and the player must be able to try it again.
  *
- * ## The end of the queue is the end of the **first part**, and nothing further
+ * ## Every way out is `/`, and the gate lands it where the pass began
  *
- * Whatever a player still owes — the six social steps, if they have no Player profile yet —
- * they are owed their ratings first: the last sport leads to the summary of what this walk
- * produced, and the done screen is where the second part is entered from. So this hook no
- * longer reads whether a profile exists, and does not route into `player_profile/` at all.
- * One screen further on, one fact read once. Before that, the summary sat on the far side of
- * six more questions and a commit, which put the whole second part between a player and the
- * number they had just spent a minute per sport producing.
- *
- * ## A pass begun at the passport ends in the app, and the app lands it on the passport
- *
- * **So does a pass begun on a group** (ADR-0200 §5): `stopDestination` answers *group*, this
- * hook routes it to `/` like *passport*, and the gate lays the group back down on its tab.
- *
- * `stopDestination` answers *passport* for a pass with that origin
- * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §3), and this hook turns it into the same route as *app*: `/`. The passport is a screen
- * inside the authenticated tree, the tree is entered through its gate, and the gate — the one
- * site that ends a pass — is told the origin as it ends and lays the passport down. So this
- * hook spells no route it does not own, and the three ways out of a passport pass (*See your
- * ratings*, *continue later*, *abandon*) reach the passport through one mechanism rather than
- * three copies of a navigation.
+ * A pass begins inside the app — a group's tab, Home, or the Skill passport
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5) — and
+ * `stopDestination` answers that origin whatever the pass produced. This hook turns every one of
+ * them into the same route: `/`. The group and the passport are screens inside the authenticated
+ * tree, the tree is entered through its gate, and the gate — the one site that ends a pass — is
+ * told the origin as it ends and lays the group or the passport down; Home is where `/` opens. So
+ * this hook spells no route it does not own, and every way out of a pass (the last *Your rating*,
+ * *Done for now*, *continue later*, *abandon*) reaches its origin through one mechanism rather
+ * than four copies of a navigation. Until #730 the end of a welcome pass was *Your starting
+ * ratings*, at `/done`; that summary repeated *Your rating* and went.
  */
 
 import { useRouter } from 'expo-router';
@@ -60,14 +49,14 @@ import { useCallback, useRef } from 'react';
 import type { AppError } from '@/shared/errors';
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import { nextDestination, stopDestination, type PassDestination } from '../domain/onboardingPass';
+import { nextDestination, type PassDestination } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { useStartAssessment } from './useStartAssessment';
 
 export interface PassAdvance {
   /**
-   * Where this sport leads: the next one chosen, the closing screens, or the app.
+   * Where this sport leads: the next one chosen, or back where the pass began.
    *
    * Exposed because a screen has to *label* the control — "Rate Tennis" needs the sport —
    * never so that a screen can decide differently.
@@ -117,16 +106,11 @@ export interface PassAdvance {
 }
 
 /**
- * The one place a pass destination becomes a route.
- *
- * `rate` is not here: it needs an assessment started before there is anything to navigate
- * to, which is the whole of what `advance` does beyond this table. `passport` and `group` are
- * `/`, the same door as `app`: the gate reads where the pass began as it ends it, and puts a
- * pass back on the passport or the group it began on — see the module note.
+ * Where every way out of a pass leaves to — see the module note. `rate` is not a way out: it
+ * needs an assessment started before there is anything to navigate to, which is the whole of
+ * what `advance` does beyond this.
  */
-function leavesTo(destination: PassDestination): '/done' | '/' {
-  return destination.kind === 'closing' ? '/done' : '/';
-}
+const OUT_OF_THE_PASS = '/';
 
 export function useAdvanceThroughPass(sport: Sport): PassAdvance {
   const router = useRouter();
@@ -176,18 +160,16 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
   const stopHere = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
-    router.replace(leavesTo(stopDestination(pass)));
-  }, [pass, router]);
+    router.replace(OUT_OF_THE_PASS);
+  }, [router]);
 
   const advance = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
 
     if (destination.kind !== 'rate') {
-      // The end of the queue, routed by what this pass produced: the summary when it made a
-      // rating, and the app when there is nothing to account for. What the player still owes
-      // is the done screen's question. Both are a `replace`.
-      router.replace(leavesTo(destination));
+      // The end of the queue: back where the pass began, which the gate lands. A `replace`.
+      router.replace(OUT_OF_THE_PASS);
       return;
     }
 

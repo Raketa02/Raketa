@@ -25,7 +25,8 @@
  * is a sport to show, and the sport itself — Members counts its list in its title — and the body
  * the sport — `undefined` until the phone has answered, so
  * nothing is drawn for one sport and then another (ADR-0188 §4) — and, for an official group the
- * reader is rated in none of the sports of, what they would add to see it (#519).
+ * reader is rated in none of the sports of, what they would add to see it (#519); for a player
+ * group's reader rated in nothing, that they meet the door where play begins (#730).
  *
  * **The filter's state can be handed in** (`SportFilterFrame`): the Administrator's Members lists
  * an official group's declared sports whatever the reader is rated in (#529), so it brings its own
@@ -78,9 +79,14 @@ export interface SportFilterPageProps {
   /**
    * Everything under the header, for the sport the page is on — `undefined` until it is known —
    * and the sports the reader would add to have one here: empty unless the group is an official
-   * one they are rated in none of the sports of.
+   * one they are rated in none of the sports of. And whether the reader meets the door instead —
+   * a player group's, rated in nothing (ADR-0200 §2).
    */
-  readonly children: (sport: Sport | undefined, toAdd: readonly Sport[]) => ReactNode;
+  readonly children: (
+    sport: Sport | undefined,
+    toAdd: readonly Sport[],
+    needsALevel: boolean,
+  ) => ReactNode;
 }
 
 export function SportFilterPage({
@@ -107,7 +113,7 @@ export interface SportFilterFrameProps extends Omit<
 
 /** **The page around a filter whose state is handed in** — `SportFilterPage`'s drawing. */
 export function SportFilterFrame({ filter, header, children }: SportFilterFrameProps) {
-  const { sports, sport, toAdd, choose } = filter;
+  const { sports, sport, toAdd, needsALevel, choose } = filter;
   const [unfolded, setUnfolded] = useState(false);
   const [headerBox, setHeaderBox] = useState<{ readonly width: number; readonly height: number }>();
   const [covered, setCovered] = useState<Box>();
@@ -151,7 +157,7 @@ export function SportFilterFrame({ filter, header, children }: SportFilterFrameP
         {header(pill, cover, sport)}
       </View>
 
-      {children(sport, toAdd)}
+      {children(sport, toAdd, needsALevel)}
 
       {unfolded && sports !== undefined && sport !== undefined ? (
         <>

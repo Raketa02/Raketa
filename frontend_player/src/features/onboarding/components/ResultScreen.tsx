@@ -36,24 +36,19 @@
  *
  * **Rate the next sport they chose, or stop.** Stopping part-way is an ordinary outcome
  * rather than an abandonment: the player leaves with the ratings they produced and goes
- * into the app, and a sport not rated today can be rated any time later. Which sport is
- * next is the pass's to answer, and with nothing after this one there is nothing to
- * offer — so the screen shows one control instead of pretending there is a choice.
+ * back where the pass began, and a sport not rated today can be rated any time later. Which
+ * sport is next is the pass's to answer, and with nothing after this one there is nothing to
+ * offer — so the screen shows one control instead of pretending there is a choice. *Your
+ * starting ratings*, the summary this used to lead to, repeated this screen and went with
+ * [#730](https://github.com/Raketa02/Raketa/issues/730).
  *
- * Either way the summary comes first: the done screen is where a run is accounted for, and
- * a player who stopped after one rating is owed that account as much as one who finished.
- * **That is now true of every player**, including one who still owes a Player profile — the
- * six social steps used to sit between the last rating and the screen that shows it, and
- * they now sit on the far side of it.
- *
- * **Except a pass begun at the Skill passport**, whose one control is the same *See your
- * ratings* and whose ratings are the passport
+ * **A pass begun at the Skill passport** ends there, its one control *See your ratings*,
+ * because the passport *is* your ratings
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §3): the pass ends there, with the new card drawn, and never on the done screen. This
- * screen does not know which it is showing — the card, the note, the trail and the ceiling
- * tick are the result's own either way — and the label fits both because both are *your
- * ratings*. The new rating's Play intent is undeclared until the player declares it, as every
- * sport's is; nothing here asks.
+ * §3), with the new card drawn. **A pass begun at Home** says *Back to Home*. This screen does
+ * not know which it is showing — the card, the note, the trail and the ceiling tick are the
+ * result's own either way. The new rating's Play intent is undeclared until the player
+ * declares it, as every sport's is; nothing here asks — the deck does, on Games.
  *
  * **A pass begun on a group goes back to it**
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3, §5): its
@@ -117,12 +112,10 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
   /**
    * **The device's back is claimed and refused, because this screen draws none.**
    *
-   * Every screen in onboarding is reached by `replace`, so the group holds one entry per push
-   * — and the push behind this one is the welcome screen, from which the only way forward is
-   * to rate a sport again. An unclaimed press popped to exactly there.
-   * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back and
-   * forward move freely inside each part and never cross between them."* A press that does
-   * nothing is what the missing back control has already said.
+   * Every screen in the questionnaire is reached by `replace`, so the group holds one entry,
+   * and an unclaimed press would leave the app from under a rating just made. The way on is
+   * the controls below; a press that does nothing is what the missing back control has
+   * already said.
    */
   useHardwareBack(() => {});
 
@@ -145,12 +138,12 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
   const explainer = useVerdictExplainer(result?.confidenceCeiling);
 
   /**
-   * A rating exists for this sport, so this run belongs on the summary.
+   * A rating exists for this sport, so the pass records it — the sport the way back stands on.
    *
-   * Recorded **where the rating is shown** rather than where the run finished: what the
-   * done screen lists is what the player was told, and a run whose result could not be
-   * read is not something to promise them a card for. Recording the same run twice is a
-   * no-op, which is what makes a refetch or a remount free.
+   * Recorded **where the rating is shown** rather than where the run finished: the chip a group
+   * pass lands on is the sport the player was told about, and a run whose result could not be
+   * read is not something to land them on. Recording the same run twice is a no-op, which is
+   * what makes a refetch or a remount free.
    */
   useEffect(() => {
     if (result === undefined) return;
@@ -243,10 +236,8 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
           ) : null}
 
           {next === undefined ? (
-            // The last sport, and the label names what is actually next: back to the group a
-            // pass began on, or the summary of this walk — the passport's, for a pass begun
-            // there. For onboarding's own pass it is the same screen whether or not the player
-            // still owes a Player profile — the done screen asks that, one press further on.
+            // The last sport, and the label names what is actually next: back where the pass
+            // began — the group, Home, or the passport's own *See your ratings*.
             <Button
               label={lastControlLabel(onwards.destination, groupName)}
               size="lg"

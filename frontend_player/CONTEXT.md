@@ -119,18 +119,20 @@ review comment and a test description all use the same word.
   is a redirect, not a declarative protected route; those landed later. _Avoid_:
   "middleware" (that is a web server's word, and it runs on a server).
 - **Entry gate** — the _second_ redirect in `(app)/_layout.tsx`, deciding where a launch
-  lands from **three parallel reads**: is a run unfinished, does a rating exist, and does a
-  Player profile exist. After the account's profiles, the first destination is the naming for an
-  account that is not **named** — that holds no nickname
-  ([ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3), read off the player
-  read — and then four, whose order is the rule: resume · welcome · the social steps · the app. Distinct from the guard, and deliberately **not**
-  part of session status — a rating check inside bootstrap would block every cold launch on
-  a network request. The third read is the authenticated player the app already asks for,
-  never a fourth endpoint. _Avoid_: "onboarded flag" — there is no such thing, because a
-  rating is per sport. Whether a _Player profile_ exists is not that flag: it is a
-  per-player question with a per-player answer, which is the distinction
-  [ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md) draws and the shared
-  glossary now carries.
+  lands from **one read**, the authenticated player the app already asks for. Its order is the
+  rule: the account's profiles, then the naming for an account that is not **named** — that holds
+  no nickname ([ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3) — then
+  the social steps for one with no Player profile, then the app
+  ([ADR-0200](../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1). **A rating and an
+  unfinished run route nowhere** ([#730](https://github.com/Raketa02/Raketa/issues/730)): a
+  level is asked where play begins, by the **level door**, and a run left halfway is offered
+  there. Until #730 the gate read three facts in parallel and had two more destinations,
+  _resume_ and _welcome_. Distinct from the guard, and deliberately **not** part of session
+  status — a profile check inside bootstrap would block every cold launch on a network request.
+  _Avoid_: "onboarded flag" — there is no such thing, because a rating is per sport. Whether a
+  _Player profile_ exists is not that flag: it is a per-player question with a per-player
+  answer, which is the distinction [ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)
+  draws and the shared glossary now carries.
 - **Profile (the switcher's)** — which hat the app is wearing for an account: **Player**, or the
   **Administrator** of one club ([ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
   §1). UI vocabulary, never a domain term — a _Player profile_ is an aggregate, and this is not it.
@@ -193,42 +195,50 @@ review comment and a test description all use the same word.
 
 ### The onboarding flow
 
-Four client-only concepts. **None exists on the backend and none should:** an Assessment is
-per sport, and nothing on the server records the sequence of them, a player's decision to
-come back later, or a half-answered second part. The first two are modelled in
-`features/onboarding/domain/onboardingPass.ts` and held in that feature's stores; the last
-two belong to `features/player_profile/`, which owns the second part and will own the
-profile editor that later edits the same values.
+Client-only concepts. **None exists on the backend and none should:** an Assessment is per
+sport, and nothing on the server records the sequence of them, which door a walk began at, or a
+half-answered second part. The pass and the door are modelled in `features/onboarding/domain/`
+(`onboardingPass.ts`, `levelDoor.ts`) and the pass is held in that feature's store; the steps
+belong to `features/player_profile/`, which owns the second part and the You tab that edits
+the same values. **Onboarding is a nickname and the six steps** (ADR-0200 §1): sign-up, the
+naming, the steps, Home — eight screens, and no questionnaire.
 
-- **Onboarding pass** — **one walk through onboarding**: the sports the player chose, in
-  the order they chose them, and which of those produced a Skill rating. It is what the
-  progress bar measures, what decides which sport comes next, and what the closing screens
-  account for. Client-only, in-memory, never persisted. It **begins** explicitly — at the
-  picker with the queue that was chosen, or at the question route for a run resumed
-  straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
-  one place, when the player reaches the app. Between passes there is **no pass**, and
-  that absence is load-bearing: it is what lets a resumed run begin one without adopting a
-  finished walk's queue. **Onboarding happens once, at the beginning — and a pass has an
-  origin**: welcome; the Skill passport's _Add a sport_, which begins a pass of exactly one
-  sport and ends back on the passport
+- **Onboarding pass** — **one walk through the questionnaire**: the sports the player chose,
+  in the order they chose them, and which of those produced a Skill rating. It is what the
+  eyebrow counts (_Padel · Rating 1 of 2_), what decides which sport comes next, and which sport
+  the way back stands on. Client-only, in-memory, never persisted. It **begins** explicitly —
+  at the picker with the queue that was chosen, at a card or chip with its one sport, at the
+  level door's _Carry on_ with the run's sport, or at the question route for a run reached by
+  a link with no pass running, which is a genuine pass of one sport — and it **ends** in one
+  place, when the player reaches the app. Between passes there is **no pass**, and that absence
+  is load-bearing: it is what lets a run reached by a link begin one without adopting a
+  finished walk's queue. **Every pass begins inside the app, and a pass has an origin**
+  (ADR-0200 §5): **Home** (`FROM_HOME` — the picker opened with no group, and a run reached by
+  a link), which ends there with _Back to Home_; the Skill passport's _Add a sport_, which
+  begins a pass of exactly one sport and ends back on the passport with _See your ratings_
   ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
-  §3); or **a group's tab** — an official group's card, _Post a game_'s or Members', or the
-  picker opened from the tab — which ends back on that group, on that tab, standing on the sport
-  rated last, and whose last result says _Back to {group name}_
-  ([ADR-0200](../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5). A link naming a sport outside the running pass is still sent to welcome rather than
-  into the middle of a flow — a second door is not a shortcut. _Avoid_: **"run"** — that is one
-  Assessment, and a pass is a
-  sequence of them; **"session"** — that is the auth session, and the two have different
-  lifetimes; also "onboarding state", "wizard".
-- **Deferred run** — an Assessment the player asked to **continue later**. Unfinished on
-  the server with every answer intact, and held on the client only so the entry gate stops
-  resuming it. It lasts the **app session**, deliberately outliving the pass: a pass ends
-  when the player reaches the app, and that is the exact moment the gate re-evaluates, so
-  a deferral folded into a pass would send the player back into the run they set aside.
-  _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
-  none; "abandoned run" — that **is** a server-side transition and is the permanent way
-  out, where this is the temporary one.
-- **Social step** — one of the **six** screens of onboarding's **second part**: tags, intro,
+  §3); or **a group's tab** — the level door, an official group's card, _Post a game_'s or
+  Members' — which ends back on that group, on that tab, standing on the sport rated last, and
+  whose last result says _Back to {group name}_. _Done for now_, _continue later_ and _abandon_
+  end it at its origin too, and so does **turning back** from the picker — a pass over no sport,
+  begun and over at once. A link naming a sport outside the running pass is sent out to `/`
+  rather than into the middle of a flow — a second door is not a shortcut. Onboarding's own
+  origin, _welcome_, went with the questionnaire leaving onboarding (#730). _Avoid_: **"run"**
+  — that is one Assessment, and a pass is a sequence of them; **"session"** — that is the auth
+  session, and the two have different lifetimes; also "onboarding state", "wizard".
+- **Level door** — the one dark card a player rated in nothing meets **in a player group**, in
+  place of Games, Fill in and Friends, _Post a game_ and Members (`LevelDoor`, onboarding's;
+  `needsALevel`, groups') — ADR-0200 §2. It offers one of two things, by `levelDoor`'s rule:
+  **_Get your level_** — _pick the sports you play, a few questions each_ — opening the picker
+  over every sport with nothing ticked; or, with a run left halfway, **_Carry on with your padel
+  questions_** — _you're on question 5_, counted off the run's own transcript — opening that run
+  where it stands, and never offering to start again. Nothing is drawn until it knows which.
+  **An official group never draws it**: its own card offers its sports (ADR-0200 §3). It is
+  the only thing that offers a run left halfway — the **Deferred run** of #730's predecessors,
+  held on the phone so the gate's _resume_ would leave it alone, went with that branch. _Avoid_:
+  "gate" — the entry gate routes launches, and this routes nothing; "rating wall".
+- **Social step** — one of the **six** profile steps, onboarding's **second part** — all of it
+  after the naming since the questionnaire left onboarding (#730): tags, intro,
   photos, availability, location, gender, in that order (`SOCIAL_STEPS`). The step names are
   the route segments, so `/location` is the screen that asks for a Location area and there is
   no second spelling of the six. The order is not arbitrary at three points: **the intro
@@ -272,8 +282,8 @@ profile editor that later edits the same values.
   leaving mid-part restart at step one. Its absence is a state: no draft means the player is
   not in the part, which is how a link naming a step in the middle is told from a player who
   walked there. _Avoid_: "form state" — it outlives every screen in the part; "saved draft"
-  and "resume" — nothing is saved, and the asymmetry with part one's resumable run is
-  deliberate.
+  and "resume" — nothing is saved, and the asymmetry with a run left halfway, which the level
+  door carries on from where it stands, is deliberate.
 - **Profile commit** — the Profile draft with **every answer present**, and the one request
   that carries it. A distinct type from the draft on purpose: three answers can be missing
   while a player is walking the part — the week, the area and the gender (`MissingAnswer`) —

@@ -1,4 +1,4 @@
-# onboarding — the two parts and the entry gate
+# onboarding — the entry gate, and the rating pass where play begins
 
 > The design record for `src/features/onboarding/` — what the feature does and the reasons the shape
 > is what it is, one paragraph per decision. Moved out of `CLAUDE.md` on 2026-09-11 so it loads
@@ -186,3 +186,45 @@ PRD and ADR-0200 §3 quote them and as the passport's chip says it; _Add Padel_ 
 a pass that ended on the passport. **Calls made here**: a pass from Members returns to the page,
 not to Members; a pass from _Post a game_ returns to Fill in, not to _Post a game_. **Not seen on a
 device**: the frame between the gate mounting Home and the group's page pushed over Play.
+
+**Onboarding is a nickname and a profile, and a level is asked where play begins**
+([#730](https://github.com/Raketa02/Raketa/issues/730),
+[ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1–§6, amending every
+paragraph above that speaks of welcome, the summary, the data screen, _resume_ or a deferral).
+**The gate reads the player and nothing else**: profiles → _no nickname_ → the naming →
+_no Player profile_ → the six steps from step one → the app. `entryDestination` lost its
+`ratings`, `runInProgress` and `deferredRunIds` inputs and its `welcome` and `resume`
+destinations, and `useEntryDecision` its two parallel reads, so a cold launch waits on
+`/users/me` alone; the _stale at mount, not yet answered since_ bound now guards that one read.
+A sign-up is eight screens — sign-up, _How should people see you?_, the six steps, Home — and
+the naming's _Continue_ hint says _Next, what kind of player you are_. **Deleted with their
+routes and copy**: _Let's set you up_ (`WelcomeScreen`, `/welcome`), _Your starting ratings_
+(`DoneScreen`, `/done`, with `useRunResults`) and _What Raketa keeps_ (`DataScreen`, `/data`);
+`ProfileFinish` replaces to `/`, so _Finish_ lands on Home. **The pass's origins are Home, the
+passport and a group** — `welcome` became `home` (`FROM_HOME`): the picker opened with no group,
+and a run reached by a link with no pass running. A pass ends where it began whatever it
+produced (`stopDestination`), so `closing` and `app` left `PassDestination` for `home`, every way
+out of a pass replaces to `/`, and the last _Your rating_ says _Back to {group}_, _Back to Home_
+or the passport's _See your ratings_ (`lastControlLabel`). A link outside the running pass goes
+to `/` rather than welcome; with no _resume_ there is no loop to fear, and the gate ends the pass
+it interrupted where it began. **The deferral went**: `deferredRuns.store` existed only so the
+gate's _resume_ would leave a run set aside alone, and _continue later_ now just leaves.
+**The level door** (`LevelDoor`, exported with `DoorOrigin`) is the one dark card a player rated
+in nothing meets in a player group, on Games, Fill in, Friends, _Post a game_ and Members —
+drawn by `groups` where its `needsALevel` says so, with the pass returning to the tab it stood
+on (_Post a game_'s to Fill in, Members' to the page's tab, as #729's card does). `levelDoor`
+is its rule: no run → _Get your level — Pick the sports you play, a few questions each._ with
+_Pick your sports_, opening `/sports?groupId&tab` (`sportsPickerRoute`); a run left halfway →
+_Carry on with your padel questions — You're on question 5._ with _Carry on_, beginning a pass
+of that sport and replacing to its question. The number is the run's own count — answered plus
+the one outstanding, or the last answered for a run stopped at its review — so the door reads
+the run's step as well as the list (`useRunInProgress`, the gate's old read, then
+`assessmentQuery`); nothing is drawn until both answer, and a failed read offers the picker,
+since starting a sport with an unfinished run hands that run back. **The picker has a way
+back**: the door reaches it by `replace`, so its header _Back_ and the device's back **turn
+back** — a pass over no sport, which the gate lands at its origin. **Calls made here**: the door's
+two lines are the spec's sentence split at its dash, and its buttons _Pick your sports_ and
+_Carry on_ are this ticket's words; _+ Post a game_ is not floated over the door on Fill in (one
+door, as the official card hides it); a run stopped at its review reads _question {last
+answered}_; the picker's back control. **Not seen on a device**: the door's card, and the frame
+between the gate mounting Home and the group pushed back over Play.

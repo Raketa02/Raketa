@@ -20,11 +20,9 @@ import {
   launchSignedIn,
   HOME_TAB_LINE,
   resetLocation,
-  SPORTS_SERVED,
   stubGate,
   stubLocation,
   stubProfileOptions,
-  stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
 import { CLUB, CLUB_ID, club, O3_CLUB_GROUP } from '@/test-support/officialGroupsServer';
 import { fakeLocation } from '@/test-support/platform';
@@ -34,7 +32,6 @@ import {
   json,
   neverResponds,
   noContent,
-  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -47,8 +44,6 @@ const YOU = `/administrator/${CLUB_ID}/you`;
 const ATTESTATION_PATH = '/api/v1/users/me/adult-attestation';
 const NAMING_PATH = '/api/v1/users/me/name';
 const COMMIT_PATH = '/api/v1/players/me/profile';
-const PADEL_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
-const stepPath = `/api/v1/assessments/${PADEL_ID}`;
 
 /** The sentence under the box when it is not ticked — sign-up's own. */
 const NOT_ATTESTED = 'Confirm that you are 18 or over — Raketa is for adults only.';
@@ -104,13 +99,6 @@ function account({
         state.nickname = body.nickname;
         return json<Wire['NamingResponse']>({ nickname: body.nickname });
       });
-      transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
-      transport.on('POST', '/api/v1/assessments', () => json(outstanding(), 201));
-      transport.on('POST', `${stepPath}/answers`, () => {
-        transport.on('GET', stepPath, () => json(finished()));
-        state.ratings = [PADEL_RATING];
-        return json(finished());
-      });
       transport.on('POST', COMMIT_PATH, () => {
         state.hasPlayerProfile = true;
         return json(PROFILE, 201);
@@ -118,69 +106,6 @@ function account({
     },
   };
 }
-
-function outstanding(): Wire['AssessmentStepResponse'] {
-  return {
-    assessment_id: PADEL_ID,
-    status: 'in_progress',
-    questions_asked: 0,
-    transcript: transcriptOf(0),
-    question: {
-      id: 'q-overhead',
-      category: 'Match execution',
-      tier: 'standard',
-      situation: 'A deep lob pushes you off the net',
-      text: 'How often do you play a controlled overhead?',
-      qualifier: 'A normal match against players at your level',
-      options: [
-        { id: 'rarely', text: 'Rarely' },
-        { id: 'usually', text: 'Usually' },
-      ],
-    },
-  };
-}
-
-const RESULT: Wire['ResultResponse'] = {
-  mu: 2.71,
-  sigma: 0.62,
-  confidence: 30,
-  confidence_ceiling: 30,
-  range: { low: 2.09, high: 3.33 },
-  band: { name: 'Established', lower: 2.65, upper: 3.85 },
-  status: 'initial_estimate',
-  questions_asked: 1,
-  engine_version: 'racketskill-v3',
-  calibration_priority: 'standard',
-  confidence_reason: {
-    key: 'limited-match-evidence',
-    sentence: 'We have not seen you play yet, so this is a starting estimate.',
-  },
-  factors: [],
-  uncertainty_factors: [],
-};
-
-function finished(): Wire['AssessmentStepResponse'] {
-  return {
-    assessment_id: PADEL_ID,
-    status: 'completed',
-    questions_asked: 1,
-    transcript: transcriptOf(1),
-    question: null,
-    result: RESULT,
-  };
-}
-
-const PADEL_RATING: Wire['RatingResponse'] = {
-  sport: 'PADEL',
-  mu: RESULT.mu,
-  sigma: RESULT.sigma,
-  confidence: RESULT.confidence,
-  range: RESULT.range,
-  band: RESULT.band,
-  status: RESULT.status,
-  engine_version: RESULT.engine_version,
-  updated_at: '2026-09-26T12:00:00Z',
-};
 
 const PROFILE: Wire['PlayerProfileResponse'] = {
   player_id: GATE_USER.id,
@@ -354,34 +279,21 @@ describe('the naming, after the attestation', () => {
     fireEvent.changeText(screen.getByLabelText('Nickname'), 'marta_n');
     fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
 
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // On to the profile steps: a level is asked where play begins, not here (ADR-0200 §1).
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
     expect(namings()).toEqual([{ nickname: 'marta_n' }]);
   });
 });
 
 describe('Start playing, from start to end', () => {
-  it('walks the attestation, the nickname, the questionnaire and the social steps into the app, holding both profiles', async () => {
+  it('walks the attestation, the nickname and the profile steps into the app, holding both profiles', async () => {
     const held = await startPlaying();
     await attest();
 
-    // The naming: the nickname alone.
+    // The naming: the nickname alone — and straight on to the profile steps, with no
+    // questionnaire between (ADR-0200 §1, #730).
     fireEvent.changeText(screen.getByLabelText('Nickname'), 'marta_n');
     fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-
-    // The questionnaire: one sport, one question, one result.
-    fireEvent.press(screen.getByLabelText('Get started'));
-    await waitFor(() => expect(screen).toHavePathname('/sports'));
-    fireEvent.press(await screen.findByLabelText('Padel'));
-    fireEvent.press(screen.getByLabelText('Rate 1 sport'));
-    fireEvent.press(await screen.findByLabelText('Usually'));
-    fireEvent.press(screen.getByLabelText('Confirm answer'));
-    await waitFor(() => expect(screen).toHavePathname(`/result/${PADEL_ID}`));
-    fireEvent.press(await screen.findByLabelText('See your ratings'));
-    await waitFor(() => expect(screen).toHavePathname('/done'));
-
-    // The social steps, into the commit.
-    fireEvent.press(await screen.findByLabelText('Finish setting up'));
     await waitFor(() => expect(screen).toHavePathname('/tags'));
     fireEvent.press(await screen.findByLabelText('Plays to win'));
     fireEvent.press(screen.getByLabelText('Here to improve'));
@@ -399,18 +311,17 @@ describe('Start playing, from start to end', () => {
     await waitFor(() => expect(screen).toHavePathname('/gender'));
     fireEvent.press(screen.getByLabelText('Woman'));
     fireEvent.press(screen.getByLabelText('Finish'));
-    await waitFor(() => expect(screen).toHavePathname('/data'));
-    fireEvent.press(screen.getByLabelText('Start playing'));
 
-    // In the app, as a player.
+    // In the app, as a player — on Home, with no data screen between.
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(held.state).toEqual({
       attested: true,
       nickname: 'marta_n',
-      ratings: [PADEL_RATING],
+      ratings: [],
       hasPlayerProfile: true,
     });
+    expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
 
     // **And still an Administrator**: the area opens on the next launch, its You tab says her
     // nickname now, and no longer offers Start playing, because the account plays.
@@ -428,7 +339,7 @@ describe('an account that holds no profile at all', () => {
   // dead end, and it takes Start playing's steps from the gate.
   it('is sent to Start playing on launch, with no way back to an area it no longer has', async () => {
     account({ administers: [] }).install(transport);
-    // Nothing a player owes the gate is waited on: a run it cannot have is no question to answer.
+    // Nothing about a run is waited on: the gate asks none, of anybody (#730).
     transport.on('GET', '/api/v1/assessments/in-progress', neverResponds());
 
     await launchSignedIn();
@@ -436,8 +347,7 @@ describe('an account that holds no profile at all', () => {
     await waitFor(() => expect(screen).toHavePathname('/start-playing'));
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
 
-    // Once it plays, the gate asks what a player owes it again.
-    stubRunsInProgress(transport, []);
+    // Once it plays, the gate asks what a player owes it again: a nickname, first.
     await attest();
     expect(screen.getByLabelText('Nickname')).toBeTruthy();
     expect(screen.queryByLabelText('Name')).toBeNull();

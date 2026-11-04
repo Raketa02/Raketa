@@ -73,8 +73,6 @@ import InvitationPasswordRoute from '@/app/(auth)/invitation/password';
 import InvitationLinkRoute from '@/app/(auth)/invite/[token]';
 import * as NativeIntent from '@/app/+native-intent';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
-import DataRoute from '@/app/(onboarding)/data';
-import DoneRoute from '@/app/(onboarding)/done';
 import IntroRoute from '@/app/(onboarding)/intro';
 import LocationRoute from '@/app/(onboarding)/location';
 import NameRoute from '@/app/(onboarding)/name';
@@ -87,7 +85,6 @@ import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
-import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { HOME_COPY } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
@@ -117,7 +114,7 @@ import { errorResponse, json, noContent, type Transport, type Wire } from './tra
 /**
  * The Home tab's one line — which is what *the player is in the app* looks like on screen.
  *
- * The gate's fourth destination is the shell's root, and the shell's root is the Home tab, so
+ * The gate's *app* destination is the shell's root, and the shell's root is the Home tab, so
  * every suite that asserts a launch, a finish or a commit landed in the app is asserting this
  * sentence. Taken from the shell's own copy rather than spelled here, because this is exactly the
  * kind of sentence that gets reworded and eight suites holding a string literal is eight red tests
@@ -210,21 +207,19 @@ export const ONBOARDING_ROUTES = {
   '(auth)/invite/[token]': InvitationLinkRoute,
   '(onboarding)/_layout': OnboardingLayout,
   // The naming step — the first screen after sign-up, and the gate's first destination
-  // (ADR-0199 §3). Before welcome in the table as it is in the walk.
+  // (ADR-0199 §3).
   '(onboarding)/name': NameRoute,
   // *Start playing*'s first step, the Adult attestation (#517), at the gate's own address: where it
   // sends an account that holds no profile at all. The You tab pushes the same screen inside its
   // area.
   '(onboarding)/start-playing': StartPlayingRoute,
-  '(onboarding)/welcome': WelcomeRoute,
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
   '(onboarding)/review/[assessmentId]': ReviewRoute,
   '(onboarding)/result/[assessmentId]': ResultRoute,
-  '(onboarding)/done': DoneRoute,
-  '(onboarding)/data': DataRoute,
-  // The second part, in order. They are routes rather than one route with a param so the
-  // sequence is visible in the file tree, the way the authorization boundary is.
+  // The profile steps, in order — the rest of onboarding since #730. They are routes rather than
+  // one route with a param so the sequence is visible in the file tree, the way the
+  // authorization boundary is.
   '(onboarding)/tags': TagsRoute,
   '(onboarding)/intro': IntroRoute,
   '(onboarding)/photos': PhotosRoute,
@@ -853,16 +848,16 @@ export interface GateStub {
   readonly email?: string;
   /**
    * The runs this player left unfinished, in the order the server sends them — sport
-   * registry order. A single run is the ordinary case; two is what proves which one the
-   * gate picks.
+   * registry order. Read by the door where play begins, never by the gate (#730): a run left
+   * halfway is offered as *Carry on*, and a launch opens the app whatever this says.
    */
   readonly runs?: readonly Wire['InProgressAssessmentResponse'][];
   /**
-   * Whether onboarding's second part has been committed — the gate's fourth branch.
+   * Whether the profile steps have been committed — the gate's branch after the nickname
+   * (ADR-0200 §1).
    *
-   * Defaults to **false**, which is the answer that goes with the default of no ratings: a
-   * player who has been rated at nothing has committed nothing either. It is only consulted
-   * once a rating exists, so most suites never have to state it.
+   * Defaults to **false**: an account sign-up and the naming leave behind, which the gate sends to
+   * the profile steps. A suite about anything inside the app states `true`.
    */
   readonly hasPlayerProfile?: boolean;
   /**
@@ -872,8 +867,8 @@ export interface GateStub {
    * which the gate sends to the naming step before anything else.
    *
    * Defaults to **named**, as `ada`, because almost no suite is about the step: every launch that
-   * lands on welcome, in the app or in the middle of a run is a launch by somebody the app can
-   * already call by their nickname.
+   * lands on the profile steps or in the app is a launch by somebody the app can already call by
+   * their nickname.
    */
   readonly nickname?: string | null;
   /**
@@ -910,14 +905,17 @@ export const GATE_USER: Wire['MeResponse'] = {
 };
 
 /**
- * The gate's three reads: what this player is rated at, what they left unfinished, and who
- * they are — which is where *does a Player profile exist* is served from.
+ * The gate's one read — who the player is, which is where the nickname and *does a Player
+ * profile exist* are served from (#730) — and the two reads a level is asked from where play
+ * begins: what this player is rated at, and what they left unfinished. Neither of those two
+ * routes a launch any more; they are here because a group's tabs, the passport and the door
+ * read them, and almost every suite reaches one.
  *
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
  *
  * **`stubGames`, `stubConversations` and `stubSportsmanship` are in here and none of them is a gate
- * read.** The gate's fourth destination is the shell's root, the shell's root is the Home tab, and
+ * read.** The gate's *app* destination is the shell's root, the shell's root is the Home tab, and
  * Home reads the rooms to say whether a booked game's chat is open; the games list and the stars
  * are read one push in, by a booked game's result screen, and every suite that opens one lands
  * through here first. All three are defaulted to nothing, and a suite with any of them calls the

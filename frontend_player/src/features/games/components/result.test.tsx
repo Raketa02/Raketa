@@ -207,8 +207,11 @@ async function openGame(served: Wire['GameSchema']) {
   await launchSignedIn(RESULT_ROUTE);
   await waitFor(() => expect(screen).toHavePathname(RESULT_ROUTE));
   // The booking is read first and the Game after it, and the screen wears *Not your game*'s
-  // title while the Game is still coming — so what is waited on is that title going.
+  // title while the Game is still coming — so what is waited on is that title going, and the
+  // booking's own read before it: neither is drawn while the booking is still *Reading the game*,
+  // which a launch reaches sooner since the gate reads the player alone (#730).
   await screen.findByLabelText('Back');
+  await waitFor(() => expect(screen.queryByLabelText('Reading the game')).toBeNull());
   await waitFor(() => expect(screen.queryByText(resultTitle({ kind: 'not-yours' }))).toBeNull());
 }
 

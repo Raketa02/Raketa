@@ -8,7 +8,7 @@
 
 import { CONTINUE, NAMING_EYEBROW } from './namingPresentation';
 
-/** The eyebrow over the title: the naming step's and welcome's word. */
+/** The eyebrow over the title: the naming step's word. */
 export const START_PLAYING_EYEBROW = NAMING_EYEBROW;
 
 /** The step's title — the row's words on the administrator's You tab, so the tap lands where it said. */

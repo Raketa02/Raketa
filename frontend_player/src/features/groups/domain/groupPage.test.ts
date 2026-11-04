@@ -1,5 +1,13 @@
 import type { GroupPerson, SportRoster } from './group';
-import { faceIn, filterSports, gamesCard, openingSport, rosterFor, sportsToAdd } from './groupPage';
+import {
+  faceIn,
+  filterSports,
+  gamesCard,
+  needsALevel,
+  openingSport,
+  rosterFor,
+  sportsToAdd,
+} from './groupPage';
 
 describe('the sports a group page filters by', () => {
   it('lists the sports the reader is rated in, in the order padel › tennis › squash › badminton', () => {
@@ -102,6 +110,26 @@ function roster(ratedCount: number, faces = ratedCount): SportRoster {
     firstRated: Array.from({ length: faces }, (_, n) => person(n + 1)),
   };
 }
+
+/**
+ * **The door where play begins** (ADR-0200 §2, #730): a player group plays whatever its members are
+ * rated in, so a reader rated in nothing has no sport for any tab — and meets the door instead. An
+ * official group keeps its own card (`sportsToAdd`), so its reader never does.
+ */
+describe('who meets the door instead of a player group’s tabs', () => {
+  it('is a reader rated in nothing, in a player group', () => {
+    expect(needsALevel([], undefined)).toBe(true);
+  });
+
+  it('is nobody rated in any sport, whatever the group plays', () => {
+    expect(needsALevel(['tennis'], undefined)).toBe(false);
+  });
+
+  it('is never an official group’s reader, who has its own card', () => {
+    expect(needsALevel([], ['padel'])).toBe(false);
+    expect(needsALevel(['tennis'], ['padel'])).toBe(false);
+  });
+});
 
 describe('the Games card', () => {
   it('is just you while you are the only one rated in the sport', () => {

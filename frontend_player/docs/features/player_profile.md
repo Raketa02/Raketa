@@ -369,3 +369,9 @@ step promises that answer is never shown or shared. The paragraph that stood nea
 record — _the consent step's copy is frozen and versioned_ — is gone with the file it described.
 **Left for a design-system ticket**: `RadiusSlider` (6.10) and `theme.size.radiusSlider` have no
 caller. **Not seen on a device**: the finish's notes stacked under the gender step's two groups.
+
+**_Finish_ lands on Home** ([#730](https://github.com/Raketa02/Raketa/issues/730), ADR-0200 §1).
+`ProfileFinish`'s `AFTER_THE_PART` is `/`: _What Raketa keeps_ recorded nothing and went, and the
+commit marks the profile on the player read, so the gate lets her through to the app's root. The
+six steps are all of onboarding after the naming now — the questionnaire left it — so step one is
+entered straight from _How should people see you?_, and no rating is read on the way.

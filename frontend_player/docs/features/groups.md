@@ -574,3 +574,15 @@ reason. `groupInfo.test.tsx` holds _ania.k_ on a Members row.
 _pass ending on the passport_ call above: its buttons say _Rate Padel_, `AddSportCard` takes the
 group and the tab to come back to, and the page reads the tab and the sport off the route as
 `returning`. The whole of it is in [`onboarding.md`](onboarding.md), whose pass it is.
+
+**A player group's reader rated in nothing meets the level door**
+([#730](https://github.com/Raketa02/Raketa/issues/730), ADR-0200 §2, §4, §6). `needsALevel(rated,
+declared)` — a player group, rated in no sport — rides on `useGroupSport` and is handed to
+`SportFilterPage`'s children as a third argument; where it holds, Games, Fill in and Friends draw
+onboarding's `LevelDoor` in place of their content, Members draws it in place of the list she is
+on nobody's copy of, and _Post a game_ draws it in place of _Get rated in … to post here_, each
+returning to the tab #729's card returns to. **_+ Post a game_ is not floated over the door**, as
+it is not over the official card. **The sport pill is drawn only once there is a rating to list**,
+and lists only rated sports — which `filterSports` already made true; the door makes it visible.
+An official group keeps `AddSportCard`. The words and the reads are onboarding's
+([`onboarding.md`](onboarding.md)).

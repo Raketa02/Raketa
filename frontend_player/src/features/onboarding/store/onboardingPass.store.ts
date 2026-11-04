@@ -2,15 +2,14 @@
  * The onboarding pass — the one piece of onboarding state that is neither server data nor
  * local to a component.
  *
- * It is wizard progress: begun when a walk through onboarding starts — at the picker, or
- * at the Skill passport's *Add a sport* — read by every screen in it, and **gone when the
- * player reaches the app**. It is never written to the server and never persisted to the
- * device — it only orders the next few assessments and accounts for what they produced, and
- * a sport not rated today can be rated any time later from the passport
- * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §3). **A pass carries its origin**, and the origin is the rule for where it ends: the
- * entry gate ends every pass on reaching the app, and lands a passport-begun one back on
- * the passport.
+ * It is wizard progress: begun when a walk through the questionnaire starts — at a door
+ * where play begins, an official group's card, or the Skill passport's *Add a sport* — read by
+ * every screen in it, and **gone when the player reaches the app**. It is never written to the
+ * server and never persisted to the device — it only orders the next few assessments and
+ * accounts for what they produced, and a sport not rated today can be rated any time later
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5). **A pass
+ * carries its origin**, and the origin is the rule for where it ends: the entry gate ends every
+ * pass on reaching the app, and lands it back where it began.
  *
  * Nothing from the backend enters this store. Ratings and assessments are TanStack
  * Query's, and a second copy here would be a second answer to "what has this player been
@@ -32,16 +31,16 @@
  * indistinguishable in the first place. It is component state on the picker, ordered by
  * `toggleSport`.
  *
- * Deferred runs are **not** here either, and `store/deferredRuns.store` says why: a
- * deferral outlives a pass, and folding it in would clear one at the moment the entry gate
- * next evaluates.
+ * **There are no deferred runs any more.** A run set aside with *continue later* was held in a
+ * store of its own, so the gate's *resume* would not send the player straight back into it; the
+ * gate resumes nothing now (ADR-0200 §5), and the door's *Carry on* is the only way back in.
  */
 
 import { create } from 'zustand';
 
 import type { Sport } from '@/shared/vocabulary/sport';
 import {
-  FROM_WELCOME,
+  FROM_HOME,
   begin as beginPass,
   recordRated,
   type OnboardingPass,
@@ -54,18 +53,16 @@ interface OnboardingPassState {
   readonly pass: OnboardingPass | undefined;
   /**
    * Start a pass over these sports, at the door it came in by: the picker's continue with
-   * what was chosen, or a chip or a group's card with its one sport.
+   * what was chosen, a chip, a group's card or the door's *Carry on* with its one sport — or
+   * nothing at all, for the picker turned back from, which the gate lands where it began.
    */
   readonly begin: (queue: readonly Sport[], origin: PassOrigin) => void;
   /**
    * Start a pass over these sports **only if none is running**.
    *
-   * The question route's, for a run resumed straight from the entry gate with no picker in
-   * between: that is a genuine pass of one sport, and saying so is what lets the position
-   * rule stop special-casing it. Its origin is welcome, whichever door the run was first
-   * begun at — the gate's *resume* branch keeps its rule, and a run set aside from the
-   * passport and resumed on the next launch ends the way any resumed run does (ADR-0179 §3,
-   * Consequences).
+   * The question route's, for a run reached with no pass running — a link, since every door
+   * begins one: that is a genuine pass of one sport, and saying so is what lets the position
+   * rule stop special-casing it. Its origin is Home, the app's root, which is where it ends.
    */
   readonly beginIfAbsent: (queue: readonly Sport[]) => void;
   /** Record that a run produced a rating. Recording it twice is a no-op. */
@@ -89,7 +86,7 @@ export const useOnboardingPass = create<OnboardingPassState>((set, get) => ({
   begin: (queue, origin) => set({ pass: beginPass(queue, origin) }),
   beginIfAbsent: (queue) => {
     if (get().pass !== undefined) return;
-    set({ pass: beginPass(queue, FROM_WELCOME) });
+    set({ pass: beginPass(queue, FROM_HOME) });
   },
   // A rating recorded with no pass running is dropped rather than beginning one. Every
   // route that shows a result was reached through a screen that begins one, so this is

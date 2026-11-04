@@ -15,8 +15,10 @@
  *
  * **Rated in none of the group's sports** (an official group's, #519), there is nothing to post:
  * *Get rated in padel to post here*, with the passport's *Add a sport* for each (Q80) — whose pass
- * returns to the group, on Fill in (#729). While the group
- * or the phone is still being read, the header alone; a refused read says why with the retry.
+ * returns to the group, on Fill in (#729). **Rated in nothing, in a player group**, it is the door
+ * where play begins instead (#730, ADR-0200 §2): every way of playing asks the same thing, and the
+ * pass it begins returns to Fill in too. While the group or the phone is still being read, the
+ * header alone; a refused read says why with the retry.
  */
 
 import { router } from 'expo-router';
@@ -24,6 +26,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LevelDoor, fromAGroup } from '@/features/onboarding/types';
 import { POSTING_COPY, PostAGameScreen, type PostingSport } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
 import { ScreenHeader, theme } from '@/shared/ui';
@@ -42,7 +45,7 @@ import { ReadFailure } from './ReadFailure';
 export function PostAGamePage({ groupId }: { readonly groupId: string }) {
   const read = useGroup(groupId);
   const group = read.data;
-  const { sports, sport, toAdd } = useGroupSport(group?.declaredSports);
+  const { sports, sport, toAdd, needsALevel } = useGroupSport(group?.declaredSports);
   const chosen = useGameIntent((state) => state.intent);
 
   // The page under this one goes to Fill in now, unseen, so every way back arrives there.
@@ -92,6 +95,9 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
           )
         ) : sports === undefined ? (
           <ActivityIndicator accessibilityLabel={POSTING_COPY.opening} color={theme.color.muted} />
+        ) : needsALevel ? (
+          // A player group, rated in nothing: the door, returning to Fill in for the card's reason.
+          <LevelDoor from={fromAGroup(groupId, 'fillIn')} />
         ) : (
           // A pass begun here returns to the group on Fill in — where this screen put the page
           // under it, and where every way back from it lands (#729).

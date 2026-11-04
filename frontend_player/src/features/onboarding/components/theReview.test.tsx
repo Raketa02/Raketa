@@ -39,11 +39,12 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const STEP_PATH = `/api/v1/assessments/${ASSESSMENT_ID}`;
+/** The run's own route — what *Carry on* opens; the gate resumes nothing (ADR-0200 §5, #730). */
+const RUN_ROUTE = `/question/${ASSESSMENT_ID}?sport=padel`;
 const ANSWERS_PATH = `${STEP_PATH}/answers`;
 const COMPLETION_PATH = `${STEP_PATH}/completion`;
 const ABANDONMENT_PATH = `${STEP_PATH}/abandonment`;
@@ -153,10 +154,6 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
-  // *Continue later* defers a run, and a deferred run is what the gate is told to leave
-  // alone — so a suite that walks that door once and then launches again lands on welcome
-  // rather than on the review. It stayed invisible while that test was the last in the file.
-  useDeferredRuns.getState().reset();
 });
 
 afterEach(() => {
@@ -165,19 +162,19 @@ afterEach(() => {
 });
 
 /**
- * A run force-quit at the stop, resumed.
+ * A run force-quit at the stop, opened again — as the door's *Carry on* opens it.
  *
  * This is also the shortest way to the review, and deliberately the one used everywhere
  * below: the review has to be reachable from a cold launch with nothing on the device, or
- * "force-quitting at the review resumes to the review" is a property only the happy path
- * has. The gate routes to the question, and the question screen — finding a run with
+ * "force-quitting at the review returns to the review" is a property only the happy path
+ * has. The run's route is the question, and the question screen — finding a run with
  * nothing left to ask — sends the player on to the review.
  */
 async function resumeIntoTheReview() {
-  stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+  stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
   transport.on('GET', STEP_PATH, () => json(STOPPED));
 
-  await launchSignedIn();
+  await launchSignedIn(RUN_ROUTE);
 
   await waitFor(() => expect(screen).toHavePathname(`/review/${ASSESSMENT_ID}`));
 }
@@ -192,10 +189,10 @@ describe('reaching the end of the questionnaire', () => {
   it('shows the review rather than a result, when the engine stops', async () => {
     // The defect this closes: a stopped run has no result, and the screen that announces
     // one had nothing to announce.
-    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () => json(LAST_QUESTION));
 
-    await launchSignedIn();
+    await launchSignedIn(RUN_ROUTE);
     expect(await screen.findByText('Time away')).toBeTruthy();
 
     transport.on('POST', ANSWERS_PATH, () => json(STOPPED));
@@ -256,7 +253,7 @@ describe('reaching the end of the questionnaire', () => {
   });
 
   it('reaches the review after one answer, on the beginner path', async () => {
-    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () =>
       json<Wire['AssessmentStepResponse']>({
         assessment_id: ASSESSMENT_ID,
@@ -267,7 +264,7 @@ describe('reaching the end of the questionnaire', () => {
       }),
     );
 
-    await launchSignedIn();
+    await launchSignedIn(RUN_ROUTE);
     expect(await screen.findByText('Recent activity')).toBeTruthy();
 
     // "Never played" leaves the engine nothing more to ask. One question screen, one
@@ -293,10 +290,10 @@ describe('reaching the end of the questionnaire', () => {
   it('keeps the confirm control identically labelled on the answer that ends the run', async () => {
     // The wart ADR-0017 accepted and ADR-0020 retires. The last question is no longer the
     // commitment, so the client never has to predict which question is the last one.
-    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+    stubGate({ hasPlayerProfile: true, runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () => json(LAST_QUESTION));
 
-    await launchSignedIn();
+    await launchSignedIn(RUN_ROUTE);
     expect(await screen.findByText('Time away')).toBeTruthy();
 
     expect(screen.getByLabelText('Confirm answer')).toBeTruthy();

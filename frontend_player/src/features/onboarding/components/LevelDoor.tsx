@@ -1,0 +1,69 @@
+/**
+ * **The door where play begins** — one dark card in place of a player group's Games, Fill in and
+ * Friends, its *Post a game* and its Members, for a player rated in nothing
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2, §5,
+ * [#730](https://github.com/Raketa02/Raketa/issues/730)).
+ *
+ * - ***Get your level*** — *pick the sports you play, a few questions each* — opens *Which sports
+ *   do you play?* over every sport, with nothing ticked.
+ * - ***Carry on with your padel questions*** — *you're on question 5* — with a run left halfway,
+ *   opens that run where it stands. It never offers to start again.
+ *
+ * The pass it begins returns to `from`: the group and the tab the door stands on, so the last
+ * *Your rating* says *Back to Wednesday padel* and lands there, with the chip on the sport just
+ * rated. **Nothing is drawn until the door knows which it is**, so it never says one and then the
+ * other.
+ *
+ * The page's dark card, as the official group's own card (`AddSportCard`) and every starting
+ * tab's (`LinkCard`) are: a headline, the line under it, and the one bright door. It lives here
+ * rather than in `groups` because its words are the questionnaire's, and Home's card (#731) says
+ * the same carry-on.
+ */
+
+import { StyleSheet, Text } from 'react-native';
+
+import { Button, DarkCard, theme } from '@/shared/ui';
+
+import { useLevelDoor, type DoorOrigin } from '../hooks/useLevelDoor';
+
+import {
+  LEVEL_DOOR_COPY,
+  carryOnHeadline,
+  carryOnHint,
+  carryOnLine,
+} from './levelDoorPresentation';
+
+export interface LevelDoorProps {
+  /** Where the pass it begins returns to — the group and the tab it stands on. */
+  readonly from: DoorOrigin;
+}
+
+export function LevelDoor({ from }: LevelDoorProps) {
+  const { door, open } = useLevelDoor(from);
+
+  if (door === undefined) return null;
+
+  const carrying = door.kind === 'carry-on';
+
+  return (
+    <DarkCard style={s.card}>
+      <Text style={s.headline}>
+        {carrying ? carryOnHeadline(door.run.sport) : LEVEL_DOOR_COPY.headline}
+      </Text>
+      <Text style={s.line}>{carrying ? carryOnLine(door.question) : LEVEL_DOOR_COPY.line}</Text>
+      <Button
+        label={carrying ? LEVEL_DOOR_COPY.carryOn : LEVEL_DOOR_COPY.start}
+        accessibilityHint={carrying ? carryOnHint(door.run.sport) : LEVEL_DOOR_COPY.startHint}
+        variant="volt"
+        onPress={open}
+      />
+    </DarkCard>
+  );
+}
+
+const s = StyleSheet.create({
+  card: { alignItems: 'center', gap: theme.space.md },
+  // 3.3: `h2` titles a card — `AddSportCard`'s and `LinkCard`'s headline.
+  headline: { ...theme.type.h2, color: theme.color.surface, textAlign: 'center' },
+  line: { ...theme.type.tiny, color: theme.color.onDarkTiny, textAlign: 'center' },
+});

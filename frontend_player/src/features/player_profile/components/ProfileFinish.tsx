@@ -60,19 +60,18 @@ import {
 import { SOCIAL_STEP_PATH, pathThatAsks } from './socialStepRoutes';
 
 /**
- * Where the part leads once the server has it: what Raketa keeps, and then the app.
+ * Where the steps lead once the server has it: **Home**
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1,
+ * [#730](https://github.com/Raketa02/Raketa/issues/730)). *What Raketa keeps*, which stood here,
+ * recorded nothing and went; the commit marks the profile on the player read, so the gate lets
+ * her through to the app's root, which is Home.
  *
- * **Not the ratings summary — the player has already seen it.** It is the screen the second
- * part is now entered *from*, so landing back on it after the commit would show a player the
- * same account of the same walk twice, with the second one following questions that had
- * nothing to do with it.
- *
- * A route literal rather than an import, and that is the boundary working. What follows the
- * commit is onboarding's, and this feature owns the profile rather than the flow that
- * collects it. Written here, beside the one press that goes there, rather than in
- * `socialStepRoutes`: that table is the six steps, and the six steps stop before this.
+ * A route literal rather than an import, and that is the boundary working: the app's root is
+ * the gate's, and this feature owns the profile rather than the flow around it. Written here,
+ * beside the one press that goes there, rather than in `socialStepRoutes`: that table is the
+ * six steps, and the six steps stop before this.
  */
-const AFTER_THE_PART = '/data';
+const AFTER_THE_PART = '/';
 
 /**
  * Why the finish will not move, for whoever cannot see that it will not.

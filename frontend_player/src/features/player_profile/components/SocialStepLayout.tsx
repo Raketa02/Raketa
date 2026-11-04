@@ -17,9 +17,10 @@
  * it at step one, which is exactly what
  * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md) says leaving
  * mid-part does."* **It did not restart anything.** The flat sequence above is the reason: one
- * history entry, so the thing under it is whatever was on screen before the part began —
- * welcome, one push behind the sport picker. Android's back popped to exactly there, and the
- * only way back into the part from welcome is to rate another sport.
+ * history entry, so the thing under it is whatever was on screen before the part began — until
+ * #730 welcome, one push behind the sport picker, and the only way back into the part from there
+ * was to rate another sport. The steps follow the naming now, and an unclaimed press would leave
+ * the app from step one.
  *
  * ADR-0090 forbids that in the same breath it is quoted for: *"Back and forward move freely
  * inside each part and never cross between them."* The restart it describes is what a **new

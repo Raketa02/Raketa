@@ -6,8 +6,8 @@
  * wire does not say which sport a step belongs to, so the sport travels as a param.
  *
  * It carries the same admission rule as the other two, and for the same reason: the review
- * is a screen *inside* onboarding, so a link naming a sport this player never chose belongs
- * at the beginning rather than one control away from creating a rating.
+ * is a screen *inside* the questionnaire, so a link naming a sport this player never chose
+ * belongs on Home rather than one control away from creating a rating.
  */
 
 import { Redirect, useLocalSearchParams } from 'expo-router';
@@ -22,7 +22,7 @@ export default function ReviewRoute() {
   const params = parseAssessmentRouteParams(useLocalSearchParams());
   const admission = useOnboardingAdmission(params?.sport);
 
-  if (params === undefined || admission === 'start-over') return <Redirect href="/welcome" />;
+  if (params === undefined || admission === 'start-over') return <Redirect href="/" />;
 
   return <ReviewScreen assessmentId={params.assessmentId} sport={params.sport} />;
 }

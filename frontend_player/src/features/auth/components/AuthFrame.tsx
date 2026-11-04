@@ -10,8 +10,8 @@
  *
  * **`lead` is the one addition**: a sentence under the title for a screen that has to say what it
  * does — *we'll send you a link and a code*, *if that email has an account* — which sign-in and
- * sign-up never needed. `tiny` in `muted`, welcome's body, because it is read once and then the
- * form is the screen.
+ * sign-up never needed. `tiny` in `muted`, because it is read once and then the form is the
+ * screen.
  *
  * ## The keyboard moves the scroll, never the form
  *

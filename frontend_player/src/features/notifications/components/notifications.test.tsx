@@ -188,10 +188,13 @@ async function backAndForth() {
 
 /**
  * The session's first read of the list has landed — what it has seen from then on, and the line a
- * notice must be newer than to be drawn as the banner.
+ * notice must be newer than to be drawn as the banner. **And reached the session**: TanStack hands
+ * an answer to its observers on the next tick, so the cache holding it is not yet the hook having
+ * seen it — a launch reaches here a beat sooner since the gate reads the player alone (#730).
  */
 async function sessionReadTheList() {
   await waitFor(() => expect(queryClient.getQueryData(notificationKeys.notices())).toBeDefined());
+  await act(async () => jest.advanceTimersByTime(1));
 }
 
 /** The server holds the three choices; a save replaces them and answers them. */

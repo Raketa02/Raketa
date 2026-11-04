@@ -4,14 +4,13 @@
  * The decision is `admissionTo`'s, a pure rule with its own tests; this is the wiring that
  * acts on it — the same split the entry gate uses, and the same one `useAdvanceThroughPass`
  * uses. What crosses the feature's public surface is the answer, never the store. A pass
- * begun at the passport reads the same rule off the same store: it admits its one sport and
- * starts any other over (ADR-0179 §3).
+ * begun at any door reads the same rule off the same store: it admits its one sport and starts
+ * any other over (ADR-0179 §3).
  *
- * **Beginning happens here, and it happens during render.** A run resumed with no pass is
+ * **Beginning happens here, and it happens during render.** A run reached with no pass is
  * a pass of one sport, and the chrome reads a position on the questionnaire's very first
  * render — so an effect would flush too late and the screen would draw a bar it had no
- * pass to measure. Doing it from the entry gate was rejected for the same reason: its
- * redirect fires before an effect would run.
+ * pass to measure.
  *
  * **The answer is settled once per mount.** Beginning changes the pass the answer was
  * computed from, so re-deriving it every render would be reading the consequence of the
@@ -25,7 +24,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import { admissionTo } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
-/** `start-over` means welcome — see `admissionTo` for why not the entry gate. */
+/** `start-over` means Home — see `admissionTo`. */
 export type OnboardingAdmission = 'admit' | 'start-over';
 
 /**

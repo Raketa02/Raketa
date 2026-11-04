@@ -28,7 +28,6 @@ import {
 import {
   GATE_USER,
   HOME_TAB_LINE,
-  SPORTS_SERVED,
   launchByLink,
   launchSignedIn,
   openLink,
@@ -43,7 +42,6 @@ import { fakeLocation } from '@/test-support/platform';
 import {
   installTransport,
   json,
-  transcriptOf,
   type RecordedRequest,
   type Transport,
   type Wire,
@@ -227,36 +225,13 @@ describe('a group link, before the account is in the app', () => {
 
   /**
    * **Kasia's walk, whole** — the ticket's second sentence. She opened the link before she had an
-   * account: she signs up, names herself, rates her padel, answers the social steps, and lands on
-   * the group. Each screen of it is its own suite's; what this proves is that the link outlives
-   * every one of them and waits for the last.
+   * account: she signs up, names herself, answers the profile steps, and lands on the group — with
+   * no questionnaire on the way, since a level is asked where play begins (ADR-0200 §1, #730). Each
+   * screen of it is its own suite's; what this proves is that the link outlives every one of them
+   * and waits for the last.
    */
-  it('is kept through sign-up, the naming, the questionnaire and the social steps', async () => {
-    const ASSESSMENT = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
-    const step = `/api/v1/assessments/${ASSESSMENT}`;
+  it('is kept through sign-up, the naming and the profile steps', async () => {
     const kasia = { ...GATE_USER, email: 'kasia@example.com', nickname: null };
-    const result: Wire['ResultResponse'] = {
-      mu: 2.71,
-      sigma: 0.62,
-      confidence: 30,
-      confidence_ceiling: 30,
-      range: { low: 2.09, high: 3.33 },
-      band: { name: 'Established', lower: 2.65, upper: 3.85 },
-      status: 'initial_estimate',
-      questions_asked: 6,
-      engine_version: 'racketskill-v3',
-      calibration_priority: 'standard',
-      factors: [],
-      uncertainty_factors: [],
-    };
-    const finished: Wire['AssessmentStepResponse'] = {
-      assessment_id: ASSESSMENT,
-      status: 'completed',
-      questions_asked: 6,
-      transcript: transcriptOf(6),
-      question: null,
-      result,
-    };
 
     // A new account: unnamed, unrated, with no Player profile — and the server's answers as she
     // gives it each of them.
@@ -275,46 +250,8 @@ describe('a group link, before the account is in the app', () => {
       stubGate(transport, { email: kasia.email, nickname: 'kasia' });
       return json<Wire['NamingResponse']>({ nickname: 'kasia' });
     });
-    transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
-    transport.on('POST', '/api/v1/assessments', () =>
-      json<Wire['AssessmentStepResponse']>(
-        {
-          assessment_id: ASSESSMENT,
-          status: 'in_progress',
-          questions_asked: 0,
-          transcript: transcriptOf(0),
-          question: {
-            id: 'q-overhead',
-            category: 'Match execution',
-            tier: 'standard',
-            situation: 'A deep lob pushes you off the net',
-            text: 'How often do you play a controlled overhead?',
-            qualifier: 'A normal match against players at your level',
-            options: [
-              { id: 'rarely', text: 'Rarely' },
-              { id: 'usually', text: 'Usually' },
-            ],
-          },
-        },
-        201,
-      ),
-    );
-    transport.on('POST', `${step}/answers`, () => {
-      transport.on('GET', step, () => json(finished));
-      stubGate(transport, {
-        email: kasia.email,
-        nickname: 'kasia',
-        ratings: [rating('PADEL')],
-      });
-      return json(finished);
-    });
     transport.on('POST', '/api/v1/players/me/profile', () => {
-      stubGate(transport, {
-        email: kasia.email,
-        nickname: 'kasia',
-        ratings: [rating('PADEL')],
-        hasPlayerProfile: true,
-      });
+      stubGate(transport, { email: kasia.email, nickname: 'kasia', hasPlayerProfile: true });
       return json<Wire['PlayerProfileResponse']>(
         {
           player_id: GATE_USER.id,
@@ -347,21 +284,7 @@ describe('a group link, before the account is in the app', () => {
     fireEvent.changeText(screen.getByLabelText('Nickname'), 'kasia');
     fireEvent.press(screen.getByLabelText('Continue'));
 
-    // The questionnaire.
-    await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    fireEvent.press(screen.getByLabelText('Get started'));
-    await waitFor(() => expect(screen).toHavePathname('/sports'));
-    fireEvent.press(await screen.findByLabelText('Padel'));
-    fireEvent.press(screen.getByLabelText('Rate 1 sport'));
-    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT}`));
-    fireEvent.press(await screen.findByLabelText('Usually'));
-    fireEvent.press(screen.getByLabelText('Confirm answer'));
-    await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT}`));
-    fireEvent.press(await screen.findByLabelText('See your ratings'));
-    await waitFor(() => expect(screen).toHavePathname('/done'));
-    fireEvent.press(await screen.findByLabelText('Finish setting up'));
-
-    // The social steps.
+    // The profile steps, straight after the naming.
     await waitFor(() => expect(screen).toHavePathname('/tags'));
     fireEvent.press(await screen.findByLabelText('Plays to win'));
     fireEvent.press(screen.getByLabelText('Here to improve'));
@@ -378,13 +301,12 @@ describe('a group link, before the account is in the app', () => {
     fireEvent.press(await screen.findByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/gender'));
     fireEvent.press(screen.getByLabelText('Woman'));
-    fireEvent.press(screen.getByLabelText('Finish'));
-    await waitFor(() => expect(screen).toHavePathname('/data'));
 
     // Nothing was searched for on the way: the link waited.
     expect(searched()).toEqual([]);
 
-    fireEvent.press(screen.getByLabelText('Start playing'));
+    // *Finish* is the way into the app, and the link is answered there.
+    fireEvent.press(screen.getByLabelText('Finish'));
 
     await expectTheGroupOnJoin();
   });
