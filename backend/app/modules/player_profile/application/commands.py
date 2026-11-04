@@ -131,10 +131,9 @@ class ChangeLocationCommand:
     """The phone's fix on a cold start (``docs/adr/0174`` §6) — or a club picked
     in its place, from *You › Where you play* (``docs/adr/0200`` §10).
 
-    The **precise fix**, as the device gave it and as the commit carries it,
-    because the coarsening is the domain's job and it happens exactly once, on
-    the way in (``domain/location.py``). Nothing above the use case ever holds
-    the cell, and nothing below it ever holds the fix.
+    The commit's ``location`` exactly: a ``PhoneReading`` or a ``PickedClub``,
+    never a cell. Nothing above the use case ever holds the cell, and nothing
+    below it ever holds the fix or the club's precise point.
     """
 
     player_id: UUID

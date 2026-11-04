@@ -1097,6 +1097,22 @@ async def test_a_line_with_contact_is_refused_with_its_reason(client):
     assert response.json()["details"] == {"reason": "contains_contact"}
 
 
+async def test_the_edit_admits_250_characters_and_refuses_251(client):
+    """The You tab's write holds the commit's cap (``docs/adr/0200`` §9)."""
+
+    _, headers = await a_player(client)
+    line = ("Padel three evenings a week, tennis on Sundays. " * 6)[:250]
+
+    admitted = await client.put(INTRO_URL, json={"intro": line}, headers=headers)
+    refused = await client.put(INTRO_URL, json={"intro": line + "x"}, headers=headers)
+
+    assert admitted.status_code == 204, admitted.text
+    assert (await client.get(PROFILE_URL, headers=headers)).json()["intro"] == line
+    assert refused.status_code == 400, refused.text
+    assert refused.json()["code"] == "intro_not_admitted"
+    assert refused.json()["details"] == {"reason": "too_long"}
+
+
 async def test_the_intro_field_is_required_so_that_null_is_said_and_not_forgotten(
     client,
 ):

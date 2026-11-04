@@ -14,7 +14,7 @@ from uuid import UUID
 from app.modules.player_profile.domain.ports import ClubPoint
 
 
-class ClubsAt:
+class InMemoryClubPoints:
     def __init__(self, points: Mapping[UUID, ClubPoint] | None = None) -> None:
         self.points = dict(points or {})
         self.asked: list[UUID] = []

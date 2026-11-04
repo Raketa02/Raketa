@@ -114,7 +114,7 @@ from tests.unit.fake_event_store import (
     InMemoryEventStore,
     RecordingPublisher,
 )
-from tests.unit.fake_club_points import ClubsAt
+from tests.unit.fake_club_points import InMemoryClubPoints
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 PLAYER = new_uuid()
@@ -136,7 +136,7 @@ class Harness:
         #: id against it, and the read asks it what was concluded about each.
         self.photos = InMemoryPhotoStorage()
         #: No club is placed: every profile here commits and moves by a reading.
-        self.clubs = ClubsAt()
+        self.clubs = InMemoryClubPoints()
 
     # A repository per call, as the request scope makes one: each remembers the
     # stream versions *it* read, and one that outlived its transaction would be

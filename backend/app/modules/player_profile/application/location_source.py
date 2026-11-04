@@ -16,6 +16,7 @@ replaces an older reading — the cold start's rule, unchanged
 
 from __future__ import annotations
 
+from app.kernel import exhaustive
 from app.modules.player_profile.application.commands import (
     LocationSource,
     PhoneReading,
@@ -39,3 +40,5 @@ async def area_of(source: LocationSource, clubs: ClubPoints) -> LocationArea:
             if point is None:
                 raise LocationClubUnknown()
             return LocationArea.around(point.latitude, point.longitude)
+        case _:
+            exhaustive(source)

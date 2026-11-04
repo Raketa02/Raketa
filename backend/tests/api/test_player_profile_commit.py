@@ -11,10 +11,12 @@ six answers, safe to send twice.**
 
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import select
 
+from app.infrastructure.events.event_store_model import EventStoreORM
 from tests.api.administration_world import club_signs_up
 from tests.unit import image_fixtures as fixtures
 
@@ -156,11 +158,13 @@ async def test_the_location_that_comes_back_is_coarser_than_the_one_sent(client)
 # ---------------------------------------------------------------------------
 
 
-async def test_a_player_who_refused_the_phone_commits_with_a_club_she_picked(client):
+async def test_a_player_who_refused_the_phone_commits_with_a_club_she_picked(
+    client, session_factory
+):
     """Ania refused the phone's location and picked Ogrody 33 near where she
     plays. Her Location area is the club's point on the map, rounded to the
     cell exactly as a reading is — and the phone never needed the club's
-    coordinates."""
+    coordinates, nor does the club's precise point reach her stream."""
 
     club_id, _ = await club_signs_up(client, point=(50.0612, 19.9367))
     headers = await auth_headers(client)
@@ -169,6 +173,21 @@ async def test_a_player_who_refused_the_phone_commits_with_a_club_she_picked(cli
 
     assert response.status_code == 201, response.text
     assert response.json()["location"] == {"latitude": 50.06, "longitude": 19.94}
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(EventStoreORM).where(
+                EventStoreORM.aggregate_id == UUID(response.json()["player_id"])
+            )
+        )
+    [created] = [
+        row for row in rows.scalars() if row.event_type == "player_profile.created"
+    ]
+    assert (created.payload["latitude"], created.payload["longitude"]) == (
+        50.06,
+        19.94,
+    )
+    for precise in (50.0612, 19.9367):
+        assert precise not in created.payload.values(), precise
 
 
 async def test_a_club_that_is_not_in_raketa_is_refused_and_nothing_is_stored(client):

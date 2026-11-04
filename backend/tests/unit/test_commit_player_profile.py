@@ -52,7 +52,7 @@ from tests.unit.fake_event_store import (
     InMemoryEventStore,
     RecordingPublisher,
 )
-from tests.unit.fake_club_points import ClubsAt
+from tests.unit.fake_club_points import InMemoryClubPoints
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 PLAYER = new_uuid()
@@ -69,7 +69,7 @@ class Harness:
         self.publisher = RecordingPublisher()
         self.uow = CountingUnitOfWork()
         self.photos = InMemoryPhotoStorage()
-        self.clubs = ClubsAt({OGRODY: OGRODY_POINT})
+        self.clubs = InMemoryClubPoints({OGRODY: OGRODY_POINT})
         self.clock = FrozenClock()
 
     def commit(self) -> CommitPlayerProfile:
