@@ -275,8 +275,8 @@ describe('You', () => {
     expect(
       screen.getByLabelText(doorRowLabel(WHAT_KIND_OF_GAME_TITLE, DECLARED_LINE)),
     ).toBeTruthy();
-    // Finding players — the three declarations, each off the profile read; the one that gates
-    // the matcher says the preference, and never the gender.
+    // Your games — the three declarations, each off the profile read; who they play with says
+    // the preference, and never the gender.
     expect(
       screen.getByLabelText(
         doorRowLabel(
@@ -326,10 +326,10 @@ describe('You', () => {
   /**
    * **Two rows left with the questions that set them** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
    * *How far to look* and *Game suggestions* were read only by the old loop's ranking, so a
-   * player who changed either changed nothing they would ever see. *Finding players* is the
-   * week, the area and who they play with — every one of them read when a game is proposed.
+   * player who changed either changed nothing they would ever see. *Your games* is the week, the
+   * area and who they play with — every one of them read when a game is proposed.
    */
-  it('lists neither How far to look nor Game suggestions under Finding players', async () => {
+  it('lists neither How far to look nor Game suggestions under Your games', async () => {
     await openYou();
 
     expect(screen.queryByText('How far to look')).toBeNull();
@@ -338,7 +338,7 @@ describe('You', () => {
     const drawn = screen.getAllByText(/./);
     const at = (text: string) => drawn.indexOf(screen.getByText(text));
     const finding = [
-      YOU_COPY.groups.findingPlayers,
+      YOU_COPY.groups.yourGames,
       YOUR_WEEK_TITLE,
       WHERE_YOU_PLAY_TITLE,
       WHO_YOU_PLAY_WITH_TITLE,
@@ -358,11 +358,22 @@ describe('You', () => {
     const drawn = screen.getAllByText(/./);
     const at = (text: string) => drawn.indexOf(screen.getByText(text));
     expect(at(YOU_COPY.groups.playing)).toBeLessThan(at(SKILL_PASSPORT_TITLE));
-    expect(at(SKILL_PASSPORT_TITLE)).toBeLessThan(at(YOU_COPY.groups.findingPlayers));
-    expect(at(YOU_COPY.groups.findingPlayers)).toBeLessThan(at(YOUR_WEEK_TITLE));
+    expect(at(SKILL_PASSPORT_TITLE)).toBeLessThan(at(YOU_COPY.groups.yourGames));
+    expect(at(YOU_COPY.groups.yourGames)).toBeLessThan(at(YOUR_WEEK_TITLE));
     expect(at(YOUR_WEEK_TITLE)).toBeLessThan(at(YOU_COPY.groups.onYourCard));
     expect(at(YOU_COPY.groups.onYourCard)).toBeLessThan(at(NICKNAME_ROW_TITLE));
     expect(at(NICKNAME_ROW_TITLE)).toBeLessThan(at('Sign out'));
+  });
+
+  /**
+   * **_Finding players_ is _Your games_** (ADR-0200 §10, #733): nothing on the tab finds players
+   * any more, and the three rows hold what a game proposed to the player reads.
+   */
+  it('says Your games over the week, the area and who they play with — never Finding players', async () => {
+    await openYou();
+
+    expect(screen.getByText('Your games')).toBeTruthy();
+    expect(screen.queryByText(/Finding players/i)).toBeNull();
   });
 
   it('draws the header card from the three reads, and the score in its ring', async () => {

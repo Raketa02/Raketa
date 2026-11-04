@@ -36,6 +36,8 @@ import {
   installTransport,
   json,
   noContent,
+  neverResponds,
+  type RecordedRequest,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -46,15 +48,20 @@ import {
   ACCESS_HOW_TO,
   ACCESS_TITLE,
   AREA_UPDATES_LINE,
+  AREA_WRITE_REFUSAL,
+  CHANGE_CLUB_LABEL,
   LOCATION_SAVED,
   OPEN_SETTINGS,
+  PICK_A_CLUB,
+  SAVING_WORD,
   USE_MY_LOCATION,
+  pickClubLabel,
+  pickedClubLabel,
 } from './locationPresentation';
 import {
   AREA_LINE,
   AREA_SET,
   CLEAR_ALL,
-  READ_AGAIN,
   SAVED,
   SAVE_YOUR_WEEK,
   WHERE_YOU_PLAY_TITLE,
@@ -307,6 +314,30 @@ describe('Your week', () => {
 // ---------------------------------------------------------------------------
 
 describe('Where you play', () => {
+  const HOME_CLUBS = '/api/v1/home-clubs';
+
+  /** A club as the search answers a player who holds an area: nearest first, with its distance. */
+  const BONARKA: Wire['ClubCardSchema'] = {
+    id: '6f1c2a54-0a43-4a39-9d5e-0b5c6d7e8f90',
+    name: 'Bonarka Arena',
+    district: 'Podgórze',
+    distance_km: 2.4,
+    sports: ['PADEL'],
+    groups: [],
+  };
+  const BONARKA_LINE = 'Podgórze · 2,4 km · Padel';
+  const PICKED = { id: BONARKA.id, name: BONARKA.name, district: BONARKA.district };
+
+  function stubClubs() {
+    transport.on('GET', HOME_CLUBS, (request: RecordedRequest) => {
+      const q = new URLSearchParams(request.path.split('?')[1] ?? '').get('q') ?? '';
+      return json<Wire['HomeClubPageResponse']>({
+        clubs: q === 'bon' ? [BONARKA] : [],
+        next_page: null,
+      });
+    });
+  }
+
   async function openTheArea() {
     await onYou();
     fireEvent.press(row(WHERE_YOU_PLAY_TITLE, AREA_LINE));
@@ -324,6 +355,11 @@ describe('Where you play', () => {
     });
   }
 
+  async function pickBonarka() {
+    fireEvent.changeText(screen.getByLabelText(PICK_A_CLUB), 'bon');
+    fireEvent.press(await screen.findByLabelText(pickClubLabel(BONARKA.name, BONARKA_LINE)));
+  }
+
   /**
    * The cold-start refresh reads the phone once on the way into the app and puts the cell
    * (ADR-0174 §6) — that read and that write are the launch's, so what the screen does is
@@ -331,7 +367,7 @@ describe('Where you play', () => {
    */
   const puts = () => transport.requestsTo('PUT', LOCATION_PATH);
 
-  it('says the area is set and how it moves, and reads nothing until pressed', async () => {
+  it('says the area is set and how it moves, offers both ways, and reads nothing until pressed', async () => {
     transport.on('PUT', LOCATION_PATH, () => noContent());
     await openTheArea();
     const readsOnArrival = device.reads;
@@ -339,7 +375,12 @@ describe('Where you play', () => {
 
     expect(screen.getByText(AREA_SET)).toBeTruthy();
     expect(screen.getByText(AREA_UPDATES_LINE)).toBeTruthy();
-    expect(screen.getByLabelText(READ_AGAIN)).toBeTruthy();
+    // ADR-0200 §10: *You › Where you play offers both ways*, whatever the phone has said.
+    expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
+    // The group this screen sits in, as its eyebrow — *Finding players* no more.
+    expect(screen.getByText('Your games')).toBeTruthy();
+    expect(screen.queryByText(/Finding players/i)).toBeNull();
     // Arriving on the screen is not a press: the launch's one read is the only one so far.
     expect(readsOnArrival).toBeLessThanOrEqual(1);
     await act(async () => {
@@ -355,7 +396,7 @@ describe('Where you play', () => {
     const readsBefore = device.reads;
     const putsBefore = puts().length;
 
-    await press(READ_AGAIN);
+    await press(USE_MY_LOCATION);
 
     await waitFor(() => expect(puts()).toHaveLength(putsBefore + 1));
     expect(device.reads).toBe(readsBefore + 1);
@@ -365,18 +406,95 @@ describe('Where you play', () => {
     expect(screen.queryByText(String(PRECISE.latitude))).toBeNull();
   });
 
-  it('draws the step’s refusal, without the step’s clause about finishing setting up', async () => {
+  it('picks a club: puts its id, draws it chosen, and offers Change', async () => {
+    transport.on('PUT', LOCATION_PATH, () => noContent());
+    stubClubs();
+    await openTheArea();
+    const putsBefore = puts().length;
+
+    await pickBonarka();
+
+    await waitFor(() => expect(puts()).toHaveLength(putsBefore + 1));
+    // The id alone, as the commit sends it — never a reading beside it.
+    expect(puts()[putsBefore]?.body).toEqual({ club_id: BONARKA.id });
+    expect(await screen.findByLabelText(pickedClubLabel(PICKED))).toBeTruthy();
+    expect(screen.getByLabelText(CHANGE_CLUB_LABEL)).toBeTruthy();
+    expect(screen.queryByLabelText(PICK_A_CLUB)).toBeNull();
+    // The phone did not produce this area, so its control does not claim it.
+    expect(screen.queryByLabelText(LOCATION_SAVED)).toBeNull();
+  });
+
+  it('says it is saving a pick while the write is on its way', async () => {
+    transport.on('PUT', LOCATION_PATH, neverResponds());
+    stubClubs();
+    await openTheArea();
+
+    await pickBonarka();
+
+    expect(await screen.findByLabelText(pickedClubLabel(PICKED))).toBeTruthy();
+    expect(screen.getByText(SAVING_WORD)).toBeTruthy();
+  });
+
+  it('lets the phone’s reading replace a picked club, on screen as on the server', async () => {
+    transport.on('PUT', LOCATION_PATH, () => noContent());
+    stubClubs();
+    await openTheArea();
+    await pickBonarka();
+    await screen.findByLabelText(pickedClubLabel(PICKED));
+    const putsBefore = puts().length;
+
+    await press(USE_MY_LOCATION);
+
+    await waitFor(() => expect(puts()).toHaveLength(putsBefore + 1));
+    expect(puts()[putsBefore]?.body).toEqual(AREA_KEPT);
+    expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
+    expect(screen.queryByLabelText(pickedClubLabel(PICKED))).toBeNull();
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
+  });
+
+  it('lets go of a club the server no longer knows, and says so in its own sentence', async () => {
+    transport.on('PUT', LOCATION_PATH, () => errorResponse(400, 'location_club_unknown'));
+    stubClubs();
+    await openTheArea();
+
+    await pickBonarka();
+
+    // Read off the code: *check the details above* would point at a club already let go of.
+    expect(await screen.findByText(AREA_WRITE_REFUSAL.location_club_unknown ?? '')).toBeTruthy();
+    expect(screen.queryByLabelText(pickedClubLabel(PICKED))).toBeNull();
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
+  });
+
+  it('reads the profile again once a pick lands, so the tab follows the area', async () => {
+    // The You tab under this screen observes the read for the whole visit, so the invalidation
+    // refetches at once and the re-read is what is counted.
+    transport.on('PUT', LOCATION_PATH, () => noContent());
+    stubClubs();
+    await openTheArea();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const readsBefore = transport.requestsTo('GET', PROFILE_SURFACE_PATH).length;
+
+    await pickBonarka();
+
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', PROFILE_SURFACE_PATH).length).toBeGreaterThan(readsBefore),
+    );
+  });
+
+  it('draws the step’s refusal — undo it or pick a club — and nothing about finishing setting up', async () => {
     device.state = 'undetermined';
     device.answer = 'denied';
     await openTheArea();
 
-    await press(READ_AGAIN);
+    await press(USE_MY_LOCATION);
 
     expect(await screen.findByText(ACCESS_TITLE.refused)).toBeTruthy();
     expect(screen.getByText(ACCESS_HOW_TO.refused)).toBeTruthy();
     expect(screen.queryByText(/finish setting up/)).toBeNull();
-    // The note names *Use my location*, so that is what the control now says.
     expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
     expect(puts()).toHaveLength(0);
   });
 
@@ -384,21 +502,23 @@ describe('Where you play', () => {
     device.state = 'blocked';
     await openTheArea();
 
-    await press(READ_AGAIN);
+    await press(USE_MY_LOCATION);
 
     expect(await screen.findByText(ACCESS_TITLE.blocked)).toBeTruthy();
     expect(screen.getByLabelText(OPEN_SETTINGS)).toBeTruthy();
-    expect(screen.queryByLabelText(READ_AGAIN)).toBeNull();
+    expect(screen.queryByLabelText(USE_MY_LOCATION)).toBeNull();
+    // The club is still there: Settings is one way back to an area, not the only one.
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
   });
 
   it('says so when the write is refused, with the control still offered', async () => {
     transport.on('PUT', LOCATION_PATH, () => errorResponse(403, 'forbidden'));
     await openTheArea();
 
-    await press(READ_AGAIN);
+    await press(USE_MY_LOCATION);
 
     expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(screen.getByLabelText(READ_AGAIN)).toBeTruthy();
+    expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
   });
 });
 

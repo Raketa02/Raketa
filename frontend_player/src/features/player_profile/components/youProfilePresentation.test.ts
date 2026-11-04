@@ -14,7 +14,6 @@ import {
   CLEAR_ALL,
   KIND_OF_GAME_LINE,
   NO_INTRO_LINE,
-  READ_AGAIN,
   REMOVE_INTRO,
   SAVE,
   SAVED,
@@ -113,9 +112,8 @@ describe('the titles and the buttons', () => {
     expect(CLEAR_ALL).toBe('Clear all');
   });
 
-  it('draws the area as set and offers to read it again', () => {
+  it('draws the area as set', () => {
     expect(AREA_SET).toBe('Your area is set');
-    expect(READ_AGAIN).toBe('Read my area again');
   });
 
   it('withdraws the intro with its own control, beside Save', () => {

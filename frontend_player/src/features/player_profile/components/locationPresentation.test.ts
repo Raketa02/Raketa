@@ -3,57 +3,78 @@
  *
  * **Nothing here writes a coordinate, and that is the assertion worth having.** The step
  * used to print the area back as a degree pair and no longer does — a player cannot check
- * their own latitude, and the fact they wanted was *did that work*. So the two things pinned
- * below are the two labels that carry the state instead, and the promise the copy makes
- * about what is kept.
+ * their own latitude, and the fact they wanted was *did that work*. So what is pinned below is
+ * the labels that carry the state instead, the sentence about what the area is for, and the
+ * club every refusal names (ADR-0200 §10).
  */
 
 import {
+  ACCESS_HOW_TO,
   AREA_UPDATES_LINE,
   LOCATION_SAVED,
+  NO_FIX_BODY,
+  PICK_A_CLUB,
   USE_MY_LOCATION,
   WHY_BODY,
-  WITHOUT_AN_AREA_LABEL,
-  WITH_AN_AREA_LABEL,
   captureLabel,
-  continueLabel,
+  pickClubLabel,
+  pickedClubLabel,
 } from './locationPresentation';
 
-const AN_AREA = { latitude: 41.39, longitude: 2.17 };
+const A_READING = { kind: 'reading', area: { latitude: 41.39, longitude: 2.17 } } as const;
+const A_CLUB = {
+  kind: 'club',
+  club: { id: 'club-1', name: 'Bonarka Arena', district: 'Podgórze' },
+} as const;
 
 describe('the control that reads the device', () => {
   /**
    * The green fill is never the whole fact (Part 13, *never colour alone*): the words on the
    * control change with it, so a player who cannot see the fill is told the same thing.
    */
-  it('says which act it is offering, and changes once there is an area', () => {
+  it('says which act it is offering, and changes once the phone’s reading is the area', () => {
     expect(captureLabel(undefined)).toBe(USE_MY_LOCATION);
-    expect(captureLabel(AN_AREA)).toBe(LOCATION_SAVED);
+    expect(captureLabel(A_READING)).toBe(LOCATION_SAVED);
+  });
+
+  it('still offers the phone while a picked club is the area — it did not produce that one', () => {
+    expect(captureLabel(A_CLUB)).toBe(USE_MY_LOCATION);
   });
 });
 
-describe('what the step promises about the reading', () => {
-  it('states the rounding, and that the exact position is not what is kept', () => {
-    // The sentence that has to earn the OS prompt. It may be re-worded; it may not stop
-    // saying either of these, because both are properties of the code above it — the
-    // coarsening `locationArea` applies, and the fact that nothing finer is ever held.
-    expect(WHY_BODY).toContain('round it to about 1 km');
-    expect(WHY_BODY).toContain('never store your exact location');
-    // Foreground only, permanently — the one promise the app config enforces on both
-    // platforms, and the one a player is most entitled to hear before a prompt.
-    expect(WHY_BODY).toContain('track you in the background');
+describe('what the step says the area is for', () => {
+  it('is ADR-0200 §10’s sentence: club distances, the rounding, and nobody else sees it', () => {
+    expect(WHY_BODY).toBe(
+      'Raketa shows how far each club is and lists the nearest first. Your area is rounded to about a kilometre and never shown to other players.',
+    );
+  });
+
+  it('promises nothing about players near you, and nothing about matching', () => {
+    // There is no players search any more (ADR-0200 §10, PRD #722 story 73).
+    for (const sentence of [WHY_BODY, ACCESS_HOW_TO.refused, ACCESS_HOW_TO.blocked, NO_FIX_BODY]) {
+      expect(sentence).not.toMatch(/players near|nearby|match/i);
+    }
   });
 });
 
-describe('the control that continues', () => {
-  /**
-   * The label names the consequence rather than hiding it behind a note the player may not
-   * read. Location is what discovery is built on: leaving without one is allowed, and it is
-   * not the same act as leaving with one.
-   */
-  it('says what continuing costs when there is no area', () => {
-    expect(continueLabel(undefined)).toBe(WITHOUT_AN_AREA_LABEL);
-    expect(continueLabel(AN_AREA)).toBe(WITH_AN_AREA_LABEL);
+describe('a refusal', () => {
+  it('names the other way — a club — in every sentence that follows one', () => {
+    // Denied, blocked or no fix: the step and the tab both offer the club, so each says so,
+    // and none says the setup can be finished without an area — it never could.
+    for (const sentence of [ACCESS_HOW_TO.refused, ACCESS_HOW_TO.blocked, NO_FIX_BODY]) {
+      expect(sentence).toContain('pick a club near where you play');
+      expect(sentence).not.toMatch(/without an area|later from your profile/);
+    }
+    expect(PICK_A_CLUB).toBe('Pick a club near where you play');
+  });
+});
+
+describe('a club, spoken', () => {
+  it('names the act and the club on the card, and the area on the chosen one', () => {
+    expect(pickClubLabel('Bonarka Arena', 'Podgórze · Padel')).toBe(
+      'Pick Bonarka Arena, Podgórze · Padel',
+    );
+    expect(pickedClubLabel(A_CLUB.club)).toBe('Your area: Bonarka Arena, Podgórze');
   });
 });
 

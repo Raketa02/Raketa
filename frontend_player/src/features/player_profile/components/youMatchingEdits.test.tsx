@@ -116,7 +116,7 @@ const puts = (path: string) => transport.requestsTo('PUT', path);
 // The row
 // ---------------------------------------------------------------------------
 
-describe('the row under Finding players', () => {
+describe('the row under Your games', () => {
   it('draws the preference from the read', async () => {
     await onYou();
 

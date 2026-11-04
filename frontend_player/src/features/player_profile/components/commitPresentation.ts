@@ -97,12 +97,11 @@ export interface MissingAnswerCopy {
  * was carried past that step some other way — a build from before the floor, a restored
  * draft — and the honest thing is to name the step and offer the way back to it.
  *
- * **The area is the one a player actually meets.** The location step can be left with none —
- * it names that cost on the control that leaves it, and this is where the cost is
- * collected: search and matchmaking have one spatial input, and a profile without it takes
- * part in neither. The step insists here rather than earlier because being trapped on step
- * five behind an OS prompt is not a setup flow; being asked once more at the end, with the
- * way back one press away, is.
+ * **The area is held twice.** The location step draws *Continue* only once there is one — a
+ * reading, or a club picked after a refusal (ADR-0200 §10) — so no walk forward reaches the end
+ * without it; this entry is for the draft that arrives some other way, and for the commit that
+ * names a picked club the server no longer knows (`location_club_unknown`). Either way the
+ * words are the same: what the area is for, and the way back to the step.
  *
  * **The gender answer has no entry**: it is asked on this very screen, so what is missing is
  * not a step to go back to but the three controls above the finish. That is
@@ -117,7 +116,7 @@ export const MISSING_ANSWER_COPY: Readonly<Record<AnswerAskedBehind, MissingAnsw
   },
   location: {
     title: 'We still need the area you play in',
-    body: 'Finding players near you works from one thing: roughly where you play. Without it there is nowhere to search from and no one to match you with, so this is the one answer setting up cannot finish without.',
+    body: 'Raketa measures how far each club is from the area you play in, so setting up cannot finish without one — from your phone, or a club you pick.',
     label: 'Set the area you play in',
     finishHint: 'Set the area you play in to finish',
   },
@@ -159,7 +158,7 @@ export function answerStillWanted(
  * backend writes for a log, and branching on it would ship English into every locale and
  * let a copy edit on the server change what an installed app does.
  *
- * One entry today. It is a table rather than an `if` because the commit has several refusals
+ * Two entries today. It is a table rather than an `if` because the commit has several refusals
  * and the others will want their own sentences the moment a screen can produce one. The
  * intro's refusal is **not** in it, and that is the point of the next function: nothing is
  * missing when a line is refused, so it is not an answer still wanted and does not take
@@ -167,6 +166,9 @@ export function answerStillWanted(
  */
 const ANSWER_THE_COMMIT_REFUSED: Readonly<Record<string, AnswerAskedBehind>> = {
   weekly_hours_empty: 'availability',
+  // A picked club the server does not know (#726): the area is as good as missing, and sending
+  // the same id again would be refused the same way — so the way back to the step, not *try again*.
+  location_club_unknown: 'location',
 };
 
 /**

@@ -17,6 +17,7 @@ import {
   toProfileOptions,
   toUploadedPhoto,
   toWeeklyHours,
+  toWireLocation,
   toWireWeeklyHours,
 } from './playerProfileMappers';
 
@@ -113,7 +114,7 @@ describe('the body that ends the part', () => {
       { day: 1, hour: 7 },
       { day: 7, hour: 22 },
     ],
-    location: { latitude: 41.39, longitude: 2.16 },
+    location: { kind: 'reading', area: { latitude: 41.39, longitude: 2.16 } },
     gender: 'woman',
     genderPreference: 'any',
   };
@@ -130,6 +131,19 @@ describe('the body that ends the part', () => {
       gender: 'WOMAN',
       gender_preference: 'ANY',
     });
+  });
+
+  it('carries a picked club as its id, and nothing of a reading beside it', () => {
+    // ADR-0200 §10: the server rounds the club's point to the cell; the phone never needs it.
+    const picked = toCommitRequest({
+      ...COMMIT,
+      location: {
+        kind: 'club',
+        club: { id: 'club-1', name: 'Bonarka Arena', district: 'Podgórze' },
+      },
+    });
+
+    expect(picked.location).toEqual({ club_id: 'club-1' });
   });
 
   it('carries the intro where there is one, and leaves the field out where there is none', () => {
@@ -381,5 +395,23 @@ describe('the profile surface You reads', () => {
     } as unknown as Wire['PlayerProfileReadResponse'];
 
     expect(toPlayerProfileSurface(fromTheFuture).playIntents).toEqual({ padel: 'FOR_FUN' });
+  });
+});
+
+describe('toWireLocation', () => {
+  it('sends a reading as its cell — the two numbers and nothing else', () => {
+    // `extra="forbid"` on the server: a third key on a reading is a 422.
+    expect(
+      toWireLocation({ kind: 'reading', area: { latitude: 50.06, longitude: 19.94 } }),
+    ).toEqual({ latitude: 50.06, longitude: 19.94 });
+  });
+
+  it('sends a picked club as its id alone — never its name or its district', () => {
+    expect(
+      toWireLocation({
+        kind: 'club',
+        club: { id: 'club-1', name: 'Bonarka Arena', district: 'Podgórze' },
+      }),
+    ).toEqual({ club_id: 'club-1' });
   });
 });

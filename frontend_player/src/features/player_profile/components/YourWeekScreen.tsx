@@ -78,7 +78,7 @@ export function YourWeekScreen() {
 
   return (
     <ShellScreen
-      eyebrow={YOU_COPY.groups.findingPlayers}
+      eyebrow={YOU_COPY.groups.yourGames}
       title={YOUR_WEEK_TITLE}
       onBack={router.back}
       action={

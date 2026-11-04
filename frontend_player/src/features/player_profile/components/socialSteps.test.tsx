@@ -11,7 +11,7 @@
  * Every assertion is about what a player can see, where they land, or what left the device.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
@@ -99,7 +99,7 @@ const STEPS = [
     title: 'Where do you play?',
     eyebrow: 'Setting up · Step 5 of 6',
     back: 'Back to When do you usually play?',
-    forward: 'Continue without matching',
+    forward: 'Continue',
   },
   {
     path: '/gender',
@@ -116,21 +116,22 @@ const ABOUT_YOU = ['Woman', 'Man', 'Prefer not to say'] as const;
 /**
  * The step this suite gives a real answer to and comes back for.
  *
- * The **first** one. The week insists on an answer too since ADR-0102, but photos and the
- * location may each be walked past untouched, and walking back to step one is the longest
- * round trip the part has — which is what this is really measuring.
+ * The **first** one. The week and the area insist on an answer too, but walking back to step
+ * one is the longest round trip the part has — which is what this is really measuring.
  */
 const ANSWERED_STEP = 0;
 
 /**
  * The steps of the six that may be walked past with nothing answered at all.
  *
- * Three steps, three different reasons. The intro and the photos are genuinely optional — no
- * line is a complete answer to *say it in your own words*, and no photo to *add some
- * photos*; this walk presses the intro's *Next* on an empty box, which is the same answer
- * *Skip* gives and is asserted as such in its own suite. **The location step is not**: it
- * can be *passed* with nothing, at the cost of search and matchmaking, and this walk is the
- * one that pays it, which is why its forward control is labelled differently.
+ * Two steps, for one reason: the intro and the photos are genuinely optional — no line is a
+ * complete answer to *say it in your own words*, and no photo to *add some photos*; this walk
+ * presses the intro's *Next* on an empty box, which is the same answer *Skip* gives and is
+ * asserted as such in its own suite.
+ *
+ * **The location step left this list** with ADR-0200 §10: it used to be *passed* with nothing,
+ * on *Continue without matching*, and the finish then refused the part two screens later. Its
+ * *Continue* is drawn only once there is an area, so this walk gives it one.
  *
  * **The week left this list**, and it is the only step that ever has. It was here for the
  * same reason photos are, and ADR-0102 took the reason away: a blank grid was being scored
@@ -140,21 +141,28 @@ const ANSWERED_STEP = 0;
  * preference opens unconstrained, which is what every player already holds — but the answer
  * about the player is required and has no default anybody may give on their behalf.
  */
-const OPTIONAL_STEPS = [1, 2, 4];
+const OPTIONAL_STEPS = [1, 2];
 
 /**
  * Answer whatever step is on screen.
  *
- * Each of the six wants something different — two tags at the floor, one cell of the week,
- * nothing at all on the three that may be walked past, and one answer about the player on
- * the last, which has no default anybody may give on their behalf. This suite is about the
+ * Each of the six wants something different — two tags at the floor, one cell of the week, the
+ * phone's area, nothing at all on the two that may be walked past, and one answer about the
+ * player on the last, which has no default anybody may give on their behalf. This suite is about the
  * walk, so it answers each of them the way that step wants and says nothing else about any
  * of them.
  */
 function answerTheStep(index: number) {
-  // Optional, and each has its own suite: the intro is a line or nothing, the photos step
-  // reaches the device, and the location step can be passed at a cost it names.
+  // Optional, and each has its own suite: the intro is a line or nothing, and the photos step
+  // reaches the device.
   if (OPTIONAL_STEPS.includes(index)) return;
+
+  // The phone says yes and knows where it is; its own suite is where a refusal and the club
+  // picked in its place are exercised. *Continue* appears once the reading lands.
+  if (STEPS[index]!.path === '/location') {
+    fireEvent.press(screen.getByLabelText('Use my location'));
+    return;
+  }
 
   // The week's floor is one hour, so one cell is the whole of what step four
   // asks for. Its own suite is where the grid itself is exercised.
@@ -178,9 +186,9 @@ function answerTheStep(index: number) {
 /**
  * Press the forward control of the step at `from`.
  *
- * Named per step rather than as one string: three of the six say *Continue*, one says
- * *Next*, one says what it costs to leave it empty, one finishes, and a helper that hunted
- * for any of them would stop noticing which screen it was on.
+ * Named per step rather than as one string: four of the six say *Continue*, one says
+ * *Next*, one finishes, and a helper that hunted for any of them would stop noticing which
+ * screen it was on.
  *
  * **Waited for, not read.** The first step draws its control from the served options, and
  * a suite that walks the part under fake timers can outrun a query whose cache was
@@ -214,9 +222,8 @@ const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(
 async function enterTheSocialSteps() {
   stubGate({ ratings: [RATING], hasPlayerProfile: false });
   stubProfileOptions(transport);
-  // A phone nobody has asked yet. This suite never presses the location step's control, so
-  // no prompt is shown and no fix is read — what it needs from the device is only that it
-  // is *described*, rather than being whatever a mocked native module answers.
+  // A phone nobody has asked yet, which says yes when the location step asks and knows where
+  // it is — described, rather than being whatever a mocked native module answers.
   stubLocation(fakeLocation());
 
   await launchSignedIn();
@@ -283,25 +290,39 @@ describe('walking forward through the second part', () => {
     expect(screen.queryByText('May we suggest games?')).toBeNull();
   });
 
-  it('will not finish a part that walked past the area, and offers the way back to it', async () => {
-    // This walk pressed *Continue without matching* on step five, which is allowed and is
-    // the cost that step names. The commit is where it is collected: finding players near
-    // you works from one thing, and a profile without it takes part in nothing. So the part
-    // insists once more, here, with the way back one press away — rather than trapping the
-    // player on step five behind an OS prompt.
+  it('draws no way past the location step until there is an area', async () => {
+    // ADR-0200 §10: *Continue without matching* is gone, and so is every way past the step that
+    // the finish would refuse two screens later.
+    await enterTheSocialSteps();
+    await continueFromTheFirstStep();
+    await walkOnTo(4);
+    await waitFor(() => expect(screen).toHavePathname('/location'));
+
+    expect(screen.queryByLabelText('Continue')).toBeNull();
+    expect(screen.queryByLabelText(/without/)).toBeNull();
+
+    answerTheStep(4);
+
+    expect(await screen.findByLabelText('Continue')).toBeTruthy();
+  });
+
+  it('will not finish a part whose draft holds no area, and offers the way back to it', async () => {
+    // No walk forward reaches the finish without an area any more — but a profile cannot exist
+    // without one, and the finish holds that whatever carried the draft there. The draft is let
+    // go of through the store's own API, as the step's *Change* does.
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
     await walkOnTo(STEPS.length - 1);
     await waitFor(() => expect(screen).toHavePathname('/gender'));
-
-    // Answered — so what is holding the finish is not the question on this screen.
     answerTheStep(STEPS.length - 1);
+    act(() => useProfileDraft.getState().answer({ location: undefined }));
 
     const finish = screen.getByLabelText(STEPS[STEPS.length - 1]!.forward);
     expect(finish.props.accessibilityState?.disabled).toBe(true);
     // Not merely grey: the reason is on screen, and it is readable without sight.
     expect(finish.props.accessibilityHint).toBe('Set the area you play in to finish');
     expect(screen.getByText('We still need the area you play in')).toBeTruthy();
+    expect(screen.queryByText(/players near you/)).toBeNull();
 
     // And nothing was sent. A part that cannot be committed does not half-commit.
     expect(transport.requests.filter((request) => request.method === 'POST')).toEqual([]);

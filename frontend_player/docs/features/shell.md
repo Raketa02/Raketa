@@ -191,3 +191,10 @@ is drawn at the top of Home, above _TO CONFIRM_ and the rail, because until she 
 under it can happen; what it says and when, and the reads it costs, are in
 [`groups.md`](groups.md). The gate stubs both reads empty, so a suite's Home draws no card unless it
 puts the player in a group. **Calls made here**: its place on Home; the pull does not re-read it.
+
+**_Finding players_ is _Your games_** ([#733](https://github.com/Raketa02/Raketa/issues/733),
+ADR-0200 §10). Nothing on the tab finds players any more, so the group holding _Your week · Where
+you play · Who you play with_ is named for what they are read by — a game proposed to the player.
+`YOU_COPY.groups.findingPlayers` became `yourGames`, and the three screens behind the rows wear it
+as their eyebrow. The paragraph on #582 above that says _the group keeps its title_ was true until
+this one.

@@ -41,12 +41,15 @@ describe('recording an answer', () => {
       recordAnswer(recordAnswer(emptyDraft(), { gender: 'man' }), {
         weeklyHours: [{ day: 1, hour: 9 }],
       }),
-      { location: { latitude: 41.39, longitude: 2.16 } },
+      { location: { kind: 'reading', area: { latitude: 41.39, longitude: 2.16 } } },
     );
 
     expect(walked.gender).toBe('man');
     expect(walked.weeklyHours).toEqual([{ day: 1, hour: 9 }]);
-    expect(walked.location).toEqual({ latitude: 41.39, longitude: 2.16 });
+    expect(walked.location).toEqual({
+      kind: 'reading',
+      area: { latitude: 41.39, longitude: 2.16 },
+    });
   });
 
   it('replaces the answer to the step that was answered again', () => {

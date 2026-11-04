@@ -5,7 +5,7 @@
  * §2, §6 — the day [ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
  * §5 named, when the intro becomes editable with the tags and the photos as one piece of work).
  *
- * The box, the counter, the hint and the rule are `IntroField`, exactly as `SocialIntroStep`
+ * The box, the counter and the hint are `IntroField`, exactly as `SocialIntroStep`
  * draws them. What this screen adds is the two controls the step never had: *Save*, sending
  * `PUT /players/me/intro` with the trimmed line, and *Remove intro*, sending the same route
  * with no line — offered only while the profile holds one, because withdrawing nothing is
@@ -18,9 +18,9 @@
  * The third, `contains_contact`, is the server's pattern and never this app's: it lands on the
  * reply, and is drawn **in the same place from the same table** (`introRefusalSentence`), so a
  * player reads one kind of sentence about their line whichever side refused it. On the step
- * that refusal was six screens away; here it is one press away, which is what the rule under
- * the box was written for. A refusal is cleared by the next keystroke, because the line it was
- * about is gone.
+ * that refusal was six screens away; here it is one press away. It is the only place the contact
+ * rule is said — no paragraph under the box announces it (ADR-0200 §9). A refusal is cleared by
+ * the next keystroke, because the line it was about is gone.
  *
  * ## A draft until the button, and blank is not a save
  *

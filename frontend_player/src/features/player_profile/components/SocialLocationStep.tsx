@@ -1,32 +1,33 @@
 /**
  * Step five of onboarding's second part: **where do you play?**
  *
- * It sits after the week and before *Who you play with*, with the other answers that narrow
- * who the platform puts in front of a player. A permission prompt is the highest-friction
- * moment in the whole flow, which is why the screen explains it before asking.
+ * It sits after the week and before *Who you play with*. A permission prompt is the
+ * highest-friction moment in the whole flow, which is why the screen explains it before asking.
  *
  * ## The explanation comes before the prompt, always
  *
  * Nothing is read on arrival, and the OS dialog cannot appear until the player presses the
  * control. What is on screen before that is the reason: what the area is used for, that it
- * is read once and rounded, and that nothing is collected while they are elsewhere. iOS
+ * is rounded to about a kilometre, and that no other player is shown it. iOS
  * shows its dialog once per install, so a prompt that arrives before the sentence spends
  * the only ask this app gets.
  *
- * ## A refusal costs discovery, not the step
+ * ## A refusal is answered with a club, and Continue waits for an area
  *
- * Location is what search and matchmaking are worked out from — a player without an area
- * cannot find anyone and cannot be found — so this step insists, and says exactly what
- * declining costs, in the note *and* on the control that leaves. But it still leaves: being
- * stuck on step five of six behind a permission the player can change at any time is not a
- * setup flow, and the area is editable from the profile afterwards.
+ * The area measures how far each club is and orders every club search, and a Player profile
+ * cannot exist without one — so *Continue* is **drawn only once there is an area**
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §10). It used to
+ * be drawn always, with *Continue without matching* on it before an area, and the finish two
+ * screens later then refused to go: a step that let a player past what the end would not.
+ * What a refusal gets instead of a way past is **another way in**: after the phone says no —
+ * denied, blocked, or no fix — the step offers *Pick a club near where you play*, and the club
+ * she picks is her area. It stays drawn while a club is the answer, so walking back finds it.
  *
  * ## Nothing here decides anything
  *
- * The coarsening is `locationArea`'s, the asking and the re-reading are `useLocationStep`'s,
- * and the words are `locationPresentation`'s. What is left in this file is what a player
- * sees — the same split the three steps before it made, and for the same reason: the
- * profile editor will obey these rules from a screen that looks nothing like this one.
+ * The coarsening is `locationArea`'s, the asking, the re-reading and the pick are
+ * `useLocationStep`'s, the search is `AreaClubPicker`'s over `groups`' own, and the words are
+ * `locationPresentation`'s. What is left in this file is what a player sees.
  *
  * ## No coordinates are drawn at all
  *
@@ -55,44 +56,48 @@ import { Button, Note } from '@/shared/ui';
 import { stepAfter } from '../domain/socialSteps';
 import { useLocationStep } from '../hooks/useLocationStep';
 
+import { AreaClubPicker } from './AreaClubPicker';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
 import {
-  ACCESS_BODY,
+  ACCESS_HOW_TO,
   ACCESS_TITLE,
+  CONTINUE,
   NO_FIX_BODY,
   NO_FIX_TITLE,
   OPEN_SETTINGS,
   READ_AGAIN_HINT,
   READING_WORD,
-  captureLabel,
-  continueLabel,
+  USE_MY_LOCATION_HINT,
   WHY_BODY,
   WHY_TITLE,
+  captureLabel,
 } from './locationPresentation';
 
 export function SocialLocationStep() {
   const router = useRouter();
-  const { area, standing, capture } = useLocationStep();
-  const settled = area !== undefined;
+  const { location, standing, capture, pick, unpick } = useLocationStep();
+  const fromThePhone = location?.kind === 'reading';
 
   // Where continuing leads is the step order's answer, not this screen's.
   const next = stepAfter('location');
   const refusal =
     standing.access === 'refused' || standing.access === 'blocked' ? standing.access : undefined;
+  // The club is offered once the phone has said no, in any of its three ways — and stays while a
+  // club is the answer, so the pick is on screen whenever the step is.
+  const offersAClub = refusal !== undefined || standing.noFix || location?.kind === 'club';
 
   return (
     <SocialStepLayout
       step="location"
       action={
-        next === undefined ? null : (
-          // Never disabled. The accent moves to it only once there is an area to continue
-          // with — before that the ask is the important control on the screen, and the
-          // label says what leaving without one costs.
+        // Drawn only once there is an area: a profile cannot exist without one, and a way past
+        // that the finish would refuse two screens later is the contradiction ADR-0200 §10 removed.
+        next === undefined || location === undefined ? null : (
           <Button
-            label={continueLabel(area)}
-            variant={area === undefined ? 'secondary' : 'primary'}
+            label={CONTINUE}
+            variant="primary"
             size="lg"
             onPress={() => router.replace(SOCIAL_STEP_PATH[next])}
             accessibilityHint={`Goes to ${stepCopy(next).title}`}
@@ -108,25 +113,24 @@ export function SocialLocationStep() {
       </Note>
 
       {/* The one accent, and only ever one of it (design-system 1.2): the ask is the coral
-          control while there is no area, and once there is one it goes green and says so
-          while the action bar's continue takes the accent. Pressing it then re-reads
-          something already answered, which is why it stays a control and says which act it
-          is now offering. */}
+          control while there is no area; once the phone's reading is the area it goes green and
+          says so, and once a club is, it steps back to `secondary` — still the way to let the
+          phone say instead — while *Continue* takes the accent. */}
       <Button
-        label={captureLabel(area)}
-        variant={settled ? 'settled' : 'primary'}
+        label={captureLabel(location)}
+        variant={fromThePhone ? 'settled' : location === undefined ? 'primary' : 'secondary'}
         size="lg"
         busy={standing.reading}
         busyLabel={READING_WORD}
         onPress={() => void capture()}
-        accessibilityHint={settled ? READ_AGAIN_HINT : 'Asks your phone for your position, once'}
+        accessibilityHint={fromThePhone ? READ_AGAIN_HINT : USE_MY_LOCATION_HINT}
       />
 
       {refusal === undefined ? null : (
         // Announced: a player who has just dismissed an OS dialog is looking at the
         // dialog, not at the screen underneath it.
         <Note variant="amber" accessibilityRole="alert" title={ACCESS_TITLE[refusal]}>
-          {ACCESS_BODY[refusal]}
+          {ACCESS_HOW_TO[refusal]}
         </Note>
       )}
 
@@ -142,6 +146,14 @@ export function SocialLocationStep() {
         <Note variant="amber" accessibilityRole="alert" title={NO_FIX_TITLE}>
           {NO_FIX_BODY}
         </Note>
+      ) : null}
+
+      {offersAClub ? (
+        <AreaClubPicker
+          chosen={location?.kind === 'club' ? location.club : undefined}
+          onPick={pick}
+          onChange={unpick}
+        />
       ) : null}
     </SocialStepLayout>
   );

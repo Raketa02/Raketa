@@ -58,7 +58,7 @@ import { weekStanding } from './availabilityWeek';
 import { introToSend } from './intro';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
 import type { Gender, GenderPreference } from './gender';
-import type { WeeklyHour, LocationArea, ProfileDraft } from './ProfileDraft';
+import type { LocationSource, ProfileDraft, WeeklyHour } from './ProfileDraft';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { SocialStep } from './socialSteps';
 
@@ -78,7 +78,8 @@ export interface ProfileCommit {
   readonly intro?: string;
   readonly photoIds: readonly string[];
   readonly weeklyHours: readonly WeeklyHour[];
-  readonly location: LocationArea;
+  /** A reading or a picked club — narrowed from the draft's `| undefined`. */
+  readonly location: LocationSource;
   /** Narrowed from the draft's `| undefined`: the commit requires an answer. */
   readonly gender: Gender;
   /**

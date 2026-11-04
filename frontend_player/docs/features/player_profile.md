@@ -375,3 +375,57 @@ caller. **Not seen on a device**: the finish's notes stacked under the gender st
 commit marks the profile on the player read, so the gate lets her through to the app's root. The
 six steps are all of onboarding after the naming now — the questionnaire left it — so step one is
 entered straight from _How should people see you?_, and no rating is read on the way.
+
+**The intro takes 250 characters and says its rule only when it is broken**
+([#733](https://github.com/Raketa02/Raketa/issues/733), ADR-0200 §9). `INTRO_CAP` is 250, so the
+counter reads _n / 250_ and _Keep it under 250 characters._ is the length refusal — on the step
+and on You's _Intro_, which draw the same `IntroField`. **The paragraph of rules under the box is
+gone** (`INTRO_RULE`): it argued, above, that the contact refusal lands six screens later and so
+had to be said up front, and ADR-0200 §9 ruled the other way — small print to everybody who would
+never type a phone number, on the screen meant to be the part's shortest. The rule stands, and
+its sentence is unchanged: _Leave out phone numbers, emails, links and handles — people reach you
+in the chat._ is said only to a line that breaks it, at the commit (with _Change your intro_) or
+under You's box on the save. The box grows to **nine** lines rather than four, by the arithmetic
+its note already made: a hundred characters was three lines at the value role, so 250 is eight to
+read back whole, and one more is room for the overrun. **Not seen on a device**: nine lines over
+the keyboard on a small phone.
+
+**_Where do you play?_ tells the truth, waits for an area, and answers a refusal with a club**
+([#733](https://github.com/Raketa02/Raketa/issues/733), ADR-0200 §10, Apple 5.1.1(iv)). The
+note is ADR-0200 §10's sentence — _Raketa shows how far each club is and lists the nearest first.
+Your area is rounded to about a kilometre and never shown to other players._ — and every line
+about nearby players or matching went: _Continue without matching_, the cost clause about
+finishing without an area, and the commit's _Finding players near you…_. **_Continue_ is drawn
+only once there is an area**, plain and `primary`, because the finish never could go without one
+and a step that let a player past what the end refused was the contradiction the ADR names; the
+finish's _We still need the area you play in_ stays, in truthful words, for a draft that arrives
+without one, and now also answers `location_club_unknown` with the way back to the step rather
+than _try again_. **After a refusal** — denied, blocked, or no fix — every note names the other
+way (`ACCESS_HOW_TO`, `NO_FIX_BODY`; the step's and the tab's sentences are one now, since both
+offer it) and `AreaClubPicker` is drawn under it: _Pick a club near where you play_, one field
+over **groups' home-club search** (`useHomeClubSearch`, `ClubCard` with a _Pick_ pill, exported
+from `groups/types` for this third caller), A–Z with no distance while the player has no area,
+nearest first once she has; no groups drawn under a club; _More clubs_ as a control, since neither
+host's scroller is the picker's. **The draft's area is a `LocationSource`** — `{ kind: 'reading',
+area }` or `{ kind: 'club', club }`, the backend's pair — and `toWireLocation` is the one mapping
+both writes use: a reading is its two numbers, a club is `{ club_id }` alone, never a key from the
+other (each side of the server's union forbids extras). The picked club keeps its name and
+district in the draft for the chosen card, on `mintSoft` with _Change_, which lets go of it; the
+picker stays drawn while a club is the answer, so walking back finds it. _Use my location_ steps
+back to `secondary` while a club is the area, says _Location saved_ only of the phone's own
+reading, and **a reading replaces a club**: the step's foreground re-read after the permission was
+allowed in Settings, as the cold-start refresh does once she is in the app (it sends
+`{ kind: 'reading' }` only, and is otherwise unchanged). **You › _Where you play_ offers both ways, always** — `useReadAreaAgain` became
+`useChangeArea`, one mutation for both writes, which reads off it everything the screen draws: a
+pick shows chosen with _Change_ saying _Saving…_ on the ordinary surface while it goes and on mint
+once it lands, a reading after it takes it off the screen as it takes it off the server, and a
+refused pick is let go of under the coral reason — `location_club_unknown` in its own sentence
+(`AREA_WRITE_REFUSAL`, through `codeMessage`). **Every write of the area joins one mutation
+`scope`** (`LOCATION_WRITES`, the cold start's too), so a pick and a reading pressed one after the
+other land in that order. Its
+control is _Use my location_ — _Read my area again_ retired — and its eyebrow is _Your games_
+(shell's rename). **Calls made here, not in the ADR**: the field drawn at once rather than behind
+a button; _Pick_ as the pill's word; _More clubs_; the step keeps the refusal note up after a pick;
+the tab's _Your area updates each time you open Raketa_ is kept although a club-picked area does
+not move until the phone may be read. **Not seen on a device**: the picker on the step under the
+keyboard, and the chosen card beside _Use my location_.

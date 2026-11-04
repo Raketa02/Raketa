@@ -134,7 +134,7 @@ export function WhoYouPlayWithScreen() {
 
   return (
     <ShellScreen
-      eyebrow={YOU_COPY.groups.findingPlayers}
+      eyebrow={YOU_COPY.groups.yourGames}
       title={WHO_YOU_PLAY_WITH_TITLE}
       onBack={router.back}
     >

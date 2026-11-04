@@ -46,6 +46,7 @@ import type { Gender, GenderPreference } from '../domain/gender';
 import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/PlayerProfileSurface';
 import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
+import type { LocationSource } from '../domain/ProfileDraft';
 import type { ProfileCommit } from '../domain/profileCommit';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
@@ -60,6 +61,7 @@ type ProfilePhotoResource = components['schemas']['ProfilePhotoResource'];
 type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
 type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
+type ChangeLocationRequest = components['schemas']['ChangeLocationRequest'];
 
 /**
  * One spelling, not two.
@@ -344,6 +346,22 @@ export function toWireGenderPreference(preference: GenderPreference): WireGender
 }
 
 /**
+ * **Where the area comes from, as both writes carry it** — the commit's `location` and
+ * `PUT /players/me/location` take the same union
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §10).
+ *
+ * A reading is its cell, the two numbers and nothing else; a picked club is its id alone — the
+ * name and the district the step held for the screen stay on the phone. **Exactly one shape and
+ * never a key from the other**: each side of the server's union forbids extra keys, so a reading
+ * that carried a `club_id` would be a 422.
+ */
+export function toWireLocation(source: LocationSource): ChangeLocationRequest {
+  return source.kind === 'reading'
+    ? { latitude: source.area.latitude, longitude: source.area.longitude }
+    : { club_id: source.club.id };
+}
+
+/**
  * Everything the second part collected, as the one body that ends it.
  *
  * It takes a `ProfileCommit` and not a draft, which is the whole of what keeps a partial
@@ -365,7 +383,7 @@ export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileReque
     ...(commit.intro === undefined ? {} : { intro: commit.intro }),
     photo_ids: [...commit.photoIds],
     weekly_hours: toWireWeeklyHours(commit.weeklyHours),
-    location: { latitude: commit.location.latitude, longitude: commit.location.longitude },
+    location: toWireLocation(commit.location),
     gender: WIRE_GENDER[commit.gender],
     // Sent always, including when it is `ANY`. The field has a default on the wire and the
     // app could omit it — it does not, because *what an unconstrained player sends* would

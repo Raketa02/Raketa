@@ -186,6 +186,8 @@ export const LOADING_YOUR_TAGS = 'Loading your tags';
 export const LOADING_INTRO = 'Loading your intro';
 export const LOADING_WHO_YOU_PLAY_WITH = 'Loading who you play with';
 
-/** *Where you play*'s one state, and the control under it. */
+/**
+ * *Where you play*'s one state. Its controls are the location step's — *Use my location* and
+ * *Pick a club near where you play* (ADR-0200 §10); *Read my area again* went with #733.
+ */
 export const AREA_SET = 'Your area is set';
-export const READ_AGAIN = 'Read my area again';

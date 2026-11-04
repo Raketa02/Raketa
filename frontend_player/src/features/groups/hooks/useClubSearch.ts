@@ -1,5 +1,7 @@
 /**
  * **The two searches** — New group's home club and Join a group — as one hook over two routes.
+ * The home-club search has a third caller: *Pick a club near where you play*, the player
+ * profile's way to an area without the phone's location (#733, ADR-0200 §10).
  *
  * **A new question on every keystroke** (story 32): the text is the key, so each letter asks
  * again and the previous letter's request is abandoned through its `signal`. **The answer on

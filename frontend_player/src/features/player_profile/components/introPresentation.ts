@@ -1,6 +1,6 @@
 /**
- * The words the intro **step** says — the box, the counter, the two controls, the line of
- * small print — and the three sentences a refused line is answered with.
+ * The words the intro **step** says — the box, the counter, the two controls — and the three
+ * sentences a refused line is answered with.
  *
  * ## The refusal says what to change, and never what was matched
  *
@@ -12,15 +12,15 @@
  * compile, and one sentence serves both the refusal the step pre-empts and the one the commit
  * brings back from the server.
  *
- * ## The rule is said up front, and that is the opposite of the photos step
+ * ## The rule is said only when it is broken
  *
- * The photos step does not announce its check, because a check that is wrong about some
- * share of what it flags reads as a threat to the majority whose photo is fine. This one
- * announces the fence, for two reasons the photos step does not have: the rule is
- * deterministic and never wrong about a phone number, and the refusal lands **six screens
- * later**, at the commit — the one refusal the client cannot see coming is the one it costs
- * most to meet late. So the line under the box says who reads the intro and what to leave
- * out of it, once, in the same words the refusal would use.
+ * A paragraph under the box used to say who reads the intro and what to leave out of it,
+ * because the contact refusal lands six screens later, at the commit. ADR-0200 §9 took it away:
+ * it was small print to everybody who would never type a phone number, read on the screen that
+ * was meant to be the shortest of the part. The rule stands — a line carrying a phone number,
+ * an email, a link or a handle is still refused — and its one sentence is now said only to the
+ * line that breaks it, at the commit or under the You tab's box on the save, in the words the
+ * paragraph used.
  */
 
 import { orOutOfDate } from '@/shared/vocabulary/outOfDate';
@@ -32,15 +32,6 @@ export const INTRO_FIELD_LABEL = 'Your intro';
 
 /** One of the mocks' own lines, so the shape of an answer is legible before anything is typed. */
 export const INTRO_PLACEHOLDER = 'Will travel for a hard game.';
-
-/**
- * Who reads it and what to leave out — said once, under the box.
- *
- * The second sentence is the `contains_contact` refusal's, verbatim: a player who meets the
- * refusal at the commit is then reading a rule they were shown, not a new one.
- */
-export const INTRO_RULE =
-  'Other players read this on your card. Leave out phone numbers, emails, links and handles — people reach you in the chat.';
 
 /** What the box is for, for whoever cannot see the counter or the small print. */
 export const INTRO_FIELD_HINT = `One line, up to ${INTRO_CAP} characters. Optional.`;
@@ -72,10 +63,10 @@ export function introSkipHint(nextTitle: string): string {
 }
 
 /**
- * The counter under the box: `42 / 100`.
+ * The counter under the box: `42 / 250`.
  *
  * It counts **what the cap is read against** — the trimmed line, in code points — and not
- * the raw box, so it can never say `104 / 100` beside an open *Next*: the spaces around a
+ * the raw box, so it can never say `254 / 250` beside an open *Next*: the spaces around a
  * line are not part of it, and a counter that counted them would be arguing with the rule it
  * is there to show. It keeps counting past the cap rather than clamping — the box takes
  * everything and the sentence under it says what is wrong, so the overrun has to be visible

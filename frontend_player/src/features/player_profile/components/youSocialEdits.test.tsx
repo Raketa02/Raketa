@@ -557,6 +557,24 @@ describe('Intro', () => {
     expect(puts(INTRO_PATH)).toHaveLength(0);
   });
 
+  it('takes 250 characters, with the counter at 250 and no paragraph of rules', async () => {
+    transport.on('PUT', INTRO_PATH, () => noContent());
+    await openTheIntro();
+    const atTheCap = 'x'.repeat(INTRO_CAP);
+
+    // ADR-0200 §9: the rule line is gone; the contact rule is said only when it is broken.
+    expect(screen.queryByText(/Other players read this on your card/)).toBeNull();
+    expect(screen.queryByText(INTRO_REFUSAL_SENTENCE.contains_contact)).toBeNull();
+
+    fireEvent.changeText(box(), atTheCap);
+    expect(screen.getByText('250 / 250')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.press(screen.getByLabelText(SAVE));
+
+    await waitFor(() => expect(puts(INTRO_PATH)).toHaveLength(1));
+    expect(puts(INTRO_PATH)[0]?.body).toEqual({ intro: atTheCap });
+  });
+
   it('draws the server’s refusal under the box, in the step’s sentence, with the line kept', async () => {
     transport.on('PUT', INTRO_PATH, () =>
       json(
@@ -572,6 +590,8 @@ describe('Intro', () => {
     await openTheIntro();
 
     fireEvent.changeText(box(), 'WhatsApp me on 600 700 800');
+    // Not said before the press: only the line that breaks the rule is told it.
+    expect(screen.queryByText(INTRO_REFUSAL_SENTENCE.contains_contact)).toBeNull();
     fireEvent.press(screen.getByLabelText(SAVE));
 
     expect(await screen.findByText(INTRO_REFUSAL_SENTENCE.contains_contact)).toBeTruthy();

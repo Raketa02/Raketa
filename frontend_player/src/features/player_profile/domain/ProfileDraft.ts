@@ -44,16 +44,43 @@ import { DEFAULT_GENDER_PREFERENCE } from './gender';
 export type { WeeklyHour };
 
 /**
- * Where the player plays.
+ * Where the player plays, as the phone read it — already the cell.
  *
- * What is sent and what is kept are not the same number: the platform rounds to roughly a
- * kilometre before recording anything, and the precise fix is never stored and never
- * shareable. The draft holds what the device gave, for exactly as long as the part lasts.
+ * `areaAround` rounds the fix to about a kilometre the moment it is read, so the precise fix is
+ * never stored and never shareable; the platform rounds again on the way in, which is a no-op at
+ * the same resolution. The draft holds the cell for exactly as long as the part lasts.
  */
 export interface LocationArea {
   readonly latitude: number;
   readonly longitude: number;
 }
+
+/**
+ * **A Club the player picked** in place of a reading — *Pick a club near where you play*, offered
+ * when the phone's permission is refused or the phone cannot place itself
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §10).
+ *
+ * Only the id crosses the wire: the server rounds the club's point to the cell exactly as it
+ * rounds a reading, so the phone never needs a club's coordinates. The name and the district are
+ * held for the screen alone, so a player walking back to the step recognises what she picked.
+ */
+export interface PickedClub {
+  readonly id: string;
+  readonly name: string;
+  readonly district: string;
+}
+
+/**
+ * **Where the Location area comes from**: the phone's reading, coarsened the moment it was read,
+ * or a club the player picked. Either is a whole answer to *where do you play?* (ADR-0200 §10),
+ * and the backend's `LocationSource` is the same pair.
+ *
+ * Nothing records which it was once it is sent — the area is a cell — so this is a fact about a
+ * draft or a write in flight, never about a profile read back.
+ */
+export type LocationSource =
+  | { readonly kind: 'reading'; readonly area: LocationArea }
+  | { readonly kind: 'club'; readonly club: PickedClub };
 
 export interface ProfileDraft {
   /**
@@ -75,7 +102,8 @@ export interface ProfileDraft {
   readonly photoIds: readonly string[];
   /** The hours of the week that were ticked. Empty is an answer. */
   readonly weeklyHours: readonly WeeklyHour[];
-  readonly location: LocationArea | undefined;
+  /** A reading or a picked club. Absent until the step has one: an area is never guessed. */
+  readonly location: LocationSource | undefined;
   /**
    * The player's own answer. Absent until the step asks, and **never read as
    * `prefer-not-to-say`** — that is an answer somebody chose, and this is the question not

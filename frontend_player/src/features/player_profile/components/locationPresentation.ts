@@ -1,49 +1,48 @@
 /**
- * The words on the location step.
+ * The words on the location step, and on You's *Where you play*.
  *
  * **This step asks for a permission, so most of what is here is the explanation that goes
  * before one.** A prompt a player did not expect is refused by people who would have said
  * yes, and iOS shows it once — so the sentence that earns the yes has to be on screen
  * before the OS dialog is, not underneath it.
  *
- * The copy is honest in both directions, which is the harder half:
+ * **The copy tells the truth about what the area is for** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §10). The area measures how far each club is and orders every club search, and that is all it
+ * does: the step used to say it was *to show you nearby players and show you to them*, and that
+ * a player could *finish setting up without an area* — the first named a players search that no
+ * longer exists, the second a finish that never allowed it. Both went, with *Continue without
+ * matching* and the commit's *Finding players near you*. What is kept is said plainly — rounded
+ * to about a kilometre, never shown to another player — before the prompt rather than after it.
  *
- * - **What is kept is said plainly.** *Rounded to about 1 km, and only that approximate
- *   area* is the whole promise, and it is stated before the prompt rather than after it. A
- *   screen that said "we respect your privacy" and left the reader to guess what that meant
- *   would be a screen nobody should believe. The title asks the player's own question back at
- *   them — *why we ask your location* — because that is what somebody looking at a permission
- *   control wants answered, rather than a heading about Raketa.
- * - **What a refusal costs is named, not implied.** Location is what discovery is built
- *   on: a player without an area cannot search and cannot be matched. Saying so is not a
- *   dark pattern — hiding it until the app is empty would be.
- *
- * The refused / blocked split is the photos step's, for the same reason: pressing the
- * control again is the whole answer to one of them and achieves nothing on the other.
+ * **A refusal is answered with another way, not with a cost.** *Pick a club near where you play*
+ * is the alternative Apple's 5.1.1(iv) asks for: the club's point becomes the area. The refused
+ * / blocked split is the photos step's, for the same reason — pressing the control again is the
+ * whole answer to one of them and achieves nothing on the other — and **each sentence names the
+ * club as the other way**, so the step and the tab, which both offer it, say one thing.
  *
  * ## The coordinates are not words on this screen, and there are none here to write
  *
  * The area used to be printed back as a degree pair. It no longer is: a player has no use
  * for their own latitude, cannot check it, and a screen full of figures reads as *this is
  * what we took* rather than *this is what we rounded away*. What replaced it is a control
- * that says it is done — `LOCATION_SAVED` — so the whole of what this file writes about the
- * area is now the promise and the confirmation. **The formatters that drew the pair are
- * gone rather than left unused**, which is what makes *the precise fix never reaches a
- * screen* true of one fewer file.
+ * that says it is done — `LOCATION_SAVED` — or the club she picked, by name.
  */
 
-import type { LocationArea } from '../domain/ProfileDraft';
+import type { LocationSource, PickedClub } from '../domain/ProfileDraft';
 
 import type { LocationAccess } from '../hooks/useLocationCapture';
 
 /** The one control that reaches the device — named several times below, so once here. */
 export const USE_MY_LOCATION = 'Use my location';
 
+/** What pressing it does, before there is an area from the phone. */
+export const USE_MY_LOCATION_HINT = 'Asks your phone for your position, once';
+
 /** Swapped in while the device is being read. A busy button is not a disabled one. */
 export const READING_WORD = 'Reading your area…';
 
 /**
- * What the same control says once there is an area.
+ * What the same control says once the phone's reading is the area.
  *
  * **The words, not only the green**, and this is the half the design system insists on: a
  * control that carried *done* in a fill alone would carry it for nobody who cannot see the
@@ -57,48 +56,33 @@ export const READ_AGAIN_HINT = 'Reads your area again';
 
 export const WHY_TITLE = 'Why we ask your location';
 
+/** ADR-0200 §10's sentence, verbatim: what the area is for, and what is kept of it. */
 export const WHY_BODY =
-  'To show you nearby players and show you to them, Raketa needs a rough idea of where you ' +
-  'play. We take one location reading, round it to about 1 km, and only keep that ' +
-  'approximate area. We never store your exact location or track you in the background.';
+  'Raketa shows how far each club is and lists the nearest first. Your area is rounded to ' +
+  'about a kilometre and never shown to other players.';
 
-export const ACCESS_TITLE: Readonly<
-  Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>
-> = {
+/** The other way to an area, offered after a refusal on the step and always on the tab. */
+export const PICK_A_CLUB = 'Pick a club near where you play';
+
+/** The same offer at the end of a sentence about a refusal — said once, named three times below. */
+const OR_PICK_A_CLUB = 'or pick a club near where you play';
+
+type Refusal = Exclude<LocationAccess, 'unasked' | 'granted'>;
+
+export const ACCESS_TITLE: Readonly<Record<Refusal, string>> = {
   refused: 'Raketa cannot see where you play',
   blocked: 'Location is turned off for Raketa',
 };
 
 /**
- * What to do about a refusal — the half of each sentence that is true on every screen.
- *
- * The You tab's *Where you play* cites the step's permission states (ADR-0179 §2), and this
- * is the part it cites: how to undo the refusal. What it does **not** cite is the cost clause
- * below, which is about finishing setting up — a player on the tab finished long ago and holds
- * an area already, so that clause would be a sentence about somebody else.
+ * What to do about a refusal: undo it, or pick a club. True on the step and on the tab alike,
+ * because both offer the club — the step's old cost clause, about finishing without an area,
+ * was true of neither.
  */
-export const ACCESS_HOW_TO: Readonly<
-  Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>
-> = {
-  refused: `Press ${USE_MY_LOCATION} again to allow it.`,
-  blocked: `Turn it on for Raketa in Settings, then press ${USE_MY_LOCATION} again.`,
+export const ACCESS_HOW_TO: Readonly<Record<Refusal, string>> = {
+  refused: `Press ${USE_MY_LOCATION} again to allow it, ${OR_PICK_A_CLUB}.`,
+  blocked: `Turn it on for Raketa in Settings and press ${USE_MY_LOCATION} again, ${OR_PICK_A_CLUB}.`,
 };
-
-/**
- * What a refusal costs **on the step**: the same clause after either refusal, because the
- * consequence is the same whichever it was and the player should not have to work out that
- * the two screens they might be looking at mean one thing.
- */
-const WITHOUT_AN_AREA_COST =
-  'You can finish setting up without an area — but until you set one, you cannot search for ' +
-  'players and no game can be suggested to you.';
-
-/** What a refusal costs, and what to do about it — the step's whole note. */
-export const ACCESS_BODY: Readonly<Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>> =
-  {
-    refused: `${ACCESS_HOW_TO.refused} ${WITHOUT_AN_AREA_COST}`,
-    blocked: `${ACCESS_HOW_TO.blocked} ${WITHOUT_AN_AREA_COST}`,
-  };
 
 /** The control that goes where pressing again cannot: the app's own settings page. */
 export const OPEN_SETTINGS = 'Open Settings';
@@ -106,28 +90,61 @@ export const OPEN_SETTINGS = 'Open Settings';
 /** Permission granted and still no fix — indoors, underground, or a device with no signal. */
 export const NO_FIX_TITLE = 'Your phone could not place you';
 
-export const NO_FIX_BODY =
-  `It happens indoors and underground. Press ${USE_MY_LOCATION} again in a moment, or ` +
-  'continue and set your area later from your profile.';
+export const NO_FIX_BODY = `It happens indoors and underground. Press ${USE_MY_LOCATION} again in a moment, ${OR_PICK_A_CLUB}.`;
 
-export const WITH_AN_AREA_LABEL = 'Continue';
+/** The step's way on — drawn only once there is an area (ADR-0200 §10). */
+export const CONTINUE = 'Continue';
 
 /**
- * The label a player leaving with no area presses.
- *
- * It says the consequence rather than leaving it in a note beside it: this is the last
- * moment the choice is in front of them, and *Continue* alone would let a refusal that
- * costs discovery read as an ordinary step passed.
+ * What the control that reads the device says: *Location saved* only while the phone's reading
+ * is the area. A picked club is an area too, but not one this control produced, so the control
+ * still offers what it does.
  */
-export const WITHOUT_AN_AREA_LABEL = 'Continue without matching';
-
-export function continueLabel(area: LocationArea | undefined): string {
-  return area === undefined ? WITHOUT_AN_AREA_LABEL : WITH_AN_AREA_LABEL;
+export function captureLabel(location: LocationSource | undefined): string {
+  return location?.kind === 'reading' ? LOCATION_SAVED : USE_MY_LOCATION;
 }
 
-/** What the control that reads the device says, given whether there is already an area. */
-export function captureLabel(area: LocationArea | undefined): string {
-  return area === undefined ? USE_MY_LOCATION : LOCATION_SAVED;
+// ---------------------------------------------------------------------------
+// Pick a club near where you play
+// ---------------------------------------------------------------------------
+
+/** In the field before anything is typed: what the search reads. */
+export const CLUB_SEARCH_PLACEHOLDER = 'Club name or district';
+
+/** The pill beside each club the search answers — the whole head is the tap. */
+export const PICK_WORD = 'Pick';
+
+/** Under *No club called "…"*: what can be picked, so the empty answer is not a dead end. */
+export const NO_CLUB_NOTE = 'Only clubs in Raketa can be picked — try a district.';
+
+/** More of the answer than the first twenty — the search asks a page at a time. */
+export const MORE_CLUBS = 'More clubs';
+
+/** The chosen club's one control: back to the search. */
+export const CHANGE_CLUB = 'Change';
+export const CHANGE_CLUB_LABEL = 'Change the club';
+
+/** While a pick is being written, on the tab — the step holds it in the draft and writes nothing. */
+export const SAVING_WORD = 'Saving…';
+
+/**
+ * **The tab's write refusals, by `code`**, read over `recoveryMessage` with `codeMessage`. One entry:
+ * a picked club the server no longer knows (`location_club_unknown`, #726). The generic
+ * *check the details above* would point at a club the screen has already let go of; this says
+ * what happened and what to do, and the search is back under it.
+ */
+export const AREA_WRITE_REFUSAL: Readonly<Record<string, string>> = {
+  location_club_unknown: 'That club is no longer in Raketa — pick another.',
+};
+
+/** A club's card, spoken — the head is the tap, and its line rides with the name. */
+export function pickClubLabel(name: string, line: string): string {
+  return `${PICK_WORD} ${name}, ${line}`;
+}
+
+/** The chosen club, spoken whole: what the area now is. */
+export function pickedClubLabel(club: PickedClub): string {
+  return `Your area: ${club.name}, ${club.district}`;
 }
 
 /**

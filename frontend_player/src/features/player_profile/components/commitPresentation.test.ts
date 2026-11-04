@@ -1,8 +1,8 @@
 /**
  * What the end of the part says when it cannot finish.
  *
- * The area is the case a player actually meets — the location step names the cost of
- * leaving without one and this is where it is collected.
+ * The area is held at the step — *Continue* waits for one (ADR-0200 §10) — and once more here,
+ * for a draft that arrives without one and for a picked club the server no longer knows.
  *
  * The week arrives from **both** directions since ADR-0102 gave it a floor: a draft that
  * holds no ticked cell, and a commit the server refused with `weekly_hours_empty`.
@@ -90,6 +90,19 @@ describe('a commit the server refused', () => {
     expect(refused?.label).toBe('Set when you usually play');
   });
 
+  it('reads a picked club the server does not know as the area still wanted, never try again', () => {
+    // Sending the same `club_id` again would be refused the same way, so the way back is the
+    // location step, in the words the draft would have used for an area it never held.
+    const wanted = answerStillWanted(['location']);
+
+    expect(stepTheCommitRefused(refusal('location_club_unknown', { field: 'club_id' }))).toEqual({
+      step: 'location',
+      body: wanted?.copy.body,
+      label: wanted?.copy.label,
+    });
+    expect(wanted?.copy.body).not.toMatch(/players|match/i);
+  });
+
   it('says the same words the draft would have said about the same answer', () => {
     // Which side noticed is not the player's to care about: they are being asked for the
     // same thing either way, so they are asked for it in the same sentence.
@@ -107,7 +120,7 @@ describe('a commit the server refused', () => {
     // what the player reads is what to leave out — not what was found.
     expect(stepTheCommitRefused(refusal('intro_not_admitted', { reason: 'too_long' }))).toEqual({
       step: 'intro',
-      body: 'Keep it under 100 characters.',
+      body: 'Keep it under 250 characters.',
       label: 'Change your intro',
     });
     expect(stepTheCommitRefused(refusal('intro_not_admitted', { reason: 'multiline' }))).toEqual({

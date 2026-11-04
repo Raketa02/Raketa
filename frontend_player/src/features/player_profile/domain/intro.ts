@@ -1,8 +1,9 @@
 /**
  * The **intro**: one line a player writes about themselves, and the rules it is held to
- * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+ * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md);
+ * the cap from [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §9).
  *
- * At most a hundred characters after trimming, no line break, in any language — and
+ * At most 250 characters after trimming, no line break, in any language — and
  * **optional**: a player who skips has no intro, not an empty one. It is the first free text
  * this platform shows a stranger, and the fence that made that admissible is the backend's:
  * a line carrying a phone number, an email, a URL or an `@handle` is refused at the write,
@@ -21,15 +22,18 @@
  * ## Counted the way the server counts
  *
  * Python's `len` counts code points; a JavaScript string's `.length` counts UTF-16 units, on
- * which one emoji is two. A cap this side enforced in units would refuse a hundred emoji the
+ * which one emoji is two. A cap this side enforced in units would refuse a line of emoji the
  * server admits — a false refusal is a rewrite the player did not owe — so the count is in
  * code points, which is what `Array.from` yields.
  */
 
 import type { AppError } from '@/shared/errors';
 
-/** The most characters an intro may hold, after trimming. The server's number, restated once. */
-export const INTRO_CAP = 100;
+/**
+ * The most characters an intro may hold, after trimming. The server's number, restated once —
+ * 250 since ADR-0200 §9, which retired ADR-0170 §4's hundred with the deck card it fitted.
+ */
+export const INTRO_CAP = 250;
 
 /**
  * The three reasons `intro_not_admitted` may carry, spelled as the wire spells them.
@@ -68,7 +72,7 @@ export function introLength(line: string): number {
  * Where a written line stands, read off the draft.
  *
  * **Trimmed first**, because the server trims first: a return pressed after the last word is
- * not a second line, and a hundred characters wrapped in a space is not over the cap. Where a
+ * not a second line, and a line at the cap wrapped in a space is not over it. Where a
  * line breaks both rules, the length is named — it is the one that stays true after the other
  * is fixed.
  */

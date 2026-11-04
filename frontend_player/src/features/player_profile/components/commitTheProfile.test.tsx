@@ -537,7 +537,7 @@ describe('a failed commit', () => {
    * still in the box, because the draft was never touched by a failure.
    */
   describe.each([
-    ['too_long', 'Keep it under 100 characters.'],
+    ['too_long', 'Keep it under 250 characters.'],
     ['multiline', 'One line, no line breaks.'],
     [
       'contains_contact',

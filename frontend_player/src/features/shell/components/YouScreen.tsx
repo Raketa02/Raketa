@@ -6,7 +6,7 @@
  * ```
  * header card       the record's header, compact — tapping it opens How others see you
  * PLAYING           Skill passport · Player reliability · What kind of game
- * FINDING PLAYERS   Your week · Where you play · Who you play with
+ * YOUR GAMES        Your week · Where you play · Who you play with
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Nickname
  * ACCOUNT           Games & money · Payments · Notifications · Blocked players
  * ─────────────
@@ -25,17 +25,18 @@
  * read-only facts and the door to the sheet, `player_profile`'s declarations, `auth`'s nickname —
  * and each row reads its own fact and pushes its own screen. What this file decides is which
  * row sits in which group, and in what order: groups because the rows answer questions — what
- * has the platform concluded about me, what does the matcher read when it looks for a game, what
- * does a stranger read about me, and **how do I pay for a game**. That fourth one was not asked on
+ * has the platform concluded about me, what does a proposed game read about when and where I
+ * play, what does a stranger read about me, and **how do I pay for a game**. That fourth one was not asked on
  * this tab until money was (ADR-0179 §9, amended by ADR-0189; the screens A7): **ACCOUNT** sits
  * after *On your card* and before *Sign out*, and holds *Games & money* (#554), *Payments*
  * (#552) and *Notifications* (#559), in that order (mock 50), and then *Blocked players* (#587) —
  * the way back from a block when the record is out of reach. *Sign out* stays at the foot as the
  * account panel draws it, pinned under the scroller.
  *
- * **Finding players lost two rows** with the old loop's ranking, the only thing that read them:
+ * **Your games lost two rows** with the old loop's ranking, the only thing that read them:
  * *How far to look* and *Game suggestions* ([#582](https://github.com/Raketa02/Raketa/issues/582)).
- * A setting on this tab is one a proposed game still reads.
+ * A setting on this tab is one a proposed game still reads. The group was *Finding players* until
+ * ADR-0200 §10 renamed it (#733): nothing on the tab finds players any more.
  *
  * ## The switcher chip
  *
@@ -118,7 +119,7 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <WhatKindOfGameRow divided />
           </YouGroup>
 
-          <YouGroup title={YOU_COPY.groups.findingPlayers}>
+          <YouGroup title={YOU_COPY.groups.yourGames}>
             <YourWeekRow />
             <WhereYouPlayRow divided />
             <WhoYouPlayWithRow divided />

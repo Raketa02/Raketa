@@ -59,6 +59,17 @@ export { HomeLevelCard } from './components/HomeLevelCard';
 export { groupKeys } from './hooks/groupKeys';
 
 /**
+ * **The home-club search, for a Location area** ([#733](https://github.com/Raketa02/Raketa/issues/733),
+ * ADR-0200 §10): a player who refuses the phone's location picks a club near where she plays, from
+ * the same search New group's home club uses — by name or district, A–Z with no area yet — drawn
+ * as the same card with the caller's own pill. `player_profile` owns what the pick means.
+ */
+export { useHomeClubSearch, type ClubSearchState } from './hooks/useClubSearch';
+export { ClubCard } from './components/ClubCard';
+export { clubLine, noClubCalled } from './components/groupsPresentation';
+export type { SearchedClub } from './domain/group';
+
+/**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),
  * [#517](https://github.com/Raketa02/Raketa/issues/517)): an official group is a Group, so its tile,
  * its dots, its club's tile, its form cards, its request row, who a switch to Anyone let in, a failed

@@ -8,7 +8,8 @@
  * groups end and the next club begins, and a card with its own shadow does.
  *
  * Two parts. **The head** is the club's name over *district · distance · sports*, on white — in
- * New group the one tap that chooses it, with a *Set as home* pill beside it; in Join a group
+ * New group the one tap that chooses it, with a *Set as home* pill beside it (and in the player
+ * profile's *Pick a club near where you play*, with a *Pick* pill, #733); in Join a group
  * context, spoken whole with no button role, because nothing happens when it is touched (story
  * 39). **The band** under it, a step down on `paper3` to the card's edges, holds what is at the
  * club — its groups, or Join a group's sentence that it has none.
@@ -36,12 +37,21 @@ export interface ClubCardProps {
    * Join a group, where the head is context.
    */
   readonly onChoose?: () => void;
+  /** The pill's word beside a head that chooses — *Set as home* unless the caller says. */
+  readonly chooseWord?: string;
   /** What sits on the band under the head. Absent — or `null` — draws no band. */
   readonly children?: ReactNode;
   readonly testID?: string;
 }
 
-export function ClubCard({ club, headLabel, onChoose, children, testID }: ClubCardProps) {
+export function ClubCard({
+  club,
+  headLabel,
+  onChoose,
+  chooseWord = GROUPS_COPY.newGroup.setAsHome,
+  children,
+  testID,
+}: ClubCardProps) {
   const words = (
     <View style={s.words}>
       <Text style={s.name} numberOfLines={1}>
@@ -73,7 +83,7 @@ export function ClubCard({ club, headLabel, onChoose, children, testID }: ClubCa
             {/* Drawn as a chip and not one: the whole head is the tap, as it always was, so the
                 pill is where the finger is invited rather than a second control inside the first. */}
             <View style={s.pill}>
-              <Text style={s.pillWord}>{GROUPS_COPY.newGroup.setAsHome}</Text>
+              <Text style={s.pillWord}>{chooseWord}</Text>
             </View>
           </Pressable>
         )}

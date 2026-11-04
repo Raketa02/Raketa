@@ -58,7 +58,7 @@ import { foregroundRefreshDue } from '../domain/locationRefresh';
 import type { LocationArea } from '../domain/ProfileDraft';
 import { changeLocation } from '../use-cases/changeLocation';
 
-import { playerProfileKeys } from './playerProfileKeys';
+import { LOCATION_WRITES, playerProfileKeys } from './playerProfileKeys';
 
 /**
  * @param inTheApp whether the player is signed in and past onboarding — the entry gate's own
@@ -73,7 +73,10 @@ export function useLocationRefresh(inTheApp: boolean): void {
 
   // No `onError`: `mutate` reports a failure to nobody, which is the silence the ADR asks for.
   const { mutate: move } = useMutation<void, AppError, LocationArea>({
-    mutationFn: (area) => changeLocation(area),
+    // Always a reading: a refresh only ever has the phone's cell to send, and once permission
+    // exists it replaces a club picked by hand (ADR-0200 §10).
+    mutationFn: (area) => changeLocation({ kind: 'reading', area }),
+    scope: LOCATION_WRITES,
     onSuccess: () => client.invalidateQueries({ queryKey: playerProfileKeys.surface() }),
   });
 

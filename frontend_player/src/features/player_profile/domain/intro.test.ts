@@ -47,7 +47,7 @@ describe('what a written line stands as', () => {
 
     expect(introStanding(atTheCap)).toEqual({ kind: 'written', line: atTheCap });
     // The spaces around it are not part of the line — the server trims before it counts,
-    // and a client that refused a hundred characters wrapped in a space would be stricter
+    // and a client that refused a line at the cap wrapped in a space would be stricter
     // than the rule it is pre-empting.
     expect(introStanding(`  ${atTheCap}  `)).toEqual({ kind: 'written', line: atTheCap });
     expect(introStanding(`${atTheCap}b`)).toEqual({ kind: 'refused', reason: 'too_long' });
@@ -55,7 +55,7 @@ describe('what a written line stands as', () => {
 
   it('counts characters the way the server does, so an emoji is one and not two', () => {
     // Python's `len` counts code points; a JavaScript string's `.length` counts UTF-16
-    // units, on which one emoji is two. A line of a hundred emoji is at the cap, not over it.
+    // units, on which one emoji is two. A line of emoji as long as the cap is at it, not over it.
     const emoji = '🎾'.repeat(INTRO_CAP);
 
     expect(introLength(emoji)).toBe(INTRO_CAP);

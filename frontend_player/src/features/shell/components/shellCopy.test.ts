@@ -50,7 +50,7 @@ describe("what You's groups say", () => {
   it('names the four questions the rows answer, in the order they are asked', () => {
     expect(Object.values(YOU_COPY.groups)).toEqual([
       'Playing',
-      'Finding players',
+      'Your games',
       'On your card',
       'Account',
     ]);

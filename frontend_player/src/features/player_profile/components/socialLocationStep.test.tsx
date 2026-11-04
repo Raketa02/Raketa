@@ -9,10 +9,11 @@
  * both be exercised here at all. Everything between the two runs for real: the router, the
  * domain rule that coarsens a fix, the store and the screen.
  *
- * **The refusal is half the ticket.** Location is what search and matchmaking are worked out
- * from, so the step insists — and a player who says no still finishes it, with the cost
- * named on the control that leaves. A suite that only walked the granted path would prove
- * the case that was never in doubt.
+ * **The refusal is half the ticket.** The area is what every distance to a club is measured
+ * from, so the step requires one — *Continue* is drawn only once there is an area — and a player
+ * who says no is offered *Pick a club near where you play*, and the club she picks is her area
+ * (ADR-0200 §10, #733). A suite that only walked the granted path would prove the case that was
+ * never in doubt.
  *
  * Every assertion is about what a player can see, what they can operate, or what an
  * assistive technology is told — **with one deliberate exception**. The draft is read
@@ -29,6 +30,7 @@ import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  PROFILE_SURFACE_PATH,
   launchSignedIn,
   resetLocation,
   stubGate as stubGateWith,
@@ -36,21 +38,34 @@ import {
   stubProfileOptions,
 } from '@/test-support/onboardingRouter';
 import { fakeLocation, type FakeLocation } from '@/test-support/platform';
-import { installTransport, type Transport, type Wire } from '@/test-support/transport';
+import {
+  installTransport,
+  json,
+  type RecordedRequest,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import { FINISH_LABEL } from './commitPresentation';
 import {
-  ACCESS_BODY,
+  ACCESS_HOW_TO,
   ACCESS_TITLE,
+  CHANGE_CLUB_LABEL,
+  CONTINUE,
   LOCATION_SAVED,
+  MORE_CLUBS,
+  NO_CLUB_NOTE,
+  NO_FIX_BODY,
   NO_FIX_TITLE,
   OPEN_SETTINGS,
+  PICK_A_CLUB,
   USE_MY_LOCATION,
   WHY_BODY,
   WHY_TITLE,
-  WITHOUT_AN_AREA_LABEL,
-  WITH_AN_AREA_LABEL,
+  pickClubLabel,
+  pickedClubLabel,
 } from './locationPresentation';
 
 /** One rating: the first part is behind this player, and the second one is not. */
@@ -78,6 +93,78 @@ const AREA_KEPT = { latitude: 41.39, longitude: 2.17 };
 /** Somewhere else entirely — what a player who travelled comes back to the app holding. */
 const ELSEWHERE = { latitude: 40.4168, longitude: -3.7038, accuracyMetres: 20 };
 const ELSEWHERE_KEPT = { latitude: 40.42, longitude: -3.7 };
+
+/** A reading, as the draft holds one. */
+const reading = (area: { latitude: number; longitude: number }) => ({ kind: 'reading', area });
+
+const HOME_CLUBS = '/api/v1/home-clubs';
+
+/**
+ * Two clubs, as the home-club search answers a player with **no area yet**: A–Z, and no distance
+ * — there is nothing to measure from (`distance_km` `null`). The groups at a club ride along on
+ * the wire and are not drawn here.
+ */
+const BONARKA: Wire['ClubCardSchema'] = {
+  id: '6f1c2a54-0a43-4a39-9d5e-0b5c6d7e8f90',
+  name: 'Bonarka Arena',
+  district: 'Podgórze',
+  distance_km: null,
+  sports: ['PADEL', 'TENNIS'],
+  groups: [],
+};
+const BOREK: Wire['ClubCardSchema'] = {
+  id: '7a2d3b65-1b54-4b4a-8e6f-1c6d7e8f9a01',
+  name: 'Borek Padel',
+  district: 'Borek Fałęcki',
+  distance_km: null,
+  sports: ['PADEL'],
+  groups: [],
+};
+
+/** `q` and `page` off a recorded request — the transport routes on the path without them. */
+function queryOf(request: RecordedRequest) {
+  const params = new URLSearchParams(request.path.split('?')[1] ?? '');
+  return { q: params.get('q') ?? '', page: Number(params.get('page') ?? '1') };
+}
+
+/** The home-club search, answering each text from a table of pages. */
+function stubClubs(answers: Readonly<Record<string, readonly Wire['HomeClubPageResponse'][]>>) {
+  transport.on('GET', HOME_CLUBS, (request) => {
+    const { q, page } = queryOf(request);
+    const pages = answers[q] ?? [{ clubs: [], next_page: null }];
+    return json<Wire['HomeClubPageResponse']>(pages[page - 1] ?? { clubs: [], next_page: null });
+  });
+}
+
+const searches = () => transport.requestsTo('GET', HOME_CLUBS).map(queryOf);
+
+/** Type into the picker's one field — it is named by the offer itself. */
+const searchFor = (text: string) => fireEvent.changeText(screen.getByLabelText(PICK_A_CLUB), text);
+
+/** A club's card, by the name its head is spoken with. */
+const clubCard = (club: Wire['ClubCardSchema'], line: string) =>
+  screen.findByLabelText(pickClubLabel(club.name, line));
+
+/** The commit, answered as the real route answers it, and the gate moved on as the server would. */
+function stubCommit() {
+  transport.on('POST', PROFILE_SURFACE_PATH, () => {
+    stubGateWith(transport, { ratings: [RATING], hasPlayerProfile: true });
+    return json<Wire['PlayerProfileResponse']>(
+      {
+        player_id: '11111111-2222-4333-8444-555555555555',
+        social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+        photo_ids: [],
+        weekly_hours: [{ day: 3, hour: 19 }],
+        location: { latitude: 50.03, longitude: 19.95 },
+        created_at: '2026-11-04T10:00:00Z',
+        updated_at: '2026-11-04T10:00:00Z',
+      },
+      201,
+    );
+  });
+}
+
+const commits = () => transport.requestsTo('POST', PROFILE_SURFACE_PATH);
 
 /**
  * Whether the step is holding an area, read the way a player reads it: off the one control
@@ -189,6 +276,16 @@ describe('arriving on the step', () => {
     expect(areaShown()).toBe(false);
     expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
   });
+
+  it('draws no Continue, and no club to pick, before anything has been asked', async () => {
+    // ADR-0200 §10: *Continue* appears only once an area is set, and the club is the answer to a
+    // refusal — not a second question put to somebody whose phone has not been asked yet.
+    await reachTheLocationStep();
+
+    expect(screen.queryByLabelText(CONTINUE)).toBeNull();
+    expect(screen.queryByLabelText(/without/i)).toBeNull();
+    expect(screen.queryByLabelText(PICK_A_CLUB)).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -233,7 +330,7 @@ describe('granting the permission', () => {
 
     // The draft is where an area is observable now, and what is kept is the rounded pair —
     // which is also the pair the commit will send.
-    expect(areaKept()).toEqual(AREA_KEPT);
+    expect(areaKept()).toEqual(reading(AREA_KEPT));
   });
 
   it('continues plainly once there is an area', async () => {
@@ -241,7 +338,7 @@ describe('granting the permission', () => {
     await askTheDevice();
     await screen.findByLabelText(LOCATION_SAVED);
 
-    fireEvent.press(screen.getByLabelText(WITH_AN_AREA_LABEL));
+    fireEvent.press(screen.getByLabelText(CONTINUE));
 
     await waitFor(() => expect(screen).toHavePathname('/gender'));
   });
@@ -256,33 +353,33 @@ describe('refusing the permission', () => {
     device = fakeLocation({ answer: 'denied', fix: PRECISE });
   });
 
-  it('says what a refusal costs and how to undo it', async () => {
+  it('says how to undo it, or pick a club, and offers the club', async () => {
     await reachTheLocationStep();
 
     await askTheDevice();
 
     expect(await screen.findByText(ACCESS_TITLE.refused)).toBeTruthy();
-    expect(screen.getByText(ACCESS_BODY.refused)).toBeTruthy();
+    expect(screen.getByText(ACCESS_HOW_TO.refused)).toBeTruthy();
     // No fix was read: the port answers none without a permission, and the control does not
     // pretend otherwise by claiming to have saved something.
     expect(areaShown()).toBe(false);
+    // The other way in, drawn as the one field it is.
+    expect(screen.getByText(PICK_A_CLUB)).toBeTruthy();
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
   });
 
   /**
-   * The step insists; it does not hold anybody hostage. A player stuck on step five of six
-   * behind a permission they can change at any time is not a setup flow — and the label is
-   * where the cost is stated, because a note beside it is a note they may not read.
+   * The step requires an area — but it does not hold anybody hostage either: a player stuck
+   * behind a permission she does not want to give has the club, and nothing else is a way past.
    */
-  it('lets the player finish the step, with the cost on the control that leaves', async () => {
+  it('lets nobody past without an area — no Continue until a club is picked', async () => {
     await reachTheLocationStep();
     await askTheDevice();
     await screen.findByText(ACCESS_TITLE.refused);
 
-    fireEvent.press(screen.getByLabelText(WITHOUT_AN_AREA_LABEL));
-
-    await waitFor(() => expect(screen).toHavePathname('/gender'));
+    expect(screen.queryByLabelText(CONTINUE)).toBeNull();
     // Nothing was claimed on their behalf. An unanswered location is absent, never a zero
-    // pair, and the commit will find it exactly as the player left it.
+    // pair.
     expect(areaKept()).toBeUndefined();
   });
 
@@ -298,6 +395,8 @@ describe('refusing the permission', () => {
 
     expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
     expect(screen.queryByText(ACCESS_TITLE.refused)).toBeNull();
+    // The phone answered, so the club is no longer the question.
+    expect(screen.queryByLabelText(PICK_A_CLUB)).toBeNull();
   });
 
   /** A return to the app is not a press. Re-prompting on every foreground is a wall. */
@@ -312,6 +411,152 @@ describe('refusing the permission', () => {
     expect(device.state).toBe('denied');
     expect(device.reads).toBe(0);
     expect(areaShown()).toBe(false);
+  });
+});
+
+describe('picking a club near where you play', () => {
+  beforeEach(() => {
+    device = fakeLocation({ answer: 'denied', fix: PRECISE });
+  });
+
+  /** The step, refused, with the club field on screen. */
+  async function refuseAndOfferTheClub() {
+    await reachTheLocationStep();
+    await askTheDevice();
+    await screen.findByLabelText(PICK_A_CLUB);
+  }
+
+  it('searches the clubs by what is typed, and lists them as the search answers — A–Z, no distance', async () => {
+    stubClubs({ bo: [{ clubs: [BONARKA, BOREK], next_page: null }] });
+    await refuseAndOfferTheClub();
+
+    searchFor('bo');
+
+    // The home-club search, asked with the text — a player with no area gets the clubs A–Z,
+    // and no distance is drawn because there is nothing yet to measure one from.
+    expect(await clubCard(BONARKA, 'Podgórze · Padel, Tennis')).toBeTruthy();
+    expect(await clubCard(BOREK, 'Borek Fałęcki · Padel')).toBeTruthy();
+    expect(searches()).toContainEqual({ q: 'bo', page: 1 });
+    expect(screen.queryByText(/km/)).toBeNull();
+    // A club's groups are New group's question, not this one's.
+    expect(screen.queryByText(/members/)).toBeNull();
+    expect(screen.queryByLabelText(CONTINUE)).toBeNull();
+  });
+
+  it('takes the club as the area, draws it chosen, and shows Continue', async () => {
+    stubClubs({ bon: [{ clubs: [BONARKA], next_page: null }] });
+    await refuseAndOfferTheClub();
+
+    searchFor('bon');
+    fireEvent.press(await clubCard(BONARKA, 'Podgórze · Padel, Tennis'));
+
+    const club = { id: BONARKA.id, name: BONARKA.name, district: BONARKA.district };
+    expect(await screen.findByLabelText(pickedClubLabel(club))).toBeTruthy();
+    expect(screen.queryByLabelText(PICK_A_CLUB)).toBeNull();
+    expect(areaKept()).toEqual({ kind: 'club', club });
+    // The phone's control did not produce this area, so it does not claim it.
+    expect(areaShown()).toBe(false);
+    expect(screen.getByLabelText(CONTINUE)).toBeTruthy();
+  });
+
+  /** The acceptance walk: refused, a club picked, and the commit carrying it as `club_id`. */
+  it('sends the club as the location when the part is finished', async () => {
+    stubClubs({ bon: [{ clubs: [BONARKA], next_page: null }] });
+    stubCommit();
+    await refuseAndOfferTheClub();
+
+    searchFor('bon');
+    fireEvent.press(await clubCard(BONARKA, 'Podgórze · Padel, Tennis'));
+    fireEvent.press(await screen.findByLabelText(CONTINUE));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
+    fireEvent.press(screen.getByLabelText('Woman'));
+    fireEvent.press(screen.getByLabelText(FINISH_LABEL));
+
+    await waitFor(() => expect(commits()).toHaveLength(1));
+    // The id alone: the server rounds the club's point to the cell, and the name and the
+    // district the step drew stay on the phone. No reading rides beside it.
+    expect((commits()[0]?.body as Wire['CommitPlayerProfileRequest']).location).toEqual({
+      club_id: BONARKA.id,
+    });
+  });
+
+  it('lets go of the club on Change, and offers the search again', async () => {
+    stubClubs({ bon: [{ clubs: [BONARKA], next_page: null }] });
+    await refuseAndOfferTheClub();
+    searchFor('bon');
+    fireEvent.press(await clubCard(BONARKA, 'Podgórze · Padel, Tennis'));
+    await screen.findByLabelText(CONTINUE);
+
+    fireEvent.press(screen.getByLabelText(CHANGE_CLUB_LABEL));
+
+    expect(await screen.findByLabelText(PICK_A_CLUB)).toBeTruthy();
+    expect(screen.queryByLabelText(CONTINUE)).toBeNull();
+    expect(areaKept()).toBeUndefined();
+  });
+
+  it('says so when no club is called that, and what can be picked', async () => {
+    stubClubs({});
+    await refuseAndOfferTheClub();
+
+    searchFor('zzz');
+
+    expect(await screen.findByText('No club called “zzz”')).toBeTruthy();
+    expect(screen.getByText(NO_CLUB_NOTE)).toBeTruthy();
+  });
+
+  it('asks for the next twenty when there are more', async () => {
+    const page2: Wire['ClubCardSchema'] = { ...BOREK, id: 'c0ffee00-0000-4000-8000-000000000021' };
+    stubClubs({
+      bo: [
+        { clubs: [BONARKA], next_page: 2 },
+        { clubs: [page2], next_page: null },
+      ],
+    });
+    await refuseAndOfferTheClub();
+    searchFor('bo');
+    await clubCard(BONARKA, 'Podgórze · Padel, Tennis');
+
+    fireEvent.press(screen.getByLabelText(MORE_CLUBS));
+
+    expect(await clubCard(page2, 'Borek Fałęcki · Padel')).toBeTruthy();
+    expect(searches()).toContainEqual({ q: 'bo', page: 2 });
+    expect(screen.queryByLabelText(MORE_CLUBS)).toBeNull();
+  });
+
+  it('finds the club still chosen after walking on and back', async () => {
+    stubClubs({ bon: [{ clubs: [BONARKA], next_page: null }] });
+    await refuseAndOfferTheClub();
+    searchFor('bon');
+    fireEvent.press(await clubCard(BONARKA, 'Podgórze · Padel, Tennis'));
+    fireEvent.press(await screen.findByLabelText(CONTINUE));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
+
+    fireEvent.press(screen.getByLabelText('Back to Where do you play?'));
+    await waitFor(() => expect(screen).toHavePathname('/location'));
+
+    // Nobody refused anything on this visit — the club is drawn because it is the answer.
+    const club = { id: BONARKA.id, name: BONARKA.name, district: BONARKA.district };
+    expect(await screen.findByLabelText(pickedClubLabel(club))).toBeTruthy();
+    expect(screen.getByLabelText(CONTINUE)).toBeTruthy();
+  });
+
+  /**
+   * ADR-0200 §10: once the phone may be read, its reading replaces a club picked by hand. The
+   * player allowed location in Settings and came back; the step's own foreground re-read does it.
+   */
+  it('gives way to the phone’s reading once the permission exists', async () => {
+    stubClubs({ bon: [{ clubs: [BONARKA], next_page: null }] });
+    await refuseAndOfferTheClub();
+    searchFor('bon');
+    fireEvent.press(await clubCard(BONARKA, 'Podgórze · Padel, Tennis'));
+    await screen.findByLabelText(CONTINUE);
+
+    device.state = 'granted';
+    await leaveAndReturn();
+
+    await waitFor(() => expect(areaKept()).toEqual(reading(AREA_KEPT)));
+    expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
+    expect(screen.getByLabelText(CONTINUE)).toBeTruthy();
   });
 });
 
@@ -330,19 +575,18 @@ describe('a permission that was turned off in Settings', () => {
     await askTheDevice();
 
     expect(await screen.findByText(ACCESS_TITLE.blocked)).toBeTruthy();
-    expect(screen.getByText(ACCESS_BODY.blocked)).toBeTruthy();
+    expect(screen.getByText(ACCESS_HOW_TO.blocked)).toBeTruthy();
     expect(screen.getByLabelText(OPEN_SETTINGS)).toBeTruthy();
     expect(device.reads).toBe(0);
   });
 
-  it('still lets the step be finished', async () => {
+  it('offers the club, and nothing else past the step', async () => {
     await reachTheLocationStep();
     await askTheDevice();
     await screen.findByText(ACCESS_TITLE.blocked);
 
-    fireEvent.press(screen.getByLabelText(WITHOUT_AN_AREA_LABEL));
-
-    await waitFor(() => expect(screen).toHavePathname('/gender'));
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
+    expect(screen.queryByLabelText(CONTINUE)).toBeNull();
   });
 });
 
@@ -358,7 +602,10 @@ describe('a phone that cannot place itself', () => {
     await askTheDevice();
 
     expect(await screen.findByText(NO_FIX_TITLE)).toBeTruthy();
-    expect(screen.getByLabelText(WITHOUT_AN_AREA_LABEL)).toBeTruthy();
+    expect(screen.getByText(NO_FIX_BODY)).toBeTruthy();
+    // The third refusal, answered as the other two are: the club, and no way past without one.
+    expect(screen.getByLabelText(PICK_A_CLUB)).toBeTruthy();
+    expect(screen.queryByLabelText(CONTINUE)).toBeNull();
   });
 
   /**
@@ -375,6 +622,8 @@ describe('a phone that cannot place itself', () => {
     expect(areaShown()).toBe(false);
     expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
     expect(screen.queryByText(NO_FIX_TITLE)).toBeNull();
+    // Nobody asked, so nothing was refused: the club is not offered for a read nobody saw.
+    expect(screen.queryByLabelText(PICK_A_CLUB)).toBeNull();
   });
 });
 
@@ -394,7 +643,7 @@ describe('foregrounding the app with the permission granted', () => {
     device.fix = ELSEWHERE;
     await leaveAndReturn();
 
-    await waitFor(() => expect(areaKept()).toEqual(ELSEWHERE_KEPT));
+    await waitFor(() => expect(areaKept()).toEqual(reading(ELSEWHERE_KEPT)));
     expect(device.reads).toBe(2);
     // And the control does not flicker back: it was settled and it stays settled.
     expect(areaShown()).toBe(true);
@@ -422,14 +671,14 @@ describe('walking away from the step and back', () => {
     await askTheDevice();
     await screen.findByLabelText(LOCATION_SAVED);
 
-    fireEvent.press(screen.getByLabelText(WITH_AN_AREA_LABEL));
+    fireEvent.press(screen.getByLabelText(CONTINUE));
     await waitFor(() => expect(screen).toHavePathname('/gender'));
 
     fireEvent.press(screen.getByLabelText('Back to Where do you play?'));
     await waitFor(() => expect(screen).toHavePathname('/location'));
 
     expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
-    expect(areaKept()).toEqual(AREA_KEPT);
+    expect(areaKept()).toEqual(reading(AREA_KEPT));
     // The permission is granted by now, so arriving re-reads — and the pair is the same
     // one, which is why nothing about the screen changed.
     expect(device.state).toBe('granted');

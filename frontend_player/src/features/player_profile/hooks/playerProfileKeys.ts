@@ -34,3 +34,11 @@ export const playerProfileKeys = {
    */
   photo: (photoId: string) => [...playerProfileKeys.all, 'photo', photoId] as const,
 };
+
+/**
+ * **The one queue every write of the Location area joins** — `PUT /players/me/location` from the
+ * cold start and from *Where you play*'s two controls (#733). A mutation `scope` runs its writes
+ * one after another, so a pick and a reading pressed in quick succession reach the server in the
+ * order they were pressed, and the area held is the one the screen last drew.
+ */
+export const LOCATION_WRITES = { id: 'player-profile:location' } as const;

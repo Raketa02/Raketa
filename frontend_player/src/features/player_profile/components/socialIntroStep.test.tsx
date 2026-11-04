@@ -80,9 +80,9 @@ describe('what the step offers', () => {
     // The label is drawn and is the name, never a placeholder that vanishes on the first
     // keystroke.
     expect(screen.getByText('Your intro')).toBeTruthy();
-    expect(box().props.accessibilityHint).toBe('One line, up to 100 characters. Optional.');
-    expect(screen.getByText('0 / 100')).toBeTruthy();
-    expect(screen.getByLabelText('0 of 100 characters')).toBeTruthy();
+    expect(box().props.accessibilityHint).toBe('One line, up to 250 characters. Optional.');
+    expect(screen.getByText('0 / 250')).toBeTruthy();
+    expect(screen.getByLabelText('0 of 250 characters')).toBeTruthy();
 
     // Both, whatever is in the box: the step is optional and the screen says so by offering
     // the way past rather than by leaving Next open on an empty box and hoping.
@@ -93,14 +93,13 @@ describe('what the step offers', () => {
     );
   });
 
-  it('says the rule once, before the refusal that enforces it is six screens away', async () => {
+  it('draws no paragraph of rules — the contact rule is said only when it is broken', async () => {
+    // ADR-0200 §9: the rule line under the box is gone. A phone number is refused with the
+    // refusal's own sentence, at the commit or on You's save, and only to somebody who typed one.
     await reachTheIntroStep();
 
-    expect(
-      screen.getByText(
-        'Other players read this on your card. Leave out phone numbers, emails, links and handles — people reach you in the chat.',
-      ),
-    ).toBeTruthy();
+    expect(screen.queryByText(/Other players read this on your card/)).toBeNull();
+    expect(screen.queryByText(/Leave out phone numbers/)).toBeNull();
   });
 });
 
@@ -109,25 +108,41 @@ describe('the counter', () => {
     await reachTheIntroStep();
 
     write('Moved from Wrocław in May.');
-    expect(screen.getByText('26 / 100')).toBeTruthy();
+    expect(screen.getByText('26 / 250')).toBeTruthy();
 
     // An emoji is one character to the server and two units to JavaScript; the counter
     // agrees with the server, so a line of them reads as the length the cap is read against.
     write('🎾🎾🎾');
-    expect(screen.getByText('3 / 100')).toBeTruthy();
+    expect(screen.getByText('3 / 250')).toBeTruthy();
   });
 
   it('counts the line as the cap reads it, so the spaces around it are not counted', async () => {
-    // The counter and the refusal read the same trimmed line: a hundred characters wrapped
-    // in spaces is at the cap and says so, rather than reading `104 / 100` beside an open
+    // The counter and the refusal read the same trimmed line: 250 characters wrapped
+    // in spaces is at the cap and says so, rather than reading `254 / 250` beside an open
     // Next.
     await reachTheIntroStep();
 
     write(`  ${'a'.repeat(INTRO_CAP)}  `);
 
-    expect(screen.getByText('100 / 100')).toBeTruthy();
+    expect(screen.getByText('250 / 250')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(next().props.accessibilityState?.disabled).toBe(false);
+  });
+});
+
+describe('a line at the cap', () => {
+  it('takes 250 characters, counts them all, and lets the line through', async () => {
+    await reachTheIntroStep();
+    const atTheCap = 'a'.repeat(INTRO_CAP);
+
+    write(atTheCap);
+
+    expect(INTRO_CAP).toBe(250);
+    expect(screen.getByText('250 / 250')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.press(next());
+    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    expect(useProfileDraft.getState().draft?.intro).toBe(atTheCap);
   });
 });
 
@@ -140,12 +155,12 @@ describe('a line the server would refuse on shape', () => {
     // The box took the whole paste — nothing was swallowed — and the sentence under it is
     // the refusal's own, as an alert. The counter shows the overrun rather than clamping.
     expect(box().props.value).toHaveLength(INTRO_CAP + 3);
-    expect(screen.getByText('103 / 100')).toBeTruthy();
+    expect(screen.getByText('253 / 250')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
-    expect(screen.getByText('Keep it under 100 characters.')).toBeTruthy();
+    expect(screen.getByText('Keep it under 250 characters.')).toBeTruthy();
     expect(next().props.accessibilityState?.disabled).toBe(true);
     // A blocked control names what is wrong rather than merely being grey.
-    expect(next().props.accessibilityHint).toBe('Keep it under 100 characters.');
+    expect(next().props.accessibilityHint).toBe('Keep it under 250 characters.');
 
     // Trimmed to the cap, it opens again with nothing said.
     write('a'.repeat(INTRO_CAP));
@@ -189,6 +204,6 @@ describe('the line in the draft', () => {
     // Untrimmed: the box is exactly as it was left, and the trimming is the commit's. The
     // counter reads the line and not the box, so the trailing space is not in it.
     expect(box().props.value).toBe('Will travel for a hard game. ');
-    expect(screen.getByText('28 / 100')).toBeTruthy();
+    expect(screen.getByText('28 / 250')).toBeTruthy();
   });
 });

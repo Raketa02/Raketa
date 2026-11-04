@@ -20,7 +20,7 @@ function answeredDraft(): ProfileDraft {
     intro: 'Moved from Wrocław in May. Needs opponents.',
     photoIds: ['photo-1'],
     weeklyHours: [{ day: 3, hour: 19 }],
-    location: { latitude: 41.39, longitude: 2.16 },
+    location: { kind: 'reading', area: { latitude: 41.39, longitude: 2.16 } },
     gender: 'woman',
     // Not written by `answeredDraft` because a player never has to: `emptyDraft` already
     // holds `any`. It is named here anyway, so a test that narrows it is visibly changing
@@ -40,7 +40,7 @@ describe('a draft with every answer given', () => {
         intro: 'Moved from Wrocław in May. Needs opponents.',
         photoIds: ['photo-1'],
         weeklyHours: [{ day: 3, hour: 19 }],
-        location: { latitude: 41.39, longitude: 2.16 },
+        location: { kind: 'reading', area: { latitude: 41.39, longitude: 2.16 } },
         gender: 'woman',
         genderPreference: 'any',
       },
@@ -85,13 +85,23 @@ describe('a draft with every answer given', () => {
 });
 
 describe('a draft still missing an answer', () => {
-  it('names the area a player continued past', () => {
-    // The location step can be left without one, at the cost the step names. The commit
-    // is where that cost is collected: a profile takes part in search and matchmaking
-    // through one spatial input, and there is nothing to send in its place.
+  it('names an area the draft does not hold', () => {
+    // The location step shows *Continue* only once an area is set (ADR-0200 §10), so no walk
+    // forward arrives here without one — but a profile cannot exist without an area, and the
+    // commit is where that is held, whatever carried the draft past the step.
     const standing = readyToCommit(recordAnswer(answeredDraft(), { location: undefined }));
 
     expect(standing).toEqual({ kind: 'incomplete', missing: ['location'] });
+  });
+
+  it('takes a picked club for the area, as it takes a reading', () => {
+    const club = { id: 'club-1', name: 'Bonarka Arena', district: 'Podgórze' };
+    const standing = readyToCommit(
+      recordAnswer(answeredDraft(), { location: { kind: 'club', club } }),
+    );
+
+    expect(standing.kind).toBe('ready');
+    expect(standing.kind === 'ready' && standing.commit.location).toEqual({ kind: 'club', club });
   });
 
   it('names a week with nothing ticked', () => {

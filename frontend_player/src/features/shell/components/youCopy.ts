@@ -7,11 +7,11 @@
  * fact it is, and each of those features owns its row's title and live line
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §1). The group titles are exported because the screens behind the rows wear them as their
- * eyebrow: *Playing · Skill passport*, *Finding players · Your week*, *On your card · Name*.
+ * eyebrow: *Playing · Skill passport*, *Your games · Your week*, *On your card · Name*.
  *
  * **Four groups, because the rows answer four questions**: what has the platform concluded
- * about me, what does the matcher read when it looks for a game, what does a stranger read about
- * me — and, since money arrived, how do I pay for a game. That fourth, the **account**, was not
+ * about me, what does a proposed game read about when and where I play, what does a stranger
+ * read about me — and, since money arrived, how do I pay for a game. That fourth, the **account**, was not
  * asked on this tab until ADR-0189 amended ADR-0179 §9; its group sits after *On your card* and
  * before *Sign out* (the screens A7, #552), and *Sign out* stays at the foot as the account panel
  * draws it.
@@ -28,7 +28,12 @@ export const YOU_COPY = {
   title: 'You',
   groups: {
     playing: 'Playing',
-    findingPlayers: 'Finding players',
+    /**
+     * *Your week · Where you play · Who you play with* — ***Your games***, which was *Finding
+     * players* until ADR-0200 §10: nothing on this tab finds players any more, and what the three
+     * rows hold is what a game proposed to the player reads.
+     */
+    yourGames: 'Your games',
     onYourCard: 'On your card',
     account: 'Account',
   },

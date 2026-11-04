@@ -1,6 +1,6 @@
 /**
  * **The intro's box, as the step draws it** — the label, the placeholder, the counter, the
- * hint, the rule, and the refusal under the box — for the two screens that take the line:
+ * hint, and the refusal under the box — for the two screens that take the line:
  * the onboarding step, and the You tab's *Intro*
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §2, §6).
@@ -15,15 +15,18 @@
  * `WhereField`'s argument, one feature over, and it holds here: a `maxLength` swallows the
  * tail of a paste, and a shortened line is one the person who typed it believes they wrote
  * whole — in front of every stranger who reads it. So the box takes everything, the counter
- * keeps counting past a hundred, the sentence under the box says what is wrong, and the
- * caller's control stays shut until it is not. The box grows to a few lines so a hundred
- * characters can be read back whole, and the return key **dismisses the keyboard rather than
+ * keeps counting past the cap, the sentence under the box says what is wrong, and the
+ * caller's control stays shut until it is not. The box grows so a line at the cap can be read
+ * back whole, and the return key **dismisses the keyboard rather than
  * breaking the line** — a line break is the second shape refusal, and the ordinary way of
  * producing one should not produce it. A pasted one still can, and is refused under the box
  * the same way.
+ *
+ * **No paragraph of rules under it** (ADR-0200 §9): the contact rule is said only to a line that
+ * breaks it, as that refusal's sentence, in the place every refusal is drawn.
  */
 
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { TextField, theme } from '@/shared/ui';
 
@@ -33,7 +36,6 @@ import {
   INTRO_FIELD_HINT,
   INTRO_FIELD_LABEL,
   INTRO_PLACEHOLDER,
-  INTRO_RULE,
   introCounter,
   spokenIntroCounter,
 } from './introPresentation';
@@ -41,11 +43,11 @@ import {
 /**
  * How many lines the box may grow to before it scrolls.
  *
- * A hundred characters is two lines on the deck card at the mock's size and three in this
- * box at the value role, so three is where a line at the cap can be read back whole. One
- * more than that is room for the overrun the counter is there to show.
+ * A hundred characters was three lines in this box at the value role, so the 250 of ADR-0200 §9
+ * is eight: where a line at the cap can be read back whole. One more than that is room for the
+ * overrun the counter is there to show. An empty box is one line; it grows only as it fills.
  */
-const INTRO_LINES = 4;
+const INTRO_LINES = 9;
 
 export interface IntroFieldProps {
   /** The line as typed, untrimmed — what the box shows. */
@@ -57,7 +59,7 @@ export interface IntroFieldProps {
 
 export function IntroField({ written, onChangeText, refusal }: IntroFieldProps) {
   // The count is of the line as the cap reads it — trimmed — and not of the box: the spaces
-  // around a line are not part of it, and a counter that said `104 / 100` beside an open
+  // around a line are not part of it, and a counter that said `254 / 250` beside an open
   // control would be arguing with the rule it is there to show.
   const length = introLength(written.trim());
 
@@ -81,16 +83,11 @@ export function IntroField({ written, onChangeText, refusal }: IntroFieldProps) 
       />
 
       {/* Right-aligned under the box, in the number role — every figure is mono and
-          tabular, which is what keeps `9 / 100` and `10 / 100` from shifting the line. Spoken
+          tabular, which is what keeps `9 / 250` and `10 / 250` from shifting the line. Spoken
           as a count rather than as a fraction, because `/` is not a word. */}
       <Text style={s.counter} accessibilityLabel={spokenIntroCounter(length)}>
         {introCounter(length)}
       </Text>
-
-      {/* The rule, once, before the refusal that enforces it. */}
-      <View style={s.rule}>
-        <Text style={s.smallPrint}>{INTRO_RULE}</Text>
-      </View>
     </>
   );
 }
@@ -102,6 +99,4 @@ const s = StyleSheet.create({
     color: theme.color.muted,
     textAlign: 'right',
   },
-  rule: { paddingTop: theme.space.xs },
-  smallPrint: { ...theme.type.tiny, color: theme.color.muted },
 });

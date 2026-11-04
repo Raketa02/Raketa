@@ -50,7 +50,7 @@ const COPY: Readonly<Record<SocialStep, StepCopy>> = {
   },
   location: {
     title: 'Where do you play?',
-    asks: 'The area you play in, read once from your device and rounded.',
+    asks: 'The area you play in — read once from your phone and rounded, or a club you pick.',
   },
   gender: {
     /**
