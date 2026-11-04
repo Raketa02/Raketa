@@ -25,6 +25,10 @@
  * admits this file says so, and `scripts/test-import-boundaries.sh` proves the fence still holds
  * beside it.
  *
+ * **And one flag per phone** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §8): *the guide on Your rating was shown* names no account and is kept at sign-out — see
+ * {@link PhoneFlag}. The two rules above hold for every value but that one.
+ *
  * **Nothing here throws, and nothing here judges a value.** A read that fails is *nothing saved*;
  * a write that fails loses only the next launch's copy. Whether a saved value still means
  * something — a segment this build has never heard of, a sport the player is no longer rated in —
@@ -84,8 +88,44 @@ export async function savePhonePreference(
 }
 
 /**
+ * **The flags the phone keeps for itself** — per phone rather than per account, and **kept at
+ * sign-out** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8,
+ * amending ADR-0188 §2). One today: the guide on *Your rating* was shown, finished or skipped,
+ * because the ruling was *once per phone* — a second account on the same phone never sees it, and
+ * a new phone does.
+ *
+ * A flag rather than a value: it is down until something raises it, and nothing lowers one. It
+ * names nobody, so it lives under a prefix of its own, which `forgetPhonePreferences` never lists.
+ */
+export type PhoneFlag = 'ratingGuideShown';
+
+const FLAG_PREFIX = 'raketa.phone-flags.';
+
+/** The value a raised flag is stored as — any other stored string reads as down. */
+const RAISED = 'raised';
+
+/** Whether this phone ever raised the flag. A read that fails is *never*, as a value's is *nothing saved*. */
+export async function readPhoneFlag(flag: PhoneFlag): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(`${FLAG_PREFIX}${flag}`)) === RAISED;
+  } catch {
+    return false;
+  }
+}
+
+/** Raise the flag for good. */
+export async function raisePhoneFlag(flag: PhoneFlag): Promise<void> {
+  try {
+    await AsyncStorage.setItem(`${FLAG_PREFIX}${flag}`, RAISED);
+  } catch {
+    // The flag stands for this session in whoever holds it; only the next launch's copy is lost.
+  }
+}
+
+/**
  * **Forget every account's choices** — a step of the sign-out sequence (ADR-0188 §3). The flag
- * datafile the other AsyncStorage module keeps is left alone: it names nobody.
+ * datafile the other AsyncStorage module kept named nobody and was left alone, and so are the
+ * phone's own flags (ADR-0200 §8): they are under a prefix this never lists.
  */
 export async function forgetPhonePreferences(): Promise<void> {
   try {

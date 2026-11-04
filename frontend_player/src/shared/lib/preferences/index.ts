@@ -5,8 +5,11 @@
 
 export {
   forgetPhonePreferences,
+  raisePhoneFlag,
+  readPhoneFlag,
   readPhonePreference,
   savePhonePreference,
+  type PhoneFlag,
   type PhonePreference,
 } from './phonePreferences';
 export { phonePreferenceKeys } from './phonePreferenceKeys';

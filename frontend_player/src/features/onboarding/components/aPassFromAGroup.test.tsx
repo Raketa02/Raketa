@@ -32,6 +32,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
   stubRunsInProgress,
+  ratingGuideAlreadyShown,
 } from '@/test-support/onboardingRouter';
 import {
   installTransport,
@@ -256,6 +257,7 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
+  await ratingGuideAlreadyShown();
 });
 
 afterEach(() => {

@@ -604,6 +604,9 @@ const radius = {
    *  The active state's RING is this grown by `size.tabBar.ringGap + ringStroke` on every
    *  side, which is arithmetic the bar does rather than a second radius token. */
   fab: 11,
+  /** The guide's hole (9.4) — the window cut in its dim around one figure. A button's 10, named
+   *  for its role: a hole is not a control, and changing one must not change the other. */
+  spotlight: 10,
   btn: 10,
   note: 10,
   daySquare: 10,

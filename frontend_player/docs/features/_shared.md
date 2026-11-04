@@ -233,7 +233,11 @@ and last AsyncStorage importer (ADR-0188): **one key per account per value**, a 
 _nothing saved_, and `forgetPhonePreferences` is step 4 of `endSession`, awaited after the status
 change because it waits on no query — whichever way the session ended. It judges no value; the
 owning feature turns a stale one into its default, and `phonePreferenceKeys` spells the Query key
-every owner holds its value under, so the three owners share one root. `shared/lib/platform/clipboard.ts` is the fifth
+every owner holds its value under, so the three owners share one root. **A per-phone flag joined
+it with [#732](https://github.com/Raketa02/Raketa/issues/732)** (ADR-0200 §8): `readPhoneFlag` /
+`raisePhoneFlag` keep _the guide on Your rating was shown_ under `raketa.phone-flags.`, a prefix
+`forgetPhonePreferences` never lists, so it outlives the session — `phonePreferenceKeys.flag` is
+its Query key, with no account in it. `shared/lib/platform/clipboard.ts` is the fifth
 port, **read-only and one verb wide** at #512 (`readText`, never rejecting — #513 gave it a second), for Join a group's **Paste**;
 `fakeClipboard()` and `stubClipboard` drive it. Both fences are lint rules proved by
 `pnpm test:boundaries`. The primitives: `Segment` gained **`prominent`** (the tab's own view

@@ -250,3 +250,25 @@ can't deal you games until you have one._ on Home — and its pass ends on Home,
 ([`groups.md`](groups.md)). **Calls made here**: the Home line is the spec's sentence split at its
 dash, as the door's is; the offer travels in the route rather than being read again by the picker.
 **Not seen on a device**: the card on Home.
+
+**The first _Your rating_ a phone shows runs a guide over the verdict**
+([#732](https://github.com/Raketa02/Raketa/issues/732),
+[ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8). The screen dims and
+`shared/ui`'s `Guide` (design-system 9.4) cuts out **the level** with its head, then **the likely
+range**, then **the confidence ring** — _1 of 3_ to _3 of 3_, _Next_ and _Skip_, _Got it_ last —
+in the ⓘ marks' own words (`explainers`), so bubble 3 keeps _"The questionnaire can provide up to
+{ceiling}% confidence."_ A tap on the dim is _Next_, the device's back is _Skip_, and **nothing
+beneath answers**: the screen's root takes `pointerEvents: 'none'` while the guide is up, beside the
+`behindOverlay` the popover already asks of it. `Verdict` gained an optional `spotlit` — three refs
+from `useVerdictSpotlights`, on the figures rather than their marks, because the hole needs the
+figure — and `verdictGuide` is the steps; **the passport passes none, which is how its cards never
+run it**. **Whether it runs** is `ratingGuideIsDue` (a rating on the screen, and the phone has
+answered _never_ — not yet read is not never), whatever the pass's origin; `useRatingGuide` holds the
+phone's flag in Query under `phonePreferenceKeys.flag` and, on any ending, writes `true` to the cache
+(so the next sport in the pass shows none) and raises `ratingGuideShown` in the phone-preferences
+store, **per phone and kept at sign-out**. The marks and their popovers are unchanged. Suites that
+land on _Your rating_ for another reason start from `ratingGuideAlreadyShown()`; the walk is
+`theGuideOnYourRating.test`. **Calls made here**: the flag is set when the guide ends rather than
+when it opens, so a guide the app was killed under shows again; a tap in the hole counts as _Next_,
+as the dim does; _Skip_ is named _Skip the guide_; the bubble takes the content's width. **Not seen
+on a device**: the hole's fit around each figure and the bubble's place, on either platform.

@@ -27,6 +27,7 @@ import {
   launchSignedIn,
   runInProgress,
   stubGate as stubGateWith,
+  ratingGuideAlreadyShown,
 } from '@/test-support/onboardingRouter';
 import {
   installTransport,
@@ -123,6 +124,7 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
+  await ratingGuideAlreadyShown();
 });
 
 afterEach(() => {

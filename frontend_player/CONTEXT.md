@@ -795,7 +795,8 @@ it.
   ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
   Four values — the **Play segment** since #512, the last sport, the last profile and the booked
   games this phone has opened — and a stale or unreadable one is its default, judged by the
-  feature that owns it.
+  feature that owns it. **And one flag that is the phone's own**, kept at sign-out: _the guide on
+  Your rating was shown_ (ADR-0200 §8, #732).
   _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
   and never a credential.
 - **Permission state** — the four answers a platform port gives about a capability:

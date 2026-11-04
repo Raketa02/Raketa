@@ -47,6 +47,15 @@
  * draws one popover — as a sibling of its root, never inside it — and a screen with several
  * cards draws one popover for all of them. The explainers' copy is the app's own, built per
  * rating because the one number in it is the served ceiling.
+ *
+ * ## The guide's three spotlights
+ *
+ * The first *Your rating* a phone shows runs a guide over the same three figures, in the marks'
+ * own words ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8).
+ * The guide cuts each figure out of its dim, so it needs the figure itself rather than its mark:
+ * a screen that runs it holds three more refs ({@link useVerdictSpotlights}) and hands them in as
+ * `spotlit`, and {@link verdictGuide} is the steps. **The passport passes none**, which is how its
+ * cards never run it.
  */
 
 import { useRef, useState, type MutableRefObject, type ReactNode } from 'react';
@@ -63,6 +72,7 @@ import {
   Row,
   theme,
   type FocusTarget,
+  type GuideStep,
 } from '@/shared/ui';
 
 import type { Band, LikelyRange } from '../domain/SkillRating';
@@ -107,6 +117,33 @@ export function explainers(ceiling: number | undefined): Readonly<Record<Explain
           : `Shows how confident Raketa is about your level, not how good you are. The questionnaire can provide up to ${ceiling}% confidence. As you play more, Raketa learns and becomes more certain about your skill level.`,
     },
   };
+}
+
+/** The order the guide walks the figures in: the biggest number first (ADR-0200 §8). */
+const GUIDE_ORDER: readonly ExplainerKey[] = ['level', 'range', 'confidence'];
+
+/** The three figures a guide cuts out of its dim — the figure and its mark, not the mark alone. */
+export type VerdictSpotlights = Readonly<Record<ExplainerKey, MutableRefObject<View | null>>>;
+
+/** The refs a screen that runs the guide hands its card as `spotlit`, held for the screen's life. */
+export function useVerdictSpotlights(): VerdictSpotlights {
+  const level = useRef<View | null>(null);
+  const range = useRef<View | null>(null);
+  const confidence = useRef<View | null>(null);
+  return { level, range, confidence };
+}
+
+/**
+ * **The guide's steps**: the level, the likely range, then the confidence, each in its mark's
+ * words — so the third keeps *"The questionnaire can provide up to {ceiling}% confidence"*, and a
+ * low number does not read as Raketa doubting her (Q7).
+ */
+export function verdictGuide(
+  spotlit: VerdictSpotlights,
+  ceiling: number | undefined,
+): readonly GuideStep[] {
+  const words = explainers(ceiling);
+  return GUIDE_ORDER.map((key) => ({ target: spotlit[key], ...words[key] }));
 }
 
 /** A mark that was pressed: which figure it explains, and the mark itself for the popover. */
@@ -197,6 +234,8 @@ export interface VerdictProps {
   readonly questionsAsked?: number;
   /** A mark was pressed. The screen opens its one popover on it. */
   readonly onExplain: (explaining: Explaining) => void;
+  /** The figures a guide cuts out — handed in only by a screen that runs one. */
+  readonly spotlit?: VerdictSpotlights;
 }
 
 /**
@@ -206,7 +245,7 @@ export interface VerdictProps {
  */
 type MarkRef = MutableRefObject<View | null>;
 
-export function Verdict({ rating, top, questionsAsked, onExplain }: VerdictProps) {
+export function Verdict({ rating, top, questionsAsked, onExplain, spotlit }: VerdictProps) {
   const band = bandPresentation(rating.band.name);
   const level = formatLevel(rating.level);
   const range = formatRange(rating.range);
@@ -224,18 +263,22 @@ export function Verdict({ rating, top, questionsAsked, onExplain }: VerdictProps
 
       <View style={s.verdict}>
         <View style={s.figures}>
-          <View style={s.figureHead}>
-            <Text style={s.eyebrowOnDark}>Your level</Text>
-            <InfoMark
-              ref={levelMark}
-              onDark
-              onPress={() => onExplain({ key: 'level', trigger: levelMark })}
-              accessibilityLabel="What your Level means"
-            />
+          {/* The level's spotlight takes its head and the figure together. Each spotlit view is
+              kept off Android's flattening, because the guide measures it. */}
+          <View ref={spotlit?.level} collapsable={false} style={s.figure}>
+            <View style={s.figureHead}>
+              <Text style={s.eyebrowOnDark}>Your level</Text>
+              <InfoMark
+                ref={levelMark}
+                onDark
+                onPress={() => onExplain({ key: 'level', trigger: levelMark })}
+                accessibilityLabel="What your Level means"
+              />
+            </View>
+            <Text style={s.level}>{level}</Text>
           </View>
-          <Text style={s.level}>{level}</Text>
 
-          <View style={s.figureHead}>
+          <View ref={spotlit?.range} collapsable={false} style={s.figureHead}>
             <Text style={s.rangeValue}>{range}</Text>
             <Text style={s.rangeLabel}>likely range</Text>
             <InfoMark
@@ -247,7 +290,7 @@ export function Verdict({ rating, top, questionsAsked, onExplain }: VerdictProps
           </View>
         </View>
 
-        <View style={s.ring}>
+        <View ref={spotlit?.confidence} collapsable={false} style={s.ring}>
           {/* The ceiling is the engine's and arrives with a run's result. Absent, the ring
               draws no tick and its name states the one number it has. */}
           <ConfidenceRing
@@ -319,6 +362,8 @@ const s = StyleSheet.create({
   },
   verdict: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
   figures: { flex: 1, gap: theme.space.xxs },
+  // The level's head and figure, one spotlight — the column's own gap between the two.
+  figure: { gap: theme.space.xxs },
   figureHead: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   eyebrowOnDark: {
     ...theme.type.eyebrow,

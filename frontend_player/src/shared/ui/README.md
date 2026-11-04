@@ -99,8 +99,9 @@ on its way or has failed is `shared/errors`' `liveLine`, because a read's standi
 sentence is an errors concern and not a drawing. `DarkCard` gained `PressableDarkCard` for the
 tab's header card, as `Card` has `PressableCard`. And by promotion out of Play's courts
 ([#574](https://github.com/Raketa02/Raketa/issues/574)): `SeatFace` with `SeatCaption` and the
-seat's ring, which the group page, Fill in and a booked game's players card draw. Import them from
-`@/shared/ui`.
+seat's ring, which the group page, Fill in and a booked game's players card draw. And by _Your
+rating_'s first showing ([#732](https://github.com/Raketa02/Raketa/issues/732)): `Guide` (9.4),
+with its arithmetic in `guideGeometry.ts`. Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with
@@ -224,6 +225,9 @@ spreads `behindOverlay(open)`, and the overlay is rendered as that screen's _sib
 never inside it. `CloseControl` is 9.1's close circle, shared because the header control
 that opens a sheet, the sheet's own close and the popover's are the same 28pt object;
 `InfoGlyph` is shared for the same reason between the info note and the popover's mark.
+**`Guide` is a real modal too, and a stricter one** (9.4): it sits on the popover's stage and
+layer, its whole window is one press surface (a tap off the bubble is _Next_, back is _Skip_), and
+its screen takes `pointerEvents: 'none'` beside `behindOverlay`, so nothing beneath answers.
 
 **The toast is the third overlay and the first that needs 9.3's host.** `ToastHost` is mounted
 **once**, as a sibling of the route tree in `src/app/_layout.tsx` — `zIndex` is scoped to the

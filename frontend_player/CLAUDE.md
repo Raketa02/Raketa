@@ -148,7 +148,7 @@ src/
   `Share`, the one fenced name out of that module). Features depend on the port
   and drive the fakes in `src/test-support/platform.ts`. AsyncStorage's one importer is
   `shared/lib/preferences/phonePreferences.ts` — per-account choices, wiped at sign-out
-  (ADR-0188). _(lint)_
+  (ADR-0188), and one per-phone flag kept at sign-out (ADR-0200 §8). _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. _(lint)_ But do not move code to `shared/` because two files use it; keep it local
   until cross-feature ownership is proven (the third caller).
@@ -181,7 +181,7 @@ src/
 | Form input                | The form + one Zod schema                                                                                                        |
 | Navigation                | expo-router — a route param is not app state                                                                                     |
 | Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
-| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out — the Play segment today (ADR-0188)                      |
+| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); one per-phone flag, kept (ADR-0200 §8)       |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.

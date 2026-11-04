@@ -1193,7 +1193,12 @@ the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), th
 the last profile to come — **one key per account per value**, and **empties itself at sign-out**
 as step 4 of `endSession`, beside the cache clear. It holds a choice, never a copy of server
 state; a value it cannot read, or one the owning feature no longer recognises, is that value's
-default. AsyncStorage stays banned everywhere else ([Part 19](#part-19--what-the-linter-enforces)).
+default. **One flag is the phone's rather than an account's**
+([ADR-0200](../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8, #732): _the guide on
+Your rating was shown_ (`readPhoneFlag` / `raisePhoneFlag`), under a prefix of its own that the
+sign-out never lists, so it is kept — a second account on the phone never sees the guide. A flag
+is down until raised and nothing lowers one. AsyncStorage stays banned everywhere else
+([Part 19](#part-19--what-the-linter-enforces)).
 
 **Introduce SQLite** only for true offline workflows, large structured local datasets,
 durable operation queues, complex local queries, conflict resolution, or persistence
@@ -1212,7 +1217,7 @@ encodes:
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is importable only by
   `shared/lib/preferences/phonePreferences.ts`, which keeps the per-account choices ADR-0188
-  lists — never a credential (ADR-0008, ADR-0188 §1). The feature flags' saved datafile was its
+  lists and ADR-0200 §8's one per-phone flag — never a credential (ADR-0008, ADR-0188 §1). The feature flags' saved datafile was its
   other owner until the flags were removed (#576)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
 - `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics` and `expo-clipboard`

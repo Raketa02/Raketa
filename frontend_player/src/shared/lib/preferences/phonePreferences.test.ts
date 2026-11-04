@@ -11,7 +11,12 @@
 
 import { endSession } from '@/shared/lib/auth';
 
-import { readPhonePreference, savePhonePreference } from './phonePreferences';
+import {
+  raisePhoneFlag,
+  readPhoneFlag,
+  readPhonePreference,
+  savePhonePreference,
+} from './phonePreferences';
 
 const ADA = '11111111-2222-4333-8444-555555555555';
 const BORIS = '99999999-8888-4777-8666-555555555555';
@@ -58,5 +63,32 @@ describe('the phone-preferences store', () => {
     await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBeUndefined();
     await expect(readPhonePreference(ADA, 'lastSport')).resolves.toBeUndefined();
     await expect(readPhonePreference(BORIS, 'playSegment')).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * **The one value kept per phone** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §8, amending ADR-0188 §2): *the guide on Your rating was shown* names no account and outlives a
+ * session — a second account on the same phone never sees the guide, and a new phone does.
+ */
+describe('a flag the phone keeps', () => {
+  it('is down until it is raised', async () => {
+    await expect(readPhoneFlag('ratingGuideShown')).resolves.toBe(false);
+  });
+
+  it('stays up once raised', async () => {
+    await raisePhoneFlag('ratingGuideShown');
+
+    await expect(readPhoneFlag('ratingGuideShown')).resolves.toBe(true);
+  });
+
+  it('is kept when a session ends, while every account’s choices go', async () => {
+    await raisePhoneFlag('ratingGuideShown');
+    await savePhonePreference(ADA, 'playSegment', 'explore');
+
+    await endSession('requested');
+
+    await expect(readPhoneFlag('ratingGuideShown')).resolves.toBe(true);
+    await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBeUndefined();
   });
 });

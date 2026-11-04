@@ -10,10 +10,15 @@
  * never finds the first one's answer in memory either.
  */
 
-import type { PhonePreference } from './phonePreferences';
+import type { PhoneFlag, PhonePreference } from './phonePreferences';
 
 export const phonePreferenceKeys = {
   all: ['phone-preferences'] as const,
   one: (account: string, preference: PhonePreference) =>
     [...phonePreferenceKeys.all, account, preference] as const,
+  /**
+   * A flag the phone keeps for itself (ADR-0200 §8) — no account in the key, because the flag names
+   * none. A sign-out still drops it from memory with everything else; the next read finds it raised.
+   */
+  flag: (flag: PhoneFlag) => [...phonePreferenceKeys.all, 'phone', flag] as const,
 };

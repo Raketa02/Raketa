@@ -32,6 +32,16 @@
  * spreads `behindOverlay` while one is open, and an overlay inside that element would hide
  * itself along with everything else.
  *
+ * ## The guide, on the first one a phone shows
+ *
+ * **The first _Your rating_ this phone ever shows runs a guide over the verdict's three
+ * figures** — the level, the likely range, the confidence, one at a time in the ⓘ marks' own
+ * words ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8,
+ * `useRatingGuide`). Whatever the pass's origin, and once: *Got it*, *Skip* and the device's back
+ * all end it, and the phone remembers. It is the third overlay here and a sibling like the
+ * popover; **while it is up the root takes no touches**, so nothing beneath answers even where
+ * the stage would let a touch through. The marks and their popover are unchanged.
+ *
  * ## Where the flow goes from here
  *
  * **Rate the next sport they chose, or stop.** Stopping part-way is an ordinary outcome
@@ -65,13 +75,14 @@ import { useEffect } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { behindOverlay, Button, Card, Note, theme } from '@/shared/ui';
+import { behindOverlay, Button, Card, Guide, Note, theme } from '@/shared/ui';
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
 import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAssessment } from '../hooks/useAssessment';
+import { useRatingGuide } from '../hooks/useRatingGuide';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { EvidenceTrail } from './EvidenceTrail';
@@ -90,7 +101,13 @@ import {
 import { formatRange } from '@/shared/formatting/ratingFormat';
 import { sportLabel } from './sportPresentation';
 import { STARTING_LABEL } from './startPresentation';
-import { Verdict, VerdictPopover, useVerdictExplainer } from './Verdict';
+import {
+  Verdict,
+  VerdictPopover,
+  useVerdictExplainer,
+  useVerdictSpotlights,
+  verdictGuide,
+} from './Verdict';
 
 /** Raised when the run ended on evidence the questionnaire could not settle. */
 const CALIBRATION_ELEVATED = 'elevated';
@@ -137,6 +154,10 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
   // one up, so the popover anchors to the mark it was opened from and returns focus to it.
   const explainer = useVerdictExplainer(result?.confidenceCeiling);
 
+  // The guide's three figures, and whether this phone has yet to show it (ADR-0200 §8).
+  const spotlit = useVerdictSpotlights();
+  const guide = useRatingGuide(result !== undefined);
+
   /**
    * A rating exists for this sport, so the pass records it — the sport the way back stands on.
    *
@@ -156,8 +177,10 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
         style={s.screen}
         edges={['top', 'bottom']}
         // A popover is a real overlay: while one is open nothing behind it is reachable by
-        // a screen reader. The popover is a sibling below, never a child.
-        {...behindOverlay(explainer.open)}
+        // a screen reader. The popover is a sibling below, never a child — and so is the guide,
+        // under which nothing here takes a touch either: it is modal.
+        {...behindOverlay(explainer.open || guide.open)}
+        pointerEvents={guide.open ? 'none' : 'auto'}
       >
         {/* The eyebrow carries which sport of how many, and nothing else does: the bar
             that used to repeat it under the header measured sports, and sports are no
@@ -197,6 +220,7 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
                 rating={result}
                 questionsAsked={result.questionsAsked}
                 onExplain={explainer.explain}
+                spotlit={spotlit}
               />
               <BandCard result={result} />
             </>
@@ -266,6 +290,11 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
       </SafeAreaView>
 
       <VerdictPopover {...explainer.popover} />
+      <Guide
+        visible={guide.open}
+        steps={verdictGuide(spotlit, result?.confidenceCeiling)}
+        onDone={guide.done}
+      />
     </>
   );
 }
