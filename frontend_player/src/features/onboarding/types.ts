@@ -98,13 +98,26 @@ export {
  * §3), and which route that is belongs to the route file that lands it.
  */
 export { useEndOnboardingPass, type PassLanding } from './hooks/useEndOnboardingPass';
-export type { PassOrigin } from './domain/onboardingPass';
+/**
+ * **Where a pass began** — onboarding's own door, the Skill passport, or a group's tab
+ * ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5) — and what
+ * the app lands once it ends (`PassReturn`).
+ */
+export {
+  FROM_THE_PASSPORT,
+  FROM_WELCOME,
+  fromAGroup,
+  type PassOrigin,
+  type PassReturn,
+} from './domain/onboardingPass';
+/** The group a running pass returns to, for the result route to read its name by. */
+export { useReturningGroup } from './hooks/useReturningGroup';
 
 /**
- * **The second door into the pass** — the Skill passport's *Add a sport* (ADR-0179 §3). The
- * chip starts the sport's assessment through the picker's own start, begins a pass of that
- * one sport at the question route, and the pass ends back on the passport. The act crosses
- * the surface; the store does not.
+ * **The second door into the pass** — the Skill passport's *Add a sport* (ADR-0179 §3), and an
+ * official group's card (ADR-0200 §3). The button starts the sport's assessment through the
+ * picker's own start, begins a pass of that one sport at the question route, and the pass ends
+ * where the caller said it began. The act crosses the surface; the store does not.
  */
 export { useAddASport, type AddASport } from './hooks/useAddASport';
 export { STARTING_LABEL } from './components/startPresentation';

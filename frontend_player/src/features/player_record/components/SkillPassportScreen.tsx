@@ -58,6 +58,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import {
   BAND_NAMES,
+  FROM_THE_PASSPORT,
   STARTING_LABEL,
   Verdict,
   VerdictPopover,
@@ -101,7 +102,7 @@ export function SkillPassportScreen() {
   const router = useRouter();
   const ratings = useSkillRatings();
   const sports = useSports();
-  const addASport = useAddASport();
+  const addASport = useAddASport(FROM_THE_PASSPORT);
 
   // One popover for every card, and every card's explainers are the same sentences, because
   // no card has a served ceiling.

@@ -14,7 +14,8 @@
  * now* on Games.
  *
  * **Rated in none of the group's sports** (an official group's, #519), there is nothing to post:
- * *Get rated in padel to post here*, with the passport's *Add a sport* for each (Q80). While the group
+ * *Get rated in padel to post here*, with the passport's *Add a sport* for each (Q80) — whose pass
+ * returns to the group, on Fill in (#729). While the group
  * or the phone is still being read, the header alone; a refused read says why with the retry.
  */
 
@@ -92,7 +93,14 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
         ) : sports === undefined ? (
           <ActivityIndicator accessibilityLabel={POSTING_COPY.opening} color={theme.color.muted} />
         ) : (
-          <AddSportCard sports={unrated} headline={rateToPostHeadline(unrated)} />
+          // A pass begun here returns to the group on Fill in — where this screen put the page
+          // under it, and where every way back from it lands (#729).
+          <AddSportCard
+            sports={unrated}
+            groupId={groupId}
+            tab="fillIn"
+            headline={rateToPostHeadline(unrated)}
+          />
         )}
       </View>
     </SafeAreaView>

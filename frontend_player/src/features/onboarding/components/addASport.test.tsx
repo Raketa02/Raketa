@@ -37,6 +37,7 @@ import {
 } from '@/test-support/transport';
 
 import { useDeferredRuns } from '../store/deferredRuns.store';
+import { FROM_THE_PASSPORT } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { ratingStatusLabel } from './bandPresentation';
@@ -339,6 +340,8 @@ describe('a pass begun at the passport', () => {
       await expectThePassport();
       expect(screen.queryByText('Your starting ratings')).toBeNull();
       expect(screen.queryByText(/Step 1 of 6/)).toBeNull();
+      // A pass begun here returns to no group, so no group is read to name the way back (#729).
+      expect(transport.requests.filter((r) => r.path.startsWith('/api/v1/groups/'))).toEqual([]);
     },
     WALK_TIMEOUT,
   );
@@ -419,7 +422,7 @@ describe('a link during a pass begun at the passport', () => {
   it('sends a link naming another sport to welcome, not into the middle of the pass', async () => {
     stubGate({ ratings: THREE_RATED, hasPlayerProfile: true });
     // A pass of one sport is running from the passport, and the link names another.
-    useOnboardingPass.getState().begin(['badminton'], 'passport');
+    useOnboardingPass.getState().begin(['badminton'], FROM_THE_PASSPORT);
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 

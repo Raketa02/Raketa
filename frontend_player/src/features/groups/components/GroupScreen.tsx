@@ -44,6 +44,11 @@
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
  * not a deck — the question, the starting card.
  *
+ * **A rating pass begun on the page comes back to it** (#729, ADR-0200 §3, §5): the route hands in
+ * the tab it began on and the sport it rated last, and the page opens on that tab, standing on that
+ * sport — the notice's posture: the page stands on it until the player picks another, never saved
+ * as a pick. Its official card hands the tab it is on to the pass it begins.
+ *
  * **A notice opens the deck at a card** (#559; the screens A9: *the deck opens with the card on top
  * for You complete it and Challenges*). The route hands in the card's sport, kind and id: the page
  * stands on that sport until the player picks another — never saved as a pick — the switch moves
@@ -82,7 +87,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
-import type { DeckArrival } from '../schemas/groupRouteParams';
+import type { DeckArrival, ReturningPass } from '../schemas/groupRouteParams';
 import { useGroup, useGroupReread } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
 import { useGameIntent } from '../store/gameIntent.store';
@@ -147,13 +152,18 @@ export interface GroupScreenProps {
   readonly groupId: string;
   /** The card a notice opened the deck at (#559) — absent for a page the player opened. */
   readonly arrival?: DeckArrival;
+  /** The tab and the sport a rating pass begun here returns to (#729) — absent otherwise. */
+  readonly returning?: ReturningPass;
 }
 
-export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
+export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
   const read = useGroup(groupId);
   const group = read.data;
 
-  const tab = useGroupTab((state) => state.tabs[groupId]) ?? OPENING_TAB;
+  // A pass returning here opens on the tab it began on, from the first frame — the page that
+  // began it forgot its tab as it went, so nothing is drawn for Games and then redrawn.
+  const returnTab = returning?.tab;
+  const tab = useGroupTab((state) => state.tabs[groupId]) ?? returnTab ?? OPENING_TAB;
   const show = useGroupTab((state) => state.show);
   const setTab = (next: GroupTab) => show(groupId, next);
   const reread = useGroupReread(groupId);
@@ -173,6 +183,10 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
     />
   );
 
+  // The sport the page stands on until the player picks another: a notice's card's, or the one a
+  // returning pass rated last. Opening is not picking — neither is saved (ADR-0188 §2).
+  const openingSport = arrival?.sport ?? returning?.sport;
+
   // A notice's card: the deck, in the card's kind. Before the deck is drawn — it waits for the sport,
   // which is read off the phone — so it is never read for one kind and then another.
   const card = arrival?.card;
@@ -182,6 +196,12 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
     show(groupId, 'games');
     useGameIntent.getState().choose(kind);
   }, [card, kind, groupId, show]);
+
+  // And the tab a pass returned to is the page's, held where every screen over the page reads it —
+  // so Members' card, pressed from over it, begins a pass that returns to this tab too.
+  useEffect(() => {
+    if (returnTab !== undefined) show(groupId, returnTab);
+  }, [returnTab, groupId, show]);
 
   // The page's tab and *Post a game*'s draft are kept while the page is up, and go with it — so it
   // opens on Games the next time, and the next post starts from nothing.
@@ -197,7 +217,7 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
-        {...(arrival === undefined ? {} : { opening: arrival.sport })}
+        {...(openingSport === undefined ? {} : { opening: openingSport })}
         header={(pill, cover) => (
           <GroupHeader
             groupId={groupId}
@@ -242,7 +262,7 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
                   refreshControl={tab === 'friends' ? undefined : pullControl}
                 >
                   {toAdd.length > 0 ? (
-                    <AddSportCard sports={toAdd} />
+                    <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
                   ) : sport === undefined ? null : (
                     <TabBody tab={tab} group={group} sport={sport} />
                   )}

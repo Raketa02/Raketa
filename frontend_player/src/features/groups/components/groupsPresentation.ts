@@ -584,7 +584,11 @@ export function addSportLine(sports: readonly Sport[]): string {
   return `Add ${sportsInLine(sports, 'or')} to your Skill passport to see its games.`;
 }
 
-/** *Add Padel* — the door into Add a sport for one of them, named as a control is. */
-export function addSportLabel(sport: Sport): string {
-  return `Add ${sportLabel(sport)}`;
+/**
+ * *Rate Padel* — the door into the questionnaire for one of them, named as a control is, and as
+ * the Skill passport's own chip names it (#729, ADR-0200 §3). It was *Add Padel* while the pass
+ * ended on the passport.
+ */
+export function rateSportLabel(sport: Sport): string {
+  return `Rate ${sportLabel(sport)}`;
 }

@@ -59,11 +59,29 @@ export function useGroupsList() {
   return useMyGroups();
 }
 
-export function useGroup(groupId: string) {
-  return useQuery<Group, AppError>({
+/** One group's read — the page's, and the name *Your rating* says on the way back to it. */
+function groupRead(groupId: string) {
+  return {
     queryKey: groupKeys.detail(groupId),
-    queryFn: ({ signal }) => readGroup(groupId, { signal }),
-  });
+    queryFn: ({ signal }: { readonly signal: AbortSignal }) => readGroup(groupId, { signal }),
+  };
+}
+
+export function useGroup(groupId: string) {
+  return useQuery<Group, AppError>(groupRead(groupId));
+}
+
+/**
+ * **A group's name, by its id** — for *Your rating*'s *Back to {group name}* (#729), on a screen
+ * that is not this feature's. The page's own read, under its key, so a pass begun on the page finds
+ * the name already in hand; asked for nothing while there is no group to name.
+ */
+export function useGroupName(groupId: string | undefined): string | undefined {
+  return useQuery<Group, AppError, string>({
+    ...groupRead(groupId ?? ''),
+    enabled: groupId !== undefined,
+    select: (group) => group.name,
+  }).data;
 }
 
 /**

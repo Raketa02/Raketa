@@ -511,7 +511,7 @@ describe('an official group’s page for a player rated in none of its sports', 
 
     expect(await screen.findByText(ADD_HEADLINE)).toBeTruthy();
     expect(screen.getByText(ADD_LINE)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add Padel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rate Padel' })).toBeTruthy();
     // Nothing is drawn for a sport, and there is no sport to pick.
     expect(screen.queryByLabelText(/^Sport: /)).toBeNull();
     expect(screen.queryByText('Just you so far')).toBeNull();
@@ -554,8 +554,8 @@ describe('an official group’s page for a player rated in none of its sports', 
     expect(
       screen.getByText('Add padel or squash to your Skill passport to see its games.'),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add Padel' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add Squash' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rate Padel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rate Squash' })).toBeTruthy();
   });
 
   it('shows the card on Members too, where the list is drawn for a sport', async () => {
@@ -571,7 +571,7 @@ describe('an official group’s page for a player rated in none of its sports', 
     expect(transport.requestsTo('GET', `/api/v1/groups/${O3_MINE.id}/members`)).toHaveLength(0);
   });
 
-  describe('Add', () => {
+  describe('Rate', () => {
     const RUN = '4d5e6f70-8192-4a3b-8c4d-5e6f70819203';
     const OPENING: Wire['AssessmentStepResponse'] = {
       assessment_id: RUN,
@@ -600,7 +600,7 @@ describe('an official group’s page for a player rated in none of its sports', 
       transport.on('GET', `${ASSESSMENTS}/${RUN}`, () => json(OPENING));
       await openPage();
 
-      fireEvent.press(await screen.findByRole('button', { name: 'Add Padel' }));
+      fireEvent.press(await screen.findByRole('button', { name: 'Rate Padel' }));
 
       await waitFor(() => expect(screen).toHavePathname(`/question/${RUN}`));
       expect(await screen.findByText('Have you played padel before?')).toBeTruthy();
@@ -613,11 +613,11 @@ describe('an official group’s page for a player rated in none of its sports', 
       transport.on('POST', ASSESSMENTS, networkFailure());
       await openPage();
 
-      fireEvent.press(await screen.findByRole('button', { name: 'Add Padel' }));
+      fireEvent.press(await screen.findByRole('button', { name: 'Rate Padel' }));
 
       expect(await screen.findByRole('alert')).toBeTruthy();
       expect(screen).toHavePathname(`/play/group/${O3_MINE.id}`);
-      expect(screen.getByRole('button', { name: 'Add Padel' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Rate Padel' })).toBeTruthy();
     });
   });
 });

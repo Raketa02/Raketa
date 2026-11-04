@@ -33,21 +33,26 @@
  * on every change to the pass would end the one the chip has just begun, before the
  * questionnaire mounted.
  *
+ * **A pass begun on a group lands the same way** (ADR-0200 §5): back on that group, on the tab
+ * it began on, with the chip on the sport rated last — `returnOf` says which, and the route
+ * file turns it into the group's route.
+ *
  * A deferred run is untouched by this. Its lifetime is the app session, and reaching the
  * app is exactly the moment a deferral has to survive.
  */
 
 import { useEffect, useRef } from 'react';
 
-import type { PassOrigin } from '../domain/onboardingPass';
+import { returnOf, type PassReturn } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 /**
- * What the app does with a pass that has just ended, told where it began. Called once per
- * pass, from the gate's app branch, after the authenticated tree has mounted — so a caller
- * that navigates inside the tree finds the shell there to navigate.
+ * What the app does with a pass that has just ended, told where to put it back (`returnOf`):
+ * the passport, or a group on its tab with the sport rated last. Called once per pass, and
+ * never for a welcome pass, from the gate's app branch, after the authenticated tree has
+ * mounted — so a caller that navigates inside the tree finds the shell there to navigate.
  */
-export type PassLanding = (origin: PassOrigin) => void;
+export type PassLanding = (back: PassReturn) => void;
 
 /**
  * @param inTheApp whether the entry gate has landed the player in the authenticated tree.
@@ -68,6 +73,7 @@ export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): void
   useEffect(() => {
     if (!inTheApp) return;
     const ended = end();
-    if (ended !== undefined) landing.current(ended.origin);
+    const back = ended === undefined ? undefined : returnOf(ended);
+    if (back !== undefined) landing.current(back);
   }, [inTheApp, end]);
 }

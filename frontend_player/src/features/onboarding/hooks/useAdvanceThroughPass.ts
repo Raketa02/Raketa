@@ -41,6 +41,9 @@
  *
  * ## A pass begun at the passport ends in the app, and the app lands it on the passport
  *
+ * **So does a pass begun on a group** (ADR-0200 §5): `stopDestination` answers *group*, this
+ * hook routes it to `/` like *passport*, and the gate lays the group back down on its tab.
+ *
  * `stopDestination` answers *passport* for a pass with that origin
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §3), and this hook turns it into the same route as *app*: `/`. The passport is a screen
@@ -117,9 +120,9 @@ export interface PassAdvance {
  * The one place a pass destination becomes a route.
  *
  * `rate` is not here: it needs an assessment started before there is anything to navigate
- * to, which is the whole of what `advance` does beyond this table. `passport` is `/`, the
- * same door as `app`: the gate reads where the pass began as it ends it, and the passport is
- * where it puts a pass begun there — see the module note.
+ * to, which is the whole of what `advance` does beyond this table. `passport` and `group` are
+ * `/`, the same door as `app`: the gate reads where the pass began as it ends it, and puts a
+ * pass back on the passport or the group it began on — see the module note.
  */
 function leavesTo(destination: PassDestination): '/done' | '/' {
   return destination.kind === 'closing' ? '/done' : '/';

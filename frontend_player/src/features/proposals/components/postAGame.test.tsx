@@ -355,7 +355,7 @@ describe('rated in none of the group’s sports (Q80)', () => {
     act(() => router.push(`/play/group/${CREW.id}/post`));
 
     expect(await screen.findByText('Get rated in squash to post here')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add Squash' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rate Squash' })).toBeTruthy();
     expect(screen.queryByTestId('posting-grid-week-1')).toBeNull();
     expect(gridAsks()).toHaveLength(0);
   });

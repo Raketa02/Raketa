@@ -8,6 +8,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { GroupTab } from '../domain/groupPage';
 import type { DeckArrival } from '../schemas/groupRouteParams';
 
 /** **The Groups list** — Play's root, on its *Groups* segment; where leaving a group lands. */
@@ -71,4 +72,16 @@ export function groupMembersRoute(groupId: string) {
 /** **Edit group**, pushed over Info from its Edit group row — the Owner's. */
 export function groupEditRoute(groupId: string) {
   return { pathname: '/play/group/[groupId]/edit', params: { groupId } } as const;
+}
+
+/**
+ * **A group's page, returned to by a rating pass begun on it** (#729, ADR-0200 §3, §5): on the
+ * tab the pass began on, standing on the sport it rated last — none for a pass that rated nothing.
+ * Validated where the route reads it (`schemas/groupRouteParams`).
+ */
+export function groupReturnRoute(groupId: string, tab: GroupTab, sport: Sport | undefined) {
+  return {
+    pathname: '/play/group/[groupId]',
+    params: sport === undefined ? { groupId, tab } : { groupId, tab, sport },
+  } as const;
 }

@@ -9,6 +9,11 @@
  * one sport, and the pass ends back on the passport — and both are the pass's, not the chip's.
  * What crosses the feature's public surface is the act, never the store.
  *
+ * **An official group's card is the same act from another door**
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3): a button
+ * per sport the group plays, on its tabs, on Members and on *Post a game*. The caller hands in
+ * the origin — the passport, or the group and the tab the card is on — and the pass ends there.
+ *
  * **The start is the picker's own hook**, so a sport with an unfinished run gets that run back
  * rather than a second one — the server answers the outstanding run for a sport already
  * being rated, exactly as it does when the picker names it.
@@ -34,12 +39,13 @@ import { useCallback, useRef } from 'react';
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { PassOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { useStartAssessment } from './useStartAssessment';
 
 export interface AddASport {
-  /** Begin a pass of this one sport, from the passport. */
+  /** Begin a pass of this one sport, from the door the hook was handed. */
   readonly rate: (sport: Sport) => void;
   /** The sport whose start is in flight, so its chip alone can say so. */
   readonly starting: Sport | undefined;
@@ -47,7 +53,11 @@ export interface AddASport {
   readonly error: AppError | null;
 }
 
-export function useAddASport(): AddASport {
+/**
+ * @param from where the pass begins, and so where it ends: the passport for its chips, a group's
+ * tab for that group's card (ADR-0200 §3, §5). Taken rather than defaulted, as `begin` takes it.
+ */
+export function useAddASport(from: PassOrigin): AddASport {
   const router = useRouter();
   const beginPass = useOnboardingPass((state) => state.begin);
   const start = useStartAssessment();
@@ -65,7 +75,7 @@ export function useAddASport(): AddASport {
       inFlight.current = true;
       startRun(sport, {
         onSuccess: (opening) => {
-          beginPass([sport], 'passport');
+          beginPass([sport], from);
           router.replace({
             pathname: '/question/[assessmentId]',
             params: { assessmentId: opening.assessmentId, sport },
@@ -78,7 +88,7 @@ export function useAddASport(): AddASport {
         },
       });
     },
-    [beginPass, router, startRun],
+    [beginPass, from, router, startRun],
   );
 
   return {

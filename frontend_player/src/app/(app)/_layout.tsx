@@ -63,6 +63,10 @@
  * where it came from. Which route the passport is belongs to
  * the feature that owns the screen, not to this file — the same seam `NAMING_STEP` and
  * `SOCIAL_STEPS_ENTRY` cross.
+ *
+ * **A pass that began on a group ends on it** ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §5, #729) the same way: Play laid down, and the group's page pushed over it on the tab the pass
+ * began on, standing on the sport it rated last — the route the groups feature names.
  */
 
 import { Redirect, Stack, router, usePathname } from 'expo-router';
@@ -70,11 +74,12 @@ import { useCallback } from 'react';
 
 import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
 import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
+import { groupReturnRoute } from '@/features/groups/types';
 import {
   EntryUnavailableScreen,
   useEndOnboardingPass,
   useEntryDecision,
-  type PassOrigin,
+  type PassReturn,
 } from '@/features/onboarding/types';
 import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
 import { IncomingLinks } from '@/features/links/types';
@@ -88,13 +93,18 @@ export default function AppLayout() {
   const pathname = usePathname();
 
   // Where a pass that has just ended lands, by where it began. A welcome pass is already
-  // where the gate put it; a passport pass goes back to the passport, with the You tab laid
-  // down beneath it.
+  // where the gate put it, and is never handed here; a passport pass goes back to the passport,
+  // with the You tab laid down beneath it; a group's goes back to the group, on the tab it began
+  // on and the sport it rated last, with Play beneath it.
   const land = useCallback(
-    (origin: PassOrigin) => {
-      if (origin !== 'passport') return;
-      openTab('you', pathname);
-      router.push(YOU_PASSPORT_ROUTE);
+    (back: PassReturn) => {
+      if (back.kind === 'passport') {
+        openTab('you', pathname);
+        router.push(YOU_PASSPORT_ROUTE);
+        return;
+      }
+      openTab('play', pathname);
+      router.push(groupReturnRoute(back.groupId, back.tab, back.sport));
     },
     [pathname],
   );

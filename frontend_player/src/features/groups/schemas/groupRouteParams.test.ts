@@ -1,5 +1,6 @@
 import {
   parseFriendsRouteParams,
+  parseGroupPlace,
   parseGroupRouteParams,
   parseJoinRouteParams,
 } from './groupRouteParams';
@@ -41,6 +42,62 @@ describe('a group page opened at a card', () => {
     { sport: 'padel', kind: 'forFun', card: 'not-a-card' },
   ])('opens the page as it always does for %p', (arrival) => {
     expect(parseGroupRouteParams({ groupId: GROUP, ...arrival })).toEqual({ groupId: GROUP });
+  });
+});
+
+/**
+ * **A group's page returned to by a rating pass** (#729, ADR-0200 §5): the tab the pass began on,
+ * and the sport it rated last. The tab alone, or the page opens as it always does.
+ */
+describe('a group page a rating pass returns to', () => {
+  const GROUP = 'a0000000-0000-4000-8000-000000000002';
+
+  it('reads the tab and the sport beside the group', () => {
+    expect(parseGroupRouteParams({ groupId: GROUP, tab: 'fillIn', sport: 'tennis' })).toEqual({
+      groupId: GROUP,
+      returning: { tab: 'fillIn', sport: 'tennis' },
+    });
+  });
+
+  it('reads the tab with no sport, for a pass that rated nothing', () => {
+    expect(parseGroupRouteParams({ groupId: GROUP, tab: 'friends' })).toEqual({
+      groupId: GROUP,
+      returning: { tab: 'friends' },
+    });
+  });
+
+  it.each([
+    { tab: 'info' },
+    { tab: 'FILL_IN', sport: 'padel' },
+    { tab: 'games', sport: 'pickleball' },
+    { sport: 'padel' },
+  ])('opens the page as it always does for %p', (returning) => {
+    expect(parseGroupRouteParams({ groupId: GROUP, ...returning })).toEqual({ groupId: GROUP });
+  });
+});
+
+/**
+ * **The sports picker, opened from a group's tab** (#729, for #730's door): which group, and which
+ * tab, so the pass it begins returns there.
+ */
+describe('a rating pass begun on a group’s tab', () => {
+  const GROUP = 'a0000000-0000-4000-8000-000000000002';
+
+  it('reads the group and the tab', () => {
+    expect(parseGroupPlace({ groupId: GROUP, tab: 'games' })).toEqual({
+      groupId: GROUP,
+      tab: 'games',
+    });
+  });
+
+  it.each([
+    { groupId: GROUP },
+    { groupId: GROUP, tab: 'members' },
+    { groupId: 'not-a-group', tab: 'games' },
+    {},
+    undefined,
+  ])('is no group for %p', (params) => {
+    expect(parseGroupPlace(params)).toBeUndefined();
   });
 });
 

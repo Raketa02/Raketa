@@ -55,6 +55,12 @@
  * ratings*. The new rating's Play intent is undeclared until the player declares it, as every
  * sport's is; nothing here asks.
  *
+ * **A pass begun on a group goes back to it**
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3, §5): its
+ * last control is *Back to {group name}*, and *Done for now* goes there too. The name is the
+ * route's to hand in, because the group is another feature's read; the way there is the gate's,
+ * as the passport's is.
+ *
  * **None of that is decided here.** `useAdvanceThroughPass` owns the whole transition and
  * the question screen calls the same hook, so the two screens cannot answer differently
  * again — which they did, over what a failed start does.
@@ -79,6 +85,13 @@ import { useHardwareBack } from '@/shared/lib/platform';
 import { bandPresentation } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
+import {
+  DONE_FOR_NOW,
+  doneForNowHint,
+  lastControlLabel,
+  rateNextHint,
+  rateNextLabel,
+} from './resultPresentation';
 import { formatRange } from '@/shared/formatting/ratingFormat';
 import { sportLabel } from './sportPresentation';
 import { STARTING_LABEL } from './startPresentation';
@@ -87,23 +100,17 @@ import { Verdict, VerdictPopover, useVerdictExplainer } from './Verdict';
 /** Raised when the run ended on evidence the questionnaire could not settle. */
 const CALIBRATION_ELEVATED = 'elevated';
 
-/**
- * What the last sport leads to, as the control that leads there.
- *
- * **One label, because there is now one destination.** The end of the queue is the end of
- * the first part for everybody: the summary of what this walk produced. Whether six more
- * steps follow it is the done screen's question, so this screen no longer needs to know —
- * and no longer says *Finish setting up* to a player who is about to be shown their
- * ratings.
- */
-const SEE_YOUR_RATINGS = 'See your ratings';
-
 export interface ResultScreenProps {
   readonly assessmentId: string;
   readonly sport: Sport;
+  /**
+   * The name of the group a pass begun there returns to — the route reads it, since the group
+   * is another feature's — and `undefined` for any other pass, or while it is being read.
+   */
+  readonly groupName?: string;
 }
 
-export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
+export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenProps) {
   const assessment = useAssessment(assessmentId);
   const pass = useOnboardingPass((state) => state.pass);
   const position = positionOf(pass, sport);
@@ -236,25 +243,30 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
           ) : null}
 
           {next === undefined ? (
-            // The last sport, and the label names what is actually next: the summary of
-            // this walk. It is the same screen whether or not the player still owes a
-            // Player profile — the done screen asks that, one press further on.
-            <Button label={SEE_YOUR_RATINGS} size="lg" onPress={onwards.advance} />
+            // The last sport, and the label names what is actually next: back to the group a
+            // pass began on, or the summary of this walk — the passport's, for a pass begun
+            // there. For onboarding's own pass it is the same screen whether or not the player
+            // still owes a Player profile — the done screen asks that, one press further on.
+            <Button
+              label={lastControlLabel(onwards.destination, groupName)}
+              size="lg"
+              onPress={onwards.advance}
+            />
           ) : (
             <>
               <Button
-                label={`Rate ${sportLabel(next)}`}
+                label={rateNextLabel(next)}
                 size="lg"
                 busy={onwards.advancing}
                 busyLabel={STARTING_LABEL}
-                accessibilityHint={`Starts the ${sportLabel(next)} questions`}
+                accessibilityHint={rateNextHint(next)}
                 onPress={onwards.advance}
               />
               <Button
-                label="Done for now"
+                label={DONE_FOR_NOW}
                 variant="secondary"
                 size="lg"
-                accessibilityHint={`Keeps the ratings you have and skips ${sportLabel(next)}`}
+                accessibilityHint={doneForNowHint(next)}
                 onPress={onwards.stopHere}
               />
             </>

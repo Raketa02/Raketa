@@ -41,6 +41,7 @@ import { create } from 'zustand';
 
 import type { Sport } from '@/shared/vocabulary/sport';
 import {
+  FROM_WELCOME,
   begin as beginPass,
   recordRated,
   type OnboardingPass,
@@ -52,8 +53,8 @@ interface OnboardingPassState {
   /** Undefined between walks. See above — absence is the state that makes this work. */
   readonly pass: OnboardingPass | undefined;
   /**
-   * Start a pass over these sports, at one of the two doors: the picker's continue with
-   * what was chosen, or the passport's chip with its one sport.
+   * Start a pass over these sports, at the door it came in by: the picker's continue with
+   * what was chosen, or a chip or a group's card with its one sport.
    */
   readonly begin: (queue: readonly Sport[], origin: PassOrigin) => void;
   /**
@@ -75,8 +76,8 @@ interface OnboardingPassState {
    * Called from one site — the entry gate's app branch — which is what makes this the
    * *definition* of a pass ending rather than a line someone must remember on every exit.
    * Ending may be lazy because nothing reads a pass once the player is in the app; what is
-   * read is the ended pass's origin, once, by the gate, to land a passport-begun pass back
-   * on the passport. Returned rather than subscribed to, because a gate that re-rendered
+   * read is the ended pass's origin, once, by the gate, to land a pass begun on the passport
+   * or on a group back where it began. Returned rather than subscribed to, because a gate that re-rendered
    * on every change to the pass would end the one the chip has just begun.
    */
   readonly end: () => OnboardingPass | undefined;
@@ -88,7 +89,7 @@ export const useOnboardingPass = create<OnboardingPassState>((set, get) => ({
   begin: (queue, origin) => set({ pass: beginPass(queue, origin) }),
   beginIfAbsent: (queue) => {
     if (get().pass !== undefined) return;
-    set({ pass: beginPass(queue, 'welcome') });
+    set({ pass: beginPass(queue, FROM_WELCOME) });
   },
   // A rating recorded with no pass running is dropped rather than beginning one. Every
   // route that shows a result was reached through a screen that begins one, so this is

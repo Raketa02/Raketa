@@ -35,6 +35,7 @@ import {
 
 import { onboardingKeys } from '../hooks/onboardingKeys';
 import { useDeferredRuns } from '../store/deferredRuns.store';
+import { FROM_WELCOME } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const PADEL_RUN = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
@@ -416,7 +417,7 @@ describe('abandoning a sport', () => {
     // resumed tennis run then borrowed whatever pass was lying around. It no longer is,
     // and that is the point: an earlier walk's ratings do not follow a player into a run
     // they resumed after it — see the two-passes test below for that case.
-    useOnboardingPass.getState().begin(['padel', 'tennis'], 'welcome');
+    useOnboardingPass.getState().begin(['padel', 'tennis'], FROM_WELCOME);
     useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
     // A player who finished setting up long ago and came back for one more sport. Without

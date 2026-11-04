@@ -47,7 +47,7 @@
  * page in the administrator area (#529) — the same header, list, rows and record sheet
  * (`AdministeredMembersScreen`). Two things differ, because somebody who runs a group need not
  * play in it: **the pill lists the sports the group declares**, not the ones the reader is rated in
- * (`useDeclaredSport`), so there is never an *Add Padel* card in place of the list; and the group
+ * (`useDeclaredSport`), so there is never a *Rate Padel* card in place of the list; and the group
  * is the administrator area's read, handed in, since the player's read of a group is its members'.
  * The reader is no row unless they joined as a player, when they are *You*, as anywhere.
  */
@@ -68,10 +68,12 @@ import { Card, PlayerPhoto, ScreenHeader, Tag, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group, GroupMember } from '../domain/group';
+import { OPENING_TAB } from '../domain/groupPage';
 import { adminTagged, runnerApart, type GroupRunner } from '../domain/groupInfo';
 import { useDeclaredSport } from '../hooks/useGroupSport';
 import { useGroup, useGroupMembers } from '../hooks/useGroups';
 import { useReaderId } from '../hooks/useReaderId';
+import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';
 import { ClubTile } from './ClubTile';
@@ -95,6 +97,8 @@ const COPY = GROUPS_COPY.members;
 export function MembersScreen({ groupId }: { readonly groupId: string }) {
   const read = useGroup(groupId);
   const group = read.data;
+  // The tab the page beneath is on: a pass begun on this screen's card returns to the page there.
+  const pageTab = useGroupTab((state) => state.tabs[groupId]) ?? OPENING_TAB;
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -122,7 +126,7 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
           ) : toAdd.length > 0 ? (
             // An official group the reader plays none of the sports of: no list is drawn for one.
             <View style={s.body}>
-              <AddSportCard sports={toAdd} />
+              <AddSportCard sports={toAdd} groupId={groupId} tab={pageTab} />
             </View>
           ) : sport === undefined ? null : (
             <MembersList

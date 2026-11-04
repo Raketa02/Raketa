@@ -11,7 +11,8 @@
  * evidence.
  *
  * Continuing starts the first selected sport's assessment and lands on its opening
- * question. It is `replace`, not `push`: a player walks back through the questionnaire
+ * question. **Where the pass began is the route's to say**: onboarding's own picker, or one
+ * opened from a group's tab (the door #730 draws there), whose pass returns to that tab. It is `replace`, not `push`: a player walks back through the questionnaire
  * with its own control (ADR-0020), and the system back gesture must not be a second,
  * unlabelled way out of the run.
  */
@@ -25,7 +26,7 @@ import { offlineMessage } from '@/shared/errors';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import { toggleSport } from '../domain/onboardingPass';
+import { toggleSport, type PassOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
@@ -35,7 +36,15 @@ import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { sportColour, sportLabel } from './sportPresentation';
 import { STARTING_LABEL } from './startPresentation';
 
-export function SportsPickerScreen() {
+export interface SportsPickerScreenProps {
+  /**
+   * Where the pass begins, and so where it ends: onboarding's own door (welcome), or a group's
+   * tab (ADR-0200 §2, §5) — read by the route from its params, since the tab is the group's.
+   */
+  readonly origin: PassOrigin;
+}
+
+export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
   const router = useRouter();
   const sports = useSports();
   /**
@@ -54,17 +63,21 @@ export function SportsPickerScreen() {
 
   const begin = () => {
     if (first === undefined) return;
-    // The pass begins here, with the queue that was chosen, at onboarding's own door. It no
-    // longer *clears* an earlier walk — the entry gate ended that one when the player
-    // reached the app — so this is a beginning rather than a reset that happened to double
-    // as one.
-    beginPass(queue, 'welcome');
     start.mutate(first, {
-      onSuccess: (step) =>
+      // The pass begins here, with the queue that was chosen, at the door the picker was
+      // opened from. It no longer *clears* an earlier walk — the entry gate ended that one
+      // when the player reached the app — so this is a beginning rather than a reset that
+      // happened to double as one. **On success, not on press**, as *Add a sport*'s: opened
+      // from a group the player is in the app, where between passes there is no pass, and a
+      // failed start must leave none behind. The begin and the departure are one step, so
+      // the question screen still reads its position on its first render.
+      onSuccess: (step) => {
+        beginPass(queue, origin);
         router.replace({
           pathname: '/question/[assessmentId]',
           params: { assessmentId: step.assessmentId, sport: first },
-        }),
+        });
+      },
     });
   };
 

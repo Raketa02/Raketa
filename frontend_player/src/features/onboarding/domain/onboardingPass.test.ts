@@ -8,11 +8,15 @@
  */
 
 import {
+  FROM_THE_PASSPORT,
+  FROM_WELCOME,
   admissionTo,
   begin,
+  fromAGroup,
   nextDestination,
   positionOf,
   recordRated,
+  returnOf,
   stopDestination,
   toggleSport,
   type OnboardingPass,
@@ -20,21 +24,22 @@ import {
 
 const PADEL_RUN = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const TENNIS_RUN = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
+const KAZIMIERZ = 'c1000000-0000-4000-8000-000000000729';
 
 /** A pass begun at welcome over these sports, built the way the picker builds it. */
 function passOver(queue: readonly ('padel' | 'tennis' | 'squash')[]): OnboardingPass {
-  return begin(queue, 'welcome');
+  return begin(queue, FROM_WELCOME);
 }
 
 /** A pass begun at the Skill passport: one sport, and the passport is where it ends. */
 function passportPassOver(sport: 'padel' | 'tennis' | 'squash' | 'badminton'): OnboardingPass {
-  return begin([sport], 'passport');
+  return begin([sport], FROM_THE_PASSPORT);
 }
 
 describe('beginning a pass', () => {
   it('takes the sports chosen, in the order they were chosen, with nothing rated', () => {
-    expect(begin(['tennis', 'padel'], 'welcome')).toEqual({
-      origin: 'welcome',
+    expect(begin(['tennis', 'padel'], FROM_WELCOME)).toEqual({
+      origin: FROM_WELCOME,
       queue: ['tennis', 'padel'],
       rated: [],
     });
@@ -44,7 +49,7 @@ describe('beginning a pass', () => {
     // ADR-0179 §3: a pass has an origin — welcome, or the passport's *Add a sport* — and
     // it is a fact about the pass rather than about any screen in it.
     expect(passportPassOver('badminton')).toEqual({
-      origin: 'passport',
+      origin: FROM_THE_PASSPORT,
       queue: ['badminton'],
       rated: [],
     });
@@ -56,7 +61,7 @@ describe('beginning a pass', () => {
     // A new queue is a new walk through onboarding, and the closing screens account for
     // *this* walk. Carrying padel forward would put a sport the player answered nothing
     // about today on a screen saying these are the ratings you just produced.
-    expect(begin(['tennis'], 'welcome').rated).toEqual([]);
+    expect(begin(['tennis'], FROM_WELCOME).rated).toEqual([]);
     expect(first.rated).toHaveLength(1);
   });
 });
@@ -130,7 +135,7 @@ describe('position across sports', () => {
     // No longer reachable on a screen — `admissionTo` turns those players away — but it
     // stays the honest answer, and it is *why* they can be turned away rather than drawn
     // a bar with no denominator.
-    expect(positionOf(begin([], 'welcome'), 'padel')).toBeUndefined();
+    expect(positionOf(begin([], FROM_WELCOME), 'padel')).toBeUndefined();
     expect(positionOf(passOver(['tennis']), 'padel')).toBeUndefined();
   });
 
@@ -142,7 +147,7 @@ describe('position across sports', () => {
     // The defect this replaced: with nothing ending a pass, a run resumed after a walk
     // that rated two sports was still inside that walk and read "Rating 2 of 2". A resumed
     // run is now a genuine pass of one sport, and needs no special case to say so.
-    expect(positionOf(begin(['padel'], 'welcome'), 'padel')).toEqual({ index: 1, total: 1 });
+    expect(positionOf(begin(['padel'], FROM_WELCOME), 'padel')).toEqual({ index: 1, total: 1 });
   });
 });
 
@@ -199,7 +204,7 @@ describe('where the player goes after a sport', () => {
 
   it('goes straight to the app from a sport outside the pass that produced nothing', () => {
     // The resumed run that was abandoned: nothing was chosen, nothing was rated.
-    expect(nextDestination(begin([], 'welcome'), 'padel')).toEqual({ kind: 'app' });
+    expect(nextDestination(begin([], FROM_WELCOME), 'padel')).toEqual({ kind: 'app' });
   });
 
   it('goes straight to the app when no pass is running', () => {
@@ -250,6 +255,81 @@ describe('where a pass begun at the passport ends', () => {
     // is not a shortcut into the middle of a flow, whichever door the pass came in by.
     expect(admissionTo(passportPassOver('badminton'), 'badminton')).toEqual({ kind: 'admit' });
     expect(admissionTo(passportPassOver('badminton'), 'squash')).toEqual({ kind: 'start-over' });
+  });
+});
+
+/** A pass begun on a group's tab — its card, or (from #730) its door into the picker. */
+function groupPassOver(queue: readonly ('padel' | 'tennis' | 'squash')[]): OnboardingPass {
+  return begin(queue, fromAGroup(KAZIMIERZ, 'fillIn'));
+}
+
+describe('where a pass begun on a group ends', () => {
+  // ADR-0200 §5: a pass ends where it began — on that group, on that tab. A Player profile
+  // exists, so the done screen and the social steps are never this pass's either.
+  it('carries the group and the tab it began on', () => {
+    expect(groupPassOver(['padel'])).toEqual({
+      origin: { kind: 'group', groupId: KAZIMIERZ, tab: 'fillIn' },
+      queue: ['padel'],
+      rated: [],
+    });
+  });
+
+  it('offers the next sport while the queue has one', () => {
+    expect(nextDestination(groupPassOver(['padel', 'tennis']), 'padel')).toEqual({
+      kind: 'rate',
+      sport: 'tennis',
+    });
+  });
+
+  it('goes back to the group after the last sport', () => {
+    const pass = recordRated(groupPassOver(['padel', 'tennis']), {
+      assessmentId: PADEL_RUN,
+      sport: 'padel',
+    });
+
+    expect(nextDestination(pass, 'tennis')).toEqual({ kind: 'group' });
+  });
+
+  it('goes back to the group on Done for now, and when nothing was rated', () => {
+    // Stopping never strands her in the questionnaire, and a pass that produced nothing still
+    // ends on the screen she left — the app is where she already was.
+    expect(stopDestination(groupPassOver(['padel', 'tennis']))).toEqual({ kind: 'group' });
+    expect(nextDestination(groupPassOver(['padel']), 'padel')).toEqual({ kind: 'group' });
+  });
+});
+
+describe('what the app lands, once a pass has ended', () => {
+  it('lands nothing for a welcome pass, which is already where the gate put it', () => {
+    expect(returnOf(passOver(['padel']))).toBeUndefined();
+  });
+
+  it('lands the passport for a pass begun there', () => {
+    expect(returnOf(passportPassOver('badminton'))).toEqual({ kind: 'passport' });
+  });
+
+  it('lands the group on its tab, with the chip on the sport rated last', () => {
+    let pass = recordRated(groupPassOver(['padel', 'tennis']), {
+      assessmentId: PADEL_RUN,
+      sport: 'padel',
+    });
+    pass = recordRated(pass, { assessmentId: TENNIS_RUN, sport: 'tennis' });
+
+    expect(returnOf(pass)).toEqual({
+      kind: 'group',
+      groupId: KAZIMIERZ,
+      tab: 'fillIn',
+      sport: 'tennis',
+    });
+  });
+
+  it('lands the group with no sport to stand on when nothing was rated', () => {
+    // Continue later, or the one sport abandoned: the page opens as it always does.
+    expect(returnOf(groupPassOver(['padel']))).toEqual({
+      kind: 'group',
+      groupId: KAZIMIERZ,
+      tab: 'fillIn',
+      sport: undefined,
+    });
   });
 });
 

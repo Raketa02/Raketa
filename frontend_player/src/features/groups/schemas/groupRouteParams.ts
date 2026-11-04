@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
-import { GAME_INTENTS, type GameIntent } from '../domain/groupPage';
+import { GAME_INTENTS, GROUP_TABS, type GameIntent, type GroupTab } from '../domain/groupPage';
 
 const GroupRouteParams = z.object({ groupId: z.string().uuid() });
 
@@ -30,17 +30,56 @@ export interface DeckArrival {
 }
 
 /**
- * The group id, and the card a notice opened its deck at — or `undefined` for a group id this app
- * cannot read. An arrival is all three of its params or none: one this build cannot read opens the
- * page as the page always opens, since the group id alone is a page to open.
+ * **A page a rating pass returns to** — what the app adds to the group's id when a pass begun on
+ * the page ends (#729, ADR-0200 §5): the tab it began on, and the sport it rated last, which the
+ * page stands on until the player picks another. No sport for a pass that rated nothing.
  */
-export function parseGroupRouteParams(
-  params: unknown,
-): { readonly groupId: string; readonly arrival?: DeckArrival } | undefined {
+const ReturningPassParams = z.object({
+  tab: z.enum(GROUP_TABS),
+  sport: z.enum(SPORTS).optional(),
+});
+
+export interface ReturningPass {
+  readonly tab: GroupTab;
+  readonly sport?: Sport;
+}
+
+export interface GroupRoute {
+  readonly groupId: string;
+  readonly arrival?: DeckArrival;
+  readonly returning?: ReturningPass;
+}
+
+/**
+ * The group id, the card a notice opened its deck at, and the tab a rating pass returns to — or
+ * `undefined` for a group id this app cannot read. An arrival is all three of its params or none,
+ * and a return its tab or nothing: one this build cannot read opens the page as the page always
+ * opens, since the group id alone is a page to open.
+ */
+export function parseGroupRouteParams(params: unknown): GroupRoute | undefined {
   const parsed = GroupRouteParams.safeParse(params);
   if (!parsed.success) return undefined;
   const arrival = DeckArrivalParams.safeParse(params);
-  return arrival.success ? { ...parsed.data, arrival: arrival.data } : parsed.data;
+  const returning = ReturningPassParams.safeParse(params);
+  return {
+    ...parsed.data,
+    ...(arrival.success ? { arrival: arrival.data } : {}),
+    ...(returning.success ? { returning: returning.data } : {}),
+  };
+}
+
+/**
+ * **A group's tab, as the sports picker is opened from it** (#729, for the door #730 draws there):
+ * the group and the tab a pass begun there returns to — or `undefined` for anything else, which is
+ * the picker onboarding opens itself.
+ */
+const GroupPlaceParams = GroupRouteParams.extend({ tab: z.enum(GROUP_TABS) });
+
+export function parseGroupPlace(
+  params: unknown,
+): { readonly groupId: string; readonly tab: GroupTab } | undefined {
+  const parsed = GroupPlaceParams.safeParse(params);
+  return parsed.success ? parsed.data : undefined;
 }
 
 /**

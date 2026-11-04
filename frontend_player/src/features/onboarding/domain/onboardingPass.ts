@@ -13,10 +13,11 @@
  * where the pass began.** The first two facts answer every question onboarding asks about
  * itself: the progress bar's numerator and denominator, which sport comes next, and whether
  * there is anything to account for on the way out. The third answers where the way out
- * leads: a pass has an **origin** — welcome, or the Skill passport's *Add a sport* — and
- * where it ends is read off it
+ * leads: a pass has an **origin** — welcome, the Skill passport's *Add a sport*, or a group's
+ * tab — and where it ends is read off it
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §3). Everything between the two ends is the same walk.
+ * §3, amended by [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §5). Everything between the two ends is the same walk.
  *
  * ## What a pass is not
  *
@@ -40,6 +41,11 @@
  * entry gate as a pure function, tested without mounting anything.
  */
 
+// **Type-only, and it has to stay so.** A group's tab is the groups feature's word, carried here
+// and never read — the pass hands it back to the gate. `groups` imports this feature at runtime,
+// so a value import back would close a cycle through both `types.ts` barrels; a type import is
+// erased and closes none.
+import type { GroupTab } from '@/features/groups/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 /** A run that produced a Skill rating. **Identifiers only** — see above. */
@@ -56,8 +62,28 @@ export interface RatedRun {
  * the Skill passport's *Add a sport*: a queue of one, begun at the question route, ending
  * back on the passport — never on the done screen, the data screen or the social steps,
  * because a Player profile already exists and those screens are onboarding's.
+ *
+ * `group` is a group's tab (ADR-0200 §5): an official group's card, *Post a game*'s, Members',
+ * or the picker opened from the tab. It ends on that group, **on that tab**, with the chip on
+ * the sport just rated — never on the passport, which is where a group's card used to send it.
+ * **Identifiers only**, as `rated` is: the group's name is TanStack Query's, read where the
+ * way back is labelled, and a copy here would go stale the moment its Owner renamed it.
  */
-export type PassOrigin = 'welcome' | 'passport';
+export type PassOrigin =
+  | { readonly kind: 'welcome' }
+  | { readonly kind: 'passport' }
+  | { readonly kind: 'group'; readonly groupId: string; readonly tab: GroupTab };
+
+/** Onboarding's own door: the picker's queue, or a run the gate resumed. Gone with #730. */
+export const FROM_WELCOME: PassOrigin = { kind: 'welcome' };
+
+/** The Skill passport's *Add a sport*. */
+export const FROM_THE_PASSPORT: PassOrigin = { kind: 'passport' };
+
+/** A group's tab — the one the player was on when they pressed the door. */
+export function fromAGroup(groupId: string, tab: GroupTab): PassOrigin {
+  return { kind: 'group', groupId, tab };
+}
 
 export interface OnboardingPass {
   readonly origin: PassOrigin;
@@ -206,7 +232,12 @@ export type PassDestination =
    * it, when the one sport was abandoned. A profile exists, so the done screen, the data
    * screen and the social steps are never this pass's (ADR-0179 §3).
    */
-  | { readonly kind: 'passport' };
+  | { readonly kind: 'passport' }
+  /**
+   * Back on the group the pass began on, on its tab (ADR-0200 §5) — whatever the pass
+   * produced, for the passport's reason: she was in the app, and that is the screen she left.
+   */
+  | { readonly kind: 'group' };
 
 /**
  * Where a player who **stops before the end of the queue** goes.
@@ -219,7 +250,9 @@ export type PassDestination =
  * **A pass begun at the passport ends on the passport, whatever it produced.** There is no
  * account to give on a done screen — the passport *is* the account, and it draws the new
  * card itself — and there is no second part to enter, because a Player profile already
- * exists. Rated or abandoned, the player goes back to the screen they left.
+ * exists. Rated or abandoned, the player goes back to the screen they left. **A pass begun on a
+ * group ends on the group** for the same reason (ADR-0200 §5): she was in the app, and the tab
+ * is the screen she left.
  *
  * For a pass begun at welcome, two answers, and the question is only ever the one this
  * pass can answer by itself:
@@ -241,8 +274,14 @@ export type PassDestination =
  */
 export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
   if (pass === undefined) return { kind: 'app' };
-  if (pass.origin === 'passport') return { kind: 'passport' };
-  return pass.rated.length === 0 ? { kind: 'app' } : { kind: 'closing' };
+  switch (pass.origin.kind) {
+    case 'passport':
+      return { kind: 'passport' };
+    case 'group':
+      return { kind: 'group' };
+    case 'welcome':
+      return pass.rated.length === 0 ? { kind: 'app' } : { kind: 'closing' };
+  }
 }
 
 /**
@@ -272,4 +311,43 @@ export function nextDestination(pass: OnboardingPass | undefined, sport: Sport):
 
   if (next !== undefined) return { kind: 'rate', sport: next };
   return stopDestination(pass);
+}
+
+/**
+ * What the app lays down for a pass that has just ended, read off where it began.
+ *
+ * - **welcome → nothing.** Onboarding's pass is already where the entry gate put it.
+ * - **passport → the passport**, the You tab beneath it (ADR-0179 §3).
+ * - **group → that group, on the tab it began on, standing on the sport rated last**
+ *   (ADR-0200 §3, §5). *The sport just rated* is the last in `rated`: the last sport of the
+ *   queue when she finished, the one she stopped after on *Done for now*, the one before an
+ *   abandoned sport. **None when nothing was rated** — continue later, or the one sport
+ *   abandoned — and the page opens on the sport it always would.
+ *
+ * Asked once, by the gate's app branch, as it ends the pass — so the screens between never
+ * read it, and every way out of the pass lands through the same answer.
+ */
+export type PassReturn =
+  | { readonly kind: 'passport' }
+  | {
+      readonly kind: 'group';
+      readonly groupId: string;
+      readonly tab: GroupTab;
+      readonly sport: Sport | undefined;
+    };
+
+export function returnOf(pass: OnboardingPass): PassReturn | undefined {
+  switch (pass.origin.kind) {
+    case 'welcome':
+      return undefined;
+    case 'passport':
+      return { kind: 'passport' };
+    case 'group':
+      return {
+        kind: 'group',
+        groupId: pass.origin.groupId,
+        tab: pass.origin.tab,
+        sport: pass.rated[pass.rated.length - 1]?.sport,
+      };
+  }
 }

@@ -568,3 +568,9 @@ group's runner is the one value that is not always a nickname**: `administrator_
 Administrator's nickname once they have one and the name their club typed until then (§4), so an
 Administrator who has never played is still named, and `administratorName` keeps its word for that
 reason. `groupInfo.test.tsx` holds _ania.k_ on a Members row.
+
+**An official group's card begins a pass that comes back to the page**
+([#729](https://github.com/Raketa02/Raketa/issues/729), ADR-0200 §3, §5), which rules the
+_pass ending on the passport_ call above: its buttons say _Rate Padel_, `AddSportCard` takes the
+group and the tab to come back to, and the page reads the tab and the sport off the route as
+`returning`. The whole of it is in [`onboarding.md`](onboarding.md), whose pass it is.

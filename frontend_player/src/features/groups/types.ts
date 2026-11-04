@@ -39,6 +39,17 @@ export { groupDeckRoute } from './components/groupRoutes';
 export type { DeckArrival } from './schemas/groupRouteParams';
 
 /**
+ * **A rating pass begun on a group returns to it** ([#729](https://github.com/Raketa02/Raketa/issues/729),
+ * ADR-0200 §3, §5): the tab the pass began on is this feature's word, and onboarding carries it as
+ * the pass's origin; the picker's route reads a group's tab off its params; the result's route names
+ * the group; and the app's gate lays the page back down on that tab, on the sport rated last.
+ */
+export type { GroupTab } from './domain/groupPage';
+export { parseGroupPlace } from './schemas/groupRouteParams';
+export { useGroupName } from './hooks/useGroups';
+export { groupReturnRoute } from './components/groupRoutes';
+
+/**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),
  * [#517](https://github.com/Raketa02/Raketa/issues/517)): an official group is a Group, so its tile,
  * its dots, its club's tile, its form cards, its request row, who a switch to Anyone let in, a failed

@@ -157,3 +157,32 @@ account that does not play never asks the player's reads, whichever club it open
 ([#582](https://github.com/Raketa02/Raketa/issues/582)): setting up stopped asking either, so the
 screen keeps no account of them. Why the gender answer did not take the radius's place on the
 card is in [`player_profile.md`](player_profile.md).
+
+**A pass begun on a group returns to it** ([#729](https://github.com/Raketa02/Raketa/issues/729),
+[ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3, §5, amending the
+passport paragraph above). The origin is a union now — `welcome`, `passport`, or `group` with the
+group's id and **the tab it began on** (`fromAGroup`), identifiers only, since the group's name is
+Query's. The tab is `groups`' word, imported as a type only: `groups` imports this feature at
+runtime, so a value import back would be a cycle through the two barrels. `stopDestination` answers
+`group` whatever the pass produced, so every way out — the last result, _Done for now_, _continue
+later_, _abandon_ — replaces to `/` as a passport pass's does, and the gate's landing is handed
+`returnOf(pass)`: the passport, or the group, its tab and **the sport rated last** (the last of
+`rated`; none when nothing was). `(app)/_layout` lays Play down and pushes `groups`'
+`groupReturnRoute`, so _back_ is the Groups list; the page opens on that tab and stands on that
+sport the way a notice's card does, never saving it as a pick. **_Your rating_'s words moved to
+`resultPresentation`**: mid-pass _Rate {next}_ and _Done for now_, unchanged; on the last sport
+_Back to {group name}_ for a group pass and _See your ratings_ for the rest. The result **route**
+asks for the name — `useReturningGroup`, then `groups`' `useGroupName`, the page's own read under
+its key — and hands it in; while it is unread the control says _Back to the group_. **Two doors
+begin a group pass.** `useAddASport(from)` takes its origin: the passport hands
+`FROM_THE_PASSPORT`, and the official group's card (`AddSportCard`) its group and the tab to come
+back to — the page its own, _Post a game_ Fill in (where it turns the page under it, and where every
+way back from it lands), Members the tab the page beneath it is on. And **the picker takes one from
+its route**: `/sports?groupId=…&tab=…`, checked by `groups`' `parseGroupPlace`, anything else being
+onboarding's own picker. Nothing in the app opens it yet; it is the seam #730's door calls. The
+picker now begins its pass **on the start's success**, as the chip does, so a failed start from
+inside the app leaves no pass behind. **The card's buttons say _Rate Padel_**, as the issue, the
+PRD and ADR-0200 §3 quote them and as the passport's chip says it; _Add Padel_ was the wording of
+a pass that ended on the passport. **Calls made here**: a pass from Members returns to the page,
+not to Members; a pass from _Post a game_ returns to Fill in, not to _Post a game_. **Not seen on a
+device**: the frame between the gate mounting Home and the group's page pushed over Play.

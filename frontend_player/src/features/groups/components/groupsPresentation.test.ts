@@ -4,7 +4,6 @@ import type { GamesCard } from '../domain/groupPage';
 
 import {
   addSportHeadline,
-  addSportLabel,
   addSportLine,
   approverLine,
   clubLine,
@@ -16,6 +15,7 @@ import {
   membersTitle,
   membersRowLabel,
   openRecordHint,
+  rateSportLabel,
   requestLevels,
   requestTags,
   emptySeatLabel,
@@ -391,7 +391,7 @@ describe('an official group for a player rated in none of its sports', () => {
     );
   });
 
-  it('names each sport’s button by what it adds', () => {
-    expect(addSportLabel('padel')).toBe('Add Padel');
+  it('names each sport’s button by what it asks, as the passport’s chip does', () => {
+    expect(rateSportLabel('padel')).toBe('Rate Padel');
   });
 });

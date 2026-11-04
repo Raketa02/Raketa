@@ -555,7 +555,7 @@ describe('Members, from the members card', () => {
     expect(asked.map((request) => request.path.split('?')[1])).toEqual(['sport=PADEL']);
   });
 
-  // Marta plays nothing: the pill is the group's sports, never an *Add Padel* card for hers.
+  // Marta plays nothing: the pill is the group's sports, never a *Rate Padel* card for hers.
   it('lists the group’s declared sports, whatever the Administrator plays', async () => {
     serveMembers(OPEN_PLAY_GROUP.id, {
       PADEL: [member(MICHAL, 2.44), member(TOMEK, 2.71)],
