@@ -32,7 +32,7 @@ from dataclasses import dataclass, replace
 from typing import final
 
 from app.application.events import DeliveryContext
-from app.kernel import Clock, instant
+from app.kernel import Clock, instant, invariant
 from app.modules.notifications.application.reading import NoticeWords, recorded
 from app.modules.notifications.application.words import Words
 from app.modules.notifications.domain.events import NoticeGiven
@@ -88,16 +88,23 @@ def _message(notice: RecordedNotice, words: Words) -> PushMessage:
 
 
 def _opening(notice: RecordedNotice) -> dict[str, str]:
-    """What a tap hands the app: the notice, and where it opens."""
+    """What a tap hands the app: the notice, and where it opens — and the game
+    it is about, for every notice but one about no game (*Get your level*,
+    #727), which opens Home and hands nothing more."""
 
-    return {
+    opening = {
         "notice_id": str(notice.notice_id),
         "kind": notice.kind,
         "opens": notice.opens,
+    }
+    if notice.game_id is None:
+        return opening
+    return {
+        **opening,
         "game_id": str(notice.game_id),
         "pool_id": str(notice.pool_id),
-        "sport": notice.sport.value,
-        "game_kind": notice.game_kind,
+        "sport": invariant(notice.sport, f"{notice.kind} names its sport").value,
+        "game_kind": str(notice.game_kind),
     }
 
 

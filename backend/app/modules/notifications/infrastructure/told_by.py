@@ -1,7 +1,8 @@
 """What a notice says, read off the contexts that own it — every adapter
 **signed here**, so the arrows run ``notifications → proposals``, ``→ bookings``,
-``→ games``, ``→ payments`` and ``→ users`` (a club's name is read through
-Proposals' own ``ClubNames``), and none of them knows a notice exists (#549).
+``→ games``, ``→ payments``, ``→ users``, ``→ groups`` and ``→ rating`` (a club's
+name is read through Proposals' own ``ClubNames``), and none of them knows a
+notice exists (#549).
 
 ``BookedAndProposedGames`` is a game as it stands: the proposal's stream folded,
 and its booking's when it has one — one id for both. ``GameStreamCourts`` is the
@@ -14,7 +15,10 @@ own projection. ``ProposalsDecks`` asks
 own ``RescueOffers`` who a seat is offered to — never a second reading of
 either rule. ``SeatChargeShares`` is what a refund gives back — the provider's
 own figures, never an estimate (#641). ``PlatformNames`` is a person's nickname
-(``docs/adr/0199`` §1) and a club's name.
+(``docs/adr/0199`` §1) and a club's name. ``DirectoryGroupJoiners`` is when each
+account first joined a group it is in now, asked of the groups' own published
+directory, and ``RatingsRatedAccounts`` who holds a rating, asked of rating's
+published read — *Get your level*'s two questions (#727).
 """
 
 from __future__ import annotations
@@ -23,13 +27,14 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
-from app.kernel import Instant, instant
+from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.ports import BookingDirectory, BookingRepository
 from app.modules.games.domain.attendance import NOT_HERE_STATES, AttendanceState
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind
 from app.modules.games.domain.ports import GameRepository
 from app.modules.games.domain.standing import GameStanding, settlement_of
+from app.modules.groups.domain.ports import GroupDirectory
 from app.modules.games.domain.windows import (
     A_BOOKED_GAME,
     hour_ends_at,
@@ -48,6 +53,7 @@ from app.modules.proposals.domain.ports import (
 )
 from app.modules.proposals.domain.proposal import Standing
 from app.modules.proposals.domain.rescues import rescuable
+from app.modules.rating.domain.ports import RatedPlayerQuery
 from app.modules.users.domain.ports import UserRepository
 
 
@@ -325,3 +331,38 @@ class PlatformNames:
         if not club_ids:
             return {}
         return await self._clubs.names_of(club_ids)
+
+
+@final
+class DirectoryGroupJoiners:
+    """``GroupJoiners`` over the groups' own published directory — never their
+    table, whose shape is that context's business."""
+
+    def __init__(self, groups: GroupDirectory) -> None:
+        self._groups = groups
+
+    async def first_joined(
+        self, *, after: Instant, by: Instant
+    ) -> Mapping[UUID, Instant]:
+        return await self._groups.first_joined(after=after, by=by)
+
+
+@final
+class RatingsRatedAccounts:
+    """``RatedAccounts`` over rating's published read, which replays and holds
+    nothing — so asking cannot move a Level. One batch per sport, and a player
+    found rated is not asked about again."""
+
+    def __init__(self, ratings: RatedPlayerQuery) -> None:
+        self._ratings = ratings
+
+    async def rated_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
+        unknown = set(player_ids)
+        rated: set[UUID] = set()
+        for sport in Sport:
+            if not unknown:
+                break
+            found = set(await self._ratings.estimates_for(unknown, sport=sport))
+            rated |= found
+            unknown -= found
+        return frozenset(rated)

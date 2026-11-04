@@ -150,6 +150,17 @@ class GroupDirectory(Protocol):
         search reads the members of the page it serves and of nothing else."""
         ...
 
+    async def first_joined(
+        self, *, after: Instant, by: Instant
+    ) -> Mapping[UUID, Instant]:
+        """**When each account first joined a group** (#727): every account in
+        at least one group, player or official, whose earliest join **among
+        the groups it is in now** was after ``after`` and by ``by`` — with that
+        join's instant. A join is the moment the account was admitted, so a
+        Join request counts from its approval. An account that left every group
+        is in none, and absent."""
+        ...
+
 
 @runtime_checkable
 class GroupCodeMinter(Protocol):

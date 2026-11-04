@@ -353,6 +353,7 @@ from app.modules.payments.infrastructure.stripe_payments import StripePayments
 from app.modules.notifications.application.pushing import NoticePushes, PushTheNotice
 from app.modules.notifications.application.reading import NoticeWords
 from app.modules.notifications.application.asking import AskHowDidItGo
+from app.modules.notifications.application.get_your_level import TellGetYourLevel
 from app.modules.notifications.application.telling import GiveNotice, TellThePlayers
 from app.modules.notifications.domain.ports import (
     BellRepository,
@@ -360,12 +361,14 @@ from app.modules.notifications.domain.ports import (
     Decks,
     EndedHours,
     GameBriefs,
+    GroupJoiners,
     Names,
     NoticeDayRepository,
     NoticeDirectory,
     NotificationPreferencesRepository,
     PaidShares,
     PushNotifications,
+    RatedAccounts,
     SeatOffers,
 )
 from app.modules.notifications.infrastructure.event_sourced_notification_repositories import (  # noqa: E501
@@ -378,9 +381,11 @@ from app.modules.notifications.infrastructure.push import ExpoPush, RecordingPus
 from app.modules.notifications.infrastructure.told_by import (
     BookedAndProposedGames,
     BookedHours,
+    DirectoryGroupJoiners,
     GameStreamCourts,
     PlatformNames,
     ProposalsDecks,
+    RatingsRatedAccounts,
     RescueSeatOffers,
     SeatChargeShares,
 )
@@ -4184,6 +4189,20 @@ def build_ended_hours(session: AsyncSession) -> EndedHours:
     return BookedHours(build_booking_directory(session))
 
 
+def build_group_joiners(session: AsyncSession) -> GroupJoiners:
+    """When each account first joined a group it is in now — the groups' own
+    published directory (#727)."""
+    return DirectoryGroupJoiners(build_group_directory(session))
+
+
+def build_rated_accounts(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RatedAccounts:
+    """Who holds a Skill rating in any sport — rating's published read, which
+    holds nothing (#727)."""
+    return RatingsRatedAccounts(build_rated_player_query(session, runtime=runtime))
+
+
 def build_decks(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> Decks:
@@ -4273,6 +4292,21 @@ def build_ask_how_did_it_go(
         hours=build_ended_hours(session),
         courts=build_game_courts(session, runtime=runtime),
         games=build_game_briefs(session, runtime=runtime),
+        give=build_give_notice(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_tell_get_your_level(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> TellGetYourLevel:
+    """One run of *Get your level* over this session — the job's and a
+    test's (#727)."""
+    return TellGetYourLevel(
+        joiners=build_group_joiners(session),
+        ratings=build_rated_accounts(session, runtime=runtime),
+        notices=build_notice_directory(session),
         give=build_give_notice(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,

@@ -102,7 +102,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   kind of court it promises (`Decks`), what a refund gave back (`PaidShares`), who an
   open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`) —
   and since #663 a booked game's court, asked of the Game (`GameCourts`), and the booked hours
-  just ended, off the bookings' projection (`EndedHours`).
+  just ended, off the bookings' projection (`EndedHours`) — and since #727 when each account
+  first joined a group it is in now, off the groups' own directory (`GroupJoiners`), and who
+  holds a rating, off rating's published read (`RatedAccounts`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
   **The sixteenth, `player_profile_demands.py`, is the Player profile's consumer register**
   (#726): where a club is (`ClubPoints`), for a Location area picked as a club in place of a

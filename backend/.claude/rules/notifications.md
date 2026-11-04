@@ -17,10 +17,11 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   Notifications exists*). `notifications/application/telling.py` subscribes to
   `proposals`', `bookings`', `payments`' and — since #663 — `games`' events, as a room
   is told (ADR-0146 §5) — **its `TOLD_ABOUT` table is the only list of what an event
-  tells a player**, and `application/asking.py`'s `AskHowDidItGo` the one notice a
-  clock tells — and
+  tells a player**, and `application/asking.py`'s `AskHowDidItGo` and
+  `application/get_your_level.py`'s `TellGetYourLevel` the two notices a clock tells — and
   reads what a notice says through ports of its own (`GameBriefs`, `GameCourts`,
-  `EndedHours`, `Decks`, `PaidShares`, `SeatOffers`, `Names`), signed in
+  `EndedHours`, `Decks`, `PaidShares`, `SeatOffers`, `Names`, and for *Get your level*
+  `GroupJoiners` and `RatedAccounts`), signed in
   `infrastructure/told_by.py` over Proposals' own deck (`ReadGroupDeck.shows`) and
   `RescueOffers`, the Booking, the Game and the Seat charge. The teller and the pusher write, so both are added **per
   delivery run** over its session (`app/bootstrap/events.py`), and the push service is a
@@ -300,6 +301,25 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
     tapped I was there for Padel · Wed 17:00 — confirm it by 17:30 if so.* — to
     **everybody else on the court who may confirm it** (not absent themselves), `until`
     the late claim's day ends; a claim confirmed first asks nobody.
+- **One notice is about no game: *Get your level*** (#727; ADR-0200 §7; the mechanics
+  §17.2, Q126) — **`GET_YOUR_LEVEL`**, *Get your level so your groups can deal you games.* /
+  *Pick the sports you play — a few questions each.* (the group door's own words), **once per
+  account, ever**, to an account in at least one group whose first group join was a day ago
+  and which holds no Skill rating. **Always on**, never capped, never emailed, opening
+  **`Opens.HOME`**. It carries **none of a game's six facts**: `Notice`, `NoticeGiven`,
+  `RecordedNotice` and the `notices` row hold `game_id`, `pool_id`, `sport`, `game_kind`,
+  `club_id` and `starts_at` as `None` for it (migration 0062 made the columns nullable; every
+  other kind writes all six, and `NoticeGiven` kept its version since no older row reads
+  differently), the wire's `game_id`, `pool_id`, `sport` and `game_kind` are `null`, its push
+  data is `notice_id`, `kind` and `opens` alone, and its words come from its kind alone
+  (`words.py`'s `words_about_no_game`; the list's `_drawn` branches on `game_id`). Told by
+  the `get-your-level` job (`jobs.md`): given **a day after the join** under the key
+  `GET_YOUR_LEVEL:{player}`, and never to an account ever told it on any day
+  (`NoticeDirectory.told`), so a leave that makes a later join the earliest asks nothing
+  twice. Candidates are when each account first joined a group it is in now
+  (`GroupJoiners` → `DirectoryGroupJoiners`, over the groups' own
+  `GroupDirectory.first_joined`) and who holds a rating (`RatedAccounts` →
+  `RatingsRatedAccounts`, over rating's published `estimates_for`, one batch per sport).
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,
   so a push service down for an hour, raising, would hold the queue for that hour.
@@ -314,13 +334,14 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
 - **A notice records facts, never words** (`NoticeGiven`: the game, pool, club, hour,
   amount, the people it names by id, a reason code, a deadline (`until`), whether its reader
   had left the game (`you_left`), and where a tap
-  opens it — `BOOKING`, `PROPOSAL`, `DECK` or `RESULT`). The words are `application/words.py`'s, drawn at push
+  opens it — `BOOKING`, `PROPOSAL`, `DECK`, `RESULT` or `HOME`). The words are `application/words.py`'s, drawn at push
   time and again at every read, as an email's copy lives in the backend: a push is shown by
   the phone's system before the app runs. Deployed, an `EXPO_ACCESS_TOKEN` with Expo's
   enhanced push security makes a leaked phone token useless to anybody else.
 - **Two registers**: `push_demands.py` (the two adapters of the push port — the recording
   service and Expo, asked over a loopback server speaking Expo's documented API, never
   Expo) and `notification_demands.py` (what Notifications reads of others — since
-  #663 the court, `GameCourts`, and the hours just ended, `EndedHours`). Seeded by
+  #663 the court, `GameCourts`, and the hours just ended, `EndedHours`; since #727 the
+  first group joins, `GroupJoiners`, and who is rated, `RatedAccounts`). Seeded by
   nothing of its own: the seed's drain gives every seeded player their notices, listed,
   and pushes nothing.

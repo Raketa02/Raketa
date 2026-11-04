@@ -89,15 +89,21 @@ class NoticeSchema(BaseModel):
             "(`GET /proposals/{game_id}`); `DECK` — the pool's deck in the "
             "sport and kind, with this card on top; `RESULT` — the booked "
             "game's result screen (`GET /bookings/{game_id}`): who turned up, "
-            "and the score (#663)."
+            "and the score (#663); `HOME` — Home, for a notice about no game "
+            "(*Get your level*, #727)."
         )
     )
-    game_id: UUID = Field(
-        description="The game it is about: its proposal's id, which its booking takes."
+    game_id: UUID | None = Field(
+        description=(
+            "The game it is about: its proposal's id, which its booking takes. "
+            "`null` on a notice about no game — `GET_YOUR_LEVEL`, which opens "
+            "`HOME` — and then `pool_id`, `sport` and `game_kind` are `null` "
+            "too."
+        )
     )
-    pool_id: UUID
-    sport: Sport
-    game_kind: SearchMode
+    pool_id: UUID | None
+    sport: Sport | None
+    game_kind: SearchMode | None
     gathered: int = Field(
         description=(
             "How many more notices of its kind the day bundled into this one — "
@@ -133,7 +139,9 @@ class NoticeSchema(BaseModel):
             game_id=notice.game_id,
             pool_id=notice.pool_id,
             sport=notice.sport,
-            game_kind=SearchMode(notice.game_kind),
+            game_kind=None
+            if notice.game_kind is None
+            else SearchMode(notice.game_kind),
             gathered=notice.gathered,
             new=notice.new,
             your_own=notice.own,

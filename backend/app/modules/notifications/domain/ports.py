@@ -6,13 +6,15 @@ adapter and a recording fake (``infrastructure/``).
 
 **Everybody else's, asked and never told**: Notifications is *told* through
 the outbox by contexts that do not know it exists, as a room is
-(``docs/adr/0146`` §5), and reads what a notice says off them through seven
+(``docs/adr/0146`` §5), and reads what a notice says off them through nine
 ports declared here — what a game is now (``GameBriefs``), what its court says
 (``GameCourts``, #663), which booked hours have just ended (``EndedHours``), whose
 deck shows a card (``Decks``), what a refund gave back (``PaidShares``), who an
 open seat is offered to (``SeatOffers``) and what a person and a club are
-called (``Names``). Each is signed in ``infrastructure/`` over the context that
-owns the fact, and contracted in ``app/bootstrap/notification_demands.py``.
+called (``Names``) — and, for *Get your level* (#727), who first joined a group
+when (``GroupJoiners``) and who holds a rating (``RatedAccounts``). Each is
+signed in ``infrastructure/`` over the context that owns the fact, and
+contracted in ``app/bootstrap/notification_demands.py``.
 """
 
 from __future__ import annotations
@@ -85,12 +87,14 @@ class RecordedNotice:
 
     notice_id: UUID
     kind: str
-    game_id: UUID
-    pool_id: UUID
-    sport: Sport
-    game_kind: str
-    club_id: UUID
-    starts_at: Instant
+    #: The game's six facts — all ``None`` on a notice about no game
+    #: (*Get your level*, #727).
+    game_id: UUID | None
+    pool_id: UUID | None
+    sport: Sport | None
+    game_kind: str | None
+    club_id: UUID | None
+    starts_at: Instant | None
     opens: str
     amount_grosze: int | None
     people: tuple[UUID, ...]
@@ -132,6 +136,11 @@ class RecordedNotices:
 
 
 class NoticeDirectory(Protocol):
+    async def told(self, kind: str, player_ids: Collection[UUID]) -> frozenset[UUID]:
+        """Those of these players ever given a notice of this kind, on any day
+        — what *once per account, ever* is read against (#727)."""
+        ...
+
     async def recent(self, player_id: UUID, *, limit: int) -> RecordedNotices:
         """The player's notices, the newest first, each saying whether it is
         new to them — and how many are new in all, in the same reading.
@@ -318,6 +327,23 @@ class GameCourts(Protocol):
         ...
 
 
+class GroupJoiners(Protocol):
+    async def first_joined(
+        self, *, after: Instant, by: Instant
+    ) -> Mapping[UUID, Instant]:
+        """Every account in at least one group whose **earliest join among the
+        groups it is in now** was after ``after`` and by ``by``, with that
+        join's instant. An account that left every group is in none, and
+        absent. **Candidates** for *Get your level* (#727)."""
+        ...
+
+
+class RatedAccounts(Protocol):
+    async def rated_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
+        """Those of these players who hold a Skill rating in any sport."""
+        ...
+
+
 class EndedHours(Protocol):
     async def ended(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
         """Every booked game, whole, whose hour ended after ``after`` and by
@@ -406,6 +432,7 @@ __all__ = [
     "EndedHours",
     "GameBrief",
     "GameBriefs",
+    "GroupJoiners",
     "Names",
     "NoticeDayRepository",
     "NoticeDirectory",
@@ -416,6 +443,7 @@ __all__ = [
     "PushNotifications",
     "PushReceipt",
     "PushUnavailable",
+    "RatedAccounts",
     "RecordedNotice",
     "RecordedNotices",
     "SeatOffers",

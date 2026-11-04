@@ -21,6 +21,7 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
+    build_group_repository,
     build_proposal_repository,
     build_seat_charge_repository,
 )
@@ -41,10 +42,14 @@ from app.modules.notifications.domain.ports import (
     Decks,
     EndedHours,
     GameBriefs,
+    GroupJoiners,
     Names,
     PaidShares,
+    RatedAccounts,
     SeatOffers,
 )
+from app.modules.groups.domain.group import Group, JoinPolicy
+from app.modules.groups.domain.value_objects import GroupCode, GroupName
 from app.modules.payments.domain.provider import (
     Payment,
     PaymentStatus,
@@ -62,6 +67,7 @@ from app.modules.proposals.domain.proposal import (
 from app.shared.ids import new_uuid
 from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.proposals_world import a_club_and_its_desk, every_hour_of_the_week
+from tests.demands.test_player_record_demands import _a_club, _a_rating
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
 NOW = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -748,3 +754,116 @@ async def test_nobody_and_no_club_is_called_anything(implementation, session):
 
     assert await names.of_people([new_uuid()]) == {}
     assert await names.of_clubs([new_uuid()]) == {}
+
+
+# --------------------------------------------------------------------------- #
+# GroupJoiners and RatedAccounts — Get your level's two questions (#727)
+# --------------------------------------------------------------------------- #
+
+
+async def _a_group_joined(
+    session, owner: UUID, *, at: Instant, joins: dict[UUID, Instant], code: str
+) -> Group:
+    """A player group its Owner made at ``at``, and each of ``joins`` joining at
+    their own instant — through the aggregate, saved by its repository."""
+
+    group = Group.create_player_group(
+        group_id=new_uuid(),
+        name=GroupName("Wednesday padel"),
+        home_club_id=await _a_club(session),
+        join_policy=JoinPolicy.ANYONE,
+        owner_id=owner,
+        code=GroupCode(code),
+        occurred_at=at,
+    )
+    for player, joined_at in joins.items():
+        group.join(player, occurred_at=joined_at)
+    await build_group_repository(session, **_store(session)).save(group)
+    await session.commit()
+    return group
+
+
+async def _leave(session, group: Group, *players: UUID, at: Instant) -> None:
+    """``players`` leave the group, loaded and saved through its repository."""
+
+    groups = build_group_repository(session, **_store(session))
+    loaded = await groups.load(group.id)
+    assert loaded is not None
+    for player in players:
+        loaded.leave(player, occurred_at=at)
+    await groups.save(loaded)
+    await session.commit()
+
+
+@pytest.mark.parametrize("implementation", registered(GroupJoiners))
+async def test_each_account_is_counted_from_its_earliest_join_in_the_window(
+    implementation, session
+):
+    """Ola made the group four days ago; Kuba joined two days ago and Ewa an
+    hour ago. Asked for the joins between three days and one day ago, only Kuba
+    is a candidate — Ola joined before the window, Ewa after it."""
+
+    joiners: GroupJoiners = implementation.build(session)
+    await _a_group_joined(
+        session,
+        OLA,
+        at=instant(NOW - timedelta(days=4)),
+        joins={
+            KUBA: instant(NOW - timedelta(days=2)),
+            EWA: instant(NOW - timedelta(hours=1)),
+        },
+        code="k7pq2mxa",
+    )
+
+    first = await joiners.first_joined(
+        after=instant(NOW - timedelta(days=3)), by=instant(NOW - timedelta(days=1))
+    )
+
+    assert first == {KUBA: instant(NOW - timedelta(days=2))}
+
+
+@pytest.mark.parametrize("implementation", registered(GroupJoiners))
+async def test_an_account_is_counted_from_the_groups_it_is_in_now(
+    implementation, session
+):
+    """Tomek joined the first group four days ago and the second two days ago;
+    he left the first, so his earliest join is the second's. Zosia left the one
+    group she was in, and is in none."""
+
+    joiners: GroupJoiners = implementation.build(session)
+    first_group = await _a_group_joined(
+        session,
+        OLA,
+        at=instant(NOW - timedelta(days=5)),
+        joins={
+            TOMEK: instant(NOW - timedelta(days=4)),
+            ZOSIA: instant(NOW - timedelta(days=4)),
+        },
+        code="k7pq2mxa",
+    )
+    await _a_group_joined(
+        session,
+        KUBA,
+        at=instant(NOW - timedelta(days=3)),
+        joins={TOMEK: instant(NOW - timedelta(days=2))},
+        code="m3nq8rtw",
+    )
+    await _leave(
+        session, first_group, TOMEK, ZOSIA, at=instant(NOW - timedelta(days=1))
+    )
+
+    first = await joiners.first_joined(after=instant(NOW - timedelta(days=10)), by=NOW)
+
+    assert first[TOMEK] == instant(NOW - timedelta(days=2))
+    assert ZOSIA not in first
+
+
+@pytest.mark.parametrize("implementation", registered(RatedAccounts))
+async def test_a_rating_in_any_sport_counts_and_none_does_not(implementation, session):
+    ratings: RatedAccounts = implementation.build(session)
+    await _a_rating(session, OLA, sport=Sport.PADEL, mu=2.5)
+    await _a_rating(session, KUBA, sport=Sport.SQUASH, mu=3.0)
+    await session.commit()
+
+    assert await ratings.rated_among([OLA, KUBA, EWA]) == {OLA, KUBA}
+    assert await ratings.rated_among([]) == frozenset()

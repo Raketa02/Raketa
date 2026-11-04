@@ -11591,7 +11591,8 @@
           "AT_THE_CLUB",
           "HOW_DID_IT_GO",
           "IS_THAT_RIGHT",
-          "WERE_THEY_THERE"
+          "WERE_THEY_THERE",
+          "GET_YOUR_LEVEL"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -11622,24 +11623,52 @@
           },
           "opens": {
             "$ref": "#/components/schemas/Opens",
-            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663)."
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727)."
           },
           "game_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Game Id",
-            "description": "The game it is about: its proposal's id, which its booking takes."
+            "description": "The game it is about: its proposal's id, which its booking takes. `null` on a notice about no game \u2014 `GET_YOUR_LEVEL`, which opens `HOME` \u2014 and then `pool_id`, `sport` and `game_kind` are `null` too."
           },
           "pool_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Pool Id"
           },
           "sport": {
-            "$ref": "#/components/schemas/Sport"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sport"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "game_kind": {
-            "$ref": "#/components/schemas/SearchMode"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "gathered": {
             "type": "integer",
@@ -11827,7 +11856,8 @@
           "BOOKING",
           "PROPOSAL",
           "DECK",
-          "RESULT"
+          "RESULT",
+          "HOME"
         ],
         "title": "Opens",
         "description": "The screen a notice opens on when tapped (the screens A9)."

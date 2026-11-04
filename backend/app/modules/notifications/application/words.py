@@ -32,6 +32,10 @@ net when a score goes up — saying when silence settles it, and that silence
 costs nothing — and *were they there?* to the courtmates of a player who says
 *I was there*.
 
+**One notice is about no game** (#727; Q126): *Get your level so your groups
+can deal you games.* — no club, no hour, no sport, drawn from its kind alone
+(``words_about_no_game``).
+
 **A time to pay names its time and never its payer** (#625; Q109, Q110): the
 payer reads *Confirm your payment by 14:40 to keep your seat*, the others *It's
 a game! · waiting for one payment until 14:40* — then *booked · you paid*,
@@ -157,6 +161,23 @@ def _people(names: Sequence[str]) -> str:
     if len(names) <= 1:
         return "".join(names) or "Somebody"
     return f"{', '.join(names[:-1])} and {names[-1]}"
+
+
+#: What a notice about no game says, by its kind (#727). *Get your level*
+#: names no group and no sport (``docs/adr/0200`` §7); its second line is the
+#: group door's own words, where the questions are.
+_ABOUT_NO_GAME: Final[dict[NoticeKind, Words]] = {
+    NoticeKind.GET_YOUR_LEVEL: Words(
+        title="Get your level so your groups can deal you games.",
+        body="Pick the sports you play — a few questions each.",
+    ),
+}
+
+
+def words_about_no_game(kind: NoticeKind) -> Words:
+    """The words of a notice that carries no game's facts — *Get your level*."""
+
+    return invariant(_ABOUT_NO_GAME.get(kind), f"{kind} is about a game")
 
 
 def words_for(said: Said) -> Words:

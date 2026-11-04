@@ -510,6 +510,18 @@ class Settings(BaseSettings):
     HOW_DID_IT_GO_ENABLED: bool = True
     HOW_DID_IT_GO_INTERVAL_SECONDS: float = 30
 
+    # --- Get your level (#727, the mechanics §17.2, Q126)
+    #
+    # A day after an account's first group join, still rated in nothing, it is
+    # told once, ever: *Get your level so your groups can deal you games.* A
+    # day passing announces nothing, so a job looks for the accounts due.
+    # **When, and for how long after, is emphatically not here**: the day and
+    # the week it is still told within are domain
+    # (`notifications/domain/notices.py`). Every five minutes: a nudge a day
+    # after a join is not news by the second.
+    GET_YOUR_LEVEL_ENABLED: bool = True
+    GET_YOUR_LEVEL_INTERVAL_SECONDS: float = 300
+
     # --- club payouts (#548, the mechanics §12.6, §16.11)
     #
     # **Correctness depends on it**: a club is paid after its games are played,

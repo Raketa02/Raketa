@@ -183,3 +183,21 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   hour — the price of holding no cursor. Only the cadence (thirty seconds, like the other
   seat jobs) is a setting. It has a *Run it now* (*the hour ends · How did it go?*), and a
   counted game's pane carries its `HOUR_ENDS` moment while nobody has put a score up.
+  The twenty-fourth is **Get your level** (`get-your-level`, #727; `TellGetYourLevel` in
+  `notifications/application/get_your_level.py`), and it **buys the nudge, not
+  correctness**: nothing waits on it. A day after an account's first group join, while it
+  holds no Skill rating, it is told *Get your level so your groups can deal you games.* —
+  once per account, ever (`notifications.md`). Its read names **candidates**
+  (`GroupJoiners.first_joined`, over `GroupDirectory.first_joined`: `MIN(joined_at)` of
+  `group_members` per account, so **the earliest join among the groups it is in now** — an
+  account that left every group is none), those whose first join fell
+  `GET_YOUR_LEVEL_AFTER` (24 h) ago, within `GET_YOUR_LEVEL_WITHIN` (a week) of it — a
+  run that reaches an account later tells nothing, and Home's card still asks — **less
+  every account ever told it on any day** (`NoticeDirectory.told`, over `notices`) and every
+  account rated in any sport (`RatedAccounts`); each one transaction. **Safe beside itself
+  with no lock**: the notice is given a day after the join under a key of the account's, so
+  every process tells it on one day's stream and two at once collide there, the second
+  counted and stepped over; the never-told filter is what holds *once* across days when a
+  leave makes a later join the earliest. A week of joiners is read on every tick. Only the
+  cadence (five minutes) is a setting. It has **no *Run it now***: it is an account's, not a
+  game's (`NOT_RUN_HERE`).

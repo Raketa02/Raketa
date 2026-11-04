@@ -12,8 +12,10 @@ whose deck shows a card and the kind of court it promises (``Decks``: the deck's
 own ``shows`` and ``kind_of_court``, #673), what
 a refund gave back (``PaidShares``: the share's Seat charge),
 who an open seat is offered to (``SeatOffers``: the Fill in board's own offer)
-and what a person and a club are called (``Names``). Each is signed in
-``notifications/infrastructure/told_by.py``.
+and what a person and a club are called (``Names``) — and, for *Get your level*
+(#727), when each account first joined a group it is in now (``GroupJoiners``:
+the groups' own directory) and who holds a rating (``RatedAccounts``: rating's
+published read). Each is signed in ``notifications/infrastructure/told_by.py``.
 
 **The deck behind** ``Decks.showing`` **and the offer behind**
 ``SeatOffers.offered_among`` **are Proposals' own** — ``ReadGroupDeck`` and
@@ -31,8 +33,10 @@ from app.bootstrap.composition import (
     build_decks,
     build_ended_hours,
     build_game_briefs,
+    build_group_joiners,
     build_notice_names,
     build_paid_shares,
+    build_rated_accounts,
     build_seat_offers,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
@@ -42,8 +46,10 @@ from app.modules.notifications.domain.ports import (
     Decks,
     EndedHours,
     GameBriefs,
+    GroupJoiners,
     Names,
     PaidShares,
+    RatedAccounts,
     SeatOffers,
 )
 
@@ -59,6 +65,8 @@ NOTIFICATION_DEMANDS: tuple[type, ...] = (
     PaidShares,
     SeatOffers,
     Names,
+    GroupJoiners,
+    RatedAccounts,
 )
 
 
@@ -87,6 +95,12 @@ NOTIFICATION_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=Names, name="PlatformNames", build=build_notice_names
+    ),
+    RegisteredImplementation(
+        port=GroupJoiners, name="DirectoryGroupJoiners", build=build_group_joiners
+    ),
+    RegisteredImplementation(
+        port=RatedAccounts, name="RatingsRatedAccounts", build=build_rated_accounts
     ),
 )
 

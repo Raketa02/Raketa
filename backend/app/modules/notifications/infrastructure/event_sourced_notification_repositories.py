@@ -337,6 +337,17 @@ class SqlAlchemyNoticeDirectory:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def told(self, kind: str, player_ids: Collection[UUID]) -> frozenset[UUID]:
+        wanted = set(player_ids)
+        if not wanted:
+            return frozenset()
+        rows = await self._session.scalars(
+            select(NoticeORM.player_id)
+            .where(NoticeORM.kind == kind, NoticeORM.player_id.in_(wanted))
+            .distinct()
+        )
+        return frozenset(rows)
+
     async def recent(self, player_id: UUID, *, limit: int) -> RecordedNotices:
         visit = (
             await self._session.execute(
@@ -388,10 +399,10 @@ def _recorded(row: NoticeORM, *, new: bool) -> RecordedNotice:
         kind=row.kind,
         game_id=row.game_id,
         pool_id=row.pool_id,
-        sport=Sport(row.sport),
+        sport=None if row.sport is None else Sport(row.sport),
         game_kind=row.game_kind,
         club_id=row.club_id,
-        starts_at=stored_instant(row.starts_at),
+        starts_at=None if row.starts_at is None else stored_instant(row.starts_at),
         opens=row.opens,
         amount_grosze=row.amount_grosze,
         people=tuple(UUID(one) for one in row.people.split(",") if one),

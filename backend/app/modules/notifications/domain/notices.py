@@ -96,6 +96,10 @@ class NoticeKind(StrEnum):
     #: *Was Oscar at Ogrody 33?* — to the courtmates, when a player who Didn't
     #: come says *I was there* (#663).
     WERE_THEY_THERE = "WERE_THEY_THERE"
+    #: *Get your level so your groups can deal you games.* — **about no game
+    #: at all**: once per account, ever, a day after a first group join while
+    #: rated in nothing (#727, Q126). Always on, opening Home, never emailed.
+    GET_YOUR_LEVEL = "GET_YOUR_LEVEL"
 
 
 class Opens(StrEnum):
@@ -109,6 +113,8 @@ class Opens(StrEnum):
     DECK = "DECK"
     #: The booked game's result screen — who turned up, and the score (#663).
     RESULT = "RESULT"
+    #: Home — where *Get your level* stands on a card too (#727).
+    HOME = "HOME"
 
 
 class NoticeReason(StrEnum):
@@ -174,6 +180,17 @@ CHOSEN: Final[dict[NoticeKind, Chosen]] = {
 #: screen and Home still ask for the score until its entry window closes.
 ASKED_WITHIN: Final = timedelta(minutes=30)
 
+#: How long after an account's first group join, still rated in nothing, it
+#: is told *Get your level* (#727, Q126) — **given at that moment**, whenever a
+#: run comes to it, so every process tells it on one day's stream.
+GET_YOUR_LEVEL_AFTER: Final = timedelta(hours=24)
+
+#: How long past ``GET_YOUR_LEVEL_AFTER`` a run still tells it. A run that
+#: reaches an account later — the process down a week — tells nothing, and
+#: Home's card still asks: the same bound ``ASKED_WITHIN`` puts on *How did it
+#: go?*, so a run reads a week's joiners and never every member there is.
+GET_YOUR_LEVEL_WITHIN: Final = timedelta(days=7)
+
 #: What a day's stream id is drawn under — fixed for ever, since a stored stream
 #: is found by it.
 _DAYS: Final = UUID("0b0b9a0e-5c1d-4d5e-9b0a-6a49f3a2c549")
@@ -199,13 +216,15 @@ class Notice:
     kind: NoticeKind
     key: str
     #: The game it is about — its proposal's id, which its booking takes.
-    game_id: UUID
-    pool_id: UUID
-    sport: Sport
+    #: **All six facts of the game are ``None`` on a notice about no game**
+    #: (*Get your level*, #727), and every other kind has all six.
+    game_id: UUID | None
+    pool_id: UUID | None
+    sport: Sport | None
     #: ``COMPETITIVE`` or ``FOR_FUN``.
-    game_kind: str
-    club_id: UUID
-    starts_at: Instant
+    game_kind: str | None
+    club_id: UUID | None
+    starts_at: Instant | None
     opens: Opens
     amount_grosze: int | None = None
     people: tuple[UUID, ...] = ()
@@ -232,6 +251,24 @@ class Notice:
     #: The court the game left, said when a club's cancel moved it — *Court 2
     #: can't be played* (#672).
     moved_from: str | None = None
+
+
+def get_your_level(player_id: UUID) -> Notice:
+    """*Get your level so your groups can deal you games.* (#727; Q126) — about
+    no game, so none of a game's six facts, opening Home. **Keyed by the
+    account**: told once, whichever day and process tells it."""
+
+    return Notice(
+        kind=NoticeKind.GET_YOUR_LEVEL,
+        key=f"{NoticeKind.GET_YOUR_LEVEL}:{player_id}",
+        game_id=None,
+        pool_id=None,
+        sport=None,
+        game_kind=None,
+        club_id=None,
+        starts_at=None,
+        opens=Opens.HOME,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,7 +329,9 @@ class NoticesOfADay:
                 day=self.day.isoformat(),
                 kind=notice.kind.value,
                 key=notice.key,
-                game_id=notice.game_id,
+                # Only a chosen kind is bundled, and every chosen kind is about
+                # a game.
+                game_id=invariant(notice.game_id, f"{notice.kind} is about a game"),
                 occurred_at=at,
             )
             self._record_that(bundled)
@@ -305,7 +344,7 @@ class NoticesOfADay:
             key=notice.key,
             game_id=notice.game_id,
             pool_id=notice.pool_id,
-            sport=notice.sport.value,
+            sport=None if notice.sport is None else notice.sport.value,
             game_kind=notice.game_kind,
             club_id=notice.club_id,
             starts_at=notice.starts_at,

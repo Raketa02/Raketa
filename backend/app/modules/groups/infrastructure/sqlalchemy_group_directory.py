@@ -18,10 +18,14 @@ from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.database.stored_time import stored_instant_or_none
+from app.infrastructure.database.stored_time import (
+    stored_instant,
+    stored_instant_or_none,
+)
+from app.kernel import Instant
 from app.modules.clubs.domain.folding import fold
 from app.modules.groups.domain.ports import GroupListing
 from app.modules.groups.domain.value_objects import (
@@ -62,6 +66,17 @@ class SqlAlchemyGroupDirectory:
                 .order_by(GroupMemberORM.joined_at.desc(), GroupMemberORM.group_id)
             )
         ).all()
+
+    async def first_joined(
+        self, *, after: Instant, by: Instant
+    ) -> Mapping[UUID, Instant]:
+        first = func.min(GroupMemberORM.joined_at)
+        rows = await self._session.execute(
+            select(GroupMemberORM.player_id, first)
+            .group_by(GroupMemberORM.player_id)
+            .having(first > after, first <= by)
+        )
+        return {player_id: stored_instant(joined) for player_id, joined in rows}
 
     async def every(self) -> Sequence[UUID]:
         return (

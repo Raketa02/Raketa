@@ -13,13 +13,18 @@ counted whole however few rows are asked for.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, final
 from uuid import UUID
 
-from app.kernel import Instant, Sport, instant
-from app.modules.notifications.application.words import Said, Words, words_for
+from app.kernel import Instant, Sport, instant, invariant
+from app.modules.notifications.application.words import (
+    Said,
+    Words,
+    words_about_no_game,
+    words_for,
+)
 from app.modules.notifications.domain.events import NoticeGiven
 from app.modules.notifications.domain.notices import NoticeKind, Opens
 from app.modules.notifications.domain.ports import (
@@ -40,10 +45,10 @@ def recorded(given: NoticeGiven) -> RecordedNotice:
         kind=given.kind,
         game_id=given.game_id,
         pool_id=given.pool_id,
-        sport=Sport(given.sport),
+        sport=None if given.sport is None else Sport(given.sport),
         game_kind=given.game_kind,
         club_id=given.club_id,
-        starts_at=instant(given.starts_at),
+        starts_at=None if given.starts_at is None else instant(given.starts_at),
         opens=given.opens,
         amount_grosze=given.amount_grosze,
         people=given.people,
@@ -72,33 +77,46 @@ class NoticeWords:
         people = await self._names.of_people(
             {person for notice in notices for person in notice.people}
         )
-        clubs = await self._names.of_clubs({notice.club_id for notice in notices})
-        return [
-            words_for(
-                Said(
-                    kind=NoticeKind(notice.kind),
-                    sport=notice.sport,
-                    club=clubs.get(notice.club_id, "the club"),
-                    starts_at=notice.starts_at,
-                    opens=Opens(notice.opens),
-                    amount_grosze=notice.amount_grosze,
-                    names=tuple(
-                        people[person] for person in notice.people if person in people
-                    ),
-                    reason=notice.reason,
-                    gathered=notice.gathered,
-                    until=notice.until,
-                    given_at=notice.given_at,
-                    you_left=notice.you_left,
-                    kept_grosze=notice.kept_grosze,
-                    rescue=notice.rescue,
-                    court_name=notice.court_name,
-                    indoor=notice.indoor,
-                    moved_from=notice.moved_from,
-                )
-            )
-            for notice in notices
-        ]
+        clubs = await self._names.of_clubs(
+            {notice.club_id for notice in notices if notice.club_id is not None}
+        )
+        return [_drawn(notice, people=people, clubs=clubs) for notice in notices]
+
+
+def _drawn(
+    notice: RecordedNotice,
+    *,
+    people: Mapping[UUID, str],
+    clubs: Mapping[UUID, str],
+) -> Words:
+    """One notice's words — from its kind alone when it is about no game
+    (*Get your level*, #727), else from the game's facts and the names."""
+
+    kind = NoticeKind(notice.kind)
+    if notice.game_id is None:
+        return words_about_no_game(kind)
+    club_id = invariant(notice.club_id, f"{kind} names its club")
+    return words_for(
+        Said(
+            kind=kind,
+            sport=invariant(notice.sport, f"{kind} names its sport"),
+            club=clubs.get(club_id, "the club"),
+            starts_at=invariant(notice.starts_at, f"{kind} names its hour"),
+            opens=Opens(notice.opens),
+            amount_grosze=notice.amount_grosze,
+            names=tuple(people[person] for person in notice.people if person in people),
+            reason=notice.reason,
+            gathered=notice.gathered,
+            until=notice.until,
+            given_at=notice.given_at,
+            you_left=notice.you_left,
+            kept_grosze=notice.kept_grosze,
+            rescue=notice.rescue,
+            court_name=notice.court_name,
+            indoor=notice.indoor,
+            moved_from=notice.moved_from,
+        )
+    )
 
 
 @dataclass(frozen=True, slots=True)

@@ -19,6 +19,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   because SQL cannot fold, `group_members`, whose `joined_version` (the
   admitting event's stream version) is the exact joining order, and
   `group_join_requests`, one row **while a request waits** and deleted by its answer.
+  **When an account first joined a group is read off `group_members`**
+  (`GroupDirectory.first_joined`, #727): `MIN(joined_at)` per account over the groups it is
+  in now — a leave deletes the row, so it is the earliest join *among those*, and an account
+  that left every group is in none — which Notifications asks for *Get your level*.
   **A deletion leaves no row in any of the three** — the link then finds nothing, which is
   how it reads *nothing at that link* — and the repository loads a stream ending in
   `group_deleted` as **no group**, so every act on one meets `group_not_found`.

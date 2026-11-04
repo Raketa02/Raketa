@@ -108,6 +108,11 @@ class NoticeGiven:
     ``None`` on every other kind, and on the rows recorded before.
     ``moved_from`` is the court the game left, said when a club's cancel moved
     it — *Court 2 can't be played*, the cancel's reason in ``reason`` (#672).
+
+    **A notice about no game** — *Get your level* (#727) — carries ``None`` in
+    all six of the game's facts (``game_id`` to ``starts_at``) and opens
+    ``HOME``. Every row recorded before carries all six, so nothing older reads
+    differently: the shape widened, and no version moved.
     """
 
     notice_id: UUID
@@ -116,14 +121,14 @@ class NoticeGiven:
     day: str
     kind: str
     key: str
-    game_id: UUID
-    pool_id: UUID
-    sport: str
+    game_id: UUID | None
+    pool_id: UUID | None
+    sport: str | None
     #: ``COMPETITIVE`` or ``FOR_FUN``.
-    game_kind: str
-    club_id: UUID
-    starts_at: datetime
-    #: ``BOOKING``, ``PROPOSAL`` or ``DECK``.
+    game_kind: str | None
+    club_id: UUID | None
+    starts_at: datetime | None
+    #: ``BOOKING``, ``PROPOSAL``, ``DECK``, ``RESULT`` or ``HOME``.
     opens: str
     amount_grosze: int | None
     people: tuple[UUID, ...]

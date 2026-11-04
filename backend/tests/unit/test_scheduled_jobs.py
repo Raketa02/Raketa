@@ -23,6 +23,7 @@ import app.bootstrap.jobs as jobs_module
 from app.bootstrap.composition import build_clock
 from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
+    GET_YOUR_LEVEL_JOB,
     HOW_DID_IT_GO_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     CONVERSATION_SWEEP_JOB,
@@ -121,6 +122,7 @@ def _nothing_but(**overrides):
             "CLUB_PAYOUTS_ENABLED": False,
             "NEW_BOOKINGS_SUMMARY_ENABLED": False,
             "HOW_DID_IT_GO_ENABLED": False,
+            "GET_YOUR_LEVEL_ENABLED": False,
             **overrides,
         }
     )
@@ -649,4 +651,46 @@ async def test_how_did_it_go_runs_end_to_end_through_the_real_wiring(
 
     assert not any(
         record.message == "how did it go finished" for record in caplog.records
+    )
+
+
+def test_get_your_level_is_registered_every_five_minutes():
+    """How often an account due is looked for is a setting — every five
+    minutes, since a nudge a day after a join is not news by the second; the
+    day, and the week it is still told within, are domain (#727)."""
+
+    assert get_settings().GET_YOUR_LEVEL_INTERVAL_SECONDS == 300
+    settings = _nothing_but(
+        GET_YOUR_LEVEL_ENABLED=True, GET_YOUR_LEVEL_INTERVAL_SECONDS=60.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [(job.name, job.interval_seconds) for job in jobs] == [
+        (GET_YOUR_LEVEL_JOB, 60.0)
+    ]
+
+
+def test_get_your_level_without_a_session_factory_refuses_to_be_registered():
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(
+            session_factory=None, settings=_nothing_but(GET_YOUR_LEVEL_ENABLED=True)
+        )
+
+
+async def test_get_your_level_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """With nobody in a group, a run tells nobody and says nothing."""
+
+    [job] = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(GET_YOUR_LEVEL_ENABLED=True),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await job.run_once()
+
+    assert not any(
+        record.message == "get your level finished" for record in caplog.records
     )

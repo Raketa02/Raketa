@@ -45,6 +45,7 @@ from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     CONVERSATION_SWEEP_JOB,
     CUT_OFF_JOB,
+    GET_YOUR_LEVEL_JOB,
     HOLDING_JOB,
     HOW_DID_IT_GO_JOB,
     MAIL_DELIVERY_JOB,
@@ -91,6 +92,10 @@ NOT_RUN_HERE: Final[Mapping[str, str]] = MappingProxyType(
         MAIL_DELIVERY_JOB: (
             "Not a timed rule: the mail queue's drain, every two seconds. An "
             "email waits on nothing a press could bring forward."
+        ),
+        GET_YOUR_LEVEL_JOB: (
+            "An account's, not a game's: Get your level, told once to an account "
+            "a day after its first group join while rated in nothing (#727)."
         ),
         PHOTO_SWEEP_JOB: "Photos, not games: uploads never committed to a profile.",
         PHOTO_REVIEW_BACKFILL_JOB: (

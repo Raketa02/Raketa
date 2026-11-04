@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
     build_ask_how_did_it_go,
+    build_tell_get_your_level,
     build_propose_games,
     build_clock,
     build_destroy_ended_conversations,
@@ -131,6 +132,12 @@ HOLDING_JOB = "holding"
 #: wait for a score whether or not this has run.
 HOW_DID_IT_GO_JOB = "how-did-it-go"
 
+#: Get your level (#727). A day after an account's first group join, still
+#: rated in nothing, it is told once, ever, to get its level. A day passing
+#: announces nothing, so nothing else tells it: Home's card and the groups'
+#: door still ask whether or not this has run.
+GET_YOUR_LEVEL_JOB = "get-your-level"
+
 #: Club payouts (#548). At the close of every club day it decides, per club, one
 #: payout of what its games over by then left it — played, or called off with
 #: what that gives back decided; the outbox makes it and tells the desk.
@@ -188,6 +195,7 @@ def build_scheduled_jobs(
         or settings.CUT_OFF_ENABLED
         or settings.HOLDING_ENABLED
         or settings.HOW_DID_IT_GO_ENABLED
+        or settings.GET_YOUR_LEVEL_ENABLED
         or settings.CLUB_PAYOUTS_ENABLED
         or settings.NEW_BOOKINGS_SUMMARY_ENABLED
     ):
@@ -249,6 +257,12 @@ def build_scheduled_jobs(
         if settings.HOW_DID_IT_GO_ENABLED:
             jobs.append(
                 build_how_did_it_go_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.GET_YOUR_LEVEL_ENABLED:
+            jobs.append(
+                build_get_your_level_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -535,6 +549,43 @@ def build_how_did_it_go_job(
     return PeriodicJob(
         name=HOW_DID_IT_GO_JOB,
         interval_seconds=settings.HOW_DID_IT_GO_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_get_your_level_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Tell an account *Get your level* a day after its first group join, while
+    it holds no rating — once, ever (#727).
+
+    **Idempotent and safe beside itself with no lock**: an account is told
+    under a key of its own, on the day a day after its join falls on, and never
+    again once told on any day — so a second run tells nothing, and two
+    processes at once collide on the player's day, the second stepped over.
+    **What it buys is the nudge, not correctness**: nothing waits on it.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_tell_get_your_level(session, clock=clock).execute()
+        if done.players or done.conflicts:
+            logger.info(
+                "get your level finished",
+                extra={
+                    "job": GET_YOUR_LEVEL_JOB,
+                    "players": done.players,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=GET_YOUR_LEVEL_JOB,
+        interval_seconds=settings.GET_YOUR_LEVEL_INTERVAL_SECONDS,
         run=run,
     )
 

@@ -121,6 +121,7 @@ def build_lifespan(settings: Settings):
             or settings.CUT_OFF_ENABLED
             or settings.HOLDING_ENABLED
             or settings.HOW_DID_IT_GO_ENABLED
+            or settings.GET_YOUR_LEVEL_ENABLED
             or settings.CLUB_PAYOUTS_ENABLED
             or settings.NEW_BOOKINGS_SUMMARY_ENABLED
         ):

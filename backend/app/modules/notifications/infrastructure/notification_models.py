@@ -70,12 +70,22 @@ class NoticeORM(Base):
     notice_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
     player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
-    game_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
-    pool_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
-    sport: Mapped[str] = mapped_column(String(16), nullable=False)
-    game_kind: Mapped[str] = mapped_column(String(16), nullable=False)
-    club_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
-    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: The game's six facts — every one ``NULL`` on a notice about no game,
+    #: *Get your level* (#727), and every one set on every other kind.
+    game_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False), nullable=True
+    )
+    pool_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False), nullable=True
+    )
+    sport: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    game_kind: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    club_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False), nullable=True
+    )
+    starts_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     opens: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_grosze: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     #: The players it names, comma-separated, in the order it names them.
