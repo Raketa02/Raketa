@@ -1,7 +1,7 @@
 import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 import { booking } from './stub/bookings';
-import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
+import { administrator, DAY_MS, fromNow, joinRequest, officialGroup } from './stub/club';
 import { dayFromToday } from './stub/clock';
 import { court, week } from './stub/courts';
 import { moneyRow, payout } from './stub/money';
@@ -9,6 +9,13 @@ import { moneyRow, payout } from './stub/money';
 /** **Every page works at phone width** (#500 story 95): nothing scrolls sideways at 360 px. */
 
 test.use({ viewport: { width: 360, height: 780 } });
+
+/**
+ * **The longest nickname there is**: 64 characters, with no space or hyphen for a line to break at
+ * (ADR-0199). A name had spaces; a handle may have none, so only the page's `overflow-wrap` keeps
+ * it on a phone.
+ */
+const LONGEST_NICKNAME = 'malgorzata.szczepanska_wisniewska.ogrody33_wieczorne.granie.krkw';
 
 async function fitsSideways(page: import('@playwright/test').Page, path: string) {
   const overflow = await page.evaluate(
@@ -111,6 +118,7 @@ test('Groups and Hand over fit a phone: the table, the choices and the question'
     waiting_count: 12,
     whatsapp_size: 48,
   });
+  group.requests = [joinRequest({ nickname: LONGEST_NICKNAME }), ...group.requests.slice(1)];
   club.groups = [group, officialGroup({ name: 'Ogrody open play', member_count: 8 })];
   await signIn(page);
   await page.goto('/groups');
@@ -123,6 +131,7 @@ test('Groups and Hand over fit a phone: the table, the choices and the question'
   );
 
   await page.goto(`/groups/${group.id}`);
+  await expect(page.getByText(LONGEST_NICKNAME)).toBeVisible();
   await page.getByRole('radio', { name: /Tomek/ }).check();
   await fitsSideways(page, '/groups/<id>');
 
@@ -219,7 +228,7 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
     }),
   );
   long.players = long.players.map((player, index) =>
-    index === 0 ? { ...player, name: 'Małgorzata Szczepańska-Wiśniewska' } : player,
+    index === 0 ? { ...player, nickname: LONGEST_NICKNAME } : player,
   );
   club.bookings.add(
     booking({
@@ -237,6 +246,7 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
   await expect(page.getByRole('rowheader').first()).toContainText(
     'Kort centralny przy wejściu · indoor',
   );
+  await expect(page.getByText(LONGEST_NICKNAME)).toBeVisible();
   await fitsSideways(page, '/bookings');
 
   await page.getByRole('button', { name: /^Move/ }).click();

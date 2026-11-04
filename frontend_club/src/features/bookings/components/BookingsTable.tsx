@@ -44,7 +44,7 @@ function Players({ booking }: { booking: Booking }) {
     <ul className={styles.players}>
       {booking.players.map((player) => (
         <li key={player.id}>
-          <span className={styles.player}>{player.name ?? COPY.nameless}</span>
+          <span className={styles.player}>{player.nickname ?? COPY.nameless}</span>
           {player.share === null ? null : (
             <span className={styles.share} data-share={player.share}>
               {` ${COPY.shares[player.share]}`}

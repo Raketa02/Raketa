@@ -74,8 +74,9 @@ test.describe('Bookings', () => {
 
     const seatOpen = rowAt(page, '18:00–19:00');
     await expect(seatOpen.getByRole('cell').nth(0)).toHaveText('Tennis · Friendly');
+    // Each player by their whole nickname, never with an @ (ADR-0199 §5).
     await expect(seatOpen.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-      /Anna Nowak\s*taken$/,
+      /^ania\.k\s*taken$/,
       'Open seat',
     ]);
     await expect(seatOpen.getByRole('cell').nth(2)).toHaveText('Seat open');
@@ -88,10 +89,10 @@ test.describe('Bookings', () => {
     const booked = rowAt(page, '19:00–20:00');
     await expect(booked.getByRole('cell').nth(0)).toHaveText('Padel · Competitive');
     await expect(booked.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-      /Anna Nowak\s*held$/,
-      /Piotr Sikora\s*held$/,
-      /Kasia Wiśniewska\s*held$/,
-      /Marek Zając\s*held$/,
+      /^ania\.k\s*held$/,
+      /^piotr\.s\s*held$/,
+      /^kasia_w\s*held$/,
+      /^marek-z\s*held$/,
     ]);
     await expect(booked.getByRole('cell').nth(2)).toHaveText('Booked');
     await expect(booked.getByRole('cell').nth(3)).toHaveText(
@@ -169,7 +170,7 @@ test.describe('Bookings', () => {
       booking({ court: padel, day, hour: 12, cut_off: fromNow(-HOUR_MS) }),
     );
     nameless.players = nameless.players.map((player, index) =>
-      index === 3 ? { ...player, name: null } : player,
+      index === 3 ? { ...player, nickname: null } : player,
     );
 
     await openDay(page, day);
@@ -186,7 +187,7 @@ test.describe('Bookings', () => {
     );
     await expect(
       rowAt(page, '12:00–13:00').getByRole('cell').nth(1).getByRole('listitem').last(),
-    ).toHaveText(/A player\s*taken/);
+    ).toHaveText(/^A player\s*taken$/);
   });
 
   test('‹ and › walk the days, the date box opens any, and Today comes back', async ({
@@ -606,9 +607,9 @@ test.describe('Bookings', () => {
       // Nothing was taken, so nothing is refunded, and no share is held any more.
       await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł\s*Refunded\s*0 zł/);
       await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-        'Anna Nowak',
-        'Piotr Sikora',
-        'Kasia Wiśniewska',
+        'ania.k',
+        'piotr.s',
+        'kasia_w',
         'Open seat',
       ]);
       await expect(row.getByRole('button')).toHaveCount(0);

@@ -842,8 +842,9 @@ export interface components {
         };
         /**
          * ClubBookingPlayerSchema
-         * @description A player on the game, as the club sees them — **a name, and whether they
-         *     paid or their share is only held**, and nothing else (§16.14).
+         * @description A player on the game, as the club sees them — **their nickname, and
+         *     whether they paid or their share is only held**, and nothing else (§16.14;
+         *     ``docs/adr/0199``, #725).
          */
         ClubBookingPlayerSchema: {
             /**
@@ -852,10 +853,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description Their Name, whole. `null` for an account that can no longer be named.
+             * Nickname
+             * @description Their nickname, whole (docs/adr/0199 §5) — *ania.k*. `null` for an account that can no longer be named, which reads as *A player*.
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Paid
              * @description Their share was taken — *paid ✓*.
@@ -1097,9 +1098,10 @@ export interface components {
         /**
          * ClubJoinRequestSchema
          * @description A Join request as the club answers it — club 20's card without the
-         *     photograph: who is asking, and what they play. ``player_id`` is the id to
-         *     approve or decline. **No Player Score**, as everywhere a request is drawn,
-         *     and **no photograph**, which the club website draws nowhere.
+         *     photograph: who is asking, by their nickname, and what they play
+         *     (``docs/adr/0199``, #725). ``player_id`` is the id to approve or decline.
+         *     **No Player Score**, as everywhere a request is drawn, and **no
+         *     photograph**, which the club website draws nowhere.
          */
         ClubJoinRequestSchema: {
             /**
@@ -1108,10 +1110,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the request still waits.
+             * Nickname
+             * @description Their nickname, whole (docs/adr/0199 §5) — *ania.k*. `null` for an account that can no longer be named, which reads as *A player* — the request still waits.
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Levels
              * @description **Every sport they are rated in**, in the registry's order, each with its Level — *Padel 2,44 · Tennis 2,60*. Empty for somebody rated in nothing.
@@ -1439,7 +1441,7 @@ export interface components {
         InviteAdministratorRequest: {
             /**
              * Name
-             * @description Trimmed, runs of whitespace collapsed, then 2–64 characters — `administrator_name_invalid` otherwise. It becomes the person's Name if they are new to Raketa.
+             * @description Trimmed, runs of whitespace collapsed, then 2–64 characters — `administrator_name_invalid` otherwise. It is the Administrator's, and stays theirs: an account it opens holds no player name, and players see them by the nickname they pick.
              */
             name: string;
             /**

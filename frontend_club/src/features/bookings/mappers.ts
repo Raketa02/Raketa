@@ -119,11 +119,14 @@ export interface GameCourt {
   readonly indoor: boolean;
 }
 
-/** A player on a game, as the club sees them: a name, and where their share stands. */
+/**
+ * A player on a game, as the club sees them: their nickname, and where their share stands
+ * (ADR-0199 §5).
+ */
 export interface BookingPlayer {
   readonly id: string;
-  /** `null` for an account that can no longer be named. */
-  readonly name: string | null;
+  /** Their whole nickname, or `null` for an account that can no longer be named. */
+  readonly nickname: string | null;
   /**
    * `null` while it is neither held nor taken: on a card checked and held later, or once its hold
    * was let go.
@@ -210,7 +213,7 @@ function toBooking(wire: WireBooking): Booking {
         : { reason: wire.called_off_reason, cancel: wire.cancel_reason },
     players: wire.players.map((player) => ({
       id: player.player_id,
-      name: player.name,
+      nickname: player.nickname,
       share: shareOf(player),
     })),
     openSeats: wire.open_seats,

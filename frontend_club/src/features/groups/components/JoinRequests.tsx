@@ -82,7 +82,7 @@ export function JoinRequests({
       {refused}
       <ul className={styles.requests}>
         {requests.map((request) => {
-          const name = request.name ?? COPY.unnamed;
+          const name = request.nickname ?? COPY.unnamed;
           return (
             <li key={request.id} className={styles.request}>
               <div className={styles.who}>

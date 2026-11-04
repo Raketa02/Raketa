@@ -45,7 +45,8 @@ export const GROUPS_COPY = {
       'Nobody runs this group right now, so they wait for you. Answer them here, or hand the ' +
       'group over below.',
     explain: 'Approve lets them in at once. Decline tells them nothing, and they can ask again.',
-    unnamed: 'A player who can no longer be named',
+    /** Somebody whose account reads as nobody: the club's one fallback (ADR-0199 §5). */
+    unnamed: 'A player',
     unrated: 'Not rated in any sport yet',
     approve: 'Approve',
     decline: 'Decline',

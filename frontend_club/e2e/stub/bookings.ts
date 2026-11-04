@@ -44,8 +44,11 @@ export type FakeBooking = Omit<ClubBooking, 'status' | 'ends_at' | 'may_move_or_
   cut_off: string;
 };
 
-/** The names a game's players get unless a test names them, the first side first. */
-const NAMES = ['Anna Nowak', 'Piotr Sikora', 'Kasia Wiśniewska', 'Marek Zając'];
+/**
+ * The nicknames a game's players get unless a test names them, the first side first: the whole
+ * handle, separators and all (ADR-0199 §5).
+ */
+const NICKNAMES = ['ania.k', 'piotr.s', 'kasia_w', 'marek-z'];
 
 /**
  * **A booking on `court` at `hour` of the local `day`**: booked and full, from an official group,
@@ -66,9 +69,9 @@ export function booking(
   const cutOff = rest.cut_off ?? new Date(Date.parse(startsAt) - CUT_OFF_MS).toISOString();
   const booked = stage === 'BOOKED' || stage === 'SEAT_OPEN';
   const taken = booked && Date.now() >= Date.parse(cutOff);
-  const players = NAMES.slice(0, seated).map((name) => ({
+  const players = NICKNAMES.slice(0, seated).map((nickname) => ({
     player_id: randomUUID(),
-    name,
+    nickname,
     paid: taken,
     held: booked && !taken,
   }));

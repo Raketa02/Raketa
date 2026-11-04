@@ -435,9 +435,16 @@ test.describe('Hand over', () => {
 });
 
 test.describe('Join requests', () => {
-  /** The row in *Want to join* that a person's name heads. */
+  /** Every row in *Want to join*: each one answers somebody. */
+  function requests(page: Page) {
+    return page
+      .getByRole('listitem')
+      .filter({ has: page.getByRole('button', { name: /^Approve / }) });
+  }
+
+  /** The row in *Want to join* that a person's nickname, or the fallback, heads. */
   function requestOf(page: Page, name: string) {
-    return page.getByRole('listitem').filter({ hasText: name });
+    return requests(page).filter({ hasText: name });
   }
 
   test('with nobody running it, the desk lets one in and turns one away, and the table counts', async ({
@@ -446,13 +453,13 @@ test.describe('Join requests', () => {
     club,
   }) => {
     const rafa = joinRequest({
-      name: 'Rafa Peralta',
+      nickname: 'rafa.p',
       levels: [
         { sport: 'PADEL', level: 2.456 },
         { sport: 'TENNIS', level: 3.1 },
       ],
     });
-    const kasia = joinRequest({ name: 'Kasia Lis' });
+    const kasia = joinRequest({ nickname: 'kasia_l' });
     const group = officialGroup({
       name: 'Ogrody 33 Club',
       member_count: 5,
@@ -469,15 +476,18 @@ test.describe('Join requests', () => {
       'Nobody runs this group right now, so they wait for you. Answer them here, or hand the ' +
         'group over below.',
     );
-    // In the order they asked; Levels as the app writes them.
-    await expect(requestOf(page, 'Rafa Peralta')).toContainText('Padel 2,46 · Tennis 3,10');
-    await expect(requestOf(page, 'Kasia Lis')).toContainText('Not rated in any sport yet');
+    // In the order they asked, each by their whole nickname and never with an @ (ADR-0199 §5),
+    // over their Levels as the app writes them.
+    await expect(requests(page)).toHaveText([
+      /^rafa\.p\s*Padel 2,46 · Tennis 3,10/,
+      /^kasia_l\s*Not rated in any sport yet/,
+    ]);
 
-    await page.getByRole('button', { name: 'Approve Rafa Peralta' }).click();
+    await page.getByRole('button', { name: 'Approve rafa.p' }).click();
     await expect(page.getByRole('heading', { name: 'Want to join · 1' })).toBeVisible();
-    await expect(requestOf(page, 'Rafa Peralta')).toHaveCount(0);
+    await expect(requestOf(page, 'rafa.p')).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Decline Kasia Lis' }).click();
+    await page.getByRole('button', { name: 'Decline kasia_l' }).click();
     await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
 
     expect(
@@ -511,7 +521,7 @@ test.describe('Join requests', () => {
     const group = officialGroup({
       name: 'Ogrody 33 Club',
       runBy: marta,
-      requests: [joinRequest({ name: 'Rafa Peralta' })],
+      requests: [joinRequest({ nickname: 'rafa.p' })],
     });
     club.groups = [group];
     await signIn(page);
@@ -521,7 +531,7 @@ test.describe('Join requests', () => {
     await expect(page.getByRole('main')).toContainText(
       'Marta Wójcik answers them in the app, and you can answer them here too.',
     );
-    await page.getByRole('button', { name: 'Approve Rafa Peralta' }).click();
+    await page.getByRole('button', { name: 'Approve rafa.p' }).click();
     await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
     await expect(page.getByRole('main')).toContainText(/Administrator\s*Marta Wójcik/);
   });
@@ -532,7 +542,7 @@ test.describe('Join requests', () => {
   }) => {
     const group = officialGroup({
       name: 'Ogrody 33 Club',
-      requests: [joinRequest({ name: 'Rafa Peralta' })],
+      requests: [joinRequest({ nickname: 'rafa.p' })],
     });
     club.groups = [group];
     await signIn(page);
@@ -541,12 +551,34 @@ test.describe('Join requests', () => {
 
     // The administrator lets him in from the app before the desk presses.
     club.groups = [{ ...group, member_count: 1, requests: [] }];
-    await page.getByRole('button', { name: 'Approve Rafa Peralta' }).click();
+    await page.getByRole('button', { name: 'Approve rafa.p' }).click();
 
     await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-      "Rafa Peralta isn't waiting any more: somebody answered first.",
+      "rafa.p isn't waiting any more: somebody answered first.",
     );
     await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
+  });
+
+  test('somebody who can no longer be named still waits, and is answered as the fallback', async ({
+    page,
+    stub,
+    club,
+  }) => {
+    const nobody = joinRequest({ nickname: null });
+    const group = officialGroup({ name: 'Ogrody 33 Club', requests: [nobody] });
+    club.groups = [group];
+    await signIn(page);
+    await page.goto(`/groups/${group.id}`);
+
+    // The fallback Bookings reads too, and the person is answered by it (ADR-0199 §5).
+    await expect(requests(page)).toHaveText([/^A player\s*Not rated in any sport yet/]);
+    await page.getByRole('button', { name: 'Decline A player' }).click();
+    await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
+    expect(
+      stub
+        .requests('post', '/api/v1/club/groups/{group_id}/requests/{player_id}/decline')
+        .map(({ params }) => params),
+    ).toEqual([{ group_id: group.id, player_id: nobody.player_id }]);
   });
 
   test('nobody waiting draws no card', async ({ page, club }) => {

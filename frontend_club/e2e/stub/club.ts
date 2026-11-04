@@ -36,8 +36,10 @@ export type OfficialGroup = Omit<ClubGroup, 'administrator' | 'waiting_count'> &
   requests: JoinRequest[];
 };
 
-/** **Somebody asking to join**, rated in nothing unless the test says. */
-export function joinRequest(fields: Pick<JoinRequest, 'name'> & Partial<JoinRequest>): JoinRequest {
+/** **Somebody asking to join**, by their nickname, rated in nothing unless the test says. */
+export function joinRequest(
+  fields: Pick<JoinRequest, 'nickname'> & Partial<JoinRequest>,
+): JoinRequest {
   return { player_id: randomUUID(), levels: [], ...fields };
 }
 
@@ -99,7 +101,7 @@ export function officialGroup(
     whatsapp_percent: percentOf(members, size),
     games: 0,
     requests: Array.from({ length: waiting_count }, (_, n) =>
-      joinRequest({ name: `Player ${n + 1}` }),
+      joinRequest({ nickname: `player.${n + 1}` }),
     ),
     ...rest,
   };

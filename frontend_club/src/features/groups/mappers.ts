@@ -97,8 +97,10 @@ export interface SportLevel {
 export interface JoinRequest {
   /** The player's id: whom the club approves or declines. */
   readonly id: string;
-  /** Their whole Name, or `null` for an account that can no longer be named. */
-  readonly name: string | null;
+  /**
+   * Their whole nickname (ADR-0199 §5), or `null` for an account that can no longer be named.
+   */
+  readonly nickname: string | null;
   /** Every sport they are rated in, in the registry's order, each with its Level. */
   readonly levels: readonly SportLevel[];
 }
@@ -107,7 +109,7 @@ export interface JoinRequest {
 export function toJoinRequests(wire: WireJoinRequests): readonly JoinRequest[] {
   return wire.requests.map((request) => ({
     id: request.player_id,
-    name: request.name,
+    nickname: request.nickname,
     levels: request.levels.map(({ sport, level }) => ({ sport, level })),
   }));
 }

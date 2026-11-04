@@ -42,7 +42,7 @@
   font-weight: var(--weight-medium);
 }
 
-/* The share held or taken, under the name. */
+/* The share held or taken, under the nickname. */
 .share {
   display: block;
   color: var(--colour-green);

@@ -151,7 +151,10 @@ export const BOOKINGS_COPY = {
     DOUBLE_BOOKING: 'Double booking',
     OTHER: 'Other',
   } satisfies Record<CancelReason, string>,
-  /** A player's share, under their name (Q113): held on their card until the cut-off, or taken. */
+  /**
+   * A player's share, under their nickname (Q113): held on their card until the cut-off, or
+   * taken.
+   */
   shares: { HELD: 'held', TAKEN: 'taken' } satisfies Record<Share, string>,
   openSeat: 'Open seat',
   /** A player whose account can no longer be named. */
