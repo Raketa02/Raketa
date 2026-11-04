@@ -4,11 +4,13 @@
 player fields hold. Bonarka Arena's desk reads Saturday's booking — Ania, who
 picked ``ania.k``, Kuba, Ewa and Tomek — and every seat carries a
 ``nickname``; Ogrody 33's desk reads ``ania.k`` asking to join *Ogrody 33
-Club*, with her Levels. **The Administrators keep the name their club typed**
-(§4): Tomek plays as ``tomek.k`` and the desk still reads *Tomek Kowal* on its
-table, on the invitation, as who runs a group and on the handover. And **the
-club's emails carry no player at all** — *New bookings today* and *a game was
-called off at the cut-off* name the hour, the court and the sport, and nobody.
+Club*, with her Levels — and somebody who never picked a nickname as
+``null``, the website's *A player*. **The Administrators keep the name their
+club typed** (§4): Tomek plays as ``tomek.k`` and the desk still reads *Tomek
+Kowal* on its table, on the invitation, as who runs a group and on the
+handover. And **the club's emails carry no player at all** — *New bookings
+today* and *a game was called off at the cut-off* name the hour, the court and
+the sport, and nobody.
 
 Every act is taken over HTTP as the website and the phone take it; every claim
 is read where the desk would read it.
@@ -23,6 +25,7 @@ from app.bootstrap.composition import build_summarise_new_bookings
 from app.core.config import get_settings
 from app.kernel import Sport
 from tests.api.administration_world import (
+    ADMINISTRATORS,
     MARTA,
     accept_path,
     club_signs_up,
@@ -47,6 +50,7 @@ from tests.api.test_club_groups import (
     the_club_s_groups,
     the_club_s_queue,
 )
+from tests.api.players_world import auth
 from tests.api.test_groups import a_rated_player, join
 from tests.api.test_official_groups import an_official_group
 from tests.unit.fake_clock import MovableClock
@@ -197,6 +201,40 @@ async def test_the_desk_reads_ania_k_asking_to_join_with_her_levels(
     assert [row["sport"] for row in request["levels"]] == ["PADEL", "TENNIS"]
 
 
+async def test_somebody_who_never_picked_a_nickname_still_asks_as_nobody(
+    client, ogrody, marta
+):
+    """Signed up and in, never named: the request waits all the same, and the
+    desk reads ``null`` — the website's *A player*."""
+
+    group = await an_official_group(client, marta, ogrody["id"])
+    signed_up = await client.post(
+        "/api/v1/users",
+        json={
+            "email": "nobody@example.com",
+            "password1": "hunter22!",
+            "password2": "hunter22!",
+            "adult_attested": True,
+        },
+    )
+    assert signed_up.status_code == 201, signed_up.text
+    signed_in = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "nobody@example.com", "password": "hunter22!"},
+    )
+    assert signed_in.status_code == 200, signed_in.text
+    nobody = {
+        "id": signed_up.json()["id"],
+        "headers": auth(signed_in.json()["access_token"]),
+    }
+    asked = await join(client, nobody, group)
+    assert asked.json()["relation"] == "REQUESTED", asked.text
+
+    [request] = await the_club_s_queue(client, ogrody, group)
+
+    assert (request["player_id"], request["nickname"]) == (nobody["id"], None)
+
+
 async def test_an_administrator_who_plays_as_tomek_k_is_tomek_kowal_to_the_desk(
     client, ogrody, marta
 ):
@@ -208,12 +246,23 @@ async def test_an_administrator_who_plays_as_tomek_k_is_tomek_kowal_to_the_desk(
     invited = await invites(
         client, ogrody["desk"], name="Tomek Kowal", email="tomek.k@example.com"
     )
+    waiting = {one["id"]: one for one in await listed(client, ogrody["desk"])}
+    resent = await client.post(
+        f"{ADMINISTRATORS}/{invited['id']}/invitation", headers=ogrody["desk"]
+    )
     accepted = await client.post(accept_path(invited["id"]), headers=tomek["headers"])
     assert accepted.status_code == 200, accepted.text
 
     handed = await hands_over(client, ogrody["desk"], group, invited["id"])
 
+    # The invitation, as sent, as it waits on the table and as sent again.
     assert invited["name"] == "Tomek Kowal"
+    assert (waiting[invited["id"]]["status"], waiting[invited["id"]]["name"]) == (
+        "INVITED",
+        "Tomek Kowal",
+    )
+    assert resent.status_code == 200, resent.text
+    assert resent.json()["name"] == "Tomek Kowal"
     assert handed.status_code == 200, handed.text
     assert handed.json()["administrator"] == {
         "id": invited["id"],
