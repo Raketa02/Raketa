@@ -98,9 +98,14 @@ let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
 
-/** Nothing about the questionnaire was asked or shown on the way. */
+/**
+ * Nothing about the questionnaire was asked or shown on the way. **The ratings may be read on
+ * Home** — its *Get your level* card asks whether there are any (#731) — but nothing on the way
+ * there asks, and with no group to be in there is no card, so no run is looked for either.
+ */
 function expectNoQuestionnaire() {
-  expect(transport.requestsTo('GET', RATINGS_PATH)).toEqual([]);
+  const onHome = screen.queryByText(HOME_TAB_LINE) !== null;
+  if (!onHome) expect(transport.requestsTo('GET', RATINGS_PATH)).toEqual([]);
   expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toEqual([]);
   expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toEqual([]);
   expect(screen.queryByText('Which sports do you play?')).toBeNull();

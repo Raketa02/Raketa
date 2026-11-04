@@ -6,6 +6,7 @@
  * path spelled twice is the one that goes stale.
  */
 
+import { fromAGroup, sportsPickerRoute } from '@/features/onboarding/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { GroupTab } from '../domain/groupPage';
@@ -84,4 +85,13 @@ export function groupReturnRoute(groupId: string, tab: GroupTab, sport: Sport | 
     pathname: '/play/group/[groupId]',
     params: sport === undefined ? { groupId, tab } : { groupId, tab, sport },
   } as const;
+}
+
+/**
+ * ***+ Another sport*** (#731, ADR-0200 §4): *Which sports do you play?* over the sports the chip
+ * offers, for a pass that returns to this group on this tab. Onboarding's picker, so the route is
+ * onboarding's; walked into by `replace`, as every door into the questionnaire is.
+ */
+export function anotherSportRoute(groupId: string, tab: GroupTab, offer: readonly Sport[]) {
+  return sportsPickerRoute(fromAGroup(groupId, tab), offer);
 }

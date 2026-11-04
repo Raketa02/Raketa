@@ -50,6 +50,13 @@ export { useGroupName } from './hooks/useGroups';
 export { groupReturnRoute } from './components/groupRoutes';
 
 /**
+ * **Home's *Get your level*** ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7):
+ * the door where play begins, drawn on Home for a member of a group rated in nothing. The shell
+ * places it; whether it is drawn is this feature's rule.
+ */
+export { HomeLevelCard } from './components/HomeLevelCard';
+
+/**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),
  * [#517](https://github.com/Raketa02/Raketa/issues/517)): an official group is a Group, so its tile,
  * its dots, its club's tile, its form cards, its request row, who a switch to Anyone let in, a failed

@@ -50,6 +50,10 @@
  * to the tab it stood on. No sport pill is drawn until she holds a rating. **On Fill in, *+ Post a
  * game* still floats over the door** (the screens A3), and *Post a game* draws the same door.
  *
+ * **The chip ends with *+ Another sport*** while a sport is left to offer (#731, ADR-0200 §4): the
+ * picker over the sports she is unrated in — an official group's own, or any — for a pass that
+ * returns to the tab the page is on.
+ *
  * **A rating pass begun on the page comes back to it** (#729, ADR-0200 §3, §5): the route hands in
  * the tab it began on and the sport it rated last, and the page opens on that tab, standing on that
  * sport — the notice's posture: the page stands on it until the player picks another, never saved
@@ -105,7 +109,7 @@ import { FillInTab, PostAGame } from './FillInTab';
 import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupHeader } from './GroupHeader';
-import { groupInfoRoute } from './groupRoutes';
+import { anotherSportRoute, groupInfoRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
 import { fillInTabLabel, gamesTabLabel } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
@@ -225,6 +229,7 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
       <SportFilterPage
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
         {...(openingSport === undefined ? {} : { opening: openingSport })}
+        onAnother={(offer) => router.replace(anotherSportRoute(groupId, tab, offer))}
         header={(pill, cover) => (
           <GroupHeader
             groupId={groupId}

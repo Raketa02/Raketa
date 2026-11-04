@@ -19,6 +19,8 @@
  * **A player group's reader rated in nothing meets the door** (ADR-0200 §2, #730): `needsALevel`
  * says so, and the page draws *Get your level* in place of its tabs. The sport pill is drawn only
  * once there is a rating to list (`sports` is empty until then), and lists only rated sports.
+ * **It ends with *+ Another sport*** while there is a sport left to offer (`toOffer`, #731): any
+ * she is unrated in, or an official group's own.
  *
  * The phone read is `usePlaySegment`'s posture, for its reasons: local, never waiting on the
  * network (`networkMode: 'always'`), once per account per session and kept for good, and every
@@ -33,7 +35,13 @@ import { useSkillRatings } from '@/features/onboarding/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { filterSports, needsALevel, openingSport, sportsToAdd } from '../domain/groupPage';
+import {
+  filterSports,
+  needsALevel,
+  openingSport,
+  sportsToAdd,
+  sportsToOffer,
+} from '../domain/groupPage';
 import { keepLastSport, readLastSport } from '../use-cases/lastSport';
 
 import { useReaderId } from './useReaderId';
@@ -54,6 +62,12 @@ export interface GroupSport {
    * group, which offers its own card instead.
    */
   readonly needsALevel: boolean;
+  /**
+   * **What *+ Another sport* offers** — the sports the reader is unrated in, an official group's own
+   * or any (ADR-0200 §4, `sportsToOffer`); empty while there is no chip, once there is nothing left
+   * to offer, and while either read is out.
+   */
+  readonly toOffer: readonly Sport[];
   readonly choose: (sport: Sport) => void;
 }
 
@@ -103,7 +117,14 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 
   // `null` is a phone that answered *nothing saved*; `undefined` is one still being read.
   if (rated === undefined || (account !== undefined && picked === undefined)) {
-    return { sports: undefined, sport: undefined, toAdd: [], needsALevel: false, choose };
+    return {
+      sports: undefined,
+      sport: undefined,
+      toAdd: [],
+      needsALevel: false,
+      toOffer: [],
+      choose,
+    };
   }
 
   return {
@@ -111,6 +132,7 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
     sport: openingSport(rated, picked ?? undefined, declared, wanted),
     toAdd: sportsToAdd(rated, declared),
     needsALevel: needsALevel(rated, declared),
+    toOffer: sportsToOffer(rated, declared),
     choose,
   };
 }
@@ -120,7 +142,8 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
  * (#529). Somebody who runs a group need not play, so the filter lists every sport the group
  * declares, in the order it is served (the registry's), and opens on the first. **A pick is held
  * while the screen is up and kept nowhere**: Play's last sport is the player's choice, and an
- * Administrator looking down a list has not made one. Nothing until the group is read.
+ * Administrator looking down a list has not made one. Nothing until the group is read, and never
+ * *+ Another sport*: the list is the group's, not a level the reader is asked for.
  */
 export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupSport {
   const [picked, setPicked] = useState<Sport>();
@@ -131,10 +154,18 @@ export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupS
       sport: undefined,
       toAdd: [],
       needsALevel: false,
+      toOffer: [],
       choose: setPicked,
     };
   }
 
   const sport = picked !== undefined && declared.includes(picked) ? picked : declared[0];
-  return { sports: declared, sport, toAdd: [], needsALevel: false, choose: setPicked };
+  return {
+    sports: declared,
+    sport,
+    toAdd: [],
+    needsALevel: false,
+    toOffer: [],
+    choose: setPicked,
+  };
 }

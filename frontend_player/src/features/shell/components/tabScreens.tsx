@@ -10,6 +10,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { HomeLevelCard } from '@/features/groups/types';
 import { NoticeBell } from '@/features/notifications/types';
 import { HomeRail, PaymentsToConfirm, rereadHome } from '@/features/proposals/types';
 
@@ -32,6 +33,11 @@ import { HOME_COPY } from './shellCopy';
  * **A payment to confirm is above the rail** — proposals' *TO CONFIRM*, which draws nothing while
  * there is none: the bar's Home badge counts every payment the player has to confirm, and a count
  * with nothing on the tab to answer it would be a dead end.
+ *
+ * **A member of a group rated in nothing is asked for a level first** (`groups`' `HomeLevelCard`,
+ * [#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7): *Get your level — your
+ * groups can't deal you games until you have one.*, at the top, since until she has one nothing
+ * under it can happen. It draws nothing for anybody else.
  */
 export function HomeScreen() {
   const client = useQueryClient();
@@ -41,6 +47,7 @@ export function HomeScreen() {
       right={<NoticeBell />}
       onRefresh={() => rereadHome(client)}
     >
+      <HomeLevelCard />
       <PaymentsToConfirm />
       <HomeRail empty={HOME_COPY.empty} />
     </ShellScreen>

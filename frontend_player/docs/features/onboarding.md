@@ -232,3 +232,21 @@ sport with another sport's run left halfway sees no _Carry on_** — the door is
 and gets the run back from the passport's chip or #731's _+ Another sport_, whose start hands an
 unfinished run back. **Not seen on a device**: the door's card, and the frame
 between the gate mounting Home and the group pushed back over Play.
+
+**Two more doors into the picker, and one narrows it**
+([#731](https://github.com/Raketa02/Raketa/issues/731),
+[ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §4, §5, §7). **The picker
+takes an offer**: `/sports?…&offer=tennis,squash`, read by `parsePickerOffer` (one param, the sports
+joined by commas, so the route is a plain string however expo-router serialises a list) and drawn
+through `sportsOnOffer` — the served sports, in the server's order, narrowed to those offered. An
+offer that is not one is no narrowing: the list is longer, and the server's start still refuses a
+sport already rated. `sportsPickerRoute(from, offer?)` moved out of `useLevelDoor` and is exported,
+because `groups`' _+ Another sport_ opens the picker too, over what it offers; the door and the Home
+card offer every sport and carry none. **`LevelDoor` is Home's card as well**, `from` `FROM_HOME`:
+only its line under _Get your level_ differs by where it stands (`LEVEL_DOOR_COPY.line`, keyed by
+the origin's kind) — _Pick the sports you play, a few questions each._ on a group's tab, _Your groups
+can't deal you games until you have one._ on Home — and its pass ends on Home, whose last control
+#730 already said _Back to Home_. Whether the card is drawn is `groups`' rule
+([`groups.md`](groups.md)). **Calls made here**: the Home line is the spec's sentence split at its
+dash, as the door's is; the offer travels in the route rather than being read again by the picker.
+**Not seen on a device**: the card on Home.

@@ -28,6 +28,11 @@
  * reader is rated in none of the sports of, what they would add to see it (#519); for a player
  * group's reader rated in nothing, that they meet the door where play begins (#730).
  *
+ * **The bar ends with *+ Another sport*** while there is a sport left to offer (#731, ADR-0200 §4):
+ * pressed, it folds and hands the page the sports it offers (`onAnother`), and the page opens the
+ * picker for a pass that returns to it — the tab is the page's to say. A page that hands no
+ * `onAnother` offers none.
+ *
  * **The filter's state can be handed in** (`SportFilterFrame`): the Administrator's Members lists
  * an official group's declared sports whatever the reader is rated in (#529), so it brings its own
  * state and draws the same header, pill and bar.
@@ -87,6 +92,11 @@ export interface SportFilterPageProps {
     toAdd: readonly Sport[],
     needsALevel: boolean,
   ) => ReactNode;
+  /**
+   * ***+ Another sport*** was pressed, with the sports it offers — the ones the reader is unrated
+   * in (#731). Absent, the bar ends with no such pill.
+   */
+  readonly onAnother?: (offer: readonly Sport[]) => void;
 }
 
 export function SportFilterPage({
@@ -94,10 +104,15 @@ export function SportFilterPage({
   opening,
   header,
   children,
+  onAnother,
 }: SportFilterPageProps) {
   const filter = useGroupSport(declaredSports, opening);
   return (
-    <SportFilterFrame filter={filter} header={header}>
+    <SportFilterFrame
+      filter={filter}
+      header={header}
+      {...(onAnother === undefined ? {} : { onAnother })}
+    >
       {children}
     </SportFilterFrame>
   );
@@ -112,8 +127,8 @@ export interface SportFilterFrameProps extends Omit<
 }
 
 /** **The page around a filter whose state is handed in** — `SportFilterPage`'s drawing. */
-export function SportFilterFrame({ filter, header, children }: SportFilterFrameProps) {
-  const { sports, sport, toAdd, needsALevel, choose } = filter;
+export function SportFilterFrame({ filter, header, children, onAnother }: SportFilterFrameProps) {
+  const { sports, sport, toAdd, needsALevel, toOffer, choose } = filter;
   const [unfolded, setUnfolded] = useState(false);
   const [headerBox, setHeaderBox] = useState<{ readonly width: number; readonly height: number }>();
   const [covered, setCovered] = useState<Box>();
@@ -126,9 +141,23 @@ export function SportFilterFrame({ filter, header, children }: SportFilterFrameP
     fold();
   }
 
+  // *+ Another sport*: only where the page opens the picker, and only while a sport is left.
+  const another =
+    onAnother === undefined || toOffer.length === 0
+      ? undefined
+      : () => {
+          fold();
+          onAnother(toOffer);
+        };
+
   const pill =
     sports === undefined || sport === undefined ? undefined : (
-      <SportPill sports={sports} sport={sport} onUnfold={() => setUnfolded(true)} />
+      <SportPill
+        sports={sports}
+        sport={sport}
+        another={another !== undefined}
+        onUnfold={() => setUnfolded(true)}
+      />
     );
 
   const cover = (node: ReactNode) => (
@@ -178,6 +207,7 @@ export function SportFilterFrame({ filter, header, children }: SportFilterFrameP
               sport={sport}
               onChoose={pick}
               {...(barCover === undefined ? {} : { cover: barCover })}
+              {...(another === undefined ? {} : { onAnother: another })}
             />
           </View>
         </>

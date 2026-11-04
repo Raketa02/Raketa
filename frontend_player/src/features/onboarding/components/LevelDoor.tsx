@@ -14,10 +14,14 @@
  * rated. **Nothing is drawn until the door knows which it is**, so it never says one and then the
  * other — and offline, with nothing cached, it says it is waiting rather than drawing nothing.
  *
+ * **On Home it is the card** ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7):
+ * the same door, `from` Home, whose line says why nothing is happening — *your groups can't deal you
+ * games until you have one* — and whose pass ends on Home. Where it is drawn is `groups`' rule.
+ *
  * The page's dark card, as the official group's own card (`AddSportCard`) and every starting
  * tab's (`LinkCard`) are: a headline, the line under it, and the one bright door. It lives here
- * rather than in `groups` because its words are the questionnaire's, and Home's card (#731) says
- * the same carry-on.
+ * rather than in `groups` because its words are the questionnaire's, and Home's card says the same
+ * carry-on.
  */
 
 import { StyleSheet, Text } from 'react-native';
@@ -36,7 +40,7 @@ import {
 } from './levelDoorPresentation';
 
 export interface LevelDoorProps {
-  /** Where the pass it begins returns to — the group and the tab it stands on. */
+  /** Where the pass it begins returns to — the group and the tab it stands on, or Home. */
   readonly from: DoorOrigin;
 }
 
@@ -56,7 +60,9 @@ export function LevelDoor({ from }: LevelDoorProps) {
       <Text style={s.headline}>
         {carrying ? carryOnHeadline(door.run.sport) : LEVEL_DOOR_COPY.headline}
       </Text>
-      <Text style={s.line}>{carrying ? carryOnLine(door.question) : LEVEL_DOOR_COPY.line}</Text>
+      <Text style={s.line}>
+        {carrying ? carryOnLine(door.question) : LEVEL_DOOR_COPY.line[from.kind]}
+      </Text>
       <Button
         label={carrying ? LEVEL_DOOR_COPY.carryOn : LEVEL_DOOR_COPY.start}
         accessibilityHint={carrying ? carryOnHint(door.run.sport) : LEVEL_DOOR_COPY.startHint}

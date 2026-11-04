@@ -3,7 +3,7 @@
  * deep link, and the assessment id becomes a request path.
  */
 
-import { parseAssessmentRouteParams } from './routeParams';
+import { offerParam, parseAssessmentRouteParams, parsePickerOffer } from './routeParams';
 
 const ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 
@@ -55,5 +55,29 @@ describe('assessment route params', () => {
     expect(
       parseAssessmentRouteParams({ assessmentId: ID, sport: ['padel', 'tennis'] }),
     ).toBeUndefined();
+  });
+});
+
+/**
+ * **The sports the picker offers, when a door narrows them** (#731, ADR-0200 §4): *+ Another sport*
+ * opens it over the sports the player is unrated in — an official group's own, or any — and the
+ * route carries them, so they are untrusted input like every param.
+ */
+describe('the picker’s offer', () => {
+  it('is carried as one param and read back, in the order it was written', () => {
+    const params = { offer: offerParam(['tennis', 'badminton']) };
+
+    expect(parsePickerOffer(params)).toEqual(['tennis', 'badminton']);
+  });
+
+  it('is no narrowing at all when the route carries none — every sport the server serves', () => {
+    expect(parsePickerOffer({})).toBeUndefined();
+    expect(parsePickerOffer({ groupId: ID, tab: 'games' })).toBeUndefined();
+  });
+
+  it('is no narrowing for an offer that is not one — a sport outside the set, or nothing', () => {
+    expect(parsePickerOffer({ offer: 'tennis,pickleball' })).toBeUndefined();
+    expect(parsePickerOffer({ offer: '' })).toBeUndefined();
+    expect(parsePickerOffer({ offer: ['tennis', 'squash'] })).toBeUndefined();
   });
 });

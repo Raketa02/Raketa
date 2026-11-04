@@ -2,33 +2,42 @@
  * **What a tapped push carried, checked before anything is opened** (#559; `docs/architecture.md`
  * Part 13: *payloads are untrusted, deep-link targets are validated*).
  *
- * The backend pushes seven keys (`notifications/application/pushing.py`), and all seven are read:
- * where it opens and the ids it opens by; its kind, because a Fill in alert opens somewhere its
- * `opens` alone does not say (`domain/notice.ts`); and the notice's own id, because the banner it is
- * drawn as is the list's too and is drawn once. The ids must be ids and where it opens one of the
- * five places — the fourth a booked game's result screen (#664), the fifth Home (#727), whose push
- * carries no game and is not read by this build (#731). The kinds — the notice's, the
- * sport, the game's — are narrowed where the wire is read (`mappers/`), since a code this build
- * cannot name is a notice still told and nowhere to open.
+ * The backend pushes seven keys about a game (`notifications/application/pushing.py`), and all seven
+ * are read: where it opens and the ids it opens by; its kind, because a Fill in alert opens somewhere
+ * its `opens` alone does not say (`domain/notice.ts`); and the notice's own id, because the banner it
+ * is drawn as is the list's too and is drawn once. The ids must be ids and where it opens one of the
+ * four places a game is — the fourth a booked game's result screen (#664). **A notice about no game
+ * pushes three** — its id, its kind and Home (#727) — and is read as nothing more (#731): a game's
+ * keys on a push that opens Home are left on the wire, and a game's push with none of them is not a
+ * notice. The kinds — the notice's, the sport, the game's — are narrowed where the wire is read
+ * (`mappers/`), since a code this build cannot name is a notice still told and nowhere to open.
  */
 
 import { z } from 'zod';
 
-import { OPENS, type Opens } from '../domain/vocabulary';
+import { GAME_OPENS, type Opens } from '../domain/vocabulary';
 
-const PushNoticeData = z.object({
+const AboutNoGame = z.object({
   notice_id: z.string().uuid(),
   kind: z.string(),
-  opens: z.enum(OPENS),
+  opens: z.literal('HOME'),
+});
+
+const AboutAGame = z.object({
+  notice_id: z.string().uuid(),
+  kind: z.string(),
+  opens: z.enum(GAME_OPENS),
   game_id: z.string().uuid(),
   pool_id: z.string().uuid(),
   sport: z.string(),
   game_kind: z.string(),
 });
 
+const PushNoticeData = z.union([AboutNoGame, AboutAGame]);
+
 /**
- * A notice's facts as the backend sent them — a push's payload, or a listed row's. A listed row
- * about no game carries no game's facts (#727); a push this build reads always does.
+ * A notice's facts as the backend sent them — a push's payload, or a listed row's. One about no game
+ * carries no game's facts (#727), whichever way it arrived.
  */
 export interface SentFacts {
   readonly kind: string;
@@ -48,13 +57,15 @@ export interface PushedNotice extends SentFacts {
 export function parsePushNotice(data: unknown): PushedNotice | undefined {
   const parsed = PushNoticeData.safeParse(data);
   if (!parsed.success) return undefined;
-  return {
-    noticeId: parsed.data.notice_id,
-    kind: parsed.data.kind,
-    opens: parsed.data.opens,
-    gameId: parsed.data.game_id,
-    poolId: parsed.data.pool_id,
-    sport: parsed.data.sport,
-    gameKind: parsed.data.game_kind,
-  };
+  const pushed = parsed.data;
+  const about =
+    pushed.opens === 'HOME'
+      ? { gameId: null, poolId: null, sport: null, gameKind: null }
+      : {
+          gameId: pushed.game_id,
+          poolId: pushed.pool_id,
+          sport: pushed.sport,
+          gameKind: pushed.game_kind,
+        };
+  return { noticeId: pushed.notice_id, kind: pushed.kind, opens: pushed.opens, ...about };
 }

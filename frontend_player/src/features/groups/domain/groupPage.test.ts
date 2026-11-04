@@ -3,10 +3,12 @@ import {
   faceIn,
   filterSports,
   gamesCard,
+  homeAsksForALevel,
   needsALevel,
   openingSport,
   rosterFor,
   sportsToAdd,
+  sportsToOffer,
 } from './groupPage';
 
 describe('the sports a group page filters by', () => {
@@ -128,6 +130,47 @@ describe('who meets the door instead of a player group’s tabs', () => {
   it('is never an official group’s reader, who has its own card', () => {
     expect(needsALevel([], ['padel'])).toBe(false);
     expect(needsALevel(['tennis'], ['padel'])).toBe(false);
+  });
+});
+
+// #731, ADR-0200 §4: *+ Another sport* at the end of the chip.
+describe('the sports *+ Another sport* offers', () => {
+  it('is every sport a player group’s reader is unrated in, in the registry’s order', () => {
+    expect(sportsToOffer(['tennis'], undefined)).toEqual(['padel', 'squash', 'badminton']);
+  });
+
+  it('is only an official group’s own sports the reader is unrated in', () => {
+    expect(sportsToOffer(['padel'], ['tennis', 'padel', 'badminton'])).toEqual([
+      'tennis',
+      'badminton',
+    ]);
+  });
+
+  it('is nothing once the reader is rated in everything there is to offer', () => {
+    expect(sportsToOffer(['padel', 'tennis', 'squash', 'badminton'], undefined)).toEqual([]);
+    expect(sportsToOffer(['padel', 'tennis'], ['padel', 'tennis'])).toEqual([]);
+  });
+
+  // The chip is drawn only once there is a rating to list; before it, the door or the card asks.
+  it('is nothing while there is no chip to end — the door or the group’s card asks instead', () => {
+    expect(sportsToOffer([], undefined)).toEqual([]);
+    expect(sportsToOffer(['squash'], ['padel', 'tennis'])).toEqual([]);
+  });
+});
+
+// #731, ADR-0200 §7: *Get your level — your groups can't deal you games until you have one.*
+describe('who Home asks for a level', () => {
+  it('is a member of a group who holds no rating', () => {
+    expect(homeAsksForALevel(1, [])).toBe(true);
+    expect(homeAsksForALevel(3, [])).toBe(true);
+  });
+
+  it('is nobody in no group — there is nothing a level would unlock yet', () => {
+    expect(homeAsksForALevel(0, [])).toBe(false);
+  });
+
+  it('is nobody holding any rating, whatever the groups play', () => {
+    expect(homeAsksForALevel(2, ['squash'])).toBe(false);
   });
 });
 

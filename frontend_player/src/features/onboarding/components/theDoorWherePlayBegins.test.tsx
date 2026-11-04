@@ -437,9 +437,9 @@ describe('a player rated in nothing, in a player group', () => {
 
       await expectTheGroup(WEDNESDAY, TABS.friends);
       // The door is gone, and the chip lists exactly the two sports she is rated in, standing on
-      // the one rated last.
+      // the one rated last — ending with + Another sport, squash and badminton left (#731).
       await waitFor(() => expect(screen.queryByText(DOOR)).toBeNull());
-      expect(await chipSports('Tennis')).toEqual(['Padel', 'Tennis']);
+      expect(await chipSports('Tennis')).toEqual(['Another sport', 'Padel', 'Tennis']);
       expect(transport.requestsTo('POST', ASSESSMENTS_PATH).map((request) => request.body)).toEqual(
         [{ sport: 'PADEL' }, { sport: 'TENNIS' }],
       );

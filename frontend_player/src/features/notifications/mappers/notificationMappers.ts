@@ -53,12 +53,14 @@ function toNoticeKind(wire: string): NoticeKind | undefined {
 }
 
 /**
- * Where a tap goes — `undefined` for a notice, a sport or a kind this build cannot name, and for a
- * notice about no game (#727): Home is where it opens, and opening it is #731's.
+ * Where a tap goes — **Home for a notice that opens Home** (#727, #731), whatever its kind, since
+ * it names nothing a later release could have meant differently; `undefined` for a game's notice,
+ * a sport or a kind this build cannot name, or a game's notice that names no game.
  */
 export function toTarget(facts: SentFacts): NoticeTarget | undefined {
   const { opens, gameId, poolId } = facts;
-  if (opens === 'HOME' || gameId === null || poolId === null) return undefined;
+  if (opens === 'HOME') return { opens: 'home' };
+  if (gameId === null || poolId === null) return undefined;
   const notice = toNoticeKind(facts.kind);
   const sport = facts.sport === null ? undefined : toSport(facts.sport);
   const kind = facts.gameKind === null ? undefined : toKind(facts.gameKind);

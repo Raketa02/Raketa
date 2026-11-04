@@ -3,7 +3,7 @@
  *
  * | | |
  * | --- | --- |
- * | `useMyGroups` | `GET /groups` — the reader's groups, newest joined first; `useGroupsList` re-reads it on a return, and on a pull |
+ * | `useMyGroups` | `GET /groups` — the reader's groups, newest joined first; `useGroupsList` re-reads it on a return, and on a pull; Home's card asks it of a player rated in nothing |
  * | `useGroup` | `GET /groups/{id}` — one group, as its page reads it |
  * | `useGroupMembers` | `GET /groups/{id}/members?sport=` — Members, for the filter's sport |
  * | `useJoinRequests` | `GET /groups/{id}/requests` — *Want to join*, asked **only by the Owner** |
@@ -32,10 +32,12 @@ import {
 
 import { groupKeys } from './groupKeys';
 
-export function useMyGroups() {
+/** `enabled` is Home's card's (#731): it asks which groups only of a player rated in nothing. */
+export function useMyGroups({ enabled = true }: { readonly enabled?: boolean } = {}) {
   return useQuery<readonly MyGroup[], AppError>({
     queryKey: groupKeys.mine(),
     queryFn: ({ signal }) => readMyGroups({ signal }),
+    enabled,
   });
 }
 

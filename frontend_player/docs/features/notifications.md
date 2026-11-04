@@ -337,3 +337,17 @@ words with nowhere to open, as a code this build cannot name already was. `targe
 _Get your level_ push is not read. Drawing it, opening Home and reading its push are
 [#731](https://github.com/Raketa02/Raketa/issues/731)'s. `notificationMappers.test.ts` holds both
 _nowhere_ answers.
+
+**_Get your level_ opens Home** ([#731](https://github.com/Raketa02/Raketa/issues/731),
+ADR-0200 §7), which rules the paragraph above's _nowhere yet_. `NoticeTarget` gained `{ opens:
+'home' }`, and `toTarget` answers it for **any notice that says it opens Home**, whatever its kind,
+since it names nothing a later release could have meant differently. **The push is read now**: the
+schema is a union — a game's seven keys, checked against `GAME_OPENS` (the four places a game is),
+or a notice about no game's three, `notice_id`, `kind` and `HOME` — and a game's push with no game
+in it is still no notice. **Home is laid down, not pushed**: every other destination is pushed over
+wherever the player is, so _back_ returns there, but Home is a tab's root, and a second Home over
+the list would put Home behind Home — so `useOpenNotice` calls the shell's `openTab('home', …)`,
+the tab bar's own move, from the list, the banner or a tapped push, and does nothing where Home is
+already on screen. The ratings and the run left halfway — what the card is drawn from — are marked
+stale first. The walk is `notifications.test.tsx`'s _Get your level_ block, with Home's card on the
+landing.

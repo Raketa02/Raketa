@@ -12,6 +12,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { getAnimatedStyle } from 'react-native-reanimated';
 
 import { ReducedMotionProvider, theme } from '@/shared/ui';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { SportBar, type BarCover } from './SportFilter';
 
@@ -22,15 +23,23 @@ const PILL = 80;
 function drawBar({
   reduced = false,
   cover,
-}: { readonly reduced?: boolean; readonly cover?: BarCover } = {}) {
+  onAnother,
+  sports = ['padel', 'tennis', 'squash', 'badminton'],
+}: {
+  readonly reduced?: boolean;
+  readonly cover?: BarCover;
+  readonly onAnother?: () => void;
+  readonly sports?: readonly Sport[];
+} = {}) {
   const onChoose = jest.fn();
   render(
     <ReducedMotionProvider value={reduced}>
       <SportBar
-        sports={['padel', 'tennis', 'squash', 'badminton']}
+        sports={sports}
         sport="padel"
         onChoose={onChoose}
         {...(cover === undefined ? {} : { cover })}
+        {...(onAnother === undefined ? {} : { onAnother })}
       />
     </ReducedMotionProvider>,
   );
@@ -134,5 +143,45 @@ describe('the fast filter’s bar', () => {
 
     fireEvent.press(within(bar()).getByRole('button', { name: 'Squash' }));
     expect(onChoose).toHaveBeenCalledWith('squash');
+  });
+
+  // #731, ADR-0200 §4: the row ends with + Another sport while a sport is left to offer.
+  it('ends with + Another sport, the last out from under the current one, where it is offered', () => {
+    const onAnother = jest.fn();
+    const { onChoose } = drawBar({ sports: ['padel', 'tennis'], onAnother });
+    layOut();
+    act(() => jest.advanceTimersByTime(FRAME));
+
+    const another = within(bar()).getByRole('button', { name: 'Another sport' });
+    expect(within(another).getByText('+ Another sport')).toBeTruthy();
+    expect(
+      within(bar())
+        .getAllByRole('button')
+        .map((option) => option.props.accessibilityLabel),
+    ).toEqual(['Another sport', 'Tennis', 'Padel']);
+    // One frame in, the sport beside the current one has begun to slide out and it has not.
+    // The slide is the pill's animated wrapper, a few host nodes up from the button.
+    const opacityOf = (name: string): number | undefined => {
+      let node = within(bar()).getByRole('button', { name }).parent;
+      while (node !== null) {
+        if (node.props.jestAnimatedStyle !== undefined) {
+          return (getAnimatedStyle(node) as { readonly opacity?: number }).opacity;
+        }
+        node = node.parent;
+      }
+      return undefined;
+    };
+    expect(opacityOf('Tennis')).toBeGreaterThan(0);
+    expect(opacityOf('Another sport')).toBe(0);
+
+    fireEvent.press(another);
+    expect(onAnother).toHaveBeenCalledTimes(1);
+    expect(onChoose).not.toHaveBeenCalled();
+  });
+
+  it('draws no + Another sport where nothing is offered', () => {
+    drawBar();
+
+    expect(within(bar()).queryByRole('button', { name: 'Another sport' })).toBeNull();
   });
 });

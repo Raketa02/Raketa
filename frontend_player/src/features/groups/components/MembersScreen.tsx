@@ -76,6 +76,7 @@ import { useReaderId } from '../hooks/useReaderId';
 import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';
+import { anotherSportRoute } from './groupRoutes';
 import { ClubTile } from './ClubTile';
 import { GROUPS_COPY } from './groupsCopy';
 import {
@@ -104,6 +105,8 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
+        // + Another sport (#731): its pass returns to the page beneath, on its tab, as the card's.
+        onAnother={(offer) => router.replace(anotherSportRoute(groupId, pageTab, offer))}
         header={(pill, _cover, sport) => (
           <MembersHeader
             groupId={groupId}

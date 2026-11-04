@@ -17,6 +17,7 @@ import {
   positionOf,
   recordRated,
   returnOf,
+  sportsOnOffer,
   stopDestination,
   toggleSport,
   type OnboardingPass,
@@ -88,6 +89,23 @@ describe('choosing sports', () => {
     const queue: readonly ('padel' | 'tennis')[] = ['tennis'];
     toggleSport(queue, 'padel');
     expect(queue).toEqual(['tennis']);
+  });
+});
+
+// #731: *+ Another sport* narrows the picker to the sports the player is unrated in.
+describe('the sports the picker lists', () => {
+  const SERVED = ['padel', 'tennis', 'squash', 'badminton'] as const;
+
+  it('is every sport served, where no door narrowed them', () => {
+    expect(sportsOnOffer(SERVED, undefined)).toEqual(SERVED);
+  });
+
+  it('is only those offered, in the server’s order whatever order the offer said', () => {
+    expect(sportsOnOffer(SERVED, ['badminton', 'tennis'])).toEqual(['tennis', 'badminton']);
+  });
+
+  it('never a sport the server does not serve, whatever a door offered', () => {
+    expect(sportsOnOffer(['padel', 'tennis'], ['tennis', 'squash'])).toEqual(['tennis']);
   });
 });
 

@@ -18,9 +18,11 @@ import type { GameOpens, NoticeKind } from './vocabulary';
  * Where a tap goes. A booked game is read by its booking, whose id is the game's own (#541) — its
  * details, or its result screen; a game still filling and a card on a deck are both in the group the
  * pool is filed under, in a sport and a kind — the deck is the read for exactly those, and a game's
- * details draw the card that read dealt.
+ * details draw the card that read dealt. **A notice about no game opens Home** (#727, #731) — *Get
+ * your level*, whose card is there — and names nothing to open it by.
  */
 export type NoticeTarget =
+  | { readonly opens: 'home' }
   | { readonly opens: 'booking' | 'result'; readonly bookingId: string }
   | { readonly opens: 'rescue'; readonly groupId: string; readonly bookingId: string }
   | {
@@ -93,10 +95,7 @@ export interface Notice {
    * took. Born seen: listed, never counted, never the banner (Q102).
    */
   readonly yourOwn: boolean;
-  /**
-   * Where a tap goes — absent for a game in a sport this build cannot name, and for a notice about
-   * no game, which opens Home from #731.
-   */
+  /** Where a tap goes — absent for a game in a sport or a kind this build cannot name. */
   readonly target?: NoticeTarget;
 }
 

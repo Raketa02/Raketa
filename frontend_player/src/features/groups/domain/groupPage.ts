@@ -98,6 +98,38 @@ export function needsALevel(rated: readonly Sport[], declared?: readonly Sport[]
   return declared === undefined && filterSports(rated).length === 0;
 }
 
+/**
+ * **What *+ Another sport* offers** — the sports the reader is unrated in, in the registry's order,
+ * that the picker it opens lists ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §4, [#731](https://github.com/Raketa02/Raketa/issues/731)). A player group plays whatever its
+ * members are rated in, so it offers every one of them; **an official group plays what it declares**,
+ * so it offers only its own sports she is missing — never a sport the group does not play.
+ *
+ * **Nothing while the chip is not drawn**: it ends the chip, and the chip appears only once there is
+ * a rating to list. A reader rated in nothing here meets the door, or the official group's own card
+ * (`needsALevel`, `sportsToAdd`), which asks the same question. And nothing once she is rated in
+ * everything there is to offer, so she is never offered nothing.
+ */
+export function sportsToOffer(
+  rated: readonly Sport[],
+  declared?: readonly Sport[],
+): readonly Sport[] {
+  if (filterSports(rated, declared).length === 0) return [];
+  return SPORTS.filter(
+    (sport) => !rated.includes(sport) && (declared === undefined || declared.includes(sport)),
+  );
+}
+
+/**
+ * **Whether Home asks for a level** — *Get your level — your groups can't deal you games until you
+ * have one.* (ADR-0200 §7, #731): a member of at least one group, player or official, who holds no
+ * rating in any sport. For a player who never opens a group, it says why nothing is happening.
+ * **Nobody in no group**: a level unlocks nothing there yet, and joining one is what Play is for.
+ */
+export function homeAsksForALevel(groups: number, rated: readonly Sport[]): boolean {
+  return groups > 0 && rated.length === 0;
+}
+
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */
 export function rosterFor(
   group: Pick<Group, 'ratedBySport'>,

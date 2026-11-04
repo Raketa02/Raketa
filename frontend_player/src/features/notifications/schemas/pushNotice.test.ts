@@ -38,6 +38,35 @@ describe('a push’s payload', () => {
     });
   });
 
+  // #727, #731: *Get your level* is about no game — the backend pushes its id, kind and Home alone.
+  it('reads a notice about no game, which opens Home and names nothing more', () => {
+    const level = { notice_id: PAYLOAD.notice_id, kind: 'GET_YOUR_LEVEL', opens: 'HOME' };
+
+    expect(parsePushNotice(level)).toEqual({
+      noticeId: PAYLOAD.notice_id,
+      kind: 'GET_YOUR_LEVEL',
+      opens: 'HOME',
+      gameId: null,
+      poolId: null,
+      sport: null,
+      gameKind: null,
+    });
+  });
+
+  it('never reads a game’s facts off a push that opens Home', () => {
+    expect(parsePushNotice({ ...PAYLOAD, kind: 'GET_YOUR_LEVEL', opens: 'HOME' })).toMatchObject({
+      opens: 'HOME',
+      gameId: null,
+      poolId: null,
+    });
+  });
+
+  it('is nothing to open when a game’s push names no game', () => {
+    expect(
+      parsePushNotice({ notice_id: PAYLOAD.notice_id, kind: 'GAME_BOOKED', opens: 'BOOKING' }),
+    ).toBeUndefined();
+  });
+
   it('is nothing to open when a key is missing or is not what it says', () => {
     expect(parsePushNotice({ ...PAYLOAD, opens: 'SOMEWHERE' })).toBeUndefined();
     expect(parsePushNotice({ ...PAYLOAD, opens: 'result' })).toBeUndefined();

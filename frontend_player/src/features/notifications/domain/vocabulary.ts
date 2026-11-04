@@ -32,8 +32,8 @@ export type NoticeKind =
   | 'IS_THAT_RIGHT'
   | 'WERE_THEY_THERE'
   /**
-   * *Get your level so your groups can deal you games.* (#727) — the first notice about no game.
-   * Listed in the backend's words; where a tap takes it is #731's.
+   * *Get your level so your groups can deal you games.* (#727) — the first notice about no game,
+   * opening Home, where its card is (#731).
    */
   | 'GET_YOUR_LEVEL';
 
@@ -64,18 +64,20 @@ export const NOTICE_KINDS = [
 /**
  * Where a tap opens a notice (the screens A9): a booked game's details, a game still filling's — or
  * one that did not fill — a group's deck with the card on top, a booked game's result screen
- * (#663), where each step at the court is acted on, and Home (#727), for a notice about no game —
- * which this build lists and does not open yet (#731).
+ * (#663), where each step at the court is acted on, and Home (#727, #731), for a notice about no
+ * game.
  */
 export type Opens = 'BOOKING' | 'PROPOSAL' | 'DECK' | 'RESULT' | 'HOME';
 
-export const OPENS = [
+/** The places a tap opens that are a game's — every one but Home. */
+export type GameOpens = Exclude<Opens, 'HOME'>;
+
+/** The four a game's notice opens — what a push about a game is checked against. */
+export const GAME_OPENS = [
   'BOOKING',
   'PROPOSAL',
   'DECK',
   'RESULT',
-  'HOME',
-] as const satisfies readonly Opens[];
+] as const satisfies readonly GameOpens[];
 
-/** The places a tap opens that are a game's — every one but Home. */
-export type GameOpens = Exclude<Opens, 'HOME'>;
+export const OPENS = [...GAME_OPENS, 'HOME'] as const satisfies readonly Opens[];

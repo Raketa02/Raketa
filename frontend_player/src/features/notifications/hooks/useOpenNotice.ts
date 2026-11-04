@@ -11,11 +11,18 @@
  * | a Fill in alert's open seat | the rescue, seen from outside, in its group (`rescueRoute`) | the booking |
  * | a game still filling, or one that did not fill | its details in its group (`gameRoute`) | the game |
  * | a card waiting for the player | the group's deck, the card on top (`groups`' `groupDeckRoute`) | the group's decks |
+ * | no game — *Get your level* (#731) | Home, laid down (`shell`'s `openTab`) | the ratings, and a run left halfway |
  *
  * **Pushed over wherever the player is**, and never a stack laid down: a notice is not a tab press,
  * and *back* goes where the player was — the list, or the screen the banner was over. Which tab's
  * column lights is the route's: a booked game is Home's, the rest are Play's — as a live yes on
  * Payments opens a game's details in Play.
+ *
+ * **Except Home**, which is a tab's root rather than a screen over one: a second Home pushed over
+ * the list would put Home behind Home, so a notice about no game lays Home down as the tab bar
+ * does — from the list, from the banner over any screen, or from a push tapped — and is nothing to
+ * do where Home is already on screen. Its card is drawn from the ratings and a run left halfway,
+ * marked stale first: a level got on another phone since leaves no card asking for one.
  *
  * **The reads behind it are marked stale first**, so the screen draws what the notice said rather
  * than a read from before it: a deck read twenty seconds ago does not hold the card a notice is
@@ -25,12 +32,13 @@
  * own refusal, as any screen does.
  */
 
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
+import { usePathname, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
 import { gameKeys } from '@/features/games/types';
 import { groupDeckRoute } from '@/features/groups/types';
+import { onboardingKeys } from '@/features/onboarding/types';
 import {
   bookedGameRoute,
   bookedResultRoute,
@@ -38,12 +46,23 @@ import {
   proposalKeys,
   rescueRoute,
 } from '@/features/proposals/types';
+import { openTab } from '@/features/shell/types';
 
 import type { NoticeTarget } from '../domain/notice';
 
+/** A screen pushed over wherever the player is — every destination but Home. */
+type Pushed = Parameters<ReturnType<typeof useRouter>['push']>[0];
+
+/** Where a notice opens — pushed over the player's screen, or Home laid down — and its reads. */
+type Destination =
+  | { readonly route: Pushed; readonly reads: readonly QueryKey[] }
+  | { readonly home: true; readonly reads: readonly QueryKey[] };
+
 /** Where a notice opens, and the reads that screen draws. */
-function destinationOf(target: NoticeTarget) {
+function destinationOf(target: NoticeTarget): Destination {
   switch (target.opens) {
+    case 'home':
+      return { home: true, reads: [onboardingKeys.ratings(), onboardingKeys.runInProgress()] };
     case 'booking':
       return {
         route: bookedGameRoute(target.bookingId),
@@ -86,12 +105,18 @@ export function rereadDestination(client: QueryClient, target: NoticeTarget) {
 export function useOpenNotice(): (target: NoticeTarget) => void {
   const router = useRouter();
   const client = useQueryClient();
+  const pathname = usePathname();
 
   return useCallback(
     (target: NoticeTarget) => {
       void rereadDestination(client, target);
-      router.push(destinationOf(target).route);
+      const destination = destinationOf(target);
+      if ('home' in destination) {
+        openTab('home', pathname);
+        return;
+      }
+      router.push(destination.route);
     },
-    [client, router],
+    [client, router, pathname],
   );
 }

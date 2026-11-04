@@ -24,18 +24,9 @@ import { levelDoor, type DoorOffer } from '../domain/levelDoor';
 import type { DoorOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
+import { sportsPickerRoute } from './sportsPickerRoute';
 import { assessmentQuery } from './useAssessment';
 import { useRunInProgress } from './useRunInProgress';
-
-/**
- * The picker, opened from a door: a group's tab carries its group and tab, for the pass to return
- * to — the params the picker's route reads (`groups`' `parseGroupPlace`); Home carries nothing.
- */
-function sportsPickerRoute(from: DoorOrigin) {
-  return from.kind === 'group'
-    ? ({ pathname: '/sports', params: { groupId: from.groupId, tab: from.tab } } as const)
-    : ({ pathname: '/sports' } as const);
-}
 
 export interface LevelDoorControl {
   /** What the door offers — `undefined` while either read is out. */

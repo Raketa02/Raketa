@@ -140,4 +140,16 @@ export { STARTING_LABEL } from './components/startPresentation';
 export { useOnboardingAdmission, type OnboardingAdmission } from './hooks/useOnboardingAdmission';
 
 /** Route params are untrusted input, so the route that reads them validates them here. */
-export { parseAssessmentRouteParams, type AssessmentRouteParams } from './schemas/routeParams';
+export {
+  parseAssessmentRouteParams,
+  parsePickerOffer,
+  type AssessmentRouteParams,
+} from './schemas/routeParams';
+
+/**
+ * **The picker, opened from a group's chip** — *+ Another sport* ([#731](https://github.com/Raketa02/Raketa/issues/731),
+ * ADR-0200 §4): where *Which sports do you play?* is, for a pass that returns to the group's tab,
+ * over the sports the chip offers. The door and the Home card open it through `LevelDoor`.
+ */
+export { sportsPickerRoute } from './hooks/sportsPickerRoute';
+export { PICKER_TITLE } from './components/pickerPresentation';

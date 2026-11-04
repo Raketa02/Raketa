@@ -22,6 +22,11 @@
  * and a player who opened it and changed her mind would otherwise have no way out but choosing a
  * sport. Back, the header's or the device's, **turns back**: a pass over nothing, begun and over at
  * once, which the gate lands where it began — the group and the tab the door stood on, or Home.
+ *
+ * **A door may narrow what it lists** ([#731](https://github.com/Raketa02/Raketa/issues/731),
+ * ADR-0200 §4): *+ Another sport* opens it over the sports the player is unrated in — an official
+ * group's own, or any — and only those of the served sports are drawn (`sportsOnOffer`). The door
+ * and the Home card offer every sport. Nothing is ticked either way.
  */
 
 import { useRouter } from 'expo-router';
@@ -34,7 +39,7 @@ import { useHardwareBack } from '@/shared/lib/platform';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import { toggleSport, type DoorOrigin } from '../domain/onboardingPass';
+import { sportsOnOffer, toggleSport, type DoorOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
@@ -51,11 +56,17 @@ export interface SportsPickerScreenProps {
    * route from its params, since the tab is the group's — or Home.
    */
   readonly origin: DoorOrigin;
+  /**
+   * The sports the door offers — *+ Another sport*'s, the ones the player is unrated in — or
+   * `undefined` for every sport the server serves.
+   */
+  readonly offer?: readonly Sport[];
 }
 
-export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
+export function SportsPickerScreen({ origin, offer }: SportsPickerScreenProps) {
   const router = useRouter();
   const sports = useSports();
+  const listed = sports.data === undefined ? undefined : sportsOnOffer(sports.data, offer);
   /**
    * The selection is this screen's own state, not a pass. A player still choosing has not
    * begun a walk through onboarding — they can add sports, remove them and leave — and the
@@ -114,7 +125,7 @@ export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
           <ActivityIndicator accessibilityLabel="Loading sports" color={theme.color.muted} />
         ) : null}
 
-        {sports.data?.length === 0 ? (
+        {listed?.length === 0 ? (
           <Note variant="amber">No sports are available to rate right now. Try again later.</Note>
         ) : null}
 
@@ -127,7 +138,7 @@ export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
           </View>
         ) : null}
 
-        {sports.data?.map((sport) => (
+        {listed?.map((sport) => (
           <SportCard
             key={sport}
             sport={sport}

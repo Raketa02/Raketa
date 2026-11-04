@@ -1,21 +1,34 @@
 /**
  * **The door's words** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §2, §5, [#730](https://github.com/Raketa02/Raketa/issues/730)) — *Get your level — pick the
- * sports you play, a few questions each*, or, with a run left halfway, *Carry on with your padel
+ * §2, §5, §7, [#730](https://github.com/Raketa02/Raketa/issues/730),
+ * [#731](https://github.com/Raketa02/Raketa/issues/731)) — on a group's tab, *Get your level — pick
+ * the sports you play, a few questions each*; on Home, *Get your level — your groups can't deal you
+ * games until you have one*; and with a run left halfway, on either, *Carry on with your padel
  * questions — you're on question 5*.
  *
  * Each sentence is the card's two lines, split at its dash: the headline names what the door
  * does, the line under it says what it costs or where it stands, and the one button is the door.
+ * **Only the line differs by where it stands**: on a group's tab she is where a level unlocks
+ * something, so it says what it costs; on Home she may never have opened a group, so it says why
+ * nothing is happening there.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { DoorOrigin } from '../domain/onboardingPass';
+
 import { PICKER_TITLE } from './pickerPresentation';
 import { sportInLine } from './sportPresentation';
 
+/** The line under *Get your level*, by where the door stands — a place with no line fails to compile. */
+const LINE: Readonly<Record<DoorOrigin['kind'], string>> = {
+  group: 'Pick the sports you play, a few questions each.',
+  home: "Your groups can't deal you games until you have one.",
+};
+
 export const LEVEL_DOOR_COPY = {
   headline: 'Get your level',
-  line: 'Pick the sports you play, a few questions each.',
+  line: LINE,
   start: 'Pick your sports',
   startHint: `Opens ${PICKER_TITLE}`,
   carryOn: 'Carry on',

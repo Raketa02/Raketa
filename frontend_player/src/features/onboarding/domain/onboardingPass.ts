@@ -153,6 +153,20 @@ export function recordRated(pass: OnboardingPass, run: RatedRun): OnboardingPass
     : { ...pass, rated: [...pass.rated, run] };
 }
 
+/**
+ * **The sports the picker lists** — every one the server serves, or, where a door narrowed them,
+ * only those of them it offers (*+ Another sport*'s, [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §4, [#731](https://github.com/Raketa02/Raketa/issues/731)). **The server's order, always**: the
+ * offer says which, never in what order, and a sport the server does not serve is not offered
+ * whatever a door said.
+ */
+export function sportsOnOffer(
+  served: readonly Sport[],
+  offer: readonly Sport[] | undefined,
+): readonly Sport[] {
+  return offer === undefined ? served : served.filter((sport) => offer.includes(sport));
+}
+
 export interface RatingPosition {
   /** 1-based: the sport being rated right now. */
   readonly index: number;

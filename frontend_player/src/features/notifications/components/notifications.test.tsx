@@ -1526,3 +1526,83 @@ describe('Game moved — a club moved the booked game to another court (#677)', 
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Get your level (#727, #731)
+// ---------------------------------------------------------------------------
+
+/**
+ * **A notice about no game opens Home** (#731; ADR-0200 §7; the screens A9): *Get your level so your
+ * groups can deal you games.*, told once per account to a member of a group still rated in nothing,
+ * lands on Home — where the card is that opens the picker. The backend pushes three keys for it
+ * (`pushing.py`): its id, its kind and Home, and no game.
+ */
+describe('Get your level — a notice about no game, opening Home', () => {
+  const LEVEL = notice({
+    kind: 'GET_YOUR_LEVEL',
+    title: 'Get your level so your groups can deal you games.',
+    body: 'Pick the sports you play — a few questions each.',
+    opens: 'HOME',
+    game_id: null,
+    pool_id: null,
+    sport: null,
+    game_kind: null,
+    new: true,
+  });
+
+  const PUSHED = { notice_id: LEVEL.notice_id, kind: LEVEL.kind, opens: 'HOME' };
+
+  /** Ania, rated in nothing, in the crew — Home's card is drawn for her. */
+  beforeEach(() => {
+    stubGate(transport, { ratings: [], hasPlayerProfile: true });
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', `/api/v1/groups/${CREW_ID}`, () => json(CREW_PAGE));
+  });
+
+  it('its row behind the bell opens Home, on its card', async () => {
+    stubNotices(transport, [LEVEL], { newCount: 1 });
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. Get your level so/ }));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(await screen.findByText('Get your level')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pick your sports' })).toBeTruthy();
+    // Home itself, not a second Home pushed over the list: there is nothing to go back to.
+    expect(screen.queryByLabelText('Back')).toBeNull();
+  });
+
+  it('the banner opens Home, from wherever she is', async () => {
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+
+    act(() => phone.receive({ title: LEVEL.title, body: LEVEL.body, data: PUSHED }));
+    fireEvent.press(await screen.findByRole('button', { name: `${LEVEL.title}. ${LEVEL.body}` }));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(await screen.findByRole('button', { name: 'Pick your sports' })).toBeTruthy();
+  });
+
+  it('a push of it, tapped, opens Home over wherever she is', async () => {
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('You'));
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+
+    act(() => phone.tap(PUSHED));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(await screen.findByRole('button', { name: 'Pick your sports' })).toBeTruthy();
+  });
+
+  it('a push of it, tapped, opens the app on Home', async () => {
+    phone.tap(PUSHED);
+
+    await launchSignedIn();
+
+    expect(await screen.findByRole('button', { name: 'Pick your sports' })).toBeTruthy();
+    expect(screen).toHavePathname('/');
+  });
+});

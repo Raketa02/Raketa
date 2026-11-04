@@ -217,10 +217,10 @@ describe('where a tap goes', () => {
   });
 
   /**
-   * **A notice about no game** (#727): *Get your level* names no game and opens Home. This build
-   * lists it in the backend's words and opens it nowhere yet — where a tap takes it is #731's.
+   * **A notice about no game** (#727): *Get your level* names no game and opens Home (#731), where
+   * its card is.
    */
-  it('nowhere for a notice that opens Home', () => {
+  it('Home for a notice that opens Home', () => {
     expect(
       toTarget({
         kind: 'GET_YOUR_LEVEL',
@@ -230,7 +230,20 @@ describe('where a tap goes', () => {
         sport: null,
         gameKind: null,
       }),
-    ).toBeUndefined();
+    ).toEqual({ opens: 'home' });
+  });
+
+  it('Home whatever the notice, for one that says it opens Home — there is nothing to name', () => {
+    expect(
+      toTarget({
+        kind: 'A_NOTICE_FROM_A_LATER_RELEASE',
+        opens: 'HOME',
+        gameId: null,
+        poolId: null,
+        sport: null,
+        gameKind: null,
+      }),
+    ).toEqual({ opens: 'home' });
   });
 
   it('nowhere for a notice that names no game, wherever it says it opens', () => {
@@ -248,7 +261,7 @@ describe('where a tap goes', () => {
 });
 
 describe('a listed notice about no game', () => {
-  it('is listed in the backend’s words, with nowhere to open', () => {
+  it('is listed in the backend’s words, opening Home', () => {
     const served: Wire['NoticeSchema'] = {
       ...NOTICE,
       kind: 'GET_YOUR_LEVEL',
@@ -267,7 +280,7 @@ describe('a listed notice about no game', () => {
       kind: 'GET_YOUR_LEVEL',
       title: 'Get your level so your groups can deal you games.',
       body: 'Pick the sports you play — a few questions each.',
+      target: { opens: 'home' },
     });
-    expect(notice).not.toHaveProperty('target');
   });
 });

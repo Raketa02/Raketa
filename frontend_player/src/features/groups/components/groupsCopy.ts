@@ -62,6 +62,11 @@ export const GROUPS_COPY = {
   /** The fast filter (play 41–42). */
   filter: {
     pillHint: 'Shows this group for another sport you play',
+    /** A pill whose only other choice is *+ Another sport* (#731) — there is no sport to switch to. */
+    pillHintAnother: 'Offers another sport to rate',
+    /** The bar's last way out (#731, ADR-0200 §4): drawn with its plus, spoken without it. */
+    anotherSport: 'Another sport',
+    anotherSportDrawn: '+ Another sport',
     /** The pill's faint chevron, and the bar's once it has unfolded — the fold's direction. */
     unfold: '‹',
     fold: '›',

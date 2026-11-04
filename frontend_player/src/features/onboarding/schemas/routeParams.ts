@@ -18,7 +18,7 @@
 
 import { z } from 'zod';
 
-import { SPORTS } from '@/shared/vocabulary/sport';
+import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
 export const assessmentRouteParams = z.object({
   assessmentId: z.string().uuid(),
@@ -37,6 +37,36 @@ export const assessmentRouteParams = z.object({
 });
 
 export type AssessmentRouteParams = z.infer<typeof assessmentRouteParams>;
+
+/**
+ * **The sports the picker offers, when a door narrows them** — *+ Another sport*'s
+ * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §4,
+ * [#731](https://github.com/Raketa02/Raketa/issues/731)): the sports the player is unrated in, an
+ * official group's own or any. One param, the sports joined by commas, so a route that carries it
+ * is a plain string however expo-router serialises a list.
+ *
+ * **An offer that is not one is no narrowing**, never an error: the picker lists every sport the
+ * server serves, as every other door opens it, and a sport already rated is still refused by the
+ * server's start (`sport_already_rated`). The worst a hand-built link costs is a longer list.
+ */
+const PickerOffer = z.object({
+  offer: z
+    .string()
+    .min(1)
+    .transform((joined) => joined.split(','))
+    .pipe(z.array(z.enum(SPORTS)).nonempty()),
+});
+
+/** The offer, as the route carries it. */
+export function offerParam(offer: readonly Sport[]): string {
+  return offer.join(',');
+}
+
+/** The sports a door narrowed the picker to — `undefined` for none, which offers every sport. */
+export function parsePickerOffer(params: unknown): readonly Sport[] | undefined {
+  const parsed = PickerOffer.safeParse(params);
+  return parsed.success ? parsed.data.offer : undefined;
+}
 
 /** `undefined` when the link cannot be trusted. The caller decides where that goes. */
 export function parseAssessmentRouteParams(

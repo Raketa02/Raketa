@@ -245,7 +245,9 @@ describe('the fast filter', () => {
 
     await unfold('Padel');
 
-    expect(barOptions()).toEqual(['Tennis', 'Padel']);
+    // Ended, farthest from the current sport, by + Another sport while squash and badminton are
+    // left to rate (#731) — `anotherSportAndTheHomeCard.test` walks it.
+    expect(barOptions()).toEqual([COPY.filter.anotherSport, 'Tennis', 'Padel']);
     expect(
       within(screen.getByTestId('sport-bar')).getByRole('button', {
         name: 'Padel',
@@ -358,16 +360,19 @@ describe('the fast filter', () => {
     expect(screen.queryByTestId('sport-bar')).toBeNull();
   });
 
-  it('is a plain label, with nothing to unfold, for a player rated in one sport', async () => {
+  // A choice of one is no choice — but in a player group there is always another sport to rate
+  // until she is rated in all four, so the pill unfolds onto + Another sport alone (#731). The
+  // plain label is an official group's, whose sports she is rated in all of (`officialGroups.test`).
+  it('unfolds onto + Another sport alone for a player rated in one sport', async () => {
     stubAPlayer([TENNIS]);
     await openGroup();
 
-    const label = await screen.findByLabelText('Sport: Tennis');
-    expect(screen.queryByRole('button', { name: 'Sport: Tennis' })).toBeNull();
-    expect(within(label).getByText('Tennis')).toBeTruthy();
-    expect(
-      within(label).queryByText(COPY.filter.unfold, { includeHiddenElements: true }),
-    ).toBeNull();
+    await unfold('Tennis');
+
+    expect(barOptions()).toEqual([COPY.filter.anotherSport, 'Tennis']);
+    expect(screen.getByRole('button', { name: 'Sport: Tennis' }).props.accessibilityHint).toBe(
+      COPY.filter.pillHintAnother,
+    );
   });
 
   it('opens every group on the sport last picked, even after the app is closed', async () => {

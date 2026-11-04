@@ -8,7 +8,8 @@
  * everything but its fill — 6.2's height, corner, label role and `hit.chip` — because a filter
  * over what is on screen is what a chip is; it takes `paper2`, the header's recess, because it
  * sits on paper rather than on a card. **A player rated in one sport gets a plain label**: the
- * same dot and name, no chevron, and nothing to press, because a choice of one is not a choice.
+ * same dot and name, no chevron, and nothing to press, because a choice of one is not a choice —
+ * **unless there is a sport left to offer**, when the pill unfolds onto *+ Another sport* alone.
  *
  * ## The bar
  *
@@ -29,6 +30,12 @@
  * sport by its name. **Under reduced motion** the value starts at 1 and the bar is simply open.
  * **Folding is immediate** — see `motion.unfold`.
  *
+ * **It ends with *+ Another sport*** while there is a sport left to offer
+ * ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §4): the farthest pill from the
+ * current sport, the last to slide out, so it is where the row ends. It is no sport — no dot, the
+ * plus in front — and opens *Which sports do you play?* over the sports the reader is unrated in;
+ * what those are, and where the pass returns, is the page's.
+ *
  * **Open, it never ends across the group's tile** (#529): where its sports would stop somewhere
  * over the tile, a sliver of it showed past the bar's round end, so the bar opens that much further
  * and covers it whole (`BarCover`, which the page measures). Where they stop short of the tile, the
@@ -37,7 +44,7 @@
  * Never a `Modal`, and nothing here is one: the bar is a layer of the page (ADR-0178).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -54,7 +61,7 @@ import { theme, useReducedMotion } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { GROUPS_COPY } from './groupsCopy';
-import { sportPillLabel } from './groupsPresentation';
+import { anotherSportHint, sportPillLabel } from './groupsPresentation';
 
 const COPY = GROUPS_COPY.filter;
 
@@ -108,14 +115,17 @@ function Chevron({ mark, onInk = false }: { readonly mark: string; readonly onIn
 }
 
 export interface SportPillProps {
-  /** The filter's sports. One is a plain label. */
+  /** The filter's sports. One is a plain label, unless there is another sport to offer. */
   readonly sports: readonly Sport[];
   readonly sport: Sport;
+  /** The bar ends with *+ Another sport* — so even one sport unfolds (#731). */
+  readonly another?: boolean;
   readonly onUnfold: () => void;
 }
 
-export function SportPill({ sports, sport, onUnfold }: SportPillProps) {
-  if (sports.length <= 1) {
+export function SportPill({ sports, sport, another = false, onUnfold }: SportPillProps) {
+  const switches = sports.length > 1;
+  if (!switches && !another) {
     return (
       <View accessible accessibilityLabel={sportPillLabel(sport)} style={[s.pill, s.pillClosed]}>
         <SportName sport={sport} />
@@ -127,7 +137,7 @@ export function SportPill({ sports, sport, onUnfold }: SportPillProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={sportPillLabel(sport)}
-      accessibilityHint={COPY.pillHint}
+      accessibilityHint={switches ? COPY.pillHint : COPY.pillHintAnother}
       onPress={onUnfold}
       hitSlop={theme.hit.chip}
       style={({ pressed }) => [s.pill, s.pillClosed, pressed ? s.pressed : undefined]}
@@ -156,6 +166,8 @@ export interface SportBarProps {
   readonly onChoose: (sport: Sport) => void;
   /** What the open bar covers whole rather than ending across — absent where nothing is. */
   readonly cover?: BarCover;
+  /** *+ Another sport* was pressed — absent where there is no sport left to offer (#731). */
+  readonly onAnother?: () => void;
 }
 
 /** The bar's open width: its sports', or past the tile whole where they would end across it. */
@@ -163,9 +175,11 @@ function openWidth(sports: number, cover: BarCover | undefined): number {
   return cover !== undefined && sports > cover.reaches ? Math.max(sports, cover.whole) : sports;
 }
 
-export function SportBar({ sports, sport, onChoose, cover }: SportBarProps) {
+export function SportBar({ sports, sport, onChoose, cover, onAnother }: SportBarProps) {
   const reduced = useReducedMotion();
   const others = sports.filter((other) => other !== sport);
+  // Everything that slides out from under the current sport: *+ Another sport*, the farthest, first.
+  const sliding = others.length + (onAnother === undefined ? 0 : 1);
 
   const progress = useSharedValue(reduced ? 1 : 0);
   const [rowWidth, setRowWidth] = useState<number>();
@@ -195,16 +209,42 @@ export function SportBar({ sports, sport, onChoose, cover }: SportBarProps) {
           style={s.row}
           onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
         >
+          {onAnother === undefined ? null : (
+            // The farthest from the current sport, so the last out: where the row ends.
+            <SlideOut order={sliding - 1} count={sliding} progress={progress}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={COPY.anotherSport}
+                accessibilityHint={anotherSportHint()}
+                onPress={onAnother}
+                hitSlop={theme.hit.chip}
+                style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
+              >
+                <Text style={s.label} numberOfLines={1}>
+                  {COPY.anotherSportDrawn}
+                </Text>
+              </Pressable>
+            </SlideOut>
+          )}
           {others.map((other, at) => (
-            <BarOption
+            // Nearest the current sport moves first: the row reads leftwards out of it.
+            <SlideOut
               key={other}
-              sport={other}
-              // Nearest the current sport moves first: the row reads leftwards out of it.
               order={others.length - 1 - at}
-              count={others.length}
+              count={sliding}
               progress={progress}
-              onPress={() => onChoose(other)}
-            />
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={sportLabel(other)}
+                accessibilityState={{ selected: false }}
+                onPress={() => onChoose(other)}
+                hitSlop={theme.hit.chip}
+                style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
+              >
+                <SportName sport={other} />
+              </Pressable>
+            </SlideOut>
           ))}
           <Pressable
             accessibilityRole="button"
@@ -224,16 +264,17 @@ export function SportBar({ sports, sport, onChoose, cover }: SportBarProps) {
   );
 }
 
-interface BarOptionProps {
-  readonly sport: Sport;
-  /** 0 for the sport beside the current one, counting leftwards. */
+interface SlideOutProps {
+  /** 0 for the pill beside the current sport, counting leftwards. */
   readonly order: number;
+  /** How many pills slide out — the other sports, and *+ Another sport* where there is one. */
   readonly count: number;
   readonly progress: SharedValue<number>;
-  readonly onPress: () => void;
+  readonly children: ReactNode;
 }
 
-function BarOption({ sport, order, count, progress, onPress }: BarOptionProps) {
+/** One pill of the bar's row, sliding out from under the current sport in its turn. */
+function SlideOut({ order, count, progress, children }: SlideOutProps) {
   const step = count > 1 ? (1 - OPTION_SHARE) / (count - 1) : 0;
   const start = order * step;
   const end = start + OPTION_SHARE;
@@ -250,20 +291,7 @@ function BarOption({ sport, order, count, progress, onPress }: BarOptionProps) {
     [start, end],
   );
 
-  return (
-    <Animated.View style={slide}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={sportLabel(sport)}
-        accessibilityState={{ selected: false }}
-        onPress={onPress}
-        hitSlop={theme.hit.chip}
-        style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
-      >
-        <SportName sport={sport} />
-      </Pressable>
-    </Animated.View>
-  );
+  return <Animated.View style={slide}>{children}</Animated.View>;
 }
 
 const s = StyleSheet.create({

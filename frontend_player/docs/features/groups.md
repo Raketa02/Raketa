@@ -586,3 +586,25 @@ returning to the tab #729's card returns to. **_+ Post a game_ still floats over
 and lists only rated sports — which `filterSports` already made true; the door makes it visible.
 An official group keeps `AddSportCard`. The words and the reads are onboarding's
 ([`onboarding.md`](onboarding.md)).
+
+**The chip ends with _+ Another sport_, and Home asks a member rated in nothing**
+([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §4, §7). `sportsToOffer(rated,
+declared)` is what it offers — every sport the reader is unrated in, in a player group; an official
+group's own sports she is missing, in one — and **nothing while there is no chip** (the door or the
+group's card asks then) or once nothing is left. It rides on `useGroupSport` as `toOffer`.
+`SportFilterPage` takes `onAnother(offer)`: while the offer is not empty, **the pill unfolds even for
+one rated sport** — a choice of one is a choice again, so _A player rated in one sport gets a plain
+label_ above now holds only where nothing is left to offer, which in a player group means rated in
+all four — and the bar ends with **_+ Another sport_**, drawn with its plus and spoken without, the
+farthest pill from the current sport and so the last to slide out. Pressed, the bar folds and the
+page replaces to onboarding's picker over the offer (`anotherSportRoute`), for a pass that returns
+to its tab: the page's own, and on Members the page's beneath it, as #729's card does. The
+Administrator's Members hands none. **Home's card is `HomeLevelCard`**, which the shell draws:
+onboarding's `LevelDoor` `from` Home, where `homeAsksForALevel(groups, rated)` — a member of at
+least one group, player or official, holding no rating. **It reads the ratings first and the groups
+only for a player rated in nothing** (`useMyGroups({ enabled })`), so a rated Home costs one read,
+and it draws nothing until both have answered and nothing on a failure: it is a nudge, never a wall.
+**Calls made here**: _+ Another sport_ is the bar's farthest pill rather than a chip of its own
+beside the pill (no mock draws it); Members' chip carries it too; the pill's hint for an unfold onto
+it alone is _Offers another sport to rate_. **Not seen on a device**: the pill and the bar with
+_+ Another sport_ in them, and their unfold.
