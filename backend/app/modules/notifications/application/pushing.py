@@ -99,12 +99,13 @@ def _opening(notice: RecordedNotice) -> dict[str, str]:
     }
     if notice.game_id is None:
         return opening
+    about_a_game = f"{notice.kind} is about a game"
     return {
         **opening,
         "game_id": str(notice.game_id),
-        "pool_id": str(notice.pool_id),
-        "sport": invariant(notice.sport, f"{notice.kind} names its sport").value,
-        "game_kind": str(notice.game_kind),
+        "pool_id": str(invariant(notice.pool_id, about_a_game)),
+        "sport": invariant(notice.sport, about_a_game).value,
+        "game_kind": invariant(notice.game_kind, about_a_game),
     }
 
 

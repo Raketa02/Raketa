@@ -35,7 +35,11 @@ from app.modules.notifications.domain.events import (
     PushDeviceRemoved,
     RecentNoticesOpened,
 )
-from app.modules.notifications.domain.notices import NoticesOfADay, day_id_for
+from app.modules.notifications.domain.notices import (
+    NoticeKind,
+    NoticesOfADay,
+    day_id_for,
+)
 from app.modules.notifications.domain.ports import RecordedNotice, RecordedNotices
 from app.modules.notifications.domain.preferences import (
     DEFAULT_CHOICES,
@@ -337,13 +341,15 @@ class SqlAlchemyNoticeDirectory:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def told(self, kind: str, player_ids: Collection[UUID]) -> frozenset[UUID]:
+    async def told(
+        self, kind: NoticeKind, player_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
         wanted = set(player_ids)
         if not wanted:
             return frozenset()
         rows = await self._session.scalars(
             select(NoticeORM.player_id)
-            .where(NoticeORM.kind == kind, NoticeORM.player_id.in_(wanted))
+            .where(NoticeORM.kind == kind.value, NoticeORM.player_id.in_(wanted))
             .distinct()
         )
         return frozenset(rows)

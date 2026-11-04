@@ -253,7 +253,7 @@ class Notice:
     moved_from: str | None = None
 
 
-def get_your_level(player_id: UUID) -> Notice:
+def get_your_level_notice(player_id: UUID) -> Notice:
     """*Get your level so your groups can deal you games.* (#727; Q126) — about
     no game, so none of a game's six facts, opening Home. **Keyed by the
     account**: told once, whichever day and process tells it."""

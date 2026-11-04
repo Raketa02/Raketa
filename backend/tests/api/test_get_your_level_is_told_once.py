@@ -22,8 +22,20 @@ import pytest
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_tell_get_your_level
 from app.kernel import Sport
+from app.modules.notifications.domain.notices import (
+    GET_YOUR_LEVEL_AFTER,
+    GET_YOUR_LEVEL_WITHIN,
+)
+from tests.api.administration_world import (
+    MARTA,
+    club_signs_up,
+    invites,
+    marta_sets_her_password,
+    me,
+)
 from tests.api.proposals_world import MONDAY_MORNING
 from tests.api.test_groups import a_club, a_group, a_player, a_rated_player, join
+from tests.api.test_official_groups import an_official_group, answer
 from tests.unit.fake_clock import MovableClock
 
 NOTICES = "/api/v1/players/me/notices"
@@ -223,9 +235,58 @@ async def test_it_is_always_on_whatever_she_chose(
     assert len(await told(client, ania)) == 1
 
 
+async def test_an_official_group_counts_from_the_moment_she_is_let_in(
+    client, session_factory, clock, mailbox, ania
+):
+    """*Ogrody 33 Club* approves joins: Ania asks at 08:00 and Marta lets her
+    in at 10:00, so her day runs from 10:00 — and Marta, who runs the group
+    and never joined it, is no member and is told nothing."""
+
+    club_id, desk = await club_signs_up(client)
+    await invites(client, desk, name="Marta Wójcik", email=MARTA)
+    marta_headers = await marta_sets_her_password(client, mailbox)
+    marta = {"id": (await me(client, marta_headers))["id"], "headers": marta_headers}
+    ogrody_33_club = await an_official_group(client, marta, club_id)
+    asked = await join(client, ania, ogrody_33_club)
+    assert asked.json()["relation"] == "REQUESTED", asked.text
+    clock.move(timedelta(hours=2))
+    let_in = await answer(client, marta, club_id, ogrody_33_club, ania, "approve")
+    assert let_in.status_code == 204, let_in.text
+
+    await a_day_passes(session_factory, clock, by=timedelta(hours=23))
+    await mailbox.drain()
+    assert await told(client, ania) == []
+
+    await a_day_passes(session_factory, clock, by=timedelta(hours=1))
+    await mailbox.drain()
+
+    [notice] = await told(client, ania)
+    assert notice["given_at"].startswith("2026-10-06T08:00:00")
+    assert await told(client, marta) == []
+
+
 # --------------------------------------------------------------------------- #
 # Never told
 # --------------------------------------------------------------------------- #
+
+
+async def test_a_run_more_than_a_week_past_her_day_tells_nothing(
+    client, session_factory, clock, mailbox, ania, wednesday_padel
+):
+    """A run that reaches an account later than ``GET_YOUR_LEVEL_WITHIN`` past
+    its day — the process down that long — tells nothing; Home's card still
+    asks."""
+
+    await joins(client, ania, wednesday_padel)
+
+    await a_day_passes(
+        session_factory,
+        clock,
+        by=GET_YOUR_LEVEL_AFTER + GET_YOUR_LEVEL_WITHIN + timedelta(minutes=1),
+    )
+    await mailbox.drain()
+
+    assert await told(client, ania) == []
 
 
 async def test_at_twenty_three_hours_she_is_not_told_yet(

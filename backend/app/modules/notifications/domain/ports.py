@@ -27,7 +27,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.notifications.domain.bell import Bell
-from app.modules.notifications.domain.notices import NoticesOfADay
+from app.modules.notifications.domain.notices import NoticeKind, NoticesOfADay
 from app.modules.notifications.domain.preferences import (
     NotificationChoice,
     NotificationPreferences,
@@ -136,7 +136,9 @@ class RecordedNotices:
 
 
 class NoticeDirectory(Protocol):
-    async def told(self, kind: str, player_ids: Collection[UUID]) -> frozenset[UUID]:
+    async def told(
+        self, kind: NoticeKind, player_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
         """Those of these players ever given a notice of this kind, on any day
         — what *once per account, ever* is read against (#727)."""
         ...

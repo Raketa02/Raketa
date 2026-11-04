@@ -33,7 +33,7 @@ from app.modules.notifications.domain.notices import (
     GET_YOUR_LEVEL_AFTER,
     GET_YOUR_LEVEL_WITHIN,
     NoticeKind,
-    get_your_level,
+    get_your_level_notice,
 )
 from app.modules.notifications.domain.ports import (
     GroupJoiners,
@@ -84,7 +84,7 @@ class TellGetYourLevel:
             try:
                 if await self._give.execute(
                     player,
-                    get_your_level(player),
+                    get_your_level_notice(player),
                     at=instant(joined[player] + GET_YOUR_LEVEL_AFTER),
                 ):
                     await self._uow.commit()
