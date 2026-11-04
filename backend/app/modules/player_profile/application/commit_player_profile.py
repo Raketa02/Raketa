@@ -44,13 +44,14 @@ from app.kernel import Clock, Instant, instant
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
 )
+from app.modules.player_profile.application.location_source import area_of
 from app.modules.player_profile.application.owned_photos import (
     check_photos_are_the_callers,
 )
 from app.modules.player_profile.domain.errors import PlayerProfileAlreadyExists
 from app.modules.player_profile.domain.intro import Intro
-from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.ports import (
+    ClubPoints,
     PhotoStorage,
     PlayerProfileRepository,
 )
@@ -79,11 +80,13 @@ class CommitPlayerProfile:
         *,
         profiles: PlayerProfileRepository,
         photos: PhotoStorage,
+        clubs: ClubPoints,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._profiles = profiles
         self._photos = photos
+        self._clubs = clubs
         self._uow = uow
         self._clock = clock
 
@@ -104,7 +107,6 @@ class CommitPlayerProfile:
         # asks the object store a question. A commit that was going to be
         # refused for its tags should not cost three round trips first.
         selection = SocialTagSelection.from_ids(command.social_tag_ids)
-        area = LocationArea.around(command.latitude, command.longitude)
         week = WeeklyHours.of_cells(command.weekly_hours)
         # The one free-text answer, and the fence is here with the other pure
         # refusals: a line carrying contact is refused before anything is
@@ -116,6 +118,11 @@ class CommitPlayerProfile:
         # recorded — a duplicate refused after three existence checks would have
         # been three checks nobody needed.
         photo_ids = photo_order(command.photo_ids)
+
+        # The area, after every pure refusal and before the object store: a
+        # reading is rounded where it stands, and a club picked in its place
+        # costs one read of where the club is (``docs/adr/0200`` §10).
+        area = await area_of(command.location, self._clubs)
 
         # Through the same port and the same ``PhotoRef`` the upload used, and
         # the same function the You tab's photos write runs, so ownership is

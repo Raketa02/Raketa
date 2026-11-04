@@ -13,12 +13,14 @@ from fastapi import Depends
 
 from app.api.dependencies import (
     ClockDep,
+    DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
     SettingsDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_club_points,
     build_image_transcoder,
     build_photo_review,
     build_photo_storage,
@@ -52,6 +54,7 @@ from app.modules.player_profile.application.set_reliability_minimum import (
 from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.ports import (
+    ClubPoints,
     ImageTranscoder,
     PhotoReview,
     PhotoStorage,
@@ -158,16 +161,28 @@ PlayIntentDeclarationRepositoryDep = Annotated[
 ]
 
 
+def get_club_points(session: DbSession) -> ClubPoints:
+    # Where a club is, for an area picked as a club (`docs/adr/0200` §10):
+    # read over the request's session, as every directory read is.
+    return build_club_points(session)
+
+
+ClubPointsDep = Annotated[ClubPoints, Depends(get_club_points)]
+
+
 def get_commit_player_profile(
     profiles: PlayerProfileRepositoryDep,
     photos: PhotoStorageDep,
+    clubs: ClubPointsDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> CommitPlayerProfile:
     # The same `PhotoStorage` the upload route was given — FastAPI caches a
     # dependency for the life of a request, so the store that took the bytes is
     # the store the commit asks about them.
-    return CommitPlayerProfile(profiles=profiles, photos=photos, uow=uow, clock=clock)
+    return CommitPlayerProfile(
+        profiles=profiles, photos=photos, clubs=clubs, uow=uow, clock=clock
+    )
 
 
 CommitPlayerProfileDep = Annotated[
@@ -218,13 +233,15 @@ SetWeeklyHoursDep = Annotated[SetWeeklyHours, Depends(get_set_weekly_hours)]
 
 def get_change_location(
     profiles: PlayerProfileRepositoryDep,
+    clubs: ClubPointsDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> ChangeLocation:
-    # The same three the week takes: the cell is a fact on the profile's own
-    # stream and nothing else is told, because the projection follows the
-    # event it has always followed (`docs/adr/0174` §6).
-    return ChangeLocation(profiles=profiles, uow=uow, clock=clock)
+    # The three the week takes, and where a club is: the cell is a fact on the
+    # profile's own stream and nothing else is told, because the projection
+    # follows the event it has always followed (`docs/adr/0174` §6). A club
+    # picked in place of a reading is asked where it is (`docs/adr/0200` §10).
+    return ChangeLocation(profiles=profiles, clubs=clubs, uow=uow, clock=clock)
 
 
 ChangeLocationDep = Annotated[ChangeLocation, Depends(get_change_location)]

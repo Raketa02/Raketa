@@ -88,6 +88,7 @@ from app.bootstrap.composition import (
     build_assessment_repository,
     build_background_session_factory,
     build_clock,
+    build_club_points,
     build_domain_event_store,
     build_event_publisher,
     build_image_transcoder,
@@ -105,6 +106,7 @@ from app.kernel import Clock, Instant, Sport, exhaustive
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
+    PhoneReading,
     SetWeeklyHoursCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
@@ -396,6 +398,8 @@ def _build(
             # and two stores would be two answers. Most seeded profiles still
             # name none at all and the port is never asked about them.
             photos=photos,
+            # Every seeded profile commits a reading; a club is never asked.
+            clubs=build_club_points(session),
             uow=uow,
             clock=clock,
         ),
@@ -563,8 +567,9 @@ async def _ensure_profile(
             social_tag_ids=list(profile.social_tag_ids),
             photo_ids=list(profile.photo_ids),
             weekly_hours=list(profile.weekly_hours),
-            latitude=profile.latitude,
-            longitude=profile.longitude,
+            location=PhoneReading(
+                latitude=profile.latitude, longitude=profile.longitude
+            ),
             gender=profile.gender,
             gender_preference=profile.gender_preference,
             intro=profile.intro,

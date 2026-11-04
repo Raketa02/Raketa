@@ -42,6 +42,7 @@ from app.modules.player_profile.application.commands import (
     ChangeSocialTagsCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
+    PhoneReading,
     SetReliabilityMinimumCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
@@ -113,6 +114,7 @@ from tests.unit.fake_event_store import (
     InMemoryEventStore,
     RecordingPublisher,
 )
+from tests.unit.fake_club_points import ClubsAt
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 PLAYER = new_uuid()
@@ -133,6 +135,8 @@ class Harness:
         #: One store for the commit and the read: the commit proves each photo
         #: id against it, and the read asks it what was concluded about each.
         self.photos = InMemoryPhotoStorage()
+        #: No club is placed: every profile here commits and moves by a reading.
+        self.clubs = ClubsAt()
 
     # A repository per call, as the request scope makes one: each remembers the
     # stream versions *it* read, and one that outlived its transaction would be
@@ -156,8 +160,7 @@ class Harness:
             social_tag_ids=["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
             photo_ids=[],
             weekly_hours=[(2, 19), (6, 10)],
-            latitude=HOME_FIX[0],
-            longitude=HOME_FIX[1],
+            location=PhoneReading(latitude=HOME_FIX[0], longitude=HOME_FIX[1]),
             gender=Gender.WOMAN,
             gender_preference=DEFAULT_GENDER_PREFERENCE,
         )
@@ -165,6 +168,7 @@ class Harness:
         await CommitPlayerProfile(
             profiles=self._profiles(),
             photos=self.photos,
+            clubs=self.clubs,
             uow=self.uow,
             clock=self.clock,
         ).execute(CommitPlayerProfileCommand(**arguments))
@@ -186,10 +190,11 @@ class Harness:
         self, latitude: float, longitude: float, *, player_id=PLAYER
     ) -> None:
         await ChangeLocation(
-            profiles=self._profiles(), uow=self.uow, clock=self.clock
+            profiles=self._profiles(), clubs=self.clubs, uow=self.uow, clock=self.clock
         ).execute(
             ChangeLocationCommand(
-                player_id=player_id, latitude=latitude, longitude=longitude
+                player_id=player_id,
+                location=PhoneReading(latitude=latitude, longitude=longitude),
             )
         )
 

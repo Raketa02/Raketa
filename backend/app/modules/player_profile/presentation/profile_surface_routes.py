@@ -88,6 +88,7 @@ from app.modules.player_profile.application.commands import (
     SetReliabilityMinimumCommand,
     SetWeeklyHoursCommand,
 )
+from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
 from app.modules.player_profile.presentation.dependencies import (
     ChangeGenderDep,
     ChangeGenderPreferenceDep,
@@ -234,20 +235,38 @@ async def set_weekly_hours(
     "/location",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`location_club_unknown` — the club picked in place of a "
+                "reading is no club in Raketa (`details.field` `club_id`). "
+                "Nothing moves."
+            ),
+        },
         status.HTTP_404_NOT_FOUND: _NO_PROFILE,
         status.HTTP_409_CONFLICT: _LOST_THE_RACE,
     },
-    summary="Move this player's Location area to where the phone is",
+    summary=(
+        "Move this player's Location area to where the phone is — or to a "
+        "club picked in its place"
+    ),
     description=(
-        "**The cold start's write, and no screen's.** The client re-reads the "
+        "**The cold start's write.** The client re-reads the "
         "phone's position on every cold start and on return from the "
         "background after more than 24 hours — never merely on foreground — "
         "with the accuracy onboarding used, and puts it here silently. A "
         "revoked permission sends nothing: the stored area stays.\n\n"
-        "**What is sent is never what is kept.** The fix is rounded to the "
+        "**Or a club, from *You › Where you play*** (`docs/adr/0200` §10). A "
+        "player who refused the phone's location sends a `club_id` in place of "
+        "the reading — exactly one of the two, never both — and the club's "
+        "point, rounded to the cell, is their area. The phone never needs the "
+        "club's coordinates. Nothing records which it was, so the next reading "
+        "in another cell replaces a club-picked area.\n\n"
+        "**What is sent is never what is kept.** The fix — or the club's "
+        "point — is rounded to the "
         "cell about a kilometre across before anything is recorded, exactly as "
         "the profile commit rounds it, so the precise fix never reaches the "
-        "platform's records. A fix that rounds to the cell already stored "
+        "platform's records. A move that rounds to the cell already stored "
         "records nothing and still answers `204` — which is what makes a write "
         "on every launch free, and why there is no `Idempotency-Key`.\n\n"
         "**Nothing else moves.** A trip is a trip: whatever reads the area "
@@ -262,11 +281,7 @@ async def change_location(
     use_case: ChangeLocationDep,
 ) -> None:
     await use_case.execute(
-        ChangeLocationCommand(
-            player_id=user.id,
-            latitude=payload.latitude,
-            longitude=payload.longitude,
-        )
+        ChangeLocationCommand(player_id=user.id, location=payload.as_source())
     )
 
 
@@ -377,10 +392,11 @@ async def change_photos(
             "model": ErrorResponse,
             "description": (
                 "`intro_not_admitted` — the line is not one the platform "
-                "admits, with one coarse `details.reason`: `too_long` (over a "
-                "hundred characters after trimming), `multiline` (a line "
-                "break), or `contains_contact` (a phone number, an email, a URL "
-                "or bare domain, or an `@handle`). The commit's fence exactly; "
+                "admits, with one coarse `details.reason`: `too_long` (over "
+                f"{INTRO_MAX_CHARACTERS} characters after trimming), "
+                "`multiline` (a line break), or `contains_contact` (a phone "
+                "number, an email, a URL or bare domain, or an `@handle`). The "
+                "commit's fence exactly; "
                 "refused before anything is stored, and the server never says "
                 "what it matched."
             ),

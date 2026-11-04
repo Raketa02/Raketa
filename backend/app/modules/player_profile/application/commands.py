@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, TypeAlias
 from uuid import UUID
 
 from app.engines.matchfit.core import ReliabilityBand
@@ -13,6 +13,30 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
     PlayIntentSurface,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class PhoneReading:
+    """**A reading of the phone**: the precise fix, as the device gave it — two
+    floats and not a ``LocationArea``, because the coarsening is the domain's
+    job and it happens exactly once, on the way in (``domain/location.py``)."""
+
+    latitude: float
+    longitude: float
+
+
+@dataclass(frozen=True, slots=True)
+class PickedClub:
+    """**A Club they pick** in place of a reading, when the phone's permission
+    is refused (``docs/adr/0200`` §10): the club's id and nothing else, because
+    its point is the clubs' fact and the phone never needs it."""
+
+    club_id: UUID
+
+
+#: Where a Location area comes from — one of the two, never both and never
+#: neither. The boundary refuses any other shape before a command exists.
+LocationSource: TypeAlias = PhoneReading | PickedClub
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,8 +101,8 @@ class CommitPlayerProfileCommand:
     photo_ids: Sequence[UUID]
     #: ``(iso weekday 1–7, hour 7–22)`` — one pair per hour the player ticked.
     weekly_hours: Sequence[tuple[int, int]]
-    latitude: float
-    longitude: float
+    #: A reading of the phone, or a club picked in place of one.
+    location: LocationSource
     gender: Gender
     gender_preference: GenderPreference
     #: One line about themselves, or nothing. Fenced by the domain, never here.
@@ -104,18 +128,17 @@ class SetWeeklyHoursCommand:
 
 @dataclass(frozen=True, slots=True)
 class ChangeLocationCommand:
-    """The phone's fix, on a cold start (``docs/adr/0174`` §6).
+    """The phone's fix on a cold start (``docs/adr/0174`` §6) — or a club picked
+    in its place, from *You › Where you play* (``docs/adr/0200`` §10).
 
-    The **precise fix**, as the device gave it and as the commit carries it —
-    two floats and not a ``LocationArea`` — because the coarsening is the
-    domain's job and it happens exactly once, on the way in
-    (``domain/location.py``). Nothing above the use case ever holds the cell,
-    and nothing below it ever holds the fix.
+    The **precise fix**, as the device gave it and as the commit carries it,
+    because the coarsening is the domain's job and it happens exactly once, on
+    the way in (``domain/location.py``). Nothing above the use case ever holds
+    the cell, and nothing below it ever holds the fix.
     """
 
     player_id: UUID
-    latitude: float
-    longitude: float
+    location: LocationSource
 
 
 @dataclass(frozen=True, slots=True)

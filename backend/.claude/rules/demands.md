@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Fifteen registers, and they are fifteen on purpose — one per kind of claim.**
+  **Sixteen registers, and they are sixteen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -104,6 +104,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   and since #663 a booked game's court, asked of the Game (`GameCourts`), and the booked hours
   just ended, off the bookings' projection (`EndedHours`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
+  **The sixteenth, `player_profile_demands.py`, is the Player profile's consumer register**
+  (#726): where a club is (`ClubPoints`), for a Location area picked as a club in place of a
+  reading ([ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §10) —
+  signed by `clubs` over its own directory (`DirectoryClubPoints`), the point as precise as
+  the desk dropped it and nothing for an id that names no club. The profile's photo ports are
+  the outside world's and are not demands on a context.
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings.
   `game_demands.py` builds over the session alone since the game's pairing is read side

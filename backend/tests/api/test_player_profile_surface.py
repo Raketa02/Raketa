@@ -65,6 +65,7 @@ from app.modules.player_profile.domain.photos import (
     verdict_when_unreviewable,
 )
 from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
+from tests.api.administration_world import club_signs_up
 
 PROFILE_URL = "/api/v1/players/me/profile"
 WEEKLY_HOURS_URL = "/api/v1/players/me/weekly-hours"
@@ -685,6 +686,86 @@ async def test_the_location_cannot_be_written_without_a_profile(client):
 
 async def test_the_location_needs_a_token(client):
     assert (await client.put(LOCATION_URL, json=AWAY_FIX)).status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# A club in place of a reading (docs/adr/0200 §10)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_picked_club_moves_the_area_to_the_club_s_cell(client, session_factory):
+    """Filip turned the phone's location off and picks a club in Warsaw near
+    where he plays now, from *You › Where you play*: his area is that club's
+    point rounded to the cell, and the club's precise point is nowhere in his
+    stream."""
+
+    club_id, _ = await club_signs_up(client, point=tuple(AWAY_FIX.values()))
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    response = await client.put(
+        LOCATION_URL, json={"club_id": club_id}, headers=headers
+    )
+
+    assert response.status_code == 204, response.text
+    stream = await stream_of(session_factory, player_id)
+    assert len(stream) == before + 1
+    moved = stream[-1]
+    assert moved.event_type == "player_profile.location_changed"
+    assert (moved.payload["latitude"], moved.payload["longitude"]) == AWAY_CELL
+    for row in stream:
+        for precise in AWAY_FIX.values():
+            assert precise not in row.payload.values(), (row.event_type, precise)
+
+
+async def test_the_next_reading_in_another_cell_replaces_a_picked_club(
+    client, session_factory
+):
+    """The cold start is unchanged (``docs/adr/0174`` §6): once Ania allows
+    location, the phone's reading replaces the club she picked at sign-up."""
+
+    club_id, _ = await club_signs_up(client, point=tuple(AWAY_FIX.values()))
+    player_id, headers = await an_account(client, "picked")
+    await a_committed_profile(client, headers, "picked", location={"club_id": club_id})
+
+    response = await client.put(LOCATION_URL, json=HOME_FIX, headers=headers)
+
+    assert response.status_code == 204, response.text
+    moved = (await stream_of(session_factory, player_id))[-1]
+    assert moved.event_type == "player_profile.location_changed"
+    assert (moved.payload["latitude"], moved.payload["longitude"]) == (51.51, -0.13)
+
+
+async def test_a_club_that_is_not_in_raketa_moves_nothing(client, session_factory):
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    response = await client.put(
+        LOCATION_URL, json={"club_id": str(uuid4())}, headers=headers
+    )
+
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "location_club_unknown"
+    assert response.json()["details"] == {"field": "club_id"}
+    assert await stream_length(session_factory, player_id) == before
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {**AWAY_FIX, "club_id": str(uuid4())},
+        {"longitude": 21.0122, "club_id": str(uuid4())},
+        {"latitude": 52.2297},
+        {},
+    ],
+    ids=["both forms", "half a reading and a club", "half a reading", "neither"],
+)
+async def test_a_move_is_a_reading_or_a_club_and_exactly_one(client, body):
+    _, headers = await a_player(client)
+
+    response = await client.put(LOCATION_URL, json=body, headers=headers)
+
+    assert response.status_code == 422, response.text
 
 
 # ---------------------------------------------------------------------------

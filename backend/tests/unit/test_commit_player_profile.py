@@ -14,6 +14,8 @@ import pytest
 
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
+    PhoneReading,
+    PickedClub,
 )
 from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
@@ -23,6 +25,7 @@ from app.modules.player_profile.domain.errors import (
     WeeklyHoursEmpty,
     IntroNotAdmitted,
     IntroRefusal,
+    LocationClubUnknown,
     PhotoNotFound,
     PlayerProfileAlreadyExists,
     SocialTagSelectionOutOfBounds,
@@ -38,6 +41,7 @@ from app.modules.player_profile.domain.gender import (
     GenderPreference,
 )
 from app.modules.player_profile.domain.photos import PhotoRef, TranscodedImage
+from app.modules.player_profile.domain.ports import ClubPoint
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     EventSourcedPlayerProfileRepository,
 )
@@ -48,9 +52,13 @@ from tests.unit.fake_event_store import (
     InMemoryEventStore,
     RecordingPublisher,
 )
+from tests.unit.fake_club_points import ClubsAt
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 PLAYER = new_uuid()
+#: Ogrody 33, as its desk dropped its point — and the cell that point falls in.
+OGRODY = new_uuid()
+OGRODY_POINT = ClubPoint(latitude=50.0612, longitude=19.9367)
 
 
 class Harness:
@@ -61,6 +69,7 @@ class Harness:
         self.publisher = RecordingPublisher()
         self.uow = CountingUnitOfWork()
         self.photos = InMemoryPhotoStorage()
+        self.clubs = ClubsAt({OGRODY: OGRODY_POINT})
         self.clock = FrozenClock()
 
     def commit(self) -> CommitPlayerProfile:
@@ -70,6 +79,7 @@ class Harness:
         return CommitPlayerProfile(
             profiles=self._profiles(),
             photos=self.photos,
+            clubs=self.clubs,
             uow=self.uow,
             clock=self.clock,
         )
@@ -103,8 +113,7 @@ def a_command(**overrides) -> CommitPlayerProfileCommand:
         social_tag_ids=["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
         photo_ids=[],
         weekly_hours=[(2, 19)],
-        latitude=51.5073509,
-        longitude=-0.1277583,
+        location=PhoneReading(latitude=51.5073509, longitude=-0.1277583),
         gender=Gender.WOMAN,
         gender_preference=GenderPreference.WOMEN_ONLY,
     )
@@ -136,10 +145,40 @@ async def test_the_precise_fix_never_reaches_the_stream(harness: Harness):
     """Coarsened on the way in, so there is no version of this stream from which
     the device's own reading could be recovered."""
 
-    await harness.commit().execute(a_command(latitude=51.5073509, longitude=-0.1277583))
+    await harness.commit().execute(
+        a_command(location=PhoneReading(latitude=51.5073509, longitude=-0.1277583))
+    )
 
     created = harness.publisher.published[0]
     assert (created.latitude, created.longitude) == (51.51, -0.13)
+    assert harness.clubs.asked == [], "a reading asks nobody where a club is"
+
+
+async def test_a_picked_club_s_point_is_rounded_to_the_cell_as_a_reading_is(
+    harness: Harness,
+):
+    """``docs/adr/0200`` §10: the club stands in for the reading, and its
+    precise point never reaches the stream either."""
+
+    await harness.commit().execute(a_command(location=PickedClub(club_id=OGRODY)))
+
+    created = harness.publisher.published[0]
+    assert (created.latitude, created.longitude) == (50.06, 19.94)
+
+
+async def test_a_club_that_is_not_in_raketa_is_refused_and_nothing_is_stored(
+    harness: Harness,
+):
+    with pytest.raises(LocationClubUnknown) as refused:
+        await harness.commit().execute(
+            a_command(location=PickedClub(club_id=new_uuid()))
+        )
+
+    assert refused.value.code == "location_club_unknown"
+    assert refused.value.details == {"field": "club_id"}
+    assert harness.publisher.published == []
+    assert harness.uow.commits == 0
+    assert await harness.has_profile().execute(PLAYER) is False
 
 
 async def test_a_commit_with_no_hours_ticked_is_refused(harness: Harness):

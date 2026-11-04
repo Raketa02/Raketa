@@ -502,6 +502,24 @@ forbidden_modules =
     app.modules.groups
 allow_indirect_imports = true
 
+# The Player profile does not know a club exists. `clubs` reads
+# `player_profile` — a court's Raketa hours are the player's own `WeeklyHours`
+# — and the one thing the profile asks back, *where is the club a player picked
+# in place of a reading* (docs/adr/0200 §10), is a port declared in the
+# profile's own words and **signed in `clubs/infrastructure/`**, as clubs'
+# sports question is signed in `groups`. An adapter in the profile reading the
+# clubs' directory would point the arrow back (#726).
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:player-profile-does-not-know-clubs]
+name = The Player profile context does not import Clubs
+type = forbidden
+source_modules =
+    app.modules.player_profile
+forbidden_modules =
+    app.modules.clubs
+allow_indirect_imports = true
+
 # Payments does not know a yes exists. `proposals` reads `payments` — whether a
 # player has a method their share could be charged to — and the one thing
 # `payments` asks back, *could anything still be charged to this method* (a

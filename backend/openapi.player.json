@@ -922,7 +922,7 @@
           "player-profile"
         ],
         "summary": "Commit every answer from onboarding's second part",
-        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary and the tag floor and ceiling are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**`weekly_hours` are required**, at least one hour of the 7 \u00d7 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**No search radius and no proposals opt-in.** Both were asked here and went with the ranking that read them (#581); a body that still carries either commits, and the two are ignored.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary and the tag floor and ceiling are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**`weekly_hours` are required**, at least one hour of the 7 \u00d7 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**`location` is a reading or a club, and exactly one.** The phone's fix (`latitude` and `longitude`), or \u2014 for a player who refused the phone's location \u2014 a `club_id` they picked near where they play (`docs/adr/0200` \u00a710). Either is rounded to the cell before anything is recorded; a profile cannot exist without one.\n\n**No search radius and no proposals opt-in.** Both were asked here and went with the ranking that read them (#581); a body that still carries either commits, and the two are ignored.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most 250 characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
         "operationId": "commit_player_profile_api_v1_players_me_profile_post",
         "security": [
           {
@@ -976,7 +976,7 @@
             }
           },
           "400": {
-            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.\n\n`location_club_unknown` \u2014 the club picked in place of a reading is no club in Raketa (`details.field` `club_id`): it stopped existing between the search and the tap, or the client invented it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1135,8 +1135,8 @@
         "tags": [
           "player-profile"
         ],
-        "summary": "Move this player's Location area to where the phone is",
-        "description": "**The cold start's write, and no screen's.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours \u2014 never merely on foreground \u2014 with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.\n\n**What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` \u2014 which is what makes a write on every launch free, and why there is no `Idempotency-Key`.\n\n**Nothing else moves.** A trip is a trip: whatever reads the area reads the new cell \u2014 and nothing is reset. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.",
+        "summary": "Move this player's Location area to where the phone is \u2014 or to a club picked in its place",
+        "description": "**The cold start's write.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours \u2014 never merely on foreground \u2014 with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.\n\n**Or a club, from *You \u203a Where you play*** (`docs/adr/0200` \u00a710). A player who refused the phone's location sends a `club_id` in place of the reading \u2014 exactly one of the two, never both \u2014 and the club's point, rounded to the cell, is their area. The phone never needs the club's coordinates. Nothing records which it was, so the next reading in another cell replaces a club-picked area.\n\n**What is sent is never what is kept.** The fix \u2014 or the club's point \u2014 is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A move that rounds to the cell already stored records nothing and still answers `204` \u2014 which is what makes a write on every launch free, and why there is no `Idempotency-Key`.\n\n**Nothing else moves.** A trip is a trip: whatever reads the area reads the new cell \u2014 and nothing is reset. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.",
         "operationId": "change_location_api_v1_players_me_location_put",
         "requestBody": {
           "content": {
@@ -1151,6 +1151,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "`location_club_unknown` \u2014 the club picked in place of a reading is no club in Raketa (`details.field` `club_id`). Nothing moves.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
             "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
@@ -1367,7 +1377,7 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). The commit's fence exactly; refused before anything is stored, and the server never says what it matched.",
+            "description": "`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). The commit's fence exactly; refused before anything is stored, and the server never says what it matched.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7973,7 +7983,7 @@
               }
             ],
             "title": "Intro",
-            "description": "The new line, or `null` to withdraw it. Trimmed, then held to **at most 100 characters** and **one line** \u2014 the commit's fence exactly, with the commit's codes: `intro_not_admitted` and one coarse `details.reason`, `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle`. Whitespace is `null`: a line with nothing in it is withdrawn, never stored empty."
+            "description": "The new line, or `null` to withdraw it. Trimmed, then held to **at most 250 characters** and **one line** \u2014 the commit's fence exactly, with the commit's codes: `intro_not_admitted` and one coarse `details.reason`, `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle`. Whitespace is `null`: a line with nothing in it is withdrawn, never stored empty."
           }
         },
         "type": "object",
@@ -7984,27 +7994,16 @@
         "description": "The line, replaced \u2014 or withdrawn (``docs/adr/0179`` \u00a76).\n\n**The field is required and nullable**, which is the shape of a value whose\nabsence is a real act: ``null`` withdraws the line, and ``{}`` is a 422 so\nthat a client which forgot the field cannot be clearing lines. No\n``max_length``, for the commit's reason: the cap is the domain's, and the\ndomain refuses with `intro_not_admitted` and `reason: too_long`, which is\nthe code a client branches on.\n\n**Nothing comes back.** The intro reaches the card, the record and its\nauthor's own profile read and nowhere else \u2014 a sweep in ``tests/unit/\ntest_intro.py`` holds the contract to those three shapes \u2014 and a response\nthat echoed the trimmed line would be a fourth. The author reads it back\nfrom the profile read, as the two gender writes are read back."
       },
       "ChangeLocationRequest": {
-        "properties": {
-          "latitude": {
-            "type": "number",
-            "maximum": 90.0,
-            "minimum": -90.0,
-            "title": "Latitude"
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/PhoneReadingRequest"
           },
-          "longitude": {
-            "type": "number",
-            "maximum": 180.0,
-            "minimum": -180.0,
-            "title": "Longitude"
+          {
+            "$ref": "#/components/schemas/PickedClubRequest"
           }
-        },
-        "type": "object",
-        "required": [
-          "latitude",
-          "longitude"
         ],
         "title": "ChangeLocationRequest",
-        "description": "The phone's fix, on a cold start.\n\n**What is sent is never what is kept.** The client sends the fix its device\ngave it, with the accuracy onboarding used; the platform rounds it to the\ncell about a kilometre across before anything is recorded, exactly as the\ncommit does, and a fix that rounds to the cell already stored records\nnothing (``docs/adr/0174`` \u00a76). Nothing comes back: no route on this\nsurface serves the area yet \u2014 the profile read grows the field when *You*\nis built \u2014 and a silent write on every launch is not the one to start.\n\nThe bounds are the world's, as they are on the commit's ``location`` \u2014\nread from the value object rather than spelled again. A fix outside them\nis a broken reading and not a place, refused at the boundary rather than\nrounded into a cell at the pole."
+        "description": "The phone's fix, on a cold start \u2014 or a club picked in its place, from\n*You \u203a Where you play* (``docs/adr/0200`` \u00a710).\n\n**The commit's ``location`` exactly**: a reading (`latitude` and\n`longitude`) or a `club_id`, never both and never neither.\n\n**What is sent is never what is kept.** The client sends the fix its device\ngave it, with the accuracy onboarding used; the platform rounds it \u2014 or the\npicked club's point \u2014 to the cell about a kilometre across before anything\nis recorded, exactly as the commit does, and a move that rounds to the cell\nalready stored records nothing (``docs/adr/0174`` \u00a76). Nothing comes back:\nno route on this surface serves the area, and a silent write on every\nlaunch is not the one to start."
       },
       "ChangePhotosRequest": {
         "properties": {
@@ -8225,7 +8224,16 @@
             "description": "The hours of the week this player ticked. **At least one of the 112** \u2014 an empty list is refused with `weekly_hours_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated hours are collapsed, and the floor is counted after that."
           },
           "location": {
-            "$ref": "#/components/schemas/LocationAreaResource"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PhoneReadingRequest"
+              },
+              {
+                "$ref": "#/components/schemas/PickedClubRequest"
+              }
+            ],
+            "title": "Location",
+            "description": "Where this player plays: **a reading of the phone** (`latitude` and `longitude`), or, when the phone's location is refused, **a club they pick** (`club_id`) \u2014 exactly one of the two (`docs/adr/0200` \u00a710). Either is rounded to the cell about a kilometre across before anything is recorded, and the cell comes back as `location`. A club that is not in Raketa is `location_club_unknown`."
           },
           "gender": {
             "$ref": "#/components/schemas/Gender",
@@ -8246,7 +8254,7 @@
               }
             ],
             "title": "Intro",
-            "description": "One line about yourself \u2014 your **intro** \u2014 or nothing. Optional: a player who skips the step sends nothing (or `null`, or whitespace, which is the same), and has no intro rather than an empty one.\n\nTrimmed, then held to **at most 100 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` \u2014 `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` \u2014 so the client can say what to change without the server explaining what it matched. Nothing else is read.\n\nEdited later from the You tab through `PUT /players/me/intro`, with the tags and the photos it sits between (ADR-0179 \u00a76). It crosses on the player card and on the record, and this response does not echo it."
+            "description": "One line about yourself \u2014 your **intro** \u2014 or nothing. Optional: a player who skips the step sends nothing (or `null`, or whitespace, which is the same), and has no intro rather than an empty one.\n\nTrimmed, then held to **at most 250 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` \u2014 `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` \u2014 so the client can say what to change without the server explaining what it matched. Nothing else is read.\n\nEdited later from the You tab through `PUT /players/me/intro`, with the tags and the photos it sits between (ADR-0179 \u00a76). It crosses on the player card and on the record, and this response does not echo it."
           }
         },
         "type": "object",
@@ -12073,6 +12081,30 @@
         ],
         "title": "PendingInvitationSchema"
       },
+      "PhoneReadingRequest": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "PhoneReadingRequest",
+        "description": "**A reading of the phone**: the fix its device gave, as measured.\n\n**What is sent is never what is kept**: the platform rounds it to the cell\nabout a kilometre across before anything is recorded. The bounds are the\nworld's, read from the value object rather than spelled again; a fix\noutside them is a broken reading and not a place, refused here rather than\nrounded into a cell at the pole. **Nothing else rides along**: a body that\nalso names a club is refused (``docs/adr/0200`` \u00a710)."
+      },
       "PhotoResponse": {
         "properties": {
           "photo_id": {
@@ -12139,6 +12171,23 @@
         ],
         "title": "PhotosResponse",
         "description": "The photographs as the profile now holds them, in their order.\n\nIds and nothing else: the verdict beside each is the profile read's to\nserve (`ProfilePhotoResource`), paid for once there rather than on every\nrearrangement here."
+      },
+      "PickedClubRequest": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "A club from Raketa's clubs, as `GET /home-clubs` answers it \u2014 by name or district, A\u2013Z for a player with no area yet."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "club_id"
+        ],
+        "title": "PickedClubRequest",
+        "description": "**A Club they pick** in place of a reading, when the phone's location\nis refused (``docs/adr/0200`` \u00a710): *Pick a club near where you play*.\n\nThe club's point on the map, rounded to the cell exactly as a reading is,\nbecomes the Location area \u2014 so the phone never needs a club's coordinates.\nAn id that names no club in Raketa is `location_club_unknown`. **Nothing\nelse rides along**: a body that also carries a reading is refused."
       },
       "PlayIntent": {
         "type": "string",

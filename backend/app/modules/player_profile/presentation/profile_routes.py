@@ -39,6 +39,7 @@ from app.core.exception_handlers import ErrorResponse
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
 )
+from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
 from app.modules.player_profile.presentation.dependencies import (
     CommitPlayerProfileDep,
 )
@@ -104,11 +105,15 @@ IdempotencyKeyDep = Annotated[
                 "one a profile may hold.\n\n"
                 "`intro_not_admitted` — the line is not one the platform "
                 "admits, with one coarse `details.reason`: `too_long` (over "
-                "a hundred characters after trimming), `multiline` (a line "
-                "break), or `contains_contact` (a phone number, an email, a "
-                "URL or bare domain, or an `@handle`). Refused before anything "
-                "is stored; the client says what to change and the server "
-                "never says what it matched."
+                f"{INTRO_MAX_CHARACTERS} characters after trimming), "
+                "`multiline` (a line break), or `contains_contact` (a phone "
+                "number, an email, a URL or bare domain, or an `@handle`). "
+                "Refused before anything is stored; the client says what to "
+                "change and the server never says what it matched.\n\n"
+                "`location_club_unknown` — the club picked in place of a "
+                "reading is no club in Raketa (`details.field` `club_id`): it "
+                "stopped existing between the search and the tap, or the client "
+                "invented it."
             ),
         },
         **ADULT_ATTESTATION_MISSING,
@@ -146,6 +151,11 @@ IdempotencyKeyDep = Annotated[
         "scored as a zero, so it is asked for rather than guessed at. The "
         "minimum is exactly one and is not served — it is fixed, and a client "
         "holds it as a constant.\n\n"
+        "**`location` is a reading or a club, and exactly one.** The phone's "
+        "fix (`latitude` and `longitude`), or — for a player who refused the "
+        "phone's location — a `club_id` they picked near where they play "
+        "(`docs/adr/0200` §10). Either is rounded to the cell before anything "
+        "is recorded; a profile cannot exist without one.\n\n"
         "**No search radius and no proposals opt-in.** Both were asked here "
         "and went with the ranking that read them (#581); a body that still "
         "carries either commits, and the two are ignored.\n\n"
@@ -157,9 +167,9 @@ IdempotencyKeyDep = Annotated[
         "this player from the side it excludes. Neither value ever comes back "
         "out of this API.\n\n"
         "**`intro` is optional and fenced at the write.** One line about "
-        "yourself, at most a hundred characters, any language; a player who "
-        "skips sends nothing and has no intro rather than an empty one. A "
-        "line carrying a phone number, an email, a URL or an `@handle` is "
+        f"yourself, at most {INTRO_MAX_CHARACTERS} characters, any language; "
+        "a player who skips sends nothing and has no intro rather than an "
+        "empty one. A line carrying a phone number, an email, a URL or an `@handle` is "
         "refused with `intro_not_admitted` before anything is stored. It "
         "crosses on the player card and on the record, and is not echoed here."
     ),
@@ -178,8 +188,7 @@ async def commit_player_profile(
             social_tag_ids=payload.social_tag_ids,
             photo_ids=payload.photo_ids,
             weekly_hours=payload.weekly_hours_cells(),
-            latitude=payload.location.latitude,
-            longitude=payload.location.longitude,
+            location=payload.location.as_source(),
             gender=payload.gender,
             gender_preference=payload.gender_preference,
             intro=payload.intro,

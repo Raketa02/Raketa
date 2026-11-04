@@ -300,3 +300,23 @@ class ReliabilityMinimumNotOffered(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__("A reliability filter is at least Medium or at least High.")
+
+
+class LocationClubUnknown(BadRequestError):
+    """The club picked for a Location area is no club in Raketa.
+
+    A player who refuses the phone's location **picks a club near where they
+    play**, and that club's point on the map, rounded to the cell, becomes their
+    area (``docs/adr/0200`` §10). The picker only offers clubs that exist, so this
+    is reached by a club that stopped existing between the search and the tap,
+    or by a client that invented one — a field to correct, as a group's unknown
+    home club is.
+    """
+
+    code = "location_club_unknown"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Only a club in Raketa can stand in for a location.",
+            details={"field": "club_id"},
+        )

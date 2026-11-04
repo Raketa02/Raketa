@@ -15,6 +15,7 @@ from uuid import uuid4
 
 import pytest
 
+from tests.api.administration_world import club_signs_up
 from tests.unit import image_fixtures as fixtures
 
 ALICE = {
@@ -148,6 +149,57 @@ async def test_the_location_that_comes_back_is_coarser_than_the_one_sent(client)
     body = (await commit(client, headers)).json()
 
     assert body["location"] == {"latitude": 51.51, "longitude": -0.13}
+
+
+# ---------------------------------------------------------------------------
+# A club in place of a reading (docs/adr/0200 §10)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_player_who_refused_the_phone_commits_with_a_club_she_picked(client):
+    """Ania refused the phone's location and picked Ogrody 33 near where she
+    plays. Her Location area is the club's point on the map, rounded to the
+    cell exactly as a reading is — and the phone never needed the club's
+    coordinates."""
+
+    club_id, _ = await club_signs_up(client, point=(50.0612, 19.9367))
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(location={"club_id": club_id}))
+
+    assert response.status_code == 201, response.text
+    assert response.json()["location"] == {"latitude": 50.06, "longitude": 19.94}
+
+
+async def test_a_club_that_is_not_in_raketa_is_refused_and_nothing_is_stored(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(location={"club_id": str(uuid4())}))
+
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "location_club_unknown"
+    assert response.json()["details"] == {"field": "club_id"}
+    # Nothing was stored: the same key commits once she sends a reading.
+    retry = await commit(client, headers)
+    assert retry.status_code == 201, retry.text
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        {"latitude": 50.0612, "longitude": 19.9367, "club_id": str(uuid4())},
+        {"latitude": 50.0612, "club_id": str(uuid4())},
+        {"latitude": 50.0612},
+        {},
+    ],
+    ids=["both forms", "half a reading and a club", "half a reading", "neither"],
+)
+async def test_a_location_is_a_reading_or_a_club_and_exactly_one(client, location):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(location=location))
+
+    assert response.status_code == 422, response.text
 
 
 async def test_a_commit_with_no_hours_ticked_is_refused(client):
@@ -535,14 +587,14 @@ async def test_a_commit_without_a_line_is_a_commit_without_one(client):
 @pytest.mark.parametrize(
     "line,reason",
     [
-        ("x" * 101, "too_long"),
+        ("x" * 251, "too_long"),
         ("Moved here in May.\nNeeds opponents.", "multiline"),
         ("WhatsApp me 600 123 456", "contains_contact"),
         ("karol@example.com", "contains_contact"),
         ("https://karol.example.com", "contains_contact"),
         ("insta @karol_plays", "contains_contact"),
     ],
-    ids=["101 characters", "a line break", "a phone", "an email", "a URL", "a handle"],
+    ids=["251 characters", "a line break", "a phone", "an email", "a URL", "a handle"],
 )
 async def test_a_line_the_platform_does_not_admit_is_refused_with_its_reason(
     client, line: str, reason: str
@@ -564,6 +616,20 @@ async def test_a_line_the_platform_does_not_admit_is_refused_with_its_reason(
     # which it could not if a refused commit had left a profile behind.
     retry = await commit(client, headers, a_body(intro="Three sets, best of five"))
     assert retry.status_code == 201, retry.text
+
+
+async def test_a_line_of_two_hundred_and_fifty_characters_is_admitted(client):
+    """The cap is 250 (``docs/adr/0200`` §9): the deck card two lines tall went
+    with Classic play, and the record draws the line whole."""
+
+    headers = await auth_headers(client)
+    line = "Padel three evenings a week, tennis on Sundays. " * 6
+
+    response = await commit(client, headers, a_body(intro=line[:250]))
+
+    assert response.status_code == 201, response.text
+    record = await client.get("/api/v1/players/me/record", headers=headers)
+    assert len(record.json()["intro"]) == 250
 
 
 async def test_a_line_about_the_game_is_admitted(client):

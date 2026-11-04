@@ -424,6 +424,7 @@ from app.modules.clubs.infrastructure.event_sourced_club_repository import (
 from app.modules.clubs.infrastructure.club_courts_sellable_hours import (
     ClubCourtsSellableHours,
 )
+from app.modules.clubs.infrastructure.profile_club_points import DirectoryClubPoints
 from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
     SqlAlchemyClubDirectory,
 )
@@ -572,6 +573,7 @@ from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
 )
 from app.modules.player_profile.domain.ports import (
+    ClubPoints,
     PlayIntentDeclarationRepository,
     ImageTranscoder,
     PhotoReview,
@@ -891,6 +893,13 @@ def build_club_directory(session: AsyncSession) -> ClubDirectory:
     """What the Club context publishes: its clubs, read off the search
     projection (``docs/adr/0182`` §2) and never as an aggregate."""
     return SqlAlchemyClubDirectory(session)
+
+
+def build_club_points(session: AsyncSession) -> ClubPoints:
+    """Where a club is, for a Location area picked as a club in place of a
+    reading (``docs/adr/0200`` §10): the Player profile's demand, signed in
+    ``clubs/infrastructure/`` over the directory above."""
+    return DirectoryClubPoints(build_club_directory(session))
 
 
 # --------------------------------------------------------------------------

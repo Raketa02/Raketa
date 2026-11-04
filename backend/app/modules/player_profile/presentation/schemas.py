@@ -28,10 +28,15 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
+from app.modules.player_profile.application.commands import (
+    LocationSource,
+    PhoneReading,
+    PickedClub,
+)
 from app.modules.player_profile.application.read_player_profile import (
     PlayerProfileSurface,
 )
@@ -345,6 +350,56 @@ class LocationAreaResource(BaseModel):
         return cls(latitude=area.latitude, longitude=area.longitude)
 
 
+class PhoneReadingRequest(BaseModel):
+    """**A reading of the phone**: the fix its device gave, as measured.
+
+    **What is sent is never what is kept**: the platform rounds it to the cell
+    about a kilometre across before anything is recorded. The bounds are the
+    world's, read from the value object rather than spelled again; a fix
+    outside them is a broken reading and not a place, refused here rather than
+    rounded into a cell at the pole. **Nothing else rides along**: a body that
+    also names a club is refused (``docs/adr/0200`` §10).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float = Field(..., ge=MINIMUM_LATITUDE, le=MAXIMUM_LATITUDE)
+    longitude: float = Field(..., ge=MINIMUM_LONGITUDE, le=MAXIMUM_LONGITUDE)
+
+    def as_source(self) -> LocationSource:
+        return PhoneReading(latitude=self.latitude, longitude=self.longitude)
+
+
+class PickedClubRequest(BaseModel):
+    """**A Club they pick** in place of a reading, when the phone's location
+    is refused (``docs/adr/0200`` §10): *Pick a club near where you play*.
+
+    The club's point on the map, rounded to the cell exactly as a reading is,
+    becomes the Location area — so the phone never needs a club's coordinates.
+    An id that names no club in Raketa is `location_club_unknown`. **Nothing
+    else rides along**: a body that also carries a reading is refused.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    club_id: UUID = Field(
+        ...,
+        description=(
+            "A club from Raketa's clubs, as `GET /home-clubs` answers it — by "
+            "name or district, A–Z for a player with no area yet."
+        ),
+    )
+
+    def as_source(self) -> LocationSource:
+        return PickedClub(club_id=self.club_id)
+
+
+#: Where a Location area comes from: **exactly one of** a reading
+#: (`latitude` and `longitude`) or a picked club (`club_id`). Both at once,
+#: half a reading, or neither is a 422.
+LocationRequest = PhoneReadingRequest | PickedClubRequest
+
+
 class CommitPlayerProfileRequest(BaseModel):
     """Every answer from onboarding's second part, in one body.
 
@@ -390,7 +445,18 @@ class CommitPlayerProfileRequest(BaseModel):
             "is counted after that."
         ),
     )
-    location: LocationAreaResource
+    location: LocationRequest = Field(
+        ...,
+        description=(
+            "Where this player plays: **a reading of the phone** "
+            "(`latitude` and `longitude`), or, when the phone's location is "
+            "refused, **a club they pick** (`club_id`) — exactly one of the two "
+            "(`docs/adr/0200` §10). Either is rounded to the cell about a "
+            "kilometre across before anything is recorded, and the cell comes "
+            "back as `location`. A club that is not in Raketa is "
+            "`location_club_unknown`."
+        ),
+    )
     gender: Gender = Field(
         ...,
         description=(
@@ -717,25 +783,24 @@ class WeeklyHoursResponse(BaseModel):
         return cls(weekly_hours=_weekly_hours_resource(profile.weekly_hours))
 
 
-class ChangeLocationRequest(BaseModel):
-    """The phone's fix, on a cold start.
+class ChangeLocationRequest(RootModel[LocationRequest]):
+    """The phone's fix, on a cold start — or a club picked in its place, from
+    *You › Where you play* (``docs/adr/0200`` §10).
+
+    **The commit's ``location`` exactly**: a reading (`latitude` and
+    `longitude`) or a `club_id`, never both and never neither.
 
     **What is sent is never what is kept.** The client sends the fix its device
-    gave it, with the accuracy onboarding used; the platform rounds it to the
-    cell about a kilometre across before anything is recorded, exactly as the
-    commit does, and a fix that rounds to the cell already stored records
-    nothing (``docs/adr/0174`` §6). Nothing comes back: no route on this
-    surface serves the area yet — the profile read grows the field when *You*
-    is built — and a silent write on every launch is not the one to start.
-
-    The bounds are the world's, as they are on the commit's ``location`` —
-    read from the value object rather than spelled again. A fix outside them
-    is a broken reading and not a place, refused at the boundary rather than
-    rounded into a cell at the pole.
+    gave it, with the accuracy onboarding used; the platform rounds it — or the
+    picked club's point — to the cell about a kilometre across before anything
+    is recorded, exactly as the commit does, and a move that rounds to the cell
+    already stored records nothing (``docs/adr/0174`` §6). Nothing comes back:
+    no route on this surface serves the area, and a silent write on every
+    launch is not the one to start.
     """
 
-    latitude: float = Field(..., ge=MINIMUM_LATITUDE, le=MAXIMUM_LATITUDE)
-    longitude: float = Field(..., ge=MINIMUM_LONGITUDE, le=MAXIMUM_LONGITUDE)
+    def as_source(self) -> LocationSource:
+        return self.root.as_source()
 
 
 class DeclarePlayIntentRequest(BaseModel):

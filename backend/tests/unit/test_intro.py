@@ -68,11 +68,15 @@ def test_nothing_but_whitespace_is_absent_rather_than_an_empty_intro(
 
 
 def test_exactly_the_cap_is_admitted() -> None:
+    """The cap is 250 (``docs/adr/0200`` §9), up from 100 (``docs/adr/0170``
+    §4): spelled here as the number, so a change to the constant is a change
+    somebody reads."""
+
     line = "x" * INTRO_MAX_CHARACTERS
 
     intro = Intro.written(line)
 
-    assert intro is not None and len(intro.text) == 100
+    assert intro is not None and len(intro.text) == 250
 
 
 # ---------------------------------------------------------------------------

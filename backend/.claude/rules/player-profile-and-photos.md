@@ -97,6 +97,27 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `reliability_minimum_not_offered` (400). It sits beside the gender preference because it is a
   clause of the same pair rule — `proposals`' `MatcherPlayerFit` reads it off the profile load
   it already makes — and it is read back on the player's own record, never on the profile read.
+- **A Location area is set by a reading of the phone or by a club picked in its place,
+  and the intro is up to 250 characters**
+  ([ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §9, §10, #726).
+  The commit's `location` and `PUT /players/me/location`'s body are one union,
+  `PhoneReadingRequest | PickedClubRequest` (`latitude` and `longitude`, or `club_id`), each
+  `extra="forbid"` so both at once, half a reading or neither is a `422`; the commands carry
+  `PhoneReading | PickedClub` (`LocationSource`), and `application/location_source.py`'s
+  `area_of` is the one rule both writes run — a club's point is **rounded to the cell exactly
+  as a reading is**, by `LocationArea.around`, so the desk's precise point never reaches the
+  player's stream. **Nothing records which it was**: the area is a cell, so the cold start's
+  next reading in another cell replaces a club-picked area (ADR-0174 §6, unchanged) and
+  `player_profile.location_changed` is unchanged. Where a club is comes through **this
+  context's own port**, `ClubPoints` (`ClubPoint`, precise; `None` for no club), **signed in
+  `clubs/infrastructure/`** (`DirectoryClubPoints`, over `ClubDirectory`) because the arrow
+  already runs `clubs → player_profile` — `.importlinter`'s
+  `player-profile-does-not-know-clubs` holds it — and contracted in
+  `player_profile_demands.py`. An id that names no club is `location_club_unknown` (400,
+  `details.field` `club_id`), asked after the commit's pure refusals and before the object
+  store. The intro's `INTRO_MAX_CHARACTERS` is **250** (from 100: the deck card it fitted went
+  with Classic play); the request schemas and the column stay uncapped, and a replay
+  re-checks nothing.
 - **A photo URL is signed by one client per process, and the week answers *is this hour
   ticked?* by lookup** (#702, #703; ADR-0197 §2a, §2b). Presigning sends no request, so
   building an S3 client was the whole cost of a signature, once per face on every screen

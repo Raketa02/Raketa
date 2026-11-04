@@ -1,4 +1,5 @@
-"""The seams this context is built on: the photo path's three, and two aggregates'.
+"""The seams this context is built on: the photo path's three, two aggregates',
+and one demand on another context — where a club is (``ClubPoints``).
 
 Each is here rather than in ``app/application/ports/`` because each is the
 Player profile context's own: a photo belongs to a profile, and no other context
@@ -23,7 +24,8 @@ answer and is invisible from here (``docs/adr/0091``).
 
 from __future__ import annotations
 
-from typing import AsyncGenerator, Mapping, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import AsyncGenerator, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
@@ -330,4 +332,36 @@ class PlayIntentDeclarationRepository(Protocol):
         A no-op when nothing is pending, which is what lets a re-declaration of
         the value already held be saved without growing the stream.
         """
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# A demand on clubs: where a club is (docs/adr/0200 §10)
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ClubPoint:
+    """A club's point on the map, as precise as its desk dropped it. **Never an
+    area**: rounding it to the cell is this context's rule, and
+    ``LocationArea.around`` is the only place it is applied."""
+
+    latitude: float
+    longitude: float
+
+
+@runtime_checkable
+class ClubPoints(Protocol):
+    """Where a club is — what a club picked in place of a reading stands in with.
+
+    A player who refuses the phone's location picks a club near where they play,
+    and its point becomes their Location area (``docs/adr/0200`` §10), so the
+    phone never needs a club's coordinates. Declared here in this context's
+    words and **signed in** ``clubs/infrastructure/``, so the arrow keeps
+    running ``clubs → player_profile``.
+    """
+
+    async def point_of(self, club_id: UUID) -> ClubPoint | None:
+        """This club's point, or ``None`` for an id that names no club."""
         ...

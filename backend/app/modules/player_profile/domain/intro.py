@@ -51,11 +51,12 @@ from typing import Final
 from app.kernel import invariant
 from app.modules.player_profile.domain.errors import IntroNotAdmitted, IntroRefusal
 
-#: The cap, in characters after trimming. At a hundred the line fits the deck
-#: card's two lines at the mock's size, which is what makes an ellipsis
-#: unnecessary rather than a rule that hides one (``docs/adr/0170`` §4). Not
-#: served: both sides hold it as a constant, the way the photo cap is held.
-INTRO_MAX_CHARACTERS: Final = 100
+#: The cap, in characters after trimming: **250** (``docs/adr/0200`` §9). It
+#: was a hundred, to fit the deck card's two lines (``docs/adr/0170`` §4); that
+#: card went with Classic play, and the record draws the line whole, in
+#: quotation marks under the nickname, and never truncates it. Not served: both
+#: sides hold it as a constant, the way the photo cap is held.
+INTRO_MAX_CHARACTERS: Final = 250
 
 #: The fewest digits a run has to hold before it reads as a number to dial.
 #: Seven is the shortest local number in most numbering plans; a nine-digit
