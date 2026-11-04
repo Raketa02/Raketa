@@ -62,8 +62,15 @@ export { YouScreen } from './components/YouScreen';
  * Open a tab from a screen inside another one — the tab bar's own move rather than a second one,
  * so a player sent here lands where pressing the column would have put them.
  *
- * Two callers: the entry gate, laying the You tab down under the passport a pass began at
- * (ADR-0179 §3), and a group link answered once the account is in, laying Play down under Join a
- * group (#520).
+ * Two callers: a group link answered once the account is in, laying Play down under Join a group
+ * (#520), and *Get your level*'s notice laying Home down (#731).
  */
 export { openTab } from './components/shellNavigation';
+
+/**
+ * **Arrive in the app on a screen inside a tab**, its start beneath it, in one reset made before the
+ * shell draws — so nothing is drawn on the way. The entry gate's, for a rating pass that ends where
+ * it began: a group's page with Play beneath (ADR-0200 §5), the passport with You beneath
+ * (ADR-0179 §3).
+ */
+export { useShellLanding, type ShellPlace } from './components/shellLanding';

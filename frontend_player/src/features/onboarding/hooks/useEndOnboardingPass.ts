@@ -11,9 +11,10 @@
  * entered the app and then resumed an unfinished run was still inside the first walk as far as
  * the app was concerned, and read "Rating 2 of 2" for a single run.
  *
- * **Ending is allowed to be lazy.** Nothing reads a pass once the player is in the app, so
- * an effect is soon enough. Beginning is the half that cannot be — the question screen
- * reads a position on its first render — which is why beginning is not done from here.
+ * **Ending is done before the app is drawn** — a layout effect, not a passive one. Nothing reads a
+ * pass once the player is in the app, so for ending alone a passive effect was soon enough; landing
+ * is what is not (below). Beginning is done elsewhere for its own reason — the question screen
+ * reads a position on its first render.
  *
  * ## The ended pass is read once, for where it began
  *
@@ -36,9 +37,20 @@
  * file turns it into the group's route.
  *
  * **A pass begun at Home lands nowhere further**: `/` is Home, which is where it began.
+ *
+ * ## A landing is made before the app draws anything
+ *
+ * Every way out arrives at `/`, and `/` is Home. A landing made after the app had drawn showed
+ * Home for a frame and then slid the group in over it — a blink, seen on a device. So the hook
+ * **says whether a landing is due**, read once from the pass as the gate mounts, and the gate
+ * draws nothing until it has been made: the landing is made in the layout effect, before the first
+ * frame, and the caller's landing lays its whole stack in one reset (`shell`'s `useShellLanding`).
+ * The gate is mounted afresh for every pass that comes back to it, because the questions are a
+ * sibling of the app rather than inside it — so a pass begun from inside the app, as a group's
+ * door begins one, is never mistaken for one arriving.
  */
 
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { returnOf, type PassReturn } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
@@ -46,8 +58,8 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 /**
  * What the app does with a pass that has just ended, told where to put it back (`returnOf`):
  * the passport, or a group on its tab with the sport rated last. Called once per pass, and
- * never for a Home pass, from the gate's app branch, after the authenticated tree has
- * mounted — so a caller that navigates inside the tree finds the shell there to navigate.
+ * never for a Home pass, from the gate's app branch **before the shell is drawn** — so a landing
+ * lays its stack down in one move at the root rather than navigating a shell that is not there.
  */
 export type PassLanding = (back: PassReturn) => void;
 
@@ -56,8 +68,9 @@ export type PassLanding = (back: PassReturn) => void;
  * Passed rather than read here so the gate keeps one answer, and the caller stays a route
  * file that turns a decision into a route.
  * @param land where the app puts a player whose pass just ended, by the pass's origin.
+ * @returns whether a landing is still due — the gate draws nothing of the app while it is.
  */
-export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): void {
+export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): boolean {
   const end = useOnboardingPass((state) => state.end);
 
   // The latest landing, read at the moment of ending rather than closed over: a landing that
@@ -67,10 +80,20 @@ export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): void
   const landing = useRef(land);
   landing.current = land;
 
-  useEffect(() => {
+  // Read once, as the gate mounts: a pass still held then is one coming back from the questions,
+  // while a pass begun with the gate up — at a group's door — is one leaving, and lands nothing.
+  const [landingDue, setLandingDue] = useState(() => {
+    const pass = useOnboardingPass.getState().pass;
+    return pass !== undefined && returnOf(pass) !== undefined;
+  });
+
+  useLayoutEffect(() => {
     if (!inTheApp) return;
     const ended = end();
     const back = ended === undefined ? undefined : returnOf(ended);
     if (back !== undefined) landing.current(back);
+    setLandingDue(false);
   }, [inTheApp, end]);
+
+  return landingDue;
 }

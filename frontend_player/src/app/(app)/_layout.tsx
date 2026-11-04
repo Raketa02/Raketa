@@ -68,11 +68,17 @@
  * seam `NAMING_STEP` and `SOCIAL_STEPS_ENTRY` cross.
  *
  * **A pass that began on a group ends on it** ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §5, #729) the same way: Play laid down, and the group's page pushed over it on the tab the pass
+ * §5, #729) the same way: Play laid down, and the group's page over it on the tab the pass
  * began on, standing on the sport it rated last — the route the groups feature names.
+ *
+ * **Nothing of the app is drawn until it has landed.** The app's tree comes back at `/`, which is
+ * Home, and a landing made after Home was drawn showed it for a frame and then slid the group in
+ * over it — a blink on a device. So while a landing is due this file draws nothing, the landing is
+ * made before the first frame, and it is one reset with the whole stack in it (`shell`'s
+ * `useShellLanding`): the app's first frame is the group, or the passport, with its tab beneath.
  */
 
-import { Redirect, Stack, router, usePathname } from 'expo-router';
+import { Redirect, Stack } from 'expo-router';
 import { useCallback } from 'react';
 
 import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
@@ -87,13 +93,13 @@ import {
 import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
 import { IncomingLinks } from '@/features/links/types';
 import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
-import { openTab } from '@/features/shell/types';
+import { useShellLanding } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
   const status = useSessionStatus();
   const entry = useEntryDecision();
-  const pathname = usePathname();
+  const landInTheApp = useShellLanding();
 
   // Where a pass that has just ended lands, by where it began. A Home pass is already where
   // `/` opens, and is never handed here; a passport pass goes back to the passport,
@@ -102,21 +108,19 @@ export default function AppLayout() {
   const land = useCallback(
     (back: PassReturn) => {
       if (back.kind === 'passport') {
-        openTab('you', pathname);
-        router.push(YOU_PASSPORT_ROUTE);
+        landInTheApp('you', { pathname: YOU_PASSPORT_ROUTE });
         return;
       }
-      openTab('play', pathname);
-      router.push(groupReturnRoute(back.groupId, back.tab, back.sport));
+      landInTheApp('play', groupReturnRoute(back.groupId, back.tab, back.sport));
     },
-    [pathname],
+    [landInTheApp],
   );
 
   // A rating pass is over when the player is in the app. Declared here because
   // this is the branch that knows it — one site, and the definition rather than a line
   // someone has to remember on each of the several ways out of the flow. Called before the
   // returns below, because a hook may not be conditional.
-  useEndOnboardingPass(entry.kind === 'app', land);
+  const landingDue = useEndOnboardingPass(entry.kind === 'app', land);
   // And the location moves on a cold start, for the same branch and the same reason: this is
   // the one site that knows a player is signed in and past onboarding. The feature owns what
   // happens; this file owns the moment (ADR-0174 §6).
@@ -156,6 +160,9 @@ export default function AppLayout() {
       // steps, not to this file.
       return <Redirect href={SOCIAL_STEPS_ENTRY} />;
     case 'app':
+      // Nothing until a pass coming back has landed — made before the first frame, so this draws
+      // no frame of its own: the app's first is the screen the pass returns to.
+      if (landingDue) return null;
       return (
         <>
           <Stack screenOptions={{ headerShown: false }} />

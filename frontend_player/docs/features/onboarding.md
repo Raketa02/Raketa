@@ -101,12 +101,12 @@ landing is the gate's.** The three exits of a passport pass leave to `/` exactly
 pass does — `useAdvanceThroughPass` spells no route it does not own — and the gate's app branch,
 the one site that ends a pass, is handed the ended pass's origin (`end` now _returns_ it rather
 than the hook subscribing to the store, which would end the pass the chip has just begun) and
-lays the You tab down with the passport pushed over it, the shell's own move, so _back_ from the
-passport goes where it came from. The gate's _resume_ branch is unchanged, so a run begun from
+lays the You tab down with the passport over it, so _back_ from the passport goes where it came
+from. The gate's _resume_ branch is unchanged, so a run begun from
 the passport and deferred is resumed on the next cold launch as a welcome pass and ends the way
-any resumed run does — ADR-0179 names that as a consequence. **Not seen on a device**: the frame
-between the gate mounting the Now tab and its effect laying the You stack down, and whether the
-passport's push animates in over the tab.
+any resumed run does — ADR-0179 names that as a consequence. The frame between the gate mounting
+the first tab and its effect laying the stack down was seen on a device in the end, as a blink on
+a group pass's way back, and no longer exists — see the landing paragraph at the end.
 
 **The gate reads the account's profiles first** ([#516](https://github.com/Raketa02/Raketa/issues/516),
 ADR-0185 §3). `entryDestination` has a sixth destination, **the administrator area**, ahead of the
@@ -167,8 +167,8 @@ runtime, so a value import back would be a cycle through the two barrels. `stopD
 `group` whatever the pass produced, so every way out — the last result, _Done for now_, _continue
 later_, _abandon_ — replaces to `/` as a passport pass's does, and the gate's landing is handed
 `returnOf(pass)`: the passport, or the group, its tab and **the sport rated last** (the last of
-`rated`; none when nothing was). `(app)/_layout` lays Play down and pushes `groups`'
-`groupReturnRoute`, so _back_ is the Groups list; the page opens on that tab and stands on that
+`rated`; none when nothing was). `(app)/_layout` lays Play down with `groups`'
+`groupReturnRoute` over it, so _back_ is the Groups list; the page opens on that tab and stands on that
 sport the way a notice's card does, never saving it as a pick. **_Your rating_'s words moved to
 `resultPresentation`**: mid-pass _Rate {next}_ and _Done for now_, unchanged; on the last sport
 _Back to {group name}_ for a group pass and _See your ratings_ for the rest. The result **route**
@@ -285,6 +285,21 @@ middle and both figures stretched across their column: **`spotlit` now carries e
 beside the figure** (`useVerdictSpotlights`, the popover's mark refs when it is handed in), a guide
 step's `pointAt` aims the arrow at it, and the level and the range hug their content so each hole
 fits its figure. Seen fixed on the user's iPhone the same day.
+
+**The landing draws nothing on the way (2026-11-04, seen on an iPhone).** _Back to {group name}_
+showed Home for a frame and then slid the group in over it. The questions are a sibling of the app
+under the root's `Slot`, so every way out of a pass mounts the app afresh at `/` — Home — and the
+gate's landing, a passive effect calling the shell's tab press and a push, ran only after Home had
+been drawn. Now `useEndOnboardingPass` **returns whether a landing is due**, read once from the
+pass as the gate mounts (a pass begun with the gate up, at a group's door, is one leaving and lands
+nothing), ends the pass in a **layout effect**, and the gate draws nothing of the app while a
+landing is due. The landing itself is the shell's `useShellLanding`: **one reset of the navigation
+state at the root**, `(app)` › `(tabs)` › the tab's start and the screen on top, made before the
+shell is mounted, so the app's first frame is the group — or the passport — with Play or You
+beneath it and nothing animating. The reset drops the `(app)` route's params, which held the way
+in's nested _go to Home_ and would otherwise pop the new stack straight back to it.
+`aPassFromAGroup.test` watches Home for being drawn as the screen on top between the press and the
+group. **Not seen on a device yet**: the fix.
 
 **Once per account on a phone, not once per phone (2026-11-04, ruled in-session).** A new account
 on the user's iPhone was shown no guide — exactly what ADR-0200 §8 ruled (_a second account on the

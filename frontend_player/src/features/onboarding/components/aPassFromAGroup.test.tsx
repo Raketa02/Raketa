@@ -17,14 +17,21 @@
  * Every assertion is about what a player can see or what left the device.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { useNavigation } from 'expo-router';
+import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { refreshTokens } from '@/features/auth/types';
 import { GROUPS_COPY } from '@/features/groups/types';
-import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
+import {
+  beginSession,
+  clearStoredTokens,
+  resetSessionStatus,
+  wireHttpCredentials,
+} from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
+  ONBOARDING_ROUTES,
   SPORTS_SERVED,
   launchSignedIn,
   stubGate,
@@ -347,6 +354,46 @@ describe('a pass begun on an official group’s card', () => {
 
       fireEvent.press(await screen.findByLabelText(GROUPS_COPY.group.back));
 
+      await waitFor(() => expect(screen).toHavePathname('/play'));
+    },
+    WALK_TIMEOUT,
+  );
+
+  it(
+    'draws the group as the first screen back in the app — Home is never on top on the way',
+    async () => {
+      // The app's tree is torn down while the questions are up, and comes back at `/` — Home. A
+      // landing that waited for Home to be drawn before laying the group over it showed Home for a
+      // frame and then slid the group in: a blink. Home is still beneath, so it is watched for being
+      // drawn as the screen on top, not for being drawn at all.
+      let homeOnTop = 0;
+      const Home = ONBOARDING_ROUTES['(app)/(tabs)/index'];
+      function WatchedHome() {
+        if (useNavigation().isFocused()) homeOnTop += 1;
+        return <Home />;
+      }
+      stubAnia([KAZIMIERZ]);
+      await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+      renderRouter(
+        { ...ONBOARDING_ROUTES, '(app)/(tabs)/index': WatchedHome },
+        { initialUrl: '/' },
+      );
+      fireEvent.press(await screen.findByLabelText('Play'));
+      await waitFor(() => expect(screen).toHavePathname('/play'));
+      fireEvent.press(
+        await screen.findByRole('button', { name: new RegExp(`^${KAZIMIERZ.name}, `) }),
+      );
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${KAZIMIERZ.id}`));
+      fireEvent.press(await screen.findByRole('button', { name: 'Rate Padel' }));
+      await rate(PADEL_RUN);
+      homeOnTop = 0;
+
+      fireEvent.press(screen.getByLabelText(backTo(KAZIMIERZ)));
+
+      await expectTheGroup(KAZIMIERZ, TABS.games);
+      expect(homeOnTop).toBe(0);
+      // And the stack beneath is still Play's: back is the Groups list, then Home.
+      fireEvent.press(await screen.findByLabelText(GROUPS_COPY.group.back));
       await waitFor(() => expect(screen).toHavePathname('/play'));
     },
     WALK_TIMEOUT,

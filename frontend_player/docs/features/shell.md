@@ -20,7 +20,13 @@ all** — `openTab` takes the pathname the bar's own lit column is drawn from an
 one case: every press ran the reset until 2026-09-10, so tapping Play on Play's root rebuilt the
 screen underneath the player — a reload with no cause, on the gesture people press twice when
 something feels slow. From anywhere else in the tab, including one screen deeper, the press still
-lays the stack down. **The bar stands down on exactly one route, a booked game's room**, where the
+lays the stack down. **Arriving in the app is a second move, `useShellLanding`** (2026-11-04): a
+rating pass comes back into an app whose tree it tore down, at `/`, and laying its group or passport
+down through `resetShellStack` waited for Home to be drawn first — a blink on a device. The landing
+is one reset of the navigation state at the root, `(app)` › `(tabs)` › the tab's start and the
+screen on top, made by the entry gate before the shell mounts; screens are named as `Stack.Screen`
+names them, resolved against `PUSHED_SCREENS` and the two unpushed roots
+([`onboarding.md`](onboarding.md)'s landing paragraph). **The bar stands down on exactly one route, a booked game's room**, where the
 composer replaces it ([#400](https://github.com/Raketa02/Raketa/issues/400)): `barStandsDown`
 beside `tabForPathname` names the whole path, `TabShell` does not render the bar there rather than
 hiding it, and the room takes the bottom safe-area inset the bar owns everywhere else — the one
