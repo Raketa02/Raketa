@@ -3957,14 +3957,15 @@ with no arrow, rather than pointing at nothing. The bubble takes the content's w
 buttons — which 250 would stack. The arithmetic is `guideGeometry.ts`.
 
 **Nothing moves between steps** ([1.5](#15-nothing-animates-that-does-not-have-to)): the stage
-fades in as the popover's does (none under reduced motion), and a step swaps its hole and its
-words in place. Each showing starts from step one.
+fades in, and a step swaps its hole and its words in place. Each showing starts from step one.
 
-Accessibility (Part 13, as far as
-[ADR-0198](../../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md) goes):
+**For screen readers, the name is the whole job**
+([ADR-0198](../../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md) §1):
 every control is named — _Skip the guide_, because 6.6 asks a close control to say what it
-closes — the dim is hidden from a listener, the bubble is `accessibilityViewIsModal`, and focus
-moves to the bubble's title on every step.
+closes — and the modal semantics are the stage's. The guide is new, so it adds nothing of Part
+13's paused rules: it moves no focus, and its fade does not follow reduced motion. The dim is
+hidden from a listener, as the popover's backdrop is, so it is not a nameless button the size of
+the window.
 
 **Whether a guide shows is its screen's business**, not the primitive's. _Your rating_'s runs once
 per phone, remembered in the phone-preferences store as a flag kept at sign-out (ADR-0200 §8).

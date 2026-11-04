@@ -239,7 +239,7 @@ async function rate(run: Run) {
 /** The bubble, on this step of three. */
 async function expectBubble(step: number, title: string, words: RegExp) {
   expect(await screen.findByText(`${step} of 3`)).toBeTruthy();
-  expect(screen.getByRole('header', { name: title })).toBeTruthy();
+  expect(screen.getByText(title)).toBeTruthy();
   expect(screen.getByText(words)).toBeTruthy();
 }
 
@@ -262,9 +262,7 @@ describe('the first Your rating a phone shows', () => {
       await pick('Padel', 'Tennis');
       await rate(PADEL_RUN);
 
-      // The screen beneath is dimmed out of reach, so a listener finds the bubble alone.
       await expectBubble(1, 'Your Level', LEVEL_WORDS);
-      expect(screen.queryByText(PADEL_RUN.level)).toBeNull();
       expect(screen.getByRole('button', { name: 'Skip the guide' })).toBeTruthy();
       fireEvent.press(screen.getByRole('button', { name: 'Next' }));
 
@@ -375,6 +373,53 @@ describe('once per phone', () => {
       await rate(TENNIS_RUN);
 
       await expectNoGuide(TENNIS_RUN);
+    },
+    WALK_TIMEOUT,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Whatever the pass's origin
+// ---------------------------------------------------------------------------
+
+/** Kuba's player group, whose door opened the picker. */
+const WEDNESDAY: Wire['MyGroupSchema'] = {
+  id: 'c3000000-0000-4000-8000-000000000732',
+  kind: 'PLAYER',
+  name: 'Wednesday padel',
+  monogram: { letters: 'Wp', colour: 3 },
+  sports: ['PADEL'],
+  member_count: 6,
+  home_club: { id: 'c2000000-0000-4000-8000-000000000732', name: 'Kazimierz Padel Club' },
+};
+
+const WEDNESDAY_PAGE: Wire['GroupResponse'] = {
+  ...WEDNESDAY,
+  link: 'https://raketa.app/join/K7PQ2MXA',
+  join_policy: 'PEOPLE_I_APPROVE',
+  is_owner: false,
+  rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
+  member_faces: [],
+  administrator_nickname: null,
+  is_administrator: false,
+};
+
+describe('whatever the pass’s origin', () => {
+  it(
+    'runs on a pass begun at a group’s door, as on one begun at Home',
+    async () => {
+      stubAnia();
+      transport.on('GET', `/api/v1/groups/${WEDNESDAY.id}`, () => json(WEDNESDAY_PAGE));
+      await launchSignedIn(`/sports?groupId=${WEDNESDAY.id}&tab=friends`);
+      fireEvent.press(await screen.findByLabelText('Padel'));
+      fireEvent.press(screen.getByLabelText('Rate 1 sport'));
+      await rate(PADEL_RUN);
+
+      await expectBubble(1, 'Your Level', LEVEL_WORDS);
+      fireEvent.press(screen.getByRole('button', { name: 'Skip the guide' }));
+
+      await expectNoGuide(PADEL_RUN);
+      expect(await screen.findByLabelText('Back to Wednesday padel')).toBeTruthy();
     },
     WALK_TIMEOUT,
   );

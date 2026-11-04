@@ -35,13 +35,16 @@
  * The step is the guide's own, and starts from the first each time it is shown. How it ended is
  * not reported: *Got it* and *Skip* both end it, and the one caller does the same with either.
  *
- * Accessibility (Part 13, and [ADR-0198](../../../../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md)
- * for how far): every control is named — *Skip the guide*, as 6.6 asks a close control to say what
- * it closes — the dim is hidden from a listener, the bubble is `accessibilityViewIsModal`, and
- * focus moves to its title on every step, as the popover's does.
+ * **For screen readers, the name is the whole job**
+ * ([ADR-0198](../../../../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md)
+ * §1): every control is named — *Skip the guide*, as 6.6 asks a close control to say what it
+ * closes — and the modal semantics are the stage's, which this keeps rather than adds to. It moves
+ * no focus and follows no setting: it fades in whatever reduced motion says, and nothing moves
+ * between steps. The dim is hidden from a listener, as the popover's backdrop is, so it is not a
+ * nameless button the size of the window.
  */
 
-import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useLayoutEffect, useState, type RefObject } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -55,7 +58,6 @@ import Svg, { Path } from 'react-native-svg';
 import { Button } from './Button';
 import { guideLayout, spotlightPath, type GuideRect } from './guideGeometry';
 import { ModalStage } from './ModalStage';
-import { moveAccessibilityFocus, useReducedMotion } from './overlay';
 import { theme } from './theme';
 
 export interface GuideStep {
@@ -83,11 +85,10 @@ const GUIDE_COPY = {
 } as const;
 
 export function Guide({ visible, steps, onDone }: GuideProps) {
-  const reducedMotion = useReducedMotion();
   const viewport = useWindowDimensions();
-  const heading = useRef<View | null>(null);
   const [index, setIndex] = useState(0);
-  const [target, setTarget] = useState<GuideRect>();
+  /** Where this step's target was found in the window — `undefined` until it answers. */
+  const [measured, setMeasured] = useState<GuideRect>();
 
   // Each showing starts from the first step: the step is reset in render, when `visible` turns,
   // so the first frame of a second showing is already step one.
@@ -98,21 +99,20 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
   }
 
   const step = steps[Math.min(index, steps.length - 1)];
-  const element = step?.target;
+  const target = step?.target;
   // Before paint: under the New Architecture the measurement answers at once, so a step never
   // draws its words around the last step's hole.
   useLayoutEffect(() => {
-    if (!visible || element === undefined) return;
-    setTarget(undefined);
-    element.current?.measureInWindow((x, y, width, height) => setTarget({ x, y, width, height }));
-    moveAccessibilityFocus(heading);
-  }, [visible, element]);
+    if (!visible || target === undefined) return;
+    setMeasured(undefined);
+    target.current?.measureInWindow((x, y, width, height) => setMeasured({ x, y, width, height }));
+  }, [visible, target]);
 
   if (step === undefined) return null;
 
   const last = index >= steps.length - 1;
   const next = () => (last ? onDone() : setIndex(index + 1));
-  const layout = guideLayout(target, viewport);
+  const layout = guideLayout(measured, viewport);
 
   const bubbleSpot: ViewStyle | undefined =
     layout === undefined
@@ -135,7 +135,8 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
     <ModalStage
       visible={visible}
       onRequestClose={onDone}
-      animationType={reducedMotion ? 'none' : 'fade'}
+      // ADR-0198 §1: no timing that follows a setting.
+      animationType="fade"
       layer="popover"
     >
       <View style={s.stage}>
@@ -162,10 +163,7 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
           )}
         </Pressable>
 
-        <View
-          accessibilityViewIsModal
-          style={[s.bubble, layout === undefined ? s.bubbleCentred : bubbleSpot]}
-        >
+        <View style={[s.bubble, layout === undefined ? s.bubbleCentred : bubbleSpot]}>
           {layout === undefined ? null : (
             <View
               style={[
@@ -176,11 +174,7 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
             />
           )}
 
-          {/* `accessible` on the wrapper, not the Text: focus has to land on a host element
-              this component holds a ref to. */}
-          <View ref={heading} accessible accessibilityRole="header">
-            <Text style={s.title}>{step.title}</Text>
-          </View>
+          <Text style={s.title}>{step.title}</Text>
           <Text style={s.body}>{step.body}</Text>
 
           <View style={s.foot}>

@@ -18,13 +18,14 @@ import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import { ratingGuideIsDue } from '../domain/ratingGuide';
 import { readRatingGuideShown, rememberRatingGuideShown } from '../use-cases/ratingGuide';
 
-const SHOWN = phonePreferenceKeys.flag('ratingGuideShown');
+/** Where the phone's answer is held in Query — the flag's key, not the flag. */
+const SHOWN_KEY = phonePreferenceKeys.flag('ratingGuideShown');
 
 /** @param hasRating the screen is drawing a rating, so there is something for the guide to explain. */
 export function useRatingGuide(hasRating: boolean) {
   const client = useQueryClient();
   const shown = useQuery({
-    queryKey: SHOWN,
+    queryKey: SHOWN_KEY,
     queryFn: readRatingGuideShown,
     // The device, not the network: no connection is needed to read it, and nothing refetches it.
     networkMode: 'always',
@@ -36,7 +37,7 @@ export function useRatingGuide(hasRating: boolean) {
   });
 
   const done = useCallback(() => {
-    client.setQueryData(SHOWN, true);
+    client.setQueryData(SHOWN_KEY, true);
     void rememberRatingGuideShown();
   }, [client]);
 

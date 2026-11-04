@@ -270,5 +270,7 @@ store, **per phone and kept at sign-out**. The marks and their popovers are unch
 land on _Your rating_ for another reason start from `ratingGuideAlreadyShown()`; the walk is
 `theGuideOnYourRating.test`. **Calls made here**: the flag is set when the guide ends rather than
 when it opens, so a guide the app was killed under shows again; a tap in the hole counts as _Next_,
-as the dim does; _Skip_ is named _Skip the guide_; the bubble takes the content's width. **Not seen
+as the dim does; _Skip_ is named _Skip the guide_; the bubble takes the content's width. **Per ADR-0198 §1 the guide
+adds no screen-reader work**: it moves no focus and its fade does not follow reduced motion — the
+review caught a first cut that copied the popover's focus moves. **Not seen
 on a device**: the hole's fit around each figure and the bubble's place, on either platform.
