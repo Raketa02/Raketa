@@ -270,8 +270,8 @@ async def test_switching_to_anyone_admits_everybody_waiting_at_once(client):
     assert edited.json()["group"]["member_count"] == 3
     # Who it let in, in the order they asked — the Edit screen shows them.
     assert edited.json()["admitted"] == [
-        {"player_id": str(michal["id"]), "name": "michal"},
-        {"player_id": str(tomek["id"]), "name": "tomek"},
+        {"player_id": str(michal["id"]), "nickname": "michal"},
+        {"player_id": str(tomek["id"]), "nickname": "tomek"},
     ]
     assert await waiting(client, karol, group) == []
     assert (await read(client, tomek, group)).status_code == 200
@@ -372,7 +372,7 @@ async def test_the_new_owner_is_who_joined_first_and_members_says_so(client):
     await leave(client, karol, group)
 
     rows = await listed(client, kuba, group)
-    assert [(row["name"], row["is_owner"]) for row in rows] == [
+    assert [(row["nickname"], row["is_owner"]) for row in rows] == [
         ("kuba", False),
         ("ewa", True),
     ]

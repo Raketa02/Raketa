@@ -95,7 +95,7 @@ class GroupPages:
             member_faces=tuple(
                 face_of(faces, player_id) for player_id in on_members_row
             ),
-            administrator_name=approver_name(runner, names),
+            administrator_nickname=approver_name(runner, names),
             is_administrator=running is not None and running == reader_id,
         )
 

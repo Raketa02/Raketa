@@ -18,8 +18,8 @@ from app.shared.domain import (
 
 class AdministratorNameInvalid(BadRequestError):
     """The name the club typed is not a Name: 2–64 characters once trimmed and
-    collapsed — the rule every account's Name follows, because it becomes one
-    (``docs/adr/0185`` §4)."""
+    collapsed — the rule an Administrator's name follows (``docs/adr/0199``
+    §4)."""
 
     code = "administrator_name_invalid"
 

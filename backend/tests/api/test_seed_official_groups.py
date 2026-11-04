@@ -146,10 +146,11 @@ async def test_the_protagonist_finds_an_official_group_on_her_list(client, seede
         (row["kind"], row["name"]) for row in listed
     }
     rows = {row["name"]: row for card in found["clubs"] for row in card["groups"]}
-    assert rows["Ogrody 33 Club"]["administrator_name"] == "Marta Wójcik"
+    assert rows["Ogrody 33 Club"]["administrator_nickname"] == "Marta Wójcik"
     assert rows["Ogrody 33 Club"]["relation"] == "MEMBER"
     assert (
-        rows["Ogrody open play"]["administrator_name"] == PLAYER_AND_ADMINISTRATOR.name
+        rows["Ogrody open play"]["administrator_nickname"]
+        == PLAYER_AND_ADMINISTRATOR.nickname
     )
 
 

@@ -399,17 +399,17 @@ class SavedMethods(Protocol):
 @final
 @dataclass(frozen=True, slots=True)
 class DeckPerson:
-    """What a card draws of one person: a **Name** and never the nickname
-    (``docs/adr/0171``), a photograph, their **published** Level in the card's
-    sport, and their week — which the card summarises with everybody else's and
-    never shows.
+    """What a card draws of one person: their **nickname**, whole and never
+    with an @ (``docs/adr/0199`` §1), a photograph, their **published** Level in
+    the card's sport, and their week — which the card summarises with everybody
+    else's and never shows.
 
-    ``name`` is ``None`` for an account ``users`` can no longer name, and the
+    ``nickname`` is ``None`` for an account ``users`` can no longer name, and the
     tile is kept. ``photo_id`` and ``photo_url`` are present **exactly
     together**; neither means the client draws a poster. ``level`` is ``None``
     for somebody not rated in the sport."""
 
-    name: str | None
+    nickname: str | None
     photo_id: UUID | None
     photo_url: str | None
     level: float | None
@@ -691,13 +691,13 @@ class BookedGameChanges(Protocol):
 
 @runtime_checkable
 class PlayerNames(Protocol):
-    """What each player is called — **the Name, never the nickname**
-    (``docs/adr/0171``) — the one thing the club sees of a player on its
-    bookings (the mechanics §16.14)."""
+    """What each player is called — **their nickname** (``docs/adr/0199`` §5) —
+    the one thing the club sees of a player on its bookings (the mechanics
+    §16.14)."""
 
     async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
-        """Each of these players' Names; an account that can no longer be named
-        is absent."""
+        """Each of these players' nicknames; an account that can no longer be
+        named is absent."""
         ...
 
 

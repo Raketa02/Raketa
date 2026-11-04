@@ -37,8 +37,9 @@ class InviteAdministratorRequest(BaseModel):
     name: str = Field(
         description=(
             "Trimmed, runs of whitespace collapsed, then 2–64 characters — "
-            "`administrator_name_invalid` otherwise. It becomes the person's "
-            "Name if they are new to Raketa."
+            "`administrator_name_invalid` otherwise. It is the "
+            "Administrator's, and stays theirs: an account it opens holds no "
+            "player name, and players see them by the nickname they pick."
         )
     )
     email: str = Field(
@@ -346,8 +347,9 @@ class InvitationPageResponse(BaseModel):
     name: str = Field(
         description=(
             "The name the club typed, **whole** — *Marta Wójcik*, never a first "
-            "name cut out of it (``docs/adr/0171`` §4). It becomes the person's "
-            "Name when they set a password."
+            "name cut out of it. It is the Administrator's and stays theirs: the "
+            "account a password opens holds no player name (``docs/adr/0199`` "
+            "§4)."
         )
     )
     club_name: str

@@ -96,7 +96,7 @@ async def test_the_password_is_carried_once_at_the_top_level(client, seeded):
 
     assert roster["password"] == SEED_PASSWORD
     for account in roster["accounts"]:
-        assert set(account) == {"player_id", "email", "name", "nickname"}
+        assert set(account) == {"player_id", "email", "nickname"}
 
 
 async def test_the_roster_is_ordered_by_address(client, seeded):

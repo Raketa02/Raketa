@@ -52,7 +52,7 @@
           "users"
         ],
         "summary": "Current authenticated user",
-        "description": "Carries `name` and `nickname` \u2014 the entry gate's first destination is *not named in full*, either missing \u2014 `has_player_profile`, its fourth, and `adult_attested`, all read from the account's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up. And `profiles` (docs/adr/0185 \u00a72), which the gate reads **ahead of every destination**: whether the account acts as a player, the clubs it administers, and any invitation pending for its email.",
+        "description": "Carries `nickname` \u2014 the entry gate's first destination is *no nickname* \u2014 `has_player_profile`, its fourth, and `adult_attested`, all read from the account's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up. And `profiles` (docs/adr/0185 \u00a72), which the gate reads **ahead of every destination**: whether the account acts as a player, the clubs it administers, and any invitation pending for its email.",
         "operationId": "me_api_v1_users_me_get",
         "responses": {
           "200": {
@@ -129,7 +129,7 @@
           "users"
         ],
         "summary": "Name yourself \u2014 how should people see you?",
-        "description": "**The naming**: one act carrying a name and a nickname, for the authenticated player, and repeatable \u2014 a later change is the same act, and keeping the nickname you already hold is admitted. Refused with `409 nickname_already_taken` when the handle is another player's; the name is checked against nobody. Answers the pair as recorded \u2014 the name trimmed and collapsed \u2014 and the client re-reads `GET /me` before moving on, which is where the entry gate reads it.",
+        "description": "**The naming**: a nickname and nothing else, for the authenticated player (docs/adr/0199 \u00a73), and repeatable \u2014 a later change is the same act, at any time, and keeping the nickname you already hold is admitted. Refused with `409 nickname_already_taken` when the handle is another player's. Answers the nickname as recorded, and the client re-reads `GET /me` before moving on, which is where the entry gate reads it. The path keeps the word *name*: what a player is called, which is the nickname.",
         "operationId": "name_me_api_v1_users_me_name_put",
         "requestBody": {
           "content": {
@@ -153,7 +153,7 @@
             }
           },
           "409": {
-            "description": "`nickname_already_taken` \u2014 the handle is another player's, `details.field` is `nickname`, and nothing was recorded: the act is one event, so the name is not kept either. The client writes the sentence under the field.",
+            "description": "`nickname_already_taken` \u2014 the handle is another player's, `details.field` is `nickname`, and nothing was recorded. The client writes the sentence under the field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4070,7 +4070,7 @@
           "invitations"
         ],
         "summary": "Set your password, by the invitation's link or a ticket, and sign in",
-        "description": "**A new person's account is created** \u2014 its Name the one the club typed, no nickname, and no Adult attestation \u2014 and **an account the club reset gets its password back**. Either way the administrator is active and this answers a signed-in session. `ticket_expired` is a 409 too: claiming the code again is a fresh ticket.",
+        "description": "**A new person's account is created** \u2014 no player name (the one the club typed stays the Administrator's), no nickname, and no Adult attestation \u2014 and **an account the club reset gets its password back**. Either way the administrator is active and this answers a signed-in session. `ticket_expired` is a 409 too: claiming the code again is a fresh ticket.",
         "operationId": "set_invitation_password_api_v1_invitations_password_post",
         "requestBody": {
           "content": {
@@ -7177,7 +7177,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -7186,8 +7186,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account."
+            "title": "Nickname",
+            "description": "Their nickname, whole, as a seat carries it. ``null`` where ``users`` no longer has the account."
           },
           "state": {
             "$ref": "#/components/schemas/AttendanceState",
@@ -7260,7 +7260,7 @@
           "claim_by"
         ],
         "title": "AttendanceSchema",
-        "description": "One player somebody on the court said was not here yet, and what became\nof it (#657; ``docs/adr/0195`` \u00a73). **Folded on every read against\n`read_at`**, never stored. **Who tapped is not here**: the tap is the game's,\nand a name on it would be the platform pointing at one of the people who\ncame. Nobody is ever in this list who was not tapped: everybody who arrives\non time does nothing at all."
+        "description": "One player somebody on the court said was not here yet, and what became\nof it (#657; ``docs/adr/0195`` \u00a73). **Folded on every read against\n`read_at`**, never stored. **Who tapped is not here**: the tap is the game's,\nand a nickname on it would be the platform pointing at one of the people\nwho came. Nobody is ever in this list who was not tapped: everybody who arrives\non time does nothing at all."
       },
       "AttendanceState": {
         "type": "string",
@@ -7344,10 +7344,10 @@
             "title": "Player Id",
             "description": "Who you blocked. `DELETE /blocks/{player_id}` unblocks them."
           },
-          "name": {
+          "nickname": {
             "type": "string",
-            "title": "Name",
-            "description": "The whole Name, never the nickname."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ (docs/adr/0199 \u00a71)."
           },
           "photo_id": {
             "type": "string",
@@ -7370,11 +7370,11 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "blocked_at"
         ],
         "title": "BlockedPlayerSchema",
-        "description": "One person you blocked \u2014 a name, a photograph, and when."
+        "description": "One person you blocked \u2014 a nickname, a photograph, and when."
       },
       "BlockedPlayersResponse": {
         "properties": {
@@ -7568,7 +7568,7 @@
             "type": "boolean",
             "title": "Is You"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -7577,8 +7577,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Their Name, whole \u2014 the tile may cut it short, never invent a first name. `null` for an account that can no longer be named."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ \u2014 the tile may cut it short, never invent a familiar form (`docs/adr/0199` \u00a71). `null` for an account that can no longer be named."
           },
           "photo_id": {
             "anyOf": [
@@ -7626,7 +7626,7 @@
         "required": [
           "player_id",
           "is_you",
-          "name",
+          "nickname",
           "photo_id",
           "photo_url",
           "level",
@@ -7870,7 +7870,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -7879,8 +7879,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole name, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where ``users`` no longer has the account \u2014 never for an unnamed player, whom the entry gate holds at the naming step."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0199`` \u00a71). ``null`` where ``users`` no longer has the account \u2014 never for a player with no nickname yet, whom the entry gate holds at the naming step."
           }
         },
         "type": "object",
@@ -7888,7 +7888,7 @@
           "player_id"
         ],
         "title": "CalledOffBySchema",
-        "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The name is carried because the court cannot supply it**: the leaver whose\ndeparture called the game off has been **vacated** \u2014 their seat is drawn\n`player_id: null` \u2014 so the seats alone could not name them. It is the same\nname a seat carries, read in the same set read, and it is `null` for the\nsame reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
+        "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The nickname is carried because the court cannot supply it**: the leaver\nwhose departure called the game off has been **vacated** \u2014 their seat is\ndrawn `player_id: null` \u2014 so the seats alone could not name them. It is the\nsame nickname a seat carries, read in the same set read, and it is `null`\nfor the same reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
       },
       "CalledOffReason": {
         "type": "string",
@@ -8310,7 +8310,7 @@
             "title": "Player Id",
             "description": "Who they are, and what a line's `actor_id` and a message's `author_id` match"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -8319,8 +8319,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole name, and **`null` for an account `users` can no longer name** \u2014 never for an unnamed player, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it, and it is never the nickname: a handle is drawn on a record and said nowhere (``docs/adr/0171``)."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @, and **`null` for an account `users` can no longer name** \u2014 never for a player with no nickname yet, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it (``docs/adr/0199`` \u00a71)."
           },
           "photo_id": {
             "type": "string",
@@ -8337,7 +8337,7 @@
         "type": "object",
         "required": [
           "player_id",
-          "name"
+          "nickname"
         ],
         "title": "ConversationMemberSchema",
         "description": "One person on the game's court right now.\n\n**Derived from the game's line-up, never stored** (``docs/adr/0146`` \u00a77), and\nit **moves with the court**: somebody who left is not drawn, and a rescue who\ntook the seat is, the moment either commits.\n\n**The same four fields as a person, and a narrower claim.** Being on the\nlist is the fact; the face is `ConversationPersonSchema`'s. A member is\nalways among the response's `people` too, resolved in the same read, so the\ntwo lists cannot disagree about a current member."
@@ -8350,7 +8350,7 @@
             "title": "Player Id",
             "description": "Who they are, and what a line's `actor_id` and a message's `author_id` match"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -8359,8 +8359,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole name, and **`null` for an account `users` can no longer name** \u2014 never for an unnamed player, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it, and it is never the nickname: a handle is drawn on a record and said nowhere (``docs/adr/0171``)."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @, and **`null` for an account `users` can no longer name** \u2014 never for a player with no nickname yet, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it (``docs/adr/0199`` \u00a71)."
           },
           "photo_id": {
             "type": "string",
@@ -8377,10 +8377,10 @@
         "type": "object",
         "required": [
           "player_id",
-          "name"
+          "nickname"
         ],
         "title": "ConversationPersonSchema",
-        "description": "One person this response names \u2014 **a name and a face, and nothing else.**\n\nNo Level, no band, no area, no score \u2014 those are a *card*'s, and a card is\nwhat somebody reads to decide about a game that might happen. Everybody\nhere was on this court or spoke in this room.\n\n**The shape `people` is a list of, and the shape a member has.** A member is\na person who is on the court *right now*; somebody who spoke here and left\nthe court since is not, and is still somebody the page has to name. One\nshape for both, so a client resolves every `actor_id` and `author_id` the\nsame way."
+        "description": "One person this response names \u2014 **a nickname and a face, and nothing\nelse.**\n\nNo Level, no band, no area, no score \u2014 those are a *card*'s, and a card is\nwhat somebody reads to decide about a game that might happen. Everybody\nhere was on this court or spoke in this room.\n\n**The shape `people` is a list of, and the shape a member has.** A member is\na person who is on the court *right now*; somebody who spoke here and left\nthe court since is not, and is still somebody the page has to name. One\nshape for both, so a client resolves every `actor_id` and `author_id` the\nsame way."
       },
       "ConversationResponse": {
         "properties": {
@@ -8795,7 +8795,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -8804,16 +8804,16 @@
                 "type": "null"
               }
             ],
-            "title": "Name"
+            "title": "Nickname"
           }
         },
         "type": "object",
         "required": [
           "player_id",
-          "name"
+          "nickname"
         ],
         "title": "DeckChallengerSchema",
-        "description": "Who a challenge names \u2014 *Kuba challenged you*."
+        "description": "Who a challenge names \u2014 *kuba challenged you*."
       },
       "DeckClubSchema": {
         "properties": {
@@ -8944,7 +8944,7 @@
             "title": "Is You",
             "description": "The reader's own tile."
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -8953,8 +8953,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Their Name, whole \u2014 the tile may cut it short, never invent a first name. `null` for an account that can no longer be named."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ \u2014 the tile may cut it short, never invent a familiar form (`docs/adr/0199` \u00a71). `null` for an account that can no longer be named."
           },
           "photo_id": {
             "anyOf": [
@@ -9007,7 +9007,7 @@
         "required": [
           "player_id",
           "is_you",
-          "name",
+          "nickname",
           "photo_id",
           "photo_url",
           "level",
@@ -9648,7 +9648,7 @@
                 "type": "null"
               }
             ],
-            "description": "The player who called it off, and their name (``docs/adr/0172`` \u00a74). ``null`` on every standing but `CALLED_OFF` \u2014 and on a booked game called off by its cut-off or its club, which nobody did."
+            "description": "The player who called it off, and their nickname (``docs/adr/0172`` \u00a74). ``null`` on every standing but `CALLED_OFF` \u2014 and on a booked game called off by its cut-off or its club, which nobody did."
           },
           "seats": {
             "items": {
@@ -9879,7 +9879,7 @@
             "$ref": "#/components/schemas/JoinPolicy",
             "description": "`ANYONE` \u2014 *Join* admits at once (*anyone can join*); `PEOPLE_I_APPROVE` \u2014 *Ask to join* leaves a request for the Owner (*Karol approves joins*)."
           },
-          "owner_name": {
+          "owner_nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -9888,10 +9888,10 @@
                 "type": "null"
               }
             ],
-            "title": "Owner Name",
-            "description": "The Owner's **whole Name**, never the nickname \u2014 who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` \u00a74), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named \u2014 and **always `null` on an official group**, which has no Owner: its line names `administrator_name`."
+            "title": "Owner Nickname",
+            "description": "The Owner's **whole nickname** \u2014 who answers a request, for the *approves joins* line. **Nothing is cut from it, here or by a client**, and it is never written with an @: a sentence naming somebody uses the whole nickname (`docs/adr/0199` \u00a71), so the line reads *karol.n approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named \u2014 and **always `null` on an official group**, which has no Owner: its line names `administrator_nickname`."
           },
-          "administrator_name": {
+          "administrator_nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -9900,8 +9900,8 @@
                 "type": "null"
               }
             ],
-            "title": "Administrator Name",
-            "description": "**An official group's** *approves joins* line: the whole name the club gave the Administrator running it now \u2014 *Administrator Marta W\u00f3jcik approves joins* \u2014 cut by nobody, as `owner_name` is. `null` while nobody runs it, and **always `null` on a player group**, whose line names `owner_name`."
+            "title": "Administrator Nickname",
+            "description": "**An official group's** *approves joins* line: the Administrator running it now, by **their nickname** \u2014 and by the name their club typed for them only until they have one, for an Administrator who has never played (`docs/adr/0199` \u00a74): *Administrator marta.w approves joins*, or *Administrator Marta W\u00f3jcik approves joins*. Cut by nobody, as `owner_nickname` is. `null` while nobody runs it, and **always `null` on a player group**, whose line names `owner_nickname`."
           },
           "is_administrator": {
             "type": "boolean",
@@ -9922,8 +9922,8 @@
           "sports",
           "member_count",
           "join_policy",
-          "owner_name",
-          "administrator_name",
+          "owner_nickname",
+          "administrator_nickname",
           "is_administrator",
           "relation"
         ],
@@ -10007,7 +10007,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -10016,8 +10016,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ (`docs/adr/0199` \u00a71). `null` for an account that can no longer be named \u2014 the member keeps their seat."
           },
           "photo_id": {
             "type": "string",
@@ -10066,7 +10066,7 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "level",
           "player_score",
           "reliability_band",
@@ -10106,7 +10106,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -10115,8 +10115,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ (`docs/adr/0199` \u00a71). `null` for an account that can no longer be named \u2014 the member keeps their seat."
           },
           "photo_id": {
             "type": "string",
@@ -10133,10 +10133,10 @@
         "type": "object",
         "required": [
           "player_id",
-          "name"
+          "nickname"
         ],
         "title": "GroupPersonSchema",
-        "description": "A member's face \u2014 **a name and a photograph, and nothing else**."
+        "description": "A member's face \u2014 **a nickname and a photograph, and nothing else**."
       },
       "GroupPlayerSchema": {
         "properties": {
@@ -10145,7 +10145,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -10154,8 +10154,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ (`docs/adr/0199` \u00a71). `null` for an account that can no longer be named \u2014 the member keeps their seat."
           },
           "photo_id": {
             "type": "string",
@@ -10178,7 +10178,7 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "joined_at"
         ],
         "title": "GroupPlayerSchema",
@@ -10265,7 +10265,7 @@
             "title": "Member Faces",
             "description": "The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order \u2014 the Owner, then newest joined first. A block hides nobody here, as it hides nobody in the list it opens. Empty for a reader alone (`member_count` 1), whose row draws their own face. `member_count` is the group's, so its *+N* counts everybody."
           },
-          "administrator_name": {
+          "administrator_nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -10274,8 +10274,8 @@
                 "type": "null"
               }
             ],
-            "title": "Administrator Name",
-            "description": "**An official group's** *approves joins* line, as a club's card says it: the whole Name of the Administrator running it now. **`null` while it needs an administrator** \u2014 the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover \u2014 and **always `null` on a player group**, whose line names its Owner."
+            "title": "Administrator Nickname",
+            "description": "**An official group's** *approves joins* line, as a club's card says it: the Administrator running it now, by their nickname \u2014 or by the name their club typed, for one who has never played (`docs/adr/0199` \u00a74). **`null` while it needs an administrator** \u2014 the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover \u2014 and **always `null` on a player group**, whose line names its Owner."
           },
           "is_administrator": {
             "type": "boolean",
@@ -10297,7 +10297,7 @@
           "is_owner",
           "rated_by_sport",
           "member_faces",
-          "administrator_name",
+          "administrator_nickname",
           "is_administrator"
         ],
         "title": "GroupResponse",
@@ -10820,7 +10820,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -10829,8 +10829,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @ (`docs/adr/0199` \u00a71). `null` for an account that can no longer be named \u2014 the member keeps their seat."
           },
           "photo_id": {
             "type": "string",
@@ -10855,7 +10855,7 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "levels"
         ],
         "title": "JoinRequestSchema",
@@ -11265,18 +11265,6 @@
             "format": "email",
             "title": "Email"
           },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "What this player is called \u2014 what every screen says. `null` until the naming \u2014 except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname \u2014 and the naming step asks only for what is missing."
-          },
           "nickname": {
             "anyOf": [
               {
@@ -11287,7 +11275,7 @@
               }
             ],
             "title": "Nickname",
-            "description": "The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming."
+            "description": "The handle, unique across the platform, and what every screen says about this player \u2014 never with an @. `null` until the naming, an account an invitation opened included: the entry gate's first destination is **no nickname**."
           },
           "authority": {
             "type": "string",
@@ -11480,38 +11468,25 @@
       },
       "NameRequest": {
         "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 2,
-            "title": "Name",
-            "description": "What you are called \u2014 free text, spaces allowed, **never unique**: two players may share one. Trimmed, runs of whitespace collapsed to one space, 2\u201364 characters after that. This is what every screen says about you."
-          },
           "nickname": {
             "type": "string",
             "maxLength": 64,
             "minLength": 2,
             "pattern": "^[A-Za-z0-9_.-]+$",
             "title": "Nickname",
-            "description": "A handle: letters, digits and `. _ -`, no spaces, 2\u201364 characters, **unique across the platform** \u2014 refused with `nickname_already_taken` when another player holds it, admitted when it is already yours. Shown as `@nickname` under your name on your own You tab and on your record, and said nowhere else."
+            "description": "A handle: letters, digits and `. _ -`, no spaces, 2\u201364 characters, **unique across the platform** \u2014 refused with `nickname_already_taken` when another player holds it, admitted when it is already yours. **What every screen says about you**, never with an @."
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "name",
           "nickname"
         ],
         "title": "NameRequest",
-        "description": "The naming \u2014 *How should people see you?* (``docs/adr/0171`` \u00a71\u20132).\n\nBoth fields, always: the naming is one act carrying both, and there is no\nevent for one without the other. The shape rules here are the value\nobjects' own, restated so the generated client type carries them \u2014 and\n**the name is normalised before its bounds are checked**, exactly as\n:class:`Name` normalises it, so ``\"  Ania   Kowalska \"`` is admitted and\nrecorded as ``Ania Kowalska`` and ``\"   A   \"`` is refused here as too\nshort. A bound checked on the raw string would admit the second and hand\nit to the value object, which refuses it \u2014 a typed value meeting an\ninvariant, which is a 500 for a player's typo (``CONTEXT.md``, *Invariant\nvs Unavailability*)."
+        "description": "The naming \u2014 *How should people see you?* (``docs/adr/0199`` \u00a73).\n\n**A nickname and nothing else.** The shape rule here is the value object's\nown, restated so the generated client type carries it. A body still\ncarrying a ``name`` \u2014 or anything else \u2014 is refused with the validation\nenvelope rather than quietly dropped, so a client that kept the field\ncannot believe it was recorded."
       },
       "NamingResponse": {
         "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "The name as recorded: trimmed, collapsed."
-          },
           "nickname": {
             "type": "string",
             "title": "Nickname",
@@ -11520,11 +11495,10 @@
         },
         "type": "object",
         "required": [
-          "name",
           "nickname"
         ],
         "title": "NamingResponse",
-        "description": "What the naming recorded: the name as it now stands and the nickname.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on (``docs/adr/0171`` \u00a73); this is what lets it show the\nnormalised name back at once."
+        "description": "What the naming recorded: the nickname as it now stands.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on; this is what lets it show the nickname back at once."
       },
       "NewPasswordRequest": {
         "properties": {
@@ -12356,15 +12330,10 @@
             "title": "Blocked By You",
             "description": "Whether **you** have blocked this person \u2014 your own block, and never theirs of you. Draw *Unblock* when `true` and *Block* when `false`, and no row at all when `is_self` is `true`.\n\n**It answers one direction only, and that is the point.** Nothing on this response, or any other, says whether they blocked you: their record reads the same either way. If you both blocked, each of you reads `true` about your own block and nothing about the other's.\n\n`false` on your own record, always. **Omitted only when your blocks could not be read** \u2014 draw neither row then, rather than a guess; the rest of the record is unaffected."
           },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "The whole name, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). The title of the sheet."
-          },
           "nickname": {
             "type": "string",
             "title": "Nickname",
-            "description": "Their handle, drawn as `@nickname` under the name. **The record and the You tab are the only two places it is drawn** \u2014 never on a row, a card, a sentence, a sheet, a toast, a seat label or a spoken name \u2014 because two people may share a name and this is the screen a friend tells them apart on."
+            "description": "Their handle, unique across the platform, and the title of the sheet \u2014 drawn large, with nothing under it, and never with an @. **Nothing may derive a familiar form from it**: every sentence naming somebody uses the whole nickname or names nobody (``docs/adr/0199`` \u00a71)."
           },
           "photo_id": {
             "type": "string",
@@ -12397,7 +12366,7 @@
           "intro": {
             "type": "string",
             "title": "Intro",
-            "description": "One line this player wrote about themselves \u2014 their **intro** \u2014 verbatim, drawn under the name. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.\n\nRead off the profile as it stands. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's \u2014 it is what strangers read, shown back to you."
+            "description": "One line this player wrote about themselves \u2014 their **intro** \u2014 verbatim, drawn under the nickname. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.\n\nRead off the profile as it stands. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's \u2014 it is what strangers read, shown back to you."
           },
           "sports": {
             "items": {
@@ -12427,7 +12396,6 @@
         "type": "object",
         "required": [
           "is_self",
-          "name",
           "nickname",
           "area_code",
           "social_tags",
@@ -13924,7 +13892,7 @@
             "title": "Player Id",
             "description": "Who holds this seat. ``null`` on a seat somebody has **left** and nobody has filled yet: the seat stays, drawn empty, and the game is awaiting a player before it can be recorded as played. **Always present** \u2014 a seat is never dropped."
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -13933,8 +13901,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "The whole name, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname: a handle is drawn on a record and said nowhere.\n\n``null`` where ``users`` no longer has this account, and on an open seat \u2014 never for an unnamed player, whom the entry gate holds at the naming step. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0199`` \u00a71).\n\n``null`` where ``users`` no longer has this account, and on an open seat \u2014 never for a player with no nickname yet, whom the entry gate holds at the naming step. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead."
           }
         },
         "type": "object",
@@ -13943,7 +13911,7 @@
           "player_id"
         ],
         "title": "SeatingSchema",
-        "description": "One position on one side: a person, or a seat somebody has left.\n\n**The court is frozen until somebody leaves it** (``docs/adr/0162``). An\nopen seat is drawn, never dropped \u2014 `player_id` is `null` and the seat keeps\nits place \u2014 so a four with one seat open is still a four and the client\nfolds *Needs a player* from it. Nothing on the wire names that rung.\n\n**A name, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
+        "description": "One position on one side: a person, or a seat somebody has left.\n\n**The court is frozen until somebody leaves it** (``docs/adr/0162``). An\nopen seat is drawn, never dropped \u2014 `player_id` is `null` and the seat keeps\nits place \u2014 so a four with one seat open is still a four and the client\nfolds *Needs a player* from it. Nothing on the wire names that rung.\n\n**A nickname, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
       },
       "SellerSchema": {
         "properties": {
@@ -14135,7 +14103,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -14144,8 +14112,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Their Name, whole; `null` for an account that can no longer be named."
+            "title": "Nickname",
+            "description": "Their nickname, whole and never with an @; `null` for an account that can no longer be named."
           },
           "photo_id": {
             "anyOf": [
@@ -14197,7 +14165,7 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "photo_id",
           "photo_url",
           "level",
@@ -14694,7 +14662,7 @@
           "adult_attested"
         ],
         "title": "UserCreateRequest",
-        "description": "Sign-up: credentials and the attestation, and nothing about who you are.\n\nThe nickname left this payload with ``docs/adr/0171`` \u00a72 \u2014 it is asked in\nonboarding, beside the name, with :class:`NameRequest`. **Extra fields are\nrefused** rather than ignored, so a client still sending one meets the\nvalidation envelope instead of a sign-up that quietly dropped what it said."
+        "description": "Sign-up: credentials and the attestation, and nothing about who you are.\n\nThe nickname is not in this payload (``docs/adr/0199`` \u00a73) \u2014 it is asked in\nonboarding, with :class:`NameRequest`. **Extra fields are\nrefused** rather than ignored, so a client still sending one meets the\nvalidation envelope instead of a sign-up that quietly dropped what it said."
       },
       "UserResponse": {
         "properties": {
@@ -14708,18 +14676,6 @@
             "format": "email",
             "title": "Email"
           },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "What this player is called \u2014 what every screen says. `null` until the naming \u2014 except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname \u2014 and the naming step asks only for what is missing."
-          },
           "nickname": {
             "anyOf": [
               {
@@ -14730,7 +14686,7 @@
               }
             ],
             "title": "Nickname",
-            "description": "The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming."
+            "description": "The handle, unique across the platform, and what every screen says about this player \u2014 never with an @. `null` until the naming, an account an invitation opened included: the entry gate's first destination is **no nickname**."
           },
           "authority": {
             "type": "string",
@@ -14772,7 +14728,7 @@
           "is_active"
         ],
         "title": "UserResponse",
-        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming** \u2014 and each on its\nown since ``docs/adr/0185`` \u00a74, because an account an Invitation opened\ncarries the club-typed name and no nickname \u2014 and this is the one read\nwhere either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
+        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``nickname`` is **null until the naming**, an account an Invitation opened\nincluded, and this is the one read where it may be null\n(``docs/adr/0199`` \u00a73): a player on any surface that names another player\nhas necessarily picked one, because the gate holds an account with none at\nthe naming step. **There is no ``name``**: no account holds a player name.\nOn ``/me`` the nickname is read from the player's own stream, as\n``has_player_profile`` is, so it is right the instant after the commit the\ngate reads it after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
       },
       "ValidationError": {
         "properties": {

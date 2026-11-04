@@ -190,7 +190,7 @@ async def test_a_card_is_my_version_of_the_game_with_everything_it_draws(
 
     assert len(card["sides"]["yours"]) == len(card["sides"]["theirs"]) == 2
     assert card["sides"]["yours"][0]["player_id"] == str(ola["id"])
-    by_name = {tile["name"]: tile for tile in tiles(card)}
+    by_name = {tile["nickname"]: tile for tile in tiles(card)}
     assert set(by_name) == {"ola", "kuba", "ewa", "tomek"}
     assert [name for name, tile in by_name.items() if tile["is_you"]] == ["ola"]
     assert [name for name, tile in by_name.items() if tile["is_in"]] == ["ewa"]
@@ -248,9 +248,9 @@ async def test_the_sides_are_the_evenest_arrangement_with_me_on_mine(
     [card] = (await deck_of(client, me, group))["cards"]
 
     # Ola beside a 2,9 against 2,5 and 2,9 — never the two 2,5s together.
-    mine = {tile["name"] for tile in card["sides"]["yours"]}
+    mine = {tile["nickname"] for tile in card["sides"]["yours"]}
     assert "ola" in mine and mine & {"kuba", "tomek"}
-    theirs = {tile["name"] for tile in card["sides"]["theirs"]}
+    theirs = {tile["nickname"] for tile in card["sides"]["theirs"]}
     assert "ewa" in theirs
 
 
@@ -394,8 +394,8 @@ async def test_a_challenge_names_its_poster_until_they_withdraw(
 
     [card] = (await deck_of(client, ola, group))["cards"]
     assert card["type"] == "CHALLENGE"
-    assert card["challenger"] == {"player_id": str(kuba["id"]), "name": "kuba"}
-    assert [tile["name"] for tile in tiles(card) if tile["is_in"]] == ["kuba"]
+    assert card["challenger"] == {"player_id": str(kuba["id"]), "nickname": "kuba"}
+    assert [tile["nickname"] for tile in tiles(card) if tile["is_in"]] == ["kuba"]
 
     await says_yes(client, ewa, post)
     await withdraws(client, kuba, post)
@@ -403,7 +403,7 @@ async def test_a_challenge_names_its_poster_until_they_withdraw(
     [card] = (await deck_of(client, ola, group))["cards"]
     assert card["type"] == "CHALLENGE"
     assert card["challenger"] is None
-    assert "kuba" not in {tile["name"] for tile in tiles(card)}
+    assert "kuba" not in {tile["nickname"] for tile in tiles(card)}
 
 
 async def test_a_game_dealt_in_versions_counts_the_yeses_on_every_version(
@@ -426,7 +426,7 @@ async def test_a_game_dealt_in_versions_counts_the_yeses_on_every_version(
     assert card["in_count"] == 2
     # Marek is In on the other version, so he is on mine; one seat is left
     # beside me, and the first of my version's names takes it.
-    assert {tile["name"] for tile in tiles(card)} == {"kuba", "marek", "ola", "ewa"}
+    assert {tile["nickname"] for tile in tiles(card)} == {"kuba", "marek", "ola", "ewa"}
 
 
 # --------------------------------------------------------------------------- #
@@ -586,7 +586,7 @@ async def test_a_card_with_somebody_in_i_blocked_is_withheld_and_a_name_is_left_
 
     [card] = (await deck_of(client, ola, group))["cards"]
     assert card["proposal_id"] == str(kuba_named)
-    assert {tile["name"] for tile in tiles(card)} == {"ola", "ania", "marek"}
+    assert {tile["nickname"] for tile in tiles(card)} == {"ola", "ania", "marek"}
 
 
 async def test_a_name_who_blocked_somebody_in_is_left_off_my_card(
@@ -606,7 +606,7 @@ async def test_a_name_who_blocked_somebody_in_is_left_off_my_card(
 
     [card] = (await deck_of(client, ola, group))["cards"]
 
-    assert {tile["name"] for tile in tiles(card)} == {"kuba", "ola", "ewa"}
+    assert {tile["nickname"] for tile in tiles(card)} == {"kuba", "ola", "ewa"}
 
 
 async def test_a_card_with_somebody_in_my_gender_preference_excludes_is_withheld(

@@ -21,8 +21,8 @@ class RegisterUser:
 
     Reads the email before insert to surface a domain-specific conflict instead
     of relying on a DB unique-constraint violation. The nickname's read moved to
-    the act that carries it, the naming (``docs/adr/0171`` §2): a fresh account
-    is unnamed.
+    the act that carries it, the naming (``docs/adr/0199`` §3): a fresh account
+    has no nickname.
 
     **The attestation is refused before the read.** It is built alongside the
     other value objects, above the lookup, so a caller who answered nothing is

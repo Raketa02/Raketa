@@ -192,7 +192,7 @@ async def test_a_player_users_cannot_name_keeps_their_membership(
 
     found = await faces.faces_of((stranger,))
 
-    assert found[stranger].name is None
+    assert found[stranger].nickname is None
     assert found[stranger].photo_id is None
     assert found[stranger].photo_url is None
 

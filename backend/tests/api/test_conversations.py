@@ -158,7 +158,7 @@ async def _leaves(session_factory, game_id: UUID, player_id: UUID) -> None:
 
 
 def _faces(people: list[dict]) -> dict[str, str | None]:
-    return {person["player_id"]: person["name"] for person in people}
+    return {person["player_id"]: person["nickname"] for person in people}
 
 
 # -- the opening -----------------------------------------------------------

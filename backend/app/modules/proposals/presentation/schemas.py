@@ -4,8 +4,8 @@ two details a game has — booked, or still filling (#542).
 **Money crosses as integer grosze**, as every price on this platform does, and
 the client renders it (``docs/value-formatting.md``). A yes answers only the
 seats still open, and the live-yeses list is the reader's own: **the one shape
-that draws other people is the deck's card** — each by their Name, never a
-first name cut from it (``docs/adr/0171``), their photograph and published
+that draws other people is the deck's card** — each by their whole nickname,
+never a familiar form of it (``docs/adr/0199`` §1), their photograph and published
 Level, and whether they are In. Nothing on it says who is still deciding, and
 the overlap grid says how many are free together, never who.
 
@@ -346,10 +346,11 @@ class DeckTileSchema(BaseModel):
 
     player_id: UUID
     is_you: bool = Field(description="The reader's own tile.")
-    name: str | None = Field(
+    nickname: str | None = Field(
         description=(
-            "Their Name, whole — the tile may cut it short, never invent a first "
-            "name. `null` for an account that can no longer be named."
+            "Their nickname, whole and never with an @ — the tile may cut it "
+            "short, never invent a familiar form (`docs/adr/0199` §1). `null` "
+            "for an account that can no longer be named."
         )
     )
     photo_id: UUID | None
@@ -436,10 +437,10 @@ class DeckClubSchema(BaseModel):
 
 
 class DeckChallengerSchema(BaseModel):
-    """Who a challenge names — *Kuba challenged you*."""
+    """Who a challenge names — *kuba challenged you*."""
 
     player_id: UUID
-    name: str | None
+    nickname: str | None
 
 
 class DeckCardSchema(BaseModel):
@@ -578,7 +579,7 @@ def _deck_sides(
         return DeckTileSchema(
             player_id=player_id,
             is_you=player_id == reader,
-            name=None if person is None else person.name,
+            nickname=None if person is None else person.nickname,
             photo_id=None if person is None else person.photo_id,
             photo_url=None if person is None else person.photo_url,
             level=None if person is None else person.level,
@@ -599,7 +600,7 @@ def _challenger(
         return None
     person = people.get(player_id)
     return DeckChallengerSchema(
-        player_id=player_id, name=None if person is None else person.name
+        player_id=player_id, nickname=None if person is None else person.nickname
     )
 
 
@@ -900,10 +901,11 @@ class BookedTileSchema(BaseModel):
 
     player_id: UUID
     is_you: bool
-    name: str | None = Field(
+    nickname: str | None = Field(
         description=(
-            "Their Name, whole — the tile may cut it short, never invent a first "
-            "name. `null` for an account that can no longer be named."
+            "Their nickname, whole and never with an @ — the tile may cut it "
+            "short, never invent a familiar form (`docs/adr/0199` §1). `null` "
+            "for an account that can no longer be named."
         )
     )
     photo_id: UUID | None
@@ -1014,7 +1016,7 @@ def _tile(
     return BookedTileSchema(
         player_id=player_id,
         is_you=player_id == reader,
-        name=None if person is None else person.name,
+        nickname=None if person is None else person.nickname,
         photo_id=None if person is None else person.photo_id,
         photo_url=None if person is None else person.photo_url,
         level=None if person is None else person.level,
@@ -1920,9 +1922,10 @@ class SlotFitSchema(BaseModel):
     """One of the poster's best fits free then — *2,75 · 93*."""
 
     player_id: UUID
-    name: str | None = Field(
+    nickname: str | None = Field(
         description=(
-            "Their Name, whole; `null` for an account that can no longer be named."
+            "Their nickname, whole and never with an @; `null` for an account "
+            "that can no longer be named."
         )
     )
     photo_id: UUID | None
@@ -2012,7 +2015,7 @@ class PostingSlotResponse(BaseModel):
             person = people.get(player_id)
             return SlotFitSchema(
                 player_id=player_id,
-                name=None if person is None else person.name,
+                nickname=None if person is None else person.nickname,
                 photo_id=None if person is None else person.photo_id,
                 photo_url=None if person is None else person.photo_url,
                 level=None if person is None else person.level,

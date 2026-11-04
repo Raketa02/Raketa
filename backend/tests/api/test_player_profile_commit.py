@@ -41,13 +41,13 @@ async def auth_headers(client, payload=ALICE) -> dict[str, str]:
     )
     assert login.status_code == 200, login.text
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    # Named, because a record is read back below and an unnamed player has no
-    # record identity to read (``docs/adr/0171``): sign-up is credentials only
-    # and the naming is the first step of onboarding.
+    # Named, because a record is read back below and a player with no nickname
+    # has no record identity to read (``docs/adr/0199``): sign-up is credentials
+    # only and the naming is the first step of onboarding.
     handle = payload["email"].split("@")[0].replace(".", "_")
     named = await client.put(
         "/api/v1/users/me/name",
-        json={"name": handle.replace("_", " ").title(), "nickname": handle},
+        json={"nickname": handle},
         headers=headers,
     )
     assert named.status_code == 200, named.text

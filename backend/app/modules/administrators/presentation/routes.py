@@ -92,8 +92,9 @@ async def claim_invitation(
     },
     summary="Set your password, by the invitation's link or a ticket, and sign in",
     description=(
-        "**A new person's account is created** — its Name the one the club "
-        "typed, no nickname, and no Adult attestation — and **an account the "
+        "**A new person's account is created** — no player name (the one the "
+        "club typed stays the Administrator's), no nickname, and no Adult "
+        "attestation — and **an account the "
         "club reset gets its password back**. Either way the administrator is "
         "active and this answers a signed-in session. `ticket_expired` is a "
         "409 too: claiming the code again is a fresh ticket."

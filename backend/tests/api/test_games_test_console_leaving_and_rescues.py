@@ -139,11 +139,15 @@ async def status_on_home(client, member: dict, booking: str) -> str | None:
 
 
 def refunds_on(pane: dict) -> dict[str, dict | None]:
-    return {charge["player"]["name"]: charge["refund"] for charge in pane["charges"]}
+    return {
+        charge["player"]["nickname"]: charge["refund"] for charge in pane["charges"]
+    }
 
 
 def statuses_on(pane: dict) -> dict[str, str]:
-    return {charge["player"]["name"]: charge["status"] for charge in pane["charges"]}
+    return {
+        charge["player"]["nickname"]: charge["status"] for charge in pane["charges"]
+    }
 
 
 # --------------------------------------------------------------------------- #

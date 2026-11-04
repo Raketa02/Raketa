@@ -38,7 +38,7 @@ async def _player(client, name: str) -> tuple[str, str]:
     token = login.json()["access_token"]
     named = await client.put(
         "/api/v1/users/me/name",
-        json={"name": name, "nickname": name},
+        json={"nickname": name},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert named.status_code == 200, named.text
@@ -227,7 +227,7 @@ async def test_the_list_names_whom_you_blocked_and_when_newest_first(
 
     listed = await _blocked_players(client, alice_token)
 
-    assert [(one["player_id"], one["name"]) for one in listed] == [
+    assert [(one["player_id"], one["nickname"]) for one in listed] == [
         (carol_id, "carol"),
         (bob_id, "bob"),
     ]

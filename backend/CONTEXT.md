@@ -622,7 +622,7 @@ there; they are not repeated here.
   route on it takes a session**, and its document carries no bearer scheme —
   `tests/unit/test_public_surface.py` refuses one. It **discloses the least a page needs**: a
   group's row and its club, never anybody in it; an invitation's name — whole, as the club typed
-  it (ADR-0171 §4) — club and standing, and its code while it is valid, recomputed from the link;
+  it, and the Administrator's alone (ADR-0199 §4) — club and standing, and its code while it is valid, recomputed from the link;
   a reset's standing and nothing else. A link token travels in a body, a group's code in the
   path. **Its two password routes sign nobody in**: `SetInvitationPasswordWithoutSigningIn` and
   `SetNewPasswordWithoutSigningIn` call the very rules the app's `SetInvitationPassword` and

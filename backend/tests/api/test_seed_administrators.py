@@ -82,7 +82,7 @@ async def test_the_administrator_only_account_holds_nothing_but_the_club(
 
     me = (await client.get("/api/v1/users/me", headers=marta)).json()
 
-    assert me["name"] == "Marta Wójcik"
+    assert "name" not in me
     assert me["nickname"] is None
     assert me["adult_attested"] is False
     assert me["profiles"]["acts_as_player"] is False

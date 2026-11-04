@@ -4211,7 +4211,7 @@ def build_seat_offers(
 
 
 def build_notice_names(session: AsyncSession) -> Names:
-    """A person's Name and a club's, for what a notice says."""
+    """A person's nickname and a club's name, for what a notice says."""
     return PlatformNames(
         users=build_user_repository(session),
         clubs=build_proposal_club_names(session),

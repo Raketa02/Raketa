@@ -254,8 +254,9 @@ Identity and account state.
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
 - **Name** — *retired 2026-11-03* ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md), superseding
   [ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
-  A player has no Name in Raketa, only a **Nickname** (not yet built —
-  [#724](https://github.com/Raketa02/Raketa/issues/724), [#728](https://github.com/Raketa02/Raketa/issues/728)). The name a club types when it invites
+  A player has no Name in Raketa, only a **Nickname** (the backend since
+  [#724](https://github.com/Raketa02/Raketa/issues/724); the phone not yet —
+  [#728](https://github.com/Raketa02/Raketa/issues/728)). The name a club types when it invites
   somebody is the **Administrator**'s (Administrators), never a player's. _Avoid_: a player's
   *name*, *real name*, *display name*.
 - **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`, **unique**. A handle, and
@@ -306,14 +307,15 @@ Identity and account state.
     branch that changed the shape.
   - **UserNamed** — `users.user_named` / **v2** — the naming, carrying the **Nickname** alone;
     the fold keeps the latest. v1 carried a Name beside it and is read with the name ignored
-    ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md) §6, not yet built — [#724](https://github.com/Raketa02/Raketa/issues/724)).
+    ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md) §6, built by [#724](https://github.com/Raketa02/Raketa/issues/724) — `UserNamedV1` decodes it).
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
   - **AccountOpenedByInvitation** — `users.account_opened_by_invitation` / **v2** — the other
     way a stream begins: an account an **Invitation** opened when its person set a password,
     carrying the hash and **no player name, no Nickname and no attestation**. The name the club
-    typed is the Administrator's. v1 carried it and is read with it ignored (ADR-0199 §4, not yet
-    built — [#724](https://github.com/Raketa02/Raketa/issues/724)).
+    typed is the Administrator's. v1 carried it and is read with it ignored (ADR-0199 §4, built
+    by [#724](https://github.com/Raketa02/Raketa/issues/724) — `AccountOpenedByInvitationV1`
+    decodes it).
   - **AdultAttested** — `users.adult_attested` / v1 — the Adult attestation given after the
     account was opened, at *Start playing*. Recorded once.
   - **PasswordChanged** — `users.password_changed` / v1 — a new password and the instant every

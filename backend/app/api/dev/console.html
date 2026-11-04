@@ -220,10 +220,11 @@ function esc(text) {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   })[c]);
 }
-const nameOf = (ref) => esc(ref?.name ?? "(unnamed)");
+// A person is said by their whole nickname (ADR-0199 §1).
+const nameOf = (ref) => esc(ref?.nickname ?? "(no nickname)");
 const names = (refs) => (refs && refs.length ? refs.map(nameOf).join(", ") : "nobody");
 const pill = (text, kind) => `<span class="pill ${esc(kind ?? text)}">${esc(text)}</span>`;
-const firstName = (name) => (name ? String(name).split(" ")[0] : "her");
+const herNickname = (nickname) => nickname ?? "her";
 const ANSWER_LOOK = { IN: "in", SAID_NO: "no" };
 const answerPill = (answer) => pill(answer, ANSWER_LOOK[answer] ?? "");
 
@@ -329,8 +330,8 @@ function drawProtagonist() {
     `<option value="${r.player_id}">${nameOf(r)} · ${esc(r.email)}</option>`).join("");
   if (pick) $("protagonist").value = pick;
   const her = rows.find((r) => r.player_id === pick);
-  document.querySelectorAll(".her").forEach((el) => { el.textContent = firstName(her?.name) + "'s"; });
-  document.querySelectorAll(".she").forEach((el) => { el.textContent = firstName(her?.name); });
+  document.querySelectorAll(".her").forEach((el) => { el.textContent = herNickname(her?.nickname) + "'s"; });
+  document.querySelectorAll(".she").forEach((el) => { el.textContent = herNickname(her?.nickname); });
 }
 
 // --------------------------------------------------------------------------
@@ -348,13 +349,13 @@ function drawPeople() {
     const phone = row.player_id === state.protagonist;
     const face = row.photo_url
       ? `<img class="face" src="${esc(row.photo_url)}" alt="">`
-      : `<div class="face">${esc((row.name ?? "?").slice(0, 1))}</div>`;
+      : `<div class="face">${esc((row.nickname ?? "?").slice(0, 1).toUpperCase())}</div>`;
     const cards = row.cards.length ? row.cards.map((card) => {
       const expected = EXPECTED[card.answer] ?? [];
       const button = (verb, label) =>
         `<button class="${expected.includes(verb) ? "expected" : ""}" ` +
         `data-act="${verb}" data-player="${row.player_id}" data-game="${card.proposal_id}" ` +
-        `data-who="${esc(row.name ?? row.email)}">${label}</button>`;
+        `data-who="${esc(row.nickname ?? row.email)}">${label}</button>`;
       return `<div class="rowcard">
         <span class="when">${when(card.starts_at)}</span>
         ${pill(card.kind, "kind")}
@@ -408,7 +409,7 @@ async function act(button) {
 
 const rowButton = (row, verb, label, data, expected) =>
   `<button class="${expected ? "expected" : ""}" data-row="${verb}" data-player="${row.player_id}" ` +
-  `data-who="${esc(row.name ?? row.email)}" ${data}>${label}</button>`;
+  `data-who="${esc(row.nickname ?? row.email)}" ${data}>${label}</button>`;
 
 function bookedOf(row) {
   if (!row.booked.length) return "";
@@ -585,7 +586,7 @@ async function postAct(button) {
 // --------------------------------------------------------------------------
 
 function sentButtons(row) {
-  const who = esc(row.name ?? row.email);
+  const who = esc(row.nickname ?? row.email);
   const open = state.sent[row.player_id];
   return `<button data-sent="read" data-player="${row.player_id}" data-who="${who}">` +
     `${open ? "Read Sent again" : "Sent"}</button>` +
@@ -835,7 +836,7 @@ function cardOnFile(row) {
     const options = Object.entries(choices).map(([value, label]) =>
       `<option value="${value}" ${chosen === value ? "selected" : ""}>${label}</option>`).join("");
     return `<select data-card-for="${row.player_id}" data-card-field="${field}" ` +
-      `data-who="${esc(row.name ?? row.email)}">${options}</select>`;
+      `data-who="${esc(row.nickname ?? row.email)}">${options}</select>`;
   };
   return `<div class="card-on-file"><span class="mono">${esc(row.card.brand)} •••• ${esc(row.card.last_four)}</span>
     ${row.card.outcome ? choose("outcome", OUTCOMES, row.card.outcome) : ""}

@@ -100,7 +100,7 @@ class Said:
     starts_at: Instant
     opens: Opens
     amount_grosze: int | None = None
-    #: The people it names, by Name, in the order the notice names them.
+    #: The people it names, by nickname, in the order the notice names them.
     names: tuple[str, ...] = ()
     reason: str | None = None
     #: How many more of its kind the day gathered into it.

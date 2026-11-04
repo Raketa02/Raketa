@@ -50,13 +50,13 @@ from app.infrastructure.database.base import Base
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
 from app.modules.auth.presentation.schemas import LoginRequest
-from app.modules.users.domain.value_objects import Email, Name, Nickname, RawPassword
+from app.modules.users.domain.value_objects import Email, Nickname, RawPassword
 from app.modules.users.presentation.schemas import UserResponse
 from app.seeds import catalog
 from app.seeds.catalog import (
     ACCOUNTS,
     BAND_ESTABLISHED,
-    NAMES,
+    NICKNAMES,
     RESERVED_TLD,
     SEED_EMAIL_DOMAIN,
     SEED_PASSWORD,
@@ -408,37 +408,37 @@ def test_every_address_is_on_a_reserved_tld():
         assert account.email.endswith(RESERVED_TLD)
 
 
-def test_every_account_is_addressed_by_its_state_and_shown_under_a_name():
+def test_every_account_is_addressed_by_its_state_and_shown_under_a_nickname():
     """**The slug addresses the account; it is never what a person sees.**
 
-    The two were one string, and a screen draws the name — so the builder was
-    printing *said-yes-to-you* where a name goes, and a developer could not tell
-    a court full of people from a list of test conditions. Splitting them keeps
-    the address derived from the state, so an account still cannot be called one
-    thing and reachable at another.
+    The two were one string, and a screen draws the nickname — so the builder
+    was printing *said-yes-to-you* where a person goes, and a developer could
+    not tell a court full of people from a list of test conditions. Splitting
+    them keeps the address derived from the state, so an account still cannot
+    be called one thing and reachable at another.
 
-    The name is asserted to be a **dealt** one rather than merely different,
-    because `name` falls back to the slug for accounts a guard builds to
-    refuse: this is the test that the fallback never reaches a real one.
+    The nickname is asserted to be a **dealt** one rather than merely
+    different, because `nickname` falls back to the slug for accounts a guard
+    builds to refuse: this is the test that the fallback never reaches a real
+    one.
     """
 
     for account in ACCOUNTS:
         assert account.email == f"{account.slug}@{SEED_EMAIL_DOMAIN}"
-        assert account.name == NAMES[account.slug]
-        assert account.name != account.slug
+        assert account.nickname == NICKNAMES[account.slug]
+        assert account.nickname != account.slug
         assert account.description
 
 
-def test_every_account_is_named_first_last_with_a_lowercase_handle():
-    """``First Last`` and ``first_last`` (``docs/adr/0171`` §5): the seeded
-    court reads *Diego Fabregat left*, and the dot the nickname rule forced is
-    gone. The handle is a function of the name, so the pools' disjointness on
-    the name is disjointness on the one field that is unique."""
+def test_every_account_is_a_lowercase_handle_and_holds_no_name():
+    """``first_last``, spelled as a handle (``docs/adr/0199`` §1): the seeded
+    court reads *diego_fabregat left*. **The catalogue holds no player name** —
+    nothing on an account spells one."""
 
     for account in ACCOUNTS:
-        first, last = account.name.split(" ")
-        assert first and last and "." not in account.name
-        assert account.nickname == f"{first.lower()}_{last.lower()}"
+        first, last = account.nickname.split("_")
+        assert first and last and account.nickname == account.nickname.lower()
+        assert not hasattr(account, "name")
 
 
 def test_the_catalog_covers_the_states_a_screen_has_to_render():
@@ -483,7 +483,6 @@ def test_the_catalog_is_addressable_by_the_domain():
     RawPassword(SEED_PASSWORD)
     for account in ACCOUNTS:
         assert Email(account.email).value == account.email
-        assert Name(account.name).value == account.name
         assert Nickname(account.nickname).value == account.nickname
 
 
@@ -676,7 +675,6 @@ def test_the_boundary_schemas_accept_every_seeded_address():
         assert UserResponse(
             id=UUID(int=0),
             email=account.email,
-            name=account.name,
             nickname=account.nickname,
             authority="USER",
             is_admin=False,

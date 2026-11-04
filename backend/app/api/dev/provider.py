@@ -570,7 +570,7 @@ async def notices(
                 payment_id=one.notice.payment_id,
                 charge_id=charge.charge_id,
                 player=PersonRef(
-                    player_id=charge.player_id, name=named.get(charge.player_id)
+                    player_id=charge.player_id, nickname=named.get(charge.player_id)
                 ),
                 read=one.notice.notice_id in read,
             )

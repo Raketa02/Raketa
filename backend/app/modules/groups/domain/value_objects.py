@@ -33,7 +33,7 @@ def _collapsed(typed: str) -> str:
 
     ``split()`` with no argument splits on any run of whitespace and drops the
     ends, so the trim and the collapse are one step — the way a club's name and
-    a player's Name are held.
+    an Administrator's name are held.
     """
 
     return " ".join(typed.split())

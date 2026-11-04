@@ -2506,7 +2506,7 @@
               }
             ],
             "title": "Name",
-            "description": "Their Name, whole. `null` for an account that can no longer be named."
+            "description": "Their nickname, whole (docs/adr/0199 \u00a75). `null` for an account that can no longer be named."
           },
           "paid": {
             "type": "boolean",
@@ -2936,7 +2936,7 @@
               }
             ],
             "title": "Name",
-            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the request still waits."
+            "description": "Their nickname, whole (docs/adr/0199 \u00a75). `null` for an account that can no longer be named \u2014 the request still waits."
           },
           "levels": {
             "items": {
@@ -3495,7 +3495,7 @@
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "Trimmed, runs of whitespace collapsed, then 2\u201364 characters \u2014 `administrator_name_invalid` otherwise. It becomes the person's Name if they are new to Raketa."
+            "description": "Trimmed, runs of whitespace collapsed, then 2\u201364 characters \u2014 `administrator_name_invalid` otherwise. It is the Administrator's, and stays theirs: an account it opens holds no player name, and players see them by the nickname they pick."
           },
           "email": {
             "type": "string",

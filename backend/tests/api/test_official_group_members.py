@@ -268,7 +268,7 @@ async def test_marta_opens_the_record_of_anybody_in_the_group_she_runs(
     assert before.status_code == 404
     assert before.json()["code"] == "record_unavailable"
     assert opened.status_code == 200, opened.text
-    assert opened.json()["name"] == "ewa"
+    assert opened.json()["nickname"] == "ewa"
 
 
 async def test_the_record_closes_when_she_stops_running_it(

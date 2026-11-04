@@ -113,7 +113,8 @@ from app.modules.sportsmanship.domain.card import (
     SportsmanshipCard,
     StarsGiven,
 )
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.administrators.domain.value_objects import Name
+from app.modules.users.domain.value_objects import Email
 from app.shared.ids import new_uuid
 
 SPORT = Sport.PADEL

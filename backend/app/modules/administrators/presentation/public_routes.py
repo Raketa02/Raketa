@@ -78,8 +78,8 @@ async def invitation_page(
     summary="Set your password here, by the invitation's link",
     description=(
         "**The same rules and the same results as the app's *Set your "
-        "password***: a new person's account is created — its Name the one the "
-        "club typed, no nickname, no Adult attestation — or an account the club "
+        "password***: a new person's account is created — no player name, no "
+        "nickname, no Adult attestation — or an account the club "
         "reset gets its password back, and either way the administrator is "
         "active and the link is spent. **Nobody is signed in**: the page then "
         "says to open Raketa and sign in with this email and password."

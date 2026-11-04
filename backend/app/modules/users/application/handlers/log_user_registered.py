@@ -5,11 +5,13 @@ import logging
 from app.application.events import DeliveryContext
 from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
+    AccountOpenedByInvitationV1,
     AdultAttested,
     PasswordChanged,
     PasswordCleared,
     UserDisabled,
     UserNamed,
+    UserNamedV1,
     UserPromotedToAdmin,
     UserRegistered,
 )
@@ -40,22 +42,23 @@ class LogUserRegistered:
 
 
 class LogUserNamed:
-    """Audit-trail handler for the naming (``docs/adr/0171`` §2).
+    """Audit-trail handler for the naming (``docs/adr/0199`` §3) — **the
+    nickname only**, of either version: a v1 row's name stays out of the log as
+    it stays out of the fold.
 
     A subscriber exists because an event with none fails delivery and is retried
     for ever; nothing else reacts to a player being named — every read that says
-    a name reads it live off ``users``, so a corrected name fixes the whole
-    backlog without anybody being told.
+    a nickname reads it live off ``users``, so a new one reaches every screen
+    without anybody being told.
     """
 
-    async def __call__(self, event: UserNamed, context: DeliveryContext) -> None:
+    async def __call__(
+        self, event: UserNamed | UserNamedV1, context: DeliveryContext
+    ) -> None:
         logger.info(
             "user.named",
             extra={
                 "user_id": str(event.user_id),
-                # Not ``name``: a LogRecord has one, and logging refuses the
-                # overwrite (tests/unit/test_logging_extras.py).
-                "user_name": event.name,
                 "nickname": event.nickname,
                 "occurred_at": event.occurred_at.isoformat(),
                 "event_id": str(context.event_id),
@@ -111,11 +114,14 @@ class LogUserPromotedToAdmin:
 
 
 class LogAccountOpenedByInvitation:
-    """Audit trail for an account an Invitation opened (``docs/adr/0184`` §2)
-    — **never the hash, the email or the name**: the id says which account."""
+    """Audit trail for an account an Invitation opened (``docs/adr/0184`` §2),
+    of either version — **never the hash, the email or a name**: the id says
+    which account."""
 
     async def __call__(
-        self, event: AccountOpenedByInvitation, context: DeliveryContext
+        self,
+        event: AccountOpenedByInvitation | AccountOpenedByInvitationV1,
+        context: DeliveryContext,
     ) -> None:
         logger.info(
             "user.opened_by_invitation",

@@ -26,9 +26,11 @@ from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.users.application.event_subscriptions import register_user_events
 from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
+    AccountOpenedByInvitationV1,
     AdultAttested,
     PasswordCleared,
     UserNamed,
+    UserNamedV1,
     UserRegistered,
 )
 
@@ -60,12 +62,15 @@ def _codec() -> JsonEventCodec:
 
 
 def _envelope(
-    payload: dict[str, object], *, event_type: str = "users.user_registered"
+    payload: dict[str, object],
+    *,
+    event_type: str = "users.user_registered",
+    schema_version: int = 1,
 ) -> SerializedEventEnvelope:
     return SerializedEventEnvelope(
         id=uuid4(),
         event_type=event_type,
-        schema_version=1,
+        schema_version=schema_version,
         payload=payload,
         occurred_at=NOW,
     )
@@ -118,25 +123,68 @@ def test_the_registration_carries_no_nickname() -> None:
     assert "name" not in encoded.payload
 
 
-def test_the_naming_round_trips_under_its_own_contract() -> None:
+def test_the_naming_is_written_as_its_second_version_carrying_the_nickname_alone() -> (
+    None
+):
+    """``users.user_named`` v2 (``docs/adr/0199`` §6): the Name is retired."""
+
     codec = _codec()
-    named = UserNamed(
+    named = UserNamed(user_id=REGISTERED.user_id, nickname="ada", occurred_at=NOW)
+
+    encoded = codec.encode(named)
+
+    assert encoded.event_type == "users.user_named"
+    assert encoded.schema_version == 2
+    assert encoded.payload["nickname"] == "ada"
+    assert "name" not in encoded.payload
+    assert (
+        codec.decode(
+            _envelope(encoded.payload, event_type="users.user_named", schema_version=2)
+        )
+        == named
+    )
+
+
+def test_a_naming_stored_as_the_first_version_still_decodes() -> None:
+    """A v1 row carried a Name beside the nickname. It decodes to its own
+    decode-only class, and the fold reads it with the name ignored."""
+
+    decoded = _codec().decode(
+        _envelope(
+            {
+                "user_id": str(REGISTERED.user_id),
+                "name": "Ada Lovelace",
+                "nickname": "ada",
+                "occurred_at": NOW.isoformat(),
+            },
+            event_type="users.user_named",
+        )
+    )
+
+    assert decoded == UserNamedV1(
         user_id=REGISTERED.user_id,
         name="Ada Lovelace",
         nickname="ada",
         occurred_at=NOW,
     )
 
-    encoded = codec.encode(named)
 
-    assert encoded.event_type == "users.user_named"
-    assert encoded.schema_version == 1
-    assert encoded.payload["name"] == "Ada Lovelace"
-    assert encoded.payload["nickname"] == "ada"
-    assert (
-        codec.decode(_envelope(encoded.payload, event_type="users.user_named"))
-        == named
+def test_an_invitation_opening_stored_as_the_first_version_still_decodes() -> None:
+    decoded = _codec().decode(
+        _envelope(
+            {
+                "user_id": str(REGISTERED.user_id),
+                "email": "marta@ogrody33.pl",
+                "password_hash": "$2b$12$notarealhash",
+                "name": "Marta Wójcik",
+                "occurred_at": NOW.isoformat(),
+            },
+            event_type="users.account_opened_by_invitation",
+        )
     )
+
+    assert isinstance(decoded, AccountOpenedByInvitationV1)
+    assert decoded.email == "marta@ogrody33.pl"
 
 
 @pytest.mark.parametrize(
@@ -156,16 +204,6 @@ def test_the_tester_mark_has_no_reader_any_more(event_type: str) -> None:
 @pytest.mark.parametrize(
     ("event", "event_type"),
     [
-        (
-            AccountOpenedByInvitation(
-                user_id=REGISTERED.user_id,
-                email="marta@ogrody33.pl",
-                password_hash="$2b$12$notarealhash",
-                name="Marta Wójcik",
-                occurred_at=NOW,
-            ),
-            "users.account_opened_by_invitation",
-        ),
         (
             AdultAttested(user_id=REGISTERED.user_id, occurred_at=NOW),
             "users.adult_attested",
@@ -192,16 +230,34 @@ def test_the_invitation_s_three_facts_round_trip_under_their_own_contracts(
     assert codec.decode(_envelope(encoded.payload, event_type=event_type)) == event
 
 
-def test_an_account_an_invitation_opened_carries_a_name_and_no_nickname() -> None:
-    encoded = _codec().encode(
-        AccountOpenedByInvitation(
-            user_id=REGISTERED.user_id,
-            email="marta@ogrody33.pl",
-            password_hash="$2b$12$notarealhash",
-            name="Marta Wójcik",
-            occurred_at=NOW,
-        )
+def test_an_account_an_invitation_opened_carries_no_player_name_and_no_nickname() -> (
+    None
+):
+    """``users.account_opened_by_invitation`` v2 (``docs/adr/0199`` §4): the
+    name the club typed is the Administrator's, and the account holds none."""
+
+    codec = _codec()
+    opened = AccountOpenedByInvitation(
+        user_id=REGISTERED.user_id,
+        email="marta@ogrody33.pl",
+        password_hash="$2b$12$notarealhash",
+        occurred_at=NOW,
     )
 
+    encoded = codec.encode(opened)
+
+    assert encoded.event_type == "users.account_opened_by_invitation"
+    assert encoded.schema_version == 2
+    assert (
+        codec.decode(
+            _envelope(
+                encoded.payload,
+                event_type="users.account_opened_by_invitation",
+                schema_version=2,
+            )
+        )
+        == opened
+    )
+    assert "name" not in encoded.payload
     assert "nickname" not in encoded.payload
     assert "adult_attested" not in encoded.payload

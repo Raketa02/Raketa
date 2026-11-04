@@ -1,8 +1,8 @@
-"""``BlockedFaces`` — a name from ``users``, a face from the Player profile.
+"""``BlockedFaces`` — a nickname from ``users``, a face from the Player profile.
 
 ``groups``' ``ProfileGroupFaces`` one context over, for the reason that adapter
 gives: it reads **each provider's own port** and never its table or its bucket.
-The name comes from ``users``, the first photograph from the profile, and the
+The nickname comes from ``users``, the first photograph from the profile, and the
 link is signed by ``PhotoStorage`` — arithmetic, not a request
 (``docs/adr/0107``), so a list costs no round trip to the store.
 """
@@ -41,11 +41,11 @@ class ProfileBlockedFaces:
         wanted = sorted(set(player_ids))
         if not wanted:
             return {}
-        namings = await self._users.find_namings_of(wanted)
+        nicknames = await self._users.find_nicknames_of(wanted)
         faces: dict[UUID, BlockedFace] = {}
         for player_id in wanted:
-            naming = namings.get(player_id)
-            if naming is None:
+            nickname = nicknames.get(player_id)
+            if nickname is None:
                 # Nobody to draw: the profile is not read for an id `users`
                 # cannot name.
                 faces[player_id] = BlockedFace(player_id=player_id)
@@ -61,7 +61,7 @@ class ProfileBlockedFaces:
             )
             faces[player_id] = BlockedFace(
                 player_id=player_id,
-                name=naming.name,
+                nickname=nickname,
                 photo_id=None if url is None else photo_id,
                 photo_url=url,
             )

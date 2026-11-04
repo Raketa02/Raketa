@@ -82,8 +82,7 @@ from app.modules.player_profile.domain.weekly_hours import (
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS
 from app.seeds.catalog import (
     COHORT_SURNAMES,
-    dealt_name,
-    handle_of,
+    dealt_nickname,
     BAND_ADVANCED,
     BAND_DEVELOPING,
     BAND_ESTABLISHED,
@@ -928,11 +927,12 @@ class CohortMember:
     #: a thing this fixture chooses, and the card the conclusion reaches is what
     #: ``app/seeds/screens.py`` reads back.
     photograph: str | None = None
-    #: What every screen draws for this member. ``handle`` stays the identifier
-    #: — the address, the answer key and the ring's own numbering are all it —
-    #: and this is the only thing a person ever sees. Committed with the rest of
-    #: the row, because a name is an input like the week and the tags are.
-    name: str = ""
+    #: What every screen draws for this member (``docs/adr/0199`` §1), and
+    #: **not** ``handle``, which is this fixture's own id: the address, the
+    #: answer key and the ring's own numbering are all it, and a person never
+    #: sees it. Committed with the rest of the row, because a nickname is an
+    #: input like the week and the tags are. See ``catalog.FIRST_NAMES``.
+    nickname: str = ""
     #: The line this member wrote about themselves, or ``None`` for the many
     #: who wrote none (``docs/adr/0170``). A **lookup and never a draw**, like
     #: the photograph: the deck card is built against both a card with a line
@@ -958,15 +958,6 @@ class CohortMember:
     @property
     def email(self) -> str:
         return f"{self.handle}@{SEED_EMAIL_DOMAIN}"
-
-    @property
-    def nickname(self) -> str:
-        """The handle a member is given, derived from the name
-        (``docs/adr/0171`` §5) — and **not** ``handle``, which is this
-        fixture's own id: the address, the answer key and the ring's numbering
-        are all it, and a person never sees it. See ``catalog.FIRST_NAMES``."""
-
-        return handle_of(self.name)
 
     @property
     def answers(self) -> AnswerPolicy:
@@ -1043,11 +1034,12 @@ def generate(*, seed: int = COHORT_SEED, centre: Centre = REFERENCE_CENTRE) -> C
 
 
 def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
-    """One name each, dealt **by sorted handle** out of the cohort's own pool.
+    """One nickname each, dealt **by sorted handle** out of the cohort's own
+    pool.
 
     Sorted rather than drawn, and dealt over the whole population rather than
-    per ring, because the nickname derived from a name has to be unique across
-    all of them and a keyed draw collides: two members under one nickname is a
+    per ring, because a nickname has to be unique across all of them and a
+    keyed draw collides: two members under one nickname is a
     unique-constraint violation found half way through a seed run.
 
     Sorted by handle, so the deal is a function of *which members exist*. A
@@ -1063,9 +1055,7 @@ def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
 
     order = sorted(one.handle for one in members)
     return tuple(
-        replace(
-            one, name=dealt_name(order.index(one.handle), COHORT_SURNAMES)
-        )
+        replace(one, nickname=dealt_nickname(order.index(one.handle), COHORT_SURNAMES))
         for one in members
     )
 

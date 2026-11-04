@@ -124,8 +124,8 @@ async def test_a_request_shows_the_person_s_name_face_and_every_level(client):
     [request] = await waiting(client, karol, group)
 
     # No photograph: the client draws her initials.
-    assert set(request) == {"player_id", "name", "levels"}
-    assert request["name"] == "kasia"
+    assert set(request) == {"player_id", "nickname", "levels"}
+    assert request["nickname"] == "kasia"
     # Every sport she is rated in, in the registry's order, each with its Level
     # as RacketSkill published it.
     assert [row["sport"] for row in request["levels"]] == ["PADEL", "TENNIS"]
@@ -152,7 +152,7 @@ async def test_requests_wait_in_the_order_they_were_asked(client):
 
     listed = await waiting(client, karol, group)
 
-    assert [row["name"] for row in listed] == ["kasia", "ola", "jan"]
+    assert [row["nickname"] for row in listed] == ["kasia", "ola", "jan"]
 
 
 async def test_a_group_nobody_has_asked_has_no_requests(client):
@@ -359,14 +359,15 @@ async def test_an_anyone_group_admits_at_once_and_never_has_a_request(client):
     assert await waiting(client, karol, group) == []
 
 
-async def test_a_request_names_nobody_s_nickname(client):
-    """The Name and never the handle (``docs/adr/0171`` §4)."""
+async def test_a_request_names_the_asker_by_their_nickname(client):
+    """The nickname, whole, as it stands at the read (``docs/adr/0199`` §1): a
+    rename reaches the Owner's next read."""
 
     karol = await a_player(client, "karol")
     kasia_id, token = await players.register(client, "kasia")
     renamed = await client.put(
         "/api/v1/users/me/name",
-        json={"name": "Kasia Nowak", "nickname": "kasia_n"},
+        json={"nickname": "kasia.n"},
         headers=players.auth(token),
     )
     assert renamed.status_code == 200, renamed.text
@@ -375,4 +376,5 @@ async def test_a_request_names_nobody_s_nickname(client):
 
     [request] = await waiting(client, karol, group)
 
-    assert request["name"] == "Kasia Nowak"
+    assert request["nickname"] == "kasia.n"
+    assert "name" not in request

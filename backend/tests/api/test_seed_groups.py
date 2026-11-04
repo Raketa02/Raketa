@@ -101,8 +101,8 @@ async def test_a_group_s_first_to_join_are_its_members_in_the_order_they_joined(
     declared = next(group for group in SEED_GROUPS if group.name == "Czwartkowy padel")
     assert page["is_owner"] is True
     assert padel["rated_count"] == 4
-    assert [person["name"] for person in padel["first_rated"]] == [
-        account.name for account in (declared.owner, *declared.members)
+    assert [person["nickname"] for person in padel["first_rated"]] == [
+        account.nickname for account in (declared.owner, *declared.members)
     ]
 
 
@@ -147,7 +147,7 @@ async def test_the_protagonist_s_approval_group_has_one_request_waiting(client, 
     assert page.json()["join_policy"] == "PEOPLE_I_APPROVE"
     assert listed.status_code == 200, listed.text
     [request] = listed.json()["requests"]
-    assert request["name"] == RATED_IN_EVERY_SPORT.name
+    assert request["nickname"] == RATED_IN_EVERY_SPORT.nickname
     assert [row["sport"] for row in request["levels"]] == [
         "PADEL",
         "TENNIS",
@@ -168,7 +168,7 @@ async def test_the_one_waiting_sees_requested_on_the_group(client, seeded):
     [card] = found.json()["clubs"]
     [row] = card["groups"]
     assert (row["id"], row["relation"]) == (group["id"], "REQUESTED")
-    assert row["owner_name"] == THE_POPULATED_PLAYER.name
+    assert row["owner_nickname"] == THE_POPULATED_PLAYER.nickname
 
 
 async def test_a_second_run_creates_nothing_and_joins_nobody_twice(

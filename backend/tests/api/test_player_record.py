@@ -278,10 +278,7 @@ async def test_a_group_you_share_opens_their_record(
     assert body == {
         "is_self": False,
         "blocked_by_you": False,
-        # The one read about another player that carries both halves of the
-        # naming (``docs/adr/0171`` §4): two people may share a name, and the
-        # record is where a friend tells them apart.
-        "name": "subject",
+        # The nickname and no name (``docs/adr/0199`` §6).
         "nickname": "subject",
         "area_code": "A+05151-000013",
         "social_tags": list(players.COMPETITIVE_TAGS),
@@ -358,7 +355,7 @@ async def test_your_own_record_opens_with_nothing_behind_it(client, searcher):
 
     assert response.status_code == 200, response.text
     assert response.json()["is_self"] is True
-    assert response.json()["name"] == "searcher"
+    assert response.json()["nickname"] == "searcher"
     assert response.json()["nickname"] == "searcher"
     # Nobody can block themselves, so their own sheet never says they did.
     assert response.json()["blocked_by_you"] is False
@@ -393,9 +390,9 @@ async def test_a_game_you_are_both_on_opens_the_record_both_ways(
     mine = await record_of(client, token, searcher["id"])
 
     assert theirs.status_code == 200, theirs.text
-    assert theirs.json()["name"] == "subject"
+    assert theirs.json()["nickname"] == "subject"
     assert mine.status_code == 200, mine.text
-    assert mine.json()["name"] == "searcher"
+    assert mine.json()["nickname"] == "searcher"
 
 
 async def two_strangers_in_one_group(
@@ -439,9 +436,9 @@ async def test_a_group_you_are_both_in_opens_the_record_both_ways(
     mine = await record_of(client, subject_token, searcher["id"])
 
     assert theirs.status_code == 200, theirs.text
-    assert theirs.json()["name"] == "subject"
+    assert theirs.json()["nickname"] == "subject"
     assert mine.status_code == 200, mine.text
-    assert mine.json()["name"] == "searcher"
+    assert mine.json()["nickname"] == "searcher"
 
 
 async def test_leaving_the_group_closes_the_record_it_opened(

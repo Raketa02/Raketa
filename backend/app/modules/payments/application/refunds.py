@@ -178,7 +178,7 @@ class GiveTheSharesBack:
             if reason is RefundReason.LEFT:
                 message = left_the_game_email(
                     to=payer.email,
-                    name=payer.name,
+                    nickname=payer.nickname,
                     club=club,
                     sport=charge.sport,
                     starts_at=charge.starts_at,
@@ -191,7 +191,7 @@ class GiveTheSharesBack:
                 # Only a share let go: one refunded is emailed when it is made.
                 message = seat_taken_nothing_taken_email(
                     to=payer.email,
-                    name=payer.name,
+                    nickname=payer.nickname,
                     club=club,
                     sport=charge.sport,
                     starts_at=charge.starts_at,
@@ -203,7 +203,7 @@ class GiveTheSharesBack:
             ):
                 message = game_you_left_cancelled_email(
                     to=payer.email,
-                    name=payer.name,
+                    nickname=payer.nickname,
                     club=club,
                     sport=charge.sport,
                     starts_at=charge.starts_at,
@@ -216,7 +216,7 @@ class GiveTheSharesBack:
             elif because is not None:
                 message = game_cancelled_email(
                     to=payer.email,
-                    name=payer.name,
+                    nickname=payer.nickname,
                     club=club,
                     sport=charge.sport,
                     starts_at=charge.starts_at,
@@ -229,7 +229,7 @@ class GiveTheSharesBack:
             else:
                 message = game_called_off_email(
                     to=payer.email,
-                    name=payer.name,
+                    nickname=payer.nickname,
                     club=club,
                     sport=charge.sport,
                     starts_at=charge.starts_at,
@@ -282,7 +282,7 @@ class EmailTheSeatTakenRefund:
         await self._mail.enqueue(
             seat_taken_email(
                 to=payer.email,
-                name=payer.name,
+                nickname=payer.nickname,
                 club=_club_named(seller),
                 sport=charge.sport,
                 starts_at=charge.starts_at,
@@ -334,7 +334,7 @@ class TellTheLateLeaver:
         await self._mail.enqueue(
             left_after_the_cut_off_email(
                 to=payer.email,
-                name=payer.name,
+                nickname=payer.nickname,
                 club=_club_named(seller),
                 sport=share.sport,
                 starts_at=share.starts_at,

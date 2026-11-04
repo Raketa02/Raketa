@@ -66,18 +66,18 @@ from the code.
   other side has not answered, so a game long past its hour can still wait on somebody; Home
   asks it about the games older than the hour it reads from.
 - **It has two inward ports, and the first is a single field wide**: `PlayerNames` puts a
-  **name** on a seat and nothing else about the person in it
+  **nickname** on a seat and nothing else about the person in it
   ([ADR-0141](../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the
-  name and never the nickname since
-  [ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+  nickname, on the wire `nickname`, since
+  [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) — #724).
   A Level, an area or a run of form on a record of an evening would be an as-of-now fact
-  stapled to the past; the name is what four people already knew about each other by the time
-  they were on a court together. **The court is the whole of the permission and nothing is
+  stapled to the past; the nickname is what four people already knew about each other by the
+  time they were on a court together. **The court is the whole of the permission and nothing is
   re-gated against the reader**: a block does not reach into a game already agreed. It is
-  **one set read per response** over the union of every court in the answer, and a name
-  `users` cannot answer for is `null` with the seat kept. A null there never means *unnamed*:
-  the naming is onboarding's first step, so the entry gate holds an unnamed account there and
-  `GET /users/me` is the one read where `name` and `nickname` may be null.
+  **one set read per response** over the union of every court in the answer, and a nickname
+  `users` cannot answer for is `null` with the seat kept. A null there never means *no
+  nickname yet*: the naming is onboarding's first step, so the entry gate holds such an
+  account there and `GET /users/me` is the one read where `nickname` may be null.
 - **The second inward port is `CourtPairing`, and it is read *beside* the game and never on
   it** ([ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
   `GET /games/{game_id}/pairing` answers the forecast, the split, what is at stake and each

@@ -14,9 +14,9 @@ ports, and Docker images are built separately for development and production.
 ## Capabilities
 
 - User signup with domain validation for email and password strength — credentials only —
-  and **the naming** (`PUT /api/v1/users/me/name`): a name, free text that every screen says,
-  and a unique nickname, drawn as `@…` on a record and the You tab
-  ([ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+  and **the naming** (`PUT /api/v1/users/me/name`): a unique nickname and nothing else, what
+  every screen says, never with an @
+  ([ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md)).
 - Login with access and refresh JWT issuance.
 - Refresh-token rotation with server-side token state and replay protection.
 - Idempotent logout that does not leak token existence.

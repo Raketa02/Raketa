@@ -20,10 +20,10 @@ class UserORM(Base):
         UUIDType(binary=False), primary_key=True, default=uuid.uuid4
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
-    # Both null until the naming (``docs/adr/0171`` §2). The unique constraint
-    # on the nickname admits any number of nulls, on Postgres and SQLite alike,
-    # which is exactly the reading wanted: two unnamed accounts share nothing.
-    name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Null until the naming (``docs/adr/0199`` §3). The unique constraint on
+    # the nickname admits any number of nulls, on Postgres and SQLite alike,
+    # which is exactly the reading wanted: two accounts with no nickname share
+    # nothing. There is no name column: no account holds a player name.
     nickname: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )

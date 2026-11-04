@@ -2,7 +2,7 @@
 contexts that hold the facts: **the seller** — a club's name and its account at
 the provider, read off the Club courts stream (``clubs``, so the arrow runs
 ``payments → clubs`` as the account link's does), and where its desk is emailed,
-its one sign-in (#548) — and **the payer**, a player's address and Name
+its one sign-in (#548) — and **the payer**, a player's address and nickname
 (``users``).
 """
 
@@ -61,6 +61,6 @@ class UserPayers:
                 continue
             payers[player_id] = Payer(
                 email=user.email.value,
-                name=None if user.name is None else user.name.value,
+                nickname=None if user.nickname is None else user.nickname.value,
             )
         return payers

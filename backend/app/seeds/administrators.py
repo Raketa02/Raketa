@@ -19,13 +19,17 @@ password with is the one the email carries.
 **The three are arranged for the screens the later tickets draw.**
 
 - ``administrator-only@raketa.example`` — *Marta Wójcik* — is an account an
-  invitation opened and nothing else: no nickname, no Adult attestation, no
-  player profile. She signs in with the seed password and lands in the
-  administrator area; the club website draws *Reset password* on her row.
-- ``rated-in-every-sport`` — the request card's *Tomek K.* — already played, and
-  accepted in the app. His row has no *Reset password*: his account also plays.
-- ``the-one-sport-player`` has an invitation waiting, so signing in as them shows
-  the invitation sheet on launch.
+  invitation opened and nothing else: no nickname, no player name, no Adult
+  attestation, no player profile. She signs in with the seed password and lands
+  in the administrator area; the club website draws *Reset password* on her row.
+- ``rated-in-every-sport`` — typed by the club as *Tomek Kowal* — already
+  played, and accepted in the app. His row has no
+  *Reset password*: his account also plays, and the players read his nickname.
+- ``the-one-sport-player`` — *Ola Kamińska* to the club — has an invitation
+  waiting, so signing in as them shows the invitation sheet on launch.
+
+Each name here is **the club's, typed for an Administrator**
+(``docs/adr/0199`` §4): the catalogue holds no player name.
 
 **Re-running invites nobody twice.** An Administrator already at the club is
 left exactly as the developer left it — reset, removed or accepted in a walk —
@@ -78,7 +82,8 @@ from app.modules.auth.application.one_time_credentials import OneTimeCredentials
 from app.modules.auth.application.sign_out_everywhere import SignOutEverywhere
 from app.modules.auth.application.token_rotation import TokenRotator
 from app.modules.auth.domain.ports import CredentialSecrets
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.administrators.domain.value_objects import Name
+from app.modules.users.domain.value_objects import Email
 from app.seeds.catalog import (
     RATED_IN_EVERY_SPORT,
     SEED_EMAIL_DOMAIN,
@@ -103,9 +108,18 @@ ADMINISTRATOR_ONLY_NAME: Final = "Marta Wójcik"
 PLAYER_AND_ADMINISTRATOR: Final[SeedAccount] = RATED_IN_EVERY_SPORT
 PENDING: Final[SeedAccount] = THE_ONE_SPORT_PLAYER
 
+#: What the club typed for each of them. **The Administrator's, never the
+#: player's** (``docs/adr/0199`` §4): the seed holds no player name, so the club
+#: types one here as a desk would — and *"… runs this group"* says it only for
+#: an Administrator with no nickname yet.
+PLAYER_AND_ADMINISTRATOR_NAME: Final = "Tomek Kowal"
+PENDING_NAME: Final = "Ola Kamińska"
+
 # Refused on import, through the domain's own value objects, as the clubs' are.
 Email(ADMINISTRATOR_ONLY_EMAIL)
 Name(ADMINISTRATOR_ONLY_NAME)
+Name(PLAYER_AND_ADMINISTRATOR_NAME)
+Name(PENDING_NAME)
 
 
 @final
@@ -258,7 +272,7 @@ async def _player_and_administrator(wiring: _Wiring, club_id) -> SeededAdministr
             )
         row = await wiring.invite().execute(
             InviteAdministratorCommand(
-                club_id=club_id, name=account.name, email=email.value
+                club_id=club_id, name=PLAYER_AND_ADMINISTRATOR_NAME, email=email.value
             )
         )
         await AcceptInvitation(
@@ -272,7 +286,7 @@ async def _player_and_administrator(wiring: _Wiring, club_id) -> SeededAdministr
         wiring,
         club_id,
         email=email,
-        name=account.name,
+        name=PLAYER_AND_ADMINISTRATOR_NAME,
         way_in="already played, and accepted in the app",
         action=action,
     )
@@ -285,7 +299,7 @@ async def _pending(wiring: _Wiring, club_id) -> SeededAdministrator:
     if found is None:
         await wiring.invite().execute(
             InviteAdministratorCommand(
-                club_id=club_id, name=account.name, email=email.value
+                club_id=club_id, name=PENDING_NAME, email=email.value
             )
         )
         action = "invited"
@@ -304,7 +318,7 @@ async def _pending(wiring: _Wiring, club_id) -> SeededAdministrator:
         wiring,
         club_id,
         email=email,
-        name=account.name,
+        name=PENDING_NAME,
         way_in="has not answered: the invitation sheet shows on launch",
         action=action,
     )

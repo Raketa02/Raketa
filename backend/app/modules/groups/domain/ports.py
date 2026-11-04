@@ -256,10 +256,10 @@ class RatedGroupMembers(Protocol):
 @final
 @dataclass(frozen=True, slots=True)
 class GroupFace:
-    """What a member is called and what they look like — a name, a photograph,
-    and nothing else.
+    """What a member is called and what they look like — a nickname, a
+    photograph, and nothing else.
 
-    ``name`` is the **Name** and never the nickname (``docs/adr/0171`` §4).
+    ``nickname`` is whole and never written with an @ (``docs/adr/0199`` §1).
     ``None`` for an account ``users`` can no longer name; **the member keeps
     their seat**, because they are still in the group. ``photo_id`` and
     ``photo_url`` are present **exactly together**, and neither means the
@@ -267,7 +267,7 @@ class GroupFace:
     """
 
     player_id: UUID
-    name: str | None = None
+    nickname: str | None = None
     photo_id: UUID | None = None
     photo_url: str | None = None
 
@@ -291,9 +291,9 @@ class GroupFaces(Protocol):
         ...
 
     async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
-        """The Name of each of these players and **nothing else** — a face with
-        no photograph, for a line that names somebody and draws nobody: the
-        Owner on *Karol approves joins*. One question about the union; a player
+        """The nickname of each of these players and **nothing else** — a face
+        with no photograph, for a line that names somebody and draws nobody: the
+        Owner on *karol approves joins*. One question about the union; a player
         ``users`` cannot name is absent."""
         ...
 
@@ -365,10 +365,10 @@ class RunningAdministrator:
 
     That name is what **the club's own tables** print — its Groups table names
     the person its Administrators table lists (#510). The player side's
-    *approves joins* line says the **account's** Name, as their admin-tagged
+    *approves joins* line says the **account's** nickname, as their admin-tagged
     Members row does, and falls back to this one only where ``users`` cannot
-    answer: an account an invitation opened, whose Name *is* the name the club
-    typed (``docs/adr/0185`` §4)."""
+    answer: an Administrator who has never played and has no nickname yet
+    (``docs/adr/0199`` §4)."""
 
     account_id: UUID
     club_id: UUID

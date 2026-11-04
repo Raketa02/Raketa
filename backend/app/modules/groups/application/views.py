@@ -84,20 +84,21 @@ class MyGroup:
 class GroupAtClub:
     """A group inside a club's card, as a reader who may join it sees it.
 
-    ``owner_name`` is the Owner's **Name** — who answers a Join request, for the
-    *approves joins* line — or ``None`` for an account ``users`` can no longer
-    name, and on an official group, which has no Owner. ``administrator_name``
-    is an official group's counterpart: the Name of the account running it,
-    ``None`` while nobody does. ``is_administrator``
+    ``owner_nickname`` is the Owner's **nickname** — who answers a Join request,
+    for the *approves joins* line — or ``None`` for an account ``users`` can no
+    longer name, and on an official group, which has no Owner.
+    ``administrator_nickname`` is an official group's counterpart: the nickname
+    of the account running it, or the name its club typed until it has one
+    (``docs/adr/0199`` §4), ``None`` while nobody does. ``is_administrator``
     is whether **the reader** runs it — and joins it directly, whatever its
     policy (``docs/adr/0183`` §7).
     """
 
     row: GroupRow
     join_policy: JoinPolicy
-    owner_name: str | None
+    owner_nickname: str | None
     relation: GroupRelation
-    administrator_name: str | None
+    administrator_nickname: str | None
     is_administrator: bool
 
 
@@ -186,7 +187,7 @@ class GroupPage:
     #: An official group's *approves joins* line, as a club's card says it
     #: (``approver_name``) — ``None`` while nobody runs it, and on a player
     #: group. ``is_administrator`` is whether the reader runs it (#510).
-    administrator_name: str | None
+    administrator_nickname: str | None
     is_administrator: bool
 
 
@@ -344,17 +345,17 @@ def at_club(
 ) -> GroupAtClub:
     """A group as a club's card draws it for this reader — the search's row and
     the join's answer, which must be one shape for the card to be patched in
-    place. ``names`` holds every Name ``users`` could answer for; ``runner`` is
-    who runs an official group now.
+    place. ``names`` holds every nickname ``users`` could answer for;
+    ``runner`` is who runs an official group now.
 
     **An official group's approver is named as a player group's Owner is** —
-    by the account's Name, so the line and the admin-tagged Members row say
-    one name — and by the name the club gave them only where ``users`` has
-    none to answer with: an account an invitation opened, whose Name is that
-    name (``docs/adr/0185`` §4).
+    by the account's nickname, so the line and the admin-tagged Members row say
+    one handle — and by the name the club gave them only where ``users`` has
+    none to answer with: an Administrator who has never played
+    (``docs/adr/0199`` §4).
     """
 
-    owner_name = (
+    owner_nickname = (
         names.get(listing.owner_id)
         if listing.kind is GroupKind.PLAYER and listing.owner_id is not None
         else None
@@ -362,9 +363,9 @@ def at_club(
     return GroupAtClub(
         row=row_of(listing, rated),
         join_policy=listing.join_policy,
-        owner_name=owner_name,
+        owner_nickname=owner_nickname,
         relation=relation_of(listing, reader_id),
-        administrator_name=approver_name(runner, names),
+        administrator_nickname=approver_name(runner, names),
         is_administrator=runner is not None and runner.account_id == reader_id,
     )
 
@@ -373,10 +374,11 @@ def approver_name(
     runner: RunningAdministrator | None, names: Mapping[UUID, str]
 ) -> str | None:
     """Who an official group's *approves joins* line names: the account
-    running it by **its** Name — the one its admin-tagged Members row says —
-    and by the name the club gave them only where ``users`` has none to answer
-    with (``docs/adr/0185`` §4). ``None`` while nobody runs it: the line then
-    names the club (``docs/adr/0183`` §3)."""
+    running it by **its** nickname — the one its admin-tagged Members row says
+    — and by the name the club typed for them only where ``users`` has none to
+    answer with: an Administrator who has never played (``docs/adr/0199`` §4).
+    ``None`` while nobody runs it: the line then names the club
+    (``docs/adr/0183`` §3)."""
 
     return None if runner is None else names.get(runner.account_id, runner.name)
 
@@ -402,7 +404,7 @@ async def at_clubs(
 ) -> dict[UUID, GroupAtClub]:
     """Each of these groups as a club's card draws it, by id — **three reads
     whatever the number of groups**: the ratings behind every dot, who runs the
-    official ones, and every Owner's and runner's Name in one question."""
+    official ones, and every Owner's and runner's nickname in one question."""
 
     rated = await rated_among(ratings, listings)
     runners = await running_administrators(administrators, listings)

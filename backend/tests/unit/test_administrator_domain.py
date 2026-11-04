@@ -38,7 +38,8 @@ from app.modules.auth.domain.one_time_credential import (
     LIFETIMES,
     CredentialPurpose,
 )
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.administrators.domain.value_objects import Name
+from app.modules.users.domain.value_objects import Email
 
 NOW = instant(datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc))
 CLUB = uuid4()

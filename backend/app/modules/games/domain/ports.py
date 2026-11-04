@@ -384,10 +384,9 @@ class PlayerNames(Protocol):
     borrows about a person, and the whole of it.**
 
     A game is a record of an evening, and ``docs/adr/0141`` fixes what a record
-    may say about the people in it: the **name** they gave, and nothing that
-    changes with who is looking or with when you ask. The name and not the
-    nickname (``docs/adr/0171`` §4) — the nickname is a handle, drawn on a
-    record and their own You tab and said nowhere. So there is one method here
+    may say about the people in it: what they are called — their **nickname**
+    (``docs/adr/0199`` §1) — and nothing that changes with who is looking. So
+    there is one method here
     and there is nowhere on it for a Level, an area or a photograph to arrive
     later — a card is what a *search* attaches, where a gate decided the person
     may be shown at all.
@@ -398,16 +397,16 @@ class PlayerNames(Protocol):
     """
 
     async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
-        """Each of these players' name, as one set read.
+        """Each of these players' nickname, as one set read.
 
         **A player absent from the answer keeps their seat.** A card with no
         name is not a card and the shortlist drops that row; a *seat* with no
         name is still a person who was on the court, and dropping it would
-        publish a three-person doubles game. The name goes ``None`` on the
+        publish a three-person doubles game. The nickname goes ``None`` on the
         wire, the screen says the side, and the game is unchanged — which is the
         same fall-back a Play court already draws for a seat whose row the record
-        can no longer describe. A null there never means *unnamed*: the gate
-        holds an unnamed account at the naming step (``docs/adr/0171`` §4).
+        can no longer describe. A null there never means *no nickname yet*: the
+        gate holds such an account at the naming step (``docs/adr/0199`` §3).
         """
         ...
 

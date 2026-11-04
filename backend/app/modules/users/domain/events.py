@@ -10,13 +10,13 @@ from uuid import UUID
 class UserRegistered:
     """An account opened — with credentials, and **unnamed**.
 
-    Carries no nickname since ``docs/adr/0171`` §2: sign-up is email, password
-    and the Adult attestation, and the name and nickname arrive together in
-    :class:`UserNamed`. The contract stays ``users.user_registered`` / v1
-    because a version exists to tell two stored shapes apart and only one will
-    ever be stored — only ``local`` runs, its store is disposable and a reset
-    seed is the migration. The day a store outlives a change like this, the
-    version is the first thing that has to move.
+    Carries no nickname (``docs/adr/0199`` §3): sign-up is email, password and
+    the Adult attestation, and the nickname arrives with :class:`UserNamed`. The
+    contract stays ``users.user_registered`` / v1 because a version exists to
+    tell two stored shapes apart and only one will ever be stored — only
+    ``local`` runs, its store is disposable and a reset seed is the migration.
+    The day a store outlives a change like this, the version is the first thing
+    that has to move.
     """
 
     user_id: UUID
@@ -46,11 +46,28 @@ class UserRegistered:
 
 @dataclass(frozen=True)
 class UserNamed:
-    """The naming — one act, both values (``docs/adr/0171`` §2).
+    """The naming — a **Nickname**, and nothing else (``docs/adr/0199`` §3).
 
-    A **Name** and a **Nickname** together, because they are asked under one
-    title and a later change is the same act: the fold keeps the latest. There
-    is no event for one without the other.
+    ``users.user_named`` **v2**. Repeatable: a later change is the same act, and
+    the fold keeps the latest. The Name it carried beside the nickname until
+    ADR-0199 is retired; :class:`UserNamedV1` reads a row of that shape.
+    """
+
+    user_id: UUID
+    nickname: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class UserNamedV1:
+    """``users.user_named`` **v1**, decode-only: the naming as ADR-0171 wrote
+    it, a Name beside the nickname (``docs/adr/0199`` §6).
+
+    Never written. A stored row of it decodes to this, and **the fold reads it
+    with the name ignored**, so no account holds a player name — the upcast the
+    ADR wrote ahead of the day a store outlives the change. Kept beside
+    :class:`UserNamed` rather than folded into it, because the codec builds an
+    event from every key its row carries.
     """
 
     user_id: UUID
@@ -96,10 +113,11 @@ class AccountOpenedByInvitation:
     """An account an **Invitation** opened, the moment its person set a password
     (``docs/adr/0184`` §2, ``docs/adr/0185`` §4–§5).
 
-    The other way a stream begins, beside :class:`UserRegistered`, and a
-    different shape on purpose: **the name the club typed** arrives with the
-    account, so it is not unnamed — and there is **no nickname and no Adult
-    attestation**, because the club typed an email and not the person. Nothing
+    ``users.account_opened_by_invitation`` **v2**. The other way a stream
+    begins, beside :class:`UserRegistered`, and it holds **no player name, no
+    nickname and no Adult attestation** (``docs/adr/0199`` §4): the name the
+    club typed is the Administrator's, and stays on the Administrator; the
+    person picks a nickname at *Start playing*, like anybody else. Nothing
     player-side reacts to it: an account like this is in no pool until it has
     attested and been through onboarding.
 
@@ -107,6 +125,19 @@ class AccountOpenedByInvitation:
     holder and lives as long as the account. The one-time credential that opened
     the way to it never enters an event (``docs/adr/0184`` §4).
     """
+
+    user_id: UUID
+    email: str
+    password_hash: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AccountOpenedByInvitationV1:
+    """``users.account_opened_by_invitation`` **v1**, decode-only: it carried
+    the name the club typed onto the account (``docs/adr/0185`` §4, before
+    ``docs/adr/0199`` §4). Never written, and **read with the name ignored**,
+    exactly as :class:`UserNamedV1` is."""
 
     user_id: UUID
     email: str

@@ -43,13 +43,13 @@ class BlockPlayerRequest(BaseModel):
 
 
 class BlockedPlayerSchema(BaseModel):
-    """One person you blocked — a name, a photograph, and when."""
+    """One person you blocked — a nickname, a photograph, and when."""
 
     player_id: UUID = Field(
         description="Who you blocked. `DELETE /blocks/{player_id}` unblocks them."
     )
-    name: str = Field(
-        description="The whole Name, never the nickname."
+    nickname: str = Field(
+        description=("Their nickname, whole and never with an @ (docs/adr/0199 §1).")
     )
     photo_id: UUID = Field(
         OMITTED,
@@ -76,7 +76,7 @@ class BlockedPlayerSchema(BaseModel):
     def of(cls, blocked: BlockedPlayer) -> "BlockedPlayerSchema":
         fields: dict[str, Any] = {
             "player_id": blocked.player_id,
-            "name": blocked.name,
+            "nickname": blocked.nickname,
             "blocked_at": blocked.blocked_at,
         }
         if blocked.photo_id is not None and blocked.photo_url is not None:

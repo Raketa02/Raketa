@@ -1,12 +1,11 @@
 """``PlayerNames`` over the port ``users`` already publishes.
 
 A translation and nothing more, on ``UsersAccountStatus``'s precedent: ``users``
-answers *what is this account called* — a name and a nickname together — and
-this context's question is *what do I print on this seat*, which is the **name**
-alone (``docs/adr/0171`` §4): the nickname is a handle drawn on a record and
-never on a seat. Keeping the two sentences apart is what lets ``users`` grow a
-second reason to answer nothing — an erasure, a suspension — without a game's
-wire shape changing.
+answers *what is this account's nickname*, and this context's question is *what
+do I print on this seat* — which is the **nickname**, whole
+(``docs/adr/0199`` §1). Keeping the two sentences apart is what lets ``users``
+grow a second reason to answer nothing — an erasure, a suspension — without a
+game's wire shape changing.
 
 **It reads the provider's own port and never the provider's table.** A ``select``
 over ``UserORM`` written here would make ``games`` a second reader of somebody
@@ -28,7 +27,7 @@ from app.modules.users.domain.ports import UserRepository
 
 @final
 class UsersNames:
-    """What ``users`` calls each of these accounts."""
+    """Each of these accounts' nickname, as ``users`` holds it."""
 
     def __init__(self, users: UserRepository) -> None:
         self._users = users
@@ -36,5 +35,4 @@ class UsersNames:
     async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         if not player_ids:
             return {}
-        namings = await self._users.find_namings_of(player_ids)
-        return {player_id: naming.name for player_id, naming in namings.items()}
+        return await self._users.find_nicknames_of(player_ids)

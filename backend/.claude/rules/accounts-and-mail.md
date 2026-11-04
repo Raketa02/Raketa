@@ -42,7 +42,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   administratorship reached an account, *invitation withdrawn* to somebody still invited —
   notices, so no button and no code. **Everything done to a User is done by
   `users`** (`InvitationAccounts`, behind the `AccountHolders` port): an account an invitation
-  opens is `AccountOpenedByInvitation` — the club-typed Name, no Nickname, no attestation —
+  opens is `AccountOpenedByInvitation` (v2) — no player name (the club-typed name stays on
+  the Administrator, ADR-0199 §4), no Nickname, no attestation; v1 carried the name and is
+  decoded by `AccountOpenedByInvitationV1` with it ignored —
   the club's reset is `PasswordCleared` (`users.password_hash` became nullable, and a cleared
   account signs in as a stranger would), and the attestation given later is `AdultAttested`.
   **The club's reset is refused for an account that acts as a player** — attested, or holding

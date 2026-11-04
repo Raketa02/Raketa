@@ -34,7 +34,7 @@ class BlockedPlayer:
     """One person the reader blocked, as the list draws them."""
 
     player_id: UUID
-    name: str
+    nickname: str
     photo_id: UUID | None
     photo_url: str | None
     blocked_at: Instant
@@ -57,12 +57,12 @@ class ReadBlockedPlayers:
         listed: list[BlockedPlayer] = []
         for block in own:
             face = faces.get(block.blocked_id)
-            if face is None or face.name is None:
+            if face is None or face.nickname is None:
                 continue
             listed.append(
                 BlockedPlayer(
                     player_id=block.blocked_id,
-                    name=face.name,
+                    nickname=face.nickname,
                     photo_id=face.photo_id,
                     photo_url=face.photo_url,
                     blocked_at=block.blocked_at,

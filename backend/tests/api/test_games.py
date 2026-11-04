@@ -154,7 +154,7 @@ async def test_a_seat_names_the_person_in_it_and_says_nothing_else_about_them(
 
     for token in [searcher["token"]] + [one["token"] for one in people.values()]:
         (game,) = await _games(client, token)
-        assert {seat["player_id"]: seat["name"] for seat in game["seats"]} == (
+        assert {seat["player_id"]: seat["nickname"] for seat in game["seats"]} == (
             everybody
         )
         for seat in game["seats"]:
@@ -175,7 +175,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
 
     people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
-    named = {seat["player_id"]: seat["name"] for seat in game["seats"]}
+    named = {seat["player_id"]: seat["nickname"] for seat in game["seats"]}
 
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -184,7 +184,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
     )
     assert stated.status_code == 200, stated.text
     assert {
-        seat["player_id"]: seat["name"] for seat in stated.json()["seats"]
+        seat["player_id"]: seat["nickname"] for seat in stated.json()["seats"]
     } == named
 
     theirs = _an_opponent_of(game, searcher, people)
@@ -194,7 +194,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
     )
     assert agreed.status_code == 200, agreed.text
     assert {
-        seat["player_id"]: seat["name"] for seat in agreed.json()["seats"]
+        seat["player_id"]: seat["nickname"] for seat in agreed.json()["seats"]
     } == named
 
 
@@ -219,7 +219,7 @@ async def test_a_block_does_not_unname_somebody_you_already_played(
 
     for token in (searcher["token"], theirs["token"]):
         (after,) = await _games(client, token)
-        assert all(seat["name"] is not None for seat in after["seats"]), (
+        assert all(seat["nickname"] is not None for seat in after["seats"]), (
             "a block is forward-looking and does not unname a court"
         )
 

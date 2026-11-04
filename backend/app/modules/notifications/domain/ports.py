@@ -391,7 +391,8 @@ class SeatOffers(Protocol):
 
 class Names(Protocol):
     async def of_people(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
-        """Each player's Name — never the nickname."""
+        """Each player's nickname, whole and never with an @
+        (``docs/adr/0199`` §1). An account with none is absent."""
         ...
 
     async def of_clubs(self, club_ids: Collection[UUID]) -> Mapping[UUID, str]: ...

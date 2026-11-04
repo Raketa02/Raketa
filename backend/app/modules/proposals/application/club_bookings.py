@@ -113,7 +113,7 @@ class ClubDay:
     rows: tuple[ClubBookingRow, ...]
     #: How many of the day's bookings each filter shows — the chips' counts.
     counts: Mapping[ClubFilter, int]
-    #: Each player's Name; an account that can no longer be named is absent.
+    #: Each player's nickname; an account that can no longer be named is absent.
     names: Mapping[UUID, str]
 
 

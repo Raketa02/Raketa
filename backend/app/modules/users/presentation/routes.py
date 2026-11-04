@@ -7,9 +7,9 @@ on a route of its own because onboarding's entry gate reads it on every cold
 launch alongside the account, and two round trips is two things that can fail on
 a bad connection (``docs/adr/0090``).
 
-``/me/name`` is **the naming** (``docs/adr/0171`` §2): sign-up asks for
+``/me/name`` is **the naming** (``docs/adr/0199`` §3): sign-up asks for
 credentials only, and this is the one act that says how people should see a
-player — a name and a nickname together, repeatable, refused with the users
+player — a nickname and nothing else, repeatable, refused with the users
 context's own conflict when the handle is another player's. It sits beside
 ``/me`` because that refusal is this context's, and because ``/me`` is where
 the gate reads the answer back.
@@ -77,9 +77,9 @@ async def register_user(
     status_code=status.HTTP_200_OK,
     summary="Current authenticated user",
     description=(
-        "Carries `name` and `nickname` — the entry gate's first destination is "
-        "*not named in full*, either missing — `has_player_profile`, its "
-        "fourth, and `adult_attested`, all read from the account's own event "
+        "Carries `nickname` — the entry gate's first destination is *no "
+        "nickname* — `has_player_profile`, its fourth, and `adult_attested`, "
+        "all read from the account's own event "
         "streams rather than from a projection, so a player who has just named "
         "themselves or committed their profile is never sent back to a step "
         "they just finished by a read model that has not caught up. And "
@@ -142,21 +142,21 @@ async def attest_adult(
             "model": ErrorResponse,
             "description": (
                 "`nickname_already_taken` — the handle is another player's, "
-                "`details.field` is `nickname`, and nothing was recorded: the "
-                "act is one event, so the name is not kept either. The client "
-                "writes the sentence under the field."
+                "`details.field` is `nickname`, and nothing was recorded. The "
+                "client writes the sentence under the field."
             ),
         },
     },
     summary="Name yourself — how should people see you?",
     description=(
-        "**The naming**: one act carrying a name and a nickname, for the "
-        "authenticated player, and repeatable — a later change is the same act, "
-        "and keeping the nickname you already hold is admitted. Refused with "
-        "`409 nickname_already_taken` when the handle is another player's; the "
-        "name is checked against nobody. Answers the pair as recorded — the name "
-        "trimmed and collapsed — and the client re-reads `GET /me` before moving "
-        "on, which is where the entry gate reads it."
+        "**The naming**: a nickname and nothing else, for the authenticated "
+        "player (docs/adr/0199 §3), and repeatable — a later change is the "
+        "same act, at any time, and keeping the nickname you already hold is "
+        "admitted. Refused with `409 nickname_already_taken` when the handle "
+        "is another player's. Answers the nickname as recorded, and the client "
+        "re-reads `GET /me` before moving on, which is where the "
+        "entry gate reads it. The path keeps the word *name*: what a player is "
+        "called, which is the nickname."
     ),
 )
 async def name_me(
@@ -164,9 +164,7 @@ async def name_me(
     user: CurrentUserDep,
     use_case: NameUserDep,
 ) -> NamingResponse:
-    naming = await use_case.execute(
-        NameUserCommand(
-            user_id=user.id, name=payload.name, nickname=payload.nickname
-        )
+    nickname = await use_case.execute(
+        NameUserCommand(user_id=user.id, nickname=payload.nickname)
     )
-    return NamingResponse(name=naming.name, nickname=naming.nickname)
+    return NamingResponse(nickname=nickname.value)

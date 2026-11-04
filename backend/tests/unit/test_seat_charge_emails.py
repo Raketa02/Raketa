@@ -38,7 +38,7 @@ def a_booking_email(*, held_until, booked_on_a_payment: bool = False):
 
     return game_booked_email(
         to="ivan@example.com",
-        name="Ivan",
+        nickname="ivan.k",
         club="Bonarka Arena",
         court="Court 2",
         sport=Sport.PADEL,
@@ -60,6 +60,16 @@ def test_before_the_cut_off_it_says_the_share_is_held_and_when_it_is_taken():
     ) in email.text
     assert "card fee" not in email.text
     assert "you paid" not in email.text.lower()
+
+
+def test_the_booking_greets_the_player_by_their_nickname():
+    """*It's a game, ivan.k!* — the whole handle, never an @ and never a name
+    (``docs/adr/0199`` §1)."""
+
+    email = a_booking_email(held_until=warsaw(7, 19))
+
+    assert email.text.startswith("It's a game, ivan.k!")
+    assert "@ivan.k" not in email.text
 
 
 def test_a_game_that_filled_after_its_cut_off_was_paid_and_keeps_its_sentence():
@@ -89,7 +99,7 @@ def a_seat_taken_email(*, refunded_grosze: int, fee_kept_grosze: int):
 
     return seat_taken_email(
         to="ivan@example.com",
-        name="Ivan",
+        nickname="ivan.k",
         club="Bonarka Arena",
         sport=Sport.PADEL,
         starts_at=warsaw(8, 19),
@@ -113,7 +123,7 @@ def test_a_seat_taken_refund_states_the_exact_sum_and_what_was_kept():
 def a_late_leave_email(*, refund_grosze: int | None, fee_kept_grosze: int | None):
     return left_after_the_cut_off_email(
         to="ivan@example.com",
-        name="Ivan",
+        nickname="ivan.k",
         club="Bonarka Arena",
         sport=Sport.PADEL,
         starts_at=warsaw(8, 19),
@@ -151,7 +161,7 @@ def test_no_money_email_mentions_blik():
         a_seat_taken_email(refunded_grosze=38_24, fee_kept_grosze=1_76),
         game_called_off_email(
             to="ivan@example.com",
-            name="Ivan",
+            nickname="ivan.k",
             club="Bonarka Arena",
             sport=Sport.PADEL,
             starts_at=warsaw(8, 19),
@@ -160,7 +170,7 @@ def test_no_money_email_mentions_blik():
         ),
         game_cancelled_email(
             to="ivan@example.com",
-            name="Ivan",
+            nickname="ivan.k",
             club="Bonarka Arena",
             sport=Sport.PADEL,
             starts_at=warsaw(8, 19),
@@ -170,7 +180,7 @@ def test_no_money_email_mentions_blik():
         ),
         game_you_left_cancelled_email(
             to="ivan@example.com",
-            name="Ivan",
+            nickname="ivan.k",
             club="Bonarka Arena",
             sport=Sport.PADEL,
             starts_at=warsaw(8, 19),
@@ -180,7 +190,7 @@ def test_no_money_email_mentions_blik():
         ),
         left_the_game_email(
             to="ivan@example.com",
-            name="Ivan",
+            nickname="ivan.k",
             club="Bonarka Arena",
             sport=Sport.PADEL,
             starts_at=warsaw(8, 19),

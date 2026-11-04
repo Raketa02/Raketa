@@ -1,12 +1,11 @@
-"""``GroupFaces`` — a name from ``users``, a face from the Player profile.
+"""``GroupFaces`` — a nickname from ``users``, a face from the Player profile.
 
 The conversations' ``ProfileMemberFaces`` one context over, for the reason that
 port gives for being a third spelling: it reads **each provider's own port** and
-never its table or its bucket. The name comes from ``users``, which owns what an
-account is called — the nickname beside it is left here, because a handle is
-drawn on a record and said nowhere (``docs/adr/0171`` §4); the photo id comes
-from the profile, which owns which photograph a person leads with; and the link
-is signed by ``PhotoStorage``, which owns where the bytes live.
+never its table or its bucket. The nickname comes from ``users``, which owns
+what an account is called (``docs/adr/0199`` §1); the photo id comes from the
+profile, which owns which photograph a person leads with; and the link is
+signed by ``PhotoStorage``, which owns where the bytes live.
 
 **Signing is arithmetic, not a request** (``docs/adr/0107``), so the faces a
 group page draws cost no round trip to the store. A profile is a stream folded
@@ -45,10 +44,9 @@ class ProfileGroupFaces:
         wanted = sorted(set(player_ids))
         if not wanted:
             return {}
-        namings = await self._users.find_namings_of(wanted)
+        nicknames = await self._users.find_nicknames_of(wanted)
         faces: dict[UUID, GroupFace] = {}
         for player_id in wanted:
-            naming = namings.get(player_id)
             photo_id = await self._first_photo(player_id)
             url = (
                 None
@@ -60,7 +58,7 @@ class ProfileGroupFaces:
             )
             faces[player_id] = GroupFace(
                 player_id=player_id,
-                name=None if naming is None else naming.name,
+                nickname=nicknames.get(player_id),
                 photo_id=None if url is None else photo_id,
                 photo_url=url,
             )
@@ -70,8 +68,7 @@ class ProfileGroupFaces:
         wanted = sorted(set(player_ids))
         if not wanted:
             return {}
-        namings = await self._users.find_namings_of(wanted)
-        return {player_id: naming.name for player_id, naming in namings.items()}
+        return await self._users.find_nicknames_of(wanted)
 
     async def _first_photo(self, player_id: UUID) -> UUID | None:
         """The photograph a face shows — **the first**, because order is meaning

@@ -53,7 +53,7 @@ async def listed(client, reader: dict, group: dict, sport: str = "PADEL") -> lis
 
 
 def names(rows: list[dict]) -> list[str]:
-    return [row["name"] for row in rows]
+    return [row["nickname"] for row in rows]
 
 
 async def block(client, blocker: dict, blocked: dict) -> None:
@@ -133,7 +133,7 @@ async def test_a_row_is_a_face_the_level_in_that_sport_and_when_they_joined(clie
     # hundred (#659): every row carries the figure and its band.
     assert set(owner) == {
         "player_id",
-        "name",
+        "nickname",
         "level",
         "player_score",
         "reliability_band",

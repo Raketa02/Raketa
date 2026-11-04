@@ -70,13 +70,10 @@ class OnCourtVerdict(StrEnum):
 class SubjectIdentity:
     """Who this person is, as the platform can describe them to a stranger.
 
-    **The whole name and nothing that shortens it.** ``users`` holds the
-    **Name** a player gave and the **Nickname**, their handle; every sentence
-    naming somebody uses the name they gave or names nobody. **This is the one
-    surface about another player that carries both** (``docs/adr/0171`` §4):
-    two people may share a name, and the record is where a friend tells two
-    *Ania Kowalska*s apart, so the ``@nickname`` is drawn under the name here
-    and on a player's own You tab, and nowhere else.
+    **The whole nickname and nothing that shortens it** (``docs/adr/0199``
+    §1): ``users`` holds a player's handle and no name, and every sentence
+    naming somebody uses the whole handle or names nobody. A nickname is
+    unique, so it is all a friend needs to tell two people apart.
 
     **The area is a code and never a sentence.** Nothing in this repository can
     turn a coordinate into the name of a neighbourhood, and a code is what
@@ -84,7 +81,6 @@ class SubjectIdentity:
     (``docs/adr/0021``).
     """
 
-    name: str
     nickname: str
     #: The **first** photo, because order is meaning in a player's photo list.
     #: ``None`` when they have none.

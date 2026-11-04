@@ -283,12 +283,12 @@ async def test_removing_marta_leaves_both_her_groups_needing_an_administrator(
     ]
     # Players read "Ogrody 33 approves joins", and the request waits on it.
     seen = row_in(await search(client, kasia, "ogrody"), club)
-    assert seen["administrator_name"] is None
+    assert seen["administrator_nickname"] is None
     assert seen["relation"] == "REQUESTED"
     assert rows[0]["waiting_count"] == 1
     # A member's Info tab reads it too.
     page = (await read(client, ewa, club)).json()
-    assert (page["administrator_name"], page["is_administrator"]) == (None, False)
+    assert (page["administrator_nickname"], page["is_administrator"]) == (None, False)
 
 
 # --------------------------------------------------------------------------- #
@@ -325,14 +325,14 @@ async def test_the_desk_hands_an_orphan_to_tomek_and_the_waiting_request_is_his(
     assert his_page["whatsapp_size"] == before["whatsapp_size"] == 48
     # Players read his name on the line now, on the card and on the page.
     seen = row_in(await search(client, kasia, "ogrody"), club)
-    assert seen["administrator_name"] == "tomek"
+    assert seen["administrator_nickname"] == "tomek"
 
     approved = await answer(client, tomek, ogrody["id"], club, kasia, "approve")
 
     assert approved.status_code == 204, approved.text
     (row,) = await the_club_s_groups(client, ogrody)
     assert (row["member_count"], row["waiting_count"]) == (1, 0)
-    assert (await read(client, kasia, club)).json()["administrator_name"] == "tomek"
+    assert (await read(client, kasia, club)).json()["administrator_nickname"] == "tomek"
 
 
 async def test_the_old_administrator_stops_seeing_it_and_stays_in_it_as_a_player(

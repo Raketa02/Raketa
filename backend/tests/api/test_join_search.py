@@ -384,8 +384,8 @@ async def test_each_row_carries_its_monogram_count_and_the_owner_s_name(client):
             "sports": [],
             "member_count": 1,
             "join_policy": "PEOPLE_I_APPROVE",
-            "owner_name": "karol",
-            "administrator_name": None,
+            "owner_nickname": "karol",
+            "administrator_nickname": None,
             "is_administrator": False,
             "relation": "NONE",
         }

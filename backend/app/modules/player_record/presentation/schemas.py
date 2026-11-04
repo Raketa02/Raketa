@@ -518,22 +518,14 @@ class PlayerRecordResponse(BaseModel):
             "guess; the rest of the record is unaffected."
         ),
     )
-    name: str = Field(
-        ...,
-        description=(
-            "The whole name, and **nothing may derive a familiar form from it** "
-            "— every sentence naming somebody uses the whole name or names "
-            "nobody (``docs/adr/0171``). The title of the sheet."
-        ),
-    )
     nickname: str = Field(
         ...,
         description=(
-            "Their handle, drawn as `@nickname` under the name. **The record and "
-            "the You tab are the only two places it is drawn** — never on a row, "
-            "a card, a sentence, a sheet, a toast, a seat label or a spoken "
-            "name — because two people may share a name and this is the screen "
-            "a friend tells them apart on."
+            "Their handle, unique across the platform, and the title of the "
+            "sheet — drawn large, with nothing under it, and never with an @. "
+            "**Nothing may derive a familiar form from it**: every sentence "
+            "naming somebody uses the whole nickname or names nobody "
+            "(``docs/adr/0199`` §1)."
         ),
     )
     photo_id: UUID = Field(
@@ -598,7 +590,7 @@ class PlayerRecordResponse(BaseModel):
         # No `max_length`: the cap binds the write and never the read.
         description=(
             "One line this player wrote about themselves — their **intro** — "
-            "verbatim, drawn under the name. **Omitted where they wrote "
+            "verbatim, drawn under the nickname. **Omitted where they wrote "
             "none**, and never an empty string: the intro is optional, and a "
             "player who skipped has no line rather than an empty one.\n\n"
             "Read off the profile as it stands. Fenced at the write "
@@ -707,7 +699,6 @@ class PlayerRecordResponse(BaseModel):
         identity = record.identity
         fields: dict[str, Any] = {
             "is_self": record.is_self,
-            "name": identity.name,
             "nickname": identity.nickname,
             "area_code": identity.area_code,
             "social_tags": list(identity.social_tags),

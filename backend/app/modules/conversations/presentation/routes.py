@@ -593,7 +593,7 @@ def _face(face: MemberFace) -> dict[str, Any]:
 
     fields: dict[str, Any] = {
         "player_id": face.player_id,
-        "name": face.name,
+        "nickname": face.nickname,
     }
     if face.photo_id is not None and face.photo_url is not None:
         fields["photo_id"] = face.photo_id

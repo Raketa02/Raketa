@@ -320,7 +320,7 @@ class ChargeTheSeats:
             await self._mail.enqueue(
                 game_booked_email(
                     to=payer.email,
-                    name=payer.name,
+                    nickname=payer.nickname,
                     club=seller.name,
                     court=game.court_name,
                     sport=game.sport,

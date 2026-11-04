@@ -142,8 +142,9 @@ class _InvitationPassword:
     on the public site's invitation page — so the two cannot come to two
     answers about one link.
 
-    **For a new person it opens the account** — the Name the club typed, no
-    Nickname, no Adult attestation (``docs/adr/0185`` §4–§5); **for an account
+    **For a new person it opens the account** — no player name (the name the
+    club typed stays on the Administrator, ``docs/adr/0199`` §4), no nickname,
+    no Adult attestation (``docs/adr/0185`` §5); **for an account
     a club cleared it sets that account's password** and signs its other
     sessions out. Either way the Administrator is *active* and the credential
     spent. Nothing is committed: what ends the act — a session, or none — is
@@ -190,7 +191,6 @@ class _InvitationPassword:
         if holder is None:
             account_id = await self._accounts.open_account(
                 email=administrator.email,
-                name=administrator.name,
                 password_hash=password_hash,
                 at=now,
             )

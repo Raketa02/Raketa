@@ -978,7 +978,7 @@ class NeedsHerYes:
             book_by=game.book_by,
             club_name=club,
             people_in=[
-                PersonRef(player_id=player, name=named.get(player))
+                PersonRef(player_id=player, nickname=named.get(player))
                 for player in game.yeses
             ],
             says=(
@@ -1198,7 +1198,9 @@ async def about_to_expire(
         starts_at=game.start,
         book_by=game.book_by,
         club_name=club,
-        dealt=[PersonRef(player_id=player, name=named.get(player)) for player in dealt],
+        dealt=[
+            PersonRef(player_id=player, nickname=named.get(player)) for player in dealt
+        ],
         says=(
             f"A card of hers for {_when(game.start)} at {club or 'the club'}, "
             f"nobody's answer on it. Its book-by {fires_at(game.book_by, now=now)}: "
@@ -1334,10 +1336,10 @@ async def one_leaves_before_the_cut_off(
         cut_off=cut_off,
         club_id=hour.club_id,
         club_name=club,
-        people_in=[PersonRef(player_id=p, name=named.get(p)) for p in staying],
-        left=PersonRef(player_id=leaver, name=named.get(leaver)),
-        offered_to=[PersonRef(player_id=p, name=named.get(p)) for p in offered],
-        dealt_to=[PersonRef(player_id=p, name=named.get(p)) for p in dealt],
+        people_in=[PersonRef(player_id=p, nickname=named.get(p)) for p in staying],
+        left=PersonRef(player_id=leaver, nickname=named.get(leaver)),
+        offered_to=[PersonRef(player_id=p, nickname=named.get(p)) for p in offered],
+        dealt_to=[PersonRef(player_id=p, nickname=named.get(p)) for p in dealt],
         says=(
             f"{named.get(leaver, 'One of the four')} left {_when(hour.start)} at "
             f"{club or 'the club'} just now — their hold let go, nothing taken; "
@@ -1440,10 +1442,10 @@ async def empty_seat_at_the_cut_off(
         club_id=hour.club_id,
         club_name=club,
         people_in=[
-            PersonRef(player_id=player, name=named.get(player))
+            PersonRef(player_id=player, nickname=named.get(player))
             for player in (*staying, her)
         ],
-        left=PersonRef(player_id=leaver, name=named.get(leaver)),
+        left=PersonRef(player_id=leaver, nickname=named.get(leaver)),
         says=(
             f"Her game {_when(hour.start)} at {club or 'the club'}, booked earlier; "
             f"{named.get(leaver, 'one of the three')} left it just now — a seat is "
@@ -1555,7 +1557,7 @@ class HerGameToLeave:
             cut_off=cut_off,
             club_id=hour.club_id,
             club_name=(await self._clubs.names_of([hour.club_id])).get(hour.club_id),
-            people=[PersonRef(player_id=p, name=named.get(p)) for p in people],
+            people=[PersonRef(player_id=p, nickname=named.get(p)) for p in people],
         )
 
 
@@ -1746,7 +1748,7 @@ async def a_posted_game(
         club_id=hour.club_id,
         club_name=club,
         kind=game.kind,
-        dealt=[PersonRef(player_id=p, name=named.get(p)) for p in dealt],
+        dealt=[PersonRef(player_id=p, nickname=named.get(p)) for p in dealt],
         says=(
             f"{named.get(her, 'Her')}'s post for {_when(game.start)} at "
             f"{club or 'the club'}, dealt to {len(dealt)} of her best fits — "
@@ -1887,7 +1889,7 @@ async def just_played(
             her, game_id=booked.game_id, at=stated_at
         )
         stated = StatedScore(
-            by=PersonRef(player_id=stater, name=named.get(stater)),
+            by=PersonRef(player_id=stater, nickname=named.get(stater)),
             sets=sets,
             at=stated_at,
             confirms_at=stated_at + PROPOSAL_WINDOW,
@@ -1901,7 +1903,7 @@ async def just_played(
         starts_at=hour.start,
         club_id=hour.club_id,
         club_name=club,
-        people=[PersonRef(player_id=p, name=named.get(p)) for p in people],
+        people=[PersonRef(player_id=p, nickname=named.get(p)) for p in people],
         entry_closes_at=entry_closes_at,
         stated=stated,
         says=(
@@ -1912,7 +1914,8 @@ async def just_played(
             f"{_when(entry_closes_at)}."
             if stated is None
             else f"Her game {_when(hour.start)} at {club or 'the club'}, played; "
-            f"{stated.by.name or 'somebody across the net'} put {stated.sets} up "
+            f"{stated.by.nickname or 'somebody across the net'} put "
+            f"{stated.sets} up "
             f"as if at {stated.at.astimezone(CLUB_ZONE):%a %H:%M}. Silence "
             f"confirms it — it "
             f"{fires_at(instant(stated.confirms_at), now=now)} — and *Run it "
@@ -2047,7 +2050,8 @@ async def club_day_close(
                     booked_at=game.filled_at,
                     played=game.played,
                     people=[
-                        PersonRef(player_id=p, name=named.get(p)) for p in game.people
+                        PersonRef(player_id=p, nickname=named.get(p))
+                        for p in game.people
                     ],
                 )
                 for game in written

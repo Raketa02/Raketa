@@ -81,7 +81,9 @@ async def test_setting_a_password_by_the_link_creates_her_account_as_the_club_na
     session = {"Authorization": f"Bearer {set_.json()['access_token']}"}
     account = await me(client, session)
     assert account["email"] == MARTA
-    assert account["name"] == "Marta Wójcik"
+    # The name the club typed is the Administrator's, and the account holds
+    # none (``docs/adr/0199`` §4).
+    assert "name" not in account
     assert account["nickname"] is None
     assert account["adult_attested"] is False
     assert account["has_player_profile"] is False
@@ -399,9 +401,7 @@ async def test_an_administrator_attests_then_names_herself_with_only_a_nickname(
     attested = await client.post(ATTEST, headers=marta, json={"adult_attested": True})
     again = await client.post(ATTEST, headers=marta, json={"adult_attested": True})
     account = await me(client, marta)
-    named = await client.put(
-        NAME_ME, headers=marta, json={"name": account["name"], "nickname": "marta"}
-    )
+    named = await client.put(NAME_ME, headers=marta, json={"nickname": "marta"})
 
     assert attested.status_code == again.status_code == 204
     assert account["adult_attested"] is True
@@ -501,9 +501,7 @@ async def test_nothing_player_side_begins_before_the_attestation(
     assert payment_setup.json()["code"] == "adult_attestation_missing"
 
     await client.post(ATTEST, headers=marta, json={"adult_attested": True})
-    await client.put(
-        NAME_ME, headers=marta, json={"name": "Marta Wójcik", "nickname": "marta"}
-    )
+    await client.put(NAME_ME, headers=marta, json={"nickname": "marta"})
 
     started = await client.post(
         "/api/v1/assessments", json={"sport": "PADEL"}, headers=marta

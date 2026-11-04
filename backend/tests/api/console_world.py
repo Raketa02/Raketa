@@ -111,7 +111,7 @@ async def board_of(client, group: UUID, sport: str = "PADEL") -> dict:
 
 
 def rows_of(board: dict) -> dict[str, dict]:
-    return {row["name"]: row for row in board["people"]}
+    return {row["nickname"]: row for row in board["people"]}
 
 
 def pane_of(board: dict, game: UUID) -> dict:

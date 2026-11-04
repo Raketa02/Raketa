@@ -10,8 +10,9 @@ Mounted under ``/api/v1/club``, which only the club website consumes
 own club's bookings. **Signed by this context** because a cancel refunds and
 owes a new card, and every act on a game locks its proposal first.
 
-**What the club sees of a player is their Name, and whether they paid or their
-share is only held** (§16.14).
+**What the club sees of a player is their nickname, and whether they paid or
+their share is only held** (§16.14; ``docs/adr/0199`` §5). The field keeps the
+word ``name`` until #725 renames it.
 """
 
 from __future__ import annotations
@@ -88,7 +89,8 @@ class ClubBookingPlayerSchema(BaseModel):
     player_id: UUID
     name: str | None = Field(
         description=(
-            "Their Name, whole. `null` for an account that can no longer be named."
+            "Their nickname, whole (docs/adr/0199 §5). `null` for an account "
+            "that can no longer be named."
         )
     )
     paid: bool = Field(description="Their share was taken — *paid ✓*.")

@@ -175,18 +175,18 @@ class MemberFace:
     person a ``SEAT_LEFT`` line is about is by definition no longer a member, and
     the read still resolves their face beside the roster's
     ([#408](https://github.com/Raketa02/Raketa/issues/408)); one shape for both,
-    because a client fills ``{name}`` from one list.
+    because a client fills ``{nickname}`` from one list.
 
-    **A name, a photograph, and nothing else.** No Level, no band, no area, no
+    **A nickname, a photograph, and nothing else.** No Level, no band, no area, no
     score: a card is what somebody reads to decide about a game that might
     happen, and these people are already booked on one. ``docs/adr/0141`` §1
     fixes what may be borrowed about a person on a record of an evening, and this
     room is one.
 
-    ``name`` is the **Name** and never the nickname (``docs/adr/0171`` §4) — a
-    handle is drawn on a record and said nowhere, and a room is where people
-    are said. ``None`` for a player ``users`` can no longer name, and never for
-    an unnamed one, whom the entry gate holds at the naming step. **The member
+    ``nickname`` is whole and never written with an @ (``docs/adr/0199`` §1) —
+    a room is where people are said, and a player is said by their handle.
+    ``None`` for a player ``users`` can no longer name, and never for one with
+    no nickname yet, whom the entry gate holds at the naming step. **The member
     keeps their place** — they are still somebody who agreed to play, and
     dropping them would draw a three-person doubles court.
 
@@ -202,7 +202,7 @@ class MemberFace:
     """
 
     player_id: UUID
-    name: str | None = None
+    nickname: str | None = None
     photo_id: UUID | None = None
     photo_url: str | None = None
 

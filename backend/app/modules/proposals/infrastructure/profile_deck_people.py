@@ -1,10 +1,10 @@
-"""``DeckPeople`` — a name from ``users``, a face and a week from the Player
+"""``DeckPeople`` — a nickname from ``users``, a face and a week from the Player
 profile, a Level from rating.
 
 The groups' ``ProfileGroupFaces`` one context over, for the reason that port
 gives for being a spelling of its own: it reads **each provider's own port** and
-never its table or its bucket. The **Name** and never the nickname
-(``docs/adr/0171`` §4); the **first** photograph, since order is meaning in a
+never its table or its bucket. The **nickname**, whole
+(``docs/adr/0199`` §1); the **first** photograph, since order is meaning in a
 player's photo list; the **published** Level — the figure a rating route already
 prints — so a card cannot show a number the person's own record does not; and
 the weekly hours the card's overlap grid summarises.
@@ -56,7 +56,7 @@ class ProfileDeckPeople:
         wanted = sorted(set(player_ids))
         if not wanted:
             return {}
-        namings = await self._users.find_namings_of(wanted)
+        nicknames = await self._users.find_nicknames_of(wanted)
         published = await self._ratings.published_for(wanted, sport=sport)
         people: dict[UUID, DeckPerson] = {}
         for player_id in wanted:
@@ -74,10 +74,9 @@ class ProfileDeckPeople:
                     valid_for_seconds=self._photo_link_minutes * 60,
                 )
             )
-            naming = namings.get(player_id)
             rating = published.get(player_id)
             people[player_id] = DeckPerson(
-                name=None if naming is None else naming.name,
+                nickname=nicknames.get(player_id),
                 photo_id=None if url is None else photo_id,
                 photo_url=url,
                 level=None if rating is None else rating.mu,

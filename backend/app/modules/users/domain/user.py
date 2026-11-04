@@ -9,11 +9,13 @@ from uuid import UUID
 from app.modules.users.domain.errors import InactiveUserCannotBePromoted
 from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
+    AccountOpenedByInvitationV1,
     AdultAttested,
     PasswordChanged,
     PasswordCleared,
     UserDisabled,
     UserNamed,
+    UserNamedV1,
     UserPromotedToAdmin,
     UserRegistered,
 )
@@ -22,7 +24,6 @@ from app.modules.users.domain.value_objects import (
     Authority,
     Email,
     HashedPassword,
-    Name,
     Nickname,
 )
 from app.shared.domain import DomainEvent, EventRecorder
@@ -36,11 +37,13 @@ class User:
     immediately and collected until the application layer appends them to the
     event store.
 
-    **An account can exist unnamed** (``docs/adr/0171``). Sign-up creates one
-    with credentials only, and ``name`` and ``nickname`` are ``None`` until the
-    naming — the one act that sets both, and the only read where either may be
-    null is the player's own ``/me``. Every other surface that names a player
-    is reached through a gate that holds an unnamed account at the naming step.
+    **An account can exist without a nickname** (``docs/adr/0199`` §3).
+    Sign-up creates one with credentials only, and so does an Invitation
+    (§4), and ``nickname`` is ``None`` until the naming. **No account holds a
+    player name**: the Name is retired, and a stored event that carried one is
+    read with it ignored (§6). The only read where the nickname may be null is
+    the player's own ``/me``; every other surface that names a player is
+    reached through a gate that holds such an account at the naming step.
     """
 
     id: UUID
@@ -48,7 +51,6 @@ class User:
     #: ``None`` once the club's *Reset password* has cleared it
     #: (``docs/adr/0184`` §6): nothing signs in until a new one is set.
     password_hash: Optional[HashedPassword]
-    name: Optional[Name] = None
     nickname: Optional[Nickname] = None
     authority: Authority = Authority.USER
     is_admin: bool = False
@@ -97,8 +99,8 @@ class User:
         missing or negative answer, so there is no branch here to forget: a
         registration either has one or was never built (``docs/adr/0124``).
 
-        **Credentials only.** Who the player is arrives with :meth:`name_as`,
-        in onboarding, and a fresh account is unnamed (``docs/adr/0171`` §2).
+        **Credentials only.** The nickname arrives with :meth:`name_as`, in
+        onboarding, and a fresh account has none (``docs/adr/0199`` §3).
         """
 
         user = cls._empty()
@@ -122,19 +124,19 @@ class User:
         *,
         user_id: UUID,
         email: Email,
-        name: Name,
         password_hash: HashedPassword,
         occurred_at: datetime,
     ) -> "User":
         """Open the account an Invitation is for, as its person sets a password
         (``docs/adr/0184`` §2).
 
-        **Named by the club and holding nothing else**: the Name is the one the
-        club typed, there is no Nickname, and there is no Adult attestation —
-        running a club's groups asks nobody's age (``docs/adr/0185`` §5). The
-        attestation is asked at *Start playing*, before anything player-side.
-        Whether the address already has an account is the caller's question,
-        asked before this is reached.
+        **Credentials and nothing else**: no player name — the name the club
+        typed is the Administrator's (``docs/adr/0199`` §4) — no nickname, and no
+        Adult attestation, because running a club's groups asks nobody's age
+        (``docs/adr/0185`` §5). The attestation and the nickname are asked at
+        *Start playing*, before anything player-side. Whether the address
+        already has an account is the caller's question, asked before this is
+        reached.
         """
 
         user = cls._empty()
@@ -143,7 +145,6 @@ class User:
                 user_id=user_id,
                 email=email.value,
                 password_hash=password_hash.value,
-                name=name.value,
                 occurred_at=occurred_at,
             )
         )
@@ -164,7 +165,6 @@ class User:
         if isinstance(event, UserRegistered):
             self.id = event.user_id
             self.email = Email(event.email)
-            self.name = None
             self.nickname = None
             self.password_hash = HashedPassword(event.password_hash)
             self.authority = Authority(event.authority)
@@ -184,10 +184,11 @@ class User:
             self.updated_at = None
             self.version += 1
             return
-        if isinstance(event, AccountOpenedByInvitation):
+        # A first-version row carried the name the club typed, and it is read
+        # with that name ignored (``docs/adr/0199`` §6).
+        if isinstance(event, (AccountOpenedByInvitation, AccountOpenedByInvitationV1)):
             self.id = event.user_id
             self.email = Email(event.email)
-            self.name = Name(event.name)
             self.nickname = None
             self.password_hash = HashedPassword(event.password_hash)
             self.authority = Authority.USER
@@ -208,8 +209,9 @@ class User:
             self.credentials_changed_at = event.occurred_at
             self.version += 1
             return
-        if isinstance(event, UserNamed):
-            self.name = Name(event.name)
+        # A first-version naming carried a Name beside the nickname, and it is
+        # read with the name ignored (``docs/adr/0199`` §6).
+        if isinstance(event, (UserNamed, UserNamedV1)):
             self.nickname = Nickname(event.nickname)
             self.version += 1
             return
@@ -270,26 +272,23 @@ class User:
         self._ensure_registered()
         self._record_that(PasswordCleared(user_id=self.id, occurred_at=occurred_at))
 
-    def name_as(
-        self, *, name: Name, nickname: Nickname, occurred_at: datetime
-    ) -> None:
-        """The naming: how people should see this player (``docs/adr/0171`` §2).
+    def name_as(self, *, nickname: Nickname, occurred_at: datetime) -> None:
+        """The naming: the nickname people see this player by
+        (``docs/adr/0199`` §3).
 
         **Repeatable** — a later change is the same act, and the fold keeps the
         latest. Re-submitting the step unchanged is admitted and records
         nothing, as a second ``disable`` does: the stream records acts. The
         nickname's uniqueness is not this aggregate's to know: the use case
-        reads it against the projection and refuses before this is reached. The
-        name is checked against nobody.
+        reads it against the projection and refuses before this is reached.
         """
 
         self._ensure_registered()
-        if self.name == name and self.nickname == nickname:
+        if self.nickname == nickname:
             return
         self._record_that(
             UserNamed(
                 user_id=self.id,
-                name=name.value,
                 nickname=nickname.value,
                 occurred_at=occurred_at,
             )

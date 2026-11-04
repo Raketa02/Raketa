@@ -89,7 +89,7 @@ def _the_hour(at: Instant) -> str:
 def game_booked_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     court: str,
     sport: Sport,
@@ -120,7 +120,7 @@ def game_booked_email(
         heading = f"Your {hour} is booked"
     else:
         subject = f"It's a game! · {said}"
-        heading = "It's a game!" if name is None else f"It's a game, {name}!"
+        heading = "It's a game!" if nickname is None else f"It's a game, {nickname}!"
     money: tuple[str, ...] = (
         (
             f"Your card was checked. {share} will be held from "
@@ -362,7 +362,7 @@ def _let_go(amount_grosze: int, *, on_the_card: bool) -> str:
 def left_the_game_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -378,7 +378,9 @@ def left_the_game_email(
     refund is on its way*: everything back, since leaving before the cut-off
     costs nothing."""
 
-    heading = "You left the game" if name is None else f"You left the game, {name}"
+    heading = (
+        "You left the game" if nickname is None else f"You left the game, {nickname}"
+    )
     if held:
         return render(
             ButtonEmail(
@@ -416,7 +418,7 @@ def left_the_game_email(
 def left_after_the_cut_off_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -431,7 +433,9 @@ def left_after_the_cut_off_email(
     exactly the fee kept on the payment. While that fee is not yet known there
     is no figure and no clause — never an estimate."""
 
-    heading = "You left the game" if name is None else f"You left the game, {name}"
+    heading = (
+        "You left the game" if nickname is None else f"You left the game, {nickname}"
+    )
     offered = "Your seat is offered to others."
     if refund_grosze is not None and fee_kept_grosze is not None:
         offered += (
@@ -458,7 +462,7 @@ def left_after_the_cut_off_email(
 def game_called_off_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -529,7 +533,7 @@ _CANCELLED_BECAUSE: Final[dict[CancelledBecause, str | None]] = {
 def game_cancelled_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -586,7 +590,7 @@ GAME_YOU_LEFT_CANCELLED_KIND: Final = "payments.game_you_left_cancelled.player"
 def game_you_left_cancelled_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -639,7 +643,7 @@ def game_you_left_cancelled_email(
 def seat_taken_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -664,8 +668,8 @@ def seat_taken_email(
             ),
             heading=(
                 "Your seat was taken"
-                if name is None
-                else f"Your seat was taken, {name}"
+                if nickname is None
+                else f"Your seat was taken, {nickname}"
             ),
             lines=(
                 f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at {club} "
@@ -684,7 +688,7 @@ def seat_taken_email(
 def seat_taken_nothing_taken_email(
     *,
     to: str,
-    name: str | None,
+    nickname: str | None,
     club: str,
     sport: Sport,
     starts_at: Instant,
@@ -702,8 +706,8 @@ def seat_taken_nothing_taken_email(
             subject="Your seat was taken · nothing was taken",
             heading=(
                 "Your seat was taken"
-                if name is None
-                else f"Your seat was taken, {name}"
+                if nickname is None
+                else f"Your seat was taken, {nickname}"
             ),
             lines=(
                 f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at "

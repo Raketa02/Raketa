@@ -89,7 +89,7 @@ async def deck_of(client, player: dict, group: UUID) -> list[dict]:
 
 def names_on(card: dict) -> set[str]:
     return {
-        tile["name"] for tile in (*card["sides"]["yours"], *card["sides"]["theirs"])
+        tile["nickname"] for tile in (*card["sides"]["yours"], *card["sides"]["theirs"])
     }
 
 

@@ -209,7 +209,7 @@ async def test_setting_it_on_the_page_opens_her_account_and_signs_nobody_in(
     # club's administrator.
     session = await signs_in(client, MARTA, MARTA_PASSWORD)
     account = await me(client, session)
-    assert account["name"] == "Marta Wójcik"
+    assert "name" not in account
     assert account["nickname"] is None
     assert account["adult_attested"] is False
     assert account["profiles"]["administers"] == [

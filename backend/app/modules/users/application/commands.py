@@ -5,8 +5,8 @@ from uuid import UUID
 @dataclass(frozen=True)
 class RegisterUserCommand:
     """Credentials and the attestation — and nothing about who the player is
-    (``docs/adr/0171`` §2). The name and the nickname are asked in onboarding,
-    with :class:`NameUserCommand`."""
+    (``docs/adr/0199`` §3). The nickname is asked in onboarding, with
+    :class:`NameUserCommand`."""
 
     email: str
     password: str
@@ -21,15 +21,14 @@ class RegisterUserCommand:
 
 @dataclass(frozen=True)
 class NameUserCommand:
-    """The naming: how people should see this player (``docs/adr/0171`` §2).
+    """The naming: the nickname people see this player by
+    (``docs/adr/0199`` §3).
 
-    One act carrying both values, for the authenticated player — the route
-    supplies ``user_id`` from the session and never from the body. Plain strings
-    here for the reason ``adult_attested`` above is a plain ``bool``: a command
-    is what a caller *asked for*, and the value objects refuse inside the
-    handler.
+    For the authenticated player — the route supplies ``user_id`` from the
+    session and never from the body. A plain string here for the reason
+    ``adult_attested`` above is a plain ``bool``: a command is what a caller
+    *asked for*, and the value object refuses inside the handler.
     """
 
     user_id: UUID
-    name: str
     nickname: str

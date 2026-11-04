@@ -192,16 +192,16 @@ class BlockQuery(Protocol):
 @final
 @dataclass(frozen=True, slots=True)
 class BlockedFace:
-    """What *Blocked players* draws for one person — a name, a photograph, and
-    nothing else.
+    """What *Blocked players* draws for one person — a nickname, a photograph,
+    and nothing else.
 
-    ``name`` is the **Name** and never the nickname (``docs/adr/0171`` §4), and
-    ``None`` for an id nobody can name. ``photo_id`` and ``photo_url`` are
+    ``nickname`` is whole and never written with an @ (``docs/adr/0199`` §1),
+    and ``None`` for an id nobody can name. ``photo_id`` and ``photo_url`` are
     present **exactly together**, and neither means the client draws initials.
     """
 
     player_id: UUID
-    name: str | None = None
+    nickname: str | None = None
     photo_id: UUID | None = None
     photo_url: str | None = None
 

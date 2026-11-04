@@ -19,8 +19,8 @@ from app.modules.users.domain.user import User
 class UserCreateRequest(BaseModel):
     """Sign-up: credentials and the attestation, and nothing about who you are.
 
-    The nickname left this payload with ``docs/adr/0171`` §2 — it is asked in
-    onboarding, beside the name, with :class:`NameRequest`. **Extra fields are
+    The nickname is not in this payload (``docs/adr/0199`` §3) — it is asked in
+    onboarding, with :class:`NameRequest`. **Extra fields are
     refused** rather than ignored, so a client still sending one meets the
     validation envelope instead of a sign-up that quietly dropped what it said.
     """
@@ -51,43 +51,17 @@ class UserCreateRequest(BaseModel):
 
 
 class NameRequest(BaseModel):
-    """The naming — *How should people see you?* (``docs/adr/0171`` §1–2).
+    """The naming — *How should people see you?* (``docs/adr/0199`` §3).
 
-    Both fields, always: the naming is one act carrying both, and there is no
-    event for one without the other. The shape rules here are the value
-    objects' own, restated so the generated client type carries them — and
-    **the name is normalised before its bounds are checked**, exactly as
-    :class:`Name` normalises it, so ``"  Ania   Kowalska "`` is admitted and
-    recorded as ``Ania Kowalska`` and ``"   A   "`` is refused here as too
-    short. A bound checked on the raw string would admit the second and hand
-    it to the value object, which refuses it — a typed value meeting an
-    invariant, which is a 500 for a player's typo (``CONTEXT.md``, *Invariant
-    vs Unavailability*).
+    **A nickname and nothing else.** The shape rule here is the value object's
+    own, restated so the generated client type carries it. A body still
+    carrying a ``name`` — or anything else — is refused with the validation
+    envelope rather than quietly dropped, so a client that kept the field
+    cannot believe it was recorded.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    @field_validator("name", mode="before")
-    @classmethod
-    def _trim_and_collapse(cls, v: object) -> object:
-        # ``mode="before"`` runs ahead of ``min_length`` / ``max_length``, so the
-        # bounds below are the bounds on the name as it will be recorded. The
-        # same one-liner as ``Name.__post_init__``: restated rather than
-        # imported because a request schema stays out of the domain's way and
-        # the value object stays the authority — it still runs, on the result.
-        return " ".join(v.split()) if isinstance(v, str) else v
-
-    name: str = Field(
-        ...,
-        min_length=2,
-        max_length=64,
-        description=(
-            "What you are called — free text, spaces allowed, **never unique**: "
-            "two players may share one. Trimmed, runs of whitespace collapsed to "
-            "one space, 2–64 characters after that. This is what every screen "
-            "says about you."
-        ),
-    )
     nickname: str = Field(
         ...,
         min_length=2,
@@ -97,23 +71,21 @@ class NameRequest(BaseModel):
             "A handle: letters, digits and `. _ -`, no spaces, 2–64 characters, "
             "**unique across the platform** — refused with "
             "`nickname_already_taken` when another player holds it, admitted "
-            "when it is already yours. Shown as `@nickname` under your name on "
-            "your own You tab and on your record, and said nowhere else."
+            "when it is already yours. **What every screen says about you**, "
+            "never with an @."
         ),
     )
 
 
 class NamingResponse(BaseModel):
-    """What the naming recorded: the name as it now stands and the nickname.
+    """What the naming recorded: the nickname as it now stands.
 
     Not a ``UserResponse``, deliberately — that shape carries
     ``has_player_profile``, a fact of another context's this write never asks
     about, and ``false`` there would be a claim. The client re-reads ``/me``
-    before moving on (``docs/adr/0171`` §3); this is what lets it show the
-    normalised name back at once.
+    before moving on; this is what lets it show the nickname back at once.
     """
 
-    name: str = Field(..., description="The name as recorded: trimmed, collapsed.")
     nickname: str = Field(..., description="The handle, as recorded.")
 
 
@@ -126,14 +98,14 @@ class UserResponse(BaseModel):
     and a second round trip for one boolean would be a second thing to fail
     (``docs/adr/0090``).
 
-    ``name`` and ``nickname`` are **null until the naming** — and each on its
-    own since ``docs/adr/0185`` §4, because an account an Invitation opened
-    carries the club-typed name and no nickname — and this is the one read
-    where either may be null (``docs/adr/0171`` §2): a player on any
-    surface that names another player has necessarily been named, because the
-    gate holds an unnamed account at the naming step. On ``/me`` they are read
-    from the player's own stream, as ``has_player_profile`` is, so they are
-    right the instant after the commit the gate reads them after.
+    ``nickname`` is **null until the naming**, an account an Invitation opened
+    included, and this is the one read where it may be null
+    (``docs/adr/0199`` §3): a player on any surface that names another player
+    has necessarily picked one, because the gate holds an account with none at
+    the naming step. **There is no ``name``**: no account holds a player name.
+    On ``/me`` the nickname is read from the player's own stream, as
+    ``has_player_profile`` is, so it is right the instant after the commit the
+    gate reads it after.
 
     **It is not an "onboarded" flag.** The rating context's invariant against one
     stands: whether a player has been through onboarding *for a sport* is asked
@@ -144,21 +116,13 @@ class UserResponse(BaseModel):
 
     id: UUID
     email: EmailStr
-    name: Optional[str] = Field(
-        default=None,
-        description=(
-            "What this player is called — what every screen says. `null` until "
-            "the naming — except on an account an invitation opened, which "
-            "carries the name the club typed. The entry gate's first "
-            "destination is **not named in full**: no name, or no nickname — "
-            "and the naming step asks only for what is missing."
-        ),
-    )
     nickname: Optional[str] = Field(
         default=None,
         description=(
-            "The handle, unique across the platform, drawn as `@nickname` under "
-            "the name on the You tab and nowhere else. `null` until the naming."
+            "The handle, unique across the platform, and what every screen says "
+            "about this player — never with an @. `null` until the naming, an "
+            "account an invitation opened included: the entry gate's first "
+            "destination is **no nickname**."
         ),
     )
     authority: str
@@ -184,17 +148,16 @@ class UserResponse(BaseModel):
         has_player_profile: bool = False,
         own: OwnAccount | None = None,
     ) -> "UserResponse":
-        """``own`` is the stream's answer, and the only source of the two
-        fields: ``/me`` passes what :class:`ReadOwnAccount` folded, and the
-        registration passes nothing because a fresh account is unnamed. There
-        is deliberately no fallback to the aggregate's own ``name`` — the row
-        it was loaded from is a projection, and ``docs/adr/0171`` §3 reads the
-        gate's field from the stream and never from one."""
+        """``own`` is the stream's answer, and the only source of the nickname:
+        ``/me`` passes what :class:`ReadOwnAccount` folded, and the
+        registration passes nothing because a fresh account has none. There is
+        deliberately no fallback to the aggregate's own ``nickname`` — the row
+        it was loaded from is a projection, and the gate's field is read from
+        the stream and never from one."""
 
         return cls(
             id=user.id,
             email=user.email.value,
-            name=None if own is None else own.name,
             nickname=None if own is None else own.nickname,
             authority=user.authority.value,
             is_admin=user.is_admin,

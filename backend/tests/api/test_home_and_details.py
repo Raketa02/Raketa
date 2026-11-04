@@ -134,7 +134,7 @@ async def proposal_of(client, player: dict, proposal_id: UUID | str):
 
 
 def names_of(tiles: list[dict]) -> list[str]:
-    return [tile["name"] for tile in tiles]
+    return [tile["nickname"] for tile in tiles]
 
 
 def opponent_of(card: dict, four: list[dict]) -> dict:
@@ -685,7 +685,7 @@ async def test_a_player_in_the_game_reads_its_details(
     }
     yours, theirs = details["sides"]["yours"], details["sides"]["theirs"]
     assert yours[0]["player_id"] == str(four[0]["id"])
-    assert yours[0]["name"] == "ola"
+    assert yours[0]["nickname"] == "ola"
     assert [tile["is_you"] for tile in yours + theirs] == [True, False, False, False]
     assert not any(tile["paid"] for tile in yours + theirs)
     assert all(tile["level"] is not None for tile in yours + theirs)
@@ -800,7 +800,7 @@ async def test_a_player_still_deciding_reads_their_own_card(
     tiles = details["sides"]["yours"] + details["sides"]["theirs"]
     assert {tile["player_id"] for tile in tiles} == {str(one["id"]) for one in four}
     assert details["sides"]["yours"][0]["is_you"] is True
-    assert [tile["name"] for tile in tiles if tile["is_in"]] == ["kuba"]
+    assert [tile["nickname"] for tile in tiles if tile["is_in"]] == ["kuba"]
     assert len(details["overlap"]["cells"]) == 21
 
 
@@ -816,7 +816,7 @@ async def test_a_player_in_reads_everybody_in_and_may_withdraw(
     assert details["actions"] == ["WITHDRAW"]
     assert details["in_count"] == 2
     tiles = details["sides"]["yours"] + details["sides"]["theirs"]
-    assert sorted(tile["name"] for tile in tiles) == ["kuba", "ola"]
+    assert sorted(tile["nickname"] for tile in tiles) == ["kuba", "ola"]
     assert all(tile["is_in"] for tile in tiles)
 
 

@@ -324,8 +324,8 @@ def fires_at(at: Instant, *, now: Instant) -> str:
 
 class PersonRef(BaseModel):
     player_id: UUID
-    name: str | None = Field(
-        description="Their Name; `null` for an account never named."
+    nickname: str | None = Field(
+        description="Their nickname; `null` for an account with none."
     )
 
 
@@ -464,7 +464,7 @@ class CardOnFilePane(BaseModel):
 class PersonRow(BaseModel):
     player_id: UUID = Field(description="What a press on this row names.")
     email: str
-    name: str | None
+    nickname: str | None
     photo_url: str | None = Field(
         description="A short-lived link to their face; `null` for none."
     )
@@ -502,7 +502,7 @@ class ClubPane(BaseModel):
 
 class VersionPerson(BaseModel):
     player_id: UUID
-    name: str | None
+    nickname: str | None
     answer: RowAnswer
 
 
@@ -864,7 +864,9 @@ async def read_groups(
         if protagonist is None
         else PersonRef(
             player_id=protagonist.id,
-            name=None if protagonist.name is None else protagonist.name.value,
+            nickname=(
+                None if protagonist.nickname is None else protagonist.nickname.value
+            ),
         ),
         sports=list(Sport),
         groups=sorted(listed, key=lambda group: (group.name, group.group_id)),
@@ -931,7 +933,7 @@ async def read_board(
             PersonRow(
                 player_id=player,
                 email=seed[player],
-                name=drawn[player].name,
+                nickname=drawn[player].nickname,
                 photo_url=drawn[player].photo_url,
                 level=drawn[player].level,
                 card=cards.get(player),
@@ -1093,7 +1095,7 @@ def _rescue(
         kind=game.kind,
         open_seats=game.open_seats,
         people_on=[
-            PersonRef(player_id=player, name=names.get(player))
+            PersonRef(player_id=player, nickname=names.get(player))
             for player in game.players
         ],
         offered=offered,
@@ -1166,7 +1168,9 @@ def _card(game: Proposal, player: UUID, names: Mapping[UUID, str]) -> RowCard:
         kind=game.kind,
         answer=_answer(game, player),
         open_seats=game.open_seats,
-        people_in=[PersonRef(player_id=one, name=names.get(one)) for one in game.yeses],
+        people_in=[
+            PersonRef(player_id=one, nickname=names.get(one)) for one in game.yeses
+        ],
     )
 
 
@@ -1289,7 +1293,7 @@ class _Folded:
                     people=[
                         VersionPerson(
                             player_id=player,
-                            name=self.names.get(player),
+                            nickname=self.names.get(player),
                             answer=_answer(game, player),
                         )
                         for player in version.players
@@ -1387,7 +1391,7 @@ class _Folded:
         ]
 
     def _ref(self, player: UUID) -> PersonRef:
-        return PersonRef(player_id=player, name=self.names.get(player))
+        return PersonRef(player_id=player, nickname=self.names.get(player))
 
     def _refs(self, players: Sequence[UUID]) -> list[PersonRef]:
         return [self._ref(player) for player in players]

@@ -62,17 +62,13 @@ class ProfileAndAccountIdentity:
         self._photos = photos
 
     async def identity_of(self, player_id: UUID) -> SubjectIdentity | None:
-        """Their name and nickname, first photograph, its verdict, area, tags and intro.
+        """Their nickname, first photograph, its verdict, area, tags and intro.
 
-        **Two absences, one answer.** A name this platform cannot read — an id
-        it never issued, or an account not yet named — and a profile that was
+        **Two absences, one answer.** A nickname this platform cannot read — an
+        id it never issued, or an account with none yet — and a profile that was
         never committed both mean *there is nobody here to describe*, and the
         caller refuses either way — the record is not a route that can afford to
         distinguish an id nobody was issued from one that was.
-
-        **Both halves of the naming cross here**, and only here among the reads
-        about another player (``docs/adr/0171`` §4): the record is the screen
-        two people with one name are told apart on.
 
         A missing **photograph** is an ordinary state and not an absence to
         report: the client draws the generated court poster. So is a missing
@@ -81,8 +77,8 @@ class ProfileAndAccountIdentity:
         existed at all (``docs/adr/0138``).
         """
 
-        naming = (await self._users.find_namings_of([player_id])).get(player_id)
-        if naming is None:
+        nickname = (await self._users.find_nicknames_of([player_id])).get(player_id)
+        if nickname is None:
             return None
         profile = await self._profiles.load(player_id)
         if profile is None:
@@ -98,8 +94,7 @@ class ProfileAndAccountIdentity:
             )
         )
         return SubjectIdentity(
-            name=naming.name,
-            nickname=naming.nickname,
+            nickname=nickname,
             photo_id=photo_id,
             review=None if decision is None else OnCourtVerdict(decision.value),
             area_code=area_code_of(

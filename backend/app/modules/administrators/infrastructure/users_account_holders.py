@@ -22,7 +22,7 @@ from app.modules.player_profile.application.has_player_profile import (
     HasPlayerProfile,
 )
 from app.modules.users.application.invitation_accounts import InvitationAccounts
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.users.domain.value_objects import Email
 
 
 class UsersAccountHolders:
@@ -44,10 +44,10 @@ class UsersAccountHolders:
         return AccountHolder(id=found.id, can_sign_in=found.has_password)
 
     async def open_account(
-        self, *, email: Email, name: Name, password_hash: str, at: Instant
+        self, *, email: Email, password_hash: str, at: Instant
     ) -> UUID:
         return await self._accounts.open(
-            email=email, name=name, password_hash=password_hash, at=at
+            email=email, password_hash=password_hash, at=at
         )
 
     async def set_password(

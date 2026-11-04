@@ -547,7 +547,7 @@ async def test_empty_seat_at_the_cut_off_opens_a_seat_before_the_next_cut_off(
     assert pane["booking"]["state"] == "SEAT_OPEN"
     assert moments_of(pane)["CUT_OFF"] == (at(warsaw(5, 9)), "cut-off")
     # Kuba's hold let go when he left; hers still held (#637).
-    statuses = {c["player"]["name"]: c["status"] for c in pane["charges"]}
+    statuses = {c["player"]["nickname"]: c["status"] for c in pane["charges"]}
     assert (statuses["kuba"], statuses["marta"]) == ("CANCELLED", "HELD")
 
     # Not due: the cut-off leaves it as it is.
@@ -568,7 +568,7 @@ async def test_empty_seat_at_the_cut_off_opens_a_seat_before_the_next_cut_off(
     assert (await runs(client, "cut-off"))["done"] == 1
     pane = pane_of(await board_of(client, world.group), game)
     assert pane["booking"]["state"] == "CALLED_OFF"
-    marta = next(c for c in pane["charges"] if c["player"]["name"] == "marta")
+    marta = next(c for c in pane["charges"] if c["player"]["nickname"] == "marta")
     assert marta["status"] in ("RELEASING", "CANCELLED")
     assert marta["refund"] is None
     assert (await runs(client, "cut-off"))["done"] == 0

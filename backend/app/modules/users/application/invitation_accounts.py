@@ -20,7 +20,7 @@ from app.modules.users.application.user_stream import USER_AGGREGATE, replay_use
 from app.modules.users.domain.events import AccountOpenedByInvitation, PasswordCleared
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.domain.user import User
-from app.modules.users.domain.value_objects import Email, HashedPassword, Name
+from app.modules.users.domain.value_objects import Email, HashedPassword
 from app.shared.ids import new_uuid
 
 
@@ -53,13 +53,13 @@ class InvitationAccounts:
             return None
         return InvitedAccount(id=user.id, has_password=user.has_password)
 
-    async def open(
-        self, *, email: Email, name: Name, password_hash: str, at: Instant
-    ) -> UUID:
+    async def open(self, *, email: Email, password_hash: str, at: Instant) -> UUID:
+        """Open the account, holding **no player name**: the name the club typed
+        stays on the Administrator (``docs/adr/0199`` §4)."""
+
         user = User.open_by_invitation(
             user_id=new_uuid(),
             email=email,
-            name=name,
             password_hash=HashedPassword(password_hash),
             occurred_at=at,
         )

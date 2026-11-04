@@ -224,25 +224,28 @@ class GroupAtClubSchema(GroupRowSchema):
             "(*Karol approves joins*)."
         )
     )
-    owner_name: str | None = Field(
+    owner_nickname: str | None = Field(
         description=(
-            "The Owner's **whole Name**, never the nickname — who answers a "
-            "request, for the *approves joins* line. **No first name is cut "
-            "from it, here or by a client**: a sentence naming somebody uses the "
-            "whole Name (`docs/adr/0171` §4), so the line reads *Karol Nowak "
-            "approves joins* and the row truncates it as it truncates any line. "
-            "`null` for an account that can no longer be named — and **always "
-            "`null` on an official group**, which has no Owner: its line names "
-            "`administrator_name`."
+            "The Owner's **whole nickname** — who answers a request, for the "
+            "*approves joins* line. **Nothing is cut from it, here or by a "
+            "client**, and it is never written with an @: a sentence naming "
+            "somebody uses the whole nickname (`docs/adr/0199` §1), so the line "
+            "reads *karol.n approves joins* and the row truncates it as it "
+            "truncates any line. `null` for an account that can no longer be "
+            "named — and **always `null` on an official group**, which has no "
+            "Owner: its line names `administrator_nickname`."
         )
     )
-    administrator_name: str | None = Field(
+    administrator_nickname: str | None = Field(
         description=(
-            "**An official group's** *approves joins* line: the whole name the "
-            "club gave the Administrator running it now — *Administrator Marta "
-            "Wójcik approves joins* — cut by nobody, as `owner_name` is. `null` "
-            "while nobody runs it, and **always `null` on a player group**, "
-            "whose line names `owner_name`."
+            "**An official group's** *approves joins* line: the Administrator "
+            "running it now, by **their nickname** — and by the name their club "
+            "typed for them only until they have one, for an Administrator who "
+            "has never played (`docs/adr/0199` §4): *Administrator marta.w "
+            "approves joins*, or *Administrator Marta Wójcik approves joins*. "
+            "Cut by nobody, as `owner_nickname` is. `null` while nobody runs "
+            "it, and **always `null` on a player group**, whose line names "
+            "`owner_nickname`."
         )
     )
     is_administrator: bool = Field(
@@ -268,9 +271,9 @@ class GroupAtClubSchema(GroupRowSchema):
         return cls(
             **GroupRowSchema.fields_of(group.row),
             join_policy=group.join_policy,
-            owner_name=group.owner_name,
+            owner_nickname=group.owner_nickname,
             relation=group.relation,
-            administrator_name=group.administrator_name,
+            administrator_nickname=group.administrator_nickname,
             is_administrator=group.is_administrator,
         )
 
@@ -363,13 +366,14 @@ class JoinSearchResponse(BaseModel):
 
 
 class GroupPersonSchema(BaseModel):
-    """A member's face — **a name and a photograph, and nothing else**."""
+    """A member's face — **a nickname and a photograph, and nothing else**."""
 
     player_id: UUID
-    name: str | None = Field(
+    nickname: str | None = Field(
         description=(
-            "The whole Name, never the nickname. `null` for an account that can "
-            "no longer be named — the member keeps their seat."
+            "Their nickname, whole and never with an @ (`docs/adr/0199` §1). "
+            "`null` for an account that can no longer be named — the member "
+            "keeps their seat."
         )
     )
     photo_id: UUID = Field(
@@ -396,7 +400,7 @@ class GroupPersonSchema(BaseModel):
         """A face's fields, the photograph's two only where there is one — so a
         shape that extends this one omits them as this one does."""
 
-        fields: dict = {"player_id": face.player_id, "name": face.name}
+        fields: dict = {"player_id": face.player_id, "nickname": face.nickname}
         if face.photo_id is not None and face.photo_url is not None:
             fields["photo_id"] = face.photo_id
             fields["photo_url"] = face.photo_url
@@ -461,10 +465,12 @@ class GroupResponse(GroupRowSchema):
             "*+N* counts everybody."
         )
     )
-    administrator_name: str | None = Field(
+    administrator_nickname: str | None = Field(
         description=(
             "**An official group's** *approves joins* line, as a club's card "
-            "says it: the whole Name of the Administrator running it now. "
+            "says it: the Administrator running it now, by their nickname — or "
+            "by the name their club typed, for one who has never played "
+            "(`docs/adr/0199` §4). "
             "**`null` while it needs an administrator** — the line then names "
             "the home club, *Ogrody 33 approves joins*, and requests wait for a "
             "handover — and **always `null` on a player group**, whose line "
@@ -506,7 +512,7 @@ class GroupResponse(GroupRowSchema):
             member_faces=[
                 GroupPersonSchema.from_view(face) for face in page.member_faces
             ],
-            administrator_name=page.administrator_name,
+            administrator_nickname=page.administrator_nickname,
             is_administrator=page.is_administrator,
         )
 
@@ -956,8 +962,8 @@ class ClubJoinRequestSchema(BaseModel):
     player_id: UUID
     name: str | None = Field(
         description=(
-            "The whole Name, never the nickname. `null` for an account that can "
-            "no longer be named — the request still waits."
+            "Their nickname, whole (docs/adr/0199 §5). `null` for an account "
+            "that can no longer be named — the request still waits."
         )
     )
     levels: list[SportLevelSchema] = Field(
@@ -972,7 +978,7 @@ class ClubJoinRequestSchema(BaseModel):
     def from_card(cls, card: RequestCard) -> "ClubJoinRequestSchema":
         return cls(
             player_id=card.face.player_id,
-            name=card.face.name,
+            name=card.face.nickname,
             levels=[
                 SportLevelSchema(sport=row.sport, level=row.level)
                 for row in card.levels

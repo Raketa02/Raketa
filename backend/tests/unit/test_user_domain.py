@@ -8,7 +8,9 @@ from app.modules.users.domain.events import (
     AdultAttested,
     PasswordCleared,
     UserDisabled,
+    AccountOpenedByInvitationV1,
     UserNamed,
+    UserNamedV1,
     UserPromotedToAdmin,
     UserRegistered,
 )
@@ -18,7 +20,6 @@ from app.modules.users.domain.value_objects import (
     Authority,
     Email,
     HashedPassword,
-    Name,
     Nickname,
     RawPassword,
 )
@@ -41,47 +42,17 @@ def test_nickname_rejects_special_chars():
 
 
 def test_nickname_refuses_a_space():
-    """A nickname is a handle, and a space is not in it (``docs/adr/0171`` §1).
-
-    Pinned beside the name's rule so the two cannot drift together: the name is
-    where a space goes, and this is what keeps *Ania Kowalska* out of the field
-    that is unique.
-    """
+    """A nickname is a handle, and a space is not in it (``docs/adr/0199`` §1):
+    *Ania Kowalska* is not one, and *ania.k* is."""
 
     with pytest.raises(ValueError):
         Nickname("ania kowalska")
 
 
-def test_name_trims_and_collapses_whitespace():
-    """The name rule (``docs/adr/0171`` §1): trimmed, runs of whitespace one space.
-
-    Every kind of whitespace, not only the space bar — a name pasted with a tab
-    or a line break in it is the same name.
-    """
-
-    assert Name("  Ania   Kowalska ").value == "Ania Kowalska"
-    assert Name("Diego\t\nFabregat").value == "Diego Fabregat"
-
-
-def test_name_is_two_to_sixty_four_characters_after_trimming():
-    Name("Al")
-    Name("x" * 64)
-    with pytest.raises(ValueError):
-        Name("A")
-    with pytest.raises(ValueError):
-        Name(" A ")
-    with pytest.raises(ValueError):
-        Name("x" * 65)
-    with pytest.raises(ValueError):
-        Name("   ")
-
-
-def test_name_admits_what_a_nickname_refuses():
-    """A space, an apostrophe, an accent: a name is what a person is called."""
-
-    assert Name("O'Neil-Ferrer").value == "O'Neil-Ferrer"
-    assert Name("Zoë Núñez").value == "Zoë Núñez"
-    assert Name("Diego").value == "Diego"
+def test_nickname_is_trimmed_and_keeps_its_three_separators():
+    assert Nickname(" ania.k ").value == "ania.k"
+    assert Nickname("dorota_w").value == "dorota_w"
+    assert Nickname("ak-padel").value == "ak-padel"
 
 
 def test_raw_password_requires_letter_and_digit():
@@ -243,11 +214,11 @@ def test_user_is_registered_unnamed():
         occurred_at=datetime.now(timezone.utc),
     )
 
-    assert user.name is None
     assert user.nickname is None
+    assert not hasattr(user, "name")
 
 
-def test_the_naming_records_one_event_carrying_both():
+def test_the_naming_records_one_event_carrying_the_nickname_alone():
     user_id = new_uuid()
     now = datetime.now(timezone.utc)
     user = User.register(
@@ -259,48 +230,48 @@ def test_the_naming_records_one_event_carrying_both():
     )
     user.pull_events()
 
-    user.name_as(
-        name=Name("  Ania   Kowalska "), nickname=Nickname("ania_k"), occurred_at=now
-    )
+    user.name_as(nickname=Nickname(" ania.k "), occurred_at=now)
 
-    assert user.name == Name("Ania Kowalska")
-    assert user.nickname == Nickname("ania_k")
+    assert user.nickname == Nickname("ania.k")
     assert user.pull_events() == [
-        UserNamed(
-            user_id=user_id, name="Ania Kowalska", nickname="ania_k", occurred_at=now
-        )
+        UserNamed(user_id=user_id, nickname="ania.k", occurred_at=now)
     ]
 
 
 def test_the_naming_is_repeatable_and_the_fold_keeps_the_latest():
-    """A later change is the same act (``docs/adr/0171`` §2)."""
+    """A later change is the same act (``docs/adr/0199`` §3)."""
 
     user_id = new_uuid()
     now = datetime.now(timezone.utc)
-    user = User.from_history(
-        [
-            UserRegistered(
-                user_id=user_id,
-                email="alice@example.com",
-                password_hash="hash",
-                authority=Authority.USER.value,
-                is_admin=False,
-                is_active=True,
-                occurred_at=now,
-            ),
-            UserNamed(user_id=user_id, name="Ania", nickname="ania", occurred_at=now),
-            UserNamed(
-                user_id=user_id,
-                name="Ania Kowalska",
-                nickname="ania_k",
-                occurred_at=now,
-            ),
-        ]
+    user = _registered(
+        user_id,
+        now,
+        UserNamed(user_id=user_id, nickname="ania", occurred_at=now),
+        UserNamed(user_id=user_id, nickname="ania.k", occurred_at=now),
     )
 
-    assert user.name == Name("Ania Kowalska")
-    assert user.nickname == Nickname("ania_k")
+    assert user.nickname == Nickname("ania.k")
     assert user.version == 3
+
+
+def test_a_naming_of_the_first_version_is_read_with_its_name_ignored():
+    """``users.user_named`` v1 carried a Name beside the nickname
+    (``docs/adr/0199`` §6): the fold keeps the nickname, and no account holds
+    the name."""
+
+    user_id = new_uuid()
+    now = datetime.now(timezone.utc)
+    user = _registered(
+        user_id,
+        now,
+        UserNamedV1(
+            user_id=user_id, name="Ania Kowalska", nickname="ania_k", occurred_at=now
+        ),
+    )
+
+    assert user.nickname == Nickname("ania_k")
+    assert not hasattr(user, "name")
+    assert user.version == 2
 
 
 def test_naming_yourself_the_same_way_again_records_nothing():
@@ -310,22 +281,11 @@ def test_naming_yourself_the_same_way_again_records_nothing():
 
     user_id = new_uuid()
     now = datetime.now(timezone.utc)
-    user = User.from_history(
-        [
-            UserRegistered(
-                user_id=user_id,
-                email="alice@example.com",
-                password_hash="hash",
-                authority=Authority.USER.value,
-                is_admin=False,
-                is_active=True,
-                occurred_at=now,
-            ),
-            UserNamed(user_id=user_id, name="Ania", nickname="ania", occurred_at=now),
-        ]
+    user = _registered(
+        user_id, now, UserNamed(user_id=user_id, nickname="ania", occurred_at=now)
     )
 
-    user.name_as(name=Name(" Ania "), nickname=Nickname("ania"), occurred_at=now)
+    user.name_as(nickname=Nickname(" ania "), occurred_at=now)
 
     assert user.pull_events() == []
 
@@ -387,13 +347,12 @@ def _opened_by_invitation(user_id, now) -> User:
     return User.open_by_invitation(
         user_id=user_id,
         email=Email("marta@ogrody33.pl"),
-        name=Name("  Marta   Wójcik "),
         password_hash=HashedPassword("hash"),
         occurred_at=now,
     )
 
 
-def test_an_invitation_opens_an_account_named_by_the_club_with_no_nickname():
+def test_an_invitation_opens_an_account_with_no_player_name_and_no_nickname():
     now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
     user_id = new_uuid()
 
@@ -401,11 +360,34 @@ def test_an_invitation_opens_an_account_named_by_the_club_with_no_nickname():
 
     (opened,) = user.pull_events()
     assert isinstance(opened, AccountOpenedByInvitation)
-    assert opened.name == "Marta Wójcik"
+    # The name the club typed is the Administrator's (``docs/adr/0199`` §4).
+    assert not hasattr(opened, "name")
     assert opened.email == "marta@ogrody33.pl"
-    assert user.name == Name("Marta Wójcik")
     assert user.nickname is None
     # The club typed the email, not the person: nobody has attested.
+    assert user.adult_attested is False
+    assert user.has_password
+
+
+def test_an_invitation_opening_of_the_first_version_is_read_with_its_name_ignored():
+    now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    user_id = new_uuid()
+
+    user = User.from_history(
+        [
+            AccountOpenedByInvitationV1(
+                user_id=user_id,
+                email="marta@ogrody33.pl",
+                password_hash="hash",
+                name="Marta Wójcik",
+                occurred_at=now,
+            )
+        ]
+    )
+
+    assert user.id == user_id
+    assert user.nickname is None
+    assert not hasattr(user, "name")
     assert user.adult_attested is False
     assert user.has_password
 

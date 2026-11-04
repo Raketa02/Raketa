@@ -24,7 +24,6 @@ from app.modules.player_record.domain.record import OnCourtVerdict
 from app.modules.player_record.infrastructure.subject_identities import (
     ProfileAndAccountIdentity,
 )
-from app.modules.users.domain.ports import Naming
 
 SUBJECT = uuid4()
 PHOTO = uuid4()
@@ -40,16 +39,14 @@ def test_the_two_verdict_vocabularies_agree_on_the_wire():
 
 
 class Users:
-    def __init__(self, namings: Mapping[UUID, Naming]) -> None:
-        self.namings = dict(namings)
+    def __init__(self, nicknames: Mapping[UUID, str]) -> None:
+        self.nicknames = dict(nicknames)
 
-    async def find_namings_of(
-        self, user_ids: Collection[UUID]
-    ) -> Mapping[UUID, Naming]:
+    async def find_nicknames_of(self, user_ids: Collection[UUID]) -> Mapping[UUID, str]:
         return {
-            player_id: self.namings[player_id]
+            player_id: self.nicknames[player_id]
             for player_id in user_ids
-            if player_id in self.namings
+            if player_id in self.nicknames
         }
 
 
@@ -90,7 +87,7 @@ class Photos:
 
 def identity_source(
     *,
-    naming: Naming | None = Naming(name="Karol Tomczyk", nickname="karol_t"),
+    nickname: str | None = "karol_t",
     photo_ids: tuple[UUID, ...] = (PHOTO,),
     profile: bool = True,
     decision: PhotoReviewDecision | None = PhotoReviewDecision.ALLOWED,
@@ -98,21 +95,21 @@ def identity_source(
     intro: Intro | None = None,
 ) -> ProfileAndAccountIdentity:
     return ProfileAndAccountIdentity(
-        users=Users({} if naming is None else {SUBJECT: naming}),
+        users=Users({} if nickname is None else {SUBJECT: nickname}),
         profiles=Profiles(Profile(photo_ids, intro) if profile else None),
         photos=photos or Photos(decision),
     )
 
 
-async def test_an_identity_is_the_naming_the_first_photo_and_where_they_are():
-    """Both halves of the naming cross here, and only here among the reads about
-    another player (``docs/adr/0171`` §4)."""
+async def test_an_identity_is_the_nickname_the_first_photo_and_where_they_are():
+    """The nickname and nothing else that names them (``docs/adr/0199`` §6):
+    the record drops the name."""
 
     identity = await identity_source().identity_of(SUBJECT)
 
     assert identity is not None
-    assert identity.name == "Karol Tomczyk"
     assert identity.nickname == "karol_t"
+    assert not hasattr(identity, "name")
     assert identity.photo_id == PHOTO
     assert identity.review is OnCourtVerdict.ALLOWED
     assert identity.social_tags == ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
@@ -173,8 +170,8 @@ async def test_nobody_looked_is_an_absence_and_never_a_third_value():
 
 
 async def test_a_player_the_platform_cannot_describe_is_nobody():
-    """Two absences, one answer — a name that cannot be read and a profile
+    """Two absences, one answer — a nickname that cannot be read and a profile
     never committed. The caller refuses either way, in the one shape it has."""
 
-    assert await identity_source(naming=None).identity_of(SUBJECT) is None
+    assert await identity_source(nickname=None).identity_of(SUBJECT) is None
     assert await identity_source(profile=False).identity_of(SUBJECT) is None

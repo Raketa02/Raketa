@@ -14,13 +14,11 @@ from app.modules.users.domain.events import (
     UserNamed,
     UserRegistered,
 )
-from app.modules.users.domain.ports import Naming
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
     Authority,
     Email,
     HashedPassword,
-    Name,
     Nickname,
 )
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
@@ -30,7 +28,6 @@ def _to_domain(row: UserORM) -> User:
     return User(
         id=row.id,
         email=Email(row.email),
-        name=None if row.name is None else Name(row.name),
         nickname=None if row.nickname is None else Nickname(row.nickname),
         password_hash=(
             None if row.password_hash is None else HashedPassword(row.password_hash)
@@ -48,7 +45,6 @@ def _to_orm(user: User) -> UserORM:
     return UserORM(
         id=user.id,
         email=user.email.value,
-        name=None if user.name is None else user.name.value,
         nickname=None if user.nickname is None else user.nickname.value,
         password_hash=None if user.password_hash is None else user.password_hash.value,
         authority=user.authority.value,
@@ -108,25 +104,20 @@ class SqlAlchemyUserRepository:
         )
         return frozenset(result.scalars().all())
 
-    async def find_namings_of(
-        self, user_ids: Collection[UUID]
-    ) -> Mapping[UUID, Naming]:
+    async def find_nicknames_of(self, user_ids: Collection[UUID]) -> Mapping[UUID, str]:
         ids = list(user_ids)
         if not ids:
             # `IN ()` is not portable SQL, exactly as above.
             return {}
         result = await self._session.execute(
-            select(UserORM.id, UserORM.name, UserORM.nickname).where(
+            select(UserORM.id, UserORM.nickname).where(
                 UserORM.id.in_(ids),
-                # An unnamed account is absent, not present with a blank: the
-                # port promises the pair or nothing.
-                UserORM.name.is_not(None),
+                # An account with no nickname is absent, not present with a
+                # blank: it reads as nobody.
                 UserORM.nickname.is_not(None),
             )
         )
-        return {
-            row.id: Naming(name=row.name, nickname=row.nickname) for row in result
-        }
+        return {row.id: row.nickname for row in result}
 
     async def add(self, user: User) -> User:
         row = _to_orm(user)
@@ -148,7 +139,6 @@ class SqlAlchemyUserRepository:
         row = UserORM(
             id=event.user_id,
             email=event.email,
-            name=event.name,
             password_hash=event.password_hash,
             authority="USER",
             is_admin=False,
@@ -165,7 +155,6 @@ class SqlAlchemyUserRepository:
             raise RuntimeError(
                 f"the naming of {event.user_id} has no projection row to land on"
             )
-        row.name = event.name
         row.nickname = event.nickname
         await self._session.flush()
         await self._session.refresh(row)

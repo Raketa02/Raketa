@@ -18,7 +18,7 @@ from uuid import uuid4
 from app.application.events import DeliveryContext
 from app.modules.users.application.handlers import log_user_registered
 from app.modules.users.application.handlers.log_user_registered import LogUserNamed
-from app.modules.users.domain.events import UserNamed
+from app.modules.users.domain.events import UserNamed, UserNamedV1
 
 APP = Path(__file__).resolve().parents[2] / "app"
 
@@ -30,21 +30,41 @@ RESERVED = frozenset(
 NOW = datetime(2026, 10, 7, 9, tzinfo=timezone.utc)
 
 
-async def test_the_naming_is_logged_with_the_name_it_was_given(caplog):
+async def test_the_naming_is_logged_with_the_nickname_only(caplog):
+    """The log line records the nickname and nothing else that names a person
+    (``docs/adr/0199`` §1): no account holds a name to log."""
+
     caplog.set_level(logging.INFO, logger=log_user_registered.__name__)
     user_id = uuid4()
 
     await LogUserNamed()(
-        UserNamed(
-            user_id=user_id, name="Alice Liddell", nickname="alice", occurred_at=NOW
-        ),
+        UserNamed(user_id=user_id, nickname="ania.k", occurred_at=NOW),
         DeliveryContext(event_id=uuid4(), attempt=1, occurred_at=NOW),
     )
 
     [record] = [r for r in caplog.records if r.getMessage() == "user.named"]
     assert record.user_id == str(user_id)
-    assert record.user_name == "Alice Liddell"
-    assert record.nickname == "alice"
+    assert record.nickname == "ania.k"
+    assert not hasattr(record, "user_name")
+
+
+async def test_a_first_version_naming_is_logged_without_its_name(caplog):
+    """A v1 row still in the outbox is delivered, and its name stays out of the
+    log as it stays out of the fold."""
+
+    caplog.set_level(logging.INFO, logger=log_user_registered.__name__)
+
+    await LogUserNamed()(
+        UserNamedV1(
+            user_id=uuid4(), name="Ania Kowalska", nickname="ania.k", occurred_at=NOW
+        ),
+        DeliveryContext(event_id=uuid4(), attempt=1, occurred_at=NOW),
+    )
+
+    [record] = [r for r in caplog.records if r.getMessage() == "user.named"]
+    assert record.nickname == "ania.k"
+    assert not hasattr(record, "user_name")
+    assert "Ania Kowalska" not in str(record.__dict__)
 
 
 def test_no_log_line_in_the_app_names_a_record_attribute_in_its_extra():

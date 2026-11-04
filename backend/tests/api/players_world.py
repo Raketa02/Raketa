@@ -74,9 +74,10 @@ async def register(
 ) -> tuple[UUID, str]:
     """Sign one player up, in, and name them. Returns their id and a bearer token.
 
-    The naming is the player's own act after sign-up (``docs/adr/0171`` §2); the
-    one word is used for the name and the nickname alike, so an assertion reading
-    a seat's ``name`` finds what the test registered. ``domain`` is where they
+    The naming is the player's own act after sign-up (``docs/adr/0199`` §3); the
+    one word is the address's local part and the nickname alike, so an
+    assertion reading a seat's ``nickname`` finds what the test registered.
+    ``domain`` is where they
     are addressed — ``raketa.example``, the seed system's reserved TLD, makes an
     account the games test console may act as (``docs/adr/0194`` §2).
     """
@@ -99,7 +100,7 @@ async def register(
     token = login.json()["access_token"]
     named = await client.put(
         "/api/v1/users/me/name",
-        json={"name": name, "nickname": name},
+        json={"nickname": name},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert named.status_code == 200, named.text

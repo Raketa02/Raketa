@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from app.infrastructure.events.event_store_model import EventStoreORM
 
-NAMING = {"name": "Alice Liddell", "nickname": "alice"}
+NAMING = {"nickname": "alice"}
 
 
 async def _signed_in(client, payload) -> dict[str, str]:
@@ -25,9 +25,10 @@ async def test_signup_success(client, valid_signup_payload):
     assert body["authority"] == "USER"
     assert body["is_admin"] is False
     assert "password" not in body and "password_hash" not in body
-    # Credentials only: a fresh account is unnamed (``docs/adr/0171`` §2).
-    assert body["name"] is None
+    # Credentials only: a fresh account has no nickname (``docs/adr/0199`` §3),
+    # and no account holds a name at all.
     assert body["nickname"] is None
+    assert "name" not in body
     # The Tester mark went with the feature flags it fed (#581).
     assert "is_tester" not in body
 
@@ -44,33 +45,33 @@ async def test_signup_carrying_a_nickname_is_malformed(client, valid_signup_payl
     assert resp.status_code == 422, resp.text
 
 
-async def test_me_reads_no_name_until_the_naming(client, valid_signup_payload):
-    """The entry gate's first destination reads ``name`` (``docs/adr/0171`` §3)."""
+async def test_me_reads_no_nickname_until_the_naming(client, valid_signup_payload):
+    """The entry gate's first destination reads *no nickname*
+    (``docs/adr/0199`` §3), and ``/me`` serves no ``name`` at all."""
 
     headers = await _signed_in(client, valid_signup_payload)
 
     me = await client.get("/api/v1/users/me", headers=headers)
 
     assert me.status_code == 200, me.text
-    assert me.json()["name"] is None
     assert me.json()["nickname"] is None
+    assert "name" not in me.json()
 
 
-async def test_the_naming_is_admitted_and_me_reads_both(client, valid_signup_payload):
+async def test_the_naming_takes_a_nickname_and_me_reads_it(
+    client, valid_signup_payload
+):
     headers = await _signed_in(client, valid_signup_payload)
 
     named = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": "  Alice   Liddell ", "nickname": "alice"},
-        headers=headers,
+        "/api/v1/users/me/name", json={"nickname": "ania.k"}, headers=headers
     )
 
     assert named.status_code == 200, named.text
-    assert named.json()["name"] == "Alice Liddell"
-    assert named.json()["nickname"] == "alice"
+    assert named.json() == {"nickname": "ania.k"}
     me = await client.get("/api/v1/users/me", headers=headers)
-    assert me.json()["name"] == "Alice Liddell"
-    assert me.json()["nickname"] == "alice"
+    assert me.json()["nickname"] == "ania.k"
+    assert "name" not in me.json()
 
 
 async def test_the_naming_requires_auth(client):
@@ -79,28 +80,46 @@ async def test_the_naming_requires_auth(client):
 
 
 async def test_the_naming_is_repeatable(client, valid_signup_payload):
-    """A later change is the same act, and keeping your own nickname is admitted."""
+    """A later change is the same act, and keeping your own nickname is
+    admitted (``docs/adr/0199`` §3)."""
 
     headers = await _signed_in(client, valid_signup_payload)
     assert (
         await client.put("/api/v1/users/me/name", json=NAMING, headers=headers)
     ).status_code == 200
 
-    again = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": "Alice", "nickname": "alice"},
-        headers=headers,
-    )
-    assert again.status_code == 200, again.text
-    assert again.json()["name"] == "Alice"
-    assert again.json()["nickname"] == "alice"
-
     unchanged = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": "Alice", "nickname": "alice"},
-        headers=headers,
+        "/api/v1/users/me/name", json={"nickname": "alice"}, headers=headers
     )
     assert unchanged.status_code == 200, unchanged.text
+    assert unchanged.json() == {"nickname": "alice"}
+
+    renamed = await client.put(
+        "/api/v1/users/me/name", json={"nickname": "ak.padel"}, headers=headers
+    )
+    assert renamed.status_code == 200, renamed.text
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.json()["nickname"] == "ak.padel"
+
+
+async def test_a_nickname_given_up_is_free_to_take(client, valid_signup_payload):
+    """Uniqueness reads the projection as it stands: once Alice moves on to a
+    new handle, her old one is anybody's."""
+
+    alice = await _signed_in(client, valid_signup_payload)
+    bob = await _signed_in(client, {**valid_signup_payload, "email": "bob@example.com"})
+    assert (
+        await client.put("/api/v1/users/me/name", json=NAMING, headers=alice)
+    ).status_code == 200
+    assert (
+        await client.put(
+            "/api/v1/users/me/name", json={"nickname": "alice2"}, headers=alice
+        )
+    ).status_code == 200
+
+    taken = await client.put("/api/v1/users/me/name", json=NAMING, headers=bob)
+
+    assert taken.status_code == 200, taken.text
 
 
 async def test_another_players_nickname_is_refused_with_the_conflict(
@@ -113,92 +132,40 @@ async def test_another_players_nickname_is_refused_with_the_conflict(
     bob = await _signed_in(client, {**valid_signup_payload, "email": "bob@example.com"})
 
     resp = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": "Bob", "nickname": "alice"},
-        headers=bob,
+        "/api/v1/users/me/name", json={"nickname": "alice"}, headers=bob
     )
 
     assert resp.status_code == 409, resp.text
     assert resp.json()["code"] == "nickname_already_taken"
     assert resp.json()["details"] == {"field": "nickname"}
-    # Nothing was written for the refused half either: the act is one event.
     me = await client.get("/api/v1/users/me", headers=bob)
-    assert me.json()["name"] is None
+    assert me.json()["nickname"] is None
 
 
-async def test_two_players_may_share_a_name(client, valid_signup_payload):
-    """A name is never unique (``docs/adr/0171`` §1); the handle is what tells
-    two Alices apart, on the record."""
-
-    alice = await _signed_in(client, valid_signup_payload)
-    other = await _signed_in(
-        client, {**valid_signup_payload, "email": "alice2@example.com"}
-    )
-
-    first = await client.put("/api/v1/users/me/name", json=NAMING, headers=alice)
-    second = await client.put(
-        "/api/v1/users/me/name",
-        json={**NAMING, "nickname": "alice_l"},
-        headers=other,
-    )
-
-    assert first.status_code == 200, first.text
-    assert second.status_code == 200, second.text
-    assert first.json()["name"] == second.json()["name"] == "Alice Liddell"
-
-
-async def test_the_naming_refuses_a_malformed_name_or_nickname(
+async def test_the_naming_refuses_a_malformed_nickname_or_a_name(
     client, valid_signup_payload
 ):
+    """``{nickname}`` and nothing else: a body still carrying a name is a body
+    no client sends any more, refused rather than quietly dropped."""
+
     headers = await _signed_in(client, valid_signup_payload)
 
     for body in (
-        {"name": "A", "nickname": "alice"},
-        {"name": "x" * 65, "nickname": "alice"},
-        {"name": "Alice", "nickname": "ali ce"},
-        {"name": "Alice", "nickname": "a"},
+        {"nickname": "ali ce"},
+        {"nickname": " ania.k "},
+        {"nickname": "a"},
+        {"nickname": "x" * 65},
+        {"nickname": "ania@k"},
+        {},
         {"name": "Alice"},
-        {"nickname": "alice"},
-        {"name": "Alice", "nickname": "alice", "extra": "field"},
+        {"name": "Alice Liddell", "nickname": "alice"},
+        {"nickname": "alice", "extra": "field"},
     ):
         resp = await client.put("/api/v1/users/me/name", json=body, headers=headers)
         assert resp.status_code == 422, (body, resp.text)
 
 
-async def test_the_name_rule_is_applied_after_the_trim_and_the_collapse(
-    client, valid_signup_payload
-):
-    """The 2–64 bound is on the name as recorded, not on what was typed.
-
-    ``"   A   "`` is seven characters and one name-character: a bound checked
-    on the raw string admits it and the value object then refuses it, which is
-    a typed value meeting an invariant — a 500 for a player's typo. So the
-    schema normalises first, exactly as the value object does, and the two
-    cannot disagree about what is too short or too long.
-    """
-
-    headers = await _signed_in(client, valid_signup_payload)
-
-    too_short = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": "   A   ", "nickname": "alice"},
-        headers=headers,
-    )
-    assert too_short.status_code == 422, too_short.text
-
-    # Sixty-four after the collapse, though longer as typed: admitted.
-    padded = " " + "x" * 32 + "   " + "y" * 31 + " "
-    long_enough = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": padded, "nickname": "alice"},
-        headers=headers,
-    )
-    assert long_enough.status_code == 200, long_enough.text
-    assert long_enough.json()["name"] == "x" * 32 + " " + "y" * 31
-    assert len(long_enough.json()["name"]) == 64
-
-
-async def test_the_naming_is_one_event_on_the_stream(
+async def test_the_naming_is_one_event_carrying_the_nickname_alone(
     client, valid_signup_payload, session_factory
 ):
     headers = await _signed_in(client, valid_signup_payload)
@@ -207,21 +174,19 @@ async def test_the_naming_is_one_event_on_the_stream(
     ).status_code == 200
 
     async with session_factory() as session:
-        payloads = (
-            (
-                await session.execute(
-                    select(EventStoreORM.payload).where(
-                        EventStoreORM.event_type == "users.user_named"
-                    )
+        rows = (
+            await session.execute(
+                select(EventStoreORM.payload, EventStoreORM.schema_version).where(
+                    EventStoreORM.event_type == "users.user_named"
                 )
             )
-            .scalars()
-            .all()
-        )
+        ).all()
 
-    assert len(payloads) == 1
-    assert payloads[0]["name"] == "Alice Liddell"
-    assert payloads[0]["nickname"] == "alice"
+    assert len(rows) == 1
+    payload, version = rows[0]
+    assert version == 2
+    assert payload["nickname"] == "alice"
+    assert "name" not in payload
 
 
 async def test_signup_refuses_an_unanswered_age_question(client, valid_signup_payload):

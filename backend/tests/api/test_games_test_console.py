@@ -343,7 +343,7 @@ async def test_the_protagonist_is_the_seed_s_own_once_she_is_registered(client, 
     assert signed_up.status_code == 201, signed_up.text
 
     protagonist = (await client.get("/dev/groups")).json()["protagonist"]
-    assert protagonist == {"player_id": signed_up.json()["id"], "name": None}
+    assert protagonist == {"player_id": signed_up.json()["id"], "nickname": None}
 
     # Once she is in the group, the page opens on it.
     signed_in = await client.post(
@@ -353,7 +353,7 @@ async def test_the_protagonist_is_the_seed_s_own_once_she_is_registered(client, 
     headers = players.auth(signed_in.json()["access_token"])
     named = await client.put(
         "/api/v1/users/me/name",
-        json={"name": "Marta Ferrer", "nickname": "marta_ferrer"},
+        json={"nickname": "marta_ferrer"},
         headers=headers,
     )
     assert named.status_code == 200, named.text
@@ -399,7 +399,9 @@ async def test_each_row_shows_the_cards_dealt_to_them_with_who_is_in(
     assert kuba["answer"] == "IN"
     assert kuba["kind"] == "COMPETITIVE"
     assert kuba["open_seats"] == 3
-    assert kuba["people_in"] == [{"player_id": str(world.kuba["id"]), "name": "kuba"}]
+    assert kuba["people_in"] == [
+        {"player_id": str(world.kuba["id"]), "nickname": "kuba"}
+    ]
     assert [card["answer"] for card in rows["marta"]["cards"]] == ["DEALT"]
     assert [card["answer"] for card in rows["zofia"]["cards"]] == ["SAID_NO"]
     assert rows["marek"]["cards"] == []
@@ -575,9 +577,11 @@ async def test_the_pane_of_a_game_still_filling(client, session_factory, clock, 
     assert pane["book_by"] is not None
     assert pane["share_grosze"] == 30_00
     assert pane["open_seats"] == 3
-    assert pane["people_in"] == [{"player_id": str(world.kuba["id"]), "name": "kuba"}]
+    assert pane["people_in"] == [
+        {"player_id": str(world.kuba["id"]), "nickname": "kuba"}
+    ]
     [version] = pane["versions"]
-    assert {(p["name"], p["answer"]) for p in version["people"]} == {
+    assert {(p["nickname"], p["answer"]) for p in version["people"]} == {
         ("marta", "DEALT"),
         ("kuba", "IN"),
         ("zofia", "DEALT"),
@@ -652,6 +656,6 @@ async def test_the_pane_shows_a_hold_let_go_once_somebody_leaves(
     [departure] = pane["booking"]["departures"]
     assert departure["player"]["player_id"] == str(world.kuba["id"])
     assert departure["rescued_by"] is None
-    charges = {charge["player"]["name"]: charge for charge in pane["charges"]}
+    charges = {charge["player"]["nickname"]: charge for charge in pane["charges"]}
     assert (charges["kuba"]["status"], charges["kuba"]["refund"]) == ("CANCELLED", None)
     assert (charges["marta"]["status"], charges["marta"]["refund"]) == ("HELD", None)

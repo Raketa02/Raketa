@@ -13,8 +13,8 @@ own projection. ``ProposalsDecks`` asks
 (``ReadGroupDeck.shows``), and ``RescueSeatOffers`` asks the Fill in board's
 own ``RescueOffers`` who a seat is offered to — never a second reading of
 either rule. ``SeatChargeShares`` is what a refund gives back — the provider's
-own figures, never an estimate (#641). ``PlatformNames`` is a person's Name and
-a club's.
+own figures, never an estimate (#641). ``PlatformNames`` is a person's nickname
+(``docs/adr/0199`` §1) and a club's name.
 """
 
 from __future__ import annotations
@@ -319,8 +319,7 @@ class PlatformNames:
     async def of_people(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         if not player_ids:
             return {}
-        namings = await self._users.find_namings_of(player_ids)
-        return {player_id: naming.name for player_id, naming in namings.items()}
+        return await self._users.find_nicknames_of(player_ids)
 
     async def of_clubs(self, club_ids: Collection[UUID]) -> Mapping[UUID, str]:
         if not club_ids:

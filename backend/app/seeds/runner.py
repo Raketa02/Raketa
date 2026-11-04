@@ -461,7 +461,7 @@ async def _seed_account(
         photos=photos,
     )
     player_id, registered = await _ensure_registered(
-        use_cases, email=account.email, name=account.name, nickname=account.nickname
+        use_cases, email=account.email, nickname=account.nickname
     )
     scenarios = tuple(
         [
@@ -493,9 +493,10 @@ def _clock_for(account: SeedAccount, now: Instant) -> Clock:
 
 
 async def _ensure_registered(
-    use_cases: _UseCases, *, email: str, name: str, nickname: str
+    use_cases: _UseCases, *, email: str, nickname: str
 ) -> tuple[UUID, bool]:
-    """Register this address and name the account, or find the one already there.
+    """Register this address and give the account its nickname, or find the one
+    already there.
 
     Takes the values rather than an account, because a named account and a
     cohort member are the same registration: both are an address derived from
@@ -503,12 +504,12 @@ async def _ensure_registered(
     function would be two places for *is it already there* to be answered
     differently.
 
-    **Two acts, as a player performs them** (``docs/adr/0171`` §2): sign-up is
+    **Two acts, as a player performs them** (``docs/adr/0199`` §3): sign-up is
     credentials only and the naming is its own use case, so a seeded account
     has the two events a real one has. The naming is asked on every run — it
     is the act's own idempotence that makes a second run write nothing, an
     unchanged re-naming recording no event — so a pool that dealt an account a
-    different name is corrected rather than left as the first run wrote it.
+    different nickname is corrected rather than left as the first run wrote it.
     """
 
     existing = await use_cases.users.get_by_email(email)
@@ -529,9 +530,7 @@ async def _ensure_registered(
     else:
         player_id, registered = existing.id, False
 
-    await use_cases.name.execute(
-        NameUserCommand(user_id=player_id, name=name, nickname=nickname)
-    )
+    await use_cases.name.execute(NameUserCommand(user_id=player_id, nickname=nickname))
     return player_id, registered
 
 
@@ -882,7 +881,7 @@ async def _seed_member(
         photos=photos,
     )
     player_id, registered = await _ensure_registered(
-        use_cases, email=member.email, name=member.name, nickname=member.nickname
+        use_cases, email=member.email, nickname=member.nickname
     )
     rated = tuple(
         [

@@ -168,15 +168,18 @@ class Sellers(Protocol):
 @final
 @dataclass(frozen=True, slots=True)
 class Payer:
-    """Where a player's money emails go, and what they are called in them."""
+    """Where a player's money emails go, and the nickname they are greeted by
+    in them (``docs/adr/0199`` §1) — ``None`` for an account with none, which
+    is greeted by nobody's name."""
 
     email: str
-    name: str | None
+    nickname: str | None
 
 
 @runtime_checkable
 class Payers(Protocol):
-    """**A demand of the users context**: each player's address and Name."""
+    """**A demand of the users context**: each player's address and
+    nickname."""
 
     async def of(self, player_ids: Collection[UUID]) -> Mapping[UUID, Payer]:
         """Each of these players. An account that no longer exists is absent."""

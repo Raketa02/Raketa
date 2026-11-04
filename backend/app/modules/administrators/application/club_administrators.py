@@ -47,7 +47,8 @@ from app.modules.administrators.domain.ports import (
 )
 from app.modules.auth.application.sign_out_everywhere import SignOutEverywhere
 from app.modules.users.domain.errors import EmailInvalid
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.administrators.domain.value_objects import Name
+from app.modules.users.domain.value_objects import Email
 from app.shared.ids import new_uuid
 
 

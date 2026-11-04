@@ -3,11 +3,11 @@
 ``users`` is event-sourced with a projection beside it (``docs/adr/0002``): the
 ``users`` table answers lookups — by id, by email, by nickname — and the stream
 is the record. Two reads here want the record rather than the row. The naming
-appends to the stream and needs the version it expects; and ``/me``'s ``name``
-is what onboarding's entry gate routes on, read the instant after the commit
-that wrote it, so it comes from the source that is correct at that instant by
-construction (``docs/adr/0171`` §3, on ``docs/adr/0089``'s argument for the
-profile flag) rather than from a model that could, one day, be behind.
+appends to the stream and needs the version it expects; and ``/me``'s
+``nickname`` is what onboarding's entry gate routes on, read the instant after
+the commit that wrote it, so it comes from the source that is correct at that
+instant by construction (``docs/adr/0199`` §3, on ``docs/adr/0089``'s argument
+for the profile flag) rather than from a model that could, one day, be behind.
 
 A function and not a repository, on the rating context's precedent for a
 replay with one caller shape: what an ``EventSourcedUserRepository`` would add

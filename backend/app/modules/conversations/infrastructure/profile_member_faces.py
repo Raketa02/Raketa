@@ -1,11 +1,10 @@
-"""``MemberFaces`` — a name from ``users``, a face from the Player profile.
+"""``MemberFaces`` — a nickname from ``users``, a face from the Player profile.
 
 **It reads each provider's own port and never their table or their bucket.** The
-name comes from ``users``, which owns what an account is called — and the
-nickname it answers beside it is left here, because a handle is drawn on a record
-and said nowhere (``docs/adr/0171`` §4); the photo id
-comes from the profile, which owns which photograph a person leads with; and the
-link is signed by ``PhotoStorage``, which owns where the bytes live. A key
+nickname comes from ``users``, which owns what an account is called
+(``docs/adr/0199`` §1); the photo id comes from the profile, which owns which
+photograph a person leads with; and the link is signed by ``PhotoStorage``,
+which owns where the bytes live. A key
 template written here would make this context a second implementation of that,
 and the two would disagree the day the layout changed.
 
@@ -66,12 +65,11 @@ class ProfileMemberFaces:
         if not wanted:
             return {}
 
-        namings = await self._users.find_namings_of(wanted)
+        nicknames = await self._users.find_nicknames_of(wanted)
         photos = {player_id: await self._first_photo(player_id) for player_id in wanted}
 
         faces: dict[UUID, MemberFace] = {}
         for player_id in wanted:
-            naming = namings.get(player_id)
             photo_id = photos[player_id]
             url = (
                 None
@@ -83,7 +81,7 @@ class ProfileMemberFaces:
             )
             faces[player_id] = MemberFace(
                 player_id=player_id,
-                name=None if naming is None else naming.name,
+                nickname=nicknames.get(player_id),
                 photo_id=None if url is None else photo_id,
                 photo_url=url,
             )

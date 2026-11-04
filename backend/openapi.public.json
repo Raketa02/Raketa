@@ -116,7 +116,7 @@
           "public"
         ],
         "summary": "Set your password here, by the invitation's link",
-        "description": "**The same rules and the same results as the app's *Set your password***: a new person's account is created \u2014 its Name the one the club typed, no nickname, no Adult attestation \u2014 or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Raketa and sign in with this email and password.",
+        "description": "**The same rules and the same results as the app's *Set your password***: a new person's account is created \u2014 no player name, no nickname, no Adult attestation \u2014 or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Raketa and sign in with this email and password.",
         "operationId": "set_password_on_the_invitation_page_api_v1_public_invitations_password_post",
         "requestBody": {
           "content": {
@@ -407,7 +407,7 @@
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "The name the club typed, **whole** \u2014 *Marta W\u00f3jcik*, never a first name cut out of it (``docs/adr/0171`` \u00a74). It becomes the person's Name when they set a password."
+            "description": "The name the club typed, **whole** \u2014 *Marta W\u00f3jcik*, never a first name cut out of it. It is the Administrator's and stays theirs: the account a password opens holds no player name (``docs/adr/0199`` \u00a74)."
           },
           "club_name": {
             "type": "string",

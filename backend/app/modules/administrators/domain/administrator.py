@@ -40,7 +40,8 @@ from app.modules.auth.domain.one_time_credential import (
     LIFETIMES,
     CredentialPurpose,
 )
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.administrators.domain.value_objects import Name
+from app.modules.users.domain.value_objects import Email
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
@@ -99,8 +100,9 @@ class Administrator:
     id: UUID
     club_id: UUID
     email: Email
-    #: The name the club typed. It becomes the account's Name when the person
-    #: is new to Raketa (``docs/adr/0185`` §4), and is what the club's list says.
+    #: The name the club typed — **the Administrator's, and never a player's**
+    #: (``docs/adr/0199`` §4): what the club's list and this person's own emails
+    #: say, and what *"… runs this group"* says until they have a nickname.
     name: Name
     state: AdministratorState
     #: The account this administratorship belongs to — set when the invitation

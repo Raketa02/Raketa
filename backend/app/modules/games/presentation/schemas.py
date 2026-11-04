@@ -135,7 +135,7 @@ class SeatingSchema(BaseModel):
     its place — so a four with one seat open is still a four and the client
     folds *Needs a player* from it. Nothing on the wire names that rung.
 
-    **A name, and nothing else about them** (``docs/adr/0141``). A Level, a
+    **A nickname, and nothing else about them** (``docs/adr/0141``). A Level, a
     band, an area and a run of form are what a *searcher* reads to decide about a
     game that might happen, and a gate decided they may see them; this is the
     record of a game that did, and it re-publishes nobody's profile off the back
@@ -154,18 +154,18 @@ class SeatingSchema(BaseModel):
             "**Always present** — a seat is never dropped."
         ),
     )
-    name: str | None = Field(
+    nickname: str | None = Field(
         default=None,
         description=(
-            "The whole name, and **nothing may derive a familiar form from "
-            "it** — every sentence naming somebody uses all of it or names "
-            "nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the "
-            "nickname: a handle is drawn on a record and said nowhere.\n\n"
+            "Their nickname, whole and never with an @, and **nothing may "
+            "derive a familiar form from it** — every sentence naming somebody "
+            "uses all of it or names nobody (``docs/adr/0107``, "
+            "``docs/adr/0199`` §1).\n\n"
             "``null`` where ``users`` no longer has this account, and on an "
-            "open seat — never for an unnamed player, whom the entry gate holds "
-            "at the naming step. The seat stays: dropping it would publish a "
-            "three-person doubles game, and the screen has a side to name "
-            "instead."
+            "open seat — never for a player with no nickname yet, whom the "
+            "entry gate holds at the naming step. The seat stays: dropping it "
+            "would publish a three-person doubles game, and the screen has a "
+            "side to name instead."
         ),
     )
 
@@ -173,11 +173,11 @@ class SeatingSchema(BaseModel):
 class CalledOffBySchema(BaseModel):
     """Who called the game off, and what they are called (``docs/adr/0172`` §4).
 
-    **The name is carried because the court cannot supply it**: the leaver whose
-    departure called the game off has been **vacated** — their seat is drawn
-    `player_id: null` — so the seats alone could not name them. It is the same
-    name a seat carries, read in the same set read, and it is `null` for the
-    same reason a seat's is: an account `users` no longer answers for.
+    **The nickname is carried because the court cannot supply it**: the leaver
+    whose departure called the game off has been **vacated** — their seat is
+    drawn `player_id: null` — so the seats alone could not name them. It is the
+    same nickname a seat carries, read in the same set read, and it is `null`
+    for the same reason a seat's is: an account `users` no longer answers for.
 
     **A departure is told from a press by whether this player still holds a
     seat on the game.** The presser does; the leaver's seat is open. No second
@@ -185,13 +185,14 @@ class CalledOffBySchema(BaseModel):
     """
 
     player_id: UUID
-    name: str | None = Field(
+    nickname: str | None = Field(
         default=None,
         description=(
-            "The whole name, and **nothing may derive a familiar form from "
-            "it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where "
-            "``users`` no longer has the account — never for an unnamed "
-            "player, whom the entry gate holds at the naming step."
+            "Their nickname, whole and never with an @, and **nothing may "
+            "derive a familiar form from it** (``docs/adr/0107``, "
+            "``docs/adr/0199`` §1). ``null`` where ``users`` no longer has the "
+            "account — never for a player with no nickname yet, whom the entry "
+            "gate holds at the naming step."
         ),
     )
 
@@ -228,16 +229,16 @@ class AttendanceSchema(BaseModel):
     """One player somebody on the court said was not here yet, and what became
     of it (#657; ``docs/adr/0195`` §3). **Folded on every read against
     `read_at`**, never stored. **Who tapped is not here**: the tap is the game's,
-    and a name on it would be the platform pointing at one of the people who
-    came. Nobody is ever in this list who was not tapped: everybody who arrives
+    and a nickname on it would be the platform pointing at one of the people
+    who came. Nobody is ever in this list who was not tapped: everybody who arrives
     on time does nothing at all."""
 
     player_id: UUID
-    name: str | None = Field(
+    nickname: str | None = Field(
         default=None,
         description=(
-            "Their whole name, as a seat carries it. ``null`` where ``users`` "
-            "no longer has the account."
+            "Their nickname, whole, as a seat carries it. ``null`` where "
+            "``users`` no longer has the account."
         ),
     )
     state: AttendanceState = Field(
@@ -363,7 +364,7 @@ class GameSchema(BaseModel):
     called_off_by: CalledOffBySchema | None = Field(
         default=None,
         description=(
-            "The player who called it off, and their name (``docs/adr/0172`` "
+            "The player who called it off, and their nickname (``docs/adr/0172`` "
             "§4). ``null`` on every standing but `CALLED_OFF` — and on a booked "
             "game called off by its cut-off or its club, which nobody did."
         ),
@@ -419,7 +420,7 @@ class GameSchema(BaseModel):
     def of(cls, one: StandingGame, *, reader_id: UUID) -> "GameSchema":
         """One game as its own court is allowed to see it.
 
-        The occupants carry **a name and nothing else** (``docs/adr/0141``). A
+        The occupants carry **a nickname and nothing else** (``docs/adr/0141``). A
         card, a Level and an area belong to a search's answer, where a gate
         decided they may be shown; a game is a record of an evening, and a
         screen that re-published somebody's profile off the back of it would be
@@ -470,14 +471,14 @@ class GameSchema(BaseModel):
                 if game.called_off_by is None
                 else CalledOffBySchema(
                     player_id=game.called_off_by,
-                    name=one.names.get(game.called_off_by),
+                    nickname=one.names.get(game.called_off_by),
                 )
             ),
             seats=[
                 SeatingSchema(
                     side=seating.side,
                     player_id=seating.player_id,
-                    name=(
+                    nickname=(
                         None
                         if seating.player_id is None
                         else one.names.get(seating.player_id)
@@ -516,7 +517,7 @@ def _attendance_of(one: StandingGame) -> list[AttendanceSchema]:
     return [
         AttendanceSchema(
             player_id=seating.player_id,
-            name=one.names.get(seating.player_id),
+            nickname=one.names.get(seating.player_id),
             state=states[seating.player_id],
             noted_at=absence.noted_at,
             arrive_by=tap_window_closes_at(starts_at),

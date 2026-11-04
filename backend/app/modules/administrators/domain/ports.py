@@ -29,7 +29,7 @@ from app.modules.administrators.domain.administrator import (
     AdministratorState,
     standing_of,
 )
-from app.modules.users.domain.value_objects import Email, Name
+from app.modules.users.domain.value_objects import Email
 
 # --------------------------------------------------------------------------- #
 # This context's own store
@@ -146,10 +146,11 @@ class AccountHolders(Protocol):
         ...
 
     async def open_account(
-        self, *, email: Email, name: Name, password_hash: str, at: Instant
+        self, *, email: Email, password_hash: str, at: Instant
     ) -> UUID:
-        """Open the account an invitation is for: the club-typed name, no
-        nickname, no Adult attestation (``docs/adr/0185`` §4–§5)."""
+        """Open the account an invitation is for: no player name — the
+        club-typed name stays on the Administrator (``docs/adr/0199`` §4) — no
+        nickname, and no Adult attestation (``docs/adr/0185`` §5)."""
         ...
 
     async def set_password(

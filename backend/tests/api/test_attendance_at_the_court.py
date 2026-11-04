@@ -214,7 +214,7 @@ async def test_ivan_taps_at_17_10_oscar_s_i_m_here_at_17_22_is_came_late_and_sco
     assert tapped.status_code == 200, tapped.text
     assert tapped.json()["standing"] == "NOT_HERE_YET"
     [row] = tapped.json()["attendance"]
-    assert (row["player_id"], row["name"], row["state"]) == (
+    assert (row["player_id"], row["nickname"], row["state"]) == (
         str(oscar["id"]),
         "oscar",
         "WAITING",

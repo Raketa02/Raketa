@@ -54,7 +54,8 @@ OMITTED: Any = None
 
 
 class ConversationPersonSchema(BaseModel):
-    """One person this response names — **a name and a face, and nothing else.**
+    """One person this response names — **a nickname and a face, and nothing
+    else.**
 
     No Level, no band, no area, no score — those are a *card*'s, and a card is
     what somebody reads to decide about a game that might happen. Everybody
@@ -74,17 +75,17 @@ class ConversationPersonSchema(BaseModel):
             "`author_id` match"
         ),
     )
-    name: str | None = Field(
+    nickname: str | None = Field(
         ...,
         description=(
-            "The whole name, and **`null` for an account `users` can no longer "
-            "name** — never for an unnamed player, whom the entry gate holds at "
-            "the naming step. The person keeps their place either way: a member "
-            "dropped would draw a three-person doubles court, and an actor "
-            "dropped would leave a line naming nobody. Draw the unknown player's "
-            "mark for `null` and nothing else. Nothing may derive a familiar "
-            "form from it, and it is never the nickname: a handle is drawn on a "
-            "record and said nowhere (``docs/adr/0171``)."
+            "Their nickname, whole and never with an @, and **`null` for an "
+            "account `users` can no longer name** — never for a player with no "
+            "nickname yet, whom the entry gate holds at the naming step. The "
+            "person keeps their place either way: a member dropped would draw a "
+            "three-person doubles court, and an actor dropped would leave a line "
+            "naming nobody. Draw the unknown player's mark for `null` and "
+            "nothing else. Nothing may derive a familiar form from it "
+            "(``docs/adr/0199`` §1)."
         ),
     )
     photo_id: UUID = Field(

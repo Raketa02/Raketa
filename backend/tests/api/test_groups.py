@@ -418,7 +418,7 @@ async def test_each_sport_says_how_many_are_rated_and_who_joined_first(client):
         str(owner["id"]),
         *(str(player["id"]) for player in joiners[:3]),
     ]
-    assert [person["name"] for person in padel["first_rated"]] == [
+    assert [person["nickname"] for person in padel["first_rated"]] == [
         "owner",
         "ala",
         "bea",
@@ -446,7 +446,7 @@ async def test_a_face_without_a_photograph_carries_no_photograph(client):
     [face] = next(
         row["first_rated"] for row in body["rated_by_sport"] if row["sport"] == "PADEL"
     )
-    assert face == {"player_id": str(tomek["id"]), "name": "tomek"}
+    assert face == {"player_id": str(tomek["id"]), "nickname": "tomek"}
 
 
 async def test_the_owner_is_the_owner_and_a_member_is_not(client):

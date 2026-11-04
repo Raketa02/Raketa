@@ -83,20 +83,13 @@ class RosterAccount(BaseModel):
         ),
     )
     email: str = Field(..., description="What the phone signs in with")
-    name: str | None = Field(
-        ...,
-        description=(
-            "The whole name, as every player surface says it. `null` for an "
-            "account registered and never named, which no seed run leaves "
-            "behind. What the account is *for* — the state it was named for — is "
-            "read off the address, not the name."
-        ),
-    )
     nickname: str | None = Field(
         ...,
         description=(
-            "The handle, drawn as `@nickname` on a record and the You tab only. "
-            "`null` exactly when `name` is: the naming is one act carrying both."
+            "The nickname, as every player surface says it (docs/adr/0199 §1). "
+            "`null` for an account registered and never named, which no seed "
+            "run leaves behind. What the account is *for* — the state it was "
+            "named for — is read off the address, not the nickname."
         ),
     )
 
@@ -145,7 +138,7 @@ async def read_console() -> FileResponse:
 )
 async def read_roster(db: DbSession) -> RosterResponse:
     rows = await db.execute(
-        select(UserORM.id, UserORM.email, UserORM.name, UserORM.nickname)
+        select(UserORM.id, UserORM.email, UserORM.nickname)
         .where(seed_accounts_only())
         .order_by(UserORM.email)
     )
@@ -155,7 +148,6 @@ async def read_roster(db: DbSession) -> RosterResponse:
             RosterAccount(
                 player_id=row.id,
                 email=row.email,
-                name=row.name,
                 nickname=row.nickname,
             )
             for row in rows

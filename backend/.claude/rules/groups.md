@@ -85,8 +85,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   when the club did not match, and **any text containing `/join/<code>` is a link** that
   finds exactly its group and is searched for nothing else — the domain is never read, and
   a link that leads nowhere answers no clubs with `read_as: LINK`, which is *nothing at that
-  link* and not *no match*. Each row carries the Owner's **whole Name**, never a cut first
-  name (ADR-0171 §4; the player app draws the *approves joins* line). Reading a group is
+  link* and not *no match*. Each row carries the Owner's **whole nickname** as
+  `owner_nickname`, never cut (ADR-0199 §1, #724; the player app draws the *approves joins*
+  line). Reading a group is
   members-only and a stranger meets the same `group_not_found` as a missing id. Seeded
   by `app/seeds/groups.py` — four *Anyone* groups owned and joined by the named accounts,
   so the dots follow the rule (no squash or badminton dot: one member rated is not a dot),
@@ -104,8 +105,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   is active**, so a removal takes the group away on the next read and an orphan
   needs no event. That account **joins directly** under *People I approve*
   (`join(runs_it=…)`), comes second on Members with `is_administrator` — the **admin**
-  tag — and is `administrator_name` on the approver line: the account's Name, or the
-  club's name for an account an invitation opened, never cut. An official group's dots
+  tag — and is `administrator_nickname` on the approver line: the account's nickname, or
+  the name its club typed for an Administrator who has never played (ADR-0199 §4), never
+  cut. An official group's dots
   are what it declares, and its page carries `declared_sports`. **The administrator's
   routes are `/administrator/clubs/{club_id}/groups`** behind `AdministratorAtClubDep`
   — create, list, read (players newest first, nobody hidden for a block), approve,
@@ -156,5 +158,5 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `OfficialGroupAssignments` — administrators' demand, **signed in
   `groups/infrastructure/`** like clubs' sports question, and held by its own
   `.importlinter` contract. And the member's page, `GET /groups/{id}`, carries the
-  card's `administrator_name` and `is_administrator` (one `approver_name` for both),
+  card's `administrator_nickname` and `is_administrator` (one `approver_name` for both),
   so the Info tab reads *[club] approves joins* for an orphan, as the search row does.

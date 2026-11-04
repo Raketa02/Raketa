@@ -407,15 +407,15 @@ async def test_marta_approves_michal_and_he_heads_the_players_newest_first(
     after = await page_of(client, marta, ogrody["id"], group)
 
     # Waiting, in the order they asked — each with every sport and its Level.
-    assert [row["name"] for row in before["requests"]] == ["michal", "kasia"]
+    assert [row["nickname"] for row in before["requests"]] == ["michal", "kasia"]
     michal_s = before["requests"][0]["levels"]
     assert [level["sport"] for level in michal_s] == ["PADEL", "TENNIS"]
     assert michal_s[0]["level"] == michal["level"]
     assert approved.status_code == 204, approved.text
     assert after["member_count"] == 2
-    assert [row["name"] for row in after["players"]] == ["michal", "ewa"]
+    assert [row["nickname"] for row in after["players"]] == ["michal", "ewa"]
     assert after["players"][0]["joined_at"] > after["players"][1]["joined_at"]
-    assert [row["name"] for row in after["requests"]] == ["kasia"]
+    assert [row["nickname"] for row in after["requests"]] == ["kasia"]
     # And from his side he is in.
     assert (await read(client, michal, group)).status_code == 200
 
@@ -435,7 +435,7 @@ async def test_a_block_hides_nobody_from_the_players_list(client, ogrody):
 
     page = await page_of(client, tomek, ogrody["id"], group)
 
-    assert [row["name"] for row in page["players"]] == ["kuba", "ewa"]
+    assert [row["nickname"] for row in page["players"]] == ["kuba", "ewa"]
     assert page["member_count"] == 2
 
 
@@ -507,7 +507,7 @@ async def test_all_four_settings_save_together_and_anyone_admits_everybody_waiti
 
     body = saved.json()
     assert saved.status_code == 200, saved.text
-    assert [person["name"] for person in body["admitted"]] == ["michal", "kasia"]
+    assert [person["nickname"] for person in body["admitted"]] == ["michal", "kasia"]
     assert body["group"]["name"] == "Ogrody nights"
     assert body["group"]["join_policy"] == "ANYONE"
     assert body["group"]["sports"] == ["PADEL", "TENNIS"]
@@ -546,7 +546,7 @@ async def test_a_refused_setting_records_none_of_the_four(
     after = await page_of(client, marta, ogrody["id"], group)
     assert after["name"] == "Ogrody 33 Club"
     assert after["join_policy"] == "PEOPLE_I_APPROVE"
-    assert [row["name"] for row in after["requests"]] == ["kasia"]
+    assert [row["nickname"] for row in after["requests"]] == ["kasia"]
 
 
 # --------------------------------------------------------------------------- #
@@ -615,7 +615,7 @@ async def test_an_administrator_who_plays_joins_their_group_directly(client, ogr
     assert joined.json()["is_administrator"] is True
     assert joined.json()["member_count"] == 1
     page = await page_of(client, tomek, ogrody["id"], group)
-    assert [row["name"] for row in page["players"]] == ["tomek"]
+    assert [row["nickname"] for row in page["players"]] == ["tomek"]
     assert page["requests"] == []
 
 
@@ -669,8 +669,8 @@ async def test_a_player_sees_the_declared_dots_and_administrator_marta_on_the_li
         "sports": ["PADEL"],
         "member_count": 0,
         "join_policy": "PEOPLE_I_APPROVE",
-        "owner_name": None,
-        "administrator_name": "Marta Wójcik",
+        "owner_nickname": None,
+        "administrator_nickname": "Marta Wójcik",
         "is_administrator": False,
         "relation": "NONE",
     }
@@ -688,7 +688,7 @@ async def test_the_approver_line_says_the_account_s_own_name_where_it_has_one(
 
     found = row_in(await search(client, kasia, "ogrody"), group)
 
-    assert found["administrator_name"] == "tomek"
+    assert found["administrator_nickname"] == "tomek"
 
 
 async def test_a_member_s_page_reports_the_declared_sports_and_no_owner(
@@ -709,7 +709,7 @@ async def test_a_member_s_page_reports_the_declared_sports_and_no_owner(
     assert page["is_owner"] is False
     assert page["member_count"] == 1
     # The Info tab's line names who runs it, as the search row does.
-    assert page["administrator_name"] == "Marta Wójcik"
+    assert page["administrator_nickname"] == "Marta Wójcik"
     assert page["is_administrator"] is False
     assert [(row["kind"], row["sports"]) for row in mine] == [
         ("OFFICIAL", ["PADEL", "TENNIS"])
@@ -725,7 +725,7 @@ async def test_the_administrator_who_joined_reads_that_they_run_it(client, ogrod
 
     # *You approve joins*, and his account's own Name.
     assert page["is_administrator"] is True
-    assert page["administrator_name"] == "tomek"
+    assert page["administrator_nickname"] == "tomek"
 
 
 async def test_a_player_group_s_page_declares_nothing(client):
@@ -736,7 +736,7 @@ async def test_a_player_group_s_page_declares_nothing(client):
 
     assert page["kind"] == "PLAYER"
     assert "declared_sports" not in page
-    assert page["administrator_name"] is None
+    assert page["administrator_nickname"] is None
     assert page["is_administrator"] is False
 
 
@@ -758,12 +758,12 @@ async def test_members_carry_the_administrator_who_plays_with_the_admin_tag(
     his_page = (await read(client, tomek, group)).json()
 
     # The reader, then the administrator who plays, then newest first.
-    assert [row["name"] for row in rows] == ["ewa", "tomek", "kuba"]
+    assert [row["nickname"] for row in rows] == ["ewa", "tomek", "kuba"]
     assert [row["is_administrator"] for row in rows] == [False, True, False]
     assert {row["is_owner"] for row in rows} == {False}
     # Every count includes him.
     assert page["member_count"] == 3
-    assert [face["name"] for face in page["member_faces"]] == ["tomek", "kuba"]
+    assert [face["nickname"] for face in page["member_faces"]] == ["tomek", "kuba"]
     # Running it is not owning it: he edits it from the administrator profile.
     assert his_page["is_owner"] is False
 

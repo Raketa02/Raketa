@@ -348,8 +348,8 @@ async def test_a_sheet_lists_the_fits_free_then_and_the_free_courts_home_club_fi
 
     assert sheet["cell"]["fits_free"] == 3
     # Best fit first: Kuba and Tomek at her Level, then Ewa.
-    assert [fit["name"] for fit in sheet["fits"]][-1] == "ewa"
-    assert {fit["name"] for fit in sheet["fits"]} == {"kuba", "ewa", "tomek"}
+    assert [fit["nickname"] for fit in sheet["fits"]][-1] == "ewa"
+    assert {fit["nickname"] for fit in sheet["fits"]} == {"kuba", "ewa", "tomek"}
     assert all(fit["forecast"] is not None for fit in sheet["fits"])
     assert [
         (court["club"]["id"], at(court["starts_at"]), court["fits_free"])
@@ -405,8 +405,8 @@ async def test_already_happening_here_lists_rescues_first_then_posts_still_filli
     assert sheet["rescues"][0]["share_grosze"] == 30_00
     [post] = sheet["posts"]
     assert post["proposal_id"] == marek_s["proposal_id"]
-    assert post["challenger"]["name"] == "marek"
-    assert [tile["name"] for tile in post["people_in"]] == ["marek"]
+    assert post["challenger"]["nickname"] == "marek"
+    assert [tile["nickname"] for tile in post["people_in"]] == ["marek"]
     assert post["open_seats"] == 3
 
 
@@ -445,7 +445,7 @@ async def test_posting_is_the_poster_s_yes_dealt_to_their_best_fits_as_a_challen
         [card] = await deck_of(client, fit, group)
         assert card["proposal_id"] == post["proposal_id"]
         assert card["type"] == "CHALLENGE"
-        assert card["challenger"]["name"] == "ola"
+        assert card["challenger"]["nickname"] == "ola"
         assert card["in_count"] == 1
     assert await live_ids(client, ola) == [post["proposal_id"]]
     assert (await details_of(client, ola, post["proposal_id"]))["status"] == "FILLING"
@@ -594,7 +594,7 @@ async def test_a_mixed_pairs_post_is_dealt_two_men_and_two_women(
     for man in men:
         for card in await deck_of(client, man, group):
             for side in (card["sides"]["yours"], card["sides"]["theirs"]):
-                assert len({tile["name"] for tile in side} & {"ola", "ewa"}) == 1
+                assert len({tile["nickname"] for tile in side} & {"ola", "ewa"}) == 1
 
 
 async def test_a_mixed_pairs_game_takes_no_third_man_and_books_a_man_and_a_woman_a_side(
@@ -638,7 +638,7 @@ async def test_a_mixed_pairs_game_takes_no_third_man_and_books_a_man_and_a_woman
     # The two women against the two men would be the evener game: a mixed
     # pairs game stands one of each a side all the same.
     for side in booking.json()["sides"].values():
-        assert len({tile["name"] for tile in side} & {"ola", "ewa"}) == 1
+        assert len({tile["nickname"] for tile in side} & {"ola", "ewa"}) == 1
 
 
 async def test_a_paused_yes_does_not_come_back_as_a_third_man_on_a_mixed_pairs_game(
