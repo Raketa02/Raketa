@@ -1,6 +1,6 @@
 /**
- * **The row a record ends with** — *Block kuba.w* behind a confirm sheet, or *Unblock Kuba
- * Wiśniewski* once the reader has ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571
+ * **The row a record ends with** — *Block kuba.w* behind a confirm sheet, or *Unblock kuba.w*
+ * once the reader has ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571
  * stories 1–5 and 18;
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *

@@ -43,7 +43,7 @@ export interface NamingFormOptions {
 export function useNamingForm({ initial, onSaved }: NamingFormOptions) {
   const held = initial?.nickname ?? '';
   /** What was typed into the box — `undefined` while it shows the player's own nickname. */
-  const [typed, setNickname] = useState<string>();
+  const [typed, setTyped] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const nickname = typed ?? held;
 
@@ -62,7 +62,7 @@ export function useNamingForm({ initial, onSaved }: NamingFormOptions) {
       // The mutation has already written the recorded nickname into the cache and re-read the
       // player by the time this runs, so dropping the draft is what lets the box draw it.
       onSuccess: () => {
-        setNickname(undefined);
+        setTyped(undefined);
         onSaved?.();
       },
     });
@@ -70,7 +70,7 @@ export function useNamingForm({ initial, onSaved }: NamingFormOptions) {
 
   return {
     nickname,
-    setNickname,
+    setNickname: setTyped,
     /**
      * Whether the box differs from what it opened on — what the tab's *Save* is shut behind,
      * since a save of the box as it opened is a round trip for an answer in hand. Always true on

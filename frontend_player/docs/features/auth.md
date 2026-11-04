@@ -94,11 +94,12 @@ it; the other refusals are unchanged, _That nickname is taken. Pick another._ am
 when a sighted reader sees it. **The You row is _Nickname_** (`NicknameRow`, `NicknameScreen`,
 `nicknamePresentation`): its line is the nickname whole and without an @, and its screen is the
 same one box under the tab's chrome. **The route keeps `/you/name`**, as the act keeps
-`PUT /users/me/name` (ADR-0199, _Neutral_) — and because the shell's list of pushed screens names
-it. **Named is holding a nickname** (`domain/naming.ts`'s `named`, which the gate reads through
+`PUT /users/me/name` (ADR-0199, _Neutral_) — and because the shell names the route, one by one,
+for its push transition. **Named is holding a nickname** (`domain/naming.ts`'s `named`, which the gate reads through
 `types.ts`). **An account an Invitation opened holds no player name** — the one its club typed stays
 the Administrator's (§4) — so `heldNameWithoutNickname` and the step's one-box mode are gone, and
-what tells the step such an account is `openedByInvitation`: one that runs a club's groups. It reads
+what tells the step such an account is `runsAClub` — `/users/me` says which clubs an account
+administers and not how it was opened, so a club profile is the phone's one sign. It reads
 _Pick a nickname — it's how players will see you._ under the title; every account sign-up creates
 reads the title alone. `theNaming.test.tsx` and `nicknameFromYou.test.tsx` walk both. **Not seen on
 a device**: the one-box step, the invitation line, and the You row's new title.

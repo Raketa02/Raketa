@@ -624,7 +624,7 @@ ground, the entrance and the tile came to `features/proposals` with the face tha
   whole phone, the bar included, on `ModalStage`'s top layer rather than pushed as a route,
   because it answers wherever the player is by then. **A tile** (`YesTile`) is the face the app draws everywhere,
   with two initials over a poster and an outlined empty seat as its two additions; **the spoken
-  sentence** is the picture as one header, built from whole Names. Since the mechanics' Q113 (in
+  sentence** is the picture as one header, built from whole nicknames (ADR-0199 §1). Since the mechanics' Q113 (in
   the root glossary, the share is **held** at the fill and taken at the club's **Cut-off**) its
   lines and the
   notices beside it say _held_, never _you paid_, before the cut-off

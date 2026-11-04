@@ -323,3 +323,17 @@ on the booking: _Bonarka Arena moved your game to Court 3 · Thu 19:00_, with _C
 changes_ for the club's own. It is not emailed. `targetOf` opens it where the backend sends it
 (`BOOKING`), so a row behind the bell, the banner and a push all land on the booked game, with the
 court and its kind on it (_Court 3 · indoor_).
+
+**A notice about no game is listed, and opens nowhere yet**
+([#728](https://github.com/Raketa02/Raketa/issues/728), carrying
+[#727](https://github.com/Raketa02/Raketa/issues/727)'s contract). Regenerating the player types for
+the nickname brought #727's _Get your level_ with it: the wire's `NoticeKind` gained
+`GET_YOUR_LEVEL`, `Opens` gained `HOME`, and a listed notice's game facts (`game_id`, `pool_id`,
+`sport`, `game_kind`) may be `null` — the first notice about no game. The vocabulary spells both codes,
+because `wireVocabulary.ts`'s assertion fails the build otherwise, and **nothing more**: `toTarget`
+answers `undefined` for a notice that opens Home or names no game, so it is listed in the backend's
+words with nowhere to open, as a code this build cannot name already was. `targetOf` takes
+`GameOpens`, every place but Home. **The push is untouched**: its schema still asks for a game, so a
+_Get your level_ push is not read. Drawing it, opening Home and reading its push are
+[#731](https://github.com/Raketa02/Raketa/issues/731)'s. `notificationMappers.test.ts` holds both
+_nowhere_ answers.

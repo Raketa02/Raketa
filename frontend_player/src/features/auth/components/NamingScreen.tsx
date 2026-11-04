@@ -43,7 +43,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KEYBOARD_AVOIDANCE, useHardwareBack } from '@/shared/lib/platform';
 import { Button, ScreenHeader, theme } from '@/shared/ui';
 
-import { openedByInvitation } from '../domain/naming';
+import { runsAClub } from '../domain/naming';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNamingForm } from '../hooks/useNamingForm';
 
@@ -53,7 +53,8 @@ import { CONTINUE, INVITED_LINE, NAMING_EYEBROW, NAMING_TITLE } from './namingPr
 export function NamingScreen() {
   const router = useRouter();
   const player = useCurrentUser().data;
-  const invited = player !== undefined && openedByInvitation(player);
+  // An account that runs a club's groups is the sign of one an Invitation opened.
+  const invited = player !== undefined && runsAClub(player);
   // The mutation has already written the recorded nickname into the cache and re-read the
   // player by the time this runs; the gate reads a named player and moves on.
   const form = useNamingForm({ onSaved: () => router.replace('/') });

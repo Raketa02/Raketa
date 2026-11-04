@@ -5,10 +5,10 @@
  * ```
  * ┌ photo / poster ──────┐ ┌──────────────────────┐
  * │                      │ │                      │
- * │ karol.t IN │ │ You                  │   the name, whole — cut by the box — and IN
+ * │ karol.t IN           │ │ You                  │   the nickname, whole — cut by the box — and IN
  * │ 2,75                 │ │ You complete it      │   the Level, or what your yes would do
  * └──────────────────────┘ └──────────────────────┘
- * ───── KAROL + ZOFIA  VS  ANIA + YOU ─────             stems, uppercased by the style
+ * ───── KAROL + ZOFIA  VS  ANIA + YOU ─────             stems at the first dot, uppercased by the style
  * ```
  *
  * **Which row is on top is the domain's** (`rowsOf`): the side with more people In, and on a tie

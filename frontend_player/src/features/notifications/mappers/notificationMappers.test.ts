@@ -215,4 +215,59 @@ describe('where a tap goes', () => {
       }),
     ).toBeUndefined();
   });
+
+  /**
+   * **A notice about no game** (#727): *Get your level* names no game and opens Home. This build
+   * lists it in the backend's words and opens it nowhere yet — where a tap takes it is #731's.
+   */
+  it('nowhere for a notice that opens Home', () => {
+    expect(
+      toTarget({
+        kind: 'GET_YOUR_LEVEL',
+        opens: 'HOME',
+        gameId: null,
+        poolId: null,
+        sport: null,
+        gameKind: null,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('nowhere for a notice that names no game, wherever it says it opens', () => {
+    expect(
+      toTarget({
+        kind: 'GAME_BOOKED',
+        opens: 'BOOKING',
+        gameId: null,
+        poolId: null,
+        sport: null,
+        gameKind: null,
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe('a listed notice about no game', () => {
+  it('is listed in the backend’s words, with nowhere to open', () => {
+    const served: Wire['NoticeSchema'] = {
+      ...NOTICE,
+      kind: 'GET_YOUR_LEVEL',
+      title: 'Get your level so your groups can deal you games.',
+      body: 'Pick the sports you play — a few questions each.',
+      opens: 'HOME',
+      game_id: null,
+      pool_id: null,
+      sport: null,
+      game_kind: null,
+    };
+
+    const notice = toNotice(served);
+
+    expect(notice).toMatchObject({
+      kind: 'GET_YOUR_LEVEL',
+      title: 'Get your level so your groups can deal you games.',
+      body: 'Pick the sports you play — a few questions each.',
+    });
+    expect(notice).not.toHaveProperty('target');
+  });
 });
