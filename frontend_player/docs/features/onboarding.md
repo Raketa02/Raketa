@@ -219,12 +219,16 @@ _Carry on with your padel questions — You're on question 5._ with _Carry on_, 
 of that sport and replacing to its question. The number is the run's own count — answered plus
 the one outstanding, or the last answered for a run stopped at its review — so the door reads
 the run's step as well as the list (`useRunInProgress`, the gate's old read, then
-`assessmentQuery`); nothing is drawn until both answer, and a failed read offers the picker,
-since starting a sport with an unfinished run hands that run back. **The picker has a way
+`assessmentQuery`); nothing is drawn until both answer, a failed read offers the picker,
+since starting a sport with an unfinished run hands that run back, and a read paused offline
+with nothing cached draws the amber _You're offline_ note instead. **The picker has a way
 back**: the door reaches it by `replace`, so its header _Back_ and the device's back **turn
-back** — a pass over no sport, which the gate lands at its origin. **Calls made here**: the door's
-two lines are the spec's sentence split at its dash, and its buttons _Pick your sports_ and
-_Carry on_ are this ticket's words; _+ Post a game_ is not floated over the door on Fill in (one
-door, as the official card hides it); a run stopped at its review reads _question {last
-answered}_; the picker's back control. **Not seen on a device**: the door's card, and the frame
+back** — a pass over no sport (`turnBack`), which the gate lands at its origin. **_+ Post a
+game_ still floats over Fill in's door**, as the screens A3 has it, and _Post a game_ draws the
+same door. **Calls made here**: the door's two lines are the spec's sentence split at its dash,
+and its buttons _Pick your sports_ and _Carry on_ are this ticket's words; a run stopped at its
+review reads _question {last answered}_; the picker's back control. **A player rated in some
+sport with another sport's run left halfway sees no _Carry on_** — the door is for the unrated —
+and gets the run back from the passport's chip or #731's _+ Another sport_, whose start hands an
+unfinished run back. **Not seen on a device**: the door's card, and the frame
 between the gate mounting Home and the group pushed back over Play.

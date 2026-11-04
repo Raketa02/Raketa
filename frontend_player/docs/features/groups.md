@@ -581,8 +581,8 @@ declared)` — a player group, rated in no sport — rides on `useGroupSport` an
 `SportFilterPage`'s children as a third argument; where it holds, Games, Fill in and Friends draw
 onboarding's `LevelDoor` in place of their content, Members draws it in place of the list she is
 on nobody's copy of, and _Post a game_ draws it in place of _Get rated in … to post here_, each
-returning to the tab #729's card returns to. **_+ Post a game_ is not floated over the door**, as
-it is not over the official card. **The sport pill is drawn only once there is a rating to list**,
+returning to the tab #729's card returns to. **_+ Post a game_ still floats over Fill in's door**
+(the screens A3), and opens _Post a game_'s. **The sport pill is drawn only once there is a rating to list**,
 and lists only rated sports — which `filterSports` already made true; the door makes it visible.
 An official group keeps `AddSportCard`. The words and the reads are onboarding's
 ([`onboarding.md`](onboarding.md)).

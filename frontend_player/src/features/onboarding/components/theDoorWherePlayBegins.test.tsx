@@ -18,6 +18,7 @@
  * Every assertion is about what a player can see or what left the device.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { refreshTokens } from '@/features/auth/types';
@@ -45,6 +46,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { onboardingKeys } from '../hooks/onboardingKeys';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 /** A walk — the group, the door, two runs and the landing — is longer than jest's five seconds. */
@@ -278,6 +280,7 @@ beforeEach(async () => {
 afterEach(() => {
   transport.restore();
   queryClient.clear();
+  onlineManager.setOnline(true);
 });
 
 // ---------------------------------------------------------------------------
@@ -342,7 +345,7 @@ async function chipSports(on: string): Promise<string[]> {
 
 describe('a player rated in nothing, in a player group', () => {
   it(
-    'meets the door on Games, Fill in and Friends, with no chip and nothing floated over it',
+    'meets the door on Games, Fill in and Friends, with no chip over any of them',
     async () => {
       stubAnia([WEDNESDAY]);
       await openTheGroup(WEDNESDAY);
@@ -351,8 +354,6 @@ describe('a player rated in nothing, in a player group', () => {
       await expectTheDoor();
       await openTab(TABS.fillIn);
       await expectTheDoor();
-      // One door: *+ Post a game* is not floated over it.
-      expect(screen.queryByRole('button', { name: /Post a game/ })).toBeNull();
       await openTab(TABS.friends);
       await expectTheDoor();
       // Nothing was started by looking.
@@ -361,21 +362,40 @@ describe('a player rated in nothing, in a player group', () => {
     WALK_TIMEOUT,
   );
 
-  it('meets it on Members, in place of a list she is on nobody’s copy of', async () => {
-    stubAnia([WEDNESDAY]);
-    await launchSignedIn(`/play/group/${WEDNESDAY.id}/members`);
+  it(
+    'meets it on Post a game, which still floats over Fill in’s door',
+    async () => {
+      stubAnia([WEDNESDAY]);
+      await openTheGroup(WEDNESDAY);
+      await openTab(TABS.fillIn);
+      await expectTheDoor();
 
-    await expectTheDoor();
-  });
+      // The screens A3: the FAB floats always, and *Post a game* shows the same door.
+      fireEvent.press(await screen.findByRole('button', { name: /Post a game/ }));
 
-  it('meets it on Post a game', async () => {
-    stubAnia([WEDNESDAY]);
-    await launchSignedIn(`/play/group/${WEDNESDAY.id}/post`);
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/post`));
+      await expectTheDoor();
+      // Not the official group's card, which names sports the group declares.
+      expect(screen.queryByText(/^Get rated in /)).toBeNull();
+    },
+    WALK_TIMEOUT,
+  );
 
-    await expectTheDoor();
-    // Not the official group's card, which names sports the group declares.
-    expect(screen.queryByText(/^Get rated in /)).toBeNull();
-  });
+  it(
+    'meets it on Members, in place of a list she is on nobody’s copy of',
+    async () => {
+      stubAnia([WEDNESDAY]);
+      await openTheGroup(WEDNESDAY);
+
+      fireEvent.press(await screen.findByHintText(GROUPS_COPY.group.openInfo));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/info`));
+      fireEvent.press(await screen.findByRole('button', { name: /^6 members, / }));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/members`));
+
+      await expectTheDoor();
+    },
+    WALK_TIMEOUT,
+  );
 
   it(
     'opens the picker over every sport, with nothing ticked',
@@ -463,6 +483,31 @@ describe('a player rated in nothing, in a player group', () => {
     },
     WALK_TIMEOUT,
   );
+});
+
+describe('the door, offline with nothing to answer from', () => {
+  it('says it is waiting, and draws itself the moment the connection is back', async () => {
+    stubAnia([WEDNESDAY]);
+    await openTheGroup(WEDNESDAY);
+    await expectTheDoor();
+
+    // The connection drops, and what was read about a run left halfway is gone with it — so the
+    // door the next tab draws cannot say whether it is *Get your level* or *Carry on*.
+    act(() => {
+      onlineManager.setOnline(false);
+      queryClient.removeQueries({ queryKey: onboardingKeys.runInProgress() });
+    });
+    await openTab(TABS.fillIn);
+
+    expect(
+      await screen.findByText("You're offline. This will load as soon as you're back."),
+    ).toBeTruthy();
+    expect(screen.queryByText(DOOR)).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+
+    expect(await screen.findByText(DOOR)).toBeTruthy();
+  });
 });
 
 // ---------------------------------------------------------------------------

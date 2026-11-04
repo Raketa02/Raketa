@@ -71,7 +71,7 @@ import { SOCIAL_STEP_PATH, pathThatAsks } from './socialStepRoutes';
  * beside the one press that goes there, rather than in `socialStepRoutes`: that table is the
  * six steps, and the six steps stop before this.
  */
-const AFTER_THE_PART = '/';
+const AFTER_THE_STEPS = '/';
 
 /**
  * Why the finish will not move, for whoever cannot see that it will not.
@@ -201,7 +201,7 @@ export function ProfileFinish({ unansweredHint }: ProfileFinishProps) {
         // that beats this state is the same commit rather than a second one.
         busy={commit.kind === 'committing'}
         busyLabel={FINISHING_WORD}
-        onPress={() => finish(() => router.replace(AFTER_THE_PART))}
+        onPress={() => finish(() => router.replace(AFTER_THE_STEPS))}
         accessibilityHint={finishHint(commit.kind, wanted?.copy.finishHint, unansweredHint)}
       />
     </>

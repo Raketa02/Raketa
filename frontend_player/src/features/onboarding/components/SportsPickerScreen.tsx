@@ -34,14 +34,14 @@ import { useHardwareBack } from '@/shared/lib/platform';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import { toggleSport } from '../domain/onboardingPass';
-import type { DoorOrigin } from '../hooks/useLevelDoor';
+import { toggleSport, type DoorOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
 
 import { OnboardingChrome } from './OnboardingChrome';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { PICKER_TITLE } from './pickerPresentation';
 import { sportColour, sportLabel } from './sportPresentation';
 import { STARTING_LABEL } from './startPresentation';
 
@@ -70,10 +70,11 @@ export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
 
   const [first] = queue;
 
-  // Turning back: a pass over nothing, which the gate ends on arrival and lands at its origin.
+  // Turning back: the gate ends the pass on arrival and lands it at its origin.
+  const turnBackTo = useOnboardingPass((state) => state.turnBack);
   const turnBack = () => {
     if (start.isPending) return;
-    beginPass([], origin);
+    turnBackTo(origin);
     router.replace('/');
   };
   useHardwareBack(turnBack);
@@ -100,7 +101,7 @@ export function SportsPickerScreen({ origin }: SportsPickerScreenProps) {
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <OnboardingChrome eyebrow="Raketa" title="Which sports do you play?" onBack={turnBack} />
+      <OnboardingChrome eyebrow="Raketa" title={PICKER_TITLE} onBack={turnBack} />
 
       <ScrollView contentContainerStyle={s.content}>
         {/* Paused, not loading: `networkMode: 'online'` holds a query rather than

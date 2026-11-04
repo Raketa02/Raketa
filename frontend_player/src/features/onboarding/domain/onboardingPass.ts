@@ -75,6 +75,12 @@ export type PassOrigin =
   | { readonly kind: 'passport' }
   | { readonly kind: 'group'; readonly groupId: string; readonly tab: GroupTab };
 
+/**
+ * **Where a door into the picker can stand** — a group's tab, or Home. The Skill passport has its
+ * own door, *Add a sport*, which never opens the picker.
+ */
+export type DoorOrigin = Exclude<PassOrigin, { readonly kind: 'passport' }>;
+
 /** Home — and a run reached with no pass running, which has nowhere else to have begun. */
 export const FROM_HOME: Extract<PassOrigin, { readonly kind: 'home' }> = { kind: 'home' };
 

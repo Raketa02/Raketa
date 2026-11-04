@@ -25,7 +25,7 @@
 import type { AssessmentRun, AssessmentStep } from './Assessment';
 import { runStanding } from './runStanding';
 
-export type LevelDoor =
+export type DoorOffer =
   /** The sports picker, over every sport, nothing ticked. */
   | { readonly kind: 'start' }
   /** The run left halfway — `question` is 1-based, the one she is on. */
@@ -39,7 +39,7 @@ export type LevelDoor =
 export function levelDoor(
   run: AssessmentRun | undefined,
   step: AssessmentStep | undefined,
-): LevelDoor {
+): DoorOffer {
   if (run === undefined || step === undefined) return { kind: 'start' };
   switch (runStanding(step)) {
     case 'asking':

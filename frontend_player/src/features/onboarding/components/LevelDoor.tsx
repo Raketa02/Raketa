@@ -12,7 +12,7 @@
  * The pass it begins returns to `from`: the group and the tab the door stands on, so the last
  * *Your rating* says *Back to Wednesday padel* and lands there, with the chip on the sport just
  * rated. **Nothing is drawn until the door knows which it is**, so it never says one and then the
- * other.
+ * other — and offline, with nothing cached, it says it is waiting rather than drawing nothing.
  *
  * The page's dark card, as the official group's own card (`AddSportCard`) and every starting
  * tab's (`LinkCard`) are: a headline, the line under it, and the one bright door. It lives here
@@ -22,9 +22,11 @@
 
 import { StyleSheet, Text } from 'react-native';
 
-import { Button, DarkCard, theme } from '@/shared/ui';
+import { offlineMessage } from '@/shared/errors';
+import { Button, DarkCard, Note, theme } from '@/shared/ui';
 
-import { useLevelDoor, type DoorOrigin } from '../hooks/useLevelDoor';
+import type { DoorOrigin } from '../domain/onboardingPass';
+import { useLevelDoor } from '../hooks/useLevelDoor';
 
 import {
   LEVEL_DOOR_COPY,
@@ -39,9 +41,13 @@ export interface LevelDoorProps {
 }
 
 export function LevelDoor({ from }: LevelDoorProps) {
-  const { door, open } = useLevelDoor(from);
+  const { door, offline, open } = useLevelDoor(from);
 
-  if (door === undefined) return null;
+  // Offline with nothing cached, the door cannot say which it is — so it says why, and draws itself
+  // the moment the connection is back. The picker's own offline note, for the same pause.
+  if (door === undefined) {
+    return offline ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null;
+  }
 
   const carrying = door.kind === 'carry-on';
 

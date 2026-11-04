@@ -20,24 +20,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
-import { levelDoor, type LevelDoor } from '../domain/levelDoor';
-import type { PassOrigin } from '../domain/onboardingPass';
+import { levelDoor, type DoorOffer } from '../domain/levelDoor';
+import type { DoorOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { assessmentQuery } from './useAssessment';
 import { useRunInProgress } from './useRunInProgress';
 
 /**
- * **Where a door can stand** — a group's tab, or Home. The Skill passport has its own door, *Add a
- * sport*, which never opens the picker.
- */
-export type DoorOrigin = Exclude<PassOrigin, { readonly kind: 'passport' }>;
-
-/**
  * The picker, opened from a door: a group's tab carries its group and tab, for the pass to return
  * to — the params the picker's route reads (`groups`' `parseGroupPlace`); Home carries nothing.
  */
-export function sportsPickerRoute(from: DoorOrigin) {
+function sportsPickerRoute(from: DoorOrigin) {
   return from.kind === 'group'
     ? ({ pathname: '/sports', params: { groupId: from.groupId, tab: from.tab } } as const)
     : ({ pathname: '/sports' } as const);
@@ -45,7 +39,12 @@ export function sportsPickerRoute(from: DoorOrigin) {
 
 export interface LevelDoorControl {
   /** What the door offers — `undefined` while either read is out. */
-  readonly door: LevelDoor | undefined;
+  readonly door: DoorOffer | undefined;
+  /**
+   * **A read is waiting for the connection**, with nothing cached to answer from — so the door
+   * cannot say which it is, and says why rather than drawing nothing for as long as it lasts.
+   */
+  readonly offline: boolean;
   /** Walk through it. A second press while the first departs does nothing. */
   readonly open: () => void;
 }
@@ -61,7 +60,7 @@ export function useLevelDoor(from: DoorOrigin): LevelDoorControl {
   });
 
   const door = offered();
-  function offered(): LevelDoor | undefined {
+  function offered(): DoorOffer | undefined {
     if (run.isError) return levelDoor(undefined, undefined);
     if (!run.isSuccess) return undefined;
     if (found === undefined) return levelDoor(undefined, undefined);
@@ -84,5 +83,9 @@ export function useLevelDoor(from: DoorOrigin): LevelDoorControl {
     });
   }, [beginPass, door, from, router]);
 
-  return { door, open };
+  // Paused, not loading: `networkMode: 'online'` holds a query rather than failing it.
+  const offline =
+    door === undefined && (run.fetchStatus === 'paused' || step.fetchStatus === 'paused');
+
+  return { door, offline, open };
 }

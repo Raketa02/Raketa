@@ -29,7 +29,10 @@ export interface OnboardingChromeProps {
   readonly eyebrow?: string;
   /** The header's right slot — the close control, on the screens that can be left. */
   readonly right?: ReactNode;
-  /** The header's left slot: back through the questionnaire, never out of it. */
+  /**
+   * The header's left slot: back through the questionnaire, never out of it — and, on the picker,
+   * back to where it was opened from, since nothing has begun there yet (#730).
+   */
   readonly onBack?: () => void;
   readonly backLabel?: string;
   /** The strip under the header. The questionnaire puts its navigator here. */

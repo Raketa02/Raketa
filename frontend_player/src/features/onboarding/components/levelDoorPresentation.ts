@@ -10,20 +10,16 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { sportLabel } from './sportPresentation';
+import { PICKER_TITLE } from './pickerPresentation';
+import { sportInLine } from './sportPresentation';
 
 export const LEVEL_DOOR_COPY = {
   headline: 'Get your level',
   line: 'Pick the sports you play, a few questions each.',
   start: 'Pick your sports',
-  startHint: 'Opens Which sports do you play?',
+  startHint: `Opens ${PICKER_TITLE}`,
   carryOn: 'Carry on',
 } as const;
-
-/** *padel* — a sport inside a sentence. */
-function sportInLine(sport: Sport): string {
-  return sportLabel(sport).toLowerCase();
-}
 
 /** *Carry on with your padel questions* — the run left halfway, by its sport. */
 export function carryOnHeadline(sport: Sport): string {

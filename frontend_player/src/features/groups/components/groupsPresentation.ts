@@ -14,7 +14,7 @@
  *   with real plural rules has one function to change.
  */
 
-import { sportLabel, sportShortLabel } from '@/features/onboarding/types';
+import { sportInLine, sportLabel, sportShortLabel } from '@/features/onboarding/types';
 import { RELIABILITY_BAND_WORD } from '@/features/player_record/types';
 import { counted } from '@/shared/formatting/counted';
 import { playerName } from '@/shared/formatting/playerName';
@@ -190,9 +190,6 @@ export function sportPillLabel(sport: Sport): string {
 }
 
 /** *padel*, inside a sentence — the mocks write a sport in lower case mid-line (play 14–17). */
-function sportInLine(sport: Sport): string {
-  return sportLabel(sport).toLowerCase();
-}
 
 /** *padel*, *padel and squash*, *padel, tennis or badminton* — sports inside a sentence. */
 function sportsInLine(sports: readonly Sport[], conjunction: 'and' | 'or'): string {

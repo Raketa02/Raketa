@@ -43,6 +43,7 @@ import {
   FROM_HOME,
   begin as beginPass,
   recordRated,
+  type DoorOrigin,
   type OnboardingPass,
   type PassOrigin,
   type RatedRun,
@@ -53,10 +54,14 @@ interface OnboardingPassState {
   readonly pass: OnboardingPass | undefined;
   /**
    * Start a pass over these sports, at the door it came in by: the picker's continue with
-   * what was chosen, a chip, a group's card or the door's *Carry on* with its one sport — or
-   * nothing at all, for the picker turned back from, which the gate lands where it began.
+   * what was chosen, or a chip, a group's card or the door's *Carry on* with its one sport.
    */
   readonly begin: (queue: readonly Sport[], origin: PassOrigin) => void;
+  /**
+   * **The picker turned back from, before anything was chosen** — a pass over no sport, begun and
+   * over at once, so the gate lands it where it began: the one way back the gate already knows.
+   */
+  readonly turnBack: (origin: DoorOrigin) => void;
   /**
    * Start a pass over these sports **only if none is running**.
    *
@@ -84,6 +89,7 @@ interface OnboardingPassState {
 export const useOnboardingPass = create<OnboardingPassState>((set, get) => ({
   pass: undefined,
   begin: (queue, origin) => set({ pass: beginPass(queue, origin) }),
+  turnBack: (origin) => set({ pass: beginPass([], origin) }),
   beginIfAbsent: (queue) => {
     if (get().pass !== undefined) return;
     set({ pass: beginPass(queue, FROM_HOME) });

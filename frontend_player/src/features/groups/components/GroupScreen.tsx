@@ -47,8 +47,8 @@
  * **A player rated in nothing meets one door** (#730, ADR-0200 §2): in a player group, Games, Fill
  * in and Friends each draw onboarding's `LevelDoor` in place of their content — *Get your level*,
  * or *Carry on with your padel questions* with a run left halfway — and the pass it begins returns
- * to the tab it stood on. No sport pill is drawn until she holds a rating, and *+ Post a game* is
- * not floated over the door: one door, as an official group's card is one card.
+ * to the tab it stood on. No sport pill is drawn until she holds a rating. **On Fill in, *+ Post a
+ * game* still floats over the door** (the screens A3), and *Post a game* draws the same door.
  *
  * **A rating pass begun on the page comes back to it** (#729, ADR-0200 §3, §5): the route hands in
  * the tab it began on and the sport it rated last, and the page opens on that tab, standing on that
@@ -277,7 +277,7 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
                   )}
                 </ScrollView>
               )}
-              {tab === 'fillIn' && toAdd.length === 0 && !needsALevel ? (
+              {tab === 'fillIn' && toAdd.length === 0 ? (
                 <View style={s.postAGame}>
                   <PostAGame groupId={groupId} />
                 </View>

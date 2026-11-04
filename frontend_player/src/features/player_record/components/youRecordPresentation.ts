@@ -9,7 +9,7 @@
  * is told, and the filter's switch with its two lines (#662).
  */
 
-import { sportLabel } from '@/features/onboarding/types';
+import { sportInLine, sportLabel } from '@/features/onboarding/types';
 import { counted } from '@/shared/formatting/counted';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 import type { SegmentOption, TagVariant } from '@/shared/ui';
@@ -186,5 +186,5 @@ export const THE_LADDER = 'The ladder';
 /** `Established · you (padel, squash)` — the band's name, and the player's sports on that rung. */
 export function ladderRung(bandName: string, sports: readonly Sport[]): string {
   if (sports.length === 0) return bandName;
-  return `${bandName} · you (${sports.map((sport) => sportLabel(sport).toLowerCase()).join(', ')})`;
+  return `${bandName} · you (${sports.map(sportInLine).join(', ')})`;
 }

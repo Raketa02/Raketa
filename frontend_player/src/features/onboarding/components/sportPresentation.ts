@@ -28,6 +28,15 @@ export function sportLabel(sport: Sport): string {
 }
 
 /**
+ * *padel* — a sport **inside a sentence**, where its name is an ordinary noun. One rule for every
+ * sentence that names one (*This group plays padel*, *Carry on with your padel questions*), here
+ * beside the name since its third caller (#730).
+ */
+export function sportInLine(sport: Sport): string {
+  return sportLabel(sport).toLowerCase();
+}
+
+/**
  * The three-letter form, for the one place a sport is drawn beside a level in a tag that has
  * to fit three across next to a face and a ring — the You tab's header card (ADR-0179 §1,
  * *Pad 2,71 · Ten 3,10 · Squ 2,30*). Drawn only: the pill is spoken with `sportLabel`.

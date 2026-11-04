@@ -62,10 +62,10 @@
  * §3, amended by ADR-0200 §5): one begun on Home ends there, which is where `/` opens; one begun
  * at the Skill passport's *Add a sport* enters the app the way every pass does — *See your
  * ratings*, *continue later* and *abandon* all replace to `/` — and it is this file, told the
- * origin as the pass ends, that lays the You tab down and pushes the passport over it. The shell's own move: the tab beneath, so *back* from the passport goes
- * where it came from. Which route the passport is belongs to
- * the feature that owns the screen, not to this file — the same seam `NAMING_STEP` and
- * `SOCIAL_STEPS_ENTRY` cross.
+ * origin as the pass ends, that lays the You tab down and pushes the passport over it. The
+ * shell's own move: the tab beneath, so *back* from the passport goes where it came from. Which
+ * route the passport is belongs to the feature that owns the screen, not to this file — the same
+ * seam `NAMING_STEP` and `SOCIAL_STEPS_ENTRY` cross.
  *
  * **A pass that began on a group ends on it** ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
  * §5, #729) the same way: Play laid down, and the group's page pushed over it on the tab the pass

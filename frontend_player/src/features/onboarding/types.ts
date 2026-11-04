@@ -39,7 +39,12 @@ export { toSport, toWireSport } from './mappers/onboardingMappers';
  * five {sport} searches"* — and a copy deck quoting a name is never a second table of names
  * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
  */
-export { sportColour, sportLabel, sportShortLabel } from './components/sportPresentation';
+export {
+  sportColour,
+  sportInLine,
+  sportLabel,
+  sportShortLabel,
+} from './components/sportPresentation';
 
 /**
  * The four Band names, and which of the four a served name refers to.
@@ -117,7 +122,6 @@ export { useReturningGroup } from './hooks/useReturningGroup';
  * returns to the door's origin; the card, its words and both reads are this feature's.
  */
 export { LevelDoor } from './components/LevelDoor';
-export type { DoorOrigin } from './hooks/useLevelDoor';
 
 /**
  * **A door into the pass for one sport** — the Skill passport's *Add a sport* (ADR-0179 §3), and an

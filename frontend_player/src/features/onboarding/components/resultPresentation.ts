@@ -43,7 +43,10 @@ export function lastControlLabel(destination: PassDestination, groupName?: strin
       return groupName === undefined ? 'Back to the group' : `Back to ${groupName}`;
     case 'passport':
       return 'See your ratings';
-    default:
+    case 'home':
       return 'Back to Home';
+    case 'rate':
+      // Never the last sport's: there is a sport after it. Named as the control that rates it.
+      return rateNextLabel(destination.sport);
   }
 }
