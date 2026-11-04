@@ -17,15 +17,12 @@ import { z } from 'zod';
 
 import { GAME_OPENS, type Opens } from '../domain/vocabulary';
 
-const AboutNoGame = z.object({
-  notice_id: z.string().uuid(),
-  kind: z.string(),
-  opens: z.literal('HOME'),
-});
+/** What every push carries: the notice, and its kind. */
+const Pushed = z.object({ notice_id: z.string().uuid(), kind: z.string() });
 
-const AboutAGame = z.object({
-  notice_id: z.string().uuid(),
-  kind: z.string(),
+const AboutNoGame = Pushed.extend({ opens: z.literal('HOME') });
+
+const AboutAGame = Pushed.extend({
   opens: z.enum(GAME_OPENS),
   game_id: z.string().uuid(),
   pool_id: z.string().uuid(),

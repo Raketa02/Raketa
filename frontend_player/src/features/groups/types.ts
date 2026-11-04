@@ -55,6 +55,8 @@ export { groupReturnRoute } from './components/groupRoutes';
  * places it; whether it is drawn is this feature's rule.
  */
 export { HomeLevelCard } from './components/HomeLevelCard';
+/** The reads behind it — what a notice opening Home on its card marks stale (#731). */
+export { groupKeys } from './hooks/groupKeys';
 
 /**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),

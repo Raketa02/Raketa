@@ -56,12 +56,12 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { sportColour, sportLabel } from '@/features/onboarding/types';
+import { PICKER_HINT, sportColour, sportLabel } from '@/features/onboarding/types';
 import { theme, useReducedMotion } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { GROUPS_COPY } from './groupsCopy';
-import { anotherSportHint, sportPillLabel } from './groupsPresentation';
+import { sportPillLabel } from './groupsPresentation';
 
 const COPY = GROUPS_COPY.filter;
 
@@ -215,7 +215,8 @@ export function SportBar({ sports, sport, onChoose, cover, onAnother }: SportBar
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={COPY.anotherSport}
-                accessibilityHint={anotherSportHint()}
+                // Read at render, never at load: the feature barrels form a cycle (`groupsCopy`).
+                accessibilityHint={PICKER_HINT}
                 onPress={onAnother}
                 hitSlop={theme.hit.chip}
                 style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}

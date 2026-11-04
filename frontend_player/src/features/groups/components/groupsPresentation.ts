@@ -14,12 +14,7 @@
  *   with real plural rules has one function to change.
  */
 
-import {
-  PICKER_TITLE,
-  sportInLine,
-  sportLabel,
-  sportShortLabel,
-} from '@/features/onboarding/types';
+import { sportInLine, sportLabel, sportShortLabel } from '@/features/onboarding/types';
 import { RELIABILITY_BAND_WORD } from '@/features/player_record/types';
 import { counted } from '@/shared/formatting/counted';
 import { playerName } from '@/shared/formatting/playerName';
@@ -192,14 +187,6 @@ export function chosenClubLabel(club: SearchedClub): string {
  */
 export function sportPillLabel(sport: Sport): string {
   return `Sport: ${sportLabel(sport)}`;
-}
-
-/**
- * What *+ Another sport* opens (#731) — the picker, by the title it is drawn with, read when spoken
- * rather than at load, since the barrels this feature reads it through form a cycle.
- */
-export function anotherSportHint(): string {
-  return `Opens ${PICKER_TITLE}`;
 }
 
 /** *padel*, inside a sentence — the mocks write a sport in lower case mid-line (play 14–17). */

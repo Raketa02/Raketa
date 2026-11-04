@@ -79,5 +79,3 @@ export const GAME_OPENS = [
   'DECK',
   'RESULT',
 ] as const satisfies readonly GameOpens[];
-
-export const OPENS = [...GAME_OPENS, 'HOME'] as const satisfies readonly Opens[];

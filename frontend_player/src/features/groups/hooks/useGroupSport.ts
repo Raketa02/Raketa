@@ -71,6 +71,15 @@ export interface GroupSport {
   readonly choose: (sport: Sport) => void;
 }
 
+/** **A filter with nothing to say yet** — no sports, no sport, nothing to add, offer or ask. */
+const UNREAD: Omit<GroupSport, 'choose'> = {
+  sports: undefined,
+  sport: undefined,
+  toAdd: [],
+  needsALevel: false,
+  toOffer: [],
+};
+
 /**
  * `declared` is an official group's declared sports; `undefined` for a player group, or none yet
  * read. `opening` is the sport a notice opened the page in (#559) — the page stands on it until the
@@ -117,14 +126,7 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 
   // `null` is a phone that answered *nothing saved*; `undefined` is one still being read.
   if (rated === undefined || (account !== undefined && picked === undefined)) {
-    return {
-      sports: undefined,
-      sport: undefined,
-      toAdd: [],
-      needsALevel: false,
-      toOffer: [],
-      choose,
-    };
+    return { ...UNREAD, choose };
   }
 
   return {
@@ -148,24 +150,8 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupSport {
   const [picked, setPicked] = useState<Sport>();
 
-  if (declared === undefined) {
-    return {
-      sports: undefined,
-      sport: undefined,
-      toAdd: [],
-      needsALevel: false,
-      toOffer: [],
-      choose: setPicked,
-    };
-  }
+  if (declared === undefined) return { ...UNREAD, choose: setPicked };
 
   const sport = picked !== undefined && declared.includes(picked) ? picked : declared[0];
-  return {
-    sports: declared,
-    sport,
-    toAdd: [],
-    needsALevel: false,
-    toOffer: [],
-    choose: setPicked,
-  };
+  return { ...UNREAD, sports: declared, sport, choose: setPicked };
 }

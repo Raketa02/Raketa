@@ -348,6 +348,6 @@ in it is still no notice. **Home is laid down, not pushed**: every other destina
 wherever the player is, so _back_ returns there, but Home is a tab's root, and a second Home over
 the list would put Home behind Home — so `useOpenNotice` calls the shell's `openTab('home', …)`,
 the tab bar's own move, from the list, the banner or a tapped push, and does nothing where Home is
-already on screen. The ratings and the run left halfway — what the card is drawn from — are marked
-stale first. The walk is `notifications.test.tsx`'s _Get your level_ block, with Home's card on the
+already on screen. The ratings, the groups list and the run left halfway — what the card is drawn
+from — are marked stale first. The walk is `notifications.test.tsx`'s _Get your level_ block, with Home's card on the
 landing.

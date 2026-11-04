@@ -58,7 +58,8 @@ const stepPath = (id: string) => `${ASSESSMENTS_PATH}/${id}`;
 const groupPath = (id: string) => `/api/v1/groups/${id}`;
 
 const TABS = GROUPS_COPY.group.tabs;
-const ANOTHER_SPORT = 'Another sport';
+const ANOTHER_SPORT = GROUPS_COPY.filter.anotherSport;
+const ANOTHER_SPORT_DRAWN = GROUPS_COPY.filter.anotherSportDrawn;
 const HOME_CARD = 'Get your level';
 const HOME_CARD_LINE = "Your groups can't deal you games until you have one.";
 
@@ -245,6 +246,9 @@ function stubAnia(
   stubMyGroups(transport, groups);
   for (const group of groups) {
     transport.on('GET', groupPath(group.id), () => json(pageOf(group)));
+    transport.on('GET', `${groupPath(group.id)}/members`, () =>
+      json<Wire['GroupMembersResponse']>({ sport: 'PADEL', members: [] }),
+    );
     // No usual game declared yet: the deck asks for one before it deals (ADR-0094).
     stubGroupDeck(transport, group.id, groupDeck({ segments: [], cards: [] }));
   }
@@ -361,7 +365,7 @@ describe('+ Another sport, in a player group', () => {
       await openTheGroup(WEDNESDAY);
 
       expect(await unfoldTheChip('Padel')).toEqual([ANOTHER_SPORT, 'Padel']);
-      expect(screen.getByText('+ Another sport')).toBeTruthy();
+      expect(screen.getByText(ANOTHER_SPORT_DRAWN)).toBeTruthy();
     },
     WALK_TIMEOUT,
   );
@@ -413,6 +417,31 @@ describe('+ Another sport, in a player group', () => {
     WALK_TIMEOUT,
   );
 
+  // A call made here: Members' chip is the page's chip, so it ends the same way — and, as the
+  // official group's card does there (#729), the pass returns to the page beneath, on its tab.
+  it(
+    'ends Members’ chip too, whose pass returns to the page beneath it',
+    async () => {
+      stubAnia([WEDNESDAY], { rated: [PADEL] });
+      await openTheGroup(WEDNESDAY);
+      await openTab(TABS.friends);
+      fireEvent.press(await screen.findByHintText(GROUPS_COPY.group.openInfo));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/info`));
+      fireEvent.press(await screen.findByRole('button', { name: /^6 members, / }));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/members`));
+
+      expect(await unfoldTheChip('Padel')).toEqual([ANOTHER_SPORT, 'Padel']);
+      fireEvent.press(screen.getByRole('button', { name: ANOTHER_SPORT }));
+
+      expect(await pickerSports()).toEqual(['Tennis', 'Squash', 'Badminton']);
+      fireEvent.press(await screen.findByLabelText('Back'));
+
+      await expectTheGroup(WEDNESDAY, TABS.friends);
+      expect(started()).toEqual([]);
+    },
+    WALK_TIMEOUT,
+  );
+
   it(
     'is gone once she is rated in every sport there is',
     async () => {
@@ -422,7 +451,7 @@ describe('+ Another sport, in a player group', () => {
       await openTheGroup(WEDNESDAY);
 
       expect(await unfoldTheChip('Padel')).toEqual(['Tennis', 'Squash', 'Badminton', 'Padel']);
-      expect(screen.queryByText('+ Another sport')).toBeNull();
+      expect(screen.queryByText(ANOTHER_SPORT_DRAWN)).toBeNull();
     },
     WALK_TIMEOUT,
   );
@@ -460,7 +489,7 @@ describe('+ Another sport, in an official group', () => {
       await openTheGroup(KAZIMIERZ);
 
       expect(await unfoldTheChip('Padel')).toEqual(['Tennis', 'Padel']);
-      expect(screen.queryByText('+ Another sport')).toBeNull();
+      expect(screen.queryByText(ANOTHER_SPORT_DRAWN)).toBeNull();
     },
     WALK_TIMEOUT,
   );
@@ -535,12 +564,15 @@ describe('Home, for anybody else', () => {
     expect(screen.queryByText(HOME_CARD)).toBeNull();
   });
 
-  it('draws no card for a player who holds any rating', async () => {
+  it('draws no card for a player who holds any rating — and never asks which groups she is in', async () => {
     stubAnia([WEDNESDAY], { rated: [PADEL] });
     await launchSignedIn();
 
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     await waitFor(() => expect(transport.requestsTo('GET', RATINGS_PATH)).not.toEqual([]));
+    // The ratings have answered and been drawn from: a rated Home is one read.
+    await act(async () => jest.advanceTimersByTime(1));
     expect(screen.queryByText(HOME_CARD)).toBeNull();
+    expect(transport.requestsTo('GET', '/api/v1/groups')).toEqual([]);
   });
 });

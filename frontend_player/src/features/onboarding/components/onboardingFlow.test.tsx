@@ -99,12 +99,11 @@ let transport: Transport;
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
 
 /**
- * Nothing about the questionnaire was asked or shown on the way. **The ratings may be read on
- * Home** — its *Get your level* card asks whether there are any (#731) — but nothing on the way
- * there asks, and with no group to be in there is no card, so no run is looked for either.
+ * Nothing about the questionnaire was asked or shown on the way. **On Home the ratings are read**
+ * — its *Get your level* card asks whether there are any (#731) — so a walk that ends there says
+ * so; nothing on the way asks, and with no group to be in there is no card and no run looked for.
  */
-function expectNoQuestionnaire() {
-  const onHome = screen.queryByText(HOME_TAB_LINE) !== null;
+function expectNoQuestionnaire({ onHome }: { readonly onHome: boolean }) {
   if (!onHome) expect(transport.requestsTo('GET', RATINGS_PATH)).toEqual([]);
   expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toEqual([]);
   expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toEqual([]);
@@ -164,7 +163,7 @@ describe('where a launch lands', () => {
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
     expect(screen.getByText(STEP_ONE)).toBeTruthy();
-    expectNoQuestionnaire();
+    expectNoQuestionnaire({ onHome: false });
   });
 
   it('sends a player with a rating and a run left halfway to the profile steps all the same', async () => {
@@ -185,7 +184,7 @@ describe('where a launch lands', () => {
 
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
-    expectNoQuestionnaire();
+    expectNoQuestionnaire({ onHome: true });
   });
 
   it('opens the app normally on an unfinished run, and leaves it unread', async () => {
@@ -436,7 +435,7 @@ describe('a sign-up', () => {
       '/gender',
     ]);
     expect(transport.requestsTo('POST', COMMIT_PATH)).toHaveLength(1);
-    expectNoQuestionnaire();
+    expectNoQuestionnaire({ onHome: true });
   });
 });
 

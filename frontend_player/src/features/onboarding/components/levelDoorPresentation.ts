@@ -17,7 +17,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DoorOrigin } from '../domain/onboardingPass';
 
-import { PICKER_TITLE } from './pickerPresentation';
+import { PICKER_HINT } from './pickerPresentation';
 import { sportInLine } from './sportPresentation';
 
 /** The line under *Get your level*, by where the door stands — a place with no line fails to compile. */
@@ -30,7 +30,7 @@ export const LEVEL_DOOR_COPY = {
   headline: 'Get your level',
   line: LINE,
   start: 'Pick your sports',
-  startHint: `Opens ${PICKER_TITLE}`,
+  startHint: PICKER_HINT,
   carryOn: 'Carry on',
 } as const;
 

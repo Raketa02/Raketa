@@ -187,10 +187,7 @@ _Name_ read through it.
 
 **Home asks a member of a group rated in nothing for a level, first**
 ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7). `groups`' `HomeLevelCard`
-is drawn at the top of Home, above _TO CONFIRM_ and the rail: _Get your level — your groups can't
-deal you games until you have one._, or _Carry on_ with a run left halfway. On top, because until
-she has a level nothing under it can happen; it draws nothing for anybody else. **The price, stated
-as the badges' were: Home now reads `GET /ratings` on every visit**, and `GET /groups` as well for a
-player rated in nothing — the gate stubs both (no ratings, no groups), so a suite's Home draws no
-card unless it puts the player in a group. **Calls made here**: its place on Home; the pull does not
-re-read it.
+is drawn at the top of Home, above _TO CONFIRM_ and the rail, because until she has a level nothing
+under it can happen; what it says and when, and the reads it costs, are in
+[`groups.md`](groups.md). The gate stubs both reads empty, so a suite's Home draws no card unless it
+puts the player in a group. **Calls made here**: its place on Home; the pull does not re-read it.

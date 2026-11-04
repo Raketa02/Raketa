@@ -601,9 +601,12 @@ page replaces to onboarding's picker over the offer (`anotherSportRoute`), for a
 to its tab: the page's own, and on Members the page's beneath it, as #729's card does. The
 Administrator's Members hands none. **Home's card is `HomeLevelCard`**, which the shell draws:
 onboarding's `LevelDoor` `from` Home, where `homeAsksForALevel(groups, rated)` — a member of at
-least one group, player or official, holding no rating. **It reads the ratings first and the groups
-only for a player rated in nothing** (`useMyGroups({ enabled })`), so a rated Home costs one read,
-and it draws nothing until both have answered and nothing on a failure: it is a nudge, never a wall.
+least one group, player or official, holding no rating. **`useHomeAsksForALevel` reads the ratings
+first and the groups only for a player rated in nothing** (`useMyGroups({ enabled })`), so a rated
+Home costs one read — `GET /ratings` on every visit, the price of the card, which every group's chip
+shares — and it draws nothing until both have answered and nothing on a failure: it is a nudge,
+never a wall. `groupKeys` is exported for the notice that opens Home on it, which marks the groups
+list stale with the ratings.
 **Calls made here**: _+ Another sport_ is the bar's farthest pill rather than a chip of its own
 beside the pill (no mock draws it); Members' chip carries it too; the pill's hint for an unfold onto
 it alone is _Offers another sport to rate_. **Not seen on a device**: the pill and the bar with

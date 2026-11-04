@@ -152,4 +152,4 @@ export {
  * over the sports the chip offers. The door and the Home card open it through `LevelDoor`.
  */
 export { sportsPickerRoute } from './hooks/sportsPickerRoute';
-export { PICKER_TITLE } from './components/pickerPresentation';
+export { PICKER_HINT } from './components/pickerPresentation';

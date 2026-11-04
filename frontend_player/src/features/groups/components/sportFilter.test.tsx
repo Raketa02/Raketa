@@ -14,7 +14,10 @@ import { getAnimatedStyle } from 'react-native-reanimated';
 import { ReducedMotionProvider, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import { GROUPS_COPY } from './groupsCopy';
 import { SportBar, type BarCover } from './SportFilter';
+
+const ANOTHER_SPORT = GROUPS_COPY.filter.anotherSport;
 
 const PAD = theme.size.groupPage.filterPad;
 const ROW = 300;
@@ -152,13 +155,13 @@ describe('the fast filter’s bar', () => {
     layOut();
     act(() => jest.advanceTimersByTime(FRAME));
 
-    const another = within(bar()).getByRole('button', { name: 'Another sport' });
-    expect(within(another).getByText('+ Another sport')).toBeTruthy();
+    const another = within(bar()).getByRole('button', { name: ANOTHER_SPORT });
+    expect(within(another).getByText(GROUPS_COPY.filter.anotherSportDrawn)).toBeTruthy();
     expect(
       within(bar())
         .getAllByRole('button')
         .map((option) => option.props.accessibilityLabel),
-    ).toEqual(['Another sport', 'Tennis', 'Padel']);
+    ).toEqual([ANOTHER_SPORT, 'Tennis', 'Padel']);
     // One frame in, the sport beside the current one has begun to slide out and it has not.
     // The slide is the pill's animated wrapper, a few host nodes up from the button.
     const opacityOf = (name: string): number | undefined => {
@@ -172,7 +175,7 @@ describe('the fast filter’s bar', () => {
       return undefined;
     };
     expect(opacityOf('Tennis')).toBeGreaterThan(0);
-    expect(opacityOf('Another sport')).toBe(0);
+    expect(opacityOf(ANOTHER_SPORT)).toBe(0);
 
     fireEvent.press(another);
     expect(onAnother).toHaveBeenCalledTimes(1);
@@ -182,6 +185,6 @@ describe('the fast filter’s bar', () => {
   it('draws no + Another sport where nothing is offered', () => {
     drawBar();
 
-    expect(within(bar()).queryByRole('button', { name: 'Another sport' })).toBeNull();
+    expect(within(bar()).queryByRole('button', { name: ANOTHER_SPORT })).toBeNull();
   });
 });
