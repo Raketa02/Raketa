@@ -83,14 +83,15 @@ def _reason_for_the_club(game: BookedGame, *, read_at: Instant) -> CalledOffReas
 
 
 class ClubBookingPlayerSchema(BaseModel):
-    """A player on the game, as the club sees them — **a name, and whether they
-    paid or their share is only held**, and nothing else (§16.14)."""
+    """A player on the game, as the club sees them — **their nickname, and
+    whether they paid or their share is only held**, and nothing else (§16.14;
+    ``docs/adr/0199``, #725)."""
 
     player_id: UUID
-    name: str | None = Field(
+    nickname: str | None = Field(
         description=(
-            "Their nickname, whole (docs/adr/0199 §5). `null` for an account "
-            "that can no longer be named."
+            "Their nickname, whole (docs/adr/0199 §5) — *ania.k*. `null` for an "
+            "account that can no longer be named, which reads as *A player*."
         )
     )
     paid: bool = Field(description="Their share was taken — *paid ✓*.")
@@ -214,7 +215,7 @@ class ClubBookingSchema(BaseModel):
             players=[
                 ClubBookingPlayerSchema(
                     player_id=player,
-                    name=day.names.get(player),
+                    nickname=day.names.get(player),
                     paid=player in row.takings.paid,
                     held=player in row.takings.held,
                 )

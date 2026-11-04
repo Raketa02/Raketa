@@ -422,7 +422,7 @@ unregistered and the local store reset, so the last yes books the game at every 
   (never recorded: a `BookingPlayed` event was in the screens' C1 and is not built; a game
   that went ahead short, or one somebody Didn't come to, is *played* — the club is paid and
   sees no attendance, #657),
-  else *seat open* or *booked*. **What the club sees of a player is the name, `paid` (a
+  else *seat open* or *booked*. **What the club sees of a player is the `nickname` (#725), `paid` (a
   charge `TAKING`/`CAPTURED`, `BookingTakings` over each booking's Seat charges — one
   `of_game` read per booking listed) and `held` (a charge `HELD` until the cut-off,
   #637)**; the money is the court's price (share × seats), what was collected —

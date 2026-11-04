@@ -141,7 +141,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   administrator_not_active`, and handing it to whoever runs it records nothing.
   **The club answers an official group's Join requests itself, at any time**
   ([ADR-0191](../../../docs/adr/0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)
-  §1): `GET …/groups/{id}/requests` (a name and the Levels, no photograph) and
+  §1): `GET …/groups/{id}/requests` (the `nickname` and the Levels, no photograph, #725) and
   `POST …/requests/{player_id}/approve|decline`, the Administrator's rules and events,
   answered `as_club` with the Club account as `approved_by` — the only two acts the
   aggregate lets a club do, and never on a player group at its courts. Answering is not

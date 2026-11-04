@@ -955,15 +955,17 @@ class ClubGroupsResponse(BaseModel):
 
 class ClubJoinRequestSchema(BaseModel):
     """A Join request as the club answers it — club 20's card without the
-    photograph: who is asking, and what they play. ``player_id`` is the id to
-    approve or decline. **No Player Score**, as everywhere a request is drawn,
-    and **no photograph**, which the club website draws nowhere."""
+    photograph: who is asking, by their nickname, and what they play
+    (``docs/adr/0199``, #725). ``player_id`` is the id to approve or decline.
+    **No Player Score**, as everywhere a request is drawn, and **no
+    photograph**, which the club website draws nowhere."""
 
     player_id: UUID
-    name: str | None = Field(
+    nickname: str | None = Field(
         description=(
-            "Their nickname, whole (docs/adr/0199 §5). `null` for an account "
-            "that can no longer be named — the request still waits."
+            "Their nickname, whole (docs/adr/0199 §5) — *ania.k*. `null` for an "
+            "account that can no longer be named, which reads as *A player* — "
+            "the request still waits."
         )
     )
     levels: list[SportLevelSchema] = Field(
@@ -978,7 +980,7 @@ class ClubJoinRequestSchema(BaseModel):
     def from_card(cls, card: RequestCard) -> "ClubJoinRequestSchema":
         return cls(
             player_id=card.face.player_id,
-            name=card.face.nickname,
+            nickname=card.face.nickname,
             levels=[
                 SportLevelSchema(sport=row.sport, level=row.level)
                 for row in card.levels

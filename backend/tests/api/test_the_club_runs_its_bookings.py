@@ -2,7 +2,7 @@
 §16.14, §19; the screens B4, B6).
 
 The club's desk reads its bookings **by day**, filtered, each with its players
-(name, *paid*, *held*), its money and the group it came from. It **moves** a
+(nickname, *paid*, *held*), its money and the group it came from. It **moves** a
 booked game to another free court at the same hour, and **cancels** one with a
 reason — everybody refunded in full, nothing on anybody's record, the players
 dealt a new card first — unless another of its courts takes the game, which
@@ -205,7 +205,7 @@ async def test_the_club_reads_its_bookings_by_day_with_what_it_may_see(
         "COMPETITIVE",
         "BOOKED",
     )
-    assert sorted(player["name"] for player in row["players"]) == [
+    assert sorted(player["nickname"] for player in row["players"]) == [
         "ewa",
         "kuba",
         "ola",
@@ -214,9 +214,9 @@ async def test_the_club_reads_its_bookings_by_day_with_what_it_may_see(
     # Held until the cut-off, which takes them (#637): not paid, not
     # collected yet.
     assert all((p["paid"], p["held"]) == (False, True) for p in row["players"])
-    # Nothing about a player but the name and whether they paid or are held —
-    # and since #651 never whether the desk saw them.
-    assert set(row["players"][0]) == {"player_id", "name", "paid", "held"}
+    # Nothing about a player but the nickname and whether they paid or are
+    # held — and since #651 never whether the desk saw them.
+    assert set(row["players"][0]) == {"player_id", "nickname", "paid", "held"}
     assert row["money"] == {
         "price_grosze": 120_00,
         "collected_grosze": 0,

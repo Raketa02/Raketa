@@ -1,17 +1,20 @@
-"""No read on the player surface serves a player's name — only their nickname.
+"""No read on the player or the club surface serves a player's name — only
+their nickname.
 
 ``docs/adr/0199``: the **Name** is retired, and the nickname is what every
 sentence, row, card, sheet, notice and seat label says about a player. A field
 called ``name`` on a seat, a member or a card would look harmless in a diff, so
 the claim is made over the **emitted contract** rather than over a class, the
 way the sportsmanship figure's is: every ``name`` a response can reach belongs
-to something that is not a player — a club, a court, a group, a band — and
-every shape that draws a person carries ``nickname``.
+to something that is not a player — a club, a court, a group, a band, or an
+Administrator as their club typed them — and every shape that draws a player
+carries ``nickname``. The club's desk reads ``ania.k`` on a booking and on a
+Join request too (#725).
 """
 
 from __future__ import annotations
 
-from app.api.contract import build_surface_spec
+from app.api.contract import SURFACES, build_surface_spec
 from app.api.v1.player import player_api_router
 from tests.unit.test_no_response_carries_a_forbidden_fact import (
     schemas_reachable_from_responses,
@@ -121,3 +124,57 @@ def test_sign_up_asks_for_credentials_only() -> None:
         "adult_attested",
     }
     assert request.get("additionalProperties") is False
+
+
+# --------------------------------------------------------------------------- #
+# The club surface (#725)
+# --------------------------------------------------------------------------- #
+
+#: Every club response schema that may carry a ``name``, and what it names.
+#: The Administrators keep the name their club typed for them — the table, an
+#: invitation, *run by* and the handover (``docs/adr/0199`` §4).
+CLUB_NAMES_OF_THINGS = {
+    "AdministratorGroupSchema": "a group",
+    "AdministratorSchema": "an Administrator, as the club typed it",
+    "BookedFromSchema": "a group",
+    "ClubDetailsResponse": "a club",
+    "ClubGroupAdministratorSchema": "an Administrator, as the club typed it",
+    "ClubGroupSchema": "a group",
+    "CourtResponse": "a court",
+    "CourtToMoveToSchema": "a court",
+}
+
+#: Every club shape that draws a player — a seat on a booking, somebody
+#: asking to join an official group.
+CLUB_DRAWS_A_PLAYER = ("ClubBookingPlayerSchema", "ClubJoinRequestSchema")
+
+
+def _club_spec() -> dict:
+    return build_surface_spec("Raketa Club API", SURFACES["club"])
+
+
+def test_every_name_the_club_reads_names_something_that_is_not_a_player() -> None:
+    schemas = schemas_reachable_from_responses(_club_spec())
+    assert schemas, "the walk found no schemas, so it would pass for ever"
+
+    carrying = sorted(
+        schema_name
+        for schema_name, schema in schemas.items()
+        if "name" in (schema.get("properties") or {})
+    )
+
+    assert carrying == sorted(CLUB_NAMES_OF_THINGS)
+
+
+def test_every_player_the_club_reads_is_drawn_by_their_nickname() -> None:
+    schemas = _club_spec()["components"]["schemas"]
+
+    for owner in CLUB_DRAWS_A_PLAYER:
+        properties = schemas[owner]["properties"]
+        assert "nickname" in properties, f"{owner} names nobody"
+        assert "name" not in properties, f"{owner} still serves a name"
+        # A player without one still reads as nobody — the website's *A
+        # player* — so the field stays nullable.
+        assert {"type": "null"} in properties["nickname"].get("anyOf", ()), (
+            f"{owner} cannot be nobody"
+        )

@@ -708,9 +708,9 @@ async def test_with_nobody_running_it_the_desk_lets_kasia_in(client, ogrody, mar
 
     [request] = await the_club_s_queue(client, ogrody, club)
 
-    # A name and her Levels: what deciding needs, and no photograph.
-    assert set(request) == {"player_id", "name", "levels"}
-    assert (request["player_id"], request["name"]) == (str(kasia["id"]), "kasia")
+    # A nickname and her Levels: what deciding needs, and no photograph.
+    assert set(request) == {"player_id", "nickname", "levels"}
+    assert (request["player_id"], request["nickname"]) == (str(kasia["id"]), "kasia")
     assert [row["sport"] for row in request["levels"]] == ["PADEL", "TENNIS"]
 
     approved = await the_club_answers(client, ogrody["desk"], club, kasia, "approve")
@@ -737,7 +737,7 @@ async def test_the_desk_answers_beside_marta_and_her_queue_is_the_same_one(
     declined = await the_club_answers(client, ogrody["desk"], club, kasia, "decline")
 
     # In the order they asked.
-    assert [request["name"] for request in queue] == ["kasia", "michal"]
+    assert [request["nickname"] for request in queue] == ["kasia", "michal"]
     assert declined.status_code == 204, declined.text
     page = await page_of(client, marta, ogrody["id"], club)
     assert [request["player_id"] for request in page["requests"]] == [str(michal["id"])]

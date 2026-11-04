@@ -2496,7 +2496,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -2505,8 +2505,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Their nickname, whole (docs/adr/0199 \u00a75). `null` for an account that can no longer be named."
+            "title": "Nickname",
+            "description": "Their nickname, whole (docs/adr/0199 \u00a75) \u2014 *ania.k*. `null` for an account that can no longer be named, which reads as *A player*."
           },
           "paid": {
             "type": "boolean",
@@ -2522,12 +2522,12 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "paid",
           "held"
         ],
         "title": "ClubBookingPlayerSchema",
-        "description": "A player on the game, as the club sees them \u2014 **a name, and whether they\npaid or their share is only held**, and nothing else (\u00a716.14)."
+        "description": "A player on the game, as the club sees them \u2014 **their nickname, and\nwhether they paid or their share is only held**, and nothing else (\u00a716.14;\n``docs/adr/0199``, #725)."
       },
       "ClubBookingSchema": {
         "properties": {
@@ -2926,7 +2926,7 @@
             "format": "uuid",
             "title": "Player Id"
           },
-          "name": {
+          "nickname": {
             "anyOf": [
               {
                 "type": "string"
@@ -2935,8 +2935,8 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Their nickname, whole (docs/adr/0199 \u00a75). `null` for an account that can no longer be named \u2014 the request still waits."
+            "title": "Nickname",
+            "description": "Their nickname, whole (docs/adr/0199 \u00a75) \u2014 *ania.k*. `null` for an account that can no longer be named, which reads as *A player* \u2014 the request still waits."
           },
           "levels": {
             "items": {
@@ -2950,11 +2950,11 @@
         "type": "object",
         "required": [
           "player_id",
-          "name",
+          "nickname",
           "levels"
         ],
         "title": "ClubJoinRequestSchema",
-        "description": "A Join request as the club answers it \u2014 club 20's card without the\nphotograph: who is asking, and what they play. ``player_id`` is the id to\napprove or decline. **No Player Score**, as everywhere a request is drawn,\nand **no photograph**, which the club website draws nowhere."
+        "description": "A Join request as the club answers it \u2014 club 20's card without the\nphotograph: who is asking, by their nickname, and what they play\n(``docs/adr/0199``, #725). ``player_id`` is the id to approve or decline.\n**No Player Score**, as everywhere a request is drawn, and **no\nphotograph**, which the club website draws nowhere."
       },
       "ClubJoinRequestsResponse": {
         "properties": {
