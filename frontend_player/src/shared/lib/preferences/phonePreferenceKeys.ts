@@ -17,8 +17,10 @@ export const phonePreferenceKeys = {
   one: (account: string, preference: PhonePreference) =>
     [...phonePreferenceKeys.all, account, preference] as const,
   /**
-   * A flag the phone keeps for itself (ADR-0200 §8) — no account in the key, because the flag names
-   * none. A sign-out still drops it from memory with everything else; the next read finds it raised.
+   * A flag the phone keeps for an account past its session (ADR-0200 §8) — the account in the key,
+   * as a value's. A sign-out still drops it from memory with everything else; the account's next
+   * read finds it raised.
    */
-  flag: (flag: PhoneFlag) => [...phonePreferenceKeys.all, 'phone', flag] as const,
+  flag: (account: string, flag: PhoneFlag) =>
+    [...phonePreferenceKeys.all, account, 'flag', flag] as const,
 };

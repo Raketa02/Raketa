@@ -7,7 +7,10 @@
  * dim      the scrim (9.1's night at 45 %), with a hole of radius.spotlight, the target + 6
  * bubble   7.6's card at the content's width — title cardTitle · body tiny ·
  *          "N of M" num.xs muted · Skip secondary sm · Next primary sm ("Got it" on the last)
- * arrow    7.6's, pointing at the hole from the side the bubble stands on
+ *          — or, for a step that asks, beside the hole out to the gutter, the count over the
+ *          buttons, when there is size.guideBesideMin of room
+ * arrow    7.6's, from the side the bubble stands on, at the step's `pointAt` (the hole's middle
+ *          without one); level with it on a bubble beside the hole
  * ```
  *
  * Built for *Your rating*'s three numbers
@@ -31,6 +34,10 @@
  * **The hole needs the target measured**, as the popover's arrow does: `measureInWindow` on each
  * step. Where no measurement arrives — the test renderer never answers one — the whole window is
  * dimmed and the bubble stands in its middle, with no arrow, rather than pointing at nothing.
+ * **The measurement is only as true as the screen's first frame**: a screen that runs a guide
+ * pads its safe area from the provider, never with the native `SafeAreaView`, which has no inset
+ * on its first frame and moves everything down by it on the next — after the guide has cut its
+ * hole a status bar too high (`TopSafeArea` says why the native view is late).
  *
  * The step is the guide's own, and starts from the first each time it is shown. How it ended is
  * not reported: *Got it* and *Skip* both end it, and the one caller does the same with either.
@@ -56,13 +63,33 @@ import {
 import Svg, { Path } from 'react-native-svg';
 
 import { Button } from './Button';
-import { guideLayout, spotlightPath, type GuideRect } from './guideGeometry';
+import {
+  GUIDE_BUBBLE_BORDER,
+  guideLayout,
+  spotlightPath,
+  type GuideLayout,
+  type GuideRect,
+} from './guideGeometry';
 import { ModalStage } from './ModalStage';
 import { theme } from './theme';
 
 export interface GuideStep {
   /** The element the spotlight cuts out — measured on the step, never focused. */
   readonly target: RefObject<View | null>;
+  /**
+   * What the arrow points at, inside the target — the figure's own ⓘ mark, which says what the
+   * bubble is about. Without one, or before it measures, the arrow points at the hole's middle.
+   */
+  readonly pointAt?: RefObject<View | null>;
+  /**
+   * **Stand beside the mark rather than under or over the hole** — to the hole's right, the arrow
+   * on the bubble's left edge, level with `pointAt`. For a mark on the far edge of a tall figure:
+   * the level's ⓘ sits at the top of its head and a large number, so an arrow from under the hole
+   * lands on whatever is under the figure, and there is no room over it under the status bar.
+   * Where the room beside is under `size.guideBesideMin`, or the mark did not measure, the bubble
+   * stands under or over the hole as any step's does.
+   */
+  readonly besideMark?: boolean;
   readonly title: string;
   readonly body: string;
 }
@@ -89,6 +116,8 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
   const [index, setIndex] = useState(0);
   /** Where this step's target was found in the window — `undefined` until it answers. */
   const [measured, setMeasured] = useState<GuideRect>();
+  /** Where this step's arrow points, the same way. */
+  const [pointed, setPointed] = useState<GuideRect>();
 
   // Each showing starts from the first step: the step is reset in render, when `visible` turns,
   // so the first frame of a second showing is already step one.
@@ -100,36 +129,24 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
 
   const step = steps[Math.min(index, steps.length - 1)];
   const target = step?.target;
+  const pointAt = step?.pointAt;
   // Before paint: under the New Architecture the measurement answers at once, so a step never
-  // draws its words around the last step's hole.
+  // draws its words around the last step's hole, nor its arrow at the last step's mark.
   useLayoutEffect(() => {
     if (!visible || target === undefined) return;
     setMeasured(undefined);
+    setPointed(undefined);
     target.current?.measureInWindow((x, y, width, height) => setMeasured({ x, y, width, height }));
-  }, [visible, target]);
+    pointAt?.current?.measureInWindow((x, y, width, height) => setPointed({ x, y, width, height }));
+  }, [visible, target, pointAt]);
 
   if (step === undefined) return null;
 
   const last = index >= steps.length - 1;
   const next = () => (last ? onDone() : setIndex(index + 1));
-  const layout = guideLayout(measured, viewport);
-
-  const bubbleSpot: ViewStyle | undefined =
-    layout === undefined
-      ? undefined
-      : layout.bubble.below
-        ? {
-            position: 'absolute',
-            left: layout.bubble.left,
-            width: layout.bubble.width,
-            top: layout.bubble.top,
-          }
-        : {
-            position: 'absolute',
-            left: layout.bubble.left,
-            width: layout.bubble.width,
-            bottom: layout.bubble.bottom,
-          };
+  const layout = guideLayout(measured, viewport, pointed, step.besideMark);
+  // Beside the hole the bubble is narrow, so the count stands over the buttons.
+  const beside = layout?.bubble.side === 'right';
 
   return (
     <ModalStage
@@ -163,35 +180,60 @@ export function Guide({ visible, steps, onDone }: GuideProps) {
           )}
         </Pressable>
 
-        <View style={[s.bubble, layout === undefined ? s.bubbleCentred : bubbleSpot]}>
+        <View
+          style={[s.bubble, layout === undefined ? s.bubbleCentred : bubbleSpot(layout)]}
+          testID="guide-bubble"
+        >
           {layout === undefined ? null : (
-            <View
-              style={[
-                s.arrow,
-                layout.bubble.below ? s.arrowAbove : s.arrowBelow,
-                { left: layout.arrowLeft },
-              ]}
-            />
+            <View style={[s.arrow, arrowSpot(layout)]} testID="guide-arrow" />
           )}
 
           <Text style={s.title}>{step.title}</Text>
           <Text style={s.body}>{step.body}</Text>
 
-          <View style={s.foot}>
-            <Text style={s.count}>{GUIDE_COPY.count(index + 1, steps.length)}</Text>
-            <Button
-              label={GUIDE_COPY.skip}
-              accessibilityLabel={GUIDE_COPY.skipName}
-              variant="secondary"
-              size="sm"
-              onPress={onDone}
-            />
-            <Button label={last ? GUIDE_COPY.last : GUIDE_COPY.next} size="sm" onPress={next} />
+          <View style={beside ? s.footStacked : s.foot}>
+            <Text style={beside ? s.countStacked : s.count}>
+              {GUIDE_COPY.count(index + 1, steps.length)}
+            </Text>
+            <View style={s.buttons}>
+              <Button
+                label={GUIDE_COPY.skip}
+                accessibilityLabel={GUIDE_COPY.skipName}
+                variant="secondary"
+                size="sm"
+                onPress={onDone}
+              />
+              <Button label={last ? GUIDE_COPY.last : GUIDE_COPY.next} size="sm" onPress={next} />
+            </View>
           </View>
         </View>
       </View>
     </ModalStage>
   );
+}
+
+/** Where the bubble stands in the window, by the side the layout chose. */
+function bubbleSpot({ bubble }: GuideLayout): ViewStyle {
+  const across = { position: 'absolute', left: bubble.left, width: bubble.width } as const;
+  return bubble.side === 'above'
+    ? { ...across, bottom: bubble.bottom }
+    : { ...across, top: bubble.top };
+}
+
+/**
+ * Where the arrow sits on the bubble's facing edge. An absolute child is placed from inside the
+ * outline, so the outline's width comes off what the layout measured from the outer corner.
+ */
+function arrowSpot({ bubble, arrow }: GuideLayout): ViewStyle {
+  const along = arrow - GUIDE_BUBBLE_BORDER;
+  switch (bubble.side) {
+    case 'below':
+      return { ...s.arrowAbove, left: along };
+    case 'above':
+      return { ...s.arrowBelow, left: along };
+    case 'right':
+      return { ...s.arrowLeft, top: along };
+  }
 }
 
 const ARROW = theme.size.popoverArrow;
@@ -202,7 +244,7 @@ const s = StyleSheet.create({
   scrim: { backgroundColor: theme.color.scrim },
   bubble: {
     backgroundColor: theme.color.surface,
-    borderWidth: 1,
+    borderWidth: GUIDE_BUBBLE_BORDER,
     borderColor: theme.color.line,
     borderRadius: theme.radius.popover,
     padding: theme.space.md,
@@ -221,6 +263,8 @@ const s = StyleSheet.create({
   },
   arrowAbove: { top: -ARROW / 2, borderTopWidth: 1, borderLeftWidth: 1 },
   arrowBelow: { bottom: -ARROW / 2, borderBottomWidth: 1, borderRightWidth: 1 },
+  // Beside the hole, pointing left: the square's two left-facing sides carry the outline.
+  arrowLeft: { left: -ARROW / 2, borderLeftWidth: 1, borderBottomWidth: 1 },
   title: { ...theme.type.cardTitle, color: theme.color.ink },
   body: { ...theme.type.tiny, color: theme.color.ink },
   foot: {
@@ -229,5 +273,9 @@ const s = StyleSheet.create({
     gap: theme.space.sm,
     marginTop: theme.space.xs,
   },
+  // A bubble beside the hole is narrow: the count on its own line, the buttons under it.
+  footStacked: { gap: theme.space.sm, marginTop: theme.space.xs },
   count: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted, flex: 1 },
+  countStacked: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
+  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: theme.space.sm },
 });

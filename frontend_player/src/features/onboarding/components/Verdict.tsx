@@ -50,12 +50,15 @@
  *
  * ## The guide's three spotlights
  *
- * The first *Your rating* a phone shows runs a guide over the same three figures, in the marks'
+ * The first *Your rating* a phone shows an account runs a guide over the same three figures, in the marks'
  * own words ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8).
- * The guide cuts each figure out of its dim, so it needs the figure itself rather than its mark:
- * a screen that runs it holds three more refs ({@link useVerdictSpotlights}) and hands them in as
- * `spotlit`, and {@link verdictGuide} is the steps. **The passport passes none**, which is how its
- * cards never run it.
+ * The guide cuts each figure out of its dim, so it needs the figure itself and not only its mark
+ * — and its arrow points at the mark, because the mark is what the bubble's words are: a screen
+ * that runs it holds the figures' refs and the marks' ({@link useVerdictSpotlights}) and hands
+ * them in as `spotlit`, and {@link verdictGuide} is the steps. The marks are then the screen's
+ * refs rather than the card's own, so the popover and the guide point at one element. **The level
+ * and the range hug their content** rather than stretching across their column, so each hole fits
+ * its figure. **The passport passes none**, which is how its cards never run it.
  */
 
 import { useRef, useState, type MutableRefObject, type ReactNode } from 'react';
@@ -122,28 +125,54 @@ export function explainers(ceiling: number | undefined): Readonly<Record<Explain
 /** The order the guide walks the figures in: the biggest number first (ADR-0200 §8). */
 const GUIDE_ORDER: readonly ExplainerKey[] = ['level', 'range', 'confidence'];
 
-/** The three figures a guide cuts out of its dim — the figure and its mark, not the mark alone. */
-export type VerdictSpotlights = Readonly<Record<ExplainerKey, MutableRefObject<View | null>>>;
+/** One figure a guide cuts out of its dim — the figure with its mark — and the mark its arrow points at. */
+export interface VerdictSpotlight {
+  readonly figure: MutableRefObject<View | null>;
+  readonly mark: MutableRefObject<View | null>;
+}
+
+/** The three figures a guide cuts out, each with its ⓘ mark. */
+export type VerdictSpotlights = Readonly<Record<ExplainerKey, VerdictSpotlight>>;
 
 /** The refs a screen that runs the guide hands its card as `spotlit`, held for the screen's life. */
 export function useVerdictSpotlights(): VerdictSpotlights {
   const level = useRef<View | null>(null);
+  const levelMark = useRef<View | null>(null);
   const range = useRef<View | null>(null);
+  const rangeMark = useRef<View | null>(null);
   const confidence = useRef<View | null>(null);
-  return { level, range, confidence };
+  const confidenceMark = useRef<View | null>(null);
+  return {
+    level: { figure: level, mark: levelMark },
+    range: { figure: range, mark: rangeMark },
+    confidence: { figure: confidence, mark: confidenceMark },
+  };
 }
 
 /**
  * **The guide's steps**: the level, the likely range, then the confidence, each in its mark's
  * words — so the third keeps *"The questionnaire can provide up to {ceiling}% confidence"*, and a
- * low number does not read as Raketa doubting her (Q7).
+ * low number does not read as Raketa doubting her (Q7). Each hole is the figure; each arrow points
+ * at the figure's ⓘ mark.
+ *
+ * **The level's bubble stands beside it**, its arrow level with the ⓘ. The level's mark is at the top
+ * of its head, over a large number, and the range sits three points under the number: a bubble
+ * under the hole cut the range's line in half and its arrow landed between *4,26* and *likely
+ * range*, reading as the range's, while an arrow close to the ⓘ from below would cover the number
+ * (seen on an iPhone, 2026-11-04). Right of the level is only the ring, the third step's. The range
+ * and the ring keep their bubbles under them — each mark is on its hole's bottom edge.
  */
 export function verdictGuide(
   spotlit: VerdictSpotlights,
   ceiling: number | undefined,
 ): readonly GuideStep[] {
   const words = explainers(ceiling);
-  return GUIDE_ORDER.map((key) => ({ target: spotlit[key], ...words[key] }));
+  return GUIDE_ORDER.map((key) => ({
+    target: spotlit[key].figure,
+    pointAt: spotlit[key].mark,
+    besideMark: key === 'level',
+    ...words[key],
+  }));
 }
 
 /** A mark that was pressed: which figure it explains, and the mark itself for the popover. */
@@ -251,11 +280,15 @@ export function Verdict({ rating, top, questionsAsked, onExplain, spotlit }: Ver
   const range = formatRange(rating.range);
   const confidence = formatPercent(rating.confidence);
 
-  // One ref per mark, this card's own: the popover anchors to the mark it was opened from and
-  // returns focus to it on close, which is one prop doing both jobs.
-  const levelMark: MarkRef = useRef<View | null>(null);
-  const rangeMark: MarkRef = useRef<View | null>(null);
-  const confidenceMark: MarkRef = useRef<View | null>(null);
+  // One ref per mark: the popover anchors to the mark it was opened from and returns focus to it
+  // on close, which is one prop doing both jobs. The card's own, unless a screen running the guide
+  // handed its own in — then the guide's arrow points at the same mark.
+  const ownLevelMark: MarkRef = useRef<View | null>(null);
+  const ownRangeMark: MarkRef = useRef<View | null>(null);
+  const ownConfidenceMark: MarkRef = useRef<View | null>(null);
+  const levelMark = spotlit?.level.mark ?? ownLevelMark;
+  const rangeMark = spotlit?.range.mark ?? ownRangeMark;
+  const confidenceMark = spotlit?.confidence.mark ?? ownConfidenceMark;
 
   return (
     <DarkCard>
@@ -264,8 +297,9 @@ export function Verdict({ rating, top, questionsAsked, onExplain, spotlit }: Ver
       <View style={s.verdict}>
         <View style={s.figures}>
           {/* The level's spotlight takes its head and the figure together. Each spotlit view is
-              kept off Android's flattening, because the guide measures it. */}
-          <View ref={spotlit?.level} collapsable={false} style={s.figure}>
+              kept off Android's flattening, because the guide measures it, and hugs its content,
+              so the hole fits the figure rather than the column. */}
+          <View ref={spotlit?.level.figure} collapsable={false} style={s.figure}>
             <View style={s.figureHead}>
               <Text style={s.eyebrowOnDark}>Your level</Text>
               <InfoMark
@@ -278,7 +312,7 @@ export function Verdict({ rating, top, questionsAsked, onExplain, spotlit }: Ver
             <Text style={s.level}>{level}</Text>
           </View>
 
-          <View ref={spotlit?.range} collapsable={false} style={s.figureHead}>
+          <View ref={spotlit?.range.figure} collapsable={false} style={[s.figureHead, s.hug]}>
             <Text style={s.rangeValue}>{range}</Text>
             <Text style={s.rangeLabel}>likely range</Text>
             <InfoMark
@@ -290,7 +324,7 @@ export function Verdict({ rating, top, questionsAsked, onExplain, spotlit }: Ver
           </View>
         </View>
 
-        <View ref={spotlit?.confidence} collapsable={false} style={s.ring}>
+        <View ref={spotlit?.confidence.figure} collapsable={false} style={s.ring}>
           {/* The ceiling is the engine's and arrives with a run's result. Absent, the ring
               draws no tick and its name states the one number it has. */}
           <ConfidenceRing
@@ -363,7 +397,9 @@ const s = StyleSheet.create({
   verdict: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
   figures: { flex: 1, gap: theme.space.xxs },
   // The level's head and figure, one spotlight — the column's own gap between the two.
-  figure: { gap: theme.space.xxs },
+  figure: { alignSelf: 'flex-start', gap: theme.space.xxs },
+  // A spotlit figure is as wide as what it says, not its column.
+  hug: { alignSelf: 'flex-start' },
   figureHead: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   eyebrowOnDark: {
     ...theme.type.eyebrow,

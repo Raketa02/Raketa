@@ -520,14 +520,15 @@ export const SPORTS_SERVED: Wire['SportsResponse'] = {
 };
 
 /**
- * **This phone has shown the guide on _Your rating_ already**
+ * **This account has been shown the guide on _Your rating_ on this phone already**
  * ([ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8) — for a suite that
  * lands on *Your rating* and is about something else. The device's storage is emptied after every
  * test, so every test begins on a phone that has never shown it, and the guide would stand over
- * every rating it walks to. `theGuideOnYourRating.test` is the suite about the guide.
+ * every rating it walks to. The account is the gate's player unless a suite signs in somebody
+ * else. `theGuideOnYourRating.test` is the suite about the guide.
  */
-export function ratingGuideAlreadyShown(): Promise<void> {
-  return raisePhoneFlag('ratingGuideShown');
+export function ratingGuideAlreadyShown(account: string = GATE_USER.id): Promise<void> {
+  return raisePhoneFlag(account, 'ratingGuideShown');
 }
 
 export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';

@@ -67,28 +67,35 @@ describe('the phone-preferences store', () => {
 });
 
 /**
- * **The one value kept per phone** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §8, amending ADR-0188 §2): *the guide on Your rating was shown* names no account and outlives a
- * session — a second account on the same phone never sees the guide, and a new phone does.
+ * **The one value kept past a session** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §8, as amended 2026-11-04): *the guide on Your rating was shown* is kept per account on this
+ * phone, and outlives the session — the same account signing in again never sees the guide, and a
+ * second account on the phone does, once.
  */
-describe('a flag the phone keeps', () => {
+describe('a flag the phone keeps for an account', () => {
   it('is down until it is raised', async () => {
-    await expect(readPhoneFlag('ratingGuideShown')).resolves.toBe(false);
+    await expect(readPhoneFlag(ADA, 'ratingGuideShown')).resolves.toBe(false);
   });
 
   it('stays up once raised', async () => {
-    await raisePhoneFlag('ratingGuideShown');
+    await raisePhoneFlag(ADA, 'ratingGuideShown');
 
-    await expect(readPhoneFlag('ratingGuideShown')).resolves.toBe(true);
+    await expect(readPhoneFlag(ADA, 'ratingGuideShown')).resolves.toBe(true);
+  });
+
+  it('is the account’s own: another account on the phone finds it down', async () => {
+    await raisePhoneFlag(ADA, 'ratingGuideShown');
+
+    await expect(readPhoneFlag(BORIS, 'ratingGuideShown')).resolves.toBe(false);
   });
 
   it('is kept when a session ends, while every account’s choices go', async () => {
-    await raisePhoneFlag('ratingGuideShown');
+    await raisePhoneFlag(ADA, 'ratingGuideShown');
     await savePhonePreference(ADA, 'playSegment', 'explore');
 
     await endSession('requested');
 
-    await expect(readPhoneFlag('ratingGuideShown')).resolves.toBe(true);
+    await expect(readPhoneFlag(ADA, 'ratingGuideShown')).resolves.toBe(true);
     await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBeUndefined();
   });
 });

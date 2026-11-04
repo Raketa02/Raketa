@@ -8,7 +8,16 @@
  *   over it otherwise, `space.md` clear of it — room for the arrow — and takes the content's
  *   width, gutter to gutter, as a `wide` popover does: it carries a paragraph and a row of
  *   controls, and 7.6's 250 would stack them.
- * - **The arrow** points at the hole's middle, kept off the bubble's rounded corners.
+ * - **Or beside it**, when the step asks: to the hole's right, `space.md` clear of it, out to the
+ *   right gutter, standing so its arrow is level with the mark. It is for a mark on the far edge of
+ *   a tall figure — the level's ⓘ, at the top of a head and a large number — where an arrow from
+ *   under the hole lands on whatever is under the figure, and one over the hole has no room under
+ *   the status bar. **It needs `size.guideBesideMin` of room**, and a measured mark; without
+ *   either it stands under or over the hole, as any step does.
+ * - **The arrow** points at what the step names — a figure's own ⓘ mark, which is what the
+ *   bubble explains — and at the hole's middle when it names nothing or that did not measure; kept
+ *   off the bubble's rounded corners either way. The hole's middle alone missed: a figure that
+ *   stretches across its column puts its middle in empty space, far from its mark.
  *
  * **A target that was not measured has no layout**: the test renderer never answers
  * `measureInWindow`, and a view not yet laid out answers zeros. The guide then dims the whole
@@ -30,12 +39,26 @@ export interface GuideWindow {
   readonly height: number;
 }
 
-/** Where the bubble stands: its top under the hole, or its bottom over it, measured from the window's edge. */
+/**
+ * Where the bubble stands, measured from the window's edges: its top under the hole, its bottom
+ * over it, or its top and left beside it.
+ */
 export type GuideBubbleSpot =
-  | { readonly below: true; readonly top: number; readonly left: number; readonly width: number }
   | {
-      readonly below: false;
+      readonly side: 'below';
+      readonly top: number;
+      readonly left: number;
+      readonly width: number;
+    }
+  | {
+      readonly side: 'above';
       readonly bottom: number;
+      readonly left: number;
+      readonly width: number;
+    }
+  | {
+      readonly side: 'right';
+      readonly top: number;
       readonly left: number;
       readonly width: number;
     };
@@ -43,13 +66,33 @@ export type GuideBubbleSpot =
 export interface GuideLayout {
   readonly hole: GuideRect;
   readonly bubble: GuideBubbleSpot;
-  /** From the bubble's left edge. */
-  readonly arrowLeft: number;
+  /**
+   * Where the arrow's square starts along the bubble's edge that faces the hole, from the bubble's
+   * outer corner: from its left for a bubble under or over the hole, from its top for one beside it.
+   */
+  readonly arrow: number;
 }
 
+/** The bubble's outline, which the arrow continues — 7.6's 1pt line. */
+export const GUIDE_BUBBLE_BORDER = 1;
+
+/**
+ * How far below a beside bubble's top its arrow's middle sits: level with the title's line, inside
+ * the outline and the padding — so the title reads as the thing the arrow says.
+ */
+const BESIDE_ARROW_LEVEL =
+  GUIDE_BUBBLE_BORDER + theme.space.md + theme.type.cardTitle.lineHeight / 2;
+
+/**
+ * @param pointAt where the arrow points, as measured — the hole's middle when it is `undefined` or
+ *   answered zeros, as a view not yet laid out does.
+ * @param besideMark the step asks to stand beside its mark, when there is room.
+ */
 export function guideLayout(
   target: GuideRect | undefined,
   window: GuideWindow,
+  pointAt?: GuideRect,
+  besideMark = false,
 ): GuideLayout | undefined {
   if (target === undefined || target.width <= 0 || target.height <= 0) return undefined;
 
@@ -62,18 +105,36 @@ export function guideLayout(
 
   const gap = theme.space.md;
   const gutter = theme.size.gutter;
+  const arrow = theme.size.popoverArrow;
+  const corner = theme.radius.popover;
+  const mark = pointAt === undefined || pointAt.width <= 0 ? undefined : pointAt;
+
+  if (besideMark && mark !== undefined) {
+    const besideLeft = hole.x + hole.width + gap;
+    const besideWidth = window.width - gutter - besideLeft;
+    if (besideWidth >= theme.size.guideBesideMin) {
+      const level = mark.y + mark.height / 2;
+      const besideTop = Math.max(0, level - BESIDE_ARROW_LEVEL);
+      return {
+        hole,
+        bubble: { side: 'right', top: besideTop, left: besideLeft, width: besideWidth },
+        arrow: Math.max(corner, level - besideTop - arrow / 2),
+      };
+    }
+  }
+
   const width = window.width - 2 * gutter;
   const below = hole.y + hole.height / 2 <= window.height / 2;
   const bubble: GuideBubbleSpot = below
-    ? { below, top: hole.y + hole.height + gap, left: gutter, width }
-    : { below, bottom: window.height - hole.y + gap, left: gutter, width };
+    ? { side: 'below', top: hole.y + hole.height + gap, left: gutter, width }
+    : { side: 'above', bottom: window.height - hole.y + gap, left: gutter, width };
 
-  const arrow = theme.size.popoverArrow;
-  const corner = theme.radius.popover;
-  const middle = hole.x + hole.width / 2;
-  const arrowLeft = clamp(middle - gutter - arrow / 2, corner, width - corner - arrow);
-
-  return { hole, bubble, arrowLeft };
+  const middle = mark === undefined ? hole.x + hole.width / 2 : mark.x + mark.width / 2;
+  return {
+    hole,
+    bubble,
+    arrow: clamp(middle - gutter - arrow / 2, corner, width - corner - arrow),
+  };
 }
 
 /**

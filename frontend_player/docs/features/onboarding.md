@@ -251,7 +251,7 @@ can't deal you games until you have one._ on Home — and its pass ends on Home,
 dash, as the door's is; the offer travels in the route rather than being read again by the picker.
 **Not seen on a device**: the card on Home.
 
-**The first _Your rating_ a phone shows runs a guide over the verdict**
+**The first _Your rating_ a phone shows an account runs a guide over the verdict**
 ([#732](https://github.com/Raketa02/Raketa/issues/732),
 [ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8). The screen dims and
 `shared/ui`'s `Guide` (design-system 9.4) cuts out **the level** with its head, then **the likely
@@ -259,14 +259,14 @@ range**, then **the confidence ring** — _1 of 3_ to _3 of 3_, _Next_ and _Skip
 in the ⓘ marks' own words (`explainers`), so bubble 3 keeps _"The questionnaire can provide up to
 {ceiling}% confidence."_ A tap on the dim is _Next_, the device's back is _Skip_, and **nothing
 beneath answers**: the screen's root takes `pointerEvents: 'none'` while the guide is up, beside the
-`behindOverlay` the popover already asks of it. `Verdict` gained an optional `spotlit` — three refs
-from `useVerdictSpotlights`, on the figures rather than their marks, because the hole needs the
-figure — and `verdictGuide` is the steps; **the passport passes none, which is how its cards never
+`behindOverlay` the popover already asks of it. `Verdict` gained an optional `spotlit` — from
+`useVerdictSpotlights`, each figure with its mark, because the hole needs the figure and the arrow
+the mark — and `verdictGuide` is the steps; **the passport passes none, which is how its cards never
 run it**. **Whether it runs** is `ratingGuideIsDue` (a rating on the screen, and the phone has
 answered _never_ — not yet read is not never), whatever the pass's origin; `useRatingGuide` holds the
-phone's flag in Query under `phonePreferenceKeys.flag` and, on any ending, writes `true` to the cache
+account's flag in Query under `phonePreferenceKeys.flag` and, on any ending, writes `true` to the cache
 (so the next sport in the pass shows none) and raises `ratingGuideShown` in the phone-preferences
-store, **per phone and kept at sign-out**. The marks and their popovers are unchanged. Suites that
+store, **per account and kept at sign-out** (per phone until 2026-11-04 — below). The marks and their popovers are unchanged. Suites that
 land on _Your rating_ for another reason start from `ratingGuideAlreadyShown()`; the walk is
 `theGuideOnYourRating.test`. **Calls made here**: the flag is set when the guide ends rather than
 when it opens, so a guide the app was killed under shows again; a tap in the hole counts as _Next_,
@@ -274,3 +274,40 @@ as the dim does; _Skip_ is named _Skip the guide_; the bubble takes the content'
 adds no screen-reader work**: it moves no focus and its fade does not follow reduced motion — the
 review caught a first cut that copied the popover's focus moves. **Not seen
 on a device**: the hole's fit around each figure and the bubble's place, on either platform.
+
+**Seen on an iPhone, and fixed (2026-11-04):** the hole was cut a status bar above the level — a
+white patch of undimmed paper behind the card, and the bubble over the number it explains — and
+the level's and the range's arrows pointed at empty card right of their ⓘ. The first because the
+guide measures on the frame it opens on and _Your rating_ wore the native `SafeAreaView`, which has
+no inset on its first frame (`TopSafeArea` says why): **the screen now pads both insets from the
+provider**, and the guide's suite holds it there. The second because the arrow pointed at the hole's
+middle and both figures stretched across their column: **`spotlit` now carries each figure's mark
+beside the figure** (`useVerdictSpotlights`, the popover's mark refs when it is handed in), a guide
+step's `pointAt` aims the arrow at it, and the level and the range hug their content so each hole
+fits its figure. Seen fixed on the user's iPhone the same day.
+
+**Once per account on a phone, not once per phone (2026-11-04, ruled in-session).** A new account
+on the user's iPhone was shown no guide — exactly what ADR-0200 §8 ruled (_a second account on the
+same phone never sees it_), and the user ruled it the other way: a new player is shown it once of
+their own. The flag keeps its two other properties: **kept at sign-out**, so the same account
+signing in again is not shown it twice, and **per phone**, so a new phone shows it again.
+`readPhoneFlag`/`raisePhoneFlag` take the account, its key is `raketa.phone-flags.{account}.{flag}`,
+and `phonePreferenceKeys.flag(account, flag)` carries it in memory. `useRatingGuide` **observes**
+`/users/me` (never stale) for the account rather than reading it once from the cache as the other
+preferences do: the questions are up with nothing else holding it, and can outlast the cache's five
+minutes. The old key named no account and nothing reads it now, so every account on a phone that
+raised it is shown the guide once more. `ratingGuideAlreadyShown(account?)` raises it for the gate's
+player. **Owed from a root session**: ADR-0200 §8's _per phone, not per account_ and its
+consequences line, and ADR-0188's table note.
+
+**The level's bubble stands beside it (2026-11-04, the user's call from an iPhone screenshot).**
+After the arrow was aimed at each ⓘ, the level's step still read wrong: its ⓘ is at the top of the
+head, over _3,39_, and the range line sits three points under the number — the bubble under the
+hole cut that line in half, and its arrow, under the ⓘ's column, landed between _4,26_ and _likely
+range_. An arrow close to the ⓘ from below would cover the number, and over the hole there is no
+room under the status bar. **`verdictGuide` marks the level's step `besideMark`**: the bubble stands
+right of the hole out to the gutter, over the ring (the third step's, dimmed), its arrow on its left
+edge level with the ⓘ, and the count over _Skip_ / _Next_ because it is narrow. Under
+`size.guideBesideMin` (180) of room — a phone under about 355pt wide — it stands under the hole as before. The
+range and the ring keep their bubbles under them. `verdictGuide.test` holds which step asks.
+Seen working on the user's iPhone the same day.

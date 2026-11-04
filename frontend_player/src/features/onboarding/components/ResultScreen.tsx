@@ -32,15 +32,21 @@
  * spreads `behindOverlay` while one is open, and an overlay inside that element would hide
  * itself along with everything else.
  *
- * ## The guide, on the first one a phone shows
+ * ## The guide, on the first one a phone shows an account
  *
- * **The first _Your rating_ this phone ever shows runs a guide over the verdict's three
+ * **The first _Your rating_ this phone shows an account runs a guide over the verdict's three
  * figures** — the level, the likely range, the confidence, one at a time in the ⓘ marks' own
  * words ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8,
  * `useRatingGuide`). Whatever the pass's origin, and once: *Got it*, *Skip* and the device's back
- * all end it, and the phone remembers. It is the third overlay here and a sibling like the
+ * all end it, and the phone remembers it for that account, past sign-out. It is the third overlay here and a sibling like the
  * popover; **while it is up the root takes no touches**, so nothing beneath answers even where
  * the stage would let a touch through. The marks and their popover are unchanged.
+ *
+ * **The safe area is padding from the provider, never the native `SafeAreaView`.** The guide
+ * measures the figures on the frame it opens on, which can be this screen's first; the native
+ * view has no inset on that frame and moves the whole screen down by it on the next
+ * (`TopSafeArea` says why), so the hole was cut a status bar above the level — an undimmed patch
+ * of paper over the card, and the bubble over the number it explains.
  *
  * ## Where the flow goes from here
  *
@@ -73,7 +79,7 @@
 
 import { useEffect } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { behindOverlay, Button, Card, Guide, Note, theme } from '@/shared/ui';
 
@@ -149,6 +155,8 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
   const recordRun = useOnboardingPass((state) => state.record);
 
   const result = assessment.data?.result;
+  // Both edges: this screen has no tab bar to take the bottom one.
+  const insets = useSafeAreaInsets();
 
   // Which mark the popover is open on, if any. The card holds the refs and hands the pressed
   // one up, so the popover anchors to the mark it was opened from and returns focus to it.
@@ -173,9 +181,8 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
 
   return (
     <>
-      <SafeAreaView
-        style={s.screen}
-        edges={['top', 'bottom']}
+      <View
+        style={[s.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
         // A popover is a real overlay: while one is open nothing behind it is reachable by
         // a screen reader. The popover is a sibling below, never a child — and so is the guide,
         // under which nothing here takes a touch either: it is modal.
@@ -287,7 +294,7 @@ export function ResultScreen({ assessmentId, sport, groupName }: ResultScreenPro
             </>
           )}
         </View>
-      </SafeAreaView>
+      </View>
 
       <VerdictPopover {...explainer.popover} />
       <Guide

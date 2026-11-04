@@ -1283,6 +1283,10 @@ const size = {
   sheetClose: 28,
   popoverWidth: 250,
   popoverArrow: 11,
+  /** 9.4: the narrowest a guide's bubble may stand **beside** its mark — *Skip* and *Next* side by
+   *  side at `sm`, under the count, with the bubble's padding. Narrower than this, and it stands
+   *  under or over the hole instead. */
+  guideBesideMin: 180,
   /** The rail's page dots — 7.18, and Part 8's sizes before that. Five points resting; the
    *  one you are on keeps the height and grows to fourteen, so the state has a SHAPE channel
    *  and is never carried by tone alone (Part 13). Gap is `space.xxs`.

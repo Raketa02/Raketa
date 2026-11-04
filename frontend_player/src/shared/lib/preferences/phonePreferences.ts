@@ -25,9 +25,9 @@
  * admits this file says so, and `scripts/test-import-boundaries.sh` proves the fence still holds
  * beside it.
  *
- * **And one flag per phone** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §8): *the guide on Your rating was shown* names no account and is kept at sign-out — see
- * {@link PhoneFlag}. The two rules above hold for every value but that one.
+ * **And one flag kept past a session** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
+ * §8): *the guide on Your rating was shown*, per account like every value here, but kept at
+ * sign-out — see {@link PhoneFlag}. The second rule above holds for every value but that one.
  *
  * **Nothing here throws, and nothing here judges a value.** A read that fails is *nothing saved*;
  * a write that fails loses only the next launch's copy. Whether a saved value still means
@@ -88,35 +88,43 @@ export async function savePhonePreference(
 }
 
 /**
- * **The flags the phone keeps for itself** — per phone rather than per account, and **kept at
+ * **The flags the phone keeps for an account** — per account like every value, but **kept at
  * sign-out** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8,
- * amending ADR-0188 §2). One today: the guide on *Your rating* was shown, finished or skipped,
- * because the ruling was *once per phone* — a second account on the same phone never sees it, and
- * a new phone does.
+ * amending ADR-0188 §2). One today: the guide on *Your rating* was shown to this account, finished
+ * or skipped. The ruling was *once per phone* until 2026-11-04 and is *once per account on a
+ * phone* since: the same account signing in again never sees it, and a second account on the
+ * phone sees it once of its own.
  *
  * A flag rather than a value: it is down until something raises it, and nothing lowers one. It
- * names nobody, so it lives under a prefix of its own, which `forgetPhonePreferences` never lists.
+ * outlives a session, so it lives under a prefix of its own, which `forgetPhonePreferences` never
+ * lists. The once-per-phone flag's key had no account in it; nothing reads it any more, so every
+ * account on a phone that raised it is shown the guide once more.
  */
 export type PhoneFlag = 'ratingGuideShown';
 
 const FLAG_PREFIX = 'raketa.phone-flags.';
 
+/** One entry per account per flag, as a value's is. */
+function flagKeyFor(account: string, flag: PhoneFlag): string {
+  return `${FLAG_PREFIX}${account}.${flag}`;
+}
+
 /** The value a raised flag is stored as — any other stored string reads as down. */
 const RAISED = 'raised';
 
-/** Whether this phone ever raised the flag. A read that fails is *never*, as a value's is *nothing saved*. */
-export async function readPhoneFlag(flag: PhoneFlag): Promise<boolean> {
+/** Whether this account ever raised the flag on this phone. A read that fails is *never*, as a value's is *nothing saved*. */
+export async function readPhoneFlag(account: string, flag: PhoneFlag): Promise<boolean> {
   try {
-    return (await AsyncStorage.getItem(`${FLAG_PREFIX}${flag}`)) === RAISED;
+    return (await AsyncStorage.getItem(flagKeyFor(account, flag))) === RAISED;
   } catch {
     return false;
   }
 }
 
-/** Raise the flag for good. */
-export async function raisePhoneFlag(flag: PhoneFlag): Promise<void> {
+/** Raise the account's flag on this phone for good. */
+export async function raisePhoneFlag(account: string, flag: PhoneFlag): Promise<void> {
   try {
-    await AsyncStorage.setItem(`${FLAG_PREFIX}${flag}`, RAISED);
+    await AsyncStorage.setItem(flagKeyFor(account, flag), RAISED);
   } catch {
     // The flag stands for this session in whoever holds it; only the next launch's copy is lost.
   }
@@ -125,7 +133,7 @@ export async function raisePhoneFlag(flag: PhoneFlag): Promise<void> {
 /**
  * **Forget every account's choices** — a step of the sign-out sequence (ADR-0188 §3). The flag
  * datafile the other AsyncStorage module kept named nobody and was left alone, and so are the
- * phone's own flags (ADR-0200 §8): they are under a prefix this never lists.
+ * flags kept past a session (ADR-0200 §8): they are under a prefix this never lists.
  */
 export async function forgetPhonePreferences(): Promise<void> {
   try {

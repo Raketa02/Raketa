@@ -12,7 +12,7 @@
 
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { useRef, useState, type MutableRefObject } from 'react';
-import { Dimensions, Pressable, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Path } from 'react-native-svg';
 
 import {
@@ -22,7 +22,7 @@ import {
 } from '@/test-support/hardwareBack';
 
 import { Guide } from './Guide';
-import { spotlightPath, type GuideRect } from './guideGeometry';
+import { GUIDE_BUBBLE_BORDER, spotlightPath, type GuideRect } from './guideGeometry';
 import { OverlayHost } from './overlay';
 import { theme } from './theme';
 
@@ -62,26 +62,45 @@ interface AppProps {
   readonly onDone?: () => void;
   /** Where the two targets are, when they answer at all. */
   readonly at?: readonly [GuideRect, GuideRect];
+  /** Where each target's mark is — what each step's arrow points at — when they answer at all. */
+  readonly marks?: readonly [GuideRect, GuideRect];
+  /** The first step asks to stand beside its mark. */
+  readonly firstBeside?: boolean;
 }
 
-function App({ onDone = () => {}, at }: AppProps) {
+function App({ onDone = () => {}, at, marks, firstBeside = false }: AppProps) {
   const [open, setOpen] = useState(true);
   const first = useRef<View | null>(null);
   const second = useRef<View | null>(null);
+  const firstMark = useRef<View | null>(null);
+  const secondMark = useRef<View | null>(null);
   return (
     <OverlayHost>
       <View ref={answering(first, at?.[0])}>
         <Text>Two</Text>
+        <View ref={answering(firstMark, marks?.[0])} />
       </View>
       <View ref={answering(second, at?.[1])}>
         <Text>Things</Text>
+        <View ref={answering(secondMark, marks?.[1])} />
       </View>
       <Pressable accessibilityLabel="Show it again" onPress={() => setOpen(true)} />
       <Guide
         visible={open}
         steps={[
-          { target: first, title: 'The first', body: 'What the first thing is.' },
-          { target: second, title: 'The second', body: 'What the second thing is.' },
+          {
+            target: first,
+            pointAt: firstMark,
+            besideMark: firstBeside,
+            title: 'The first',
+            body: 'What the first thing is.',
+          },
+          {
+            target: second,
+            pointAt: secondMark,
+            title: 'The second',
+            body: 'What the second thing is.',
+          },
         ]}
         onDone={() => {
           setOpen(false);
@@ -158,5 +177,51 @@ describe('the guide', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Next' }));
 
     expect(hole()).toBe(spotlightPath(grown(ring), window));
+  });
+
+  it('points each step’s arrow at its mark, not the middle of its hole', () => {
+    // A figure as wide as its column, its mark near the left: the hole's middle is empty card.
+    const level = { x: 30, y: 150, width: 285, height: 70 };
+    const levelMark = { x: 115, y: 152, width: 20, height: 20 };
+    const range = { x: 30, y: 230, width: 285, height: 24 };
+    const rangeMark = { x: 200, y: 232, width: 20, height: 20 };
+    // The arrow is placed from inside the bubble's outline, so its middle on the screen is the
+    // bubble's edge, the outline, its offset and half its square.
+    const pointedAt = () =>
+      theme.size.gutter +
+      GUIDE_BUBBLE_BORDER +
+      StyleSheet.flatten(screen.getByTestId('guide-arrow', HIDDEN_TOO).props.style).left +
+      theme.size.popoverArrow / 2;
+    render(<App at={[level, range]} marks={[levelMark, rangeMark]} />);
+
+    expect(pointedAt()).toBe(levelMark.x + levelMark.width / 2);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+    expect(pointedAt()).toBe(rangeMark.x + rangeMark.width / 2);
+  });
+
+  it('stands a step that asks beside its mark, the arrow level with it, and the next under its hole', () => {
+    // The level: a head and a large number, its mark at the head's right end — an arrow from under
+    // the hole would land on whatever sits under the number.
+    const level = { x: 30, y: 150, width: 111, height: 64 };
+    const levelMark = { x: 121, y: 150, width: 20, height: 20 };
+    const range = { x: 30, y: 230, width: 285, height: 24 };
+    const rangeMark = { x: 200, y: 232, width: 20, height: 20 };
+    const style = (testID: string) =>
+      StyleSheet.flatten(screen.getByTestId(testID, HIDDEN_TOO).props.style);
+    render(<App at={[level, range]} marks={[levelMark, rangeMark]} firstBeside />);
+
+    const bubble = style('guide-bubble');
+    expect(bubble.left).toBe(level.x + level.width + theme.space.xs + theme.space.md);
+    expect(
+      bubble.top + GUIDE_BUBBLE_BORDER + style('guide-arrow').top + theme.size.popoverArrow / 2,
+    ).toBe(levelMark.y + levelMark.height / 2);
+    // The count over the buttons, which no longer share its row.
+    expect(screen.getByText('1 of 2')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+    expect(style('guide-bubble').left).toBe(theme.size.gutter);
   });
 });

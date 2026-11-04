@@ -6,18 +6,19 @@
  * Ania is rated in nothing and picks padel and tennis from Home's picker. On her first *Your
  * rating* the screen dims and a bubble explains her level (*1 of 3*), then the likely range, then
  * the confidence (*3 of 3*, *Got it*) — the ⓘ marks' own words, one at a time. A tap on the dim is
- * *Next*, *Skip* ends it, nothing beneath it answers while it is up, and **the phone never shows
- * it again** — not on tennis, and not to whoever signs in on it next. The Skill passport's cards
- * never run it.
+ * *Next*, *Skip* ends it, nothing beneath it answers while it is up, and **it never shows her again
+ * on this phone** — not on tennis, and not after she signs out and back in. Whoever signs in on the
+ * phone next is shown it once of their own. The Skill passport's cards never run it.
  *
  * The device's storage is jest's in-memory AsyncStorage, emptied after every test, so every test
- * here begins on a phone that has never shown the guide. What the guide does on Android's back
+ * here begins on a phone that has never shown the guide to anybody. What the guide does on Android's back
  * button is `Guide.test`'s, because the harness runs as iOS.
  *
  * Every assertion is about what a player can see or what left the device.
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { refreshTokens } from '@/features/auth/types';
 import { SKILL_PASSPORT_TITLE } from '@/features/player_record/types';
@@ -323,13 +324,30 @@ describe('the first Your rating a phone shows', () => {
     },
     WALK_TIMEOUT,
   );
+
+  it(
+    'opens on a screen already where it stands, so the hole is cut around the level',
+    async () => {
+      stubAnia();
+      await pick('Padel');
+      await rate(PADEL_RUN);
+      await expectBubble(1, 'Your Level', LEVEL_WORDS);
+
+      // The guide measures the figures on the frame it opens on. A native `SafeAreaView` has no
+      // inset on that frame and moves the screen down by it on the next, so the hole was cut a
+      // status bar above the level — a white patch over the card, and the bubble over the number
+      // it explains. Padding from the provider is right first time.
+      expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
+    },
+    WALK_TIMEOUT,
+  );
 });
 
 // ---------------------------------------------------------------------------
-// Once per phone
+// Once per account, on a phone
 // ---------------------------------------------------------------------------
 
-describe('once per phone', () => {
+describe('once per account, on a phone', () => {
   it(
     'shows no guide on a second rating',
     async () => {
@@ -350,7 +368,7 @@ describe('once per phone', () => {
   );
 
   it(
-    'shows no guide to whoever signs in on the phone next',
+    'shows no guide to her again after she signs out and back in',
     async () => {
       stubAnia();
       await pick('Padel');
@@ -359,16 +377,10 @@ describe('once per phone', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Skip the guide' }));
       await expectNoGuide(PADEL_RUN);
 
-      // Signed out, the app closed, and somebody else on the same phone: the account's choices
-      // went with the session, and the phone's fact did not (ADR-0200 §8).
-      screen.unmount();
-      await endSession('requested');
-      // The sign-out drops the cache after the old session's work is cancelled, and does not wait
-      // for it — so wait here, or the drop lands on the next session's first reads.
-      await waitFor(() => expect(queryClient.getQueryCache().getAll()).toHaveLength(0));
-      useOnboardingPass.getState().reset();
-      resetSessionStatus();
-      stubAnia('22222222-3333-4444-8555-666666666732');
+      // Signed out, the app closed, and Ania again on the same phone: her choices went with the
+      // session, and that she has been shown the guide here did not (ADR-0200 §8).
+      await signOutAndClose();
+      stubAnia();
       await pick('Tennis');
       await rate(TENNIS_RUN);
 
@@ -376,7 +388,42 @@ describe('once per phone', () => {
     },
     WALK_TIMEOUT,
   );
+
+  it(
+    'shows it once to whoever signs in on the phone next',
+    async () => {
+      stubAnia();
+      await pick('Padel');
+      await rate(PADEL_RUN);
+      await expectBubble(1, 'Your Level', LEVEL_WORDS);
+      fireEvent.press(screen.getByRole('button', { name: 'Skip the guide' }));
+      await expectNoGuide(PADEL_RUN);
+
+      // Somebody else on the same phone, rating for the first time: the guide is theirs to see too.
+      await signOutAndClose();
+      stubAnia(KUBA_ID);
+      await pick('Tennis');
+      await rate(TENNIS_RUN);
+
+      await expectBubble(1, 'Your Level', LEVEL_WORDS);
+    },
+    WALK_TIMEOUT,
+  );
 });
+
+/** Signed out and the app closed, the phone's storage left as a sign-out leaves it. */
+async function signOutAndClose() {
+  screen.unmount();
+  await endSession('requested');
+  // The sign-out drops the cache after the old session's work is cancelled, and does not wait for
+  // it — so wait here, or the drop lands on the next session's first reads.
+  await waitFor(() => expect(queryClient.getQueryCache().getAll()).toHaveLength(0));
+  useOnboardingPass.getState().reset();
+  resetSessionStatus();
+}
+
+/** A second account, on Ania's phone. */
+const KUBA_ID = '22222222-3333-4444-8555-666666666732';
 
 // ---------------------------------------------------------------------------
 // Whatever the pass's origin
