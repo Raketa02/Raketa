@@ -84,7 +84,7 @@ const TOKENS: Wire['TokenResponse'] = {
 /** Tomek plays padel, is past onboarding, and Ogrody 33 has invited him. */
 const TOMEK: GateStub = {
   email: TOMEK_EMAIL,
-  name: 'Tomek Kowal',
+  nickname: 'tomek.k',
   ratings: [rating('PADEL')],
   hasPlayerProfile: true,
   profiles: {
@@ -98,7 +98,7 @@ const TOMEK: GateStub = {
 /** Kuba plays padel too, and nobody has invited him. */
 const KUBA: GateStub = {
   email: KUBA_EMAIL,
-  name: 'Kuba Wróbel',
+  nickname: 'kuba.w',
   ratings: [rating('PADEL')],
   hasPlayerProfile: true,
 };
@@ -180,7 +180,6 @@ describe('a new person', () => {
   it('gets Set your password with the token read and the email locked, then her area', async () => {
     serve({
       email: MARTA_EMAIL,
-      name: 'Marta Nowak',
       nickname: null,
       profiles: ADMINISTRATOR_ONLY,
     });

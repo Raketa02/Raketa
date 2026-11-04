@@ -30,7 +30,7 @@ export interface paths {
         };
         /**
          * Current authenticated user
-         * @description Carries `name` and `nickname` — the entry gate's first destination is *not named in full*, either missing — `has_player_profile`, its fourth, and `adult_attested`, all read from the account's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up. And `profiles` (docs/adr/0185 §2), which the gate reads **ahead of every destination**: whether the account acts as a player, the clubs it administers, and any invitation pending for its email.
+         * @description Carries `nickname` — the entry gate's first destination is *no nickname* — `has_player_profile`, its fourth, and `adult_attested`, all read from the account's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up. And `profiles` (docs/adr/0185 §2), which the gate reads **ahead of every destination**: whether the account acts as a player, the clubs it administers, and any invitation pending for its email.
          */
         get: operations["me_api_v1_users_me_get"];
         put?: never;
@@ -71,7 +71,7 @@ export interface paths {
         get?: never;
         /**
          * Name yourself — how should people see you?
-         * @description **The naming**: one act carrying a name and a nickname, for the authenticated player, and repeatable — a later change is the same act, and keeping the nickname you already hold is admitted. Refused with `409 nickname_already_taken` when the handle is another player's; the name is checked against nobody. Answers the pair as recorded — the name trimmed and collapsed — and the client re-reads `GET /me` before moving on, which is where the entry gate reads it.
+         * @description **The naming**: a nickname and nothing else, for the authenticated player (docs/adr/0199 §3), and repeatable — a later change is the same act, at any time, and keeping the nickname you already hold is admitted. Refused with `409 nickname_already_taken` when the handle is another player's. Answers the nickname as recorded, and the client re-reads `GET /me` before moving on, which is where the entry gate reads it. The path keeps the word *name*: what a player is called, which is the nickname.
          */
         put: operations["name_me_api_v1_users_me_name_put"];
         post?: never;
@@ -429,11 +429,13 @@ export interface paths {
          *
          *     **`weekly_hours` are required**, at least one hour of the 7 × 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
          *
+         *     **`location` is a reading or a club, and exactly one.** The phone's fix (`latitude` and `longitude`), or — for a player who refused the phone's location — a `club_id` they picked near where they play (`docs/adr/0200` §10). Either is rounded to the cell before anything is recorded; a profile cannot exist without one.
+         *
          *     **No search radius and no proposals opt-in.** Both were asked here and went with the ranking that read them (#581); a body that still carries either commits, and the two are ignored.
          *
          *     **`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.
          *
-         *     **`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.
+         *     **`intro` is optional and fenced at the write.** One line about yourself, at most 250 characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.
          */
         post: operations["commit_player_profile_api_v1_players_me_profile_post"];
         delete?: never;
@@ -477,10 +479,12 @@ export interface paths {
         };
         get?: never;
         /**
-         * Move this player's Location area to where the phone is
-         * @description **The cold start's write, and no screen's.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours — never merely on foreground — with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.
+         * Move this player's Location area to where the phone is — or to a club picked in its place
+         * @description **The cold start's write.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours — never merely on foreground — with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.
          *
-         *     **What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` — which is what makes a write on every launch free, and why there is no `Idempotency-Key`.
+         *     **Or a club, from *You › Where you play*** (`docs/adr/0200` §10). A player who refused the phone's location sends a `club_id` in place of the reading — exactly one of the two, never both — and the club's point, rounded to the cell, is their area. The phone never needs the club's coordinates. Nothing records which it was, so the next reading in another cell replaces a club-picked area.
+         *
+         *     **What is sent is never what is kept.** The fix — or the club's point — is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A move that rounds to the cell already stored records nothing and still answers `204` — which is what makes a write on every launch free, and why there is no `Idempotency-Key`.
          *
          *     **Nothing else moves.** A trip is a trip: whatever reads the area reads the new cell — and nothing is reset. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.
          */
@@ -1494,7 +1498,7 @@ export interface paths {
         put?: never;
         /**
          * Set your password, by the invitation's link or a ticket, and sign in
-         * @description **A new person's account is created** — its Name the one the club typed, no nickname, and no Adult attestation — and **an account the club reset gets its password back**. Either way the administrator is active and this answers a signed-in session. `ticket_expired` is a 409 too: claiming the code again is a fresh ticket.
+         * @description **A new person's account is created** — no player name (the one the club typed stays the Administrator's), no nickname, and no Adult attestation — and **an account the club reset gets its password back**. Either way the administrator is active and this answers a signed-in session. `ticket_expired` is a 409 too: claiming the code again is a fresh ticket.
          */
         post: operations["set_invitation_password_api_v1_invitations_password_post"];
         delete?: never;
@@ -2503,8 +2507,8 @@ export interface components {
          * @description One player somebody on the court said was not here yet, and what became
          *     of it (#657; ``docs/adr/0195`` §3). **Folded on every read against
          *     `read_at`**, never stored. **Who tapped is not here**: the tap is the game's,
-         *     and a name on it would be the platform pointing at one of the people who
-         *     came. Nobody is ever in this list who was not tapped: everybody who arrives
+         *     and a nickname on it would be the platform pointing at one of the people
+         *     who came. Nobody is ever in this list who was not tapped: everybody who arrives
          *     on time does nothing at all.
          */
         AttendanceSchema: {
@@ -2514,10 +2518,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account.
+             * Nickname
+             * @description Their nickname, whole, as a seat carries it. ``null`` where ``users`` no longer has the account.
              */
-            name?: string | null;
+            nickname?: string | null;
             /** @description `WAITING` — tapped *isn't here yet*, not arrived, and `arrive_by` still ahead. `ON_TIME` — arrived within ten minutes of the start: nothing is recorded, and the tap vanishes. `CAME_LATE` — arrived ten to thirty minutes after it. `DIDNT_COME` — no arrival by `arrive_by`: the game takes no score and never counts; provisional until `claim_by`, final after it. `CLAIMED` — said *I was there*, waiting for somebody else on the court to confirm it before `claim_by`; still *Didn't come* until then. `CONFIRMED` — *I was there*, confirmed: **Came late**, and the game carries on. */
             state: components["schemas"]["AttendanceState"];
             /**
@@ -2602,7 +2606,7 @@ export interface components {
         };
         /**
          * BlockedPlayerSchema
-         * @description One person you blocked — a name, a photograph, and when.
+         * @description One person you blocked — a nickname, a photograph, and when.
          */
         BlockedPlayerSchema: {
             /**
@@ -2612,10 +2616,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole Name, never the nickname.
+             * Nickname
+             * @description Their nickname, whole and never with an @ (docs/adr/0199 §1).
              */
-            name: string;
+            nickname: string;
             /**
              * Photo Id
              * Format: uuid
@@ -2740,10 +2744,10 @@ export interface components {
             /** Is You */
             is_you: boolean;
             /**
-             * Name
-             * @description Their Name, whole — the tile may cut it short, never invent a first name. `null` for an account that can no longer be named.
+             * Nickname
+             * @description Their nickname, whole and never with an @ — the tile may cut it short, never invent a familiar form (`docs/adr/0199` §1). `null` for an account that can no longer be named.
              */
-            name: string | null;
+            nickname: string | null;
             /** Photo Id */
             photo_id: string | null;
             /**
@@ -2861,11 +2865,11 @@ export interface components {
          * CalledOffBySchema
          * @description Who called the game off, and what they are called (``docs/adr/0172`` §4).
          *
-         *     **The name is carried because the court cannot supply it**: the leaver whose
-         *     departure called the game off has been **vacated** — their seat is drawn
-         *     `player_id: null` — so the seats alone could not name them. It is the same
-         *     name a seat carries, read in the same set read, and it is `null` for the
-         *     same reason a seat's is: an account `users` no longer answers for.
+         *     **The nickname is carried because the court cannot supply it**: the leaver
+         *     whose departure called the game off has been **vacated** — their seat is
+         *     drawn `player_id: null` — so the seats alone could not name them. It is the
+         *     same nickname a seat carries, read in the same set read, and it is `null`
+         *     for the same reason a seat's is: an account `users` no longer answers for.
          *
          *     **A departure is told from a press by whether this player still holds a
          *     seat on the game.** The presser does; the leaver's seat is open. No second
@@ -2878,10 +2882,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step.
+             * Nickname
+             * @description Their nickname, whole and never with an @, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0199`` §1). ``null`` where ``users`` no longer has the account — never for a player with no nickname yet, whom the entry gate holds at the naming step.
              */
-            name?: string | null;
+            nickname?: string | null;
         };
         /**
          * CalledOffReason
@@ -2950,33 +2954,27 @@ export interface components {
         ChangeIntroRequest: {
             /**
              * Intro
-             * @description The new line, or `null` to withdraw it. Trimmed, then held to **at most 100 characters** and **one line** — the commit's fence exactly, with the commit's codes: `intro_not_admitted` and one coarse `details.reason`, `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle`. Whitespace is `null`: a line with nothing in it is withdrawn, never stored empty.
+             * @description The new line, or `null` to withdraw it. Trimmed, then held to **at most 250 characters** and **one line** — the commit's fence exactly, with the commit's codes: `intro_not_admitted` and one coarse `details.reason`, `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle`. Whitespace is `null`: a line with nothing in it is withdrawn, never stored empty.
              */
             intro: string | null;
         };
         /**
          * ChangeLocationRequest
-         * @description The phone's fix, on a cold start.
+         * @description The phone's fix, on a cold start — or a club picked in its place, from
+         *     *You › Where you play* (``docs/adr/0200`` §10).
+         *
+         *     **The commit's ``location`` exactly**: a reading (`latitude` and
+         *     `longitude`) or a `club_id`, never both and never neither.
          *
          *     **What is sent is never what is kept.** The client sends the fix its device
-         *     gave it, with the accuracy onboarding used; the platform rounds it to the
-         *     cell about a kilometre across before anything is recorded, exactly as the
-         *     commit does, and a fix that rounds to the cell already stored records
-         *     nothing (``docs/adr/0174`` §6). Nothing comes back: no route on this
-         *     surface serves the area yet — the profile read grows the field when *You*
-         *     is built — and a silent write on every launch is not the one to start.
-         *
-         *     The bounds are the world's, as they are on the commit's ``location`` —
-         *     read from the value object rather than spelled again. A fix outside them
-         *     is a broken reading and not a place, refused at the boundary rather than
-         *     rounded into a cell at the pole.
+         *     gave it, with the accuracy onboarding used; the platform rounds it — or the
+         *     picked club's point — to the cell about a kilometre across before anything
+         *     is recorded, exactly as the commit does, and a move that rounds to the cell
+         *     already stored records nothing (``docs/adr/0174`` §6). Nothing comes back:
+         *     no route on this surface serves the area, and a silent write on every
+         *     launch is not the one to start.
          */
-        ChangeLocationRequest: {
-            /** Latitude */
-            latitude: number;
-            /** Longitude */
-            longitude: number;
-        };
+        ChangeLocationRequest: components["schemas"]["PhoneReadingRequest"] | components["schemas"]["PickedClubRequest"];
         /**
          * ChangePhotosRequest
          * @description The photographs, replaced whole and **in order** (``docs/adr/0179`` §8).
@@ -3135,7 +3133,11 @@ export interface components {
              * @description The hours of the week this player ticked. **At least one of the 112** — an empty list is refused with `weekly_hours_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated hours are collapsed, and the floor is counted after that.
              */
             weekly_hours: components["schemas"]["WeeklyHourResource"][];
-            location: components["schemas"]["LocationAreaResource"];
+            /**
+             * Location
+             * @description Where this player plays: **a reading of the phone** (`latitude` and `longitude`), or, when the phone's location is refused, **a club they pick** (`club_id`) — exactly one of the two (`docs/adr/0200` §10). Either is rounded to the cell about a kilometre across before anything is recorded, and the cell comes back as `location`. A club that is not in Raketa is `location_club_unknown`.
+             */
+            location: components["schemas"]["PhoneReadingRequest"] | components["schemas"]["PickedClubRequest"];
             /** @description The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained preferences, which costs its holder reach, and the client is what says so at the moment of asking. */
             gender: components["schemas"]["Gender"];
             /**
@@ -3149,7 +3151,7 @@ export interface components {
              * Intro
              * @description One line about yourself — your **intro** — or nothing. Optional: a player who skips the step sends nothing (or `null`, or whitespace, which is the same), and has no intro rather than an empty one.
              *
-             *     Trimmed, then held to **at most 100 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` — `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` — so the client can say what to change without the server explaining what it matched. Nothing else is read.
+             *     Trimmed, then held to **at most 250 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` — `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` — so the client can say what to change without the server explaining what it matched. Nothing else is read.
              *
              *     Edited later from the You tab through `PUT /players/me/intro`, with the tags and the photos it sits between (ADR-0179 §6). It crosses on the player card and on the record, and this response does not echo it.
              */
@@ -3200,10 +3202,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole name, and **`null` for an account `users` can no longer name** — never for an unnamed player, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it, and it is never the nickname: a handle is drawn on a record and said nowhere (``docs/adr/0171``).
+             * Nickname
+             * @description Their nickname, whole and never with an @, and **`null` for an account `users` can no longer name** — never for a player with no nickname yet, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it (``docs/adr/0199`` §1).
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -3218,7 +3220,8 @@ export interface components {
         };
         /**
          * ConversationPersonSchema
-         * @description One person this response names — **a name and a face, and nothing else.**
+         * @description One person this response names — **a nickname and a face, and nothing
+         *     else.**
          *
          *     No Level, no band, no area, no score — those are a *card*'s, and a card is
          *     what somebody reads to decide about a game that might happen. Everybody
@@ -3238,10 +3241,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole name, and **`null` for an account `users` can no longer name** — never for an unnamed player, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it, and it is never the nickname: a handle is drawn on a record and said nowhere (``docs/adr/0171``).
+             * Nickname
+             * @description Their nickname, whole and never with an @, and **`null` for an account `users` can no longer name** — never for a player with no nickname yet, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it (``docs/adr/0199`` §1).
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -3475,7 +3478,7 @@ export interface components {
         };
         /**
          * DeckChallengerSchema
-         * @description Who a challenge names — *Kuba challenged you*.
+         * @description Who a challenge names — *kuba challenged you*.
          */
         DeckChallengerSchema: {
             /**
@@ -3483,8 +3486,8 @@ export interface components {
              * Format: uuid
              */
             player_id: string;
-            /** Name */
-            name: string | null;
+            /** Nickname */
+            nickname: string | null;
         };
         /** DeckClubSchema */
         DeckClubSchema: {
@@ -3562,10 +3565,10 @@ export interface components {
              */
             is_you: boolean;
             /**
-             * Name
-             * @description Their Name, whole — the tile may cut it short, never invent a first name. `null` for an account that can no longer be named.
+             * Nickname
+             * @description Their nickname, whole and never with an @ — the tile may cut it short, never invent a familiar form (`docs/adr/0199` §1). `null` for an account that can no longer be named.
              */
-            name: string | null;
+            nickname: string | null;
             /** Photo Id */
             photo_id: string | null;
             /**
@@ -4037,7 +4040,7 @@ export interface components {
              * @description When it was called off — at the club's cut-off with a seat open, or by the club taking the court back (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`.
              */
             called_off_at?: string | null;
-            /** @description The player who called it off, and their name (``docs/adr/0172`` §4). ``null`` on every standing but `CALLED_OFF` — and on a booked game called off by its cut-off or its club, which nobody did. */
+            /** @description The player who called it off, and their nickname (``docs/adr/0172`` §4). ``null`` on every standing but `CALLED_OFF` — and on a booked game called off by its cut-off or its club, which nobody did. */
             called_off_by?: components["schemas"]["CalledOffBySchema"] | null;
             /**
              * Seats
@@ -4172,15 +4175,15 @@ export interface components {
             /** @description `ANYONE` — *Join* admits at once (*anyone can join*); `PEOPLE_I_APPROVE` — *Ask to join* leaves a request for the Owner (*Karol approves joins*). */
             join_policy: components["schemas"]["JoinPolicy"];
             /**
-             * Owner Name
-             * @description The Owner's **whole Name**, never the nickname — who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` §4), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named — and **always `null` on an official group**, which has no Owner: its line names `administrator_name`.
+             * Owner Nickname
+             * @description The Owner's **whole nickname** — who answers a request, for the *approves joins* line. **Nothing is cut from it, here or by a client**, and it is never written with an @: a sentence naming somebody uses the whole nickname (`docs/adr/0199` §1), so the line reads *karol.n approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named — and **always `null` on an official group**, which has no Owner: its line names `administrator_nickname`.
              */
-            owner_name: string | null;
+            owner_nickname: string | null;
             /**
-             * Administrator Name
-             * @description **An official group's** *approves joins* line: the whole name the club gave the Administrator running it now — *Administrator Marta Wójcik approves joins* — cut by nobody, as `owner_name` is. `null` while nobody runs it, and **always `null` on a player group**, whose line names `owner_name`.
+             * Administrator Nickname
+             * @description **An official group's** *approves joins* line: the Administrator running it now, by **their nickname** — and by the name their club typed for them only until they have one, for an Administrator who has never played (`docs/adr/0199` §4): *Administrator marta.w approves joins*, or *Administrator Marta Wójcik approves joins*. Cut by nobody, as `owner_nickname` is. `null` while nobody runs it, and **always `null` on a player group**, whose line names `owner_nickname`.
              */
-            administrator_name: string | null;
+            administrator_nickname: string | null;
             /**
              * Is Administrator
              * @description Whether **the reader** runs this official group. Their tap is **Join**, never *Ask to join*: they are admitted at once whatever `join_policy` says — they would otherwise be asking themselves. Always `false` on a player group.
@@ -4247,10 +4250,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             * Nickname
+             * @description Their nickname, whole and never with an @ (`docs/adr/0199` §1). `null` for an account that can no longer be named — the member keeps their seat.
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -4303,7 +4306,7 @@ export interface components {
         };
         /**
          * GroupPersonSchema
-         * @description A member's face — **a name and a photograph, and nothing else**.
+         * @description A member's face — **a nickname and a photograph, and nothing else**.
          */
         GroupPersonSchema: {
             /**
@@ -4312,10 +4315,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             * Nickname
+             * @description Their nickname, whole and never with an @ (`docs/adr/0199` §1). `null` for an account that can no longer be named — the member keeps their seat.
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -4340,10 +4343,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             * Nickname
+             * @description Their nickname, whole and never with an @ (`docs/adr/0199` §1). `null` for an account that can no longer be named — the member keeps their seat.
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -4425,10 +4428,10 @@ export interface components {
              */
             member_faces: components["schemas"]["GroupPersonSchema"][];
             /**
-             * Administrator Name
-             * @description **An official group's** *approves joins* line, as a club's card says it: the whole Name of the Administrator running it now. **`null` while it needs an administrator** — the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover — and **always `null` on a player group**, whose line names its Owner.
+             * Administrator Nickname
+             * @description **An official group's** *approves joins* line, as a club's card says it: the Administrator running it now, by their nickname — or by the name their club typed, for one who has never played (`docs/adr/0199` §4). **`null` while it needs an administrator** — the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover — and **always `null` on a player group**, whose line names its Owner.
              */
-            administrator_name: string | null;
+            administrator_nickname: string | null;
             /**
              * Is Administrator
              * @description Whether **the reader** runs this official group — who joined it as a player: *you approve joins*, answered from the administrator profile. Always `false` on a player group.
@@ -4720,10 +4723,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             * Nickname
+             * @description Their nickname, whole and never with an @ (`docs/adr/0199` §1). `null` for an account that can no longer be named — the member keeps their seat.
              */
-            name: string | null;
+            nickname: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -5033,13 +5036,8 @@ export interface components {
              */
             email: string;
             /**
-             * Name
-             * @description What this player is called — what every screen says. `null` until the naming — except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname — and the naming step asks only for what is missing.
-             */
-            name?: string | null;
-            /**
              * Nickname
-             * @description The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming.
+             * @description The handle, unique across the platform, and what every screen says about this player — never with an @. `null` until the naming, an account an invitation opened included: the entry gate's first destination is **no nickname**.
              */
             nickname?: string | null;
             /** Authority */
@@ -5156,47 +5154,31 @@ export interface components {
         };
         /**
          * NameRequest
-         * @description The naming — *How should people see you?* (``docs/adr/0171`` §1–2).
+         * @description The naming — *How should people see you?* (``docs/adr/0199`` §3).
          *
-         *     Both fields, always: the naming is one act carrying both, and there is no
-         *     event for one without the other. The shape rules here are the value
-         *     objects' own, restated so the generated client type carries them — and
-         *     **the name is normalised before its bounds are checked**, exactly as
-         *     :class:`Name` normalises it, so ``"  Ania   Kowalska "`` is admitted and
-         *     recorded as ``Ania Kowalska`` and ``"   A   "`` is refused here as too
-         *     short. A bound checked on the raw string would admit the second and hand
-         *     it to the value object, which refuses it — a typed value meeting an
-         *     invariant, which is a 500 for a player's typo (``CONTEXT.md``, *Invariant
-         *     vs Unavailability*).
+         *     **A nickname and nothing else.** The shape rule here is the value object's
+         *     own, restated so the generated client type carries it. A body still
+         *     carrying a ``name`` — or anything else — is refused with the validation
+         *     envelope rather than quietly dropped, so a client that kept the field
+         *     cannot believe it was recorded.
          */
         NameRequest: {
             /**
-             * Name
-             * @description What you are called — free text, spaces allowed, **never unique**: two players may share one. Trimmed, runs of whitespace collapsed to one space, 2–64 characters after that. This is what every screen says about you.
-             */
-            name: string;
-            /**
              * Nickname
-             * @description A handle: letters, digits and `. _ -`, no spaces, 2–64 characters, **unique across the platform** — refused with `nickname_already_taken` when another player holds it, admitted when it is already yours. Shown as `@nickname` under your name on your own You tab and on your record, and said nowhere else.
+             * @description A handle: letters, digits and `. _ -`, no spaces, 2–64 characters, **unique across the platform** — refused with `nickname_already_taken` when another player holds it, admitted when it is already yours. **What every screen says about you**, never with an @.
              */
             nickname: string;
         };
         /**
          * NamingResponse
-         * @description What the naming recorded: the name as it now stands and the nickname.
+         * @description What the naming recorded: the nickname as it now stands.
          *
          *     Not a ``UserResponse``, deliberately — that shape carries
          *     ``has_player_profile``, a fact of another context's this write never asks
          *     about, and ``false`` there would be a claim. The client re-reads ``/me``
-         *     before moving on (``docs/adr/0171`` §3); this is what lets it show the
-         *     normalised name back at once.
+         *     before moving on; this is what lets it show the nickname back at once.
          */
         NamingResponse: {
-            /**
-             * Name
-             * @description The name as recorded: trimmed, collapsed.
-             */
-            name: string;
             /**
              * Nickname
              * @description The handle, as recorded.
@@ -5240,7 +5222,7 @@ export interface components {
          * @description Every notice a player can be told (the mechanics §17.2).
          * @enum {string}
          */
-        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "NEW_GAME" | "GAME_MOVED" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE";
+        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "NEW_GAME" | "GAME_MOVED" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE" | "GET_YOUR_LEVEL";
         /**
          * NoticeSchema
          * @description One notice, in the words the phone was pushed — and where a tap opens.
@@ -5262,21 +5244,17 @@ export interface components {
              * @description When it was given — or when the day last bundled a notice into it, which is what moves it up the list.
              */
             given_at: string;
-            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top; `RESULT` — the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663). */
+            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top; `RESULT` — the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` — Home, for a notice about no game (*Get your level*, #727). */
             opens: components["schemas"]["Opens"];
             /**
              * Game Id
-             * Format: uuid
-             * @description The game it is about: its proposal's id, which its booking takes.
+             * @description The game it is about: its proposal's id, which its booking takes. `null` on a notice about no game — `GET_YOUR_LEVEL`, which opens `HOME` — and then `pool_id`, `sport` and `game_kind` are `null` too.
              */
-            game_id: string;
-            /**
-             * Pool Id
-             * Format: uuid
-             */
-            pool_id: string;
-            sport: components["schemas"]["Sport"];
-            game_kind: components["schemas"]["SearchMode"];
+            game_id: string | null;
+            /** Pool Id */
+            pool_id: string | null;
+            sport: components["schemas"]["Sport"] | null;
+            game_kind: components["schemas"]["SearchMode"] | null;
             /**
              * Gathered
              * @description How many more notices of its kind the day bundled into this one — told in its words, and pushed to nobody.
@@ -5425,7 +5403,7 @@ export interface components {
          * @description The screen a notice opens on when tapped (the screens A9).
          * @enum {string}
          */
-        Opens: "BOOKING" | "PROPOSAL" | "DECK" | "RESULT";
+        Opens: "BOOKING" | "PROPOSAL" | "DECK" | "RESULT" | "HOME";
         /**
          * OpponentVarietySchema
          * @description How widely this person spreads their games, over their **whole** record.
@@ -5607,6 +5585,23 @@ export interface components {
             expires_at: string;
         };
         /**
+         * PhoneReadingRequest
+         * @description **A reading of the phone**: the fix its device gave, as measured.
+         *
+         *     **What is sent is never what is kept**: the platform rounds it to the cell
+         *     about a kilometre across before anything is recorded. The bounds are the
+         *     world's, read from the value object rather than spelled again; a fix
+         *     outside them is a broken reading and not a place, refused here rather than
+         *     rounded into a cell at the pole. **Nothing else rides along**: a body that
+         *     also names a club is refused (``docs/adr/0200`` §10).
+         */
+        PhoneReadingRequest: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+        };
+        /**
          * PhotoResponse
          * @description One photo: the id a profile commit will carry, and a URL that reads it.
          *
@@ -5712,6 +5707,24 @@ export interface components {
         PhotosResponse: {
             /** Photo Ids */
             photo_ids: string[];
+        };
+        /**
+         * PickedClubRequest
+         * @description **A Club they pick** in place of a reading, when the phone's location
+         *     is refused (``docs/adr/0200`` §10): *Pick a club near where you play*.
+         *
+         *     The club's point on the map, rounded to the cell exactly as a reading is,
+         *     becomes the Location area — so the phone never needs a club's coordinates.
+         *     An id that names no club in Raketa is `location_club_unknown`. **Nothing
+         *     else rides along**: a body that also carries a reading is refused.
+         */
+        PickedClubRequest: {
+            /**
+             * Club Id
+             * Format: uuid
+             * @description A club from Raketa's clubs, as `GET /home-clubs` answers it — by name or district, A–Z for a player with no area yet.
+             */
+            club_id: string;
         };
         /**
          * PlayIntent
@@ -5936,13 +5949,8 @@ export interface components {
              */
             blocked_by_you?: boolean;
             /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). The title of the sheet.
-             */
-            name: string;
-            /**
              * Nickname
-             * @description Their handle, drawn as `@nickname` under the name. **The record and the You tab are the only two places it is drawn** — never on a row, a card, a sentence, a sheet, a toast, a seat label or a spoken name — because two people may share a name and this is the screen a friend tells them apart on.
+             * @description Their handle, unique across the platform, and the title of the sheet — drawn large, with nothing under it, and never with an @. **Nothing may derive a familiar form from it**: every sentence naming somebody uses the whole nickname or names nobody (``docs/adr/0199`` §1).
              */
             nickname: string;
             /**
@@ -5980,7 +5988,7 @@ export interface components {
             social_tags: string[];
             /**
              * Intro
-             * @description One line this player wrote about themselves — their **intro** — verbatim, drawn under the name. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.
+             * @description One line this player wrote about themselves — their **intro** — verbatim, drawn under the nickname. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.
              *
              *     Read off the profile as it stands. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's — it is what strangers read, shown back to you.
              */
@@ -6982,7 +6990,7 @@ export interface components {
          *     its place — so a four with one seat open is still a four and the client
          *     folds *Needs a player* from it. Nothing on the wire names that rung.
          *
-         *     **A name, and nothing else about them** (``docs/adr/0141``). A Level, a
+         *     **A nickname, and nothing else about them** (``docs/adr/0141``). A Level, a
          *     band, an area and a run of form are what a *searcher* reads to decide about a
          *     game that might happen, and a gate decided they may see them; this is the
          *     record of a game that did, and it re-publishes nobody's profile off the back
@@ -6998,12 +7006,12 @@ export interface components {
              */
             player_id: string | null;
             /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname: a handle is drawn on a record and said nowhere.
+             * Nickname
+             * @description Their nickname, whole and never with an @, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0199`` §1).
              *
-             *     ``null`` where ``users`` no longer has this account, and on an open seat — never for an unnamed player, whom the entry gate holds at the naming step. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead.
+             *     ``null`` where ``users`` no longer has this account, and on an open seat — never for a player with no nickname yet, whom the entry gate holds at the naming step. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead.
              */
-            name?: string | null;
+            nickname?: string | null;
         };
         /**
          * SellerSchema
@@ -7161,10 +7169,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Name
-             * @description Their Name, whole; `null` for an account that can no longer be named.
+             * Nickname
+             * @description Their nickname, whole and never with an @; `null` for an account that can no longer be named.
              */
-            name: string | null;
+            nickname: string | null;
             /** Photo Id */
             photo_id: string | null;
             /** Photo Url */
@@ -7484,8 +7492,8 @@ export interface components {
          * UserCreateRequest
          * @description Sign-up: credentials and the attestation, and nothing about who you are.
          *
-         *     The nickname left this payload with ``docs/adr/0171`` §2 — it is asked in
-         *     onboarding, beside the name, with :class:`NameRequest`. **Extra fields are
+         *     The nickname is not in this payload (``docs/adr/0199`` §3) — it is asked in
+         *     onboarding, with :class:`NameRequest`. **Extra fields are
          *     refused** rather than ignored, so a client still sending one meets the
          *     validation envelope instead of a sign-up that quietly dropped what it said.
          */
@@ -7515,14 +7523,14 @@ export interface components {
          *     and a second round trip for one boolean would be a second thing to fail
          *     (``docs/adr/0090``).
          *
-         *     ``name`` and ``nickname`` are **null until the naming** — and each on its
-         *     own since ``docs/adr/0185`` §4, because an account an Invitation opened
-         *     carries the club-typed name and no nickname — and this is the one read
-         *     where either may be null (``docs/adr/0171`` §2): a player on any
-         *     surface that names another player has necessarily been named, because the
-         *     gate holds an unnamed account at the naming step. On ``/me`` they are read
-         *     from the player's own stream, as ``has_player_profile`` is, so they are
-         *     right the instant after the commit the gate reads them after.
+         *     ``nickname`` is **null until the naming**, an account an Invitation opened
+         *     included, and this is the one read where it may be null
+         *     (``docs/adr/0199`` §3): a player on any surface that names another player
+         *     has necessarily picked one, because the gate holds an account with none at
+         *     the naming step. **There is no ``name``**: no account holds a player name.
+         *     On ``/me`` the nickname is read from the player's own stream, as
+         *     ``has_player_profile`` is, so it is right the instant after the commit the
+         *     gate reads it after.
          *
          *     **It is not an "onboarded" flag.** The rating context's invariant against one
          *     stands: whether a player has been through onboarding *for a sport* is asked
@@ -7542,13 +7550,8 @@ export interface components {
              */
             email: string;
             /**
-             * Name
-             * @description What this player is called — what every screen says. `null` until the naming — except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname — and the naming step asks only for what is missing.
-             */
-            name?: string | null;
-            /**
              * Nickname
-             * @description The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming.
+             * @description The handle, unique across the platform, and what every screen says about this player — never with an @. `null` until the naming, an account an invitation opened included: the entry gate's first destination is **no nickname**.
              */
             nickname?: string | null;
             /** Authority */
@@ -7915,7 +7918,7 @@ export interface operations {
                     "application/json": components["schemas"]["NamingResponse"];
                 };
             };
-            /** @description `nickname_already_taken` — the handle is another player's, `details.field` is `nickname`, and nothing was recorded: the act is one event, so the name is not kept either. The client writes the sentence under the field. */
+            /** @description `nickname_already_taken` — the handle is another player's, `details.field` is `nickname`, and nothing was recorded. The client writes the sentence under the field. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8563,7 +8566,9 @@ export interface operations {
              *
              *     `too_many_photos` / `duplicate_photo` — the photo list is not one a profile may hold.
              *
-             *     `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.
+             *     `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.
+             *
+             *     `location_club_unknown` — the club picked in place of a reading is no club in Raketa (`details.field` `club_id`): it stopped existing between the search and the tap, or the client invented it.
              */
             400: {
                 headers: {
@@ -8685,6 +8690,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description `location_club_unknown` — the club picked in place of a reading is no club in Raketa (`details.field` `club_id`). Nothing moves. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
             404: {
@@ -8867,7 +8881,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). The commit's fence exactly; refused before anything is stored, and the server never says what it matched. */
+            /** @description `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). The commit's fence exactly; refused before anything is stored, and the server never says what it matched. */
             400: {
                 headers: {
                     [name: string]: unknown;

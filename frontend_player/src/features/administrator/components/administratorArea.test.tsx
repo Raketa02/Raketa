@@ -73,7 +73,7 @@ let clipboard: FakeClipboard;
 
 beforeEach(() => {
   transport = installTransport();
-  stubGate(transport, { name: 'Marta Nowak', profiles: ADMINISTRATOR_ONLY });
+  stubGate(transport, { nickname: null, profiles: ADMINISTRATOR_ONLY });
   share = fakeShare();
   stubShare(share);
   clipboard = fakeClipboard();
@@ -520,7 +520,7 @@ describe('Members, from the members card', () => {
 
   const member = (who: typeof MICHAL, level: number): Wire['GroupMemberSchema'] => ({
     player_id: who.id,
-    name: who.name,
+    nickname: who.name,
     level,
     ...NEW_MEMBER_RELIABILITY,
     is_owner: false,
@@ -730,7 +730,7 @@ describe('removed, and the profile read says so first', () => {
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}/you`));
 
     stubGate(transport, {
-      name: 'Marta Nowak',
+      nickname: null,
       profiles: { ...ADMINISTRATOR_ONLY, administers: [] },
     });
     const ratingsBefore = transport.requestsTo('GET', '/api/v1/ratings').length;
@@ -750,7 +750,7 @@ describe('removed, and the profile read says so first', () => {
 describe('removed, an account that also plays', () => {
   it('is told, and moved to its player side rather than signed out', async () => {
     stubGate(transport, {
-      name: 'Tomek Kowal',
+      nickname: 'tomek.k',
       ratings: [rating('PADEL')],
       hasPlayerProfile: true,
       profiles: { ...ADMINISTRATOR_ONLY, acts_as_player: true },
@@ -776,8 +776,9 @@ describe('the two tabs', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'You' }));
 
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}/you`));
-    // Club 8's header, moved here: the club and the role over the account's name (#517).
-    expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    // Club 8's header, moved here (#517): the account's nickname, and *You* for one that has not
+    // started playing and holds none — the name its club typed is the Administrator's (ADR-0199 §4).
+    expect(await screen.findByRole('header', { name: 'You' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'You', selected: true })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
 
@@ -794,7 +795,7 @@ describe('the two tabs', () => {
 
     fireEvent.press(screen.getByRole('tab', { name: 'You' }));
 
-    expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'You' })).toBeTruthy();
     expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
   });
 

@@ -117,7 +117,7 @@ const CREW: Wire['MyGroupSchema'] = {
 };
 
 function person(n: number, name: string): Wire['GroupPersonSchema'] {
-  return { player_id: `e0000000-0000-4000-8000-00000000000${n}`, name };
+  return { player_id: `e0000000-0000-4000-8000-00000000000${n}`, nickname: name };
 }
 
 /** Five of the crew rated in padel — enough for a court, so an empty deck says *Nothing picked*. */
@@ -131,7 +131,7 @@ const PAGE: Wire['GroupResponse'] = {
       sport: 'PADEL',
       rated_count: 5,
       first_rated: [
-        { player_id: GATE_USER.id, name: 'Ada Lovelace' },
+        { player_id: GATE_USER.id, nickname: 'ada' },
         person(2, 'Member 2'),
         person(3, 'Member 3'),
         person(4, 'Member 4'),
@@ -139,7 +139,7 @@ const PAGE: Wire['GroupResponse'] = {
     },
   ],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -147,8 +147,7 @@ const PAGE: Wire['GroupResponse'] = {
 function karolsRecord(): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
-    name: 'Karol Tomaszewski',
-    nickname: 'karol_t',
+    nickname: 'karol.t',
     area_code: 'A+050612+0019938',
     social_tags: [],
     sports: [{ sport: 'PADEL', level: 2.75, band: 'Established' }],
@@ -420,7 +419,7 @@ describe('pulling Games', () => {
           {
             sport: 'PADEL',
             rated_count: 1,
-            first_rated: [{ player_id: GATE_USER.id, name: 'Ada Lovelace' }],
+            first_rated: [{ player_id: GATE_USER.id, nickname: 'ada' }],
           },
         ],
       }),
@@ -439,12 +438,17 @@ describe('the card', () => {
     await openGames(groupDeck({ cards: [card] }));
 
     expect(await screen.findByRole('header', { name: 'Picked for you' })).toBeTruthy();
-    // Your side on top while nobody is In, you first: YOU + ZOFIA VS ANIA + EWA.
-    expect(screen.getByText('You + Zofia vs Ania + Ewa', HIDDEN_TOO)).toBeTruthy();
-    expect(screen.getByLabelText('Zofia Bielecka, level 2,69')).toBeTruthy();
+    // Your side on top while nobody is In, you first: YOU + ZOFIA VS ANIA + EWA — each
+    // nickname cut at its first dot, a box's drawing (ADR-0157).
+    expect(screen.getByText('You + zofia vs ania + ewa', HIDDEN_TOO)).toBeTruthy();
+    // The tiles say each nickname whole, never with an @ (ADR-0199 §1): ania.k is ania.k.
+    expect(screen.getByLabelText('ania.k, level 2,68')).toBeTruthy();
+    expect(screen.getAllByText('ania.k', HIDDEN_TOO).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('zofia.b, level 2,69')).toBeTruthy();
     expect(screen.getByLabelText('You, level 2,71')).toBeTruthy();
+    expect(screen.queryByText(/@/, HIDDEN_TOO)).toBeNull();
     expect(
-      screen.getByLabelText('Balance forecast 87%, very even: You + Zofia against Ania + Ewa'),
+      screen.getByLabelText('Balance forecast 87%, very even: You + zofia against ania + ewa'),
     ).toBeTruthy();
     expect(screen.getByText('Slim overlap', HIDDEN_TOO)).toBeTruthy();
     expect(
@@ -476,10 +480,10 @@ describe('the card', () => {
       }),
     );
 
-    expect(await screen.findByLabelText('Karol Tomaszewski, level 2,75, In')).toBeTruthy();
+    expect(await screen.findByLabelText('karol.t, level 2,75, In')).toBeTruthy();
     expect(screen.getAllByText(COPY.in, HIDDEN_TOO)).toHaveLength(3);
     // The side with more people In is the top row, and In reads before you: *Ania + You*.
-    expect(screen.getByText('Karol + Zofia vs Ania + You', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('karol + zofia vs ania + You', HIDDEN_TOO)).toBeTruthy();
     expect(screen.queryByText(/asked|no answer yet|^friend$/i, HIDDEN_TOO)).toBeNull();
   });
 
@@ -520,16 +524,14 @@ describe('the card', () => {
   it('draws a challenge by name, and the group’s once the poster withdrew', async () => {
     const byKuba = deckCard({
       type: 'CHALLENGE',
-      challenger: { player_id: KUBA().player_id, name: 'Kuba Wiśniewski' },
+      challenger: { player_id: KUBA().player_id, nickname: 'kuba.w' },
       in_count: 1,
       sides: { yours: [youTile(), EWA()], theirs: [KUBA({ is_in: true }), ANIA()] },
     });
     const byTheGroup = deckCard({ type: 'CHALLENGE', challenger: null });
     await openGames(groupDeck({ cards: [byKuba, byTheGroup] }));
 
-    expect(
-      await screen.findByRole('header', { name: 'Kuba Wiśniewski challenged you' }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'kuba.w challenged you' })).toBeTruthy();
     expect(screen.getByText('The group challenged you', HIDDEN_TOO)).toBeTruthy();
   });
 
@@ -631,7 +633,7 @@ describe('the card', () => {
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
 
-    expect(await screen.findByLabelText('Kuba Wiśniewski, level 2,80')).toBeTruthy();
+    expect(await screen.findByLabelText('kuba.w, level 2,80')).toBeTruthy();
     expect(screen.queryByText(/ vs /, HIDDEN_TOO)).toBeNull();
   });
 
@@ -643,12 +645,35 @@ describe('the card', () => {
       }),
     );
 
-    fireEvent.press(await screen.findByLabelText('Karol Tomaszewski, level 2,75'));
+    fireEvent.press(await screen.findByLabelText('karol.t, level 2,75'));
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
     expect(transport.requestsTo('GET', `/api/v1/players/${KAROL().player_id}/record`)).toHaveLength(
       1,
     );
+  });
+
+  /**
+   * **Her record says ania.k large, with nothing under it** (ADR-0199 §1): the nickname is the
+   * identity, so the `@nickname` line that once sat under a name is gone, and nothing anywhere
+   * writes an @.
+   */
+  it('opens ania.k’s record from her tile, her nickname large and no handle line under it', async () => {
+    transport.on('GET', `/api/v1/players/${ANIA().player_id}/record`, () =>
+      json<Wire['PlayerRecordResponse']>({ ...karolsRecord(), nickname: 'ania.k' }),
+    );
+    await openGames(
+      groupDeck({
+        cards: [deckCard({ sides: { yours: [youTile(), KAROL()], theirs: [ANIA(), EWA()] } })],
+      }),
+    );
+
+    fireEvent.press(await screen.findByLabelText('ania.k, level 2,68'));
+
+    expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+    const header = await screen.findByLabelText(/^ania\.k\. /);
+    expect(within(header).getByText('ania.k')).toBeTruthy();
+    expect(screen.queryByText(/@/, HIDDEN_TOO)).toBeNull();
   });
 
   it('says Indoor or Outdoor on a card the server promises a kind for, and nothing where it promises neither (#677)', async () => {
@@ -716,7 +741,7 @@ describe('answering', () => {
     await waitFor(() =>
       expect(transport.requestsTo('POST', yesPath(first.proposal_id))).toHaveLength(1),
     );
-    expect(await screen.findByLabelText('Zofia Bielecka, level 2,69')).toBeTruthy();
+    expect(await screen.findByLabelText('zofia.b, level 2,69')).toBeTruthy();
     expect(screen.queryByTestId(`game-card-${first.proposal_id}`, HIDDEN_TOO)).toBeNull();
     expect(haptics.felt).toEqual(['light']);
   });
@@ -843,7 +868,7 @@ describe('the deck read again while it is answered', () => {
     const rising = deckCard({ sides: { yours: [youTile(), ZOFIA()], theirs: [KUBA(), EWA()] } });
     let dealt = [reading, rising];
     await openGames(() => groupDeck({ cards: dealt }));
-    expect(await screen.findByLabelText('Karol Tomaszewski, level 2,75')).toBeTruthy();
+    expect(await screen.findByLabelText('karol.t, level 2,75')).toBeTruthy();
 
     // On their phones: Zofia and Kuba said yes to the second game, which now ranks first, and Karol
     // to the one on screen.
@@ -868,16 +893,16 @@ describe('the deck read again while it is answered', () => {
     });
 
     // The card under the thumb is the one it was, with Karol In on it; the risen game is behind it.
-    expect(await screen.findByLabelText('Karol Tomaszewski, level 2,75, In')).toBeTruthy();
-    expect(screen.queryByLabelText(/^Zofia Bielecka/)).toBeNull();
-    expect(screen.getByLabelText('Zofia Bielecka, level 2,69, In', HIDDEN_TOO)).toBeTruthy();
+    expect(await screen.findByLabelText('karol.t, level 2,75, In')).toBeTruthy();
+    expect(screen.queryByLabelText(/^zofia.b/)).toBeNull();
+    expect(screen.getByLabelText('zofia.b, level 2,69, In', HIDDEN_TOO)).toBeTruthy();
 
     // Answered, it goes, and the risen game comes up next.
     transport.on('POST', noPath(reading.proposal_id), () => noContent());
     fireEvent.press(screen.getByRole('button', { name: COPY.no }));
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
 
-    expect(await screen.findByLabelText('Zofia Bielecka, level 2,69, In')).toBeTruthy();
+    expect(await screen.findByLabelText('zofia.b, level 2,69, In')).toBeTruthy();
   });
 
   it('lets a slow read land while the player answers on, so a yes said meanwhile reaches the deck', async () => {
@@ -886,7 +911,7 @@ describe('the deck read again while it is answered', () => {
     const third = deckCard({ sides: { yours: [youTile(), ZOFIA()], theirs: [KUBA(), EWA()] } });
     let dealt = [first, second, third];
     await openGames(() => groupDeck({ cards: dealt }));
-    await screen.findByLabelText('Karol Tomaszewski, level 2,75');
+    await screen.findByLabelText('karol.t, level 2,75');
     const server = slowDeck(() => dealt);
     for (const card of [first, second]) {
       transport.on('POST', noPath(card.proposal_id), () => {
@@ -901,7 +926,7 @@ describe('the deck read again while it is answered', () => {
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
     await waitFor(() => expect(server.out).toHaveLength(1));
     // The player answers the next card before that read is back.
-    expect(await screen.findByLabelText(/^Kuba Wiśniewski, level/)).toBeTruthy();
+    expect(await screen.findByLabelText(/^kuba.w, level/)).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: COPY.no }));
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
     await waitFor(() =>
@@ -922,7 +947,7 @@ describe('the deck read again while it is answered', () => {
     // The read that was out comes back: it is drawn, not thrown away for the second answer's.
     await letGo(server);
 
-    expect(await screen.findByLabelText('Zofia Bielecka, level 2,69, In')).toBeTruthy();
+    expect(await screen.findByLabelText('zofia.b, level 2,69, In')).toBeTruthy();
     // One more read follows it, for the answer that settled while it was out — and only one.
     await waitFor(() => expect(server.out).toHaveLength(1));
     server.slow = false;
@@ -934,7 +959,7 @@ describe('the deck read again while it is answered', () => {
     const second = deckCard({ sides: { yours: [youTile(), KUBA()], theirs: [ANIA(), EWA()] } });
     let dealt = [first, second];
     await openGames(() => groupDeck({ cards: dealt }));
-    await screen.findByLabelText('Karol Tomaszewski, level 2,75');
+    await screen.findByLabelText('karol.t, level 2,75');
     const server = slowDeck(() => dealt);
     transport.on('POST', noPath(first.proposal_id), () => {
       dealt = [second];
@@ -956,7 +981,7 @@ describe('the deck read again while it is answered', () => {
     server.slow = false;
     await letGo(server);
 
-    expect(await screen.findByLabelText(/^Kuba Wiśniewski, level/)).toBeTruthy();
+    expect(await screen.findByLabelText(/^kuba.w, level/)).toBeTruthy();
     expect(screen.queryByTestId(`game-card-${first.proposal_id}`, HIDDEN_TOO)).toBeNull();
   });
 });
@@ -999,14 +1024,14 @@ describe('the game’s details', () => {
 
     expect(await screen.findByText('Filling · 1 of 4 in')).toBeTruthy();
     expect(transport.requestsTo('GET', proposalPath(shown.proposal_id)).length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, In')).toBeTruthy();
+    expect(screen.getByLabelText('karol.t, level 2,75, In')).toBeTruthy();
     expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();
     expect(
       screen.getByLabelText('Your share, 32 zł, if it fills · book by Fri 10:00'),
     ).toBeTruthy();
-    expect(screen.getByText('Karol Tomaszewski, Ania Kowalska, Ewa Majewska')).toBeTruthy();
+    expect(screen.getByText('karol.t, ania.k, ewa.m')).toBeTruthy();
   });
 
   it('draws no paragraph about what a yes costs: the share and its line say it', async () => {

@@ -131,6 +131,15 @@ nickname: once it attests, it acts as a player and the naming is still owed — 
 nickname ([`auth.md`](auth.md)). For every account sign-up creates this is the same destination as
 before, since it holds neither until the naming.
 
+**Named is holding a nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728),
+[ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3, amending the two
+paragraphs above where they speak of a name). The gate's first player destination reads **no
+nickname**: `EntryInput.named`, from `auth`'s `named`, off `GET /users/me`'s `nickname` — the
+same read, served from the `User`'s own stream for the same reason. `/users/me` no longer serves a
+name, and an account an Invitation opened holds none (§4), so _named in full_ and `namedInFull` are
+gone: such an account, once it attests, is sent to the naming like any account sign-up created,
+and the step tells it what the nickname is for ([`auth.md`](auth.md)). The order is unchanged.
+
 **An account with two profiles opens in the one it wore last** ([#518](https://github.com/Raketa02/Raketa/issues/518),
 ADR-0185 §3, ADR-0188 §2). `profileDestination` takes **the profile the phone remembers** (`auth`'s
 `useLastProfile`) ahead of everything: an administrator profile the account still holds opens that

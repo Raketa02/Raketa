@@ -70,15 +70,15 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const SINGLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, name: 'me_' },
-  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'A', player_id: ME, nickname: 'me_' },
+  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
 ];
 
 const DOUBLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, name: 'me_' },
-  { side: 'A', player_id: KASIA, name: 'kasia.w' },
-  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
-  { side: 'B', player_id: MAREK, name: 'marek b' },
+  { side: 'A', player_id: ME, nickname: 'me_' },
+  { side: 'A', player_id: KASIA, nickname: 'kasia.w' },
+  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+  { side: 'B', player_id: MAREK, nickname: 'marek.b' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -254,7 +254,7 @@ describe('the bar', () => {
    */
   const drawn = { includeHiddenElements: true };
 
-  /** Doubles: `You + {partner stem}` against `{stem} + {stem}`, cut at the first word break. */
+  /** Doubles: `You + {partner stem}` against `{stem} + {stem}`, cut at the first dot. */
   it('labels the two sides with stems on a doubles court', async () => {
     await openTheGame({
       games: [game({ seats: DOUBLES_SEATS })],
@@ -267,7 +267,7 @@ describe('the bar', () => {
     expect(screen.getByText('tomek + marek', drawn)).toBeTruthy();
     // The row above speaks the handles whole, over *and* — a sentence never truncates.
     expect(
-      screen.getByLabelText('You and kasia.w 2,70, tomek.p and marek b 2,71, gap −0,01'),
+      screen.getByLabelText('You and kasia.w 2,70, tomek.p and marek.b 2,71, gap −0,01'),
     ).toBeTruthy();
   });
 

@@ -45,7 +45,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -58,7 +58,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -71,7 +71,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -87,7 +87,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -104,7 +104,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -117,7 +117,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -132,7 +132,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: ['a-different-assessment'],
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -150,7 +150,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -167,7 +167,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -182,7 +182,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -198,7 +198,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -207,13 +207,13 @@ describe('a player with a rating and no Player profile', () => {
 });
 
 /**
- * **An account with no name goes to the naming step before anything else**
- * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §3). Sign-up creates the account unnamed and every destination after this one says the
- * player's name, so it is the first thing the gate asks — and it asks it of every shape, including
- * the ones the flow cannot produce, because a shape the gate does not route is a loop.
+ * **An account with no nickname goes to the naming step before anything else**
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). Sign-up
+ * creates the account with none and every destination after this one says the player's nickname,
+ * so it is the first thing the gate asks — and it asks it of every shape, including the ones the
+ * flow cannot produce, because a shape the gate does not route is a loop.
  */
-describe('an account with no name yet', () => {
+describe('an account with no nickname yet', () => {
   it('is sent to the naming step, ahead of welcome', () => {
     // The ordinary case: signed up, closed the app before naming themselves, launched again.
     expect(
@@ -221,7 +221,7 @@ describe('an account with no name yet', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -237,7 +237,7 @@ describe('an account with no name yet', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -250,7 +250,7 @@ describe('an account with no name yet', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -277,7 +277,7 @@ describe('an account that holds only administrator profiles', () => {
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
         // An account an Invitation opened: the club typed a name, and nobody chose a nickname.
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: false,
         profiles: ADMINISTRATOR_ONLY,
       }),
@@ -290,7 +290,7 @@ describe('an account that holds only administrator profiles', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: false,
         profiles: ADMINISTRATOR_ONLY,
       }),
@@ -303,7 +303,7 @@ describe('an account that holds only administrator profiles', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: false,
         profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
       }),
@@ -317,7 +317,7 @@ describe('an account that holds only administrator profiles', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: true,
+        named: true,
         hasPlayerProfile: true,
         profiles: { actsAsPlayer: true, administers: [OGRODY] },
       }),
@@ -343,7 +343,7 @@ describe('an account that holds no profile at all', () => {
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
         // The club typed a name, and nobody chose a nickname.
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: false,
         profiles: NO_PROFILE,
       }),
@@ -358,7 +358,7 @@ describe('an account that holds no profile at all', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: false,
         profiles: NO_PROFILE,
       }),
@@ -367,18 +367,18 @@ describe('an account that holds no profile at all', () => {
 });
 
 /**
- * **Named in full is a name and a nickname** (ADR-0185 §4). An account an Invitation opened
- * carries the club-typed Name and no Nickname; once it has attested it acts as a player, and the
- * naming step is where it goes first — asking only for the nickname.
+ * **Named is holding a nickname** (ADR-0199 §3–§4). An account an Invitation opened holds no
+ * player name and no nickname; once it has attested it acts as a player, and the naming step is
+ * where it goes first.
  */
 describe('an administrator who has just started playing', () => {
-  it('is sent to the naming step, not past it on the strength of the club’s name', () => {
+  it('is sent to the naming step, holding no nickname yet', () => {
     expect(
       entryDestination({
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        namedInFull: false,
+        named: false,
         hasPlayerProfile: false,
         profiles: { actsAsPlayer: true, administers: [OGRODY] },
       }),
@@ -397,7 +397,7 @@ describe('an account with two profiles', () => {
     ratings: [rating('padel')],
     runInProgress: undefined,
     deferredRunIds: NONE_DEFERRED,
-    namedInFull: true,
+    named: true,
     hasPlayerProfile: true,
   } as const;
 
@@ -433,7 +433,7 @@ describe('an account with two profiles', () => {
     expect(
       entryDestination({
         ...IN_THE_APP,
-        namedInFull: false,
+        named: false,
         ratings: [],
         profiles: BOTH,
         lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },

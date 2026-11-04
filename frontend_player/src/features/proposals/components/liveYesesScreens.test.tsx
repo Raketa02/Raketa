@@ -270,9 +270,9 @@ describe('a row opens the game’s details', () => {
       expect(screen).toHavePathname(`/play/group/${POOL}/game/${yes.proposal_id}`),
     );
     expect(await screen.findByText('Filling · 2 of 4 in')).toBeTruthy();
-    expect(screen.getByLabelText('Zofia Bielecka, level 2,69, In')).toBeTruthy();
+    expect(screen.getByLabelText('zofia.b, level 2,69, In')).toBeTruthy();
     // The header names the others; the tile names her too.
-    expect(screen.getAllByText('Zofia Bielecka')).toHaveLength(2);
+    expect(screen.getAllByText('zofia.b')).toHaveLength(2);
     expect(screen.getAllByTestId('game-tile-empty')).toHaveLength(2);
     expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();

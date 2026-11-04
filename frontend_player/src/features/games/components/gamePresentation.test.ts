@@ -628,12 +628,12 @@ describe('the court’s pairing, in words', () => {
         { side: 'A', playerId: 'me', name: 'tomek.p' },
         { side: 'A', playerId: 'p', name: 'Zofia.B' },
         { side: 'B', playerId: 'o1', name: 'kuba_w' },
-        { side: 'B', playerId: 'o2', name: 'Ola Nowak' },
+        { side: 'B', playerId: 'o2', name: 'ola.n' },
       ],
       'me',
     );
 
-    expect(doubles).toEqual(['You + Zofia', 'kuba_w + Ola']);
+    expect(doubles).toEqual(['You + Zofia', 'kuba_w + ola']);
   });
 
   it('labels a singles bar with you and one stem', () => {
@@ -705,11 +705,8 @@ describe('attendance, in words', () => {
 
   it('says everybody the game waits with, when there is more than one', () => {
     expect(
-      standingLine(
-        { ...AWAITED, here: [IVAN, { kind: 'player', name: 'Piotr Sowa' }] },
-        AT_THE_COURT,
-      ),
-    ).toBe('Ivan Petrov and Piotr Sowa are waiting for you.');
+      standingLine({ ...AWAITED, here: [IVAN, { kind: 'player', name: 'piotr.s' }] }, AT_THE_COURT),
+    ).toBe('Ivan Petrov and piotr.s are waiting for you.');
   });
 
   it('tells everybody else whom the game waits for, and that saying so cost them nothing', () => {

@@ -4,7 +4,7 @@
  * mechanics §14.2).
  *
  * ```
- * ‹  [faces]  Piotr Sowa, Inés Díaz, Bartek Lis              [ Chat ]   the top bar (details 7)
+ * ‹  [faces]  piotr.s, ines.d, bartek.l              [ Chat ]   the top bar (details 7)
  *             Padel                                    the sport and kind: the tag is the state
  * ┌ ● Booked ──────────────────────────────────┐   the game card (details 8): the status,
  * │ [You · 2,71 · paid]  [Piotr · 2,95 · paid] │   the tiles with *paid*, the vs line,

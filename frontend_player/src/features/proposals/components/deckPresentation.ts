@@ -5,10 +5,10 @@
  *
  * Two rules sit over it, the app's own:
  *
- * - **A name is said whole, and drawn cut only where a box draws.** The *vs* line and the bar's two
- *   labels are stems (`handleStem`, ADR-0171 §4) because a quarter of a card cannot hold sixty-four
- *   characters; every spoken name — a tile's, the sides', the details' title — carries the Name as
- *   the player gave it.
+ * - **A nickname is said whole, and drawn cut only where a box draws.** The *vs* line and the bar's
+ *   two labels are stems (`handleStem`, ADR-0157) because a quarter of a card cannot hold
+ *   sixty-four characters; every spoken name — a tile's, the sides', the details' title — carries
+ *   the nickname as the player chose it, never with an @ (ADR-0199 §1).
  * - **A counted phrase goes through `counted()`**, so *1 person is In* is never *1 people are In*.
  */
 
@@ -90,7 +90,7 @@ export function capLine(cap: WeekCap): string {
 // The ribbon
 // ---------------------------------------------------------------------------
 
-/** *Picked for you* · *Kuba Wiśniewski challenged you* · *The group challenged you* · a rescue's. */
+/** *Picked for you* · *kuba.w challenged you* · *The group challenged you* · a rescue's. */
 export function ribbonWords(ribbon: Ribbon): string {
   switch (ribbon.kind) {
     case 'pickedForYou':
@@ -134,7 +134,7 @@ export function countdownSpoken(countdown: Countdown): string | undefined {
 // The tiles and the sides
 // ---------------------------------------------------------------------------
 
-/** A tile's name as drawn — the whole Name, cut short by the box; *You*; or the unknown's `?`. */
+/** A tile's nickname as drawn — whole, cut short by the box; *You*; or the unknown's `?`. */
 export function tileName(person: DeckPerson): string {
   if (person.isYou) return COPY.you;
   return person.name ?? COPY.unnamed;
@@ -165,11 +165,17 @@ export function vsLine(top: DeckRow, bottom: DeckRow): string {
   return `${side(top)} ${COPY.versus} ${side(bottom)}`;
 }
 
-/** *Karol Tomaszewski and Zofia Bielecka against Ania Kowalska and you* — the sides, spoken. */
+/**
+ * *karol.t and zofia.b against ania.k and you* — the sides, spoken. **A sentence opens with a
+ * capital on our own words only** — *You*, *Somebody* — and a nickname that opens it is said as
+ * its owner wrote it: *karol.t*, never *Karol.t* (ADR-0199 §1).
+ */
 export function sidesSpoken(top: DeckRow, bottom: DeckRow): string {
   const side = (row: DeckRow) => peopleIn(row).map(spoken).join(' and ');
   const said = `${side(top)} against ${side(bottom)}`;
-  return said.charAt(0).toUpperCase() + said.slice(1);
+  const [opener] = peopleIn(top);
+  const opensWithANickname = opener !== undefined && !opener.isYou && opener.name !== undefined;
+  return opensWithANickname ? said : said.charAt(0).toUpperCase() + said.slice(1);
 }
 
 /**
@@ -448,7 +454,7 @@ export function fillingStatus(inCount: number, seats: number): string {
   return `${COPY.game.filling}${DOT}${inCount} of ${seats} in`;
 }
 
-/** *Karol Tomaszewski, Zofia Bielecka, Ania Kowalska* — the other players, the title. */
+/** *karol.t, zofia.b, ania.k* — the other players, the title. */
 export function othersTitle(card: Pick<DeckCard, 'sides'>): string {
   return peopleOn(card)
     .filter((person) => !person.isYou)

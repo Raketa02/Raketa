@@ -1148,3 +1148,15 @@ ruling**: a button that had no spoken tail keeps none, so a post's last seat and
 game's details are spoken _Pay 32 zł_, where the rescue's doors say what the share does. **Nothing
 here has been seen on a device**: the stamp on every card, and _Pay_ on the rows, the sheet and the
 details, want a look.
+
+**Every person here is named by their nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1–§2). The deck's tiles, the
+_vs_ line, the bar's labels and the ribbon's challenger, a game's details, the booked game and
+_It's a game!_, the posting sheet's fits and Fill in's people all read the wire's `nickname` at
+their mapper into the same `name` field — what a player is called, whole and never with an @ — so
+no component changed for it. The stems in the _vs_ line and the bar cut at the **first dot**
+(_karol.t_ → _karol_), and the yes poster's two letters are cut from the nickname by `_shared.md`'s
+rule (_ania.k_ → `AK`, _kuba_ → `KU`). **`sidesSpoken` capitalised a nickname** that opened its
+sentence (_Karol.t and ania.k against …_); it now capitalises only _You_ and _Somebody_, and a
+nickname is said as its owner wrote it. The harness's deck and Home people are handles now
+(_karol.t_, _zofia.b_, _ania.k_, _piotr.s_, …), so the stems are exercised as they are drawn.
+`groupGames.test.tsx` holds _ania.k_ on a tile and on her record.

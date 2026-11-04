@@ -76,7 +76,7 @@ export function toPostingGrid(wire: Schemas['PostingGridResponse']): PostingGrid
 function toFit(wire: Schemas['SlotFitSchema']): SlotFit {
   return {
     playerId: wire.player_id,
-    ...(wire.name === null ? {} : { name: wire.name }),
+    ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
     ...(wire.forecast === null ? {} : { forecastPct: wire.forecast.pct }),

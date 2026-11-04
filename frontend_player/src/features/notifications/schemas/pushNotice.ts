@@ -6,7 +6,8 @@
  * where it opens and the ids it opens by; its kind, because a Fill in alert opens somewhere its
  * `opens` alone does not say (`domain/notice.ts`); and the notice's own id, because the banner it is
  * drawn as is the list's too and is drawn once. The ids must be ids and where it opens one of the
- * four places — the fourth a booked game's result screen (#664). The kinds — the notice's, the
+ * five places — the fourth a booked game's result screen (#664), the fifth Home (#727), whose push
+ * carries no game and is not read by this build (#731). The kinds — the notice's, the
  * sport, the game's — are narrowed where the wire is read (`mappers/`), since a code this build
  * cannot name is a notice still told and nowhere to open.
  */
@@ -25,14 +26,17 @@ const PushNoticeData = z.object({
   game_kind: z.string(),
 });
 
-/** A notice's facts as the backend sent them — a push's payload, or a listed row's. */
+/**
+ * A notice's facts as the backend sent them — a push's payload, or a listed row's. A listed row
+ * about no game carries no game's facts (#727); a push this build reads always does.
+ */
 export interface SentFacts {
   readonly kind: string;
   readonly opens: Opens;
-  readonly gameId: string;
-  readonly poolId: string;
-  readonly sport: string;
-  readonly gameKind: string;
+  readonly gameId: string | null;
+  readonly poolId: string | null;
+  readonly sport: string | null;
+  readonly gameKind: string | null;
 }
 
 /** A pushed notice: its id and its facts. */

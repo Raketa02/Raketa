@@ -81,6 +81,28 @@ fade. `onSaved` is optional: the naming step still passes `router.replace('/')`,
 passes nothing, and the way back is the header's. `nameFromYou.test.tsx` walks it. **Not seen
 on a device**: the boxes re-drawn from the re-read under a green button.
 
+**A player is known by their nickname, and the naming asks for it alone**
+([#728](https://github.com/Raketa02/Raketa/issues/728),
+[ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3, superseding ADR-0171
+and the two paragraphs above where they speak of a Name). _How should people see you?_ keeps its
+title and has **one box, _Nickname_**: `namingSchema`, `Naming`, `useNamingForm` and the request are
+`{ nickname }` and nothing else, and `AuthenticatedUser` carries `nickname` alone — `/users/me` stopped
+serving `name`. **No hint under the box**: the handle's rule (_Use letters, numbers, and . _ - only —
+no spaces._) is the schema's refusal and is drawn only as the box's error, when what was typed breaks
+it; the other refusals are unchanged, _That nickname is taken. Pick another._ among them. The box's
+`accessibilityHint` that carried the rule went with the visible hint — a listener hears the rule
+when a sighted reader sees it. **The You row is _Nickname_** (`NicknameRow`, `NicknameScreen`,
+`nicknamePresentation`): its line is the nickname whole and without an @, and its screen is the
+same one box under the tab's chrome. **The route keeps `/you/name`**, as the act keeps
+`PUT /users/me/name` (ADR-0199, _Neutral_) — and because the shell's list of pushed screens names
+it. **Named is holding a nickname** (`domain/naming.ts`'s `named`, which the gate reads through
+`types.ts`). **An account an Invitation opened holds no player name** — the one its club typed stays
+the Administrator's (§4) — so `heldNameWithoutNickname` and the step's one-box mode are gone, and
+what tells the step such an account is `openedByInvitation`: one that runs a club's groups. It reads
+_Pick a nickname — it's how players will see you._ under the title; every account sign-up creates
+reads the title alone. `theNaming.test.tsx` and `nicknameFromYou.test.tsx` walk both. **Not seen on
+a device**: the one-box step, the invitation line, and the You row's new title.
+
 **The tester mark is not read** ([#576](https://github.com/Raketa02/Raketa/issues/576)). It was
 carried as `AuthenticatedUser.isTester` for one reader, feature-flag evaluation (#479, ADR-0180
 §9), which left with the flags. `/users/me` still sends `is_tester` until the backend drops it
@@ -202,6 +224,8 @@ nickname — the club's name — sees the nickname's box alone, and the sub-line
 Marta Nowak. Pick a nickname to go with it._; the form opens holding that name and sends it with the
 nickname, so the naming stays one act carrying both. Every account sign-up creates holds neither and
 sees both boxes. **Not seen on a device**: the attestation step, and the naming with one box.
+_Superseded by #728 (ADR-0199 §4): no account holds a player name, the naming is one box for
+everybody, and an invitation account reads its own line — see the nickname paragraph above._
 
 **_Have an invitation code?_ and _Set your password_ are _Forgot password?_'s pieces asking for an
 invitation's** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 113–116 and

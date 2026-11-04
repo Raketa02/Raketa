@@ -6,7 +6,7 @@
  * hand-maintaining a runtime copy of every DTO creates two API schemas that drift.
  * See docs/architecture.md Part 9.
  *
- * The constraints that *are* copied — the password length, the name's bounds, the nickname
+ * The constraints that *are* copied — the password length, the nickname's bounds and its
  * pattern — exist so the app can say "that nickname can't contain a space" without a round
  * trip. The server still enforces them; this is a courtesy, never the authority. Where the
  * two disagree the server wins, and the mapped `ValidationError` is what the player sees.
@@ -106,10 +106,9 @@ const adultAttested = z.boolean().refine((given) => given, {
 
 /**
  * **Credentials, and nothing about who you are**
- * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §2). The nickname left this form for the naming below: sign-up is choosing credentials, and
- * a sign-up refused for a taken handle was a sign-up refused for a reason that had nothing to
- * do with the account. `z.object` strips what it does not name, so a caller still handing one
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). The
+ * nickname is the naming's, below: sign-up is choosing credentials, and a sign-up refused for a
+ * taken handle was a sign-up refused for a reason that had nothing to do with the account. `z.object` strips what it does not name, so a caller still handing one
  * over sends nothing the server would refuse as malformed.
  */
 export const signUpSchema = z
@@ -162,36 +161,22 @@ export function validate<TSchema extends z.ZodTypeAny>(
 }
 
 /**
- * **The nickname's rule, in the sign-up form's own words** — stated under the box on the
- * naming step as well as being the sentence a refusal shows, so a player is told what a handle
- * may contain before a refusal ever surprises them (ADR-0171 §1).
+ * **The nickname's rule, in the sign-up form's own words** — drawn only as the box's error, when
+ * what was typed breaks it, and never as a hint under an empty box: the step is one field, and
+ * a sentence under it before anything is typed is clutter for the many who never break it
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3).
  */
 export const NICKNAME_RULE = 'Use letters, numbers, and . _ - only — no spaces.';
 
 /**
- * **The naming** — *How should people see you?* — a name and a nickname, both required.
+ * **The naming** — *How should people see you?* — a nickname, and nothing else (ADR-0199 §3).
  *
- * The **name** is trimmed and its runs of whitespace collapsed to one space *before* the bounds
- * are checked, exactly as the server's value object normalises it: `"   A   "` is one character
- * and is refused as too short here rather than admitted and refused there. It is checked against
- * nobody — two players may share one.
- *
- * The **nickname** keeps the rule the sign-up form used to state: a handle, 2–64 characters of
- * letters, digits and `. _ -`, no spaces. Uniqueness is the server's, and its refusal arrives by
- * code under this box.
+ * A handle, 2–64 characters of letters, digits and `. _ -`, no spaces, trimmed as the server's
+ * value object trims it. Uniqueness is the server's, and its refusal arrives by code under this
+ * box. `z.object` strips what it does not name, so a caller still handing a name over sends
+ * nothing the server would refuse as malformed.
  */
 export const namingSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Enter your name.')
-    .transform((value) => value.replace(/\s+/g, ' '))
-    .pipe(
-      z
-        .string()
-        .min(2, 'Names are at least 2 characters.')
-        .max(64, 'Names are at most 64 characters.'),
-    ),
   nickname: z
     .string()
     .trim()

@@ -83,7 +83,7 @@ afterEach(async () => {
  */
 async function launchSignedOut(initialUrl = '/sign-in') {
   setSessionStatus('unauthenticated');
-  stubGate(transport, { name: 'Marta Nowak', nickname: null, profiles: ADMINISTRATOR_ONLY });
+  stubGate(transport, { nickname: null, profiles: ADMINISTRATOR_ONLY });
   club().install(transport);
   renderRouter(ONBOARDING_ROUTES, { initialUrl });
   await waitFor(() => expect(screen).toHavePathname(initialUrl));

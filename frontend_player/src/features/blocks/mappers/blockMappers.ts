@@ -20,7 +20,7 @@ export function toBlockedPlayers(response: BlockedPlayersResponse): readonly Blo
 function toBlockedPlayer(served: BlockedPlayerSchema): BlockedPlayer {
   return {
     playerId: served.player_id,
-    name: served.name,
+    name: served.nickname,
     ...(served.photo_url === undefined ? {} : { photoUrl: served.photo_url }),
   };
 }

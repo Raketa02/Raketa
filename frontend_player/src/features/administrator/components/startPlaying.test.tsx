@@ -1,6 +1,6 @@
 /**
  * ***Start playing*, walked** — an administrator who has never played becomes a player on the same
- * account: the Adult attestation with sign-up's tick box, the naming asking only for the nickname,
+ * account: the Adult attestation with sign-up's tick box, the naming asking for a nickname,
  * then the questionnaire and the social steps, and afterwards both profiles
  * ([#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500 story 133, ADR-0185 §3–§5).
  *
@@ -60,8 +60,8 @@ const OGRODY: Wire['AdministeredClubSchema'] = { club_id: CLUB_ID, club_name: CL
 // ---------------------------------------------------------------------------
 
 /**
- * **Marta's account, as the server holds it** — named by the club, no nickname, never attested,
- * running Ogrody 33's groups. Each act below moves it, and `GET /users/me` answers what it holds
+ * **Marta's account, as the server holds it** — no player name (the one her club typed is the
+ * Administrator's, ADR-0199 §4), no nickname, never attested, running Ogrody 33's groups. Each act below moves it, and `GET /users/me` answers what it holds
  * now: *acts as a player* once it has attested or holds a Player profile (ADR-0185 §2).
  */
 function account({
@@ -77,7 +77,6 @@ function account({
   const me = (): Wire['MeResponse'] => ({
     ...GATE_USER,
     email: 'marta@ogrody33.example',
-    name: 'Marta Nowak',
     nickname: state.nickname,
     adult_attested: state.attested,
     has_player_profile: state.hasPlayerProfile,
@@ -103,7 +102,7 @@ function account({
       transport.on('PUT', NAMING_PATH, (request) => {
         const body = request.body as Wire['NameRequest'];
         state.nickname = body.nickname;
-        return json<Wire['NamingResponse']>({ name: body.name, nickname: body.nickname });
+        return json<Wire['NamingResponse']>({ nickname: body.nickname });
       });
       transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
       transport.on('POST', '/api/v1/assessments', () => json(outstanding(), 201));
@@ -343,20 +342,20 @@ describe('Start playing, for an account the phone remembers in a club', () => {
 });
 
 describe('the naming, after the attestation', () => {
-  it('asks only for the nickname, and sends the name the club gave with it', async () => {
+  it('asks for a nickname, says what it is for, and sends it alone', async () => {
     await startPlaying();
     await attest();
 
     expect(screen.queryByLabelText('Name')).toBeNull();
-    expect(
-      screen.getByText('People will see you as Marta Nowak. Pick a nickname to go with it.'),
-    ).toBeTruthy();
+    expect(screen.getByText("Pick a nickname — it's how players will see you.")).toBeTruthy();
+    // The name her club typed is the Administrator's, and the step never says it (ADR-0199 §4).
+    expect(screen.queryByText(/Marta Nowak/)).toBeNull();
 
     fireEvent.changeText(screen.getByLabelText('Nickname'), 'marta_n');
     fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(namings()).toEqual([{ name: 'Marta Nowak', nickname: 'marta_n' }]);
+    expect(namings()).toEqual([{ nickname: 'marta_n' }]);
   });
 });
 
@@ -413,12 +412,12 @@ describe('Start playing, from start to end', () => {
       hasPlayerProfile: true,
     });
 
-    // **And still an Administrator**: the area opens on the next launch, and its You tab no longer
-    // offers Start playing, because the account plays.
+    // **And still an Administrator**: the area opens on the next launch, its You tab says her
+    // nickname now, and no longer offers Start playing, because the account plays.
     screen.unmount();
     queryClient.clear();
     await launchSignedIn(YOU);
-    expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'marta_n' })).toBeTruthy();
     expect(await screen.findByRole('button', { name: /^Ogrody 33 Club,/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Start playing/ })).toBeNull();
   });

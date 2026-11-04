@@ -256,7 +256,7 @@ export function paymentToConfirmOn(
 // It's a game!
 // ---------------------------------------------------------------------------
 
-/** One face on *It's a game!* — the whole Name for the sentence, the photograph when there is one. */
+/** One face on *It's a game!* — the whole nickname for the sentence, the photograph when there is one. */
 export interface Face {
   readonly playerId: string;
   /** Absent for an account that can no longer be named. */

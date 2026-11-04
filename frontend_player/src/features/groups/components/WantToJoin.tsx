@@ -3,7 +3,7 @@
  * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 73–74).
  *
  * **Club 20's card, everywhere** — PRD #500 replaces play 62 by name: one card, a row per person
- * in the order they asked, each with their face, their whole Name and **every sport they are
+ * in the order they asked, each with their face, their whole nickname and **every sport they are
  * rated in with its Level** (*Padel 2,44 · Tennis 2,60*), no Player Score; **✕** declines and
  * **Approve** admits. The line wraps rather than truncating, as club 20 draws Tomek's four sports
  * over two lines, and is mono — Levels are figures (1.4), and club 20's sans gives way to it.

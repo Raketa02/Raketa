@@ -839,8 +839,8 @@ export const NOT_HERE_YET_LINE =
   'Tap for anybody who isn’t at the court yet. It works only from the club — your phone reads where you are as you tap, and keeps nothing.';
 
 /**
- * **The control about somebody else**, named whole (ADR-0171): *Oscar Nowak isn't here yet*, *Oscar
- * Nowak is here* — the *they're here* of the mechanics — and *Yes, Oscar Nowak was here*.
+ * **The control about somebody else**, named whole (ADR-0199 §1): *oscar.n isn't here yet*,
+ * *oscar.n is here* — the *they're here* of the mechanics — and *Yes, oscar.n was here*.
  */
 export function attendanceTapLabel(tap: AttendanceTap, who: NamedPlayer): string {
   const name = playerName(who);

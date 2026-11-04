@@ -14,8 +14,8 @@
  * `has_player_profile` is served on `GET /users/me`, which the app already asks for, already
  * keys, and already seeds from bootstrap when a stored session was validated. So on a warm
  * launch the profile branch costs nothing at all, and on a cold one it costs a request the
- * app was going to make anyway. **The name rides on the same read** — the gate's first
- * destination ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * app was going to make anyway. **The nickname rides on the same read** — the gate's first
+ * destination ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md)
  * §3) costs nothing more than the fourth did.
  *
  * **Except for an account that does not act as a player.** Its profiles are the gate's first read
@@ -41,7 +41,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
-import { namedInFull, useCurrentUser, useLastProfile } from '@/features/auth/types';
+import { named, useCurrentUser, useLastProfile } from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 import type { AppError } from '@/shared/errors';
 
@@ -223,9 +223,9 @@ export function useEntryDecision(): EntryDecision {
   if (beingReplaced) return { kind: 'pending' };
 
   return entryDestination({
-    // A name *and* a nickname (ADR-0185 §4): an account an Invitation opened holds the club's
-    // name and no handle, and the naming is still owed once it plays.
-    namedInFull: namedInFull(user.data),
+    // A nickname (ADR-0199 §3): an account an Invitation opened holds none either, and the
+    // naming is still owed once it plays.
+    named: named(user.data),
     ratings: ratings.data,
     runInProgress: run.data ?? undefined,
     deferredRunIds,

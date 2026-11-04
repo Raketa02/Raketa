@@ -203,6 +203,23 @@ sentence, sheet, toast, seat label or spoken name. It sits in the formatter's fi
 fence is a fact about how a person is named, and nothing else in that file takes a nickname, which
 is how every other surface keeps it: by never being handed one.
 
+**The one formatter reads the nickname again, the stem cuts at the first dot, and the initials
+break at all three separators** ([#728](https://github.com/Raketa02/Raketa/issues/728),
+[ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1–§2, superseding the
+paragraph above). `NamedPlayer`'s `name` is what a player is called — **their nickname**, whole and
+never with an @ — and the field keeps the word for the reason `playerName()` does (ADR-0199,
+_Neutral_). **`handleStem` cuts at the first dot only** (`STEM_BREAK`), ADR-0157's cut as it stood
+before ADR-0171: a nickname holds no space, and `-` and `_` stay inside a word, so `dorota_w` is
+drawn whole in a box. **`handleInitials` takes the first character, then the first character after
+the first `.`, `_` or `-`, else the second** (`INITIAL_BREAK`): _ania.k_ → `AK`, _kuba_ → `KU`,
+`dorota_w` → `DW`, a separator with nothing after it giving the second character. The two rules no
+longer break alike — ADR-0199 names the split, and whoever next touches either decides whether
+they meet again. **`atNickname` is gone**: its two callers, the record header and the You header
+card, draw the nickname alone now. `handleList`'s _handle_ is a nickname again, and the word is
+right. **One sentence capitalised a nickname**: the deck's `sidesSpoken` upper-cased the first
+letter of whatever opened it, which said _Karol.t_ for _karol.t_; it now capitalises only our own
+words, _You_ and _Somebody_.
+
 **The HTTP client has two verbs again, and the env one URL** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
 The third verb, `httpGetFromFeaturesHost` — the feature-flag datafile's unauthenticated read from
 `EXPO_PUBLIC_FEATURES_URL` (#479, ADR-0180 §4, §6) — left with the flags, and so did the variable,

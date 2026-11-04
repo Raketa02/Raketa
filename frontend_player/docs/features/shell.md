@@ -177,3 +177,10 @@ game reads. The walk is `theShell.test.tsx`, which asserts neither title is draw
 `blocks`' row under _Notifications_, its line _Nobody_, _1 player_ or _2 players_, and its screen
 `you/blocked-players` in `YOU_SCREENS`. The gate stubs `GET /blocks` (none), because the row reads
 it on every visit to the tab. The record is [`blocks.md`](blocks.md).
+
+**_Name_ is _Nickname_** ([#728](https://github.com/Raketa02/Raketa/issues/728),
+[ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). The **On your
+card** group's last row is `auth`'s `NicknameRow`, its line the nickname whole and never with an
+@, and the header card draws the nickname large with nothing under it. The screen behind the row is
+still `you/name`: the route keeps the word, as the act's path does. The paragraphs above that say
+_Name_ read through it.

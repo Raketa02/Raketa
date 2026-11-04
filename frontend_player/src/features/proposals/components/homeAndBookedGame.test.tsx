@@ -562,10 +562,10 @@ describe('Home — a booked game’s card (A8)', () => {
         bookedGameOnTheList({
           game_id: OLD_LOOP_GAME,
           seats: [
-            { side: 'A', player_id: GATE_USER.id, name: GATE_USER.name },
-            { side: 'A', player_id: PIOTR, name: 'Piotr Sowa' },
-            { side: 'B', player_id: INES, name: 'Inés Díaz' },
-            { side: 'B', player_id: null, name: null },
+            { side: 'A', player_id: GATE_USER.id, nickname: GATE_USER.nickname },
+            { side: 'A', player_id: PIOTR, nickname: 'piotr.s' },
+            { side: 'B', player_id: INES, nickname: 'ines.d' },
+            { side: 'B', player_id: null, nickname: null },
           ],
         }),
       ],
@@ -719,7 +719,7 @@ describe('a booked game’s details (A4.1)', () => {
   it('draws the top bar: the others named whole, Padel · booked, and Chat', async () => {
     await openDetails();
 
-    expect(await screen.findByText('Piotr Sowa, Inés Díaz, Bartek Lis')).toBeTruthy();
+    expect(await screen.findByText('piotr.s, ines.d, bartek.l')).toBeTruthy();
     expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
   });
@@ -729,11 +729,11 @@ describe('a booked game’s details (A4.1)', () => {
 
     expect(await screen.findByRole('header', { name: HOME.status.BOOKED })).toBeTruthy();
     expect(screen.getByLabelText('You, level 2,71, paid')).toBeTruthy();
-    expect(screen.getByLabelText('Piotr Sowa, level 2,95, paid')).toBeTruthy();
+    expect(screen.getByLabelText('piotr.s, level 2,95, paid')).toBeTruthy();
     expect(screen.getByTestId(`game-tile-${INES}`)).toBeTruthy();
     expect(screen.getByTestId(`game-tile-${BARTEK}`)).toBeTruthy();
     // Decorative to a listener — every tile names its person.
-    expect(screen.getByText('You + Piotr vs Inés + Bartek', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('You + piotr vs ines + bartek', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByLabelText('Where, Bonarka Arena, Court 2 · indoor · 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();

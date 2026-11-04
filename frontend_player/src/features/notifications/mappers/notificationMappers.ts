@@ -52,18 +52,18 @@ function toNoticeKind(wire: string): NoticeKind | undefined {
   return NOTICE_KINDS.find((kind) => kind === wire);
 }
 
-/** Where a tap goes — `undefined` for a notice, a sport or a kind this build cannot name. */
+/**
+ * Where a tap goes — `undefined` for a notice, a sport or a kind this build cannot name, and for a
+ * notice about no game (#727): Home is where it opens, and opening it is #731's.
+ */
 export function toTarget(facts: SentFacts): NoticeTarget | undefined {
+  const { opens, gameId, poolId } = facts;
+  if (opens === 'HOME' || gameId === null || poolId === null) return undefined;
   const notice = toNoticeKind(facts.kind);
-  const sport = toSport(facts.sport);
-  const kind = toKind(facts.gameKind);
+  const sport = facts.sport === null ? undefined : toSport(facts.sport);
+  const kind = facts.gameKind === null ? undefined : toKind(facts.gameKind);
   if (notice === undefined || sport === undefined || kind === undefined) return undefined;
-  return targetOf(notice, facts.opens, {
-    gameId: facts.gameId,
-    poolId: facts.poolId,
-    sport,
-    kind,
-  });
+  return targetOf(notice, opens, { gameId, poolId, sport, kind });
 }
 
 export function toNotice(wire: Schemas['NoticeSchema']): Notice {

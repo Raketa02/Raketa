@@ -4,7 +4,7 @@
  * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557)).
  *
  * ```
- * ‹  [faces]  Karol Tomaszewski, Zofia Bielecka, Ania Kowalska    — or *Only you*, alone on it
+ * ‹  [faces]  karol.t, zofia.b, ania.k    — or *Only you*, alone on it
  *             Padel                                              the sport and kind: the tag is the state
  * ┌ ● Filling · 1 of 4 in ─────────────────────┐   the dark card — the status, the tiles with IN,
  * │ [tile] [tile]  ── KAROL + YOU VS … ──       │   the vs line, and the court on an accent line:

@@ -81,3 +81,8 @@ is not carried: nothing draws it.
 
 **Not seen on a device**: the confirm sheet rising over the record on both platforms, TalkBack
 inside the stacked sheet, the row at the record's foot under a long name, and the list's rows.
+
+**The row and the list name the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). `BlockedPlayer.name` is mapped from
+the wire's `nickname`, and the record hands the row its `nickname`, so the row reads _Block kuba.w_,
+the sheet _Block kuba.w?_ and _"You won't be put in games with kuba.w. They aren't told."_ — whole,
+never with an @, and the paragraph above read through ADR-0199 §7.

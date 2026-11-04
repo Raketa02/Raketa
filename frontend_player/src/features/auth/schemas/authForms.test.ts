@@ -25,9 +25,9 @@ const CREDENTIALS = {
 
 describe('sign-up', () => {
   /**
-   * **Credentials only** ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
-   * §2). The nickname is asked in onboarding, beside the name, and a sign-up form that still
-   * took one would be sending a field the server now refuses as malformed.
+   * **Credentials only** ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md)
+   * §3). The nickname is asked in onboarding, and a sign-up form that still took one would be
+   * sending a field the server refuses as malformed.
    */
   it('takes email, password and the attestation, and nothing about who you are', () => {
     const result = validate(signUpSchema, CREDENTIALS);
@@ -53,70 +53,53 @@ describe('sign-up', () => {
 });
 
 describe('the naming', () => {
-  it('takes a name with spaces in it, and the handle beside it', () => {
-    const result = validate(namingSchema, { name: 'Ania Kowalska', nickname: 'ania_k' });
+  it('takes a nickname, and nothing else', () => {
+    const result = validate(namingSchema, { nickname: 'ania.k' });
 
-    expect(result).toEqual({ ok: true, values: { name: 'Ania Kowalska', nickname: 'ania_k' } });
+    expect(result).toEqual({ ok: true, values: { nickname: 'ania.k' } });
   });
 
-  /**
-   * The server trims and collapses before it checks the bounds
-   * (`NameRequest`'s own note), and the form does the same so the sentence it shows is about
-   * the name that would leave it: `"   A   "` is one character, not seven.
-   */
-  it('trims the name and collapses runs of whitespace before checking its length', () => {
-    const roomy = validate(namingSchema, { name: '  Ania   Kowalska ', nickname: 'ania_k' });
-    expect(roomy).toEqual({ ok: true, values: { name: 'Ania Kowalska', nickname: 'ania_k' } });
+  it('drops a name a caller still sends rather than carrying it to the wire', () => {
+    const result = validate(namingSchema, { name: 'ania.k', nickname: 'ania.k' });
 
-    const short = validate(namingSchema, { name: '   A   ', nickname: 'ania_k' });
-    expect(short).toEqual({ ok: false, fieldErrors: { name: 'Names are at least 2 characters.' } });
+    expect(result).toEqual({ ok: true, values: { nickname: 'ania.k' } });
   });
 
-  it('asks for a name when the box is empty', () => {
-    expect(validate(namingSchema, { name: '', nickname: 'ania_k' })).toEqual({
-      ok: false,
-      fieldErrors: { name: 'Enter your name.' },
-    });
-  });
-
-  it('refuses a name longer than 64 characters', () => {
-    expect(validate(namingSchema, { name: 'a'.repeat(65), nickname: 'ania_k' })).toEqual({
-      ok: false,
-      fieldErrors: { name: 'Names are at most 64 characters.' },
-    });
-  });
-
-  it('never checks a name against anybody, and takes one word alone', () => {
-    expect(validate(namingSchema, { name: 'Dieguito', nickname: 'diego_f' })).toEqual({
+  it('trims the nickname before checking it', () => {
+    expect(validate(namingSchema, { nickname: '  ania.k ' })).toEqual({
       ok: true,
-      values: { name: 'Dieguito', nickname: 'diego_f' },
+      values: { nickname: 'ania.k' },
     });
   });
 
-  /** The handle's rule is the sign-up form's own words, moved here with the field. */
-  it("states the nickname's rule under its field, in the sign-up form's words", () => {
+  /** The handle's rule, in the sign-up form's own words — the one sentence a broken rule shows. */
+  it("refuses a space or a symbol in the rule's own words", () => {
     expect(NICKNAME_RULE).toBe('Use letters, numbers, and . _ - only — no spaces.');
-    expect(validate(namingSchema, { name: 'Ania Kowalska', nickname: 'ania k' })).toEqual({
+    expect(validate(namingSchema, { nickname: 'ania k' })).toEqual({
+      ok: false,
+      fieldErrors: { nickname: NICKNAME_RULE },
+    });
+    expect(validate(namingSchema, { nickname: 'ania@k' })).toEqual({
       ok: false,
       fieldErrors: { nickname: NICKNAME_RULE },
     });
   });
 
   it('keeps the handle between 2 and 64 characters', () => {
-    expect(validate(namingSchema, { name: 'Ania Kowalska', nickname: 'a' })).toEqual({
+    expect(validate(namingSchema, { nickname: 'a' })).toEqual({
       ok: false,
       fieldErrors: { nickname: 'Nicknames are at least 2 characters.' },
     });
-    expect(validate(namingSchema, { name: 'Ania Kowalska', nickname: 'a'.repeat(65) })).toEqual({
+    expect(validate(namingSchema, { nickname: 'a'.repeat(65) })).toEqual({
       ok: false,
       fieldErrors: { nickname: 'Nicknames are at most 64 characters.' },
     });
   });
 
-  it('says what is missing under each box at once', () => {
-    expect(validate(namingSchema, { name: '', nickname: '' })).toEqual({
+  it('asks for a nickname when the box is empty', () => {
+    expect(validate(namingSchema, { nickname: '' })).toEqual({
       ok: false,
-      fieldErrors: { name: 'Enter your name.', nickname: 'Enter a nickname.' },
+      fieldErrors: { nickname: 'Enter a nickname.' },
     });
   });
 });

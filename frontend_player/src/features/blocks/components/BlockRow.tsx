@@ -1,5 +1,5 @@
 /**
- * **The row a record ends with** — *Block Kuba Wiśniewski* behind a confirm sheet, or *Unblock Kuba
+ * **The row a record ends with** — *Block kuba.w* behind a confirm sheet, or *Unblock Kuba
  * Wiśniewski* once the reader has ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571
  * stories 1–5 and 18;
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
@@ -125,7 +125,7 @@ interface BlockSheetProps {
   readonly returnFocusTo: FocusTarget;
 }
 
-/** *Block Kuba Wiśniewski?* — what a block does, then **Block** and **Cancel**. */
+/** *Block kuba.w?* — what a block does, then **Block** and **Cancel**. */
 function BlockSheet({ visible, name, onBlock, onClose, write, returnFocusTo }: BlockSheetProps) {
   return (
     <BottomSheet

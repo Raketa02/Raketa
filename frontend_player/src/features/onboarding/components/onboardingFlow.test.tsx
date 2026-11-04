@@ -124,11 +124,11 @@ describe('where a launch lands', () => {
     expect(screen.getByText("Let's set you up")).toBeTruthy();
   });
 
-  it('sends a player with no name yet to the naming step, before welcome', async () => {
-    // The gate's first destination (ADR-0171 §3): sign-up creates the account unnamed, and
-    // every destination after this one says the player's name. What the step does is its own
+  it('sends a player with no nickname yet to the naming step, before welcome', async () => {
+    // The gate's first destination (ADR-0199 §3): sign-up creates the account with no nickname,
+    // and every destination after this one says the player's nickname. What the step does is its own
     // suite's, `theNaming.test.tsx`; this is the routing.
-    stubGate({ name: null });
+    stubGate({ nickname: null });
 
     await launchSignedIn();
 
@@ -151,7 +151,7 @@ describe('where a launch lands', () => {
     // Which player the gate let through. The landing is the Home tab now that the shell
     // ships, and the account it let through is one tab along.
     fireEvent.press(screen.getByLabelText('You'));
-    expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
+    expect(await screen.findByLabelText(/^ada\./)).toBeTruthy();
     // Not through onboarding, and not through the questionnaire it would have started.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
   });

@@ -35,12 +35,12 @@ function person(name: string, extra: Partial<DeckPerson> = {}): DeckPerson {
   return { playerId: name, isYou: false, name, level: 2.7, isIn: false, ...extra };
 }
 
-const YOU = person('Ada Lovelace', { isYou: true, level: 2.71 });
+const YOU = person('ada', { isYou: true, level: 2.71 });
 
 const SIDES: Pick<DeckCard, 'sides'> = {
   sides: {
-    yours: [YOU, person('Zofia Bielecka', { isIn: true })],
-    theirs: [person('Karol Tomaszewski', { isIn: true }), person('Ania Kowalska', { isIn: true })],
+    yours: [YOU, person('zofia.b', { isIn: true })],
+    theirs: [person('karol.t', { isIn: true }), person('ania.k', { isIn: true })],
   },
 };
 
@@ -65,9 +65,7 @@ describe('the lines above the deck', () => {
 
 describe('the ribbon', () => {
   it('names the challenger whole, and the group when nobody can be named', () => {
-    expect(ribbonWords({ kind: 'challenge', by: 'Kuba Wiśniewski' })).toBe(
-      'Kuba Wiśniewski challenged you',
-    );
+    expect(ribbonWords({ kind: 'challenge', by: 'kuba.w' })).toBe('kuba.w challenged you');
     expect(ribbonWords({ kind: 'challenge' })).toBe('The group challenged you');
   });
 
@@ -82,23 +80,41 @@ describe('the ribbon', () => {
 describe('the sides', () => {
   const { top, bottom } = rowsOf(SIDES, 2);
 
+  // Each nickname cut at its first dot, a box's drawing (ADR-0157), and never written with an @.
   it('draws stems in the vs line, the top row first', () => {
-    expect(vsLine(top, bottom)).toBe('Karol + Ania vs Zofia + You');
+    expect(vsLine(top, bottom)).toBe('karol + ania vs zofia + You');
   });
 
   it('says the sides whole', () => {
-    expect(sidesSpoken(top, bottom)).toBe(
-      'Karol Tomaszewski and Ania Kowalska against Zofia Bielecka and you',
+    expect(sidesSpoken(top, bottom)).toBe('karol.t and ania.k against zofia.b and you');
+  });
+
+  // A sentence opens with a capital on our own words, and a nickname is said as its owner wrote
+  // it, wherever it falls (ADR-0199 §1).
+  it('capitalises the opening word only where it is ours, never a nickname', () => {
+    // Nobody In on either side: yours is the top row, and *You* opens the sentence.
+    const yoursOnTop = rowsOf(
+      { sides: { yours: [YOU, person('zofia.b')], theirs: [person('karol.t')] } },
+      2,
     );
+    expect(sidesSpoken(yoursOnTop.top, yoursOnTop.bottom)).toBe('You and zofia.b against karol.t');
+
+    // Theirs has more In, so it is on top, and a nickname opens the sentence as it was written.
+    expect(sidesSpoken(top, bottom)).toMatch(/^karol\.t /);
+
+    // A seat nobody can name opens it with our own word, capitalised.
+    const nameless: DeckPerson = { playerId: 'gone', isYou: false, level: 2.7, isIn: true };
+    const namelessOnTop = rowsOf({ sides: { yours: [YOU], theirs: [nameless] } }, 2);
+    expect(sidesSpoken(namelessOnTop.top, namelessOnTop.bottom)).toBe('Somebody against you');
   });
 
   it('labels the bar with your side on the left, you first', () => {
-    expect(barLabels([top, bottom])).toEqual(['You + Zofia', 'Karol + Ania']);
+    expect(barLabels([top, bottom])).toEqual(['You + zofia', 'karol + ania']);
   });
 
   it('says a tile’s person, their Level, and In', () => {
-    expect(tileLabel(person('Karol Tomaszewski', { isIn: true, level: 2.75 }), false)).toBe(
-      'Karol Tomaszewski, level 2,75, In',
+    expect(tileLabel(person('karol.t', { isIn: true, level: 2.75 }), false)).toBe(
+      'karol.t, level 2,75, In',
     );
     expect(tileLabel(YOU, false)).toBe('You, level 2,71');
     expect(tileLabel(YOU, true)).toBe('You, you complete it');

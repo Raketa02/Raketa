@@ -69,10 +69,10 @@ const BADMINTON = rating('BADMINTON', 2.05);
 const LINK = 'https://raketa.app/join/K7PQ2MXA';
 
 /** Tomek, as the group serves his face — the reader. */
-const TOMEK: Wire['GroupPersonSchema'] = { player_id: GATE_USER.id, name: 'Tomek Kowal' };
+const TOMEK: Wire['GroupPersonSchema'] = { player_id: GATE_USER.id, nickname: 'Tomek Kowal' };
 
 function member(n: number): Wire['GroupPersonSchema'] {
-  return { player_id: `e0000000-0000-4000-8000-00000000000${n}`, name: `Member ${n}` };
+  return { player_id: `e0000000-0000-4000-8000-00000000000${n}`, nickname: `Member ${n}` };
 }
 
 function roster(
@@ -122,7 +122,7 @@ function pageOf(
     is_owner: true,
     rated_by_sport: JUST_TOMEK,
     member_faces: [],
-    administrator_name: null,
+    administrator_nickname: null,
     is_administrator: false,
     ...overrides,
   };

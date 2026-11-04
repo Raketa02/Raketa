@@ -53,7 +53,7 @@ const BONARKA: Wire['AdministeredClubSchema'] = {
 
 /** Tomek plays padel, is past onboarding, and runs Ogrody 33's padel WhatsApp group. */
 const TOMEK: GateStub = {
-  name: 'Tomek Kowal',
+  nickname: 'tomek.k',
   ratings: [rating('PADEL')],
   hasPlayerProfile: true,
   profiles: { acts_as_player: true, administers: [OGRODY], pending_invitations: [], handovers: [] },
@@ -137,13 +137,13 @@ describe('the chip', () => {
   });
 
   it('is not drawn for an account that runs one club and does not play', async () => {
-    serve({ name: 'Marta Nowak', nickname: null, profiles: ADMINISTRATOR_ONLY });
+    serve({ nickname: null, profiles: ADMINISTRATOR_ONLY });
     await launchSignedIn();
     await expectTheArea();
 
     await openAdministratorYou();
 
-    expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'You' })).toBeTruthy();
     expect(chip()).toBeNull();
   });
 
@@ -154,7 +154,7 @@ describe('the chip', () => {
 
     await openTheSheet();
 
-    expect(await row('Tomek Kowal, Player', true)).toBeTruthy();
+    expect(await row('tomek.k, Player', true)).toBeTruthy();
     expect(await row('Ogrody 33, Administrator', false)).toBeTruthy();
   });
 
@@ -167,7 +167,7 @@ describe('the chip', () => {
     await openTheSheet();
 
     expect(await row('Ogrody 33, Administrator', true)).toBeTruthy();
-    expect(await row('Tomek Kowal, Player', false)).toBeTruthy();
+    expect(await row('tomek.k, Player', false)).toBeTruthy();
   });
 
   /**
@@ -221,7 +221,7 @@ describe('switching', () => {
     await openAdministratorYou();
     await openTheSheet();
 
-    fireEvent.press(await row('Tomek Kowal, Player'));
+    fireEvent.press(await row('tomek.k, Player'));
 
     await expectPlayerApp();
   });
@@ -232,7 +232,7 @@ describe('switching', () => {
     await openPlayerYou();
     await openTheSheet();
 
-    fireEvent.press(await row('Tomek Kowal, Player'));
+    fireEvent.press(await row('tomek.k, Player'));
 
     await waitFor(() => expect(screen.queryByRole('header', { name: COPY.title })).toBeNull());
     expect(screen).toHavePathname('/you');
@@ -240,7 +240,6 @@ describe('switching', () => {
 
   it('moves between two clubs for an account that runs both', async () => {
     serve({
-      name: 'Marta Nowak',
       nickname: null,
       profiles: {
         acts_as_player: false,
@@ -292,7 +291,7 @@ describe('the profile the phone remembers', () => {
     await expectTheArea();
     await openAdministratorYou();
     await openTheSheet();
-    fireEvent.press(await row('Tomek Kowal, Player'));
+    fireEvent.press(await row('tomek.k, Player'));
     await expectPlayerApp();
 
     await relaunch();
@@ -302,7 +301,6 @@ describe('the profile the phone remembers', () => {
 
   it('reopens an account running two clubs in the club it wore last', async () => {
     serve({
-      name: 'Marta Nowak',
       nickname: null,
       profiles: {
         acts_as_player: false,

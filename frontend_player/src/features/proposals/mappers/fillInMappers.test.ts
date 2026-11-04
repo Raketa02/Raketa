@@ -24,9 +24,9 @@ describe('a group’s Fill in', () => {
       fillsByTheCutOff: true,
     });
     expect(read.seatsToFill[0]?.players.map((one) => [one.name, one.paid])).toEqual([
-      ['Karol Tomaszewski', true],
-      ['Ania Kowalska', true],
-      ['Kuba Wiśniewski', true],
+      ['karol.t', true],
+      ['ania.k', true],
+      ['kuba.w', true],
     ]);
   });
 

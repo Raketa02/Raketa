@@ -10,17 +10,17 @@
  *   the club it wore last          -> that administrator area, while the account still holds it
  *   only administrator profiles    -> the administrator area, before anything is asked of a player
  *   no profile at all              -> Start playing's first step, the Adult attestation
- *   not named in full              -> the naming step, before anything else
+ *   no nickname                    -> the naming step, before anything else
  *   run in progress, not set aside -> resume it, at its outstanding question
  *   no ratings at all              -> onboarding, from welcome
  *   no Player profile              -> onboarding's second part, from its first step
  *   otherwise                      -> the app
  *
- * **The name is asked first, because every destination after it says the player's name**
- * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §3). Sign-up creates the account unnamed; the naming step is onboarding's first screen, and
- * the questionnaire and every surface inside the app address the player by what it records.
- * A run half-answered by an account with no name cannot be produced by the flow — the naming
+ * **The nickname is asked first, because every destination after it says the player's nickname**
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). Sign-up
+ * creates the account with none; the naming step is onboarding's first screen, and the
+ * questionnaire and every surface inside the app address the player by what it records.
+ * A run half-answered by an account with no nickname cannot be produced by the flow — the naming
  * precedes welcome — but the gate does not assume it away, which is the lesson the fourth
  * destination wrote about itself below: a shape the flow cannot produce is still a shape the
  * gate must route, or it loops.
@@ -43,10 +43,10 @@
  * An account holds **profiles** — it may act as a player, and as the Administrator of each club
  * that named it ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
  * §1–§3). **An account that only runs a club's groups goes to its administrator area and is never
- * sent into onboarding**: it has not asked to play, and nothing below it — a name, a rating, a run —
- * is a question it owes an answer to. It is read ahead of the naming because an account an
- * Invitation opened carries the club-typed Name and no Nickname, and ADR-0185 §4 makes that *not
- * named in full* for anybody who does play. The area opens on the first club it administers, in the
+ * sent into onboarding**: it has not asked to play, and nothing below it — a nickname, a rating, a
+ * run — is a question it owes an answer to. It is read ahead of the naming because an account an
+ * Invitation opened holds no nickname (ADR-0199 §4), which for anybody who does play is the naming
+ * still owed. The area opens on the first club it administers, in the
  * server's order; which one a person with two clubs opens on is the switcher's
  * ([#518](https://github.com/Raketa02/Raketa/issues/518)), as is the last-used profile of an account
  * that holds both — which opens in Player until then, so it passes straight through to the player's
@@ -59,10 +59,10 @@
  * administrator's You tab — and the first is the **Adult attestation**, which such an account has
  * never given and which comes before anything player-side (ADR-0185 §5), the naming included.
  *
- * **Named in full is a name and a nickname** (ADR-0185 §4). An account an Invitation opened carries
- * the club-typed Name and no Nickname, so once it attests and acts as a player the naming step is
- * still owed — and asks only for the nickname. For every account sign-up creates this is the same
- * destination as before: it has neither until the naming.
+ * **Named is holding a nickname** (ADR-0199 §3, amending ADR-0185 §4). An account an Invitation
+ * opened holds no player name and no nickname — the name its club typed stays the Administrator's
+ * — so once it attests and acts as a player the naming step is owed, as it is for every account
+ * sign-up creates.
  *
  * ## The fourth destination, and why it is not the flag the glossary bans
  *
@@ -103,7 +103,7 @@ export type EntryDestination =
    */
   | { readonly kind: 'start-playing' }
   /**
-   * The naming step — *How should people see you?* — which an account not named in full cannot
+   * The naming step — *How should people see you?* — which an account with no nickname cannot
    * get past: it submits the naming, re-reads the player, and only then moves on.
    */
   | { readonly kind: 'naming' }
@@ -120,14 +120,15 @@ export type EntryDestination =
 
 export interface EntryInput {
   /**
-   * Whether the player is **named in full** — a name *and* a nickname (ADR-0185 §4). Served on the
-   * authenticated player beside `hasPlayerProfile`, and read from the `User`'s own stream for the
-   * same reason: the moment after the naming is exactly when a lagging read model would send a
-   * player back to the step they just finished. A per-player question with a per-player answer — a
-   * name has no sport dimension — so the glossary's ban on a per-player onboarding flag does not
-   * bite.
+   * Whether the player is **named** — holds a nickname
+   * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). Served
+   * on the authenticated player beside `hasPlayerProfile`, and read from the `User`'s own stream
+   * for the same reason: the moment after the naming is exactly when a lagging read model would
+   * send a player back to the step they just finished. A per-player question with a per-player
+   * answer — a nickname has no sport dimension — so the glossary's ban on a per-player onboarding
+   * flag does not bite.
    */
-  readonly namedInFull: boolean;
+  readonly named: boolean;
   readonly ratings: readonly SkillRating[];
   readonly runInProgress: AssessmentRun | undefined;
   /** Runs the player chose to come back to later, since this launch. */
@@ -176,7 +177,7 @@ export function profileDestination(
 }
 
 export function entryDestination({
-  namedInFull,
+  named,
   ratings,
   runInProgress,
   deferredRunIds,
@@ -186,7 +187,7 @@ export function entryDestination({
 }: EntryInput): EntryDestination {
   const byProfile = profileDestination(profiles, lastProfile);
   if (byProfile !== undefined) return byProfile;
-  if (!namedInFull) return { kind: 'naming' };
+  if (!named) return { kind: 'naming' };
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
     return { kind: 'resume', run: runInProgress };
   }

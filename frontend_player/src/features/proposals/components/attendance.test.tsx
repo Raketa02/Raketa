@@ -5,11 +5,11 @@
  * faked.
  *
  * Saturday 3 October, padel 16:00–17:00 at Bonarka Arena. In the first half hour the booked details'
- * door reads *Who's here*; on the result screen a player at the club taps *Bartek Lis isn't here
+ * door reads *Who's here*; on the result screen a player at the club taps *bartek.l isn't here
  * yet* — one press, no sheet — and the phone reads its position at that press and sends it. The
  * fake server judges it as the backend does, by distance from the club: **the fake location port
  * places the phone at the club or away**. Bartek reads that the others are waiting, with *I'm
- * here*; anybody says *Bartek Lis is here* when he walks in. Afterwards he may say *I was there*
+ * here*; anybody says *bartek.l is here* when he walks in. Afterwards he may say *I was there*
  * for a day, and somebody else confirms it.
  *
  * The rules are `games`' `attendance.test.ts` and `resultArgument.test.ts`, and the words
@@ -136,7 +136,7 @@ function row(
 ): Wire['AttendanceSchema'] {
   return {
     player_id: playerId,
-    name,
+    nickname: name,
     state: 'WAITING',
     noted_at: '2026-10-03T14:05:00Z',
     arrive_by: ARRIVE_BY,
@@ -221,7 +221,7 @@ describe('isn’t here yet, from the court', () => {
     stubGames(transport, [theGame()], AT_THE_COURT);
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    for (const name of ['Piotr Sowa', 'Inés Díaz', 'Bartek Lis']) {
+    for (const name of ['piotr.s', 'ines.d', 'bartek.l']) {
       expect(await screen.findByRole('button', { name: `${name} isn’t here yet` })).toBeTruthy();
     }
     expect(screen.queryByRole('button', { name: /^You isn’t/ })).toBeNull();
@@ -235,7 +235,7 @@ describe('isn’t here yet, from the court', () => {
       if (!atTheClub(request)) return errorResponse(409, 'not_at_the_club');
       const awaited = theGame({
         standing: 'NOT_HERE_YET',
-        attendance: [row(BARTEK, 'Bartek Lis')],
+        attendance: [row(BARTEK, 'bartek.l')],
       });
       stubGames(transport, [awaited], AT_THE_COURT);
       return json(awaited);
@@ -246,7 +246,7 @@ describe('isn’t here yet, from the court', () => {
     const homeReads = transport.requestsTo('GET', HOME_PATH).length;
     const bookingReads = transport.requestsTo('GET', bookingPath(BOOKING)).length;
     expect(phone.preciseReads).toBe(0);
-    fireEvent.press(await screen.findByRole('button', { name: 'Bartek Lis isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'bartek.l isn’t here yet' }));
 
     // One press, and it is sent: no sheet stands in front of it.
     await waitFor(() => expect(transport.requestsTo('POST', NOT_HERE_YET_PATH)).toHaveLength(1));
@@ -260,11 +260,11 @@ describe('isn’t here yet, from the court', () => {
     expect(phone.reads).toBe(areaReads);
 
     expect(await screen.findByRole('header', { name: 'Not here yet' })).toBeTruthy();
-    expect(screen.getByText('Waiting for Bartek Lis.')).toBeTruthy();
+    expect(screen.getByText('Waiting for bartek.l.')).toBeTruthy();
     expect(screen.getByLabelText(/^20 minutes left for them to arrive/)).toBeTruthy();
     // They can be said to be here now; the others can still be tapped; no score goes in meanwhile.
-    expect(screen.getByRole('button', { name: 'Bartek Lis is here' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Piotr Sowa isn’t here yet' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'bartek.l is here' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'piotr.s isn’t here yet' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Send this score/ })).toBeNull();
     // Home's badge and the details under this screen are read again.
     await waitFor(() =>
@@ -281,7 +281,7 @@ describe('isn’t here yet, from the court', () => {
     );
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Bartek Lis isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'bartek.l isn’t here yet' }));
 
     expect(await screen.findByText('You can say so only from Bonarka Arena.')).toBeTruthy();
     expect(transport.requestsTo('POST', NOT_HERE_YET_PATH)[0]?.body).toMatchObject({
@@ -302,7 +302,7 @@ describe('isn’t here yet, from the court', () => {
     );
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Bartek Lis isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'bartek.l isn’t here yet' }));
 
     expect(
       await screen.findByText(/Your phone could only tell roughly where you are/),
@@ -317,7 +317,7 @@ describe('isn’t here yet, from the court', () => {
     stubGames(transport, [theGame()], AT_THE_COURT);
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Bartek Lis isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'bartek.l isn’t here yet' }));
 
     expect(
       await screen.findByText(
@@ -334,7 +334,7 @@ describe('isn’t here yet, from the court', () => {
     stubGames(transport, [theGame()], AT_THE_COURT);
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'piotr.s isn’t here yet' }));
 
     expect(await screen.findByText(/Location is off for Raketa/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Settings' })).toBeTruthy();
@@ -347,7 +347,7 @@ describe('isn’t here yet, from the court', () => {
     stubGames(transport, [theGame()], AT_THE_COURT);
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'piotr.s isn’t here yet' }));
 
     expect(
       await screen.findByText('Your phone couldn’t tell where you are. Try again in a moment.'),
@@ -360,7 +360,7 @@ describe('isn’t here yet, from the court', () => {
     transport.on('POST', NOT_HERE_YET_PATH, () => errorResponse(409, 'the_tap_window_has_closed'));
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'piotr.s isn’t here yet' }));
 
     expect(
       await screen.findByText(
@@ -377,7 +377,7 @@ describe('isn’t here yet, from the court', () => {
     });
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'piotr.s isn’t here yet' }));
 
     expect(await screen.findByText(offlineMessage('does-not-resume'))).toBeTruthy();
   });
@@ -390,12 +390,12 @@ describe('isn’t here yet, from the court', () => {
     );
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa isn’t here yet' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'piotr.s isn’t here yet' }));
     expect(await screen.findByText('You can say so only from Bonarka Arena.')).toBeTruthy();
 
     // Into the club, and again.
     phone.fix = AT_THE_CLUB;
-    fireEvent.press(screen.getByRole('button', { name: 'Piotr Sowa isn’t here yet' }));
+    fireEvent.press(screen.getByRole('button', { name: 'piotr.s isn’t here yet' }));
 
     await waitFor(() => expect(transport.requestsTo('POST', NOT_HERE_YET_PATH)).toHaveLength(2));
     await waitFor(() =>
@@ -412,7 +412,7 @@ describe('the arrival', () => {
   const meAwaited = () =>
     theGame({
       standing: 'NOT_HERE_YET',
-      attendance: [row(GATE_USER.id, GATE_USER.name ?? 'Ada')],
+      attendance: [row(GATE_USER.id, GATE_USER.nickname ?? 'Ada')],
     });
 
   it('tells the player awaited who is waiting, with I’m here pinned', async () => {
@@ -420,9 +420,7 @@ describe('the arrival', () => {
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
     expect(await screen.findByRole('header', { name: 'Are you here?' })).toBeTruthy();
-    expect(
-      screen.getByText('Piotr Sowa, Inés Díaz and Bartek Lis are waiting for you.'),
-    ).toBeTruthy();
+    expect(screen.getByText('piotr.s, ines.d and bartek.l are waiting for you.')).toBeTruthy();
     expect(screen.getByLabelText(/^20 minutes left to arrive/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'I’m here' })).toBeTruthy();
     // Awaited themselves, they say nothing about anybody else.
@@ -435,7 +433,7 @@ describe('the arrival', () => {
       if (!atTheClub(request)) return errorResponse(409, 'not_at_the_club');
       const late = theGame({
         attendance: [
-          row(GATE_USER.id, GATE_USER.name ?? 'Ada', {
+          row(GATE_USER.id, GATE_USER.nickname ?? 'Ada', {
             state: 'CAME_LATE',
             arrived_at: '2026-10-03T14:22:00Z',
           }),
@@ -475,12 +473,12 @@ describe('the arrival', () => {
   it('lets a courtmate say they’re here, and the tap vanishes when they were on time', async () => {
     const bartekAwaited = theGame({
       standing: 'NOT_HERE_YET',
-      attendance: [row(BARTEK, 'Bartek Lis')],
+      attendance: [row(BARTEK, 'bartek.l')],
     });
     stubGames(transport, [bartekAwaited], AT_THE_COURT);
     transport.on('POST', ARRIVAL_PATH, () => {
       const onTime = theGame({
-        attendance: [row(BARTEK, 'Bartek Lis', { state: 'ON_TIME', arrived_at: AT_THE_COURT })],
+        attendance: [row(BARTEK, 'bartek.l', { state: 'ON_TIME', arrived_at: AT_THE_COURT })],
       });
       stubGames(transport, [onTime], AT_THE_COURT);
       return json(onTime);
@@ -490,31 +488,31 @@ describe('the arrival', () => {
       HOME.details.resultAct['whos-here'],
     );
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Bartek Lis is here' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'bartek.l is here' }));
 
     await waitFor(() => expect(transport.requestsTo('POST', ARRIVAL_PATH)).toHaveLength(1));
     expect(transport.requestsTo('POST', ARRIVAL_PATH)[0]?.body).toMatchObject({
       player_id: BARTEK,
     });
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Bartek Lis is here' })).toBeNull(),
+      expect(screen.queryByRole('button', { name: 'bartek.l is here' })).toBeNull(),
     );
     // On time vanishes: nothing is said of him, and he cannot be tapped again.
-    expect(screen.queryByText(/Bartek Lis came late/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Bartek Lis isn’t here yet' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Piotr Sowa isn’t here yet' })).toBeTruthy();
+    expect(screen.queryByText(/bartek.l came late/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'bartek.l isn’t here yet' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'piotr.s isn’t here yet' })).toBeTruthy();
   });
 
   it('says a second arrival was already noted', async () => {
     stubGames(
       transport,
-      [theGame({ standing: 'NOT_HERE_YET', attendance: [row(BARTEK, 'Bartek Lis')] })],
+      [theGame({ standing: 'NOT_HERE_YET', attendance: [row(BARTEK, 'bartek.l')] })],
       AT_THE_COURT,
     );
     transport.on('POST', ARRIVAL_PATH, () => errorResponse(409, 'already_arrived'));
     await openResult(details(AT_THE_COURT), HOME.details.resultAct['whos-here']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Bartek Lis is here' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'bartek.l is here' }));
 
     expect(
       await screen.findByText('That arrival is already noted — the first one counts.'),
@@ -537,7 +535,9 @@ describe('after the half hour', () => {
     theGame({
       standing: 'DIDNT_COME',
       entry_closes_at: null,
-      attendance: [row(GATE_USER.id, GATE_USER.name ?? 'Ada', { state: 'DIDNT_COME', ...extra })],
+      attendance: [
+        row(GATE_USER.id, GATE_USER.nickname ?? 'Ada', { state: 'DIDNT_COME', ...extra }),
+      ],
     });
 
   it('says on Home’s card that somebody didn’t come, and to say who was there', async () => {
@@ -590,14 +590,14 @@ describe('after the half hour', () => {
       theGame({
         standing: 'DIDNT_COME',
         entry_closes_at: null,
-        attendance: [row(BARTEK, 'Bartek Lis', { state: 'CLAIMED', claimed_at: NEXT_MORNING })],
+        attendance: [row(BARTEK, 'bartek.l', { state: 'CLAIMED', claimed_at: NEXT_MORNING })],
       });
     stubGames(transport, [bartekClaimed()], NEXT_MORNING);
     transport.on('POST', CONFIRMATION_PATH, () => {
       const confirmed = theGame({
         entry_closes_at: '2026-10-04T15:00:00Z',
         attendance: [
-          row(BARTEK, 'Bartek Lis', {
+          row(BARTEK, 'bartek.l', {
             state: 'CONFIRMED',
             claimed_at: NEXT_MORNING,
             confirmed_at: '2026-10-04T07:05:00Z',
@@ -609,14 +609,14 @@ describe('after the half hour', () => {
     });
     await openResult(uncounted(true), HOME.details.resultAct['who-was-there']);
 
-    expect(await screen.findByText('Bartek Lis didn’t come.')).toBeTruthy();
-    expect(screen.getByText('Bartek Lis says they were there')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Yes, Bartek Lis was here' }));
+    expect(await screen.findByText('bartek.l didn’t come.')).toBeTruthy();
+    expect(screen.getByText('bartek.l says they were there')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Yes, bartek.l was here' }));
 
     await waitFor(() => expect(transport.requestsTo('POST', CONFIRMATION_PATH)).toHaveLength(1));
     expect(transport.requestsTo('POST', CONFIRMATION_PATH)[0]?.body).toEqual({ player_id: BARTEK });
     expect(phone.preciseReads).toBe(0);
-    expect(await screen.findByText('Bartek Lis came late')).toBeTruthy();
+    expect(await screen.findByText('bartek.l came late')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Who was there' })).toBeTruthy();
   });
 
@@ -627,7 +627,7 @@ describe('after the half hour', () => {
         theGame({
           standing: 'DIDNT_COME',
           entry_closes_at: null,
-          attendance: [row(BARTEK, 'Bartek Lis', { state: 'CLAIMED', claimed_at: NEXT_MORNING })],
+          attendance: [row(BARTEK, 'bartek.l', { state: 'CLAIMED', claimed_at: NEXT_MORNING })],
         }),
       ],
       NEXT_MORNING,
@@ -635,7 +635,7 @@ describe('after the half hour', () => {
     transport.on('POST', CONFIRMATION_PATH, () => errorResponse(409, 'the_late_claim_has_closed'));
     await openResult(uncounted(true), HOME.details.resultAct['who-was-there']);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Yes, Bartek Lis was here' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Yes, bartek.l was here' }));
 
     expect(
       await screen.findByText(
@@ -651,7 +651,7 @@ describe('after the half hour', () => {
         theGame({
           standing: 'DIDNT_COME',
           entry_closes_at: null,
-          attendance: [row(INES, 'Inés Díaz', { state: 'DIDNT_COME' })],
+          attendance: [row(INES, 'ines.d', { state: 'DIDNT_COME' })],
         }),
       ],
       NEXT_MORNING,

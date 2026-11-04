@@ -22,8 +22,8 @@
  *
  * **On success it hands the next step to the gate**, as the naming does: the act writes *acts as a
  * player* into the cached player and awaits a fresh read of it, then the screen replaces itself
- * with `/`. The gate then reads an account that plays and is not named in full, and sends it to the
- * naming — which asks only for the nickname, because the club gave the name.
+ * with `/`. The gate then reads an account that plays and holds no nickname, and sends it to the
+ * naming — which tells it what the nickname is for (ADR-0199 §3–§4).
  */
 
 import { useRouter } from 'expo-router';

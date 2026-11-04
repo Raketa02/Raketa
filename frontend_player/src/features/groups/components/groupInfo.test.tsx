@@ -97,7 +97,7 @@ const ME: Person = {
 const KAROL = person(1, 'Karol Tomczak', { PADEL: 2.75, TENNIS: 3.0 }, 75, 'HIGH');
 const EWA = person(2, 'Ewa Mazur', { PADEL: 2.6 }, 91);
 const ZOFIA = person(3, 'Zofia Bąk', { PADEL: 2.69 }, 95);
-const ANIA = person(4, 'Ania Kowalczyk', { PADEL: 2.68 }, 99);
+const ANIA = person(4, 'ania.k', { PADEL: 2.68 }, 99);
 const KUBA = person(5, 'Kuba Wróbel', { PADEL: 2.8 }, 96);
 /** Rated in padel and nothing has happened to her yet: 100, like everybody at the start. */
 const OLA = person(6, 'Ola Nowak', { PADEL: 2.64 });
@@ -122,7 +122,7 @@ const SEATS: Readonly<Record<Wire['Sport'], number>> = {
 };
 
 function face(who: Person): Wire['GroupPersonSchema'] {
-  return { player_id: who.id, name: who.name };
+  return { player_id: who.id, nickname: who.name };
 }
 
 interface CrewSetup {
@@ -183,7 +183,7 @@ function crew({
     link: LINK,
     join_policy: state.policy,
     is_owner: state.ownerId === ME.id,
-    administrator_name: null,
+    administrator_nickname: null,
     is_administrator: false,
     rated_by_sport: WIRE_SPORTS.map((sport) => ({
       sport,
@@ -198,7 +198,7 @@ function crew({
       .filter((who) => has(who) && who.levels[sport] !== undefined)
       .map((who) => ({
         player_id: who.id,
-        name: who.name,
+        nickname: who.name,
         level: who.levels[sport] ?? 0,
         player_score: who.score,
         reliability_band: who.band,
@@ -209,7 +209,7 @@ function crew({
 
   const requestOf = (who: Person): Wire['JoinRequestSchema'] => ({
     player_id: who.id,
-    name: who.name,
+    nickname: who.name,
     levels: WIRE_SPORTS.flatMap((sport) => {
       const level = who.levels[sport];
       return level === undefined ? [] : [{ sport, level }];
@@ -1096,6 +1096,10 @@ describe('Members', () => {
     ).toBeTruthy();
     // Nothing has happened to Ola yet: 100, like everybody at the start, never a missing tag.
     expect(screen.getByLabelText('Ola Nowak, reliability 100, Very high, Padel 2,64')).toBeTruthy();
+    // A member by her nickname, whole and never with an @ (ADR-0199 §1).
+    expect(screen.getByLabelText('ania.k, reliability 99, Very high, Padel 2,68')).toBeTruthy();
+    expect(within(screen.getByTestId(`member-${ANIA.id}`)).getByText('ania.k')).toBeTruthy();
+    expect(screen.queryByText(/@/)).toBeNull();
     // The tag beside the name, on the tint of the band the server served.
     const row = (id: string) => within(screen.getByTestId(`member-${id}`));
     expect(row(ME.id).getByTestId('score-tag-VERY_HIGH')).toBeTruthy();
@@ -1149,8 +1153,7 @@ describe('Members', () => {
     transport.on('GET', `/api/v1/players/${ZOFIA.id}/record`, () =>
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
-        name: ZOFIA.name,
-        nickname: 'zofia',
+        nickname: ZOFIA.name,
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: 2.69, band: 'Established' }],

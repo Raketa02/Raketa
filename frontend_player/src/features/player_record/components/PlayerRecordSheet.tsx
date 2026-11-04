@@ -68,7 +68,7 @@
  *
  * The last row is **`blocks`' `BlockRow`** ([#587](https://github.com/Raketa02/Raketa/issues/587),
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)):
- * *Block Kuba Wiśniewski* behind a confirm sheet, or *Unblock Kuba Wiśniewski* once the reader
+ * *Block kuba.w* behind a confirm sheet, or *Unblock kuba.w* once the reader
  * has. It is not the foot — no caller fills it, and every surface that opens a record gets it —
  * and it reads no global state either: whether the reader blocked the subject is **this read's
  * own answer**, `blocked_by_you`, folded to `blockedByYou` at the wire boundary and absent on your
@@ -349,7 +349,7 @@ function Filled({
       {record.blockedByYou === undefined ? null : (
         <BlockRow
           playerId={playerId}
-          name={record.name}
+          name={record.nickname}
           blocked={record.blockedByYou}
           rereadRecord={rereadRecord}
         />

@@ -118,7 +118,7 @@ const PAGE: Wire['GroupResponse'] = {
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -346,7 +346,7 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
 // ---------------------------------------------------------------------------
 
 describe('It’s a game! — for the player whose yes filled the game (§11.3)', () => {
-  const sentence = 'It’s a game! You and Zofia Bielecka against Ania Kowalska and Ewa Majewska';
+  const sentence = 'It’s a game! You and zofia.b against ania.k and ewa.m';
 
   it('covers the phone with the faces, the word, Open game and Later', async () => {
     const card = bookItNow();
@@ -809,7 +809,7 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
 
     expect(
       await screen.findByRole('header', {
-        name: 'It’s a game! You and Piotr Sowa against Inés Díaz and Bartek Lis',
+        name: 'It’s a game! You and piotr.s against ines.d and bartek.l',
       }),
     ).toBeTruthy();
     expect(toasts()).toEqual([]);

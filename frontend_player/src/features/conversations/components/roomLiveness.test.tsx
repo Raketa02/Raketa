@@ -81,8 +81,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const MEMBERS: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, name: 'me_' },
-  { player_id: TOMEK, name: 'tomek.p' },
+  { player_id: ME, nickname: 'me_' },
+  { player_id: TOMEK, nickname: 'tomek.p' },
 ];
 
 function message(seq: number, authorId: string, text: string): Wire['MessageSchema'] {
@@ -123,8 +123,8 @@ function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire
     planned_at: '2026-09-08T09:00:00Z',
     entry_closes_at: '2026-09-20T07:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, name: 'me_' },
-      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+      { side: 'A', player_id: ME, nickname: 'me_' },
+      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
     ],
     proposals: [],
     attendance: [],
@@ -514,13 +514,16 @@ describe('held', () => {
 
 describe('somebody is typing', () => {
   const OLA = 'cccccccc-0000-4000-8000-000000000003';
-  const THREE: Wire['ConversationMemberSchema'][] = [...MEMBERS, { player_id: OLA, name: 'ola.k' }];
+  const THREE: Wire['ConversationMemberSchema'][] = [
+    ...MEMBERS,
+    { player_id: OLA, nickname: 'ola.k' },
+  ];
   const named = (ids: readonly string[], members = MEMBERS) =>
     typingLine(
       ids,
       members.map((one) => ({
         playerId: one.player_id,
-        ...(one.name === null ? {} : { name: one.name }),
+        ...(one.nickname === null ? {} : { name: one.nickname }),
       })),
     ) ?? '';
   const typingPath = `${conversationPath(ROOM)}/typing`;
@@ -646,7 +649,7 @@ describe('somebody is typing', () => {
     const ZOFIA = 'dddddddd-0000-4000-8000-000000000004';
     const FOUR: Wire['ConversationMemberSchema'][] = [
       ...THREE,
-      { player_id: ZOFIA, name: 'zofia.b' },
+      { player_id: ZOFIA, nickname: 'zofia.b' },
     ];
     await openLive(room([], FOUR));
 

@@ -12,7 +12,7 @@ import { daysBetween, platformClock, platformDay, weekdayOf } from '@/shared/dat
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { Weekday } from '@/shared/vocabulary/week';
 
-import type { NoticeKind, Opens } from './vocabulary';
+import type { GameOpens, NoticeKind } from './vocabulary';
 
 /**
  * Where a tap goes. A booked game is read by its booking, whose id is the game's own (#541) — its
@@ -56,7 +56,7 @@ export interface NoticeFacts {
  * opens, the open seat seen from outside, in its group (A4.3). The booked game's own details would
  * tell a reader who was never in it that the game is not theirs any more.
  */
-export function targetOf(kind: NoticeKind, opens: Opens, facts: NoticeFacts): NoticeTarget {
+export function targetOf(kind: NoticeKind, opens: GameOpens, facts: NoticeFacts): NoticeTarget {
   switch (opens) {
     case 'BOOKING':
       return kind === 'FILL_IN_ALERT'
@@ -93,7 +93,10 @@ export interface Notice {
    * took. Born seen: listed, never counted, never the banner (Q102).
    */
   readonly yourOwn: boolean;
-  /** Where a tap goes — absent for a game in a sport this build cannot name. */
+  /**
+   * Where a tap goes — absent for a game in a sport this build cannot name, and for a notice about
+   * no game, which opens Home from #731.
+   */
   readonly target?: NoticeTarget;
 }
 

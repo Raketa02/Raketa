@@ -1,35 +1,34 @@
 /**
- * **Named in full**, and the name an account holds without its nickname — ADR-0185 §4, with no
- * renderer and no network.
+ * **Named** — holding a nickname — and the account an Invitation opened, which the step asks in
+ * words of its own (ADR-0199 §3), with no renderer and no network.
  */
 
-import { heldNameWithoutNickname, namedInFull } from './naming';
+import { named, openedByInvitation } from './naming';
 
-describe('named in full', () => {
-  it('is a name and a nickname', () => {
-    expect(namedInFull({ name: 'Ania Kowalska', nickname: 'ania_k' })).toBe(true);
+const ADMINISTERS_OGRODY = {
+  actsAsPlayer: true,
+  administers: [{ clubId: 'club-ogrody', clubName: 'Ogrody 33' }],
+};
+const PLAYS_ONLY = { actsAsPlayer: true, administers: [] };
+
+describe('named', () => {
+  it('is holding a nickname', () => {
+    expect(named({ nickname: 'ania.k' })).toBe(true);
   });
 
-  it('is not an account sign-up created, which holds neither until the naming', () => {
-    expect(namedInFull({})).toBe(false);
-  });
-
-  // An account an Invitation opened: the club typed the name, and nobody chose a handle.
-  it('is not a name the club gave, with no nickname', () => {
-    expect(namedInFull({ name: 'Marta Nowak' })).toBe(false);
+  it('is not an account sign-up created, which holds none until the naming', () => {
+    expect(named({})).toBe(false);
   });
 });
 
-describe('the name held without a nickname', () => {
-  it('is the club’s name, which the naming keeps and asks only the nickname beside', () => {
-    expect(heldNameWithoutNickname({ name: 'Marta Nowak' })).toBe('Marta Nowak');
+describe('an account an Invitation opened', () => {
+  // The club typed a name for its Administrator, and it stays the Administrator's: the account
+  // holds no player name, so what tells the step who this is is the club whose groups it runs.
+  it('is one that runs a club’s groups', () => {
+    expect(openedByInvitation({ profiles: ADMINISTERS_OGRODY })).toBe(true);
   });
 
-  it('is nothing for an account holding neither, which is asked both', () => {
-    expect(heldNameWithoutNickname({})).toBeUndefined();
-  });
-
-  it('is nothing for an account named in full', () => {
-    expect(heldNameWithoutNickname({ name: 'Ania Kowalska', nickname: 'ania_k' })).toBeUndefined();
+  it('is not an account that only plays', () => {
+    expect(openedByInvitation({ profiles: PLAYS_ONLY })).toBe(false);
   });
 });

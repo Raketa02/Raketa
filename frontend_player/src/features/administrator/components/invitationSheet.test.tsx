@@ -51,7 +51,7 @@ const INVITATION: Wire['PendingInvitationSchema'] = {
 /** Tomek plays padel and is past onboarding; Ogrody 33 has invited him. */
 function tomek(pending: readonly Wire['PendingInvitationSchema'][] = [INVITATION]): GateStub {
   return {
-    name: 'Tomek Kowal',
+    nickname: 'tomek.k',
     ratings: [rating('PADEL')],
     hasPlayerProfile: true,
     profiles: {
@@ -155,9 +155,7 @@ describe('the invitation sheet', () => {
       await screen.findByRole('header', { name: ADMINISTRATOR_COPY.switcher.title }),
     ).toBeTruthy();
     expect(transport.requestsTo('POST', ACCEPT_PATH)).toHaveLength(1);
-    expect(
-      screen.getByRole('button', { name: 'Tomek Kowal, Player', selected: true }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'tomek.k, Player', selected: true })).toBeTruthy();
     expect(
       screen.getByRole('button', { name: 'Ogrody 33, Administrator', selected: false }),
     ).toBeTruthy();
@@ -280,7 +278,6 @@ describe('an administrator another club invites', () => {
   it('offers it over the administrator area, next to the profile she has', async () => {
     const BONARKA_ID = 'c0000000-0000-4000-8000-000000000044';
     serve({
-      name: 'Marta Nowak',
       nickname: null,
       profiles: {
         acts_as_player: false,

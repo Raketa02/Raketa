@@ -99,15 +99,14 @@ export function me({ signal }: AuthApiOptions = {}): Promise<MeResponse> {
 }
 
 /**
- * Name yourself — *How should people see you?* — the one act that names a player, and it is
- * repeatable ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §2).
+ * Name yourself — *How should people see you?* — the one act that names a player: a nickname,
+ * and nothing else, repeatable at any time
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). The path
+ * keeps the word *name*: what a player is called, which is the nickname.
  *
- * Both fields, always: the server records one event carrying both, and there is none for one
- * without the other. It answers with the name **as recorded** — trimmed, runs of whitespace
- * collapsed — rather than with a `UserResponse`, and the refusal it carries is the users
- * context's own `nickname_already_taken`, on `details.field`, for the screen to put under the
- * box.
+ * It answers with the nickname **as recorded** rather than with a `UserResponse`, and the refusal
+ * it carries is the users context's own `nickname_already_taken`, on `details.field`, for the
+ * screen to put under the box.
  */
 export function nameMe(
   body: NameRequest,
@@ -251,7 +250,8 @@ export function claimInvitationCode(
 
 /**
  * ***Set your password*** with **exactly one** of the link's `token` or a claimed code's `ticket`.
- * A new person's account is created — the name the club typed, no nickname, no Adult attestation —
+ * A new person's account is created — no player name (the one the club typed is the
+ * Administrator's), no nickname, no Adult attestation —
  * or an account the club reset gets its password back; either way it answers a signed-in session.
  */
 export function setInvitationPassword(

@@ -35,8 +35,8 @@
  * booked game lives (A2.4); **Later** and Android's back take it away and leave the player where
  * they were. It is one-shot: nothing re-shows it.
  *
- * A listener hears the picture once, as the header's sentence — *It's a game! You and Zofia
- * Bielecka against Ania Kowalska and Ewa Majewska* — built from whole Names (ADR-0167 §3).
+ * A listener hears the picture once, as the header's sentence — *It's a game! You and zofia.b
+ * against ania.k and ewa.m* — built from whole nicknames (ADR-0167 §3, ADR-0199 §1).
  */
 
 import { StatusBar } from 'expo-status-bar';

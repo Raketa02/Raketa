@@ -60,7 +60,6 @@ const TOKENS: Wire['TokenResponse'] = {
 const USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
-  name: 'Ada Lovelace',
   nickname: 'ada',
   authority: 'player',
   is_admin: false,
@@ -213,7 +212,7 @@ describe('signing up', () => {
 
   /** The account is created **unnamed** — registration answers with no name and no handle. */
   const { adult_attested: _attested, profiles: _profiles, ...REGISTERED } = USER;
-  const UNNAMED: Wire['UserResponse'] = { ...REGISTERED, name: null, nickname: null };
+  const UNNAMED: Wire['UserResponse'] = { ...REGISTERED, nickname: null };
 
   it('creates the account, signs in, and lands in a live session', async () => {
     setSessionStatus('unauthenticated');
@@ -235,8 +234,8 @@ describe('signing up', () => {
   /**
    * **Credentials only, and no nickname box** — sign-up is choosing credentials, and saying
    * who you are is onboarding's first screen
-   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
-   * §2). The server refuses a payload that still carries one as malformed, so what leaves the
+   * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). The
+   * server refuses a payload that still carries one as malformed, so what leaves the
    * form is pinned field by field.
    */
   it('shows no nickname field, and sends the password twice with nothing about who you are', async () => {
@@ -430,7 +429,6 @@ describe('signing out', () => {
     queryClient.setQueryData(authKeys.currentUser(), {
       id: USER.id,
       email: USER.email,
-      name: USER.name,
       nickname: USER.nickname,
     });
 
@@ -564,13 +562,13 @@ describe('signing out', () => {
 function WhoAmI() {
   const user = useCurrentUser();
   if (user.error !== null) return <Text>{authErrorMessage(user.error)}</Text>;
-  return <Text>{user.data?.name ?? ''}</Text>;
+  return <Text>{user.data?.nickname ?? ''}</Text>;
 }
 
 describe('the account panel', () => {
   /**
-   * **The panel is the button now** (ADR-0179 §1). The identity it drew — the name, the handle,
-   * the email — is the You tab's header card's and its *Name* row's, asserted where they are
+   * **The panel is the button now** (ADR-0179 §1). The identity it drew — the nickname and the
+   * email — is the You tab's header card's and its *Nickname* row's, asserted where they are
    * drawn (`theShell.test.tsx`); what the panel keeps is the one act that is the account's.
    */
   it('draws the way out, and no identity of its own', async () => {
@@ -580,7 +578,7 @@ describe('the account panel', () => {
     renderScreen(<AccountPanel />);
 
     expect(screen.getByLabelText('Sign out')).toBeTruthy();
-    expect(screen.queryByText('Ada Lovelace')).toBeNull();
+    expect(screen.queryByText('ada')).toBeNull();
     expect(screen.queryByText('ada@example.com')).toBeNull();
     // Nothing read: the panel has no fact of its own to fetch.
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(0);

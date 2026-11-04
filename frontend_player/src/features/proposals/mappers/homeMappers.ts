@@ -27,7 +27,7 @@ export function toSeat(wire: Schemas['BookedTileSchema']): DeckPerson {
     // Nobody on a booked court is *In* — that word is a game still filling's.
     isIn: false,
     paid: wire.paid,
-    ...(wire.name === null ? {} : { name: wire.name }),
+    ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
   };

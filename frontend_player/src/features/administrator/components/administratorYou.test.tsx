@@ -51,7 +51,7 @@ let transport: Transport;
 
 beforeEach(() => {
   transport = installTransport();
-  stubGate(transport, { name: 'Marta Nowak', nickname: null, profiles: ADMINISTRATOR_ONLY });
+  stubGate(transport, { nickname: null, profiles: ADMINISTRATOR_ONLY });
   useToastQueue.setState({ queue: [] });
 });
 
@@ -74,18 +74,20 @@ async function openYou(setups: readonly GroupSetup[] = [O3_CLUB_GROUP, OPEN_PLAY
 
   fireEvent.press(await screen.findByRole('tab', { name: 'You' }));
   await waitFor(() => expect(screen).toHavePathname(YOU));
-  expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+  expect(await screen.findByRole('header', { name: 'You' })).toBeTruthy();
   return server;
 }
 
 // ---------------------------------------------------------------------------
 
 describe('the You tab', () => {
-  // #529: the switcher chip and the area's bar already say whose profile it is.
-  it('says her name, with nothing over it', async () => {
+  // #529: the switcher chip and the area's bar already say whose profile it is. Marta has not
+  // started playing, so she holds no nickname, and the name her club typed is the Administrator's
+  // (ADR-0199 §4): the header says *You*.
+  it('says You for an account with no nickname yet, with nothing over it', async () => {
     await openYou();
 
-    expect(screen.getByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'You' })).toBeTruthy();
     expect(screen.queryByText('Ogrody 33 · Administrator')).toBeNull();
     expect(screen.getByRole('tab', { name: 'You', selected: true })).toBeTruthy();
   });
@@ -130,7 +132,7 @@ describe('the You tab', () => {
   // Both profiles already: the player side exists, and the switcher is how to reach it (#518).
   it('offers no Start playing to an account that already plays', async () => {
     stubGate(transport, {
-      name: 'Tomek Kowal',
+      nickname: 'tomek.k',
       ratings: [rating('PADEL')],
       hasPlayerProfile: true,
       profiles: { ...ADMINISTRATOR_ONLY, acts_as_player: true },
@@ -138,7 +140,8 @@ describe('the You tab', () => {
     club([O3_CLUB_GROUP]).install(transport);
     await launchSignedIn(YOU);
 
-    expect(await screen.findByRole('header', { name: 'Tomek Kowal' })).toBeTruthy();
+    // The header is the account's nickname, once it plays (ADR-0199 §1).
+    expect(await screen.findByRole('header', { name: 'tomek.k' })).toBeTruthy();
     expect(await screen.findByRole('button', { name: /^Ogrody 33 Club,/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Start playing/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();

@@ -87,8 +87,8 @@ const O3_CLUB: Wire['GroupAtClubSchema'] = {
   sports: ['PADEL'],
   member_count: 11,
   join_policy: 'PEOPLE_I_APPROVE',
-  owner_name: null,
-  administrator_name: 'Marta Wójcik',
+  owner_nickname: null,
+  administrator_nickname: 'Marta Wójcik',
   is_administrator: false,
   relation: 'NONE',
 };
@@ -102,8 +102,8 @@ const OPEN_PLAY: Wire['GroupAtClubSchema'] = {
   sports: ['PADEL', 'TENNIS'],
   member_count: 8,
   join_policy: 'PEOPLE_I_APPROVE',
-  owner_name: null,
-  administrator_name: null,
+  owner_nickname: null,
+  administrator_nickname: null,
   is_administrator: false,
   relation: 'NONE',
 };
@@ -117,8 +117,8 @@ const WIECZOREM: Wire['GroupAtClubSchema'] = {
   sports: ['TENNIS'],
   member_count: 5,
   join_policy: 'PEOPLE_I_APPROVE',
-  owner_name: 'Karol Nowak',
-  administrator_name: null,
+  owner_nickname: 'Karol Nowak',
+  administrator_nickname: null,
   is_administrator: false,
   relation: 'NONE',
 };
@@ -126,7 +126,7 @@ const WIECZOREM: Wire['GroupAtClubSchema'] = {
 /** Tomek's group: he runs it, and it asks for approval — of everybody but him. */
 const TOMEK_RUNS: Wire['GroupAtClubSchema'] = {
   ...OPEN_PLAY,
-  administrator_name: 'Tomek Kowal',
+  administrator_nickname: 'Tomek Kowal',
   is_administrator: true,
 };
 
@@ -381,9 +381,9 @@ describe('an official group on the Groups list', () => {
 
 const MARTA: Wire['GroupPersonSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000000041',
-  name: 'Marta Wójcik',
+  nickname: 'Marta Wójcik',
 };
-const KASIA: Wire['GroupPersonSchema'] = { player_id: GATE_USER.id, name: 'Kasia Lis' };
+const KASIA: Wire['GroupPersonSchema'] = { player_id: GATE_USER.id, nickname: 'Kasia Lis' };
 
 function pageOf(
   group: Wire['MyGroupSchema'],
@@ -402,7 +402,7 @@ function pageOf(
       { sport: 'BADMINTON', rated_count: 0, first_rated: [] },
     ],
     member_faces: [MARTA],
-    administrator_name: O3_CLUB.administrator_name,
+    administrator_nickname: O3_CLUB.administrator_nickname,
     is_administrator: false,
     ...overrides,
   };
@@ -461,7 +461,7 @@ describe('an official group’s header', () => {
   it('is an official group’s alone', async () => {
     stubAPlayer([PADEL, TENNIS]);
     const mine: Wire['MyGroupSchema'] = { ...O3_MINE, kind: 'PLAYER', name: 'Ogrody wieczorem' };
-    await openPage(mine, pageOf(mine, { administrator_name: null }));
+    await openPage(mine, pageOf(mine, { administrator_nickname: null }));
 
     expect(
       screen.getByRole('button', { name: /^Ogrody wieczorem/ }).props.accessibilityLabel,
@@ -629,7 +629,7 @@ describe('an official group’s page for a player rated in none of its sports', 
 /** Kasia's padel row, and Michał's — a list with no Administrator on it. */
 const KASIA_ROW: Wire['GroupMemberSchema'] = {
   player_id: GATE_USER.id,
-  name: 'Kasia Lis',
+  nickname: 'Kasia Lis',
   level: 2.71,
   ...NEW_MEMBER_RELIABILITY,
   is_owner: false,
@@ -638,7 +638,7 @@ const KASIA_ROW: Wire['GroupMemberSchema'] = {
 };
 const MICHAL_ROW: Wire['GroupMemberSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000000042',
-  name: 'Michał Rogalski',
+  nickname: 'Michał Rogalski',
   level: 2.44,
   ...NEW_MEMBER_RELIABILITY,
   is_owner: false,
@@ -691,7 +691,7 @@ describe('Members of an official group', () => {
   it('names the club while the group needs an administrator', async () => {
     stubAPlayer([PADEL, TENNIS]);
     stubMembers([KASIA_ROW]);
-    await openMembers(pageOf(O3_MINE, { administrator_name: null }));
+    await openMembers(pageOf(O3_MINE, { administrator_nickname: null }));
 
     const runner = await screen.findByTestId('members-runner');
     expect(runner.props.accessibilityLabel).toBe('Ogrody 33, no administrator right now');
@@ -706,7 +706,7 @@ describe('Members of an official group', () => {
         members: [
           {
             player_id: GATE_USER.id,
-            name: 'Kasia Lis',
+            nickname: 'Kasia Lis',
             level: 2.71,
             ...NEW_MEMBER_RELIABILITY,
             is_owner: false,
@@ -715,7 +715,7 @@ describe('Members of an official group', () => {
           },
           {
             player_id: MARTA.player_id,
-            name: 'Marta Wójcik',
+            nickname: 'Marta Wójcik',
             level: 2.6,
             player_score: 91,
             reliability_band: 'VERY_HIGH',
@@ -725,7 +725,7 @@ describe('Members of an official group', () => {
           },
           {
             player_id: 'e0000000-0000-4000-8000-000000000042',
-            name: 'Michał Rogalski',
+            nickname: 'Michał Rogalski',
             level: 2.44,
             ...NEW_MEMBER_RELIABILITY,
             is_owner: false,
@@ -760,7 +760,7 @@ describe('Members of an official group', () => {
         members: [
           {
             player_id: GATE_USER.id,
-            name: 'Tomek Kowal',
+            nickname: 'Tomek Kowal',
             level: 2.71,
             ...NEW_MEMBER_RELIABILITY,
             is_owner: false,
@@ -771,7 +771,7 @@ describe('Members of an official group', () => {
       }),
     );
     await openMembers(
-      pageOf(O3_MINE, { administrator_name: 'Tomek Kowal', is_administrator: true }),
+      pageOf(O3_MINE, { administrator_nickname: 'Tomek Kowal', is_administrator: true }),
     );
 
     expect(

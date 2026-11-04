@@ -32,7 +32,6 @@ describe('toAuthenticatedUser', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
-      name: 'Ada Lovelace',
       nickname: 'ada',
       authority: 'player',
       is_admin: true,
@@ -46,7 +45,6 @@ describe('toAuthenticatedUser', () => {
     expect(user).toEqual({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
-      name: 'Ada Lovelace',
       nickname: 'ada',
       hasPlayerProfile: false,
       profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
@@ -57,16 +55,15 @@ describe('toAuthenticatedUser', () => {
   });
 
   /**
-   * **`null` on the wire is *not yet named*, and it is carried as absence** — the one read
-   * where either may be null
-   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
-   * §2). The entry gate reads the absence and sends the player to the naming step.
+   * **`null` on the wire is *no nickname yet*, and it is carried as absence** — the one read
+   * where it may be null
+   * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). The
+   * entry gate reads the absence and sends the player to the naming step.
    */
-  it('carries an unnamed player as one with no name and no nickname', () => {
+  it('carries a player with no nickname yet as one with none', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
-      name: null,
       nickname: null,
       authority: 'player',
       is_admin: false,
@@ -88,7 +85,6 @@ describe('toAuthenticatedUser', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
-      name: 'Ada Lovelace',
       nickname: 'ada',
       authority: 'player',
       is_admin: false,
@@ -112,7 +108,6 @@ describe('toAuthenticatedUser', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'marta@example.com',
-      name: 'Marta Nowak',
       nickname: null,
       authority: 'player',
       is_admin: false,
@@ -139,8 +134,9 @@ describe('toAuthenticatedUser', () => {
       pendingInvitations: [],
       handovers: [],
     });
-    // A club's name the club typed, and nickname-less: an account an invitation opened.
-    expect(user.name).toBe('Marta Nowak');
+    // An account an invitation opened holds no player name and no nickname (ADR-0199 §4): the
+    // name its club typed is the Administrator's, on the club's pages.
+    expect(user).not.toHaveProperty('name');
     expect(user).not.toHaveProperty('nickname');
   });
 });
@@ -150,7 +146,6 @@ describe('the invitations an account is offered', () => {
     const user = toAuthenticatedUser({
       id: '11111111-2222-4333-8444-555555555555',
       email: 'tomek@example.com',
-      name: 'Tomek Kowal',
       nickname: 'tomek',
       authority: 'player',
       is_admin: false,
@@ -188,7 +183,6 @@ describe('the groups a club handed the account', () => {
     const user = toAuthenticatedUser({
       id: '11111111-2222-4333-8444-555555555555',
       email: 'tomek@example.com',
-      name: 'Tomek Kowal',
       nickname: 'tomek',
       authority: 'player',
       is_admin: false,
@@ -223,11 +217,8 @@ describe('the groups a club handed the account', () => {
 });
 
 describe('toNaming', () => {
-  it('carries what the naming recorded — the name as normalised, and the handle', () => {
-    expect(toNaming({ name: 'Ada Lovelace', nickname: 'ada' })).toEqual({
-      name: 'Ada Lovelace',
-      nickname: 'ada',
-    });
+  it('carries what the naming recorded — the nickname, and nothing else', () => {
+    expect(toNaming({ nickname: 'ada' })).toEqual({ nickname: 'ada' });
   });
 });
 

@@ -109,7 +109,7 @@ const CREW_PAGE: Wire['GroupResponse'] = {
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -1272,13 +1272,13 @@ describe('each step at the court opens the game’s result screen (#663)', () =>
   const NOT_HERE_YET = notice({
     kind: 'NOT_HERE_YET',
     opens: 'RESULT',
-    title: "Inés Díaz is at Bonarka Arena and you're not there yet",
+    title: "ines.d is at Bonarka Arena and you're not there yet",
     body: "Tap I'm here when you arrive — Padel · Sat 16:00.",
   });
   const AT_THE_CLUB = notice({
     kind: 'AT_THE_CLUB',
     opens: 'RESULT',
-    title: 'Bartek Lis is at Bonarka Arena',
+    title: 'bartek.l is at Bonarka Arena',
     body: 'Padel · Sat 16:00 — arrived at 16:12.',
   });
   const HOW_DID_IT_GO = notice({
@@ -1290,14 +1290,14 @@ describe('each step at the court opens the game’s result screen (#663)', () =>
   const IS_THAT_RIGHT = notice({
     kind: 'IS_THAT_RIGHT',
     opens: 'RESULT',
-    title: 'Is that right? · Inés Díaz put a score up',
+    title: 'Is that right? · ines.d put a score up',
     body: 'Padel · Sat 16:00 at Bonarka Arena. If nobody answers by 17:30 tomorrow, it becomes the result — saying nothing costs nothing.',
   });
   const WERE_THEY_THERE = notice({
     kind: 'WERE_THEY_THERE',
     opens: 'RESULT',
-    title: 'Was Bartek Lis at Bonarka Arena?',
-    body: 'Bartek Lis tapped I was there for Padel · Sat 16:00 — confirm it by 16:30 tomorrow if so.',
+    title: 'Was bartek.l at Bonarka Arena?',
+    body: 'bartek.l tapped I was there for Padel · Sat 16:00 — confirm it by 16:30 tomorrow if so.',
   });
   const STEPS = [NOT_HERE_YET, AT_THE_CLUB, HOW_DID_IT_GO, IS_THAT_RIGHT, WERE_THEY_THERE];
 
@@ -1350,7 +1350,7 @@ describe('each step at the court opens the game’s result screen (#663)', () =>
           attendance: [
             {
               player_id: GATE_USER.id,
-              name: GATE_USER.name ?? 'Ada',
+              nickname: GATE_USER.nickname ?? 'Ada',
               state: 'WAITING',
               noted_at: '2026-10-03T14:05:00Z',
               arrive_by: '2026-10-03T14:30:00Z',

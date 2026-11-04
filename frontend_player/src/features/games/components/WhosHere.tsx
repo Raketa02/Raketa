@@ -6,9 +6,9 @@
  * ```
  * WHO'S HERE
  * Tap for anybody who isn't at the court yet. It works only from the club — …
- * [ Piotr Sowa isn't here yet ]
+ * [ piotr.s isn't here yet ]
  * [ Oscar Nowak is here ]                    Oscar is awaited: his arrival is a tap away
- * · Inés Díaz came late
+ * · ines.d came late
  * ```
  *
  * **One press, and no sheet in front of it.** *Isn't here yet* costs its maker nothing and the

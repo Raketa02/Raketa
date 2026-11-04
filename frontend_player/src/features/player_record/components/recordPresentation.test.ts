@@ -108,9 +108,9 @@ describe('the sheet’s two titles', () => {
     expect(recordCloseLabel(true)).toBe(`Close ${OWN_RECORD_TITLE.toLowerCase()}`);
   });
 
-  it('marks your own name rather than replacing it', () => {
-    expect(recordHandle('Bea Kowalczyk', true)).toBe(`Bea Kowalczyk ${YOU_MARK}`);
-    expect(recordHandle('Bea Kowalczyk', false)).toBe('Bea Kowalczyk');
+  it('marks your own nickname rather than replacing it, and never writes an @', () => {
+    expect(recordHandle('bea_k', true)).toBe(`bea_k ${YOU_MARK}`);
+    expect(recordHandle('bea_k', false)).toBe('bea_k');
   });
 });
 
@@ -240,46 +240,43 @@ describe('the record blocks, as one element', () => {
 
 describe('the header, as one element', () => {
   /**
-   * The name first and the handle second, because that is the order they are drawn — and the
-   * handle *is* here: this sheet is one of the two places it is drawn
-   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
-   * §4), and a listener is told what a reader is shown.
+   * The nickname first, because that is the order the header draws — and nothing after it that
+   * is not drawn: there is no handle line under the nickname
+   * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1), and a
+   * listener is told what a reader is shown.
    */
-  it('leads with the name and the handle, and drops what is absent rather than speaking nothing', () => {
+  it('leads with the nickname, and drops what is absent rather than speaking nothing', () => {
     expect(
       recordHeaderLabel({
-        name: 'Bea Kowalczyk',
-        handle: '@bea_k',
+        name: 'bea_k',
         onCourt: true,
         identity: 'In your area · 0,6 km',
         sports: ['Padel 2,75'],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k. Photo checked: on court. In your area · 0,6 km. Padel 2,75');
+    ).toBe('bea_k. Photo checked: on court. In your area · 0,6 km. Padel 2,75');
 
     expect(
       recordHeaderLabel({
-        name: 'Bea Kowalczyk',
-        handle: '@bea_k',
+        name: 'bea_k',
         onCourt: false,
         identity: '',
         sports: [],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k');
+    ).toBe('bea_k');
   });
 
-  it('speaks the intro inside its marks, after the handle and before where they are', () => {
-    // The drawn order: the line sits under the name, so it is heard there too — as their own
-    // words, which the quotation marks say, and never as the name (ADR-0170 §4).
+  it('speaks the intro inside its marks, after the nickname and before where they are', () => {
+    // The drawn order: the line sits under the nickname, so it is heard there too — as their own
+    // words, which the quotation marks say, and never as a name (ADR-0170 §4).
     expect(
       recordHeaderLabel({
-        name: 'Bea Kowalczyk',
-        handle: '@bea_k',
+        name: 'bea_k',
         onCourt: false,
         intro: introLine('Will travel for a hard game.'),
         identity: '4,3 km',
         sports: ['Padel 2,75'],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k. “Will travel for a hard game.”. 4,3 km. Padel 2,75');
+    ).toBe('bea_k. “Will travel for a hard game.”. 4,3 km. Padel 2,75');
   });
 
   /**
@@ -290,13 +287,12 @@ describe('the header, as one element', () => {
   it('says nothing about a photograph that was flagged or never checked', () => {
     expect(
       recordHeaderLabel({
-        name: 'Bea Kowalczyk',
-        handle: '@bea_k',
+        name: 'bea_k',
         onCourt: false,
         identity: '4,3 km',
         sports: [],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k. 4,3 km');
+    ).toBe('bea_k. 4,3 km');
   });
 });
 

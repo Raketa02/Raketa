@@ -1,6 +1,9 @@
-import { NameScreen } from '@/features/auth/types';
+import { NicknameScreen } from '@/features/auth/types';
 
-/** *Name* — the naming, pre-filled, pushed over the You tab; `features/auth`'s own screen. */
-export default function NameRoute() {
-  return <NameScreen />;
+/**
+ * *Nickname* — the naming, pre-filled, pushed over the You tab; `features/auth`'s own screen. The
+ * path keeps the word *name*, as `PUT /users/me/name` does (ADR-0199, *Neutral*).
+ */
+export default function NicknameRoute() {
+  return <NicknameScreen />;
 }

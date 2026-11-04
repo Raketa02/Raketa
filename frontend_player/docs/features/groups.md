@@ -560,3 +560,11 @@ matcher's `SCORE_MIN`_, is retired). **The row says the band in words**: _Karol 
 its only carrier. Members carries no _New_, so a new player's tag reads `100` in mint. Tapping a row
 opens the same sheet the player reads about themselves: the figure with the band's word or _New_,
 and the four counts under _Full record_ (`player_record.md`).
+
+**Members, requests and _… runs this group_ name the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1, §4). The
+members, the people, the join requests and the Owner's _approves joins_ line read the wire's
+`nickname` / `owner_nickname` into the same fields, whole and never with an @. **An official
+group's runner is the one value that is not always a nickname**: `administrator_nickname` is the
+Administrator's nickname once they have one and the name their club typed until then (§4), so an
+Administrator who has never played is still named, and `administratorName` keeps its word for that
+reason. `groupInfo.test.tsx` holds _ania.k_ on a Members row.

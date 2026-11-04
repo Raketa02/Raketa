@@ -93,7 +93,7 @@ describe('a cell’s sheet', () => {
     expect(read.cell).toMatchObject({ fitsFree: 5, courtFree: true, fullGame: true });
     expect(read.fits[0]).toEqual({
       playerId: 'd0000000-0000-4000-8000-000000000001',
-      name: 'Karol Tomaszewski',
+      name: 'karol.t',
       level: 2.75,
       forecastPct: 93,
     });
@@ -114,12 +114,12 @@ describe('a cell’s sheet', () => {
       kind: 'competitive',
       club: { name: 'Bonarka Arena' },
       shareGrosze: 3200,
-      challenger: { playerId: KUBA().player_id, name: 'Kuba Wiśniewski' },
+      challenger: { playerId: KUBA().player_id, name: 'kuba.w' },
       openSeats: 2,
     });
     expect(read.posts[0]?.peopleIn.map((person) => [person.name, person.isIn])).toEqual([
-      ['Kuba Wiśniewski', true],
-      ['Ania Kowalska', true],
+      ['kuba.w', true],
+      ['ania.k', true],
     ]);
   });
 
@@ -127,7 +127,7 @@ describe('a cell’s sheet', () => {
     const wire = postingSlot();
     const read = toPostingSlot({
       ...wire,
-      fits: wire.fits.map((fit) => ({ ...fit, forecast: null, level: null, name: null })),
+      fits: wire.fits.map((fit) => ({ ...fit, forecast: null, level: null, nickname: null })),
       posts: [postStillFilling({ challenger: null })],
     });
 

@@ -27,7 +27,7 @@ describe('a game still filling, in detail', () => {
       deadline: card.deadline,
       forecast: { pct: 87, provisional: false },
     });
-    expect(details?.sides.yours[1]).toMatchObject({ name: 'Karol Tomaszewski', isIn: true });
+    expect(details?.sides.yours[1]).toMatchObject({ name: 'karol.t', isIn: true });
     expect(details).not.toHaveProperty('yourPayment');
     expect(details).not.toHaveProperty('challenger');
   });

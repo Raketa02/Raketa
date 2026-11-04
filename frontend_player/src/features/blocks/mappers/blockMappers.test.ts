@@ -10,7 +10,7 @@ import { toBlockedPlayers } from './blockMappers';
 function blocked(over: Partial<Wire['BlockedPlayerSchema']> = {}): Wire['BlockedPlayerSchema'] {
   return {
     player_id: 'e0000000-0000-4000-8000-000000000001',
-    name: 'Kuba Wiśniewski',
+    nickname: 'kuba.w',
     blocked_at: '2026-10-06T09:00:00Z',
     ...over,
   };
@@ -20,14 +20,14 @@ describe('Blocked players, off the wire', () => {
   it('keeps the server’s order — newest first — and every name whole', () => {
     const served = {
       players: [
-        blocked({ player_id: 'e0000000-0000-4000-8000-000000000002', name: 'Zofia Bąk' }),
+        blocked({ player_id: 'e0000000-0000-4000-8000-000000000002', nickname: 'Zofia Bąk' }),
         blocked(),
       ],
     };
 
     expect(toBlockedPlayers(served).map((player) => [player.playerId, player.name])).toEqual([
       ['e0000000-0000-4000-8000-000000000002', 'Zofia Bąk'],
-      ['e0000000-0000-4000-8000-000000000001', 'Kuba Wiśniewski'],
+      ['e0000000-0000-4000-8000-000000000001', 'kuba.w'],
     ]);
   });
 

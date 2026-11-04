@@ -5,7 +5,7 @@
  * ```
  * ┌ photo / poster ──────┐ ┌──────────────────────┐
  * │                      │ │                      │
- * │ Karol Tomaszewski IN │ │ You                  │   the name, whole — cut by the box — and IN
+ * │ karol.t IN │ │ You                  │   the name, whole — cut by the box — and IN
  * │ 2,75                 │ │ You complete it      │   the Level, or what your yes would do
  * └──────────────────────┘ └──────────────────────┘
  * ───── KAROL + ZOFIA  VS  ANIA + YOU ─────             stems, uppercased by the style
@@ -23,11 +23,11 @@
  * An empty seat is a dashed tile with nothing in it — a side short of a player, which the read
  * draws empty rather than inventing somebody.
  *
- * ## The name is whole, and the box cuts it
+ * ## The nickname is whole, and the box cuts it
  *
- * ADR-0171: a tile shows the Name the player gave, and a narrow tile truncates it — one line,
- * tail cut — rather than drawing *Karol T.*, which is the mocks' own data and not a rule. Only the
- * *vs* line stems a name, because it holds four in one line.
+ * ADR-0199 §1: a tile shows the nickname the player chose, without an @, and a narrow tile
+ * truncates it — one line, tail cut — rather than drawing *Karol T.*, which is the mocks' own data
+ * and not a rule. Only the *vs* line stems a nickname, because it holds four in one line.
  *
  * ## A rescue's open seat is yours, dashed
  *

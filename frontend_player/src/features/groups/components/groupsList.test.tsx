@@ -73,7 +73,7 @@ function pageOf(
     is_owner: false,
     rated_by_sport: [],
     member_faces: [],
-    administrator_name: null,
+    administrator_nickname: null,
     is_administrator: false,
     ...overrides,
   };

@@ -167,12 +167,12 @@ export function fitLine(fit: SlotFit): string | undefined {
   return parts.length === 0 ? undefined : parts.join(LINE_JOIN);
 }
 
-/** A fit's name — whole, never cut to a first name (ADR-0171); the unknown's mark without one. */
+/** A fit's nickname — whole, never cut (ADR-0199 §1); the unknown's mark without one. */
 export function fitName(fit: SlotFit): string {
   return fit.name ?? '?';
 }
 
-/** *Karol Tomaszewski, level 2,75, a 93 % even game* — a fit, spoken. */
+/** *karol.t, level 2,75, a 93 % even game* — a fit, spoken. */
 export function fitSpoken(fit: SlotFit): string {
   return [
     fitName(fit),
@@ -230,7 +230,7 @@ export function rescueLine(row: SeatToFill): string {
   return [clubName(row), row.courtName, eachWords(row.shareGrosze)].join(LINE_JOIN);
 }
 
-/** *Kuba Wiśniewski · Bonarka Arena · 32 zł if it fills* — a post's line: no court number (Q79). */
+/** *kuba.w · Bonarka Arena · 32 zł if it fills* — a post's line: no court number (Q79). */
 export function postLine(post: PostStillFilling): string {
   return [
     post.challenger?.name ?? COPY.sheet.group,

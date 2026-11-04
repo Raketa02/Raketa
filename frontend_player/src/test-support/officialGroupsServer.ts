@@ -61,7 +61,7 @@ export const TOMEK = person(2, 'Tomek Kowal', { PADEL: 2.71, TENNIS: 3.1, SQUASH
 export const ANIA = person(3, 'Ania Kowalczyk', { PADEL: 2.68 });
 export const STAS = person(4, 'Staś Wójcik', { PADEL: 2.5 });
 export const FILIP = person(5, 'Filip Nowak', { TENNIS: 3.0 });
-export const BARTEK = person(6, 'Bartek Lis', { PADEL: 2.9 });
+export const BARTEK = person(6, 'bartek.l', { PADEL: 2.9 });
 export const KUBA = person(7, 'Kuba Wróbel', { PADEL: 2.8 });
 
 export const EVERYBODY = [MICHAL, TOMEK, ANIA, STAS, FILIP, BARTEK, KUBA];
@@ -199,12 +199,12 @@ export function club(setups: readonly GroupSetup[] = []) {
     whatsapp_size: group.size,
     players: group.players.map(({ who, joinedAt }) => ({
       player_id: who.id,
-      name: who.name,
+      nickname: who.name,
       joined_at: joinedAt,
     })),
     requests: group.requests.map((who) => ({
       player_id: who.id,
-      name: who.name,
+      nickname: who.name,
       levels: REGISTRY.flatMap((sport) => {
         const level = who.levels[sport];
         return level === undefined ? [] : [{ sport, level }];
@@ -274,7 +274,7 @@ export function club(setups: readonly GroupSetup[] = []) {
     group.players.unshift(...admitted.map((who) => ({ who, joinedAt: NOW })));
     return json<Wire['SavedSettingsResponse']>({
       group: page(group),
-      admitted: admitted.map((who) => ({ player_id: who.id, name: who.name })),
+      admitted: admitted.map((who) => ({ player_id: who.id, nickname: who.name })),
     });
   }
 

@@ -33,15 +33,13 @@ export function toTokens(wire: TokenResponse): Tokens {
 }
 
 export function toAuthenticatedUser(wire: MeResponse): AuthenticatedUser {
-  // `null` on the wire is *not yet named* — the one read where it may be (ADR-0171 §2) — and
+  // `null` on the wire is *no nickname yet* — the one read where it may be (ADR-0199 §3) — and
   // it is carried as absence, which is how every other shape in this app spells a name it
   // does not have. The entry gate reads the absence.
-  const name = wire.name ?? undefined;
   const nickname = wire.nickname ?? undefined;
   return {
     id: wire.id,
     email: wire.email,
-    ...(name === undefined ? {} : { name }),
     ...(nickname === undefined ? {} : { nickname }),
     // Kept where `is_admin` is dropped, because the app must branch on it: the entry gate
     // reads it to decide whether onboarding's second part is still owed. It defaults to
@@ -91,9 +89,9 @@ export function toClaimTicket(wire: ClaimTicketResponse): string {
   return wire.ticket;
 }
 
-/** What the naming recorded: the name as normalised by the server, and the handle. */
+/** What the naming recorded: the nickname, as the server holds it. */
 export function toNaming(wire: NamingResponse): Naming {
-  return { name: wire.name, nickname: wire.nickname };
+  return { nickname: wire.nickname };
 }
 
 /**

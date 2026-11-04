@@ -1,7 +1,7 @@
 /**
  * **One person asking to join** — club 20's row, **everywhere**: an Owner's *Want to join* on a
  * player group's Info (#514) and an Administrator's on an official group's page (#516). The
- * face, the whole Name, and under it **the first two sports they are rated in** — the sport's
+ * face, the whole nickname, and under it **the first two sports they are rated in** — the sport's
  * dot, its short name and the Level in mono (*● Pad 2,44*) — **and one *+N* for the rest** (#529,
  * the owner's mock of 2026-09-30): four sports over two lines, as club 20 drew them, made the row
  * untidy. **No tag around either** (the owner's ask, 2026-10-01): the dot and the text, and the

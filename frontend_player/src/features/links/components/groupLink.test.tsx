@@ -66,8 +66,8 @@ const O3_CLUB: Wire['GroupAtClubSchema'] = {
   sports: ['PADEL', 'TENNIS'],
   member_count: 11,
   join_policy: 'ANYONE',
-  owner_name: 'Coach Andrzej',
-  administrator_name: null,
+  owner_nickname: 'Coach Andrzej',
+  administrator_nickname: null,
   is_administrator: false,
   relation: 'NONE',
 };
@@ -234,7 +234,7 @@ describe('a group link, before the account is in the app', () => {
   it('is kept through sign-up, the naming, the questionnaire and the social steps', async () => {
     const ASSESSMENT = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
     const step = `/api/v1/assessments/${ASSESSMENT}`;
-    const kasia = { ...GATE_USER, email: 'kasia@example.com', name: null, nickname: null };
+    const kasia = { ...GATE_USER, email: 'kasia@example.com', nickname: null };
     const result: Wire['ResultResponse'] = {
       mu: 2.71,
       sigma: 0.62,
@@ -260,7 +260,7 @@ describe('a group link, before the account is in the app', () => {
 
     // A new account: unnamed, unrated, with no Player profile — and the server's answers as she
     // gives it each of them.
-    serve({ email: kasia.email, name: null });
+    serve({ email: kasia.email, nickname: null });
     stubLocation(fakeLocation({ fix: { latitude: 50.06, longitude: 19.94, accuracyMetres: 12 } }));
     transport.on('POST', '/api/v1/users', () => json<Wire['UserResponse']>(kasia, 201));
     transport.on('POST', '/api/v1/auth/login', () =>
@@ -272,8 +272,8 @@ describe('a group link, before the account is in the app', () => {
       }),
     );
     transport.on('PUT', '/api/v1/users/me/name', () => {
-      stubGate(transport, { email: kasia.email, name: 'Kasia Nowak' });
-      return json<Wire['NamingResponse']>({ name: 'Kasia Nowak', nickname: 'kasia' });
+      stubGate(transport, { email: kasia.email, nickname: 'kasia' });
+      return json<Wire['NamingResponse']>({ nickname: 'kasia' });
     });
     transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
     transport.on('POST', '/api/v1/assessments', () =>
@@ -303,7 +303,7 @@ describe('a group link, before the account is in the app', () => {
       transport.on('GET', step, () => json(finished));
       stubGate(transport, {
         email: kasia.email,
-        name: 'Kasia Nowak',
+        nickname: 'kasia',
         ratings: [rating('PADEL')],
       });
       return json(finished);
@@ -311,7 +311,7 @@ describe('a group link, before the account is in the app', () => {
     transport.on('POST', '/api/v1/players/me/profile', () => {
       stubGate(transport, {
         email: kasia.email,
-        name: 'Kasia Nowak',
+        nickname: 'kasia',
         ratings: [rating('PADEL')],
         hasPlayerProfile: true,
       });
@@ -344,7 +344,6 @@ describe('a group link, before the account is in the app', () => {
 
     // The naming.
     await waitFor(() => expect(screen).toHavePathname('/name'));
-    fireEvent.changeText(screen.getByLabelText('Name'), 'Kasia Nowak');
     fireEvent.changeText(screen.getByLabelText('Nickname'), 'kasia');
     fireEvent.press(screen.getByLabelText('Continue'));
 
@@ -420,7 +419,7 @@ describe('a group link, in the administrator area', () => {
    * link waits — *Start playing*'s steps end in the player's app, where it is opened like Kasia's.
    */
   it('takes an account that does not play nowhere', async () => {
-    serve({ name: 'Marta Nowak', nickname: null, profiles: ADMINISTRATOR_ONLY });
+    serve({ nickname: null, profiles: ADMINISTRATOR_ONLY });
     club().install(transport);
     await launchSignedIn();
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}`));

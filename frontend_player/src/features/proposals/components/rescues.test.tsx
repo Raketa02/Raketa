@@ -123,7 +123,7 @@ const PAGE: Wire['GroupResponse'] = {
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -140,7 +140,7 @@ function bookedTile(tile: Wire['DeckTileSchema']): Wire['BookedTileSchema'] {
   return {
     player_id: tile.player_id,
     is_you: tile.is_you,
-    name: tile.name,
+    nickname: tile.nickname,
     photo_id: tile.photo_id,
     photo_url: tile.photo_url,
     level: tile.level,
@@ -259,8 +259,8 @@ describe('a Seat open card in the deck (A2.3, mock 2)', () => {
     await openGames([rescueCard()]);
 
     expect(await screen.findByRole('header', { name: /^Seat open · court booked/ })).toBeTruthy();
-    expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, paid')).toBeTruthy();
-    expect(screen.getByLabelText('Kuba Wiśniewski, level 2,80, paid')).toBeTruthy();
+    expect(screen.getByLabelText('karol.t, level 2,75, paid')).toBeTruthy();
+    expect(screen.getByLabelText('kuba.w, level 2,80, paid')).toBeTruthy();
     expect(screen.getByLabelText('Your seat: you complete it, 27 zł, court booked')).toBeTruthy();
     expect(screen.getByText('27 zł · court booked')).toBeTruthy();
     expect(
@@ -304,7 +304,7 @@ describe('taking the seat from the card (A2.4)', () => {
     expect(transport.requestsTo('POST', yesPath(card.proposal_id))).toHaveLength(0);
     expect(
       await screen.findByRole('header', {
-        name: 'It’s a game! You and Kuba Wiśniewski against Karol Tomaszewski and Ania Kowalska',
+        name: 'It’s a game! You and kuba.w against karol.t and ania.k',
       }),
     ).toBeTruthy();
 
@@ -481,7 +481,7 @@ describe('the rescue seen from outside (A4.3)', () => {
 
     expect(screen.getByText('Seat open')).toBeTruthy();
     expect(screen.getByText('Padel')).toBeTruthy();
-    expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, paid')).toBeTruthy();
+    expect(screen.getByLabelText('karol.t, level 2,75, paid')).toBeTruthy();
     expect(screen.getByLabelText('Where, Ogrody 33, Court 6 · 3,1 km')).toBeTruthy();
     // The card's deadline is the cut-off, 21 hours after the read: Thursday 07:00 in Warsaw.
     expect(screen.getByLabelText('Your share, 27 zł, fills by Thu 07:00')).toBeTruthy();

@@ -6,9 +6,10 @@
  * Taken from the mocks (play 1, 3–17, 23–55), with the mocks' *Rakieta* read as **Raketa**
  * (ADR-0187 §8). Two rules sit over it:
  *
- * - **A name is said whole.** The *approves joins* line carries the Owner's or the
- *   Administrator's whole Name and the row truncates the line, as it truncates any line; no first
- *   name is cut from it here or on the server (ADR-0171 §4, #505, #519).
+ * - **A nickname is said whole, never with an @.** The *approves joins* line carries the Owner's or
+ *   the Administrator's whole nickname — the Administrator's club-typed name until they have one
+ *   (ADR-0199 §4) — and the row truncates the line, as it truncates any line; nothing is cut from
+ *   it here or on the server (ADR-0199 §1, #505, #519).
  * - **A counted phrase goes through `counted()`**, so *1 member* is never *1 members* and a market
  *   with real plural rules has one function to change.
  */
@@ -347,7 +348,7 @@ export function requestTags(levels: readonly SportLevel[]): {
   return rest > 0 ? { shown, more: `+${rest}` } : { shown };
 }
 
-/** A name as a row draws it — the whole Name, or the word for somebody who can't be named. */
+/** A nickname as a row draws it — whole, or the word for somebody who can't be named. */
 export function personName(name: string | null): string {
   return name === null ? playerName({ kind: 'unknown' }) : playerName({ kind: 'player', name });
 }
@@ -492,7 +493,7 @@ export interface MemberRowPerson extends Pick<
   readonly you: boolean;
 }
 
-/** *You* for the reader's own row, the whole Name for anybody else (play 61). */
+/** *You* for the reader's own row, the whole nickname for anybody else (play 61). */
 export function memberName(member: Pick<MemberRowPerson, 'name' | 'you'>): string {
   return member.you ? playerName({ kind: 'you' }) : personName(member.name);
 }

@@ -97,7 +97,7 @@ function toConversation(row: ConversationRowSchema): readonly Conversation[] {
 function toPerson(person: ConversationPersonSchema): ConversationPerson {
   return {
     playerId: person.player_id,
-    ...(person.name == null ? {} : { name: person.name }),
+    ...(person.nickname == null ? {} : { name: person.nickname }),
     ...(person.photo_url == null ? {} : { photoUrl: person.photo_url }),
   };
 }

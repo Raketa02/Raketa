@@ -5,17 +5,19 @@
  * §1; Part 16, 2026-09-17).
  *
  * ```
- * ┌ photo ┐  Tomek Kowalski                    ◯ 92
- * │  ON   │  @tomek.k                          SCORE
- * │ COURT │  “Will travel for a hard game.”
- * └───────┘  ● Padel 2,71  ● Tennis 3,10
+ * ┌ photo ┐  tomek.k                           ◯ 92
+ * │  ON   │  “Will travel for a hard game.”    SCORE
+ * │ COURT │  ● Padel 2,71  ● Tennis 3,10
+ * └───────┘
  * ```
  *
  * ## Three reads, and what each is for
  *
- * The name and the handle are `GET /users/me`'s — seeded by bootstrap, so the card has a name
- * before anything else lands, and the one the *Name* row's save writes into, so a rename shows
- * here on the way back. The sport pills are `GET /ratings`', the same read the passport row's
+ * The nickname is `GET /users/me`'s — seeded by bootstrap, so the card has it before anything else
+ * lands, and the one the *Nickname* row's save writes into, so a rename shows here on the way
+ * back. Drawn large, **with nothing under it**: the handle is the identity, and the `@nickname`
+ * line that once sat under a name went with the name
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). The sport pills are `GET /ratings`', the same read the passport row's
  * line is drawn from. The photograph, the mark, the intro and the score are the record's, the
  * same read the sheet this card opens draws whole. Each part draws when its read is in and is
  * simply absent until then: the card never draws a nought.
@@ -59,7 +61,6 @@ import {
   sportShortLabel,
   useSkillRatings,
 } from '@/features/onboarding/types';
-import { atNickname } from '@/shared/formatting/playerName';
 import { ConfidenceRing, PhotoPanel, PressableDarkCard, Tag, theme } from '@/shared/ui';
 
 import { useOwnRecord } from '../hooks/useOwnRecord';
@@ -78,8 +79,7 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
   const { record, playerId } = useOwnRecord();
 
   const own = record.data;
-  const name = user.data?.name;
-  const handle = user.data?.nickname === undefined ? undefined : atNickname(user.data.nickname);
+  const name = user.data?.nickname;
   const intro = own?.intro === undefined ? undefined : introLine(own.intro);
   const reliability = own?.reliability;
   // Drawn short — three pills have to fit between a face and a ring — and spoken in full.
@@ -94,7 +94,6 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
       style={s.card}
       accessibilityLabel={[
         ...(name === undefined ? [] : [name]),
-        ...(handle === undefined ? [] : [handle]),
         ...(intro === undefined ? [] : [intro]),
         ...(pills.length === 0 ? [] : [pills.map((pill) => pill.spoken).join(', ')]),
         // The band's word or *New* is spoken here, since the ring draws the figure alone.
@@ -114,7 +113,6 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
 
       <View style={s.column}>
         {name === undefined ? null : <Text style={s.name}>{name}</Text>}
-        {handle === undefined ? null : <Text style={s.handle}>{handle}</Text>}
         {intro === undefined ? null : <Text style={s.intro}>{intro}</Text>}
 
         {pills.length === 0 ? null : (
@@ -147,10 +145,9 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
 
 const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
-  // Takes what the panel and the ring leave, so a long name wraps inside it.
+  // Takes what the panel and the ring leave, so a long nickname wraps inside it.
   column: { flex: 1, gap: theme.space.xxs },
   name: { ...theme.type.h2, color: theme.color.surface },
-  handle: { ...theme.num.tiny, color: theme.color.onDarkTiny },
   intro: { ...theme.type.tiny, color: theme.color.onDarkTiny },
   pills: {
     flexDirection: 'row',

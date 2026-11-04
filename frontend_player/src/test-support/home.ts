@@ -41,7 +41,7 @@ function seat(
   return {
     player_id: playerId,
     is_you: false,
-    name,
+    nickname: name,
     photo_id: null,
     photo_url: null,
     level,
@@ -59,10 +59,10 @@ export function bookedSides({
 }: { readonly paid?: boolean } = {}): Wire['BookedSidesSchema'] {
   return {
     yours: [
-      seat(GATE_USER.id, GATE_USER.name ?? 'Ada', 2.71, { is_you: true, paid }),
-      seat(PIOTR, 'Piotr Sowa', 2.95, { paid }),
+      seat(GATE_USER.id, GATE_USER.nickname ?? 'Ada', 2.71, { is_you: true, paid }),
+      seat(PIOTR, 'piotr.s', 2.95, { paid }),
     ],
-    theirs: [seat(INES, 'Inés Díaz', 3.4, { paid }), seat(BARTEK, 'Bartek Lis', 2.35, { paid })],
+    theirs: [seat(INES, 'ines.d', 3.4, { paid }), seat(BARTEK, 'bartek.l', 2.35, { paid })],
   };
 }
 
@@ -178,10 +178,10 @@ export function stubBooking(transport: Transport, details: Wire['BookingDetailsR
 /** The room's members — the four on the court, as a booked game's room is opened with them. */
 export function bookedMembers(): Wire['ConversationMemberSchema'][] {
   return [
-    { player_id: GATE_USER.id, name: GATE_USER.name ?? 'Ada' },
-    { player_id: PIOTR, name: 'Piotr Sowa' },
-    { player_id: INES, name: 'Inés Díaz' },
-    { player_id: BARTEK, name: 'Bartek Lis' },
+    { player_id: GATE_USER.id, nickname: GATE_USER.nickname ?? 'Ada' },
+    { player_id: PIOTR, nickname: 'piotr.s' },
+    { player_id: INES, nickname: 'ines.d' },
+    { player_id: BARTEK, nickname: 'bartek.l' },
   ];
 }
 
@@ -225,10 +225,10 @@ export function bookedGameOnTheList(extra: Partial<Wire['GameSchema']> = {}): Wi
     planned_at: '2026-09-30T18:00:00Z',
     entry_closes_at: '2026-10-05T14:00:00Z',
     seats: [
-      { side: 'A', player_id: GATE_USER.id, name: GATE_USER.name ?? 'Ada' },
-      { side: 'A', player_id: PIOTR, name: 'Piotr Sowa' },
-      { side: 'B', player_id: INES, name: 'Inés Díaz' },
-      { side: 'B', player_id: BARTEK, name: 'Bartek Lis' },
+      { side: 'A', player_id: GATE_USER.id, nickname: GATE_USER.nickname ?? 'Ada' },
+      { side: 'A', player_id: PIOTR, nickname: 'piotr.s' },
+      { side: 'B', player_id: INES, nickname: 'ines.d' },
+      { side: 'B', player_id: BARTEK, nickname: 'bartek.l' },
     ],
     proposals: [],
     attendance: [],

@@ -58,14 +58,16 @@ export interface GroupAtClub {
   readonly memberCount: number;
   readonly joinPolicy: JoinPolicy;
   /**
-   * Who answers a request — the Owner's **whole Name**, never cut to a first name (ADR-0171 §4).
-   * `null` for an account that can no longer be named, and always on an official group, which has
-   * no Owner.
+   * Who answers a request — the Owner's **whole nickname**, never cut and never with an @
+   * (ADR-0199 §1). `null` for an account that can no longer be named, and always on an official
+   * group, which has no Owner.
    */
   readonly ownerName: string | null;
   /**
-   * **An official group's** answerer — the whole name of the Administrator running it now, cut by
-   * nobody. `null` while it **needs an administrator** (ADR-0183 §3), and always on a player group.
+   * **An official group's** answerer — the Administrator running it now, by their nickname, and by
+   * the name their club typed until they have one (ADR-0199 §4): an Administrator who has never
+   * played has no nickname, and the line must still say who runs it. Cut by nobody. `null` while it
+   * **needs an administrator** (ADR-0183 §3), and always on a player group.
    */
   readonly administratorName: string | null;
   /**
@@ -104,8 +106,9 @@ export interface ClubSearch {
 }
 
 /**
- * **A member's face** — a name and a photograph, and nothing else. `name` is the whole Name, and
- * `null` for an account that can no longer be named: the member keeps their seat. `photoUrl` is
+ * **A member's face** — a nickname and a photograph, and nothing else. `name` is what the member
+ * is called — their whole nickname (ADR-0199 §1) — and `null` for an account that can no longer
+ * be named: the member keeps their seat. `photoUrl` is
  * a link signed for the one answer it came on, absent when they have none — the poster stands in.
  */
 export interface GroupPerson {
@@ -140,8 +143,9 @@ export interface Group {
   /** Always `false` on an official group, which has no Owner. */
   readonly isOwner: boolean;
   /**
-   * **Who runs an official group now** — the whole Name of its Administrator, the one their
-   * admin-tagged Members row says, cut by nobody. `null` while the group **needs an
+   * **Who runs an official group now** — its Administrator by their whole nickname, the one their
+   * admin-tagged Members row says, or by the name their club typed until they have one
+   * (ADR-0199 §4), cut by nobody. `null` while the group **needs an
    * administrator** (ADR-0183 §3), and always on a player group, whose Owner is one of its members.
    * Members names them apart from the list wherever the list does not (`runnerApart`).
    */

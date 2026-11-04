@@ -24,7 +24,7 @@
  * **A member can always find who runs the group** (#529, the product owner's ask) — to know who
  * answers for it, and who to go to. A player group's Owner is a member and leads the list; an
  * official group's Administrator need not play in it, and was on no list. So **a card over the
- * list names them** (`RunnerCard`): the club's tile, their whole Name and the admin tag, over *runs
+ * list names them** (`RunnerCard`): the club's tile, their whole nickname and the admin tag, over *runs
  * this group for Ogrody 33* — or the club over *no administrator right now* while the group needs
  * one. It is drawn **wherever the sport's list does not carry their own admin-tagged row**, so
  * nobody is drawn twice, and never for a reader who runs it. It is not a button — an Administrator
@@ -281,7 +281,7 @@ function MembersList({ groupId, sport, refused, group }: MembersListProps) {
 }
 
 /**
- * **Who runs an official group**, over the list (#529) — the club's tile, their whole Name and the
+ * **Who runs an official group**, over the list (#529) — the club's tile, their whole nickname and the
  * admin tag, over *runs this group for Ogrody 33*; the club's name over *no administrator right
  * now* while nobody does. One element, spoken as drawn, and not a button: an Administrator need
  * not play, so there may be no record to open, and the group's read carries their name alone. Not a

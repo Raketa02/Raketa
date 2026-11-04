@@ -120,7 +120,7 @@ const CREW_PAGE: Wire['GroupResponse'] = {
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -289,7 +289,7 @@ describe('the last yes, when another player’s share is refused (Q110)', () => 
   });
   /** Half an hour after the deck's read: 10:30 on Wednesday. */
   const until = new Date(DECK_READ_AT + 30 * MINUTE).toISOString();
-  const matched = 'It’s a game! You and Zofia Bielecka against Ania Kowalska and Ewa Majewska';
+  const matched = 'It’s a game! You and zofia.b against ania.k and ewa.m';
 
   /** Land on the crew's Games tab, say yes to the last seat, and let the ten seconds pass. */
   async function fillIt(answer: Wire['YesAnswerResponse']) {
@@ -743,7 +743,7 @@ describe('paying in time (Q110)', () => {
 
     expect(
       await screen.findByRole('header', {
-        name: 'It’s a game! You and Piotr Sowa against Inés Díaz and Bartek Lis',
+        name: 'It’s a game! You and piotr.s against ines.d and bartek.l',
       }),
     ).toBeTruthy();
     expect(toasts()).toEqual([]);

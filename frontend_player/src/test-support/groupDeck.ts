@@ -65,7 +65,7 @@ function tile(n: number, name: string, level: number, extra: Partial<Tile> = {})
   return {
     player_id: `d0000000-0000-4000-8000-00000000000${n}`,
     is_you: false,
-    name,
+    nickname: name,
     photo_id: null,
     photo_url: null,
     level,
@@ -78,18 +78,18 @@ function tile(n: number, name: string, level: number, extra: Partial<Tile> = {})
 /** The reader's own tile — the signed-in player, as the gate knows them. */
 export function youTile(extra: Partial<Tile> = {}): Tile {
   return {
-    ...tile(0, GATE_USER.name ?? 'Ada Lovelace', 2.71),
+    ...tile(0, GATE_USER.nickname ?? 'ada', 2.71),
     player_id: GATE_USER.id,
     is_you: true,
     ...extra,
   };
 }
 
-export const KAROL = (extra: Partial<Tile> = {}) => tile(1, 'Karol Tomaszewski', 2.75, extra);
-export const ZOFIA = (extra: Partial<Tile> = {}) => tile(2, 'Zofia Bielecka', 2.69, extra);
-export const ANIA = (extra: Partial<Tile> = {}) => tile(3, 'Ania Kowalska', 2.68, extra);
-export const KUBA = (extra: Partial<Tile> = {}) => tile(4, 'Kuba Wiśniewski', 2.8, extra);
-export const EWA = (extra: Partial<Tile> = {}) => tile(5, 'Ewa Majewska', 2.6, extra);
+export const KAROL = (extra: Partial<Tile> = {}) => tile(1, 'karol.t', 2.75, extra);
+export const ZOFIA = (extra: Partial<Tile> = {}) => tile(2, 'zofia.b', 2.69, extra);
+export const ANIA = (extra: Partial<Tile> = {}) => tile(3, 'ania.k', 2.68, extra);
+export const KUBA = (extra: Partial<Tile> = {}) => tile(4, 'kuba.w', 2.8, extra);
+export const EWA = (extra: Partial<Tile> = {}) => tile(5, 'ewa.m', 2.6, extra);
 
 /** Twenty-one cells, Monday first and morning first, every one dark but the ones named. */
 export function overlapCells(
@@ -234,7 +234,7 @@ function seatOf(tile: Tile): Wire['BookedTileSchema'] {
   return {
     player_id: tile.player_id,
     is_you: false,
-    name: tile.name,
+    nickname: tile.nickname,
     photo_id: tile.photo_id,
     photo_url: tile.photo_url,
     level: tile.level,

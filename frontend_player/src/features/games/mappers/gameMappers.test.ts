@@ -148,8 +148,8 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', name: 'me_' },
-            { side: 'B', player_id: 'them', name: 'tomek.p' },
+            { side: 'A', player_id: 'me', nickname: 'me_' },
+            { side: 'B', player_id: 'them', nickname: 'tomek.p' },
           ],
         }),
       ],
@@ -173,8 +173,8 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', name: 'me_' },
-            { side: 'B', player_id: 'them', name: null },
+            { side: 'A', player_id: 'me', nickname: 'me_' },
+            { side: 'B', player_id: 'them', nickname: null },
           ],
         }),
       ],
@@ -197,8 +197,8 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', name: 'me_' },
-            { side: 'B', player_id: null, name: null },
+            { side: 'A', player_id: 'me', nickname: 'me_' },
+            { side: 'B', player_id: null, nickname: null },
           ],
         }),
       ],
@@ -240,7 +240,7 @@ describe('a code this build has never seen', () => {
         standing: 'CALLED_OFF',
         entry_closes_at: null,
         called_off_at: '2026-09-04T20:00:00Z',
-        called_off_by: { player_id: 'tomek', name: 'tomek.p' },
+        called_off_by: { player_id: 'tomek', nickname: 'tomek.p' },
       }),
       READ_AT,
     );
@@ -249,7 +249,7 @@ describe('a code this build has never seen', () => {
         standing: 'CALLED_OFF',
         entry_closes_at: null,
         called_off_at: '2026-09-04T20:00:00Z',
-        called_off_by: { player_id: 'tomek', name: null },
+        called_off_by: { player_id: 'tomek', nickname: null },
       }),
       READ_AT,
     );
@@ -272,7 +272,7 @@ describe('a code this build has never seen', () => {
         attendance: [
           {
             player_id: 'them',
-            name: 'Oscar Nowak',
+            nickname: 'Oscar Nowak',
             state: 'CONFIRMED',
             noted_at: '2026-09-04T18:10:00Z',
             arrive_by: '2026-09-04T18:30:00Z',
@@ -283,7 +283,7 @@ describe('a code this build has never seen', () => {
           },
           {
             player_id: 'gone',
-            name: null,
+            nickname: null,
             state: 'DIDNT_COME',
             noted_at: '2026-09-04T18:12:00Z',
             arrive_by: '2026-09-04T18:30:00Z',

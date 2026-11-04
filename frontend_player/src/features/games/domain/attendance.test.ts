@@ -36,7 +36,7 @@ function game(over: Partial<Game> = {}): Game {
     standing: 'AWAITING_ENTRY',
     seats: [
       { side: 'A', playerId: ME, name: 'Ivan Petrov' },
-      { side: 'A', playerId: PARTNER, name: 'Piotr Sowa' },
+      { side: 'A', playerId: PARTNER, name: 'piotr.s' },
       { side: 'B', playerId: KUBA, name: 'Oscar Nowak' },
       { side: 'B', playerId: INES },
     ],
@@ -80,7 +80,7 @@ describe('isn’t here yet', () => {
 
     expect(block.phase).toBe('at-the-court');
     expect(block.rows).toStrictEqual([
-      { playerId: PARTNER, who: { kind: 'player', name: 'Piotr Sowa' }, tap: 'not-here-yet' },
+      { playerId: PARTNER, who: { kind: 'player', name: 'piotr.s' }, tap: 'not-here-yet' },
       { playerId: KUBA, who: { kind: 'player', name: 'Oscar Nowak' }, tap: 'not-here-yet' },
       { playerId: INES, who: { kind: 'unknown' }, tap: 'not-here-yet' },
     ]);
@@ -128,7 +128,7 @@ describe('while somebody is awaited', () => {
     const block = attendanceBlock(oscarAwaited(), ME, HOUR);
 
     expect(block.rows).toStrictEqual([
-      { playerId: PARTNER, who: { kind: 'player', name: 'Piotr Sowa' }, tap: 'not-here-yet' },
+      { playerId: PARTNER, who: { kind: 'player', name: 'piotr.s' }, tap: 'not-here-yet' },
       { playerId: KUBA, who: { kind: 'player', name: 'Oscar Nowak' }, tap: 'here' },
       { playerId: INES, who: { kind: 'unknown' }, tap: 'not-here-yet' },
     ]);

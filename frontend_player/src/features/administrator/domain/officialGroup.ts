@@ -57,8 +57,8 @@ export interface AdministeredGroups {
 }
 
 /**
- * **A player of the group** — a face on the members card (club 18, 19). `name` is the whole Name,
- * `null` for an account that can no longer be named; `photoUrl` is signed for the one answer it came
+ * **A player of the group** — a face on the members card (club 18, 19). `name` is their whole
+ * nickname (ADR-0199 §1), `null` for an account that can no longer be named; `photoUrl` is signed for the one answer it came
  * on, absent where the poster stands in. The wire says when they joined too; nothing draws it since
  * the card's tap to Members replaced the list of join dates (#529).
  */

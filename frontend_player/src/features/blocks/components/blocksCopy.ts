@@ -8,9 +8,10 @@
  * The PRD proposed *Block Kuba* and *He isn't told*, and said the design pass may refine them. Two
  * rules refine them here:
  *
- * - **The name is said whole.** ADR-0171 §4 (ADR-0107 §4's rule, read on names): every sentence
- *   naming somebody uses the whole name, and nothing invents a first name. A row's label is its
- *   spoken name, so *Block Kuba Wiśniewski*; a box may cut the drawing, never the words.
+ * - **The nickname is said whole.** ADR-0199 §1 (ADR-0107 §4's rule, read on the nickname again):
+ *   every sentence naming somebody uses the whole nickname, never with an @, and nothing invents a
+ *   familiar form. A row's label is its spoken name, so *Block kuba.w*; a box may cut the drawing,
+ *   never the words.
  * - **No pronoun.** This app does not know whether Kuba is *he*: the one thing that could say is
  *   the gender answer, and the gender step promises nobody is ever shown it. So the sheet says
  *   *They aren't told.*

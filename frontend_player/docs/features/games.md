@@ -471,3 +471,8 @@ before this change still shows the old sentence. **Not seen on a device.**
 - **A row's tap and its line are both drawn for a late claim** (_Oscar Nowak says they were there_
   over _Yes, Oscar Nowak was here_); an awaited player reads others awaited as a line, with nothing
   to press.
+
+**Every seat, line and tap names the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). A game's seats, its attendance
+rows and who called it off read the wire's `nickname`, so the court's eyebrow, the bar, the result
+screen's sentences, _oscar.n isn't here yet_ and the late claim's line say the whole nickname,
+never with an @. The stems on the bar cut at the first dot.

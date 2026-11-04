@@ -88,7 +88,7 @@ interface Person {
 }
 
 /** On the deck's card — and so the face whose record is opened. */
-const KUBA_PERSON: Person = { id: KUBA().player_id, name: 'Kuba Wiśniewski' };
+const KUBA_PERSON: Person = { id: KUBA().player_id, name: 'kuba.w' };
 /** Not on any card: reachable only from the list. */
 const ZOFIA: Person = {
   id: 'e0000000-0000-4000-8000-000000000031',
@@ -133,11 +133,11 @@ const PAGE: Wire['GroupResponse'] = {
     {
       sport: 'PADEL',
       rated_count: 5,
-      first_rated: [{ player_id: GATE_USER.id, name: 'Ada Lovelace' }],
+      first_rated: [{ player_id: GATE_USER.id, nickname: 'ada' }],
     },
   ],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -145,8 +145,7 @@ const PAGE: Wire['GroupResponse'] = {
 function recordOf(who: Person, blockedByYou: boolean | undefined): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
-    name: who.name,
-    nickname: 'someone',
+    nickname: who.name,
     area_code: 'A+050612+0019938',
     social_tags: [],
     sports: [{ sport: 'PADEL', level: 2.8, band: 'Established' }],
@@ -184,7 +183,7 @@ function blockServer(
         const who = PEOPLE.find((person) => person.id === id)!;
         return {
           player_id: who.id,
-          name: who.name,
+          nickname: who.name,
           ...(who.photoUrl === undefined
             ? {}
             : { photo_id: 'f0000000-0000-4000-8000-000000000001', photo_url: who.photoUrl }),

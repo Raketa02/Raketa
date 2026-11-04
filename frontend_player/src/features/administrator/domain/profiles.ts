@@ -14,18 +14,19 @@
 import type { HeldProfiles, ProfileChoice } from '@/features/auth/types';
 
 export type ProfileOption =
+  /** The player profile, by the player's nickname — absent before the naming (ADR-0199 §1). */
   | { readonly kind: 'player'; readonly name: string | undefined }
   | { readonly kind: 'administrator'; readonly clubId: string; readonly clubName: string };
 
 export function profileOptions(user: {
-  readonly name?: string | undefined;
+  readonly nickname?: string | undefined;
   readonly profiles: HeldProfiles;
 }): readonly ProfileOption[] {
   const clubs = user.profiles.administers.map((club): ProfileOption => ({
     kind: 'administrator',
     ...club,
   }));
-  return user.profiles.actsAsPlayer ? [{ kind: 'player', name: user.name }, ...clubs] : clubs;
+  return user.profiles.actsAsPlayer ? [{ kind: 'player', name: user.nickname }, ...clubs] : clubs;
 }
 
 /** Whether there is anything to switch to. */

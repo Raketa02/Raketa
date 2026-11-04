@@ -15,7 +15,7 @@
 
 export interface BlockedPlayer {
   readonly playerId: string;
-  /** The whole Name, never the nickname, and never a familiar form of it (ADR-0171 §4). */
+  /** Their nickname, whole and never with an @, and never a familiar form of it (ADR-0199 §1). */
   readonly name: string;
   /** Absent where they have no photograph — the face draws their generated poster. */
   readonly photoUrl?: string;

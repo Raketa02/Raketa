@@ -30,7 +30,7 @@ describe('a card', () => {
       deckCard({
         type: 'CHALLENGE',
         kind: 'FOR_FUN',
-        challenger: { player_id: KUBA().player_id, name: 'Kuba Wiśniewski' },
+        challenger: { player_id: KUBA().player_id, nickname: 'kuba.w' },
         in_count: 2,
         version_count: 2,
         court: 'BOOK_IT_NOW',
@@ -41,7 +41,7 @@ describe('a card', () => {
     expect(read).toMatchObject({
       type: 'CHALLENGE',
       kind: 'forFun',
-      challenger: { playerId: KUBA().player_id, name: 'Kuba Wiśniewski' },
+      challenger: { playerId: KUBA().player_id, name: 'kuba.w' },
       startsAt: '2026-10-03T14:00:00Z',
       club: { name: 'Bonarka Arena' },
       shareGrosze: 3200,
@@ -62,7 +62,7 @@ describe('a card', () => {
         club: { id: 'gone', name: null },
         sides: {
           yours: [youTile()],
-          theirs: [ANIA({ name: null, level: null }), EWA({ photo_url: 'https://p/e.jpg' })],
+          theirs: [ANIA({ nickname: null, level: null }), EWA({ photo_url: 'https://p/e.jpg' })],
         },
         forecast: null,
       }),

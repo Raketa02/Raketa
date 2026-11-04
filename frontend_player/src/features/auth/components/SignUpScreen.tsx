@@ -1,9 +1,9 @@
 /**
  * Create an account — **credentials, and nothing about who you are.**
  *
- * Email, a password twice and the adult attestation. The nickname left this form with
- * [ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §2: choosing credentials and saying who you are are two different moments, and the second
+ * Email, a password twice and the adult attestation. The nickname is not asked here
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3):
+ * choosing credentials and saying who you are are two different moments, and the second
  * is onboarding's first screen — *How should people see you?* — which the entry gate sends
  * this new session straight into. A sign-up refused for a taken handle was a sign-up refused
  * for a reason that had nothing to do with the account.

@@ -120,8 +120,10 @@ review comment and a test description all use the same word.
   "middleware" (that is a web server's word, and it runs on a server).
 - **Entry gate** — the _second_ redirect in `(app)/_layout.tsx`, deciding where a launch
   lands from **three parallel reads**: is a run unfinished, does a rating exist, and does a
-  Player profile exist. Four destinations, and the order between them is the rule: resume ·
-  welcome · the social steps · the app. Distinct from the guard, and deliberately **not**
+  Player profile exist. After the account's profiles, the first destination is the naming for an
+  account that is not **named** — that holds no nickname
+  ([ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3), read off the player
+  read — and then four, whose order is the rule: resume · welcome · the social steps · the app. Distinct from the guard, and deliberately **not**
   part of session status — a rating check inside bootstrap would block every cold launch on
   a network request. The third read is the authenticated player the app already asks for,
   never a fourth endpoint. _Avoid_: "onboarded flag" — there is no such thing, because a
@@ -500,13 +502,20 @@ here; what follows is only what this client had to invent to draw them.
   Tomek Przybylski and Marek Baran_, which is what tells two padel games in a week apart — and in
   the sentences about something a **person** did: putting a score up, and leaving a game that was
   then called off.
-  Always the **whole** name
-  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, read
-  through [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
-  the seat carries the **Name** and never the nickname, which is a handle drawn on a record and
-  said nowhere — the term keeps its word for the reason the specs do), and the unknown player's
-  `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and dropping a seat
+  Always the **whole** nickname, never with an @
+  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, read on
+  the nickname again by [ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1:
+  the nickname is a handle, so the term's word is right again), and the unknown player's `?` for
+  a seat `users` can no longer answer for. _Avoid_: shortening one, and dropping a seat
   that has no name — the court keeps its shape and loses a word.
+- **A person's `name`** — the field a read model carries for what a person is called: **their
+  nickname**, mapped from the wire's `nickname` at `mappers/`, whole and never with an @
+  ([ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). It keeps the word
+  for the reason `playerName()` does (ADR-0199, _Neutral_): _name_ there means _what a player is
+  called_. Where a shape once held a Name **and** a nickname — the authenticated player, the
+  record — it holds `nickname` alone. The one such value that is not always a nickname is a
+  group's `administratorName`: _… runs this group_ names an Administrator who has never played by
+  the name their club typed (§4). _Avoid_: reading it as the retired **Name**, and drawing an @.
 - **The open seat** — a seat somebody has **left** and nobody has filled: `player_id: null` on
   the wire, `playerId` absent here (`openSeats`), and **still a seat** — it keeps its place and
   its side, and the court keeps its size. _We played_ is withheld while one is open

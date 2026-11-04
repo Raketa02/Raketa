@@ -104,7 +104,7 @@ const PAGE: Wire['GroupResponse'] = {
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 10, first_rated: [] }],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -363,7 +363,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     const [, partner] = bookedSides().yours;
     expect(
       await screen.findByRole('header', {
-        name: `It’s a game! You and ${partner?.name ?? ''} against Inés Díaz and Bartek Lis`,
+        name: `It’s a game! You and ${partner?.nickname ?? ''} against ines.d and bartek.l`,
       }),
     ).toBeTruthy();
     await waitFor(() => expect(screen.queryByTestId(`seat-to-fill-${row.booking_id}`)).toBeNull());
@@ -420,8 +420,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     transport.on('GET', `/api/v1/players/${karol.player_id}/record`, () =>
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
-        name: 'Karol Tomaszewski',
-        nickname: 'karol_t',
+        nickname: 'karol.t',
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: 2.75, band: 'Established' }],

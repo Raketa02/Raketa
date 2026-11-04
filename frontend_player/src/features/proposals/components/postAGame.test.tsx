@@ -136,20 +136,20 @@ const PAGE: Wire['GroupResponse'] = {
       sport: 'PADEL',
       rated_count: 10,
       first_rated: [
-        { player_id: GATE_USER.id, name: 'Ada Lovelace' },
-        { player_id: 'e0000000-0000-4000-8000-000000000002', name: 'Member 2' },
-        { player_id: 'e0000000-0000-4000-8000-000000000003', name: 'Member 3' },
-        { player_id: 'e0000000-0000-4000-8000-000000000004', name: 'Member 4' },
+        { player_id: GATE_USER.id, nickname: 'ada' },
+        { player_id: 'e0000000-0000-4000-8000-000000000002', nickname: 'Member 2' },
+        { player_id: 'e0000000-0000-4000-8000-000000000003', nickname: 'Member 3' },
+        { player_id: 'e0000000-0000-4000-8000-000000000004', nickname: 'Member 4' },
       ],
     },
     {
       sport: 'TENNIS',
       rated_count: 4,
-      first_rated: [{ player_id: GATE_USER.id, name: 'Ada Lovelace' }],
+      first_rated: [{ player_id: GATE_USER.id, nickname: 'ada' }],
     },
   ],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 
@@ -704,7 +704,7 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     expect(await screen.findByRole('header', { name: 'Saturday evening' })).toBeTruthy();
     expect(await screen.findByText('5 of your best fits free then')).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: 'Karol Tomaszewski, level 2,75, a 93 % even game' }),
+      screen.getByRole('button', { name: 'karol.t, level 2,75, a 93 % even game' }),
     ).toBeTruthy();
     expect(screen.getByText('2,69 · 95')).toBeTruthy();
     expect(screen.getByText(COPY.sheet.freeCourts)).toBeTruthy();
@@ -843,7 +843,7 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
 
     fireEvent.press(
       await screen.findByRole('button', {
-        name: 'Karol Tomaszewski, level 2,75, a 93 % even game',
+        name: 'karol.t, level 2,75, a 93 % even game',
       }),
     );
 
@@ -884,9 +884,7 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
       }),
     ).toBeTruthy();
     const postRow = screen.getByTestId(`slot-post-${post.proposal_id}`);
-    expect(
-      within(postRow).getByText('Kuba Wiśniewski · Bonarka Arena · 32 zł if it fills'),
-    ).toBeTruthy();
+    expect(within(postRow).getByText('kuba.w · Bonarka Arena · 32 zł if it fills')).toBeTruthy();
     expect(within(postRow).queryByText(/Court/)).toBeNull();
     expect(within(postRow).getByRole('button', { name: PROPOSALS_COPY.yes })).toBeTruthy();
   });
@@ -966,7 +964,7 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     const [, partner] = bookedSides().yours;
     expect(
       await screen.findByRole('header', {
-        name: `${FILL_COPY.itsAGame.word} You and ${partner?.name ?? ''} against Inés Díaz and Bartek Lis`,
+        name: `${FILL_COPY.itsAGame.word} You and ${partner?.nickname ?? ''} against ines.d and bartek.l`,
       }),
     ).toBeTruthy();
   });
@@ -995,7 +993,7 @@ describe('Post — you’re In (mock 33, A5.4)', () => {
         deckCard({
           proposal_id: mine.proposal_id,
           type: 'CHALLENGE',
-          challenger: { player_id: GATE_USER.id, name: GATE_USER.name ?? null },
+          challenger: { player_id: GATE_USER.id, nickname: GATE_USER.nickname ?? null },
           in_count: 1,
           sides: { yours: [youTile({ is_in: true })], theirs: [] },
         }),

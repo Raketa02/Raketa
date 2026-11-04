@@ -9,11 +9,9 @@
  * different objects naming the same people under one heading each
  * ([`the-loop-screens.md`](../../../../docs/specs/the-loop/the-loop-screens.md) §1.2, §1.3).
  *
- * **Every *handle* in this file is a name** — the player's Name since
- * [ADR-0171](../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md),
- * never the nickname, which is drawn on a record and said nowhere. The words keep their old
- * spelling for the reason `playerName.ts` gives: the specs read *handle* through the ADR rather
- * than being rewritten, and so do the functions those specs name.
+ * **Every *handle* in this file is a nickname** — what every screen says about a player since
+ * [ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md), whole and never
+ * with an @. The word is right again: the nickname is a handle.
  *
  * **§15 is categorical: a name is not shortenable.** So a list of them gives way by dropping
  * **whole names**, the ellipsis falls at a separator, and whoever is dropped is whole on the

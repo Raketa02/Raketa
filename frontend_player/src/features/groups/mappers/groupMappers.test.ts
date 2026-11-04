@@ -19,8 +19,8 @@ const O3_CLUB: Wire['GroupAtClubSchema'] = {
   sports: ['PADEL', 'TENNIS'],
   member_count: 11,
   join_policy: 'PEOPLE_I_APPROVE',
-  owner_name: 'Coach Andrzej',
-  administrator_name: null,
+  owner_nickname: 'Coach Andrzej',
+  administrator_nickname: null,
   is_administrator: false,
   relation: 'REQUESTED',
 };
@@ -65,8 +65,8 @@ describe('a club as a search answers it', () => {
     const official: Wire['GroupAtClubSchema'] = {
       ...O3_CLUB,
       kind: 'OFFICIAL',
-      owner_name: null,
-      administrator_name: 'Marta Wójcik',
+      owner_nickname: null,
+      administrator_nickname: 'Marta Wójcik',
       is_administrator: true,
     };
 
@@ -148,7 +148,7 @@ describe('the reader’s groups and a group’s page', () => {
         is_owner: true,
         rated_by_sport: [],
         member_faces: [],
-        administrator_name: null,
+        administrator_nickname: null,
         is_administrator: false,
       }),
     ).toMatchObject({
@@ -198,7 +198,7 @@ describe('the reader’s groups and a group’s page', () => {
       ...PAGE,
       kind: 'OFFICIAL',
       is_owner: false,
-      administrator_name: 'Marta Wójcik',
+      administrator_nickname: 'Marta Wójcik',
       is_administrator: true,
     };
 
@@ -221,7 +221,7 @@ describe('the reader’s groups and a group’s page', () => {
       link: 'https://raketa.app/join/ABCDEFGH',
       join_policy: 'ANYONE',
       is_owner: true,
-      administrator_name: null,
+      administrator_nickname: null,
       is_administrator: false,
       rated_by_sport: [
         {
@@ -230,11 +230,11 @@ describe('the reader’s groups and a group’s page', () => {
           first_rated: [
             {
               player_id: 'p1',
-              name: 'Tomek Kowal',
+              nickname: 'Tomek Kowal',
               photo_id: 'f1',
               photo_url: 'https://photos.test/f1',
             },
-            { player_id: 'p2', name: null },
+            { player_id: 'p2', nickname: null },
           ],
         },
         { sport: 'TENNIS', rated_count: 0, first_rated: [] },
@@ -288,12 +288,17 @@ const PAGE: Wire['GroupResponse'] = {
   link: 'https://raketa.app/join/ABCDEFGH',
   join_policy: 'PEOPLE_I_APPROVE',
   is_owner: true,
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
   rated_by_sport: [],
   member_faces: [
-    { player_id: 'p1', name: 'Karol Tomczak', photo_id: 'f1', photo_url: 'https://photos.test/f1' },
-    { player_id: 'p2', name: null },
+    {
+      player_id: 'p1',
+      nickname: 'Karol Tomczak',
+      photo_id: 'f1',
+      photo_url: 'https://photos.test/f1',
+    },
+    { player_id: 'p2', nickname: null },
   ],
 };
 
@@ -314,7 +319,7 @@ describe('Members, for one sport', () => {
         members: [
           {
             player_id: 'p0',
-            name: 'Tomek Kowal',
+            nickname: 'Tomek Kowal',
             level: 2.71,
             player_score: 92,
             reliability_band: 'VERY_HIGH',
@@ -324,7 +329,7 @@ describe('Members, for one sport', () => {
           },
           {
             player_id: 'p1',
-            name: 'Karol Tomczak',
+            nickname: 'Karol Tomczak',
             photo_id: 'f1',
             photo_url: 'https://photos.test/f1',
             level: 2.75,
@@ -369,7 +374,7 @@ describe('Members, for one sport', () => {
       members: [
         {
           player_id: 'p2',
-          name: 'Ewa Mazur',
+          nickname: 'Ewa Mazur',
           level: 2.6,
           player_score: 61,
           reliability_band: 'SHAKY' as Wire['ReliabilityBand'],
@@ -390,7 +395,7 @@ describe('Members, for one sport', () => {
       members: [
         {
           player_id: 'p3',
-          name: 'Marta Wójcik',
+          nickname: 'Marta Wójcik',
           level: 2.6,
           player_score: 100,
           reliability_band: 'VERY_HIGH',
@@ -412,13 +417,13 @@ describe('the Join requests waiting', () => {
         requests: [
           {
             player_id: 'p3',
-            name: 'Michał Rogalski',
+            nickname: 'Michał Rogalski',
             levels: [
               { sport: 'PADEL', level: 2.44 },
               { sport: 'TENNIS', level: 2.6 },
             ],
           },
-          { player_id: 'p4', name: null, levels: [] },
+          { player_id: 'p4', nickname: null, levels: [] },
         ],
       }),
     ).toEqual([
@@ -456,7 +461,7 @@ describe('an edit’s answer', () => {
   it('reads the group as the save left it and who the switch to Anyone let in', () => {
     const edited = toEditedGroup({
       group: { ...PAGE, name: 'Kazimierz padel', join_policy: 'ANYONE' },
-      admitted: [{ player_id: 'p3', name: 'Michał Rogalski' }],
+      admitted: [{ player_id: 'p3', nickname: 'Michał Rogalski' }],
     });
 
     expect(edited.group).toMatchObject({ name: 'Kazimierz padel', joinPolicy: 'ANYONE' });

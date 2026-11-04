@@ -70,3 +70,6 @@ why the card is the one read in the app that draws **nothing at all on a failed 
 result screen around it draws a note, because a game a player pushed into vanishing is
 indistinguishable from a link gone stale and must not be, and a coral note over an unasked-for
 favour is the app apologising for a chore it invented.
+
+**The stars name the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). The people on the card come off the game's seats,
+which read the wire's `nickname`, so each row of stars names the person whole and never with an @.

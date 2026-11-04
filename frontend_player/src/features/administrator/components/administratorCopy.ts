@@ -49,7 +49,7 @@ export const ADMINISTRATOR_COPY = {
     },
   },
   you: {
-    /** The header's title where the account's name has not been read — it always has one here. */
+    /** The header's title where the account has no nickname — one that has not started playing. */
     title: 'You',
     /** The group of one row per official group, each opening its settings. */
     groups: 'Group settings',

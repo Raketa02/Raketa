@@ -26,15 +26,15 @@ describe('It’s a game! as a listener hears it', () => {
     expect(
       itsAGameSentence({
         yours: [
-          { playerId: 'me', name: 'Ada Lovelace' },
-          { playerId: 'z', name: 'Zofia Bielecka' },
+          { playerId: 'me', name: 'ada' },
+          { playerId: 'z', name: 'zofia.b' },
         ],
         theirs: [
-          { playerId: 'a', name: 'Ania Kowalska' },
-          { playerId: 'e', name: 'Ewa Majewska' },
+          { playerId: 'a', name: 'ania.k' },
+          { playerId: 'e', name: 'ewa.m' },
         ],
       }),
-    ).toBe('It’s a game! You and Zofia Bielecka against Ania Kowalska and Ewa Majewska');
+    ).toBe('It’s a game! You and zofia.b against ania.k and ewa.m');
   });
 
   it('says singles as you against them, and a person with no name as the unknown mark', () => {
@@ -47,11 +47,11 @@ describe('It’s a game! as a listener hears it', () => {
     const line = itsAGameLine({ until: { at: '2026-10-06T12:40:00Z', today: true } });
     expect(
       itsAGameSentence(
-        { yours: [{ playerId: 'me' }], theirs: [{ playerId: 'k', name: 'Kuba Wiśniewski' }] },
+        { yours: [{ playerId: 'me' }], theirs: [{ playerId: 'k', name: 'kuba.w' }] },
         line.spoken,
       ),
     ).toBe(
-      'It’s a game! You against Kuba Wiśniewski. Waiting for one payment until 14:40. Nobody pays until it’s in',
+      'It’s a game! You against kuba.w. Waiting for one payment until 14:40. Nobody pays until it’s in',
     );
   });
 });

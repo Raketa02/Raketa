@@ -13,8 +13,8 @@
  * ## The entry gate
  *
  * The second redirect is onboarding's, and onboarding is **two parts** — so the gate has
- * five destinations rather than two: an unnamed account goes to the naming step before
- * anything else ([ADR-0171](../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * five destinations rather than two: an account with no nickname goes to the naming step before
+ * anything else ([ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md)
  * §3), an unfinished run resumes, no ratings goes to welcome, a rating with no Player profile
  * goes to the second part's first step, and only then does a player reach the app
  * ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).

@@ -10,7 +10,9 @@
  * - **Two initials over a poster, and never over a photograph.** The poster is a fact about an
  *   id and the gradient alone cannot say who at tile size; a photograph already names the
  *   person, and letters over it would cover the one thing that does. The cut is
- *   `handleInitials`, beside `handleStem`, and it is a **drawing**: hidden from the screen
+ *   `handleInitials`, beside `handleStem` — from the nickname, *ania.k* → `AK`, *kuba* → `KU`
+ *   ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §2) — and it
+ *   is a **drawing**: hidden from the screen
  *   reader with the rest of the tile, because the sentence that names everybody is the
  *   screen's header, built from whole handles. The day the initials are spoken, §3's fence
  *   has fallen.
@@ -34,7 +36,7 @@ export type YesSeat =
   | {
       readonly kind: 'person';
       readonly playerId: string;
-      /** The whole name, for the spoken sentence. Absent where `users` has lost the account. */
+      /** The whole nickname, for the spoken sentence. Absent where `users` has lost the account. */
       readonly name?: string;
       /** Off the seat card; absent for the reader, whose face comes off their own record. */
       readonly photoUrl?: string;

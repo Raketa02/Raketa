@@ -23,12 +23,12 @@ export { StartPlayingScreen } from './components/StartPlayingScreen';
 /**
  * **The naming, from the You tab**
  * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §7): the *Name* row the shell composes, the screen behind it the route file mounts, and
- * the row's words for the suites that hold the tab to them.
+ * §7): the *Nickname* row the shell composes, the screen behind it the route file mounts, and
+ * the row's words for the suites that hold the tab to them (ADR-0199 §3).
  */
-export { NameRow, YOU_NAME_ROUTE, type NameRowProps } from './components/NameRow';
-export { NameScreen } from './components/NameScreen';
-export { NAME_ROW_TITLE, SAVE_NAME, nameLine } from './components/namePresentation';
+export { NicknameRow, YOU_NICKNAME_ROUTE, type NicknameRowProps } from './components/NicknameRow';
+export { NicknameScreen } from './components/NicknameScreen';
+export { NICKNAME_ROW_TITLE, SAVE_NICKNAME } from './components/nicknamePresentation';
 export { SignInScreen } from './components/SignInScreen';
 export { SignUpScreen } from './components/SignUpScreen';
 
@@ -70,10 +70,9 @@ export { useInvitationLink } from './hooks/useInvitationLink';
 export { LINK_STATE_MESSAGE, invitationErrorMessage } from './components/invitationPresentation';
 
 /**
- * **Named in full** — a name and a nickname (ADR-0185 §4) — for the entry gate's first destination;
- * the naming step reads the same rule from inside this feature.
+ * **Named** — holding a nickname (ADR-0199 §3) — for the entry gate's first destination.
  */
-export { namedInFull } from './domain/naming';
+export { named } from './domain/naming';
 
 /**
  * **Which profile the account wears, and the one the phone remembers** (ADR-0188 §2, #518) — the
@@ -96,7 +95,7 @@ export type {
 } from './domain/AuthenticatedUser';
 
 /**
- * Where an unnamed account is sent. The entry gate reaches for it, and one file spelling the
+ * Where an account with no nickname is sent. The entry gate reaches for it, and one file spelling the
  * route is one place to change it — `SOCIAL_STEPS_ENTRY`'s own argument.
  */
 export const NAMING_STEP = '/name';

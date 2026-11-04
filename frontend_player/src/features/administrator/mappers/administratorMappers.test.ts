@@ -79,17 +79,17 @@ describe('an official group’s page', () => {
     players: [
       {
         player_id: 'p1',
-        name: 'Ania Kowalczyk',
+        nickname: 'Ania Kowalczyk',
         photo_id: 'f1',
         photo_url: 'https://photos.test/f1',
         joined_at: '2026-09-07T18:00:00Z',
       },
-      { player_id: 'p2', name: null, joined_at: '2026-08-31T10:00:00Z' },
+      { player_id: 'p2', nickname: null, joined_at: '2026-08-31T10:00:00Z' },
     ],
     requests: [
       {
         player_id: 'p3',
-        name: 'Michał Rogalski',
+        nickname: 'Michał Rogalski',
         levels: [
           { sport: 'PADEL', level: 2.44 },
           { sport: 'TENNIS', level: 2.6 },
@@ -154,11 +154,11 @@ describe('a settings save’s answer', () => {
       admitted: [
         {
           player_id: 'p3',
-          name: 'Michał Rogalski',
+          nickname: 'Michał Rogalski',
           photo_id: 'f3',
           photo_url: 'https://photos.test/f3',
         },
-        { player_id: 'p7', name: null },
+        { player_id: 'p7', nickname: null },
       ],
     });
 

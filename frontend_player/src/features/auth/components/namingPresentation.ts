@@ -2,10 +2,10 @@
  * **Every sentence the naming step says.**
  *
  * One deck, on the rule the whole app is written to: a screen is assembled from words that live
- * in one place, never from templates inlined in a component. The two refusals a box can show
- * are not here — the form's own sentences live with the schema they belong to, and the
- * server's `nickname_already_taken` with the other codes in `authErrorMessage` — and the
- * nickname's rule is quoted from the schema rather than spelled twice.
+ * in one place, never from templates inlined in a component. The refusals the box can show are
+ * not here — the form's own sentences live with the schema they belong to, the handle's rule
+ * among them, and the server's `nickname_already_taken` with the other codes in
+ * `authErrorMessage`.
  */
 
 /** The eyebrow over the title: the same word the sign-up form and welcome open with. */
@@ -14,16 +14,11 @@ export const NAMING_EYEBROW = 'Raketa';
 /**
  * The step's title, and **the question it is** — asked in the second person, because the
  * answer is how the player wants to be seen rather than a record the platform is filling in
- * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §1).
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3).
  */
 export const NAMING_TITLE = 'How should people see you?';
 
-/**
- * The two boxes, in the order the ADR asks them: the name first, because it is what everyone
- * sees, and the handle under it.
- */
-export const NAME_LABEL = 'Name';
+/** The one box: the nickname is all the naming asks. */
 export const NICKNAME_LABEL = 'Nickname';
 
 /**
@@ -37,10 +32,8 @@ export const CONTINUE = {
 } as const;
 
 /**
- * **Under the title, where only the nickname is asked** — an account whose name the club gave
- * (ADR-0185 §4). The step says the name it will keep, so the one box is not a question about a
- * name nobody sees; it changes later from the You tab's *Name*, the same act.
+ * **Under the title, for an account an Invitation opened** (ADR-0199 §3). Its club has known it by
+ * the name the club typed, which stays the Administrator's; the line says what the nickname is
+ * for, since it is the first thing the account is asked as a player.
  */
-export function nameKeptLine(name: string): string {
-  return `People will see you as ${name}. Pick a nickname to go with it.`;
-}
+export const INVITED_LINE = "Pick a nickname — it's how players will see you.";

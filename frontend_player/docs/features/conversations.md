@@ -190,3 +190,8 @@ the mechanics Q100). The bubble on the game's Home card opens the same route as 
 _Open the chat_, pushed straight over Home, so Back from the room is whichever screen opened it. The
 screen is unchanged — it never had a way into the details and still has none; the door is
 `proposals`' (`ChatDoor`), named by `OPEN_THE_CHAT` like the details' one.
+
+**The chat names its people by nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). Members and people read the wire's
+`nickname`; the header's drawn line is each nickname's stem at its **first dot**, spoken whole, and
+the author labels, the typing line and the system lines say the whole nickname, never with an @.
+`conversationScreen.test.tsx` holds _ania.k_ in the header, on her bubble and in a line about her.

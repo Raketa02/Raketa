@@ -82,10 +82,10 @@ const DOUBLES: Wire['GameSchema'] = {
   score: { sets: [{ a: 6, b: 4 }] },
   outcome: 'WIN',
   seats: [
-    { side: 'A', player_id: ME, name: 'ada' },
-    { side: 'A', player_id: PARTNER, name: 'kasia_w' },
-    { side: 'B', player_id: OPPONENT, name: 'tomek.p' },
-    { side: 'B', player_id: THEIR_PARTNER, name: 'marekb' },
+    { side: 'A', player_id: ME, nickname: 'ada' },
+    { side: 'A', player_id: PARTNER, nickname: 'kasia_w' },
+    { side: 'B', player_id: OPPONENT, nickname: 'tomek.p' },
+    { side: 'B', player_id: THEIR_PARTNER, nickname: 'marekb' },
   ],
   proposals: [],
   attendance: [],
@@ -97,8 +97,8 @@ const SINGLES: Wire['GameSchema'] = {
   game_id: SINGLES_GAME,
   sport: 'SQUASH',
   seats: [
-    { side: 'A', player_id: ME, name: 'ada' },
-    { side: 'B', player_id: OPPONENT, name: 'tomek.p' },
+    { side: 'A', player_id: ME, nickname: 'ada' },
+    { side: 'B', player_id: OPPONENT, nickname: 'tomek.p' },
   ],
 };
 

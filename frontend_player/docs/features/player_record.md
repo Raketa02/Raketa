@@ -172,6 +172,20 @@ may share a name, and this is the screen a friend opens to tell them apart, whic
 handle is here and on the reader's own You tab and nowhere else. The header's spoken name says
 both, in the order they are drawn, because a listener is told what a reader is shown.
 
+**The header draws the nickname large, and nothing under it**
+([#728](https://github.com/Raketa02/Raketa/issues/728),
+[ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1, superseding the
+paragraph above). The record's read drops `name` and keeps `nickname`, and so does
+`PlayerRecord`: the sheet's title is the whole nickname with `(you)` after your own, never written
+with an @, and **the handle line under it is gone** — the nickname is unique and is the identity,
+so there is nothing left to tell two people apart by. `atNickname` went with its last two callers,
+and `recordHeaderLabel` speaks the nickname, the intro and the rest in the order they are drawn.
+**`YouHeaderCard` does the same**: the nickname from `GET /users/me`, large, and nothing under it —
+what the _Nickname_ row's save writes into, so a rename shows here on the way back. The Block row
+names the record's nickname. `groupGames.test.tsx` opens _ania.k_'s record from her tile and
+`nicknameFromYou.test.tsx` renames her from You. **Not seen on a device**: the header and the card
+without their second line.
+
 **The identity line prints the kilometres to one decimal**
 ([#461](https://github.com/Raketa02/Raketa/issues/461),
 [ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).

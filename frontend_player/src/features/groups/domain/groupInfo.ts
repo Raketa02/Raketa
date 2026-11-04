@@ -100,7 +100,7 @@ export function adminTagged(member: Pick<GroupMember, 'isOwner' | 'isAdministrat
  * ask). A member can always find who runs the group they are in, to know who answers for it: a
  * player group's Owner is one of its members and leads the list with the **admin** tag, but an
  * official group's Administrator need not play in it, and was then on no list at all. So Members
- * names them over the list — their whole Name, the admin tag and the club they run it for — and,
+ * names them over the list — their whole nickname, the admin tag and the club they run it for — and,
  * while the group **needs an administrator**, the club in their place, which holds the group until
  * it hands it on (ADR-0183 §3).
  *

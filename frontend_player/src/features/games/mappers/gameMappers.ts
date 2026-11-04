@@ -116,7 +116,7 @@ function toSeat(wire: SeatingSchema): GameSeat | undefined {
   if (side === undefined) return undefined;
 
   const playerId = wire.player_id ?? undefined;
-  const name = wire.name ?? undefined;
+  const name = wire.nickname ?? undefined;
   return {
     side,
     ...(playerId === undefined ? {} : { playerId }),
@@ -145,7 +145,7 @@ function toAttendance(wire: AttendanceSchema): Attendance {
   const state = member(ATTENDANCE_STATES, wire.state);
   return {
     playerId: wire.player_id,
-    ...(wire.name == null ? {} : { name: wire.name }),
+    ...(wire.nickname == null ? {} : { name: wire.nickname }),
     ...(state === undefined ? {} : { state }),
     notedAt: wire.noted_at,
     arriveBy: wire.arrive_by,
@@ -185,7 +185,7 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
       : {
           calledOffBy: {
             playerId: wire.called_off_by.player_id,
-            ...(wire.called_off_by.name == null ? {} : { name: wire.called_off_by.name }),
+            ...(wire.called_off_by.nickname == null ? {} : { name: wire.called_off_by.nickname }),
           },
         }),
     score: wire.score == null ? undefined : toScore(wire.score),

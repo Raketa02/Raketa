@@ -3,8 +3,8 @@
  * game!* as a listener hears it, and the facts of a payment to confirm
  * ([#555](https://github.com/Raketa02/Raketa/issues/555)). The fixed words are `fillCopy.ts`.
  *
- * **The announcement is built from whole Names**, the yes screen's own rule (ADR-0167 §3, ADR-0171):
- * the tiles draw initials over a poster, and those never reach a sentence.
+ * **The announcement is built from whole nicknames**, the yes screen's own rule (ADR-0167 §3,
+ * ADR-0199 §1–§2): the tiles draw initials over a poster, and those never reach a sentence.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
@@ -50,8 +50,8 @@ function spoken(face: Face): string {
 }
 
 /**
- * *It's a game! You and Zofia Bielecka against Ania Kowalska and Ewa Majewska* — the screen's
- * header, spoken; singles are *You against Kuba Wiśniewski*. The line under the word, when there is
+ * *It's a game! You and zofia.b against ania.k and ewa.m* — the screen's
+ * header, spoken; singles are *You against kuba.w*. The line under the word, when there is
  * one, follows the picture (`itsAGameLine`'s `spoken`).
  */
 export function itsAGameSentence(picture: ItsAGamePicture, line?: string): string {

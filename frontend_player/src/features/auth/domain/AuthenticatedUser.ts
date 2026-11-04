@@ -18,7 +18,7 @@
  * than carried: nothing in the player app may branch on them. A client that renders
  * differently for an admin has invented an authorization decision it cannot enforce.
  *
- * `hasPlayerProfile` and `name` are the two fields kept for the opposite reason — the client
+ * `hasPlayerProfile` and `nickname` are the two fields kept for the opposite reason — the client
  * is *required* to branch on them, at launch, before any route tree exists. The wire no
  * longer carries `is_tester` at all: its one reader was feature-flag evaluation, which left
  * with the flags (#576), and the mark left the server after it (#581).
@@ -27,20 +27,16 @@ export interface AuthenticatedUser {
   readonly id: string;
   readonly email: string;
   /**
-   * What this player is called — **what every screen says about them**, and the entry gate's
-   * first destination when it is absent
-   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+   * What this player is called — their handle, unique across the platform, and **what every
+   * screen says about them**, whole and never with an @
+   * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). The
+   * entry gate's first destination when it is absent.
    *
    * Absent until the naming, and this is the one read on which it may be: sign-up creates
-   * the account unnamed, and the gate holds it at the naming step until it is not. Read from
-   * the `User`'s own stream for `hasPlayerProfile`'s reason — the moment after the naming is
-   * exactly when a lagging read model would send a player back to the step they just finished.
-   */
-  readonly name?: string;
-  /**
-   * Their handle, unique across the platform — drawn as `@nickname` under the name on their
-   * own You tab and on their record, and **said nowhere else**. Absent until the naming, with
-   * the name: the two are one act.
+   * the account with none, an account an Invitation opened holds none either (§4), and the gate
+   * holds it at the naming step until it has one. Read from the `User`'s own stream for
+   * `hasPlayerProfile`'s reason — the moment after the naming is exactly when a lagging read model
+   * would send a player back to the step they just finished.
    */
   readonly nickname?: string;
   /**
@@ -137,8 +133,8 @@ export interface SignInCredentials {
 /**
  * What a player types to create an account — **credentials, and nothing about who they are.**
  *
- * The nickname left this shape with ADR-0171 §2: sign-up is choosing credentials, and saying
- * who you are is a different moment, asked first thing in onboarding by {@link Naming}.
+ * Sign-up is choosing credentials, and saying who you are is a different moment, asked first
+ * thing in onboarding by {@link Naming} (ADR-0199 §3).
  */
 export interface Registration {
   readonly email: string;
@@ -160,19 +156,16 @@ export interface Registration {
 }
 
 /**
- * **The naming** — *How should people see you?* — the one act that names a player
- * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §2).
+ * **The naming** — *How should people see you?* — the one act that names a player: **a nickname,
+ * and nothing else**
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3).
  *
- * Both together, always: there is no event for one without the other, so a shape carrying one
- * would be a naming the server cannot record. The name is what the player wants to be called
- * — free text, spaces allowed, never unique; the nickname is a handle under the rule the sign-up
- * form used to state, unique across the platform and refused with `nickname_already_taken` when
- * it is another player's. **Repeatable**: a later change is the same act, and this is also what
- * the naming answers with — the name as recorded, trimmed and collapsed, which is why the screen
- * re-reads the player rather than trusting what it typed.
+ * A handle under the rule the sign-up form used to state, unique across the platform and refused
+ * with `nickname_already_taken` when another account holds it. **Repeatable**: a later change
+ * from the You tab is the same act, at any time, and keeping your own is admitted. This is also
+ * what the naming answers with — the nickname as recorded — which is why the screen re-reads the
+ * player rather than trusting what it typed.
  */
 export interface Naming {
-  readonly name: string;
   readonly nickname: string;
 }

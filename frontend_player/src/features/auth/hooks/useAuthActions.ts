@@ -95,13 +95,13 @@ export function useSignOut() {
  * **Written, and then re-read, in that order** — the same shape as `useMarkPlayerProfileCommitted`
  * and for the same reasons, with one difference the ADR asks for:
  *
- * - The **write** is not a guess. The server answered with the name *as recorded* — trimmed,
- *   collapsed — so what goes into the cached player is what the server holds, and a gate
- *   reading the cache in the next instant already finds a named player. A cache still saying
- *   *no name* would route the player straight back to the step they just finished.
+ * - The **write** is not a guess. The server answered with the nickname *as recorded*, so what
+ *   goes into the cached player is what the server holds, and a gate reading the cache in the
+ *   next instant already finds a named player. A cache still saying *no nickname* would route the
+ *   player straight back to the step they just finished.
  * - The **re-read** is the server staying the authority, and it is **awaited**
- *   ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- *   §3: *it submits the naming, re-reads `/me`, and only then moves on*).
+ *   ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3: *it
+ *   submits the naming, re-reads `/me`, and only then moves on*).
  *
  * **`fetchQuery`, and not an invalidation, because the entry may be gone.** Nothing on the
  * naming step observes the player, and an unobserved query is garbage-collected after its
@@ -126,11 +126,9 @@ export function useNamePlayer() {
     onSuccess: async (recorded) => {
       queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
         // Nothing cached to update — the re-read below creates the entry. Returning
-        // `undefined` leaves the cache untouched rather than inventing a player out of two
-        // strings.
-        player === undefined
-          ? undefined
-          : { ...player, name: recorded.name, nickname: recorded.nickname },
+        // `undefined` leaves the cache untouched rather than inventing a player out of a
+        // string.
+        player === undefined ? undefined : { ...player, nickname: recorded.nickname },
       );
       // `staleTime: 0` is the point: the write above just made the entry fresh, and a fetch that
       // honoured that would hand the write back as the server's answer.

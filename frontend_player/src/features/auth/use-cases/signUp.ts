@@ -7,9 +7,9 @@
  * whether their account exists.
  *
  * **Credentials only.** Nothing about who the player is travels here: the account is created
- * unnamed, and the naming is onboarding's first step
- * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §2), which the entry gate sends the new session straight into.
+ * with no nickname, and the naming is onboarding's first step
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3), which
+ * the entry gate sends the new session straight into.
  */
 
 import { register } from '../api/authApi';

@@ -5,15 +5,18 @@
  * administrator's rows in it:
  *
  * ```
- * Marta Nowak                   the account's name — club 8's header, which club 17 moved here
+ * marta.n                       the account's nickname, once it plays — club 8's header
  * GROUP SETTINGS                one row per official group she runs, opening its settings
  * PLAYING                       Start playing — only while the account does not act as a player
  * ─────────────
  * Sign out                      pinned under the page, above the bar
  * ```
  *
- * **The header is the person's name**, club 8's, which PRD #500 moved here from the Groups tab — the
- * one tab about the account. Club 8's *OGRODY 33 · ADMINISTRATOR* over it went at the product
+ * **The header is the person's nickname**, club 8's header, which PRD #500 moved here from the Groups
+ * tab — the one tab about the account. The account holds no other name: the one its club typed is
+ * the Administrator's, on the club's own pages
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §4), so an
+ * account that has not started playing has no nickname yet and the header says *You*. Club 8's *OGRODY 33 · ADMINISTRATOR* over it went at the product
  * owner's ask (#529, 2026-10-02), as the Groups tab's had: the switcher chip beside the name and
  * the area's own bar already say whose profile it is. **The switcher chip is its right slot** ([#518](https://github.com/Raketa02/Raketa/issues/518),
  * club 7), drawn only for an account with a second profile to switch to.
@@ -60,7 +63,7 @@ export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) 
   return (
     <TopSafeArea style={s.screen}>
       <ScreenHeader
-        title={user.data?.name ?? COPY.title}
+        title={user.data?.nickname ?? COPY.title}
         right={<ProfileChip worn={{ kind: 'administrator', clubId }} />}
       />
       <ScrollView contentContainerStyle={s.content}>

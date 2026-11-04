@@ -357,3 +357,13 @@ address, the existing-account email's button, takes back all of them; `/users/me
 (`useOfferInvitationsAgain`); **a group link switches an account that
 plays to Player**, where Join a group is, and waits for one that does not. The rest is
 [`links.md`](links.md)'s.
+
+**The area says the account's nickname, or _You_** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §4). `/users/me` no longer
+serves a name, and the name a club types for its Administrator stays the Administrator's, on the
+club's own pages. So **the You tab's header is the account's nickname once it plays, and _You_
+until then** — an account an Invitation opened that has not started playing holds no nickname, and
+the area has no read of the club-typed name to fall back on. The switcher's Player row is the
+nickname too (_tomek.k, Player_). The players of a group and the requests read the wire's
+`nickname`. **A call made without a ruling**: _You_ for an Administrator who has not played, where
+the area used to say _Marta Nowak_; serving the Administrator's own name to the phone would be a
+contract change of its own.

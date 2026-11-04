@@ -7,7 +7,7 @@ type Wire = components['schemas'];
 const tile = (extra: Partial<Wire['BookedTileSchema']> = {}): Wire['BookedTileSchema'] => ({
   player_id: 'p-1',
   is_you: false,
-  name: 'Piotr Sowa',
+  nickname: 'piotr.s',
   photo_id: null,
   photo_url: null,
   level: 2.95,
@@ -95,7 +95,7 @@ describe('toHome', () => {
                 isYou: true,
                 isIn: false,
                 paid: true,
-                name: 'Piotr Sowa',
+                name: 'piotr.s',
                 level: 2.95,
               },
             ],
@@ -105,7 +105,7 @@ describe('toHome', () => {
                 isYou: false,
                 isIn: false,
                 paid: true,
-                name: 'Piotr Sowa',
+                name: 'piotr.s',
                 level: 2.95,
               },
             ],
@@ -130,7 +130,7 @@ describe('toHome', () => {
         homeGame({
           club: { id: 'club-1', name: null },
           sides: {
-            yours: [tile({ name: null, level: null, photo_url: null, paid: false })],
+            yours: [tile({ nickname: null, level: null, photo_url: null, paid: false })],
             theirs: [],
           },
           money: {

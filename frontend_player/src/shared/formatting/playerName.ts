@@ -1,36 +1,30 @@
 /**
- * How this platform names a person — **the whole name, or nobody**.
+ * How this platform names a person — **the whole nickname, or nobody**, and never with an @.
  *
- * `users` holds an Email, a **Name** and a **Nickname**
- * ([ADR-0171](../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
- * The name is what a player is called — free text, spaces allowed, 2 to 64 characters, never
- * unique — and **it is what every screen says**. The nickname is a handle, drawn as `@nickname`
- * under the name on a player's record and on their own You tab, and **said nowhere**: never in
- * a sentence, on a row, a card, a sheet, a toast, a seat label or a spoken name. Nothing here
- * takes one.
+ * `users` holds an Email and a **Nickname**
+ * ([ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md)). The nickname is
+ * a handle — 2 to 64 characters of letters, digits and `. _ -`, unique across the platform — and
+ * **it is what every screen says**: every sentence, row, card, sheet, toast, notice, seat label
+ * and spoken name. It is never written with an @ (*ania.k put a score up*): the @ is a chat app's
+ * mention mark, and inside a sentence it reads as markup (ADR-0199 §1). The Name is retired.
  *
- * ADR-0107 §4's rule reads on names now, and its argument is untouched: *"every sentence naming
- * somebody uses the whole name or names nobody — the prototype's `split(' ')[0]` has nothing
- * behind it here, and inventing a first name is the product addressing a person by a name they
- * never gave it."* The name was a handle when that was written, and none of what follows
- * depended on it being one — only on the platform saying what the player gave it, whole.
+ * ADR-0107 §4's rule reads on the nickname again, and its argument is untouched: *"every sentence
+ * naming somebody uses the whole handle or names nobody — the prototype's `split(' ')[0]` has
+ * nothing behind it here, and inventing a first name is the product addressing a person by a
+ * name they never gave it."*
  *
  * So there is **one** of these, and it is the only thing that turns a player into words:
  * the head-to-head row, the court's side names, the pre-send sheet and all eight of the
  * toasts that name somebody
  * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §15). It is in
- * `shared/` rather than in Play because the challenge a send opens names the same people on
- * screens Play does not own.
+ * `shared/` because every feature that draws a person names them through it. **The function
+ * keeps the word *name***, as ADR-0199's *Neutral* says: *name* there means *what a player is
+ * called*, which is the nickname — and so does the `name` a read model carries for a person.
  *
  * **A seat label may truncate visually; a sentence may not, and a spoken name never does.**
  * ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents
- * nothing. *Whether* a box truncates is that box's business; **where a name can be cut** is
- * a property of names, and that is `handleStem` below.
- *
- * **The two functions under it keep their names from the days the name was a handle.** The
- * specs say *the whole handle* in a dozen places and read through ADR-0171 rather than being
- * rewritten; the function names do the same. What they cut is the **name** — a handle is never
- * stemmed, because a handle is never drawn where a stem is.
+ * nothing. *Whether* a box truncates is that box's business; **where a nickname can be cut** is
+ * a property of nicknames, and that is `handleStem` below.
  *
  * **`sideNames` is gone, and the rule it carried is not.** §B16's `"You + Marek"` was redrawn
  * as a *list* — *"a formatter that returns one string has decided the layout, and this one
@@ -51,8 +45,8 @@
  * They share the `?` because there is no word to draw in either, and they stay one case rather
  * than an optional name because the *caller* is what knows which: a formatter taking
  * `string | undefined` would let one read as the other at the call site instead of at the seat.
- * **Never an unnamed player**: the entry gate holds an account with no name at the naming step,
- * so a read that names somebody has necessarily been handed a name (ADR-0171 §4).
+ * **Never a player with no nickname yet**: the entry gate holds such an account at the naming
+ * step, so a read that names somebody has necessarily been handed a nickname (ADR-0199 §3).
  */
 export type NamedPlayer =
   | { readonly kind: 'you' }
@@ -62,7 +56,7 @@ export type NamedPlayer =
 /** The unknown player stays a question mark — §15, and it is not a word. */
 const UNKNOWN = '?';
 
-/** You, to yourself. Never the name: a player reading their own name in a row about them. */
+/** You, to yourself. Never the nickname: a player reading their own handle in a row about them. */
 const YOURSELF = 'You';
 
 export function playerName(player: NamedPlayer): string {
@@ -77,89 +71,68 @@ export function playerName(player: NamedPlayer): string {
 }
 
 /**
- * The name **up to its first word break** — `Diego Fabregat` drawn as `Diego`.
+ * The nickname **up to its first dot** — `sergio.sabater` drawn as `sergio`.
  *
  * **This is not an invented name, and the distinction is the whole of why it is allowed.**
  * ADR-0107 forbids *inventing* a familiar form: the prototype's `split(' ')[0]` over a real
  * name produced a word the person never gave the platform. This produces no word at all — it
- * takes a **prefix of the name they typed**, cut at a character they typed, and it is used
+ * takes a **prefix of the nickname they typed**, cut at a character they typed, and it is used
  * only where a box is drawing rather than where a sentence is naming. Every sentence, every
  * accessible name and every toast still carries all sixty-four characters: the two rows that
  * draw this stem sit directly under one that speaks the whole thing, and the conversation's
- * header, the third drawer, is called by the names whole in its own accessible name
+ * header, the third drawer, is called by the nicknames whole in its own accessible name
  * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
  *
- * **The stem now often *is* the first name, and it is still not one** — ADR-0171 §4. ADR-0157
- * argued this cut while the name was a handle and the space half of the break was never
- * exercised; a player who types *Diego Fabregat* has now typed the space, and what a box draws
- * past the cut is a truncation of what they gave, not a word the platform chose. A reviewer who
- * reads the output alone will see a first name; this rule is what says why that is allowed.
+ * **The first dot, and deliberately not a dash or an underscore** — ADR-0157's cut, as it stood
+ * before ADR-0171 (ADR-0199, *Leaves standing*). `-` and `_` are as often inside one word as
+ * between two — `anne-marie` and `dorota_w` are what their owners chose — and cutting at a
+ * separator rather than at a character count is what keeps the result a word: it is the same
+ * rule the seat's three-character caption breaks on purpose, because a 46pt face has no room to
+ * respect it. **The poster's initials now break at all three** (`handleInitials`), so
+ * `dorota_w` draws `DW` on a poster and `dorota_w` whole in a box; ADR-0199 names the split, and
+ * whoever next touches either rule decides whether they meet again.
  *
- * **A space or a dot, and deliberately not a dash or an underscore.** Those two are the
- * characters a name puts *between words* — `Diego Fabregat`, `Sergio.Sabater` — where `-` and
- * `_` are as often inside one: `Anne-Marie` and `dorota_w` are single words with punctuation
- * in them, and cutting at the dash would draw `Anne` for a name whose owner wrote ten
- * characters. Cutting at a separator rather than at a character count is what keeps the
- * result a word: it is the same rule the seat's three-character caption breaks on purpose,
- * because a 46pt face has no room to respect it.
- *
- * **A name that opens with a break keeps all of itself.** An empty stem is not a shorter
- * name, it is no name, and there is nothing to draw in its place.
+ * **A nickname that opens with a dot keeps all of itself.** An empty stem is not a shorter
+ * nickname, it is none, and there is nothing to draw in its place.
  */
-export function handleStem(name: string): string {
-  const [stem] = name.split(WORD_BREAK);
-  return stem === undefined || stem === '' ? name : stem;
+export function handleStem(nickname: string): string {
+  const [stem] = nickname.split(STEM_BREAK);
+  return stem === undefined || stem === '' ? nickname : stem;
 }
 
-/** The two characters a name separates words with. See `handleStem`. */
-const WORD_BREAK = /[.\s]/;
+/** Where a box may cut a nickname. See `handleStem`. */
+const STEM_BREAK = '.';
 
 /**
- * **Two initials, for a poster** — `Ania Kowalska` drawn as `AK`, `Diego` as `DI`, `x` as `X`.
+ * **Two initials, for a poster** — `ania.k` drawn as `AK`, `kuba` as `KU`, `x` as `X`.
  *
  * **This one *is* an exception to ADR-0107 §4, and it is argued as one rather than smuggled
  * under the rule** —
  * [ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
- * §3, cut from the **name** since ADR-0171 §4. `handleStem` above is a prefix somebody typed;
- * two initials are a derived form, which is what
+ * §3, cut from the **nickname** since
+ * [ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §2. `handleStem`
+ * above is a prefix somebody typed; two initials are a derived form, which is what
  * [#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused on the Chats rows. What §4
  * protects is a **sentence** — *addressing a person by a name they never gave it* — and this
  * is a **drawing**: it goes over the generated poster on the yes screen's tile, where the
  * gradient alone cannot say who at tile size, and over nothing else. **The fence has four
  * sides**: never spoken, never in copy or a toast, never over a photograph, never on any other
- * surface. The tile's spoken name is the whole name, and the screen's sentence is built from
- * whole names — so nobody is ever addressed as `AK`.
+ * surface. The tile's spoken name is the whole nickname, and the screen's sentence is built from
+ * whole nicknames — so nobody is ever addressed as `AK`.
  *
- * The cut is `handleStem`'s own word breaks — a space or a dot, so the two rules stay one — and
- * `_` and `-` stay inside a word for the same reason they do there: `Anne-Marie` is one word
- * and its first two characters are what it has to give. A name that opens with a break keeps
- * what follows it, because an initial for nothing is not an initial. Upper-cased **here**, for
- * the drawing, and the name itself is never touched.
+ * **The cut** (ADR-0199 §2): the nickname's first character, then **the first character after
+ * its first `.`, `_` or `-`**, else its second character. With no name, a handle's three
+ * separators are the only breaks a player types, and `dorota_w` → `DO` would draw half of what
+ * she chose. A separator with nothing after it gives nothing, and the second character stands in.
+ * Upper-cased **here**, for the drawing, and the nickname itself is never touched.
  */
-export function handleInitials(name: string): string {
-  const words = name.split(WORD_BREAK).filter((word) => word !== '');
-  const letters =
-    words.length >= 2
-      ? words.slice(0, INITIALS).map((word) => word.slice(0, 1))
-      : [(words[0] ?? name).slice(0, INITIALS)];
-  return letters.join('').toUpperCase();
+export function handleInitials(nickname: string): string {
+  const first = nickname.slice(0, 1);
+  const separator = nickname.search(INITIAL_BREAK);
+  const afterSeparator = separator === -1 ? '' : nickname.slice(separator + 1, separator + 2);
+  const second = afterSeparator === '' ? nickname.slice(1, 2) : afterSeparator;
+  return `${first}${second}`.toUpperCase();
 }
 
-/** How many a poster carries — two, as the mock draws them. */
-const INITIALS = 2;
-
-/**
- * **`@nickname` — the one form a handle is drawn in, and the two places it is drawn.**
- *
- * The nickname is what is a player's alone: two people may share a name, and the record a
- * friend opens is where they are told apart (ADR-0171 §4). So it is drawn under the name on
- * a player's **record** and on their own **You tab**, and **nowhere else** — never in a
- * sentence, on a row, a card, a sheet, a toast, a seat label or a spoken name. Nothing in this
- * file's formatter takes one, which is how every other surface keeps the fence: it is never
- * handed the thing it must not draw.
- *
- * Spelled once, here, so the two screens cannot disagree about the mark.
- */
-export function atNickname(nickname: string): string {
-  return `@${nickname}`;
-}
+/** The three characters a nickname may separate its parts with — `[A-Za-z0-9_.-]` has no other. */
+const INITIAL_BREAK = /[._-]/;

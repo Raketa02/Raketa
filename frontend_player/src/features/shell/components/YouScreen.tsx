@@ -7,7 +7,7 @@
  * header card       the record's header, compact — tapping it opens How others see you
  * PLAYING           Skill passport · Player reliability · What kind of game
  * FINDING PLAYERS   Your week · Where you play · Who you play with
- * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
+ * ON YOUR CARD      How others see you · Photos · Tags · Intro · Nickname
  * ACCOUNT           Games & money · Payments · Notifications · Blocked players
  * ─────────────
  * Sign out          pinned under the page, above the bar
@@ -22,7 +22,7 @@
  *
  * The title and the four group titles are the shell's (`youCopy`); **every row
  * from *Skill passport* down is the feature's whose fact it is** — `player_record`'s two
- * read-only facts and the door to the sheet, `player_profile`'s declarations, `auth`'s name —
+ * read-only facts and the door to the sheet, `player_profile`'s declarations, `auth`'s nickname —
  * and each row reads its own fact and pushes its own screen. What this file decides is which
  * row sits in which group, and in what order: groups because the rows answer questions — what
  * has the platform concluded about me, what does the matcher read when it looks for a game, what
@@ -63,7 +63,7 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AccountPanel, NameRow } from '@/features/auth/types';
+import { AccountPanel, NicknameRow } from '@/features/auth/types';
 import { BlockedPlayersRow } from '@/features/blocks/types';
 import {
   IntroRow,
@@ -129,7 +129,7 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <PhotosRow divided />
             <TagsRow divided />
             <IntroRow divided />
-            <NameRow divided />
+            <NicknameRow divided />
           </YouGroup>
 
           <YouGroup title={YOU_COPY.groups.account}>

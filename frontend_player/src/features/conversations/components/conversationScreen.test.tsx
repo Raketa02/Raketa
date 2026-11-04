@@ -93,7 +93,7 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 function member(playerId: string, name: string): Wire['ConversationMemberSchema'] {
-  return { player_id: playerId, name };
+  return { player_id: playerId, nickname: name };
 }
 
 const PAIR = [member(ME, 'me_'), member(TOMEK, 'tomek.p')];
@@ -218,22 +218,41 @@ describe('the header', () => {
   });
 
   /**
-   * **A name is cut at its space, and it is still not a first name**
-   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
-   * §4): *Diego* is a prefix the owner typed, cut at a character the owner typed, drawn only in
-   * this box. The header's own spoken name says the whole thing, and nothing anywhere says the
-   * nickname.
+   * **ania.k, by her nickname, and never with an @**
+   * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). The
+   * header draws her stem — cut at her first dot, a prefix she typed, drawn only in this box
+   * (ADR-0157) — and speaks her whole; her bubble in a room of three draws her whole, and the line
+   * about what she did says her whole.
    */
-  it('draws a name’s stem at its space, and speaks the whole name', async () => {
+  it('names a member by her nickname — the header, her bubble and a line about her', async () => {
     await openTheRoom(
-      room({ members: [member(ME, 'Ola Nowak'), member(TOMEK, 'Diego Fabregat')] }),
+      room({
+        members: [member(ME, 'me_'), member(TOMEK, 'ania.k'), member(OLA, 'ola.k')],
+        entries: [line(1, 'SEAT_ACCEPTED'), message(2, TOMEK, 'six works for me')],
+      }),
     );
 
-    const spoken = conversationHeaderLabel(['Diego Fabregat'], sportLabel('padel'), BOOKED);
+    const spoken = conversationHeaderLabel(['ania.k', 'ola.k'], sportLabel('padel'), BOOKED);
     const header = await screen.findByRole('header', { name: spoken });
+    expect(within(header).getByText(headerTitle(['ania.k', 'ola.k'], ROOM_ENOUGH))).toBeTruthy();
+    expect(within(header).queryByText(/ania\.k/)).toBeNull();
 
-    expect(within(header).getByText('Diego')).toBeTruthy();
-    expect(within(header).queryByText(/Fabregat/)).toBeNull();
+    const bubble = screen.getByLabelText('ania.k: six works for me');
+    expect(within(bubble).getByText('ania.k')).toBeTruthy();
+
+    const sentence = systemLineSentence(
+      {
+        kind: 'system-line',
+        seq: 1,
+        code: 'SEAT_ACCEPTED',
+        occurredAt: READ_AT,
+        actorId: TOMEK,
+        values: {},
+      },
+      [{ playerId: TOMEK, name: 'ania.k' }],
+    );
+    expect(sentence).toMatch(/^ania\.k /);
+    expect(screen.getByText(sentence)).toBeTruthy();
     expect(screen.queryByText(/@/)).toBeNull();
   });
 
@@ -437,7 +456,7 @@ describe('paging backward', () => {
   it('names a departed player off the page that carries them', async () => {
     await openTheRoom(room({ entries: [message(4, TOMEK, 'four')] }));
     await screen.findByLabelText('tomek.p: four');
-    stubEntries(transport, ROOM, [saidNo(3)], [{ player_id: BO, name: 'bo' }]);
+    stubEntries(transport, ROOM, [saidNo(3)], [{ player_id: BO, nickname: 'bo' }]);
 
     fireEvent(screen.getByTestId('conversation-stream'), 'endReached');
 
@@ -459,7 +478,7 @@ describe('who a line names', () => {
     await openTheRoom(
       room({
         members: PAIR,
-        people: [...PAIR, { player_id: BO, name: 'bo' }],
+        people: [...PAIR, { player_id: BO, nickname: 'bo' }],
         entries: [saidNo(1), message(2, TOMEK, 'shame')],
       }),
     );
@@ -473,7 +492,7 @@ describe('who a line names', () => {
     await openTheRoom(
       room({
         members: PAIR,
-        people: [...PAIR, { player_id: BO, name: 'Diego Fabregat' }],
+        people: [...PAIR, { player_id: BO, nickname: 'Diego Fabregat' }],
         entries: [saidNo(1)],
       }),
     );
@@ -486,7 +505,7 @@ describe('who a line names', () => {
   /** The `?` is for one case: the platform can no longer name the account. */
   it('draws the unknown player for somebody the platform has lost the handle of', async () => {
     await openTheRoom(
-      room({ people: [...PAIR, { player_id: BO, name: null }], entries: [saidNo(1)] }),
+      room({ people: [...PAIR, { player_id: BO, nickname: null }], entries: [saidNo(1)] }),
     );
 
     expect(await screen.findByText('? said no — that seat is open again')).toBeTruthy();

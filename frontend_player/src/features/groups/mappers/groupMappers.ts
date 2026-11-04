@@ -69,8 +69,8 @@ export function toGroupAtClub(wire: Schemas['GroupAtClubSchema']): GroupAtClub {
     sports: toSports(wire.sports),
     memberCount: wire.member_count,
     joinPolicy: wire.join_policy,
-    ownerName: wire.owner_name,
-    administratorName: wire.administrator_name,
+    ownerName: wire.owner_nickname,
+    administratorName: wire.administrator_nickname,
     isAdministrator: wire.is_administrator,
     relation: wire.relation,
   };
@@ -108,7 +108,7 @@ export function toJoinSearch(text: string, wire: Schemas['JoinSearchResponse']):
 
 /** A face: the photograph's link travels only when there is one — the poster stands in otherwise. */
 function toGroupPerson(wire: Schemas['GroupPersonSchema']): GroupPerson {
-  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire) };
+  return { playerId: wire.player_id, name: wire.nickname, ...photoOf(wire) };
 }
 
 /** A photograph's link, where the wire carried one. */
@@ -155,7 +155,7 @@ export function toGroup(wire: Schemas['GroupResponse']): Group {
     link: wire.link,
     joinPolicy: wire.join_policy,
     isOwner: wire.is_owner,
-    administratorName: wire.administrator_name,
+    administratorName: wire.administrator_nickname,
     isAdministrator: wire.is_administrator,
     ...declaredSportsOf(wire),
     ratedBySport: toRosters(wire.rated_by_sport),
@@ -174,7 +174,7 @@ export function toGroupMembers(wire: Schemas['GroupMembersResponse']): readonly 
     const band = toReliabilityBand(member.reliability_band);
     return {
       playerId: member.player_id,
-      name: member.name,
+      name: member.nickname,
       ...photoOf(member),
       level: member.level,
       playerScore: member.player_score,
@@ -197,7 +197,7 @@ function toLevels(wire: readonly Schemas['SportLevelSchema'][]): readonly SportL
 export function toJoinRequests(wire: Schemas['JoinRequestsResponse']): readonly JoinRequest[] {
   return wire.requests.map((request) => ({
     playerId: request.player_id,
-    name: request.name,
+    name: request.nickname,
     ...photoOf(request),
     levels: toLevels(request.levels),
   }));

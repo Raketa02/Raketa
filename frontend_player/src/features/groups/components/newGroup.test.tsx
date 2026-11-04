@@ -71,8 +71,8 @@ const O3_CLUB: Wire['GroupAtClubSchema'] = {
   sports: ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'],
   member_count: 11,
   join_policy: 'PEOPLE_I_APPROVE',
-  owner_name: 'Coach Andrzej',
-  administrator_name: null,
+  owner_nickname: 'Coach Andrzej',
+  administrator_nickname: null,
   is_administrator: false,
   relation: 'NONE',
 };
@@ -85,8 +85,8 @@ const OPEN_PLAY: Wire['GroupAtClubSchema'] = {
   sports: ['PADEL', 'TENNIS'],
   member_count: 8,
   join_policy: 'ANYONE',
-  owner_name: 'Zofia Wiśniewska',
-  administrator_name: null,
+  owner_nickname: 'Zofia Wiśniewska',
+  administrator_nickname: null,
   is_administrator: false,
   relation: 'MEMBER',
 };
@@ -113,7 +113,7 @@ const CREATED: Wire['GroupResponse'] = {
   is_owner: true,
   rated_by_sport: [],
   member_faces: [],
-  administrator_name: null,
+  administrator_nickname: null,
   is_administrator: false,
 };
 

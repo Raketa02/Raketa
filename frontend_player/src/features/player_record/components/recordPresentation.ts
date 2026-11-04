@@ -74,16 +74,14 @@ export function recordTitle(isSelf: boolean): string {
 }
 
 /**
- * The whole name, with the one mark that says it is yours.
+ * The whole nickname, with the one mark that says it is yours.
  *
- * The name — not the nickname, since
- * [ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
- * §4. The handle is drawn **under** it on this sheet, as `atNickname` spells it, and this
- * function keeps its old name because what it does is unchanged: the title of the sheet, with
- * the mark.
+ * The nickname, whole and without an @, and nothing under it
+ * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1): the
+ * handle is the identity, so there is no second line to tell two people apart by.
  */
-export function recordHandle(name: string, isSelf: boolean): string {
-  return isSelf ? `${name} ${YOU_MARK}` : name;
+export function recordHandle(nickname: string, isSelf: boolean): string {
+  return isSelf ? `${nickname} ${YOU_MARK}` : nickname;
 }
 
 /**
@@ -308,10 +306,8 @@ export function countedGamesReading(count: number): string {
  * rather than spoken as nothing.
  */
 export interface HeaderFacts {
-  /** The whole name, with the mark where the record is the reader's own — `recordHandle`. */
+  /** The whole nickname, with the mark where the record is the reader's own — `recordHandle`. */
   readonly name: string;
-  /** `@nickname`, as drawn under the name. This sheet is one of the two places it is. */
-  readonly handle: string;
   readonly onCourt: boolean;
   /** Their intro, already inside its marks (`introLine`), or nothing where they wrote none. */
   readonly intro?: string;
@@ -323,7 +319,6 @@ export interface HeaderFacts {
 export function recordHeaderLabel(facts: HeaderFacts): string {
   return sentences([
     facts.name,
-    facts.handle,
     ...(facts.onCourt ? [ON_COURT_CLAUSE] : []),
     // Inside its marks, so a listener hears it as the person's own words and never as a
     // second name — the deck card speaks it the same way.

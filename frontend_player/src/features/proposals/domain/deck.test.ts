@@ -148,8 +148,8 @@ describe('the ribbon', () => {
   it('says a pick, a challenge by name, the group’s challenge and a rescue', () => {
     expect(ribbonOf(card())).toEqual({ kind: 'pickedForYou' });
     expect(
-      ribbonOf(card({ type: 'CHALLENGE', challenger: { playerId: 'k', name: 'Kuba Wiśniewski' } })),
-    ).toEqual({ kind: 'challenge', by: 'Kuba Wiśniewski' });
+      ribbonOf(card({ type: 'CHALLENGE', challenger: { playerId: 'k', name: 'kuba.w' } })),
+    ).toEqual({ kind: 'challenge', by: 'kuba.w' });
     expect(ribbonOf(card({ type: 'CHALLENGE' }))).toEqual({ kind: 'challenge' });
     expect(ribbonOf(card({ type: 'CHALLENGE', challenger: { playerId: 'k' } }))).toEqual({
       kind: 'challenge',

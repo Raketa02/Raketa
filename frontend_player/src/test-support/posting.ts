@@ -139,7 +139,7 @@ export function stubPostingGrid(
 export function slotFit(tile: Wire['DeckTileSchema'], pct: number): Wire['SlotFitSchema'] {
   return {
     player_id: tile.player_id,
-    name: tile.name,
+    nickname: tile.nickname,
     photo_id: tile.photo_id,
     photo_url: tile.photo_url,
     level: tile.level,
@@ -191,7 +191,7 @@ export function postStillFilling(
     club: BONARKA,
     share_grosze: 3200,
     book_by: '2026-10-03T13:00:00Z',
-    challenger: { player_id: KUBA().player_id, name: KUBA().name },
+    challenger: { player_id: KUBA().player_id, nickname: KUBA().nickname },
     people_in: [KUBA({ is_in: true }), ANIA({ is_in: true })],
     open_seats: 2,
     ...extra,

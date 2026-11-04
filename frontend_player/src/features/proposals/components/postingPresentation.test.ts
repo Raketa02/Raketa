@@ -157,11 +157,11 @@ describe('a cell’s sheet', () => {
   });
 
   it('lines a fit with their Level and forecast, and says them whole', () => {
-    const fit = { playerId: 'p', name: 'Karol Tomaszewski', level: 2.75, forecastPct: 93 };
+    const fit = { playerId: 'p', name: 'karol.t', level: 2.75, forecastPct: 93 };
     expect(fitLine(fit)).toBe('2,75 · 93');
     expect(fitLine({ playerId: 'p', level: 2.75 })).toBe('2,75');
     expect(fitLine({ playerId: 'p' })).toBeUndefined();
-    expect(fitSpoken(fit)).toBe('Karol Tomaszewski, level 2,75, a 93 % even game');
+    expect(fitSpoken(fit)).toBe('karol.t, level 2,75, a 93 % even game');
   });
 
   it('lines a free court with its distance, share and book-by — its hour and count apart', () => {
@@ -194,9 +194,9 @@ describe('a cell’s sheet', () => {
     const post = {
       club: { id: 'c', name: 'Bonarka Arena' },
       shareGrosze: 3200,
-      challenger: { playerId: 'k', name: 'Kuba Wiśniewski' },
+      challenger: { playerId: 'k', name: 'kuba.w' },
     } as PostStillFilling;
-    expect(postLine(post)).toBe('Kuba Wiśniewski · Bonarka Arena · 32 zł if it fills');
+    expect(postLine(post)).toBe('kuba.w · Bonarka Arena · 32 zł if it fills');
     expect(postLine({ ...post, challenger: undefined })).toBe(
       'The group · Bonarka Arena · 32 zł if it fills',
     );

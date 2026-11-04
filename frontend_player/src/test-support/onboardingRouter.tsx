@@ -210,7 +210,7 @@ export const ONBOARDING_ROUTES = {
   '(auth)/invite/[token]': InvitationLinkRoute,
   '(onboarding)/_layout': OnboardingLayout,
   // The naming step — the first screen after sign-up, and the gate's first destination
-  // (ADR-0171 §3). Before welcome in the table as it is in the walk.
+  // (ADR-0199 §3). Before welcome in the table as it is in the walk.
   '(onboarding)/name': NameRoute,
   // *Start playing*'s first step, the Adult attestation (#517), at the gate's own address: where it
   // sends an account that holds no profile at all. The You tab pushes the same screen inside its
@@ -788,7 +788,6 @@ export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGrou
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
-const GATE_USER_NAME = 'Ada Lovelace';
 const GATE_USER_NICKNAME = 'ada';
 
 /**
@@ -802,7 +801,6 @@ const GATE_USER_NICKNAME = 'ada';
  */
 export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
   is_self: true,
-  name: GATE_USER_NAME,
   nickname: GATE_USER_NICKNAME,
   area_code: 'A+050612+0019938',
   social_tags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],
@@ -868,21 +866,14 @@ export interface GateStub {
    */
   readonly hasPlayerProfile?: boolean;
   /**
-   * What this player is called — the gate's **first** branch
-   * ([ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
-   * §3). `null` is an account that has not named itself yet, which the gate sends to the naming
-   * step before anything else.
+   * What this player is called — their nickname, and the gate's **first** branch
+   * ([ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). `null` is an
+   * account that has not named itself yet — one sign-up created, or one an Invitation opened —
+   * which the gate sends to the naming step before anything else.
    *
-   * Defaults to **named**, because almost no suite is about the step: every launch that lands
-   * on welcome, in the app or in the middle of a run is a launch by somebody the app can already
-   * call by name. The nickname rides with it and is not a parameter — nothing the gate reads
-   * depends on it, and a suite about the You tab reads it off `GATE_USER`.
-   */
-  readonly name?: string | null;
-  /**
-   * The handle — **with the name by default**, since the two are one act: an account with no name
-   * has no handle, and a named one has `ada`. An account an Invitation opened is the one shape that
-   * holds a name and no handle (ADR-0185 §4), so its suites pass `null`.
+   * Defaults to **named**, as `ada`, because almost no suite is about the step: every launch that
+   * lands on welcome, in the app or in the middle of a run is a launch by somebody the app can
+   * already call by their nickname.
    */
   readonly nickname?: string | null;
   /**
@@ -902,13 +893,12 @@ export const PLAYER_ONLY: Wire['AccountProfilesSchema'] = {
 };
 
 /**
- * The signed-in player, as `GET /users/me` answers. Identity is filler; the name is not: it is
- * what every screen says about her, and its absence is where a launch is sent first.
+ * The signed-in player, as `GET /users/me` answers. Identity is filler; the nickname is not: it
+ * is what every screen says about her, and its absence is where a launch is sent first.
  */
 export const GATE_USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
-  name: GATE_USER_NAME,
   nickname: GATE_USER_NICKNAME,
   authority: 'player',
   is_admin: false,
@@ -948,8 +938,7 @@ export function stubGate(
     hasPlayerProfile = false,
     id = GATE_USER.id,
     email = GATE_USER.email,
-    name = GATE_USER.name ?? null,
-    nickname = name === null ? null : (GATE_USER.nickname ?? null),
+    nickname = GATE_USER.nickname ?? null,
     profiles = PLAYER_ONLY,
   }: GateStub = {},
 ) {
@@ -962,7 +951,6 @@ export function stubGate(
       ...GATE_USER,
       id,
       email,
-      name,
       nickname,
       has_player_profile: hasPlayerProfile,
       adult_attested: profiles.acts_as_player,

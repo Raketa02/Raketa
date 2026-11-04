@@ -3,7 +3,7 @@
  * spoken by. The fixed sentences are `administratorCopy.ts`, beside this; copy is code, and
  * nothing is inlined in a component.
  *
- * `groups`' two rules hold here too: **a name is said whole** (ADR-0171 §4), and **a counted phrase
+ * `groups`' two rules hold here too: **a nickname is said whole** (ADR-0199 §1), and **a counted phrase
  * goes through `counted()`**. What is borrowed from `groups` — *N members*, *Want to join · N*, a
  * request's Levels — is read inside these functions and never at module load, because the feature
  * barrels form a cycle.
@@ -161,7 +161,7 @@ export function handoverWaiting(groups: readonly HandedGroup[]): string | undefi
   return `${counted(waiting, 'person is', 'people are')} waiting for your answer.`;
 }
 
-/** **A profile's row, spoken** — who, then which hat: *Tomek Kowal, Player*, *Ogrody 33, Administrator*. */
+/** **A profile's row, spoken** — who, then which hat: *tomek.k, Player*, *Ogrody 33, Administrator*. */
 export function profileRowLabel(title: string, role: string): string {
   return `${title}, ${role}`;
 }

@@ -15,7 +15,7 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { authKeys, NAME_ROW_TITLE, nameLine } from '@/features/auth/types';
+import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { onboardingKeys } from '@/features/onboarding/types';
 import {
@@ -320,9 +320,7 @@ describe('You', () => {
       screen.getByLabelText(doorRowLabel(INTRO_TITLE, introLine(PROFILE_SURFACE_SERVED.intro))),
     ).toBeTruthy();
     expect(
-      screen.getByLabelText(
-        doorRowLabel(NAME_ROW_TITLE, nameLine(GATE_USER.name ?? '', GATE_USER.nickname ?? '')),
-      ),
+      screen.getByLabelText(doorRowLabel(NICKNAME_ROW_TITLE, GATE_USER.nickname ?? '')),
     ).toBeTruthy();
   });
 
@@ -364,8 +362,8 @@ describe('You', () => {
     expect(at(SKILL_PASSPORT_TITLE)).toBeLessThan(at(YOU_COPY.groups.findingPlayers));
     expect(at(YOU_COPY.groups.findingPlayers)).toBeLessThan(at(YOUR_WEEK_TITLE));
     expect(at(YOUR_WEEK_TITLE)).toBeLessThan(at(YOU_COPY.groups.onYourCard));
-    expect(at(YOU_COPY.groups.onYourCard)).toBeLessThan(at(NAME_ROW_TITLE));
-    expect(at(NAME_ROW_TITLE)).toBeLessThan(at('Sign out'));
+    expect(at(YOU_COPY.groups.onYourCard)).toBeLessThan(at(NICKNAME_ROW_TITLE));
+    expect(at(NICKNAME_ROW_TITLE)).toBeLessThan(at('Sign out'));
   });
 
   it('draws the header card from the three reads, and the score in its ring', async () => {
@@ -374,10 +372,10 @@ describe('You', () => {
     expect(
       await screen.findByLabelText(scoreRingLabel(OWN_RECORD_SERVED.reliability.player_score)),
     ).toBeTruthy();
-    // The name and the handle — the You tab is one of the two screens that draw an
-    // `@nickname` (ADR-0171 §4) — and the intro in the drawing's marks.
-    expect(screen.getByText(GATE_USER.name ?? '')).toBeTruthy();
-    expect(screen.getByText(`@${GATE_USER.nickname ?? ''}`)).toBeTruthy();
+    // The nickname, with no handle line under it and never with an @ (ADR-0199 §1) — drawn by
+    // the card and by the *Nickname* row's line — and the intro in the drawing's marks.
+    expect(screen.getAllByText(GATE_USER.nickname ?? '')).toHaveLength(2);
+    expect(screen.queryByText(`@${GATE_USER.nickname ?? ''}`)).toBeNull();
     // Twice on the tab: the card quotes the record's line, and the *Intro* row quotes the
     // profile read's — the same line, off two reads (#471).
     expect(screen.getAllByText(`“${OWN_RECORD_SERVED.intro ?? ''}”`)).toHaveLength(2);
@@ -419,7 +417,7 @@ describe('You', () => {
     await openYou();
 
     // #529: pinned under the page, so it is in one place however many rows are over it.
-    expect(scrollerOf(screen.getByText(NAME_ROW_TITLE))).toBeDefined();
+    expect(scrollerOf(screen.getByText(NICKNAME_ROW_TITLE))).toBeDefined();
     expect(scrollerOf(screen.getByLabelText('Sign out'))).toBeUndefined();
   });
 
@@ -539,7 +537,6 @@ describe('the shell survives the gate re-reading the player', () => {
     queryClient.setQueryData(authKeys.currentUser(), {
       id: GATE_USER.id,
       email: GATE_USER.email,
-      name: GATE_USER.name ?? undefined,
       nickname: GATE_USER.nickname ?? undefined,
       hasPlayerProfile: true,
       profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },

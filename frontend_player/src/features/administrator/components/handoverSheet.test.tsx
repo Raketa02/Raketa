@@ -68,11 +68,11 @@ const OPEN_PLAY_HANDED = handover({ id: OPEN_PLAY_ID, name: 'Ogrody open play' }
 const O3_TITLE = 'Ogrody 33 made you the administrator of Ogrody 33 Club';
 
 /** Marta runs Ogrody 33's groups and does not play. */
-const MARTA: GateStub = { name: 'Marta Nowak', nickname: null, profiles: ADMINISTRATOR_ONLY };
+const MARTA: GateStub = { nickname: null, profiles: ADMINISTRATOR_ONLY };
 
 /** Tomek plays padel and runs Ogrody 33's groups too. */
 const TOMEK: GateStub = {
-  name: 'Tomek Kowal',
+  nickname: 'tomek.k',
   ratings: [rating('PADEL')],
   hasPlayerProfile: true,
   profiles: { acts_as_player: true, administers: [OGRODY], pending_invitations: [], handovers: [] },
@@ -112,8 +112,7 @@ function serve(account: GateStub) {
   transport.on('GET', '/api/v1/users/me', () =>
     json<Wire['MeResponse']>({
       ...GATE_USER,
-      name: account.name ?? null,
-      nickname: account.nickname === undefined ? 'tomek' : account.nickname,
+      nickname: account.nickname === undefined ? 'tomek.k' : account.nickname,
       has_player_profile: account.hasPlayerProfile ?? false,
       adult_attested: profiles.acts_as_player,
       profiles: { ...profiles, pending_invitations: [...pending], handovers: [...handed] },

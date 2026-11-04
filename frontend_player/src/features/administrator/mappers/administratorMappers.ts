@@ -70,14 +70,14 @@ function toLevels(wire: readonly Schemas['SportLevelSchema'][]): readonly SportL
 function toRequest(wire: Schemas['JoinRequestSchema']): JoinRequest {
   return {
     playerId: wire.player_id,
-    name: wire.name,
+    name: wire.nickname,
     ...photoOf(wire),
     levels: toLevels(wire.levels),
   };
 }
 
 function toPlayer(wire: Schemas['GroupPlayerSchema']): GroupPlayer {
-  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire) };
+  return { playerId: wire.player_id, name: wire.nickname, ...photoOf(wire) };
 }
 
 export function toOfficialGroup(wire: Schemas['AdministeredGroupResponse']): OfficialGroup {
@@ -112,7 +112,7 @@ export function toSettingsRequest(
 }
 
 function toGroupPerson(wire: Schemas['GroupPersonSchema']): GroupPerson {
-  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire) };
+  return { playerId: wire.player_id, name: wire.nickname, ...photoOf(wire) };
 }
 
 /** The group as its settings left it, and who a switch to *Anyone* let in, in the order they asked. */

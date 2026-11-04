@@ -87,8 +87,8 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     planned_at: '2026-09-01T09:00:00Z',
     entry_closes_at: '2026-09-09T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, name: 'me_' },
-      { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
+      { side: 'A', player_id: ME, nickname: 'me_' },
+      { side: 'B', player_id: OPPONENT, nickname: THEIR_HANDLE },
     ],
     proposals: [],
     attendance: [],
@@ -586,7 +586,7 @@ describe('the ends', () => {
         attendance: [
           {
             player_id: OPPONENT,
-            name: THEIR_HANDLE,
+            nickname: THEIR_HANDLE,
             state: 'DIDNT_COME',
             noted_at: '2026-09-04T18:05:00Z',
             arrive_by: '2026-09-04T18:30:00Z',
@@ -656,10 +656,10 @@ describe('the ends', () => {
       await openGame(
         calledOff(
           [
-            { side: 'A', player_id: ME, name: 'me_' },
-            { side: 'B', player_id: null, name: null },
+            { side: 'A', player_id: ME, nickname: 'me_' },
+            { side: 'B', player_id: null, nickname: null },
           ],
-          { player_id: OPPONENT, name: THEIR_HANDLE },
+          { player_id: OPPONENT, nickname: THEIR_HANDLE },
         ),
       );
 
@@ -673,12 +673,12 @@ describe('the ends', () => {
       await openGame(
         calledOff(
           [
-            { side: 'A', player_id: ME, name: 'me_' },
-            { side: 'A', player_id: null, name: null },
-            { side: 'B', player_id: null, name: null },
-            { side: 'B', player_id: null, name: null },
+            { side: 'A', player_id: ME, nickname: 'me_' },
+            { side: 'A', player_id: null, nickname: null },
+            { side: 'B', player_id: null, nickname: null },
+            { side: 'B', player_id: null, nickname: null },
           ],
-          { player_id: OPPONENT, name: THEIR_HANDLE },
+          { player_id: OPPONENT, nickname: THEIR_HANDLE },
         ),
       );
 
@@ -694,12 +694,12 @@ describe('the ends', () => {
      */
     it('never heads the ending with a presser', async () => {
       const court: Wire['GameSchema']['seats'] = [
-        { side: 'A', player_id: ME, name: 'me_' },
-        { side: 'A', player_id: PARTNER, name: 'kasia_w' },
-        { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
-        { side: 'B', player_id: null, name: null },
+        { side: 'A', player_id: ME, nickname: 'me_' },
+        { side: 'A', player_id: PARTNER, nickname: 'kasia_w' },
+        { side: 'B', player_id: OPPONENT, nickname: THEIR_HANDLE },
+        { side: 'B', player_id: null, nickname: null },
       ];
-      await openGame(calledOff(court, { player_id: OPPONENT, name: THEIR_HANDLE }));
+      await openGame(calledOff(court, { player_id: OPPONENT, nickname: THEIR_HANDLE }));
 
       expect(screen.getByText(CALLED_OFF_FOR_LACK_OF_PLAYERS)).toBeTruthy();
       expect(screen.queryByText(/called the game off/)).toBeNull();
