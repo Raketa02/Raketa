@@ -70,6 +70,7 @@ import { TAB_BAR_HEIGHT, TabBar, theme } from '@/shared/ui';
 
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 
+import { PUSHED_SCREENS } from './pushedScreens';
 import { landOnHome, openTab } from './shellNavigation';
 
 /**
@@ -82,28 +83,6 @@ function openGame(bookingId: string) {
   landOnHome();
   router.push(bookedGameRoute(bookingId));
 }
-
-/**
- * The screens behind the You tab's rows — every route under `you/` except the tab's own root.
- * The list rather than a prefix, because `Stack.Screen` matches on the name and a wildcard
- * would put the push on the root too.
- */
-const YOU_SCREENS = [
-  'you/passport',
-  'you/reliability',
-  'you/kind-of-game',
-  'you/week',
-  'you/area',
-  'you/who-you-play-with',
-  'you/photos',
-  'you/tags',
-  'you/intro',
-  'you/name',
-  'you/games-and-money',
-  'you/payments',
-  'you/notifications',
-  'you/blocked-players',
-] as const;
 
 export function TabShell() {
   const pathname = usePathname();
@@ -123,32 +102,9 @@ export function TabShell() {
           Play with ⚡Play lit, because the entry gate had torn the tree down for one round trip
           and this stack came back with no history to restore. `theShell.test.tsx` holds it. */}
         <Stack initialRouteName="index" screenOptions={{ headerShown: false, animation: 'none' }}>
-          <Stack.Screen name="play/index" options={{ animation: 'default' }} />
-          {/* And the groups screens (#512, #513, #514): New group and Join a group are pushed over
-            the Groups list and come back out to it, and a group's page is pushed over the list —
-            or replaces New group once the group exists, so *back* is the list either way.
-            Friends, Members and Edit group are pushed over the page and come back out to it. */}
-          <Stack.Screen name="play/new-group" options={{ animation: 'default' }} />
-          <Stack.Screen name="play/join" options={{ animation: 'default' }} />
-          <Stack.Screen name="play/group/[groupId]/index" options={{ animation: 'default' }} />
-          <Stack.Screen name="play/group/[groupId]/friends" options={{ animation: 'default' }} />
-          <Stack.Screen name="play/group/[groupId]/members" options={{ animation: 'default' }} />
-          <Stack.Screen name="play/group/[groupId]/edit" options={{ animation: 'default' }} />
-          {/* And so is a booked game (#556): its details pushed over Home, its chat and its
-            result pushed over the details — each comes back out to the screen it was opened from.
-            The chat is the one screen the bar stands down on (`shellTabs`). */}
-          <Stack.Screen name="booking/[bookingId]/index" options={{ animation: 'default' }} />
-          <Stack.Screen name="booking/[bookingId]/chat" options={{ animation: 'default' }} />
-          <Stack.Screen name="booking/[bookingId]/result" options={{ animation: 'default' }} />
-          {/* And so are the recent notices behind Home's bell (#559): pushed over Home, and back
-            is Home — a row opens its game over the list, so back from the game is the list. */}
-          <Stack.Screen name="notices" options={{ animation: 'default' }} />
-          {/* And so is every screen behind a row on You: each is pushed over the tab, the tab
-            stays underneath, and backing out returns to the row it was tapped from
-            ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
-            §1). Named one by one, as every exception is: `you/index` is the tab's root, arrived
-            at by a tab press, and takes the shell's own `none` like every root. */}
-          {YOU_SCREENS.map((name) => (
+          {/* Every screen pushed over a tab takes the push back — named one by one in
+            `pushedScreens`, which says what each is pushed over and holds the list to the tree. */}
+          {PUSHED_SCREENS.map((name) => (
             <Stack.Screen key={name} name={name} options={{ animation: 'default' }} />
           ))}
         </Stack>

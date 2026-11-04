@@ -69,9 +69,14 @@ it — the administrator's You tab pins it the same way — and `AccountPanel` p
 above the button, since whoever pins it spaces the slot.
 `shellCopy.test.ts` keeps the two refusals over every sentence the shell still writes, the group
 titles included, and asserts the placeholder's line absent so it cannot come back as a
-gap-filler. **The pushed screens take the push transition**: `TabShell` names the twelve
-`you/…` routes one by one for `animation: 'default'`, as it names every pushed screen, and the
-harness's route table spells `you/index` as the file tree does. **`ShellScreen` forwards two
+gap-filler. **The pushed screens take the push transition**: `TabShell` gives
+`animation: 'default'` to every name in `pushedScreens`, which names the `you/…` routes one by
+one as it names every pushed screen, and the harness's route table spells `you/index` as the
+file tree does. **The list is held to the file tree** (`pushedScreens.test.ts`): every route
+under `(tabs)` but Home's and You's roots must be on it, and nothing else may be. A route left
+off still opens, swapped in with no transition, and Info over a group's page — whose header is
+the page's own — read on a device as a blink; Post a game, a game's details and a rescue had
+shipped the same way. **`ShellScreen` forwards two
 more things, designed nowhere**: `subline`, which _What kind of game_ is the first shell screen
 to wear (its one line replaced the section's heading and body, ADR-0179 §2), and
 `avoidsKeyboard`, which the _Name_ screen is the first shell screen to need — the scroller and
@@ -123,7 +128,7 @@ once.
 screens A7), which the paragraph above predates. It holds _Games & money_ (`proposals`,
 [#554](https://github.com/Raketa02/Raketa/issues/554)) then _Payments_ (`payments`, #552);
 _Notifications_ (#559) joins under them. Both screens are pushed under `you/` and listed in
-`TabShell`'s `YOU_SCREENS`, so they take the push transition and keep the You column lit.
+the shell's `PUSHED_SCREENS`, so they take the push transition and keep the You column lit.
 
 **A booked game is pushed over Home** ([#556](https://github.com/Raketa02/Raketa/issues/556);
 the Games & Fill in screens A8) under a `booking` segment `INSIDE_A_TAB` counts as Home's — its
@@ -138,7 +143,7 @@ right slot; the list behind it is `/notices`, pushed over Home under a segment `
 Home's, with the push transition, and the bar stays up there. `TabShell` mounts
 `NoticesHost` inside the fill, after the bar, for the session — the phone registered, a notice while
 the app is open drawn as the banner over every screen, a tapped push opened — and lists
-`you/notifications` in `YOU_SCREENS`; _Notifications_ is the ACCOUNT group's third row, under
+`you/notifications` in `PUSHED_SCREENS`; _Notifications_ is the ACCOUNT group's third row, under
 _Payments_ (mock 50). **The price, stated as the badges' were: the shell now holds
 `GET /players/me/notices` for the session** — the banner's second source — read again every minute
 while the phone is not being pushed, so every launch makes it and the harness's gate stubs it.
@@ -170,12 +175,12 @@ three-column bar at a large text size.
 _Your week · Where you play · Who you play with_. _How far to look_ and _Game suggestions_ left
 with the two questions they answered again — the Search radius and the Proposals opt-in, read
 only by the old loop's ranking — and their screens, `you/radius` and `you/game-suggestions`,
-left `YOU_SCREENS` with them. The group keeps its title: what it holds is still what a proposed
+left `PUSHED_SCREENS` with them. The group keeps its title: what it holds is still what a proposed
 game reads. The walk is `theShell.test.tsx`, which asserts neither title is drawn.
 
 **ACCOUNT ends with _Blocked players_** ([#587](https://github.com/Raketa02/Raketa/issues/587)):
 `blocks`' row under _Notifications_, its line _Nobody_, _1 player_ or _2 players_, and its screen
-`you/blocked-players` in `YOU_SCREENS`. The gate stubs `GET /blocks` (none), because the row reads
+`you/blocked-players` in `PUSHED_SCREENS`. The gate stubs `GET /blocks` (none), because the row reads
 it on every visit to the tab. The record is [`blocks.md`](blocks.md).
 
 **_Name_ is _Nickname_** ([#728](https://github.com/Raketa02/Raketa/issues/728),
