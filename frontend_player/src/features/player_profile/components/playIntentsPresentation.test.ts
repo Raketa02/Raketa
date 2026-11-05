@@ -2,6 +2,7 @@ import {
   NOT_DECLARED,
   NOT_DECLARED_LINE,
   declaredValue,
+  intentCostLine,
   playIntentRowLabel,
 } from './playIntentsPresentation';
 
@@ -27,5 +28,46 @@ describe('what the You tab says about a declaration', () => {
   it('names a row by the sport and its answer together', () => {
     expect(playIntentRowLabel('Padel', 'COMPETITIVE')).toBe('Padel, Competitive');
     expect(playIntentRowLabel('Squash', undefined)).toBe('Squash, Not set');
+  });
+});
+
+/** The words §27's rows marked *(ADR-0201)*: the panel's lines, counted across the groups. */
+describe('what an answer on You costs', () => {
+  it('says how many cards of the kind that goes go, across the groups', () => {
+    expect(intentCostLine({ change: 'drops', kind: 'competitive', count: 7 })).toBe(
+      'Your 7 competitive cards in your groups go. Games you’re In on stay.',
+    );
+    expect(intentCostLine({ change: 'drops', kind: 'forFun', count: 3 })).toBe(
+      'Your 3 for-fun cards in your groups go. Games you’re In on stay.',
+    );
+  });
+
+  it('says one card goes', () => {
+    expect(intentCostLine({ change: 'drops', kind: 'forFun', count: 1 })).toBe(
+      'Your 1 for-fun card in your groups goes. Games you’re In on stay.',
+    );
+  });
+
+  /** PRD #736, call 4: a zero drops the number rather than saying *your 0 cards*. */
+  it('says Raketa stops dealing the kind when none of its cards is held', () => {
+    expect(intentCostLine({ change: 'drops', kind: 'competitive', count: 0 })).toBe(
+      'Raketa stops dealing you competitive games. Games you’re In on stay.',
+    );
+  });
+
+  /** A count not in hand is not zero: the line keeps its shape and loses only the number. */
+  it('says the cards go without a number while the count is not in hand', () => {
+    expect(intentCostLine({ change: 'drops', kind: 'competitive', count: undefined })).toBe(
+      'Your competitive cards in your groups go. Games you’re In on stay.',
+    );
+  });
+
+  it('says the kind played is kept and the other added, with no count', () => {
+    expect(intentCostLine({ change: 'widens', keeps: 'competitive', gets: 'forFun' })).toBe(
+      'Keep your competitive cards and get for-fun ones too.',
+    );
+    expect(intentCostLine({ change: 'widens', keeps: 'forFun', gets: 'competitive' })).toBe(
+      'Keep your for-fun cards and get competitive ones too.',
+    );
   });
 });

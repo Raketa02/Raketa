@@ -43,6 +43,16 @@
  *
  * **The one in flight is busy and the other two are shut**, which is `Button`'s own
  * distinction, and the refusal is the coral note every other write in this app draws.
+ *
+ * ## Each answer says what it costs
+ *
+ * Since Q127 a change takes the player off the cards they have not answered of a kind they
+ * dropped, in every group ([ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+ * §3, §6; [#742](https://github.com/Raketa02/Raketa/issues/742)). So an open **declared** row
+ * also reads its sport's cards across the groups, and under each answer that changes something
+ * one line says so: *Your 7 competitive cards in your groups go. Games you’re In on stay.*, or
+ * *Keep your competitive cards and get for-fun ones too.* Which line is
+ * `domain/intentChangeCost`'s; the answer held and an undeclared sport's answers say nothing.
  */
 
 import { useState } from 'react';
@@ -59,13 +69,16 @@ import {
 } from '@/shared/vocabulary/playIntentPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import { intentChangeCost, sportToCount } from '../domain/intentChangeCost';
 import { anySportUndeclared, playIntentRows } from '../domain/playIntentRows';
+import { useDeckCounts } from '../hooks/useDeckCounts';
 import { useDeclarePlayIntent, useProfileSurface } from '../hooks/useProfileSurface';
 
 import {
   NOT_DECLARED_LINE,
   PLAY_INTENTS_ROW_HINT,
   declaredValue,
+  intentCostLine,
   playIntentRowLabel,
 } from './playIntentsPresentation';
 
@@ -108,6 +121,13 @@ export function PlayIntentsSection() {
           rated.map((rating) => rating.sport),
           declarations,
         );
+  /**
+   * **The open row's cards across the groups**, read only while it is a declared sport's
+   * (`sportToCount`), and kept only while it stays open (`useDeckCounts`). Absent while on its way
+   * and after a failure, and the lines then say no number rather than a zero: what a change costs
+   * is said whether or not it can be counted, and a failure here stops no answer.
+   */
+  const deckCounts = useDeckCounts(sportToCount(open, declarations)).data;
 
   // Nothing to list until the ratings land. The screen's own line is still above this, so the
   // section simply is not there yet rather than drawing an empty card.
@@ -157,26 +177,36 @@ export function PlayIntentsSection() {
 
                 {isOpen ? (
                   <View style={s.answers}>
-                    {PLAY_INTENTS.map((intent) => (
-                      /* One button is one element to a listener, and the gloss is the sighted
-                       half of the name it already carries. */
-                      <Button
-                        key={intent}
-                        label={intentLabel(intent)}
-                        gloss={intentGloss(intent)}
-                        accessibilityLabel={declarationOptionLabel(intent, sportName)}
-                        variant="secondary"
-                        selected={declared === intent}
-                        busy={inFlight === intent}
-                        disabled={declare.isPending && inFlight !== intent}
-                        onPress={() =>
-                          declare.mutate(
-                            { sport, intent, surface: DECLARED_ON },
-                            { onSuccess: () => setOpen(undefined) },
-                          )
-                        }
-                      />
-                    ))}
+                    {PLAY_INTENTS.map((intent) => {
+                      const cost = intentChangeCost(declared, intent, deckCounts);
+                      return (
+                        <View key={intent} testID={`answer-${intent}`} style={s.answer}>
+                          {/* One button is one element to a listener, and the gloss is the
+                              sighted half of the name it already carries. */}
+                          <Button
+                            label={intentLabel(intent)}
+                            gloss={intentGloss(intent)}
+                            accessibilityLabel={declarationOptionLabel(intent, sportName)}
+                            variant="secondary"
+                            selected={declared === intent}
+                            busy={inFlight === intent}
+                            disabled={declare.isPending && inFlight !== intent}
+                            onPress={() =>
+                              declare.mutate(
+                                { sport, intent, surface: DECLARED_ON },
+                                { onSuccess: () => setOpen(undefined) },
+                              )
+                            }
+                          />
+                          {/* What the answer costs, under its gloss, which stays (the You
+                              screen 3.3). The answer held, and any answer to an undeclared
+                              sport, says nothing. */}
+                          {cost === undefined ? null : (
+                            <Text style={s.cost}>{intentCostLine(cost)}</Text>
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
                 ) : null}
               </View>
@@ -210,5 +240,7 @@ const s = StyleSheet.create({
   rowLabel: { ...theme.type.rlLabel, color: theme.color.muted, flexShrink: 1 },
   rowValue: { ...theme.type.rlValue, color: theme.color.ink },
   answers: { gap: theme.space.xs, paddingBottom: theme.space.sm },
+  answer: { gap: theme.space.xxs },
+  cost: { ...theme.type.tiny, color: theme.color.muted },
   footnote: { ...theme.type.tiny, color: theme.color.muted },
 });

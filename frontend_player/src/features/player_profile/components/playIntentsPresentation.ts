@@ -19,8 +19,13 @@
  * it; nothing about it changes a contract.
  */
 
+import { counted } from '@/shared/formatting/counted';
 import { intentLabel } from '@/shared/vocabulary/playIntentPresentation';
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
+
+import type { GameKind } from '@/features/proposals/types';
+
+import type { IntentChangeCost } from '../domain/intentChangeCost';
 
 /**
  * **The section's heading and body are gone**, and on purpose (ADR-0179 §2, §9). They read
@@ -66,3 +71,41 @@ export function playIntentRowLabel(sportName: string, intent: PlayIntent | undef
 }
 
 export const PLAY_INTENTS_ROW_HINT = 'Opens the three answers';
+
+/**
+ * The kind before a noun — *competitive cards*, *for-fun games*.
+ *
+ * The group page's panel spells the same two (`proposals`' `doorPresentation`). Two callers, so
+ * each keeps its own until a third proves who owns them.
+ */
+const BEFORE_A_NOUN: Readonly<Record<GameKind, string>> = {
+  competitive: 'competitive',
+  forFun: 'for-fun',
+};
+
+const STAY = 'Games you’re In on stay.';
+
+/**
+ * **The line under an answer that changes something** (ADR-0201 §6, the words §27's rows marked
+ * *(ADR-0201)*, [#742](https://github.com/Raketa02/Raketa/issues/742)).
+ *
+ * The lines that drop a kind are the group page's panel lines with *in your groups* added, because
+ * the count is summed across every group: *Your 7 competitive cards in your groups go. Games you’re
+ * In on stay.* — with a singular form, and a zero that drops the number (PRD #736, call 4). A count
+ * not in hand drops the number too but keeps the line's shape: the zero wording says something
+ * a missing count does not know. The line under *Either suits me* carries no count.
+ */
+export function intentCostLine(cost: IntentChangeCost): string {
+  if (cost.change === 'widens') {
+    return `Keep your ${BEFORE_A_NOUN[cost.keeps]} cards and get ${BEFORE_A_NOUN[cost.gets]} ones too.`;
+  }
+  const kind = BEFORE_A_NOUN[cost.kind];
+  if (cost.count === undefined) return `Your ${kind} cards in your groups go. ${STAY}`;
+  if (cost.count === 0) return `Raketa stops dealing you ${kind} games. ${STAY}`;
+  const cards = counted(
+    cost.count,
+    `${kind} card in your groups goes`,
+    `${kind} cards in your groups go`,
+  );
+  return `Your ${cards}. ${STAY}`;
+}

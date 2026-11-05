@@ -5,6 +5,8 @@
  * and how a mutation invalidates one of them.
  */
 
+import type { Sport } from '@/shared/vocabulary/sport';
+
 export const playerProfileKeys = {
   all: ['player-profile'] as const,
   /**
@@ -33,6 +35,14 @@ export const playerProfileKeys = {
    * each say their own standing, and a re-arrangement re-reads nothing.
    */
   photo: (photoId: string) => [...playerProfileKeys.all, 'photo', photoId] as const,
+  /**
+   * The cards each kind deals the player now in one sport, across their groups — what You ›
+   * *What kind of game* counts a change in (ADR-0201 §6). One entry per sport, because a row is
+   * opened one sport at a time and a change of intent is made in one.
+   */
+  deckCounts: (sport: Sport) => [...playerProfileKeys.all, 'deck-counts', sport] as const,
+  /** No declared row open — a key nothing is ever read under, so no sport's count is borrowed. */
+  deckCountsNone: () => [...playerProfileKeys.all, 'deck-counts', 'none'] as const,
 };
 
 /**

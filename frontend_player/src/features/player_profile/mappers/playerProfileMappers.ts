@@ -43,6 +43,7 @@ import {
 } from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from '../domain/gender';
+import type { DeckCounts } from '../domain/intentChangeCost';
 import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/PlayerProfileSurface';
 import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
@@ -62,6 +63,7 @@ type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
 type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 type ChangeLocationRequest = components['schemas']['ChangeLocationRequest'];
+type DeckCountsResponse = components['schemas']['DeckCountsResponse'];
 
 /**
  * One spelling, not two.
@@ -390,4 +392,13 @@ export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileReque
     // then be decided by whichever side was read last.
     gender_preference: WIRE_GENDER_PREFERENCE[commit.genderPreference],
   };
+}
+
+/**
+ * **The cards each kind deals the player now in one sport, summed over their groups** —
+ * `GET /players/me/deck-counts`, keyed by the deck's own `GameKind` (ADR-0201 §6). The sport is
+ * the one asked for and is not read back.
+ */
+export function toDeckCounts(response: DeckCountsResponse): DeckCounts {
+  return { competitive: response.competitive, forFun: response.for_fun };
 }

@@ -41,6 +41,7 @@ type WireSport = components['schemas']['Sport'];
  */
 export type PlayIntentSurface = components['schemas']['PlayIntentSurface'];
 type PlayIntentDeclarationResponse = components['schemas']['PlayIntentDeclarationResponse'];
+type DeckCountsResponse = components['schemas']['DeckCountsResponse'];
 
 export interface PlayerProfileApiOptions {
   readonly signal?: AbortSignal;
@@ -426,5 +427,26 @@ export function declarePlayIntent({
     path: `/api/v1/play-intents/${wireSport}`,
     body: { intent, surface },
     authenticated: true,
+  });
+}
+
+export interface GetDeckCountsOptions extends PlayerProfileApiOptions {
+  readonly wireSport: WireSport;
+}
+
+/**
+ * How many cards each kind deals this player now in one sport, **summed over every group they are
+ * in** — each group's number exactly its switch's, Seat open cards included (ADR-0201 §6). What
+ * You › *What kind of game* counts a change of intent in. Records nothing.
+ */
+export function getDeckCounts({
+  wireSport,
+  signal,
+}: GetDeckCountsOptions): Promise<DeckCountsResponse> {
+  return httpRequest<DeckCountsResponse>({
+    method: 'GET',
+    path: `/api/v1/players/me/deck-counts?sport=${wireSport}`,
+    authenticated: true,
+    signal,
   });
 }

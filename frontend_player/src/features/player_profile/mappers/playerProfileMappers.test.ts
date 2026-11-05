@@ -12,6 +12,7 @@ import type { ProfileCommit } from '../domain/profileCommit';
 
 import {
   toCommitRequest,
+  toDeckCounts,
   toPhotoAddress,
   toPlayerProfileSurface,
   toProfileOptions,
@@ -413,5 +414,14 @@ describe('toWireLocation', () => {
         club: { id: 'club-1', name: 'Bonarka Arena', district: 'Podgórze' },
       }),
     ).toEqual({ club_id: 'club-1' });
+  });
+});
+
+describe('the cards each kind deals, across the groups', () => {
+  /** The wire's two numbers, keyed by the deck's own kinds (ADR-0201 §6). */
+  it('reads the two counts by the kind they count', () => {
+    const served: Wire['DeckCountsResponse'] = { sport: 'PADEL', competitive: 7, for_fun: 0 };
+
+    expect(toDeckCounts(served)).toEqual({ competitive: 7, forFun: 0 });
   });
 });

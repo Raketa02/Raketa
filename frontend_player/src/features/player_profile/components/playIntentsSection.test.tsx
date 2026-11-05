@@ -13,7 +13,7 @@
  * imports Play, in production or in a test.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -65,6 +65,8 @@ const DECLARED_IN_TWO = profileSurface({
 });
 
 const SQUASH_INTENT = '/api/v1/play-intents/SQUASH';
+const PADEL_INTENT = '/api/v1/play-intents/PADEL';
+const DECK_COUNTS = '/api/v1/players/me/deck-counts';
 /** Asserted against the wire union, so a renamed surface is a red build rather than a red test. */
 const PROFILE_SCREEN: Wire['PlayIntentSurface'] = 'PROFILE_SCREEN';
 
@@ -207,5 +209,204 @@ describe('the play intents on You', () => {
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByLabelText(playIntentRowLabel('Squash', undefined))).toBeNull();
     expect(screen.queryByText(NOT_DECLARED_LINE)).toBeNull();
+  });
+});
+
+/**
+ * **What a change costs, said before the tap** (ADR-0201 §6,
+ * [#742](https://github.com/Raketa02/Raketa/issues/742)): opening a declared sport reads its cards
+ * across the groups, and each answer that would change something says what it does to them.
+ */
+describe('what an answer costs, on You', () => {
+  /** Ania's padel: seven competitive cards across her groups, Tennis three, Squash one for fun. */
+  const COUNTS: Readonly<Record<string, Wire['DeckCountsResponse']>> = {
+    PADEL: { sport: 'PADEL', competitive: 7, for_fun: 0 },
+    TENNIS: { sport: 'TENNIS', competitive: 3, for_fun: 0 },
+    SQUASH: { sport: 'SQUASH', competitive: 0, for_fun: 1 },
+  };
+
+  beforeEach(() => {
+    transport.on('GET', DECK_COUNTS, (request) => {
+      const sport = new URLSearchParams(request.path.split('?')[1]).get('sport') ?? '';
+      const counts = COUNTS[sport];
+      return counts === undefined ? errorResponse(404, 'not_found') : json(counts);
+    });
+  });
+
+  /** One answer's button and whatever is said under it. */
+  const answer = (intent: Wire['PlayIntent']) => within(screen.getByTestId(`answer-${intent}`));
+
+  /** The two kinds of line, so an answer with none can be asserted to say neither. */
+  const ANY_COST = /in your groups|ones too|stops dealing/;
+
+  it('reads the open sport’s cards across the groups, once, on opening it', async () => {
+    await openYou();
+    expect(transport.requestsTo('GET', DECK_COUNTS)).toEqual([]);
+
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+
+    await waitFor(() => expect(transport.requestsTo('GET', DECK_COUNTS)).toHaveLength(1));
+    expect(transport.requestsTo('GET', DECK_COUNTS)[0]?.path).toBe(`${DECK_COUNTS}?sport=PADEL`);
+  });
+
+  it('says what each change costs a Competitive player, and nothing on Competitive', async () => {
+    await openYou();
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+
+    const goes = 'Your 7 competitive cards in your groups go. Games you’re In on stay.';
+    expect(await answer('FOR_FUN').findByText(goes)).toBeTruthy();
+    expect(
+      answer('NO_PREFERENCE').getByText('Keep your competitive cards and get for-fun ones too.'),
+    ).toBeTruthy();
+    expect(answer('COMPETITIVE').queryByText(ANY_COST)).toBeNull();
+  });
+
+  it('says what each change costs a For fun player, one card in the singular', async () => {
+    stubProfileSurface(
+      transport,
+      profileSurface({
+        weekly_hours: [{ day: 2, hour: 19 }],
+        play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE', SQUASH: 'FOR_FUN' },
+      }),
+    );
+    await onYou();
+    fireEvent.press(await screen.findByLabelText(WHAT_KIND_OF_GAME_TITLE, { exact: false }));
+    fireEvent.press(await screen.findByLabelText(playIntentRowLabel('Squash', 'FOR_FUN')));
+
+    const goes = 'Your 1 for-fun card in your groups goes. Games you’re In on stay.';
+    expect(await answer('COMPETITIVE').findByText(goes)).toBeTruthy();
+    expect(
+      answer('NO_PREFERENCE').getByText('Keep your for-fun cards and get competitive ones too.'),
+    ).toBeTruthy();
+    expect(answer('FOR_FUN').queryByText(ANY_COST)).toBeNull();
+  });
+
+  /** From *Either suits me* the count is the kind that goes; a kind with no cards loses its number. */
+  it('says what each narrowing costs an Either suits me player, zero without a number', async () => {
+    await openYou();
+    fireEvent.press(row('Tennis', 'NO_PREFERENCE'));
+
+    const goes = 'Your 3 competitive cards in your groups go. Games you’re In on stay.';
+    expect(await answer('FOR_FUN').findByText(goes)).toBeTruthy();
+    expect(
+      answer('COMPETITIVE').getByText(
+        'Raketa stops dealing you for-fun games. Games you’re In on stay.',
+      ),
+    ).toBeTruthy();
+    expect(answer('NO_PREFERENCE').queryByText(ANY_COST)).toBeNull();
+  });
+
+  it('says nothing under the answers of a sport with no answer yet, and keeps its footnote', async () => {
+    await openYou();
+    fireEvent.press(row('Squash', undefined));
+
+    await screen.findByLabelText(declarationOptionLabel('FOR_FUN', 'Squash'));
+    expect(screen.queryByText(ANY_COST)).toBeNull();
+    expect(screen.getByText(NOT_DECLARED_LINE)).toBeTruthy();
+    expect(transport.requestsTo('GET', DECK_COUNTS)).toEqual([]);
+  });
+
+  /**
+   * A count not in hand is not zero, so the lines keep their shape and lose only the number — and
+   * the answers still answer.
+   */
+  it('draws the lines without a number while the count is on its way, and a press still works', async () => {
+    transport.on('GET', DECK_COUNTS, () => new Promise<Response>(() => {}));
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'PADEL', intent: 'FOR_FUN' }),
+    );
+    await openYou();
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+
+    expect(
+      await answer('FOR_FUN').findByText(
+        'Your competitive cards in your groups go. Games you’re In on stay.',
+      ),
+    ).toBeTruthy();
+    expect(
+      answer('NO_PREFERENCE').getByText('Keep your competitive cards and get for-fun ones too.'),
+    ).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(declarationOptionLabel('FOR_FUN', 'Padel')));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', PADEL_INTENT)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', PADEL_INTENT)[0]?.body).toEqual({
+      intent: 'FOR_FUN',
+      surface: PROFILE_SCREEN,
+    });
+    expect(await screen.findByLabelText(playIntentRowLabel('Padel', 'FOR_FUN'))).toBeTruthy();
+  });
+
+  /** A `403`, so the app's retries on a server error don't stand between the read and the line. */
+  it('draws the lines without a number when the count could not be read', async () => {
+    transport.on('GET', DECK_COUNTS, () => errorResponse(403, 'forbidden'));
+    await openYou();
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+
+    await waitFor(() => expect(transport.requestsTo('GET', DECK_COUNTS)).toHaveLength(1));
+    expect(
+      await answer('FOR_FUN').findByText(
+        'Your competitive cards in your groups go. Games you’re In on stay.',
+      ),
+    ).toBeTruthy();
+    // The count's failure is not the player's to act on: the lines are the whole of what it costs.
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  /**
+   * **A count is as old as the opening that read it.** Between two openings the jobs deal, the deck
+   * is answered and the group page's door changes the intent, none of it seen here — so a second
+   * opening says no number until its own read lands, and never the first opening's.
+   */
+  it('draws no number from an earlier opening while the row reads again', async () => {
+    await openYou();
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+    await answer('FOR_FUN').findByText(
+      'Your 7 competitive cards in your groups go. Games you’re In on stay.',
+    );
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+    expect(screen.queryByTestId('answer-FOR_FUN')).toBeNull();
+    // The router harness runs fake timers, so the tick a finger takes to come back is stepped.
+    act(() => jest.advanceTimersByTime(0));
+
+    transport.on('GET', DECK_COUNTS, () => new Promise<Response>(() => {}));
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+
+    expect(
+      await answer('FOR_FUN').findByText(
+        'Your competitive cards in your groups go. Games you’re In on stay.',
+      ),
+    ).toBeTruthy();
+    expect(transport.requestsTo('GET', DECK_COUNTS)).toHaveLength(2);
+  });
+
+  /**
+   * **A count from before a change is never drawn after it** — the change took the player off the
+   * dropped kind's cards, so the next opening reads again and says no number until it lands.
+   */
+  it('reads the count again after a change, drawing none from before it', async () => {
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'PADEL', intent: 'NO_PREFERENCE' }),
+    );
+    await openYou();
+    fireEvent.press(row('Padel', 'COMPETITIVE'));
+    await answer('FOR_FUN').findByText(
+      'Your 7 competitive cards in your groups go. Games you’re In on stay.',
+    );
+
+    fireEvent.press(screen.getByLabelText(declarationOptionLabel('NO_PREFERENCE', 'Padel')));
+    const nowEither = await screen.findByLabelText(playIntentRowLabel('Padel', 'NO_PREFERENCE'));
+    // The change reads nothing by itself, and the count closes with the row it was read for.
+    expect(transport.requestsTo('GET', DECK_COUNTS)).toHaveLength(1);
+
+    transport.on('GET', DECK_COUNTS, () => new Promise<Response>(() => {}));
+    fireEvent.press(nowEither);
+
+    expect(
+      await answer('FOR_FUN').findByText(
+        'Your competitive cards in your groups go. Games you’re In on stay.',
+      ),
+    ).toBeTruthy();
+    expect(transport.requestsTo('GET', DECK_COUNTS)).toHaveLength(2);
   });
 });
