@@ -84,6 +84,24 @@ class ReadGroupDeckCommand:
 
 
 @dataclass(frozen=True)
+class ReadDeckCountsCommand:
+    """One reader's cards per kind in one sport, across their groups (#739).
+    ``player_id`` comes from the session."""
+
+    player_id: UUID
+    sport: Sport
+
+
+@dataclass(frozen=True)
+class DealThePoolNowCommand:
+    """A member asking for their pool to be dealt now (#739; ``docs/adr/0201``
+    §5). ``player_id`` comes from the session."""
+
+    player_id: UUID
+    pool_id: UUID
+
+
+@dataclass(frozen=True)
 class SetGamesAndMoneyCommand:
     """Both values, as the screen sends them on every tap — ``None`` is *off*."""
 

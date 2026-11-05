@@ -35,6 +35,12 @@ they have declared nothing, which is the question that replaces the deck — the
 Games badge (cards with somebody already In, across those segments — a rescue's
 players have paid, and are not In), and the weeks at the cap, so the tab can say
 *your games this week are booked*.
+
+**Across groups** (``ReadDeckCounts``, #739; Q127): how many cards each kind
+deals the reader in one sport, summed over every group they are in — what the
+You tab's *What kind of game* says a change of intent costs. Each group's
+number is read by this deck's own read, so it is the switch's number and
+cannot be a second account of it.
 """
 
 from __future__ import annotations
@@ -47,7 +53,10 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
-from app.modules.proposals.application.commands import ReadGroupDeckCommand
+from app.modules.proposals.application.commands import (
+    ReadDeckCountsCommand,
+    ReadGroupDeckCommand,
+)
 from app.modules.proposals.application.members import genders_of, wants_of
 from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.deck import (
@@ -427,3 +436,53 @@ class ReadGroupDeck:
             if view is not None:
                 views.append((proposal, view))
         return views, genders
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class DeckCounts:
+    """How many cards each kind deals the reader now in one sport, summed over
+    every group they are in (#739) — a kind their intent does not show is
+    nought, and so is every kind of a sport they have declared nothing in."""
+
+    sport: Sport
+    competitive: int
+    for_fun: int
+
+
+@final
+class ReadDeckCounts:
+    """**The reader's switches, added up** (#739; Q127; the You screen §3.3):
+    each group's number is the count its switch shows now — read by the deck's
+    own ``execute``, its Seat open cards included and its filters all applied —
+    so the You tab's *Your 7 competitive cards in your groups go* and the seven
+    the switches show are one figure. A read, recorded nowhere."""
+
+    def __init__(self, *, pools: Pools, deck: ReadGroupDeck) -> None:
+        self._pools = pools
+        self._deck = deck
+
+    async def execute(self, command: ReadDeckCountsCommand) -> DeckCounts:
+        reader, sport = command.player_id, command.sport
+        counts = dict.fromkeys(SearchMode, 0)
+        for pool in await self._pools.of_player(reader):
+            try:
+                # The segments are the same whichever one is asked for.
+                deck = await self._deck.execute(
+                    ReadGroupDeckCommand(
+                        player_id=reader,
+                        pool_id=pool.id,
+                        sport=sport,
+                        kind=SearchMode.COMPETITIVE,
+                    )
+                )
+            except PoolNotFound:
+                # Left the group since the pools were read: none of its cards.
+                continue
+            for segment in deck.segments:
+                counts[segment.kind] += segment.count
+        return DeckCounts(
+            sport=sport,
+            competitive=counts[SearchMode.COMPETITIVE],
+            for_fun=counts[SearchMode.FOR_FUN],
+        )

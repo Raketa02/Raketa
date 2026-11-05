@@ -620,6 +620,31 @@ async def test_a_seat_open_card_is_dealt_to_the_best_fits(
     assert (await deck_cards(client, ola, group)) == []
 
 
+async def test_a_seat_open_card_counts_on_her_switch_and_across_her_groups(
+    client, group, booking, crowd
+):
+    """You › *What kind of game*'s count is the switch's, Seat open cards
+    included (#739; ``docs/adr/0201`` §6)."""
+
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+
+    deck = await client.get(
+        f"/api/v1/pools/{group}/deck",
+        params={"sport": "PADEL", "kind": "COMPETITIVE"},
+        headers=zosia["headers"],
+    )
+    counts = await client.get(
+        "/api/v1/players/me/deck-counts",
+        params={"sport": "PADEL"},
+        headers=zosia["headers"],
+    )
+
+    assert deck.json()["segments"] == [{"kind": "COMPETITIVE", "count": 1}]
+    assert counts.status_code == 200, counts.text
+    assert counts.json() == {"sport": "PADEL", "competitive": 1, "for_fun": 0}
+
+
 async def test_a_no_to_a_seat_open_card_keeps_it_out_of_the_deck_and_on_the_board(
     client, group, booking, crowd
 ):

@@ -32,9 +32,11 @@ from app.kernel import Sport, instant
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     ConfirmPaymentCommand,
+    DealThePoolNowCommand,
     LeaveTheGameCommand,
     PostAGameCommand,
     PostingCommand,
+    ReadDeckCountsCommand,
     ReadFillInCommand,
     ReadGroupDeckCommand,
     ReadPostingGridCommand,
@@ -46,11 +48,13 @@ from app.modules.proposals.domain.overlap import DayRange
 from app.modules.proposals.domain.post import Who
 from app.modules.proposals.presentation.dependencies import (
     ConfirmPaymentDep,
+    DealThePoolNowDep,
     SayNoToARescueDep,
     JoinARescueDep,
     LeaveTheGameDep,
     PostAGameDep,
     ReadBookingDetailsDep,
+    ReadDeckCountsDep,
     ReadFillInDep,
     ReadHomeDep,
     ReadPaymentsToConfirmDep,
@@ -67,6 +71,7 @@ from app.modules.proposals.presentation.dependencies import (
 )
 from app.modules.proposals.presentation.schemas import (
     BookingDetailsResponse,
+    DeckCountsResponse,
     DepartureResponse,
     FillInResponse,
     GamesAndMoneyRequest,
@@ -322,6 +327,78 @@ async def read_group_deck(
         ReadGroupDeckCommand(player_id=user.id, pool_id=pool_id, sport=sport, kind=kind)
     )
     return GroupDeckResponse.from_deck(deck, reader=user.id)
+
+
+@pools_router.post(
+    "/{pool_id}/deal",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`pool_not_found` — no such group, or the caller is not in it. One "
+                "code for both, as the deck's."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the members fit each other "
+                "could not be read, so the dealing stopped there; whatever it "
+                "had applied stands. Read the deck as it stands — the jobs deal "
+                "the rest."
+            ),
+        },
+    },
+    summary="Deal my group now",
+    description=(
+        "Right after an intent answer on the **Games** tab (Q127): Raketa deals "
+        "this group's games now — the proposer's own batch for its pool, in every "
+        "sport it plays, the one the jobs run — and answers once it has been "
+        "applied, so the phone can show *Finding for-fun games for you…* for as "
+        "long as it takes and then read the deck. It never makes a card itself: "
+        "what it deals is exactly what the jobs would have, a moment later. Safe "
+        "beside the jobs and beside itself — a repeat deals nothing new — and "
+        "what it records is told as the jobs' is (*Your new game* among it). "
+        "No body."
+    ),
+)
+async def deal_the_pool_now(
+    pool_id: UUID, user: CurrentUserDep, deal: DealThePoolNowDep
+) -> Response:
+    await deal.execute(DealThePoolNowCommand(player_id=user.id, pool_id=pool_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@players_router.get(
+    "/deck-counts",
+    response_model=DeckCountsResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the reader fits the people on "
+                "the cards could not be read. Retry."
+            ),
+        },
+    },
+    summary="My cards per kind, across my groups",
+    description=(
+        "You › *What kind of game*, one sport expanded (Q127): how many cards "
+        "each kind deals the reader **now**, summed over every group they are "
+        "in — each group's number exactly the count its switch shows, Seat open "
+        "cards included — so a change of intent can say what it costs (*Your 7 "
+        "competitive cards in your groups go*). A kind the reader's Play intent "
+        "does not show is `0`, and a sport they have declared nothing in is `0` "
+        "and `0`. Nothing is recorded."
+    ),
+)
+async def read_deck_counts(
+    sport: Sport, user: CurrentUserDep, read: ReadDeckCountsDep
+) -> DeckCountsResponse:
+    return DeckCountsResponse.from_counts(
+        await read.execute(ReadDeckCountsCommand(player_id=user.id, sport=sport))
+    )
 
 
 @players_router.get(

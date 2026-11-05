@@ -53,6 +53,7 @@ from tests.api.proposals_world import (
     a_group,
     a_member,
     deals,
+    deals_now,
     every_hour_of_the_week,
     makes,
     saves_a_card,
@@ -701,6 +702,34 @@ async def test_the_new_card_a_club_s_cancel_owed_is_told_to_each_player_once(
         ) == (card["proposal_id"], str(group), "PADEL", "COMPETITIVE")
         emails = await mailbox.to(f"{player['name']}@example.com")
         assert all("new game" not in email.subject.lower() for email in emails)
+
+
+async def test_the_owed_card_dealt_at_a_player_s_request_is_told_as_the_job_s_is(
+    client, session_factory, clock, mailbox, payments, pushes
+):
+    """*Deal my group now* (#739) runs the job's own batch on the request: the
+    owed card it deals is told to each of the four, once, as the job's is."""
+
+    four, group = await a_game_the_club_cancels(
+        client, session_factory, clock, mailbox, payments
+    )
+    told_before = {player["name"]: len(pushes.to(player["phone"])) for player in four}
+
+    for _ in range(2):
+        dealt = await deals_now(client, four[1], group)
+        assert dealt.status_code == 204, dealt.text
+
+    [card] = await deck_of(client, four[0], group)
+    assert datetime.fromisoformat(card["starts_at"]) == warsaw(10, 18)
+    for player in four:
+        assert (await pushed_to(mailbox, pushes, player))[
+            told_before[player["name"]] :
+        ] == [
+            (
+                "Your new game · Sat 18:00 at Kazimierz Padel",
+                "The same players · 30 zł a share — say yes to book it.",
+            )
+        ]
 
 
 async def test_a_card_the_proposer_deals_for_any_other_reason_tells_nobody(

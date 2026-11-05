@@ -5599,6 +5599,63 @@
         ]
       }
     },
+    "/api/v1/players/me/deck-counts": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "My cards per kind, across my groups",
+        "description": "You \u203a *What kind of game*, one sport expanded (Q127): how many cards each kind deals the reader **now**, summed over every group they are in \u2014 each group's number exactly the count its switch shows, Seat open cards included \u2014 so a change of intent can say what it costs (*Your 7 competitive cards in your groups go*). A kind the reader's Play intent does not show is `0`, and a sport they have declared nothing in is `0` and `0`. Nothing is recorded.",
+        "operationId": "read_deck_counts_api_v1_players_me_deck_counts_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckCountsResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the reader fits the people on the cards could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/players/me/games-and-money": {
       "get": {
         "tags": [
@@ -5745,6 +5802,68 @@
           },
           "503": {
             "description": "`block_state_unavailable` \u2014 whether the reader fits the people on the cards could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pools/{pool_id}/deal": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Deal my group now",
+        "description": "Right after an intent answer on the **Games** tab (Q127): Raketa deals this group's games now \u2014 the proposer's own batch for its pool, in every sport it plays, the one the jobs run \u2014 and answers once it has been applied, so the phone can show *Finding for-fun games for you\u2026* for as long as it takes and then read the deck. It never makes a card itself: what it deals is exactly what the jobs would have, a moment later. Safe beside the jobs and beside itself \u2014 a repeat deals nothing new \u2014 and what it records is told as the jobs' is (*Your new game* among it). No body.",
+        "operationId": "deal_the_pool_now_api_v1_pools__pool_id__deal_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the caller is not in it. One code for both, as the deck's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the members fit each other could not be read, so the dealing stopped there; whatever it had applied stands. Read the deck as it stands \u2014 the jobs deal the rest.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8849,6 +8968,31 @@
           "name"
         ],
         "title": "DeckClubSchema"
+      },
+      "DeckCountsResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "competitive": {
+            "type": "integer",
+            "title": "Competitive",
+            "description": "Competitive cards, summed over the reader's groups \u2014 each group's number exactly the one its switch shows, Seat open cards included. Nought when their Play intent does not show competitive games."
+          },
+          "for_fun": {
+            "type": "integer",
+            "title": "For Fun",
+            "description": "For-fun cards, summed the same way. Nought when their Play intent does not show for-fun games."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "competitive",
+          "for_fun"
+        ],
+        "title": "DeckCountsResponse",
+        "description": "How many cards each kind deals the reader now in one sport, across every\ngroup they are in (#739) \u2014 You \u203a *What kind of game*'s *Your 7 competitive\ncards in your groups go*."
       },
       "DeckForecastSchema": {
         "properties": {

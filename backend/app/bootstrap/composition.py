@@ -122,7 +122,10 @@ from app.modules.payments.domain.entered_cards import A_CARD
 from app.modules.payments.infrastructure.fake_payments import FakePayments
 from app.modules.proposals.application.booking_details import ReadBookingDetails
 from app.modules.proposals.application.expire_proposals import ExpireProposals
-from app.modules.proposals.application.group_deck import ReadGroupDeck
+from app.modules.proposals.application.group_deck import (
+    ReadDeckCounts,
+    ReadGroupDeck,
+)
 from app.modules.proposals.application.home import ReadHome
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
@@ -144,7 +147,10 @@ from app.modules.proposals.application.posting import (
     ReadPostingGrid,
     ReadPostingSlot,
 )
-from app.modules.proposals.application.propose_games import ProposeGames
+from app.modules.proposals.application.propose_games import (
+    DealThePoolNow,
+    ProposeGames,
+)
 from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
@@ -1637,7 +1643,8 @@ def build_read_group_deck_once(
     handler asks the deck ``shows`` for every row of an outbox batch, over one
     session, while other handlers in the same batch append to the proposal and
     booking streams. That caller, and the seed's screen assertion, take the
-    plain builder; only the route's dependency takes this one.
+    plain builder; only the routes' reads take this one — the deck's
+    dependency, and the deck counts' (``build_read_deck_counts``, #739).
     """
     return build_read_group_deck(
         session,
@@ -1694,6 +1701,25 @@ def build_read_group_deck(
         ),
         players=build_players_in_play(session, runtime=runtime, event_store=store),
         clock=clock,
+    )
+
+
+def build_read_deck_counts(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    booked: BookedGames | None = None,
+) -> ReadDeckCounts:
+    """The reader's cards per kind across their groups (#739), **for one
+    request**: each group's switch read by the route's own deck read, whose
+    one ``ReadOnceEventStore`` the groups share — a person on cards in two
+    groups is replayed once. Read-only, so nothing beside it appends."""
+    return ReadDeckCounts(
+        pools=build_pools(session),
+        deck=build_read_group_deck_once(
+            session, settings=settings, clock=clock, booked=booked
+        ),
     )
 
 
@@ -1758,6 +1784,21 @@ def build_propose_games(
         uow=build_unit_of_work(session),
         clock=clock,
         balance=build_ruleset().balance,
+    )
+
+
+def build_deal_the_pool_now(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    booked: BookedGames | None = None,
+) -> DealThePoolNow:
+    """A member's *deal my group now* (#739; ``docs/adr/0201`` §5): the
+    proposer the jobs run, over the request's session and clock, behind the
+    deck's refusal of a stranger. ``booked`` as the proposer's."""
+    return DealThePoolNow(
+        pools=build_pools(session),
+        proposer=build_propose_games(session, clock=clock, booked=booked),
     )
 
 

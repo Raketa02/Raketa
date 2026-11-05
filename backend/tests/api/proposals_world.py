@@ -6,9 +6,10 @@ a profile committed, rated through an assessment, and — unless a test says
 otherwise — a card saved through the three steps of the setup against the fake
 provider. **Every answer is given over HTTP**, as the phone gives it.
 
-**No route makes a proposal** — the engine will (#540) — so a test makes one the
-way a seed does, through ``MakeProposal`` and ``DealVersion`` built by the
-composition root over the test's database and clock.
+**No route makes a card itself** — the proposer does (#540), and the one route
+that deals runs it (#739) — so a test makes one the way a seed does, through
+``MakeProposal`` and ``DealVersion`` built by the composition root over the
+test's database and clock.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**, so every hour is
 a literal the calendar can check: the sixth is a Tuesday, the tenth a Saturday.
@@ -352,6 +353,17 @@ INTENT_WANTING: Final = {
     SearchMode.COMPETITIVE: "COMPETITIVE",
     SearchMode.FOR_FUN: "FOR_FUN",
 }
+
+
+def deal_path(pool_id: UUID) -> str:
+    return f"/api/v1/pools/{pool_id}/deal"
+
+
+async def deals_now(client, player: dict, pool_id: UUID):
+    """*Deal my group now*, as the phone asks it right after an intent answer
+    on the Games tab (#739)."""
+
+    return await client.post(deal_path(pool_id), headers=player["headers"])
 
 
 def yes_path(proposal_id: UUID) -> str:

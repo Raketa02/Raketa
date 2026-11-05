@@ -25,8 +25,10 @@ from app.bootstrap.composition import (
     build_preview_the_cancel,
     build_read_club_bookings,
     build_read_club_money,
+    build_read_deck_counts,
     build_read_free_courts,
     build_confirm_payment,
+    build_deal_the_pool_now,
     build_say_no_to_a_rescue,
     build_games_and_money_repository,
     build_join_a_rescue,
@@ -67,7 +69,10 @@ from app.modules.proposals.application.games_and_money import (
     ReadGamesAndMoney,
     SetGamesAndMoney,
 )
-from app.modules.proposals.application.group_deck import ReadGroupDeck
+from app.modules.proposals.application.group_deck import (
+    ReadDeckCounts,
+    ReadGroupDeck,
+)
 from app.modules.proposals.application.home import ReadHome
 from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
@@ -79,6 +84,7 @@ from app.modules.proposals.application.posting import (
     ReadPostingGrid,
     ReadPostingSlot,
 )
+from app.modules.proposals.application.propose_games import DealThePoolNow
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
 from app.modules.proposals.application.rescues import (
     SayNoToARescue,
@@ -225,6 +231,27 @@ def get_read_group_deck(
 
 
 ReadGroupDeckDep = Annotated[ReadGroupDeck, Depends(get_read_group_deck)]
+
+
+def get_deal_the_pool_now(
+    db: DbSession, clock: ClockDep, booked: BookedGamesDep
+) -> DealThePoolNow:
+    """The proposer the jobs run, for one pool, over this request (#739)."""
+    return build_deal_the_pool_now(db, clock=clock, booked=booked)
+
+
+DealThePoolNowDep = Annotated[DealThePoolNow, Depends(get_deal_the_pool_now)]
+
+
+def get_read_deck_counts(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
+) -> ReadDeckCounts:
+    """The reader's switches added up across groups (#739), each group read by
+    the deck route's own read."""
+    return build_read_deck_counts(db, settings=settings, clock=clock, booked=booked)
+
+
+ReadDeckCountsDep = Annotated[ReadDeckCounts, Depends(get_read_deck_counts)]
 
 
 def get_read_home(db: DbSession, settings: SettingsDep, clock: ClockDep) -> ReadHome:

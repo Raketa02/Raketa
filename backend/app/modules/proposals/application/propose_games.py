@@ -33,7 +33,11 @@ twice. Safe beside itself with no lock (``docs/adr/0092``).
 **When**: on a cadence over every pool, and — sooner — over the pools a change
 made due (``DueForProposing``): somebody joined, set their week, their intent or
 their Games & money, a club changed what it sells, somebody swiped. The due set
-is this process's memory and best effort; the cadence is the guarantee.
+is this process's memory and best effort; the cadence is the guarantee. **And
+at a member's request** (``DealThePoolNow``, #739; ``docs/adr/0201`` §5): right
+after an intent answer on the Games tab the phone asks for its group to be
+dealt now, and waits — the same batch, over one pool, on the request's session.
+No route makes a card itself; this one runs the proposer.
 """
 
 from __future__ import annotations
@@ -50,12 +54,14 @@ from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import BalanceRules
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.proposals.application.commands import (
+    DealThePoolNowCommand,
     DealVersionCommand,
     MakeProposalCommand,
 )
 from app.modules.proposals.application.making import DealVersion, MakeProposal
 from app.modules.proposals.application.members import ReadMembers
 from app.modules.proposals.domain.deck import GAME_LENGTH, named_on
+from app.modules.proposals.domain.errors import PoolNotFound
 from app.modules.proposals.domain.ids import pick_id
 from app.modules.proposals.domain.limits import (
     NEXT_BEST_FITS_PER_SEAT,
@@ -420,6 +426,34 @@ def _game_of(pool: Pool, sport: Sport, pick: Pick) -> UUID:
         named=pick.named,
         after=pick.after,
     )
+
+
+@final
+class DealThePoolNow:
+    """**One pool dealt now, because a member asked** (#739; ``docs/adr/0201``
+    §5, Q127): the proposer's own batch for that pool, in every sport it
+    plays, applied before the answer — so the phone's *Finding for-fun games
+    for you…* lasts exactly as long as the dealing.
+
+    Nothing here deals: it is the door to ``ProposeGames.execute``, which is
+    safe beside the jobs and beside itself by its own construction, so a
+    repeat deals nothing new. What the batch records reaches the outbox in
+    the transaction that records it, and is delivered as the jobs' is.
+
+    **A stranger learns nothing about a group's games**, so a pool that does
+    not exist and one the caller is not in are one refusal, as the deck's."""
+
+    def __init__(self, *, pools: Pools, proposer: ProposeGames) -> None:
+        self._pools = pools
+        self._proposer = proposer
+
+    async def execute(self, command: DealThePoolNowCommand) -> Proposed:
+        pool = await self._pools.find(command.pool_id)
+        if pool is None or not await self._pools.members_among(
+            pool, [command.player_id]
+        ):
+            raise PoolNotFound()
+        return await self._proposer.execute(pool.id)
 
 
 # --------------------------------------------------------------------------- #

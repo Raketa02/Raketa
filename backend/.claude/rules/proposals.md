@@ -92,8 +92,19 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   player stays In with `Proposal.paying` until their time to pay ends — the game full to
   everybody else, `waiting_for_a_payment` — and `TimeToPayRanOut` reopens it; before the
   club's cut-off the same time is **to fix the card** (`TimeTo`, #638); see `bookings.md`.
-  **No route makes a proposal**: `MakeProposal` and `DealVersion` are the dealer's, built by
-  the composition root for the proposer (#540), seeds and tests; **the yes that leaves
+  **No route makes a card itself** (amended by Q127;
+  [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+  §5, #739): `MakeProposal` and `DealVersion` are the dealer's, built by the composition root
+  for the proposer (#540), seeds and tests — and **one route runs the proposer**,
+  `POST /pools/{id}/deal` (`DealThePoolNow`, beside `ProposeGames`): right after an intent
+  answer on Games the phone asks for its group to be dealt now and waits, so *Finding for-fun
+  games for you…* lasts as long as the dealing. It is `ProposeGames.execute` for that one pool,
+  every sport it plays, over the request's session and clock — the batch the jobs run, safe
+  beside them and beside itself by the same construction (a repeat deals nothing new), its
+  records on the outbox in the transaction of each act and told as the jobs' are (*Your new
+  game* included) — behind the deck's refusal: `pool_not_found` for no such pool and for one
+  the caller is not in, one code. `204`, no body. No rate limit (ADR-0201 *Consequences*; the
+  cost is in #739's handover). **The yes that leaves
   `open_seats` at nought books the game** — `FILLED`, every version gone — or reopens the seat
   of whoever could not pay or no longer fits, and pauses or withdraws the players' other yeses
   (#541, see `bookings.md`) — **at every club: no club confirms a game** (#669; ADR-0196
@@ -137,7 +148,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Notifications' *You complete it* and challenges go only where the deck shows the card
   (#549), so a new filter added anywhere but `deal_to` is one an alert would not know.
   **And the route's read loads each stream once** (#704, ADR-0197 §2c):
-  `build_read_group_deck_once` — `get_read_group_deck`'s builder and nobody else's — hands
+  `build_read_group_deck_once` — the routes' builder and nobody else's: `get_read_group_deck`'s,
+  and `build_read_deck_counts`'s below — hands
   every adapter one `ReadOnceEventStore` over the request's store, so the profile,
   rating, proposal, booking, intent, Games & money and club-courts streams the pair rule,
   the forecasts, the card's people and the rescues share are replayed once per read, and two
@@ -154,6 +166,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   grid loads the same way and is deliberately not wired (211 statements measured; a
   follow-up once the seam has proved out). Measured on the busy seed deck (47 dealt, 33
   shown, 13 people): 257 → 138 statements, 160 → 56 ms CPU with #702 and #703.
+  **The reader's switches, added up** (#739; ADR-0201 §6): `GET /players/me/deck-counts?sport=`
+  (`ReadDeckCounts`) answers `{sport, competitive, for_fun}` for You › *What kind of game*'s
+  *Your 7 competitive cards in your groups go* — each kind summed over every pool the reader is
+  in (`Pools.of_player`), **each pool's number read by this deck's own `execute`**, its
+  `segments`, so it is the switch's count with every filter and the Seat open cards, and never
+  a second account of it (ADR-0201 *Two counts must agree*). A kind the intent does not show
+  has no segment, so `0`; an undeclared sport has none, so `0` and `0`; a pool left between the
+  two reads is skipped. Built over `build_read_group_deck_once`, so the pools share one
+  read-once store; it is read-only, which is what the reuse asks.
 - **The proposer builds the games, and its rules are one pure batch** (#540, the mechanics
   §4.3, §5, §6.2–§6.3, §7): `domain/proposer.py`'s `propose` — one pool, one sport, one
   instant; members (Level and σ off rating's estimates, weekly hours, intent, Games & money,
@@ -216,7 +237,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a delivered change made due (`DueForProposing`, fed per delivery run by
   `MarkDueForProposing`: a joining, a player's week, intent, first rating, Games & money or
   reliability filter, a swipe, anything a club changes about what it sells — which is everywhere). The due set
-  is process memory and best effort; the sweep is the guarantee.
+  is process memory and best effort; the sweep is the guarantee. **And at a member's
+  request**, for one pool, from `POST /pools/{id}/deal` (#739, above) — the short tick still
+  runs the pool the intent change made due, and deals nothing the route already dealt.
 - **A game still filling has its details, for anybody dealt it** (#542; the mechanics §14.2):
   `GET /proposals/{id}` (`application/proposal_details.py`, rules in `domain/details.py`) is the
   deck's card as a screen for the readers the deck does not serve — a card's *i*, a You're In row,

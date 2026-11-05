@@ -95,7 +95,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`clubs/domain/raketa_terms.py`); only the cadence is a setting.
   The fifteenth and sixteenth are **the proposer** (`proposer`, #540) and **its short tick**
   (`proposer-on-changes`), and **correctness depends on them**: nothing else deals a pick,
-  hands a seat a no left to the next best fits or widens a pick at half In. The sweep walks
+  hands a seat a no left to the next best fits or widens a pick at half In — but
+  `POST /pools/{id}/deal` (#739), which runs the same batch for one pool when a member asks,
+  and is never relied on: the phone falls back to the deck as it stands. The sweep walks
   every pool; the tick walks the pools a change this process delivered made due, and is
   registered only where an outbox drain runs beside it (the lifespan builds one
   `DueForProposing` per process for both). Safe beside itself with no lock: it writes

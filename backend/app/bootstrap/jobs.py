@@ -151,9 +151,11 @@ NEW_BOOKINGS_SUMMARY_JOB = "new-bookings-summary"
 
 #: The proposer (#540) — **the engine that builds games**, and the second job
 #: on this list correctness depends on: nothing else deals a pick, re-deals a
-#: seat a no left or widens a pick at half In. It writes through the dealer's
-#: own acts, one transaction each, and a pick's id is its game, so N processes
-#: running it at once make each game once and count the rest as refused.
+#: seat a no left or widens a pick at half In — but ``POST /pools/{id}/deal``
+#: (#739), the same batch for one pool when a member asks, which nothing relies
+#: on. It writes through the dealer's own acts, one transaction each, and a
+#: pick's id is its game, so N processes running it at once make each game once
+#: and count the rest as refused.
 PROPOSER_JOB = "proposer"
 #: Its short tick: the pools a change this process delivered made due. **Best
 #: effort** — a restart forgets what was due, and the sweep above sees it.

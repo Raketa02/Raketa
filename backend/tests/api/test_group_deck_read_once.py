@@ -28,6 +28,7 @@ from app.api.dependencies import get_clock
 from app.bootstrap import composition
 from app.bootstrap.composition import (
     build_decks,
+    build_read_deck_counts,
     build_read_group_deck,
     build_read_group_deck_once,
     build_say_yes,
@@ -323,10 +324,11 @@ def read_once_stores_built(monkeypatch: pytest.MonkeyPatch) -> list:
 async def test_the_reuse_is_the_requests_alone(
     session_factory, clock, read_once_stores_built
 ):
-    """The route's builder is the one that loads each stream once. The plain
-    builder — the notifications handler's, which asks the deck ``shows`` for
-    every row of an outbox batch beside handlers that append, and the seed's
-    — reads the session's own store, as every other composition does."""
+    """The routes' builders are the ones that load each stream once — the
+    deck's, and the deck counts' over it (#739). The plain builder — the
+    notifications handler's, which asks the deck ``shows`` for every row of an
+    outbox batch beside handlers that append, and the seed's — reads the
+    session's own store, as every other composition does."""
 
     settings = get_settings()
     async with session_factory() as session:
@@ -336,6 +338,9 @@ async def test_the_reuse_is_the_requests_alone(
 
         build_read_group_deck_once(session, settings=settings, clock=clock)
         assert len(read_once_stores_built) == 1
+
+        build_read_deck_counts(session, settings=settings, clock=clock)
+        assert len(read_once_stores_built) == 2
 
 
 async def test_a_yes_in_one_session_is_read_by_the_next_deck_read_in_it(

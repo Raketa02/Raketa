@@ -298,7 +298,7 @@ DestroyEndedConversationsDep = Annotated[
 
 
 def get_make_proposal(db: DbSession, clock: ClockDep) -> MakeProposal:
-    """The dealer's first act, at the real *now* — no route makes a proposal."""
+    """The dealer's first act, at the real *now* — no route makes a card itself."""
     return build_make_proposal(db, clock=clock)
 
 

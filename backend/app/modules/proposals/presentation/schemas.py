@@ -26,7 +26,7 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.booking_details import BookingDetails
-from app.modules.proposals.application.group_deck import GroupDeck
+from app.modules.proposals.application.group_deck import DeckCounts, GroupDeck
 from app.modules.proposals.application.home import Home, HomeGame
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
 from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
@@ -626,6 +626,35 @@ class DeckSegmentSchema(BaseModel):
 
     kind: SearchMode
     count: int = Field(description="Cards of this kind the reader is dealt here.")
+
+
+class DeckCountsResponse(BaseModel):
+    """How many cards each kind deals the reader now in one sport, across every
+    group they are in (#739) — You › *What kind of game*'s *Your 7 competitive
+    cards in your groups go*."""
+
+    sport: Sport
+    competitive: int = Field(
+        description=(
+            "Competitive cards, summed over the reader's groups — each group's "
+            "number exactly the one its switch shows, Seat open cards included. "
+            "Nought when their Play intent does not show competitive games."
+        )
+    )
+    for_fun: int = Field(
+        description=(
+            "For-fun cards, summed the same way. Nought when their Play intent "
+            "does not show for-fun games."
+        )
+    )
+
+    @classmethod
+    def from_counts(cls, counts: DeckCounts) -> "DeckCountsResponse":
+        return cls(
+            sport=counts.sport,
+            competitive=counts.competitive,
+            for_fun=counts.for_fun,
+        )
 
 
 class CappedWeekSchema(BaseModel):
