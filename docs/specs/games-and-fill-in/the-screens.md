@@ -36,6 +36,10 @@
 > Bertran* — read a nickname. And a level is asked where play begins: a member rated in nothing
 > meets one door on a player group's tabs, Post a game and Members, which no mock draws
 > ([A1](#a1-where-things-live), [A2.1](#a21-states)).
+>
+> **A later ruling the mocks predate (Q127):** the Competitive / For fun switch always shows both
+> kinds, and the kind the player's intent doesn't want is a dimmed door to changing it. No mock
+> draws the door, its panel or the finding state ([A1](#a1-where-things-live), [A2.1](#a21-states)).
 
 ---
 
@@ -92,8 +96,16 @@
   there is no *+ Another sport*.
 - **The Competitive / For fun switch** (mock 9) sits under the tabs on **Games**:
   *Competitive · 7* / *For fun · 1* — the number is the cards of that kind in this group and
-  sport. It stays where it is today on **Friends** too (out of scope). A player whose intent is
-  one kind sees only that segment; *Either* sees both.
+  sport. It stays where it is today on **Friends** too (out of scope).
+  - **Both kinds are always drawn** (Q127, [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+    §2). A player whose intent is one kind sees that kind live, with its number, and **the other
+    dimmed, with no number**: Ania (Competitive) reads *Competitive · 7* and a dimmed *For fun*, and
+    Kuba (For fun) the mirror. *Either suits me* sees both live, as before.
+  - **The dimmed kind is a door**, not a disabled tab: the same size as the live one and just as
+    easy to press. A tap opens its panel ([A2.1](#a21-states)) and doesn't move the switch.
+  - **The deck never opens on the dimmed kind**, even when the phone last stood on that kind in
+    another sport or group. The remembered position stays one for the app, as today, and is
+    corrected to a live kind.
 
 ## A2. The Games tab
 
@@ -110,9 +122,40 @@
    you're on question 5*, and opening that run. Nothing else asks her to finish it.
 4. **No intent for this sport** — the one-time inline question *Competitive / For fun / Either*
    replaces the deck until answered; for a member who has just rated, straight after the door.
-5. **Weekly cap reached** — a slim line above the deck: *"Your 2 games this week are booked —
+   Its answer is followed by state 5. The switch isn't drawn while the question is up.
+5. **Finding** (Q127) — right after any intent answer on Games, on the first-time question or on
+   the other kind's door. The phone sends `PUT /play-intents/{sport}` with the `DECK` surface, then
+   `POST /pools/{id}/deal`, and while that request is in flight the deck's area names the kind it
+   lands on: ***Finding for-fun games for you…*** or ***Finding competitive games for you…***. After
+   *Either suits me* on the first-time question it reads ***Finding games for you…***. Then it
+   re-reads the deck: the cards
+   (state 7), or *Nothing picked right now* with **Post a game** (state 1). A failed deal request
+   falls through to the re-read, and nothing is retried.
+6. **Weekly cap reached** — a slim line above the deck: *"Your 2 games this week are booked —
    showing next week"* (Q73).
-6. **The deck** (mock 1).
+7. **The deck** (mock 1).
+
+**The other kind's door** (Q127). A tap on the switch's dimmed kind opens a panel over the deck, inside
+the deck's area so the cards' layout is not squeezed. It is an overlay on the group page, not a new
+route:
+
+> **You play padel competitively, so Raketa only puts you in competitive games.**
+> Want for-fun games too?
+>
+> **Either suits me** — *Keep your 7 competitive cards and get for-fun ones too.*
+> **For fun** — *Your 7 competitive cards go. Games you're In on stay.*
+> **Keep competitive**
+
+- *Either suits me* is first and highlighted. The three answers are the first-time question's and
+  the You tab's words.
+- The number is the member's own count of that kind in this group, the one the switch shows. One
+  card reads *Your 1 competitive card goes.*; none drops the number: *Get for-fun games as well as
+  competitive ones.* and *Raketa stops dealing you competitive games. Games you're In on stay.*
+  ([the words §28](../matchmaking/the-words.md#28-the-games-tabs-door-and-finding)).
+- An answer changes this sport only, lands on the kind tapped, and goes on to state 5.
+- *Keep competitive* closes the panel and sends nothing.
+- Kuba's panel is the mirror: *You play padel for fun, so Raketa only puts you in for-fun games.
+  Want competitive games too?*, with *Keep for fun*.
 
 ### A2.2 The deck stage
 
@@ -591,7 +634,9 @@ row, and there is no *mark all*. The app icon carries no number until push is on
   posting grid cell (nine states), the slot sheet, the hour grid (7 × 16), the numbered setup
   checklist, the method card, the receipt row, the on/off chip.
 - **Changed** — peeking deck cards fade; the group page's Competitive / For fun switch appears on
-  Games; the You tab gains *Account*; the bottom bar loses Players and Chats (removed, #569).
+  Games, and since Q127 draws the kind the intent doesn't want dimmed, at full size and still
+  pressable, as a door; the You tab gains *Account*; the bottom bar loses Players and Chats
+  (removed, #569).
 - **Sport colours** as today: padel coral, tennis mint, squash night2, badminton amber.
 
 ---
@@ -794,7 +839,12 @@ proposals' needs, per club and hour.
   Deals versions at half-In and after every no. Respects games-per-week, most-I'll-pay and one
   card per people-set per batch. Since Q123 an **owed card** is chosen closest to the cancelled
   game first: the same club, day and hour; for a player group, another club at that day and hour,
-  nearest first; then the closest hour, the home club first.
+  nearest first; then the closest hour, the home club first. Since Q127 a named player who is not
+  In and whose intent no longer wants the card's kind is **gone**, as after a no, and their seat is
+  dealt to next best fits; and one pool's batch also runs on a player's asking, through
+  `POST /pools/{id}/deal`, which makes no card itself
+  ([ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+  §3, §5).
 - **Book-by expiry** — expires unfilled proposals; tells posters.
 - **Holding the shares** (Q113) — every 30 seconds, as time to pay and the cut-off: holds the
   share of every checked charge whose holding time — four days before the cut-off — has come. A
@@ -838,7 +888,9 @@ proposals' needs, per club and hour.
   the secret), `POST /players/me/payment-methods/confirmation`, `GET` and `DELETE
   /players/me/payment-methods/current` (settled by #536, ADR-0190), `GET /players/me/payments`
   (live yeses + receipts),
-  `POST /seat-charges/{id}/confirmation` (recovery). Since Q115 and Q118, four routes carry the
+  `POST /seat-charges/{id}/confirmation` (recovery), and since Q127 `POST /pools/{id}/deal` (the
+  finding state's deal, `204`) and `GET /players/me/deck-counts?sport=` (the You tab's cost lines,
+  `{sport, competitive, for_fun}`). Since Q115 and Q118, four routes carry the
   attendance acts on a game, each with a location fix in its body, and one sets the reliability
   filter; the no-show routes are gone. The tickets settle the paths.
 - **Club surface** — `GET/POST/PATCH /club/courts`, `PUT /club/courts/{id}/hours`,

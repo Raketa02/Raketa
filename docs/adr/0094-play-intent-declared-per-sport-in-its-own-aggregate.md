@@ -9,6 +9,12 @@
   rates, so a profile now exists before any rating. The decision it argued for, intent in its own
   aggregate, stands. The Decision's *declared at the tail of every rating run* no longer describes
   the app: intent is declared on the group deck's declaration step and on the You tab.
+  **The 2026-10-06 note's *the You tab is the other place a player changes it* amended 2026-11-05
+  by [ADR-0201](0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)**:
+  the deck's door is a further place. The Games switch always shows both kinds, and the kind the
+  intent doesn't want opens an in-place change, still reported on the `DECK` surface, so the closed
+  five stand. A changed intent also takes the player off the cards of the dropped kind they haven't
+  answered, and keeps their yeses.
 - **Date:** 2026-08-26
 
 > **Overrules two recommendations in the matchmaking input document**

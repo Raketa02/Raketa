@@ -258,7 +258,33 @@ the route's answer arriving in the cache, never the request echoed back.
 *Competitive* the Competitive segment, *For fun* the For fun one, *No preference* both — and so
 which proposed games and rescues the proposer puts them in: only a kind their intent wants. An
 undeclared sport deals them nothing until it is answered; the deck asks the question in its
-place.
+place. **Since Q127 a change also takes them off the cards they haven't answered** of a kind they
+dropped, in every group, and keeps their yeses
+([ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+§3). The group deck's switch is now another place to make the same change (its dimmed door, §2
+there).
+
+**What a change costs, said before the tap** (Q127, ADR-0201 §6). Expanding a sport's row reads
+`GET /players/me/deck-counts?sport=`, which answers `{sport, competitive, for_fun}`: the cards each
+kind deals the player now in that sport, **summed over every group they're in**, each group's
+number exactly its switch's, Seat open cards included. Under each answer that would change
+something, one line, below the answer's gloss, which stays *(a call made in the spec: the PRD says
+only "a line under each answer")*:
+
+| From | To | The line |
+| --- | --- | --- |
+| *Competitive*, or *Either suits me* | *For fun* | *Your 7 competitive cards in your groups go. Games you're In on stay.* — one card: *Your 1 competitive card in your groups goes. Games you're In on stay.* — none: *Raketa stops dealing you competitive games. Games you're In on stay.* |
+| *For fun*, or *Either suits me* | *Competitive* | the mirror: *Your 3 for-fun cards in your groups go. …*, with the same one-card and zero forms |
+| *Competitive* | *Either suits me* | *Keep your competitive cards and get for-fun ones too.* |
+| *For fun* | *Either suits me* | *Keep your for-fun cards and get competitive ones too.* |
+
+- **The current answer** is marked as today and gets no line.
+- **An undeclared sport** gets no lines and keeps its footnote.
+- **The count is the dropped kind's**: going from *Either suits me* to *For fun* counts the
+  competitive cards, the kind that goes.
+- **The words** are [the words §27](../matchmaking/the-words.md#27-the-you-tab)'s rows marked
+  *(ADR-0201)*. The lines that drop a kind say what the group page's panel says, with *in your
+  groups* added; the *Either suits me* line carries no count.
 
 ### 3.4 Your week — the Availability grid
 

@@ -1002,6 +1002,11 @@ anything else.
 > [ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §10: *Finding players* is *Your
 > games*, the *Name* row is *Nickname* and draws no `@`, and *Where you play* offers a picked club.
 > The rows marked *(ADR-0199)* or *(ADR-0200)* say the new words.
+>
+> **Amended 2026-11-05** by [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md) §6: *What kind of game*'s answers
+> say what a change costs, counted across the player's groups. The rows marked *(ADR-0201)* say the
+> new words. The lines that drop a kind are §28's panel lines with *in your groups* added; the line
+> under *Either suits me* carries no count.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -1030,6 +1035,9 @@ anything else.
 | Reliability, the filter | `Play only with players of at least High reliability` · `… at least Medium reliability` · off by default · `Your filter hides {n} of the {m} players in your groups.` | *(ADR-0195)* the *hides* line only while a filter is on ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
 | Reliability, a player someone filters out | `Some players in your groups play only with {band} reliability or above. At {floor} you're dealt with everyone again.` | *(ADR-0195)* names nobody; `{floor}` is the lowest band floor among the filters that hide them ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
 | What kind of game, under the title | `This changes how people find you` | replaces the section's heading and body; the footnote for an undeclared sport is #296's, cited |
+| What kind of game, under an answer that drops a kind | `Your {n} {kind} cards in your groups go. Games you're In on stay.` · `Your 1 {kind} card in your groups goes. Games you're In on stay.` · `Raketa stops dealing you {kind} games. Games you're In on stay.` | *(ADR-0201)* under *Competitive* or *For fun* when the current answer is the other kind or *Either suits me*; `{kind}` is the kind that goes, `competitive` or `for-fun`; `{n}` is `GET /players/me/deck-counts`'s count of it, summed over the player's groups; the third at `{n}` = 0 ([#742](https://github.com/Raketa02/Raketa/issues/742)) |
+| What kind of game, under *Either suits me* | `Keep your {kind} cards and get {other kind} ones too.` | *(ADR-0201)* when the current answer is one kind: `Keep your competitive cards and get for-fun ones too.` · `Keep your for-fun cards and get competitive ones too.`; no count |
+| What kind of game, the current answer and an undeclared sport | *no line* | *(ADR-0201)* the current answer is marked as today; an undeclared sport keeps its footnote |
 | Your week, the buttons | `Save your week` · `Saved` · `Clear all` | the grid's footnote is the step's, cited |
 | Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
 | Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
@@ -1046,3 +1054,47 @@ step's. **What is dropped** is recorded in ADR-0179 §9 so nobody restores it as
 tab's placeholder line, the declaration section's heading and body, the week's promise note,
 the location's *why we ask*, the gender step's scope sentences, and every explanatory card of the
 first draft.
+
+## 28. The Games tab's door, and finding
+
+> Added 2026-11-05 by [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md) §2 and §4,
+> the mechanics Q127, PRD [#736](https://github.com/Raketa02/Raketa/issues/736). The surface is
+> [the screens A1 and A2.1](../games-and-fill-in/the-screens.md#a21-states). Built by
+> [#740](https://github.com/Raketa02/Raketa/issues/740) (the door and its panel) and
+> [#741](https://github.com/Raketa02/Raketa/issues/741) (finding). **The three answers are not
+> respelled here**: *Competitive*, *For fun* and *Either suits me* are `playIntentPresentation`'s, the
+> first-time question's and the You tab's, cited.
+
+**The panel says what the player declared, why they don't see the other kind, and what each answer
+costs.** It is written twice, once for each declared kind, and each line has a singular and a zero
+form. `{sport}` is the sport's name inside a sentence, as in *Carry on with your padel questions*;
+`{n}` is the count of the player's own cards of their declared kind in this group, the one the
+switch shows.
+
+| Where | A competitive player taps *For fun* | A for-fun player taps *Competitive* | Note |
+| --- | --- | --- | --- |
+| The switch, the door | `For fun`, dimmed | `Competitive`, dimmed | no number; the same size and press target as the live kind |
+| Panel, the title | `You play {sport} competitively, so Raketa only puts you in competitive games.` | `You play {sport} for fun, so Raketa only puts you in for-fun games.` | |
+| Panel, the question | `Want for-fun games too?` | `Want competitive games too?` | |
+| Panel, *Either suits me*'s line, `{n}` ≥ 2 | `Keep your {n} competitive cards and get for-fun ones too.` | `Keep your {n} for-fun cards and get competitive ones too.` | the first answer, highlighted |
+| … `{n}` = 1 | `Keep your 1 competitive card and get for-fun ones too.` | `Keep your 1 for-fun card and get competitive ones too.` | |
+| … `{n}` = 0 | `Get for-fun games as well as competitive ones.` | `Get competitive games as well as for-fun ones.` | a zero drops the number (PRD #736, call 4) |
+| Panel, the tapped kind's line, `{n}` ≥ 2 | `Your {n} competitive cards go. Games you're In on stay.` | `Your {n} for-fun cards go. Games you're In on stay.` | the second answer |
+| … `{n}` = 1 | `Your 1 competitive card goes. Games you're In on stay.` | `Your 1 for-fun card goes. Games you're In on stay.` | |
+| … `{n}` = 0 | `Raketa stops dealing you competitive games. Games you're In on stay.` | `Raketa stops dealing you for-fun games. Games you're In on stay.` | |
+| Panel, the way out | `Keep competitive` | `Keep for fun` | closes the panel and sends nothing |
+
+**Finding** is the deck's area right after an intent answer on Games, while the deal request is in
+flight:
+
+| After | Sentence | Note |
+| --- | --- | --- |
+| The panel's *For fun*, or the first-time question's *For fun* | `Finding for-fun games for you…` | |
+| The panel's *Competitive*, or the first-time question's *Competitive* | `Finding competitive games for you…` | |
+| The panel's *Either suits me* | `Finding {kind} games for you…` | `{kind}` is the kind tapped, where the player lands |
+| The first-time question's *Either suits me* | `Finding games for you…` | |
+
+The ellipsis is one character, `…`. Finding ends on the deck's own states, whose words are already
+written: the cards, or *Nothing picked right now* with **Post a game**. A new yes refused on a card of
+a dropped kind is `no_longer_fits`, whose words `proposalsCopy` already has
+(`frontend_player/src/features/proposals/components/proposalsCopy.ts`), cited.
