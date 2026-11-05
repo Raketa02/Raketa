@@ -10,23 +10,33 @@
  * cards of the kind asked for only where the intent shows it. So the switch a test reads after an
  * answer is the one the server's new intent draws.
  *
+ * **A kind the intent has just gained has no cards until the group is dealt** — the server's
+ * `built`, which `POST /pools/{id}/deal` fills, as the card-builder would. So a deck read before the
+ * deal would say *Nothing picked right now*, and the finding that covers the wait (#741) is what a
+ * test sees instead.
+ *
  * **The cast is the PRD's.** Ania is Competitive in padel (`Competitive · 7`), Kuba is For fun
  * (`For fun · 3`), and Zofia's *Either suits me* draws both live. The reader is whichever of them
  * the suite declares; their tennis is For fun, to prove a padel answer leaves it alone.
  *
- * The *Finding…* state after an answer is #741's, and is not asserted here: an answer re-reads the
- * group's decks, and the tab lands on the kind tapped.
+ * **Finding** (#741, ADR-0201 §4, the screens A2.1 state 5): after an answer on the door's panel or
+ * the first-time question, the group is dealt and then its deck read, the tab saying *Finding…*
+ * meanwhile — in that order, and with a failed deal falling through to the read.
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
+import { TIMEOUT_MS } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
+import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
 import {
+  dealPath,
   deckCard,
   deckPath,
+  fillInPath,
   DECK_READ_AT,
   groupDeck,
   KUBA,
@@ -51,6 +61,9 @@ import {
   errorResponse,
   installTransport,
   json,
+  networkFailure,
+  neverResponds,
+  noContent,
   type RecordedRequest,
   type Transport,
   type Wire,
@@ -128,6 +141,8 @@ let transport: Transport;
 let intents: Partial<Record<Wire['Sport'], Intent>>;
 /** How many padel cards of each kind the server deals the reader in this group. */
 let dealing: Record<Kind, number>;
+/** The padel kinds the group has been dealt in for the reader — what the deal fills. */
+let built: Set<Kind>;
 
 beforeEach(() => {
   transport = installTransport();
@@ -139,6 +154,7 @@ beforeEach(() => {
   stubProfileSurface(transport);
   stubPaymentMethod(transport, { brand: 'visa', last_four: '4312', wallet: null });
   useGameIntent.setState({ intent: 'competitive' });
+  useToastQueue.setState({ queue: [] });
   intents = { TENNIS: 'FOR_FUN' };
   dealing = { COMPETITIVE: 7, FOR_FUN: 3 };
   watchHardwareBack();
@@ -182,10 +198,13 @@ function askedOf(request: RecordedRequest): { sport: Wire['Sport']; kind: Kind }
 /** The deck as the server deals it now — see the module note. */
 function dealt(sport: Wire['Sport'], kind: Kind): Wire['GroupDeckResponse'] {
   const kinds = shows(intents[sport]);
-  const count = (of: Kind) => (sport === 'PADEL' ? dealing[of] : 2);
+  const count = (of: Kind) => {
+    if (sport !== 'PADEL') return 2;
+    return built.has(of) ? dealing[of] : 0;
+  };
   const cards =
     sport === 'PADEL' && kinds.includes(kind)
-      ? Array.from({ length: dealing[kind] }, (_, at) => padelCard(kind, at + 1))
+      ? Array.from({ length: count(kind) }, (_, at) => padelCard(kind, at + 1))
       : [];
   return groupDeck({
     pool_id: GROUP.id,
@@ -199,6 +218,7 @@ function dealt(sport: Wire['Sport'], kind: Kind): Wire['GroupDeckResponse'] {
 /** Land on the group's page, Games on padel, the reader declared as `padel` says. */
 async function openGames(padel: Intent | undefined) {
   if (padel !== undefined) intents.PADEL = padel;
+  built = new Set(shows(intents.PADEL));
   stubMyGroups(transport, [GROUP]);
   transport.on('GET', `/api/v1/groups/${GROUP.id}`, () => json(PAGE));
   transport.on('GET', deckPath(GROUP.id), (request) => {
@@ -206,6 +226,7 @@ async function openGames(padel: Intent | undefined) {
     return json(dealt(sport, kind));
   });
   stubFillIn(transport, GROUP.id);
+  transport.on('POST', dealPath(GROUP.id), () => deal());
   for (const sport of ['PADEL', 'TENNIS'] as const) {
     transport.on('PUT', intentPath(sport), (request) => {
       const { intent } = request.body as { intent: Intent };
@@ -239,6 +260,40 @@ function fill(button: { readonly props: { readonly style?: unknown } }): unknown
   const drawn = typeof style === 'function' ? style({ pressed: false }) : style;
   return StyleSheet.flatten(drawn as ViewStyle).backgroundColor;
 }
+
+/** The card-builder's run: every kind the padel intent shows now holds its cards. */
+function deal(): Response {
+  for (const kind of shows(intents.PADEL)) built.add(kind);
+  return noContent();
+}
+
+/** Hold the deal until the suite lets it go — the wait finding covers. */
+function holdTheDeal(): () => void {
+  let release: () => void = () => undefined;
+  const dealtNow = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  transport.on('POST', dealPath(GROUP.id), async () => {
+    await dealtNow;
+    return deal();
+  });
+  return () => release();
+}
+
+/** The answer, the deal and the deck's reads since `from`, in the order they reached the socket. */
+function trafficSince(from: number): string[] {
+  const routes = [
+    `PUT ${intentPath('PADEL')}`,
+    `POST ${dealPath(GROUP.id)}`,
+    `GET ${deckPath(GROUP.id)}`,
+  ];
+  return transport.requests
+    .slice(from)
+    .map((request) => `${request.method} ${request.path.split('?')[0]}`)
+    .filter((route) => routes.includes(route));
+}
+
+const findingSays = (line: string) => screen.findByText(line);
 
 /** Hold the padel declaration's answer until the suite lets it go. */
 function holdTheDeclaration(): () => void {
@@ -584,5 +639,203 @@ describe('an answer', () => {
       screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
     ).toBeTruthy();
     expect(intents.PADEL).toBe('COMPETITIVE');
+  });
+});
+
+describe('finding, after the door’s answer', () => {
+  it('says it is finding the kind tapped while the group is dealt, then deals its cards', async () => {
+    await openGames('COMPETITIVE');
+    const release = holdTheDeal();
+
+    fireEvent.press(await door('For fun'));
+    fireEvent.press(answer('Either suits me'));
+
+    expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
+    expect(panel()).toBeNull();
+    // Over the deck's area: the cards it covers are still laid out under it.
+    expect(
+      screen.getByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`, HIDDEN_TOO),
+    ).toBeTruthy();
+
+    await act(async () => release());
+
+    expect(await live('For fun, 3 games', true)).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByText('Finding for-fun games for you…')).toBeNull();
+  });
+
+  it('sends the answer, then the deal, then reads the deck — once', async () => {
+    await openGames('COMPETITIVE');
+    fireEvent.press(await door('For fun'));
+    const from = transport.requests.length;
+
+    fireEvent.press(answer('For fun'));
+
+    expect(await live('For fun, 3 games', true)).toBeTruthy();
+    expect(trafficSince(from)).toEqual([
+      `PUT ${intentPath('PADEL')}`,
+      `POST ${dealPath(GROUP.id)}`,
+      `GET ${deckPath(GROUP.id)}`,
+    ]);
+    expect(transport.requestsTo('GET', deckPath(GROUP.id)).at(-1)?.path).toContain('kind=FOR_FUN');
+    // The page's Fill in is read again with it: who a seat is offered to reads the intent too.
+    expect(
+      transport.requests
+        .slice(from)
+        .filter((request) => request.path.split('?')[0] === fillInPath(GROUP.id)),
+    ).toHaveLength(1);
+  });
+
+  it('still lands on the kind asked for when the player leaves Games before it has', async () => {
+    await openGames('COMPETITIVE');
+    const release = holdTheDeal();
+
+    fireEvent.press(await door('For fun'));
+    fireEvent.press(answer('Either suits me'));
+    expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
+    fireEvent.press(await screen.findByRole('button', { name: /^Fill in/ }));
+    await act(async () => release());
+    await waitFor(() => expect(useGameIntent.getState().intent).toBe('forFun'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^Games/ }));
+
+    expect(await live('For fun, 3 games', true)).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`)).toBeTruthy();
+  });
+
+  it('gives a deal that never answers up at the request’s timeout, and reads the deck', async () => {
+    await openGames('COMPETITIVE');
+    transport.on('POST', dealPath(GROUP.id), neverResponds());
+
+    fireEvent.press(await door('For fun'));
+    fireEvent.press(answer('For fun'));
+    expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(TIMEOUT_MS.request + 1));
+
+    expect(await live('For fun, 0 games', true)).toBeTruthy();
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+    expect(screen.queryByText(/^Finding/)).toBeNull();
+  });
+
+  it('keeps the deck as it stands when the connection is gone for the read too', async () => {
+    await openGames('COMPETITIVE');
+    await screen.findByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`);
+    transport.on('POST', dealPath(GROUP.id), networkFailure());
+    transport.on('GET', deckPath(GROUP.id), networkFailure());
+
+    fireEvent.press(await door('For fun'));
+    fireEvent.press(answer('For fun'));
+
+    // Finding ends, and the switch stays on the deck the phone has rather than one no read can reach.
+    await waitFor(() => expect(screen.queryByText(/^Finding/)).toBeNull());
+    expect(
+      screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
+    ).toBeTruthy();
+    expect(screen.getByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(useGameIntent.getState().intent).toBe('competitive');
+  });
+
+  it('ends on Nothing picked right now and Post a game when the deal deals nothing', async () => {
+    dealing.FOR_FUN = 0;
+    await openGames('COMPETITIVE');
+
+    fireEvent.press(await door('For fun'));
+    fireEvent.press(answer('For fun'));
+
+    expect(await live('For fun, 0 games', true)).toBeTruthy();
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Post a game' })).toBeTruthy();
+    expect(screen.queryByText(/^Finding/)).toBeNull();
+  });
+
+  it.each([
+    ['the network', networkFailure()],
+    ['pool_not_found', () => errorResponse(404, 'pool_not_found')],
+    ['a server error', () => errorResponse(500, 'internal_error')],
+  ])(
+    'shows the deck as it stands when the deal fails on %s — said nowhere, tried once',
+    async (_failure, responder) => {
+      await openGames('COMPETITIVE');
+      transport.on('POST', dealPath(GROUP.id), responder);
+
+      fireEvent.press(await door('For fun'));
+      fireEvent.press(answer('For fun'));
+
+      // Nothing was dealt, so the new kind has nothing yet — the deck's own empty card says so.
+      expect(await live('For fun, 0 games', true)).toBeTruthy();
+      expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+      expect(screen.queryByText(/^Finding/)).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(useToastQueue.getState().queue).toEqual([]);
+      expect(transport.requestsTo('POST', dealPath(GROUP.id))).toHaveLength(1);
+      expect(transport.requestsTo('GET', deckPath(GROUP.id)).at(-1)?.path).toContain(
+        'kind=FOR_FUN',
+      );
+    },
+  );
+});
+
+describe('finding, after the first-time question', () => {
+  it('names the kind answered while the group is dealt, then deals its cards', async () => {
+    await openGames(undefined);
+    const release = holdTheDeal();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'For fun, your usual at Padel' }));
+
+    expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
+    expect(screen.queryByText('Your usual game at Padel')).toBeNull();
+
+    await act(async () => release());
+
+    expect(await live('For fun, 3 games', true)).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`)).toBeTruthy();
+    expect(await door('Competitive')).toBeTruthy();
+  });
+
+  it('names no kind after Either suits me, and lands where the switch stood', async () => {
+    await openGames(undefined);
+    const release = holdTheDeal();
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Either suits me, your usual at Padel' }),
+    );
+
+    expect(await findingSays('Finding games for you…')).toBeTruthy();
+
+    await act(async () => release());
+
+    expect(await live('Competitive, 7 games', true)).toBeTruthy();
+    expect(screen.getByText('For fun · 3')).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`)).toBeTruthy();
+  });
+
+  it('sends the answer, then the deal, then reads the deck', async () => {
+    await openGames(undefined);
+    const ask = await screen.findByRole('button', { name: 'Competitive, your usual at Padel' });
+    const from = transport.requests.length;
+
+    fireEvent.press(ask);
+
+    expect(await live('Competitive, 7 games', true)).toBeTruthy();
+    expect(trafficSince(from)).toEqual([
+      `PUT ${intentPath('PADEL')}`,
+      `POST ${dealPath(GROUP.id)}`,
+      `GET ${deckPath(GROUP.id)}`,
+    ]);
+  });
+
+  it('shows the deck as it stands when the deal fails', async () => {
+    await openGames(undefined);
+    transport.on('POST', dealPath(GROUP.id), networkFailure());
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Competitive, your usual at Padel' }),
+    );
+
+    expect(await live('Competitive, 0 games', true)).toBeTruthy();
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

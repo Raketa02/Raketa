@@ -214,6 +214,42 @@ export function intentAnswering(panel: DoorPanel, answer: DoorAnswer): PlayInten
 }
 
 // ---------------------------------------------------------------------------
+// Finding — after an intent answer on Games (ADR-0201 §4)
+// ---------------------------------------------------------------------------
+
+/**
+ * **What the tab says while Raketa deals the group, and where the deck lands after** (the screens
+ * A2.1 state 5): *Finding for-fun games for you…* names the kind it lands on, and *Finding games for
+ * you…* names none — after *Either suits me* on the first-time question, when both kinds arrive.
+ */
+export interface Finding {
+  readonly landsOn: GameKind;
+  /** Absent when the answer wanted both kinds and none was tapped. */
+  readonly names?: GameKind;
+}
+
+/** After the door's panel: the kind tapped, whichever of its two answers. */
+export function findingAfterTheDoor(panel: DoorPanel): Finding {
+  return { landsOn: panel.tapped, names: panel.tapped };
+}
+
+/**
+ * After the first-time question: the kind answered — or, for *Either suits me*, no kind named and
+ * the deck where the switch already stands (`chosen`), since both kinds are now the player's.
+ */
+export function findingAfterTheQuestion(intent: PlayIntent, chosen: GameKind): Finding {
+  if (intent === 'NO_PREFERENCE') return { landsOn: chosen };
+  const kind = KIND_OF_INTENT[intent];
+  return { landsOn: kind, names: kind };
+}
+
+/** The kind an intent of one kind wants — `INTENT_OF_KIND` read the other way. */
+const KIND_OF_INTENT: Readonly<Record<Exclude<PlayIntent, 'NO_PREFERENCE'>, GameKind>> = {
+  COMPETITIVE: 'competitive',
+  FOR_FUN: 'forFun',
+};
+
+// ---------------------------------------------------------------------------
 // The rows
 // ---------------------------------------------------------------------------
 

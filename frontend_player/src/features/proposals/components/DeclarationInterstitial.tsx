@@ -5,8 +5,8 @@
  * A group deals a player only the kind of game their intent wants, and nothing while they have
  * declared none, so the one-time question replaces the deck until it is answered. It reports
  * `DECK` — the contract's word for a deck, which is what the tab is — and says its one line about
- * who reads the answer (`GROUP_DECK_DECLARATION_BODY`). `onDeclared` is the caller's, so the deck
- * is read again for the segments the answer now shows; the interstitial knows nothing about what
+ * who reads the answer (`GROUP_DECK_DECLARATION_BODY`). `onDeclared` is the caller's, told which
+ * answer landed, so the deck can find the games it now wants (#741); the interstitial knows nothing about what
  * it stands in front of.
  *
  * It began on Find a game, which reported `SEARCH_SWITCH` and said its own line, and came here
@@ -54,7 +54,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useDeclarePlayIntent } from '@/features/player_profile/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Button, DarkCard, Note, theme } from '@/shared/ui';
-import { PLAY_INTENTS } from '@/shared/vocabulary/playIntent';
+import { PLAY_INTENTS, type PlayIntent } from '@/shared/vocabulary/playIntent';
 import {
   declarationOptionLabel,
   intentGloss,
@@ -78,8 +78,8 @@ export interface DeclarationInterstitialProps {
   readonly sport: Sport;
   /** This app's word for that sport — the caller already drew it on a chip. */
   readonly sportName: string;
-  /** The answer has landed — for a caller whose own read the answer changes. */
-  readonly onDeclared?: () => void;
+  /** The answer has landed, and which it was — for a caller whose own read the answer changes. */
+  readonly onDeclared?: (intent: PlayIntent) => void;
 }
 
 export function DeclarationInterstitial({
@@ -121,7 +121,7 @@ export function DeclarationInterstitial({
               onPress={() =>
                 declare.mutate(
                   { sport, intent, surface: DECLARED_ON },
-                  { onSuccess: () => onDeclared?.() },
+                  { onSuccess: () => onDeclared?.(intent) },
                 )
               }
             />

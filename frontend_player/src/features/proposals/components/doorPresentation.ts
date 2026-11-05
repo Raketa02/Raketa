@@ -1,7 +1,8 @@
 /**
- * **The other kind's door, and the panel it opens** — the words §28
+ * **The other kind's door, the panel it opens, and finding after an answer** — the words §28
  * ([ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
- * §2, [#740](https://github.com/Raketa02/Raketa/issues/740)), for `KindDoor` beside it.
+ * §2 and §4, [#740](https://github.com/Raketa02/Raketa/issues/740) and
+ * [#741](https://github.com/Raketa02/Raketa/issues/741)), for `KindDoor` and `FindingGames` beside it.
  *
  * Written once for each declared kind, so a competitive player's panel and a for-fun player's are
  * the same sentences read from the other side. Each cost line has a singular and a zero form, and
@@ -14,7 +15,7 @@
 
 import { counted } from '@/shared/formatting/counted';
 
-import type { DoorPanel } from '../domain/deck';
+import type { DoorPanel, Finding } from '../domain/deck';
 import type { GameKind } from '../domain/vocabulary';
 
 import { PROPOSALS_COPY } from './proposalsCopy';
@@ -71,6 +72,16 @@ export function dropCost({ yours, count }: DoorPanel): string {
  */
 export function keepLabel({ yours }: DoorKinds): string {
   return `Keep ${PROPOSALS_COPY.kind[yours].toLowerCase()}`;
+}
+
+/**
+ * **Finding**, while the group is dealt after an answer — *Finding for-fun games for you…*, or
+ * *Finding games for you…* when the answer named no kind. The ellipsis is one character (§28).
+ */
+export function findingLine({ names }: Finding): string {
+  return names === undefined
+    ? 'Finding games for you…'
+    : `Finding ${BEFORE_A_NOUN[names]} games for you…`;
 }
 
 /**

@@ -6,14 +6,20 @@
  *
  * 1. **No intent for this sport** — the read's segments are empty, and the one-time question
  *    *Competitive / For fun / Either* replaces the deck until it is answered (A2.1) —
- *    `DeclarationInterstitial`, reporting `DECK`; the answer re-reads the deck, which then has
- *    segments.
+ *    `DeclarationInterstitial`, reporting `DECK`; the answer is followed by finding (below), and the
+ *    deck read after it has segments.
  * 2. **Nothing to deal in this segment** — the group's starting cards, exactly as built (*Just you
  *    so far*, *3 of 4*, *Nothing picked right now*), which the group page hands in as `empty`: they
  *    are the group's words about its roster, not the deck's.
  * 3. **The weekly cap** — a slim line above the deck, *Your 2 games this week are booked — showing
  *    next week* (Q73), whenever the read names a capped week of the fortnight.
  * 4. **The deck** — the switch, the stage and the three buttons (mock 1).
+ *
+ * **Finding** (A2.1 state 5, ADR-0201 §4, #741) follows any intent answer on this tab — the
+ * first-time question's or the door's panel's: the group is dealt now and the deck it lands on read
+ * (`useFindGames`), and meanwhile `FindingGames` says *Finding for-fun games for you…* where the
+ * answer was given — in the question's place, or over the deck's area. Then the switch lands on the
+ * kind named, and the deck's own states follow: the cards, or *Nothing picked right now*.
  *
  * While the first read is on its way the tab says so with the muted spinner; a read that failed
  * says why and offers the retry, unless the failure is one no retry can mend.
@@ -135,6 +141,8 @@ import {
   anyCountingDown,
   chargesAtOnce,
   doorPanel,
+  findingAfterTheDoor,
+  findingAfterTheQuestion,
   intentAnswering,
   refusalOutcome,
   standingCards,
@@ -145,6 +153,7 @@ import {
   type DeckPerson,
   type DoorAnswer,
   type DoorPanel,
+  type Finding,
 } from '../domain/deck';
 import { isRescue, type DealtIn } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
@@ -155,8 +164,8 @@ import {
   useAnswerCard,
   useAnswersOnTheirWay,
   useDropCard,
+  useFindGames,
   useGroupDeck,
-  useRereadDeck,
 } from '../hooks/useGroupDeck';
 import { useLatest } from '../hooks/useLatest';
 
@@ -164,6 +173,7 @@ import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { doorSpoken } from './doorPresentation';
+import { FindingGames } from './FindingGames';
 import {
   answerLabels,
   capLine,
@@ -226,7 +236,6 @@ export function GamesDeck({
   refreshControl,
 }: GamesDeckProps) {
   const { read, kind } = useGroupDeck(groupId, sport, chosen);
-  const reread = useRereadDeck(groupId);
   const drop = useDropCard(groupId, sport, kind);
   const dealtIn: DealtIn = { groupId, sport, kind };
   const fill = useFillYes(dealtIn);
@@ -247,9 +256,14 @@ export function GamesDeck({
   // The door's answer is written here rather than in the panel, so it lands — the switch moved,
   // the group read again — when the panel has gone meanwhile (`KindDoor`).
   const declare = useDeclarePlayIntent();
+  // Finding, after an intent answer here: the group dealt now, then the deck it lands on read
+  // (`useFindGames`) — the area says so meanwhile, and the switch lands once it has.
+  const find = useFindGames(groupId, onChoose);
   /** The intent on its way for this sport — nothing on the switch moves while it is. */
-  const declaring =
-    declare.isPending && declare.variables?.sport === sport ? declare.variables.intent : undefined;
+  const declaring = pendingOn(sport, declare)?.intent;
+  /** The finding under way for this sport — nothing on the switch moves while it is either. */
+  const finding = pendingOn(sport, find)?.finding;
+  const beginFinding = (after: Finding) => find.mutate({ sport, finding: after });
   // A panel belongs to the sport it was opened on, and a change of sport closes it.
   useEffect(() => {
     setDoor(undefined);
@@ -390,11 +404,16 @@ export function GamesDeck({
   if (deck.segments.length === 0) {
     return (
       <ScrollView testID={BODY} contentContainerStyle={s.page} refreshControl={refreshControl}>
-        <DeclarationInterstitial
-          sport={sport}
-          sportName={sportLabel(sport)}
-          onDeclared={() => void reread()}
-        />
+        {/* The answer's finding stands where the question was, until the deck it lands on is read. */}
+        {finding === undefined ? (
+          <DeclarationInterstitial
+            sport={sport}
+            sportName={sportLabel(sport)}
+            onDeclared={(intent) => beginFinding(findingAfterTheQuestion(intent, kind))}
+          />
+        ) : (
+          <FindingGames finding={finding} />
+        )}
       </ScrollView>
     );
   }
@@ -422,10 +441,10 @@ export function GamesDeck({
 
   /**
    * A door opens its panel and moves nothing; a live kind is the page's choice, as ever. While an
-   * answer is on its way the switch is still: the answer lands it on the kind tapped.
+   * answer is on its way, or its games are being found, the switch is still: finding lands it.
    */
   const choose = (pressed: GameKind) => {
-    if (declaring !== undefined) return;
+    if (declaring !== undefined || finding !== undefined) return;
     if (doorPanel(deck.segments, pressed) !== undefined) {
       setRefusal(undefined);
       setDoor({ sport, kind: pressed });
@@ -436,9 +455,10 @@ export function GamesDeck({
   };
 
   /**
-   * The panel's answer, for this sport alone. On landing the switch moves to the kind tapped and
-   * the group's decks are read again, as after the first-time question; a refusal stays in the
-   * panel. Handed to this call because the deck outlives the panel — see `KindDoor`.
+   * The panel's answer, for this sport alone. On landing the panel closes and the tab is finding,
+   * as after the first-time question — the group dealt, the deck read, the switch on the kind
+   * tapped; a refusal stays in the panel. Handed to this call because the deck outlives the panel —
+   * see `KindDoor`.
    */
   const answerTheDoor = (asked: DoorPanel, said: DoorAnswer) => {
     setRefusal(undefined);
@@ -447,26 +467,33 @@ export function GamesDeck({
       {
         onSuccess: () => {
           setDoor(undefined);
-          onChoose(asked.tapped);
-          void reread();
+          beginFinding(findingAfterTheDoor(asked));
         },
         onError: (error) => setRefusal(error),
       },
     );
   };
 
+  // Over the deck's area, on its paper: finding after an answer, or the door's panel — never both,
+  // since an answer that lands closes the panel.
   const overTheDeck =
-    panel === undefined ? null : (
-      <KindDoor
-        sport={sport}
-        panel={panel}
-        {...(declaring === undefined ? {} : { answering: declaring })}
-        {...(refusal === undefined ? {} : { refusal })}
-        onAnswer={(said) => answerTheDoor(panel, said)}
-        onClose={() => setDoor(undefined)}
-      />
+    finding !== undefined ? (
+      <View style={s.over}>
+        <FindingGames finding={finding} />
+      </View>
+    ) : panel === undefined ? null : (
+      <View style={s.over}>
+        <KindDoor
+          sport={sport}
+          panel={panel}
+          {...(declaring === undefined ? {} : { answering: declaring })}
+          {...(refusal === undefined ? {} : { refusal })}
+          onAnswer={(said) => answerTheDoor(panel, said)}
+          onClose={() => setDoor(undefined)}
+        />
+      </View>
     );
-  const covered = behindOverlay(panel !== undefined);
+  const covered = behindOverlay(panel !== undefined || finding !== undefined);
 
   const above = (
     <>
@@ -567,6 +594,14 @@ export function GamesDeck({
   );
 }
 
+/** A write's variables while it is on its way for this sport — the switch is still meanwhile. */
+function pendingOn<V extends { readonly sport: Sport }>(
+  sport: Sport,
+  write: { readonly isPending: boolean; readonly variables?: V | undefined },
+): V | undefined {
+  return write.isPending && write.variables?.sport === sport ? write.variables : undefined;
+}
+
 /** The set without one id. */
 function without(held: ReadonlySet<string>, proposalId: string): ReadonlySet<string> {
   const next = new Set(held);
@@ -583,6 +618,8 @@ const s = StyleSheet.create({
   area: { flex: 1 },
   // What the area holds: the stage and the buttons, or the starting card — the page's own step.
   under: { flex: 1, gap: theme.space.sm },
+  // The ground of what lies over the deck's area — the paper the cards stand on, covering them.
+  over: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.color.paper },
   // The stage takes what the page leaves between the switch and the buttons.
   stage: { flex: 1, marginBottom: theme.space.sm },
   cap: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },

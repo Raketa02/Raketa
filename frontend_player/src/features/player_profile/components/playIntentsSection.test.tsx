@@ -161,6 +161,14 @@ describe('the play intents on You', () => {
     // The row draws the route's answer, and the answers close behind it.
     expect(await screen.findByLabelText(playIntentRowLabel('Squash', 'FOR_FUN'))).toBeTruthy();
     expect(screen.queryByLabelText(declarationOptionLabel('FOR_FUN', 'Squash'))).toBeNull();
+
+    // Only an answer on a group's Games tab deals its group now (#741, ADR-0201 §4); the jobs deal
+    // the groups of an answer given here.
+    expect(
+      transport.requests.filter(
+        (request) => request.method === 'POST' && /\/pools\/[^/]+\/deal$/.test(request.path),
+      ),
+    ).toEqual([]);
   });
 
   /**

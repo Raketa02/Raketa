@@ -8,7 +8,7 @@
  * | `useAnswerCard` | `POST /proposals/{id}/yes` or `/no` — a swipe, a button, or the details' *I'm in* |
  * | `useWithdrawYes` | `DELETE /proposals/{id}/yes` — the details' *Withdraw* |
  * | `useDropCard` | the answered card off the read the moment it has flown |
- * | `useRereadDeck` | the group's decks marked stale — after the intent question is answered |
+ * | `useFindGames` | after an intent answer on Games: the group dealt now, then its deck read (#741) |
  * | `useRereadGroupGames` | the decks, Fill in, the games' details and the live yeses — a pull |
  * | `useAnswersOnTheirWay` | the cards whose answers are still on their way — hidden from a read |
  *
@@ -49,13 +49,14 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 
-import type { AppError } from '@/shared/errors';
+import { isAppError, type AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { resolveKind, withoutCard, type GroupDeck } from '../domain/deck';
-import { isRescue, type YesAnswer, type YesOn } from '../domain/fill';
+import { resolveKind, withoutCard, type Finding, type GroupDeck } from '../domain/deck';
+import { isRescue, type DealtIn, type YesAnswer, type YesOn } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
 import { answerCard, withdrawYes, type AnswerToCard } from '../use-cases/answers';
+import { dealTheGroupNow } from '../use-cases/dealNow';
 import { readGroupDeck } from '../use-cases/deckReads';
 
 import { proposalKeys } from './proposalKeys';
@@ -108,10 +109,77 @@ export function useDropCard(groupId: string, sport: Sport, kind: GameKind) {
   return (proposalId: string) => dropCard(client, { groupId, sport, kind }, proposalId);
 }
 
-/** Mark every deck read for this group stale, so the one on screen is read again. */
-export function useRereadDeck(groupId: string) {
+/** What finding is asked for: the page's sport, and what the tab names and lands on. */
+interface GamesToFind {
+  readonly sport: Sport;
+  readonly finding: Finding;
+}
+
+/**
+ * **Finding, after an intent answer on Games** (ADR-0201 §4, the screens A2.1 state 5, #741) — the
+ * door's panel or the first-time question has written the intent, and the group is dealt **now**
+ * rather than at the jobs' next run, so the deck read after it holds the new kind's cards instead of
+ * a false *Nothing picked right now*. Pending for as long as the tab says *Finding…*: the deal, then
+ * the read of the deck it lands on (`findGames`) — so the deck as it stood never shows between them.
+ *
+ * **The switch lands on the mutation, not on a call** (`onLanded`): a player who leaves Games while
+ * it is finding comes back on the kind she asked for, which a call's own callback — dropped with the
+ * tab — would not give her. It lands only on a deck that was read: with the connection gone, the
+ * switch stays on the deck she has, rather than on one no read can reach.
+ *
+ * **It never hangs and never says it failed.** A failed deal — the network, `pool_not_found`, the
+ * server — falls through to the read, and a read that fails leaves the deck as it stands, whose own
+ * states say the rest; a hung server is given up at the request's own timeout. Nothing is retried,
+ * and it is never held for a reconnect (`networkMode: 'always'`): finding held behind a dropped
+ * connection would leave the tab finding with nothing on its way. The You tab's answer asks for no
+ * deal; the jobs deal those groups.
+ */
+export function useFindGames(groupId: string, onLanded: (kind: GameKind) => void) {
   const client = useQueryClient();
-  return () => client.invalidateQueries({ queryKey: proposalKeys.group(groupId) });
+  const landed = useLatest(onLanded);
+  return useMutation<boolean, AppError, GamesToFind>({
+    mutationFn: ({ sport, finding }) =>
+      findGames(client, { groupId, sport, kind: finding.landsOn }),
+    onSuccess: (read, { finding }) => {
+      if (read) landed.current(finding.landsOn);
+    },
+    networkMode: 'always',
+  });
+}
+
+/**
+ * The group dealt, then read: **the deck it lands on** read at once, and the page's Fill in with it
+ * — who a seat is offered to reads the intent too (`RescueOffers`). Every other read of the group is
+ * left stale for its next draw rather than read for nobody: the deal dealt every sport, and the kind
+ * the switch stood on is not the one it lands on. Answers whether that deck was read.
+ */
+async function findGames(client: QueryClient, landsIn: DealtIn): Promise<boolean> {
+  const { groupId, sport, kind } = landsIn;
+  await dealTheGroupNow(groupId).catch(unlessAFailedRequest);
+  await client.invalidateQueries({ queryKey: proposalKeys.group(groupId), refetchType: 'none' });
+  void client.refetchQueries(
+    { queryKey: proposalKeys.fillIn(groupId, sport), type: 'active' },
+    { cancelRefetch: false },
+  );
+  return client
+    .fetchQuery({
+      ...deckQuery(groupId, sport, kind),
+      // The tab waits on this read: once, now, and never paused for a reconnect.
+      retry: false,
+      networkMode: 'always',
+    })
+    .then(
+      () => true,
+      (error: unknown) => {
+        unlessAFailedRequest(error);
+        return false;
+      },
+    );
+}
+
+/** A request that failed falls through; anything else is a bug, and is thrown on. */
+function unlessAFailedRequest(error: unknown): void {
+  if (!isAppError(error)) throw error;
 }
 
 /**

@@ -1192,3 +1192,41 @@ first-time question's spoken names (_For fun, your usual at Padel_), so the cost
 the panel covers the cards on paper rather than over a scrim. `groupGamesDoor.test.tsx` walks it
 against a fake server that holds each sport's intent. **Not seen on a device**: the dim, and the
 panel over the stack — the ticket asks for that walk. _Finding…_ after an answer is #741's.
+
+**After an intent answer on Games, the tab is finding** ([#741](https://github.com/Raketa02/Raketa/issues/741),
+[ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+§4, the screens A2.1 state 5). The deck read straight after an answer used to come before Raketa had
+dealt anything for it, so a new player and Ania both landed on a false _Nothing picked right now_.
+Now the door's panel and the first-time question both hand their landed answer to
+**`useFindGames`**. It sends `POST /pools/{id}/deal`, then marks the group's reads stale, re-reads
+the page's Fill in (who a seat is offered to reads the intent) and reads **the deck it lands on**,
+once. Then the switch moves there. Meanwhile **`FindingGames`** says _Finding for-fun games for
+you…_ (the words §28) where the answer was given: in the question's place, or over the deck's area
+on the panel's ground. After _Either suits me_ on the first-time question it says _Finding games for
+you…_, and the deck stays where the switch stood (`findingAfterTheQuestion`). **It never hangs and
+never says it failed**:
+
+- a failed deal (the network, `pool_not_found`, a server error) falls through to the read;
+- a deal that never answers is given up at the request's own timeout;
+- that read is tried once and never paused for a reconnect (`networkMode: 'always'` on both);
+- a read that fails leaves the deck as it stands. The switch doesn't move, so with the connection
+  gone the player keeps the deck the phone has, not a spinner over one no read can reach;
+- a failure that isn't a request's is a bug, and is thrown on, not swallowed.
+
+Nothing is retried. The switch is still while finding, as it is while an answer is out. **The switch
+lands on the mutation, not on the call** (`useFindGames`' `onLanded`). A call's own callback is
+dropped when the tab unmounts, so a player who left Games mid-finding came back on the old kind.
+Moving the switch only at the end is what keeps the order **PUT, deal, deck**: moving it first would
+read the new kind's deck before the deal, for nobody. The landing moves the app-wide switch even if
+the page has gone to another sport meanwhile, as moving it at the answer would have. An answer on the You tab asks for no deal, and
+the jobs deal those groups. `useRereadDeck` lost its one caller and went. `stubGroupDeck` now answers
+the deal with `204`, so a suite that answers the first-time question doesn't pass by the
+fall-through. **Calls made without a ruling**:
+
+- finding lasts through the read, not just the deal, so the old deck never shows between the two.
+  ADR-0201 §4, the words §28 and the screens' state 5 say _while that request is in flight_, so this
+  wants a ruling and a root-doc edit;
+- the spinner and the line are `inlineTitle` in `ink` on paper.
+
+`groupGamesDoor.test.tsx` walks it against a server whose new kind has no cards until it is dealt.
+**Not seen on a device.**

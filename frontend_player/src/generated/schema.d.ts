@@ -1971,6 +1971,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/me/deck-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My cards per kind, across my groups
+         * @description You › *What kind of game*, one sport expanded (Q127): how many cards each kind deals the reader **now**, summed over every group they are in — each group's number exactly the count its switch shows, Seat open cards included — so a change of intent can say what it costs (*Your 7 competitive cards in your groups go*). A kind the reader's Play intent does not show is `0`, and a sport they have declared nothing in is `0` and `0`. Nothing is recorded.
+         */
+        get: operations["read_deck_counts_api_v1_players_me_deck_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/players/me/games-and-money": {
         parameters: {
             query?: never;
@@ -2009,6 +2029,26 @@ export interface paths {
         get: operations["read_group_deck_api_v1_pools__pool_id__deck_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pools/{pool_id}/deal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deal my group now
+         * @description Right after an intent answer on the **Games** tab (Q127): Raketa deals this group's games now — the proposer's own batch for its pool, in every sport it plays, the one the jobs run — and answers once it has been applied, so the phone can show *Finding for-fun games for you…* for as long as it takes and then read the deck. It never makes a card itself: what it deals is exactly what the jobs would have, a moment later. Safe beside the jobs and beside itself — a repeat deals nothing new — and what it records is told as the jobs' is (*Your new game* among it). No body.
+         */
+        post: operations["deal_the_pool_now_api_v1_pools__pool_id__deal_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3501,6 +3541,25 @@ export interface components {
              * @description The club's name; `null` for a club that no longer exists.
              */
             name: string | null;
+        };
+        /**
+         * DeckCountsResponse
+         * @description How many cards each kind deals the reader now in one sport, across every
+         *     group they are in (#739) — You › *What kind of game*'s *Your 7 competitive
+         *     cards in your groups go*.
+         */
+        DeckCountsResponse: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Competitive
+             * @description Competitive cards, summed over the reader's groups — each group's number exactly the one its switch shows, Seat open cards included. Nought when their Play intent does not show competitive games.
+             */
+            competitive: number;
+            /**
+             * For Fun
+             * @description For-fun cards, summed the same way. Nought when their Play intent does not show for-fun games.
+             */
+            for_fun: number;
         };
         /**
          * DeckForecastSchema
@@ -11770,7 +11829,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `payment_to_confirm` — this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `no_longer_fits` — somebody In now is somebody this player does not fit, or a post is not for them (#546); the card has gone, and who or why is not said. `post_not_open_to_you` — joining a post they were never dealt, they could not be dealt it now (#546). Nothing was recorded — except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `payment_to_confirm` — this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `no_longer_fits` — somebody In now is somebody this player does not fit, a post is not for them (#546), or their Play intent no longer wants the game's kind (Q127); the card has gone, and who or why is not said. `post_not_open_to_you` — joining a post they were never dealt, they could not be dealt it now (#546). Nothing was recorded — except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -11982,6 +12041,46 @@ export interface operations {
             };
         };
     };
+    read_deck_counts_api_v1_players_me_deck_counts_get: {
+        parameters: {
+            query: {
+                sport: components["schemas"]["Sport"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckCountsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether the reader fits the people on the cards could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     read_games_and_money_api_v1_players_me_games_and_money_get: {
         parameters: {
             query?: never;
@@ -12086,6 +12185,53 @@ export interface operations {
                 };
             };
             /** @description `block_state_unavailable` — whether the reader fits the people on the cards could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deal_the_pool_now_api_v1_pools__pool_id__deal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `pool_not_found` — no such group, or the caller is not in it. One code for both, as the deck's. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether the members fit each other could not be read, so the dealing stopped there; whatever it had applied stands. Read the deck as it stands — the jobs deal the rest. */
             503: {
                 headers: {
                     [name: string]: unknown;

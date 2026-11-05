@@ -15,8 +15,8 @@
  *
  * ## In place, over the deck, and taking no height from it
  *
- * Not a route and not a sheet: `GamesDeck` draws this **over the deck's area** — absolutely, on the
- * paper the cards stand on, under the switch the player tapped — so the stage underneath keeps the
+ * Not a route and not a sheet: `GamesDeck` draws this **over the deck's area** — on a ground it
+ * lays absolutely over it, the paper the cards stand on, under the switch the player tapped — so the stage underneath keeps the
  * size it measured and nothing in the stack moves (Q7's argument against a line under the switch).
  * It scrolls inside that area rather than growing it, so on a short phone or at a large text size
  * *Keep* is reached by a drag, never cut off and never by pushing the cards.
@@ -96,7 +96,7 @@ export function KindDoor({ sport, panel, answering, refusal, onAnswer, onClose }
   return (
     <ScrollView
       testID="kind-door"
-      style={s.over}
+      style={s.fill}
       contentContainerStyle={s.content}
       // Inside the page's own scroller, which Android lets lead unless this one asks.
       nestedScrollEnabled
@@ -127,8 +127,8 @@ export function KindDoor({ sport, panel, answering, refusal, onAnswer, onClose }
 }
 
 const s = StyleSheet.create({
-  // Over the deck's area and on its paper, so the cards under it are covered, never squeezed.
-  over: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.color.paper },
+  // The whole of the ground `GamesDeck` lays over the deck's area, so the cards are covered.
+  fill: { flex: 1 },
   content: { gap: theme.space.sm },
   title: { ...theme.type.cardTitle, color: theme.color.surface },
   body: { ...theme.type.tiny, color: theme.color.onDarkTiny, marginTop: theme.space.xxs },

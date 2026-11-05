@@ -7,6 +7,7 @@
  * | | |
  * | --- | --- |
  * | `getGroupDeck` | `GET /pools/{id}/deck?sport&kind` — a group's Games tab, the pool filed under the group's id |
+ * | `postDeal` | `POST /pools/{id}/deal` — deal the group now, after an intent answer on Games (#741) |
  * | `postYes` | `POST /proposals/{id}/yes` — *I'm in*, silent and free |
  * | `postNo` | `POST /proposals/{id}/no` — *Not this time*, silent and final |
  * | `deleteYes` | `DELETE /proposals/{id}/yes` — withdraw a yes before the game fills |
@@ -65,6 +66,19 @@ export function getGroupDeck(
     path: `/api/v1/pools/${encodeURIComponent(poolId)}/deck?sport=${sport}&kind=${kind}`,
     authenticated: true,
     signal,
+  });
+}
+
+/**
+ * **Deal this group now** (Q127, ADR-0201 §5) — the card-builder's own batch for the pool, every
+ * sport it plays; `204` once it has been applied, and a repeat deals nothing new. `pool_not_found`
+ * for no such group and for one the reader is not in, as the deck's.
+ */
+export function postDeal(poolId: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `/api/v1/pools/${encodeURIComponent(poolId)}/deal`,
+    authenticated: true,
   });
 }
 

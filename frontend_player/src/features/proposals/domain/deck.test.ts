@@ -9,6 +9,8 @@ import {
   countdownOf,
   courtTagOf,
   doorPanel,
+  findingAfterTheDoor,
+  findingAfterTheQuestion,
   foldOf,
   intentAnswering,
   inAcrossVersions,
@@ -142,6 +144,30 @@ describe('the panel a door opens', () => {
     expect(intentAnswering({ ...panel, yours: 'forFun', tapped: 'competitive' }, 'tapped')).toBe(
       'COMPETITIVE',
     );
+  });
+});
+
+describe('what finding names, and where it lands (A2.1 state 5)', () => {
+  it('names the kind tapped on the door, whichever answer, and lands there', () => {
+    expect(findingAfterTheDoor({ yours: 'competitive', count: 7, tapped: 'forFun' })).toEqual({
+      landsOn: 'forFun',
+      names: 'forFun',
+    });
+  });
+
+  it('names the kind the first-time question was answered with, and lands there', () => {
+    expect(findingAfterTheQuestion('FOR_FUN', 'competitive')).toEqual({
+      landsOn: 'forFun',
+      names: 'forFun',
+    });
+    expect(findingAfterTheQuestion('COMPETITIVE', 'forFun')).toEqual({
+      landsOn: 'competitive',
+      names: 'competitive',
+    });
+  });
+
+  it('names no kind after Either suits me, and lands where the switch already stands', () => {
+    expect(findingAfterTheQuestion('NO_PREFERENCE', 'forFun')).toEqual({ landsOn: 'forFun' });
   });
 });
 

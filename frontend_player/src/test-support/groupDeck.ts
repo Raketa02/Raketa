@@ -14,7 +14,7 @@
  */
 
 import { GATE_USER } from './onboardingRouter';
-import { json, type RecordedRequest, type Transport, type Wire } from './transport';
+import { json, noContent, type RecordedRequest, type Transport, type Wire } from './transport';
 
 /** Wednesday 30 September 2026, 10:00 in Warsaw — the instant every suite's deck is read at. */
 export const DECK_READ_AT = Date.parse('2026-09-30T08:00:00Z');
@@ -28,6 +28,11 @@ export function hoursAfterRead(hours: number): string {
 
 export function deckPath(groupId: string): string {
   return `/api/v1/pools/${groupId}/deck`;
+}
+
+/** *Deal my group now* — after an intent answer on Games (#741). */
+export function dealPath(groupId: string): string {
+  return `/api/v1/pools/${groupId}/deal`;
 }
 
 export function yesPath(proposalId: string): string {
@@ -339,7 +344,9 @@ export function groupDeck(
  *
  * **And the group's Fill in, empty** (#557): the page reads it for the Fill in tab's badge whichever
  * tab is open, so every suite that opens a group page would otherwise fail at the socket. A suite
- * about Fill in serves its own afterwards (`stubFillIn`).
+ * about Fill in serves its own afterwards (`stubFillIn`). **And the deal, answered at once** (#741):
+ * an intent answer on Games deals the group before the deck is read again, so a suite that answers
+ * the first-time question would otherwise fail its deal at the socket and pass by the fall-through.
  */
 export function stubGroupDeck(
   transport: Transport,
@@ -351,5 +358,6 @@ export function stubGroupDeck(
   transport.on('GET', deckPath(groupId), (request) =>
     json(typeof deck === 'function' ? deck(kindAsked(request)) : deck),
   );
+  transport.on('POST', dealPath(groupId), () => noContent());
   stubFillIn(transport, groupId);
 }

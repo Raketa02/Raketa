@@ -9,6 +9,7 @@ import {
   doorTitle,
   dropCost,
   eitherCost,
+  findingLine,
   keepLabel,
 } from './doorPresentation';
 
@@ -84,5 +85,20 @@ describe('the way out, and the door itself', () => {
   it('names the door without a number', () => {
     expect(doorSpoken('forFun')).toBe('For fun, not a kind you play');
     expect(doorSpoken('competitive')).toBe('Competitive, not a kind you play');
+  });
+});
+
+describe('finding, after an answer', () => {
+  it('names the kind it lands on', () => {
+    expect(findingLine({ landsOn: 'forFun', names: 'forFun' })).toBe(
+      'Finding for-fun games for you…',
+    );
+    expect(findingLine({ landsOn: 'competitive', names: 'competitive' })).toBe(
+      'Finding competitive games for you…',
+    );
+  });
+
+  it('names none after Either suits me on the first-time question', () => {
+    expect(findingLine({ landsOn: 'competitive' })).toBe('Finding games for you…');
   });
 });
