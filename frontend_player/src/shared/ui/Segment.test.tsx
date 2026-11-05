@@ -120,6 +120,52 @@ describe('the drawing', () => {
   });
 });
 
+/**
+ * **A door** (ADR-0201 §2) — a view that is not the player's yet, and whose press opens a way to
+ * make it theirs. Dimmed, never disabled: the same box, the same reach, and every press reported.
+ */
+describe('a door', () => {
+  const DOOR = [
+    { key: 'competitive', label: 'Competitive · 7' },
+    { key: 'forFun', label: 'For fun', door: true },
+  ] as const;
+
+  function renderDoor(onSelect = jest.fn()) {
+    render(<Segment options={DOOR} selected="competitive" onSelect={onSelect} />);
+    return onSelect;
+  }
+
+  it('dims its label, and only its label', () => {
+    renderDoor();
+
+    expect(labelStyle('For fun')).toMatchObject({
+      color: theme.color.muted,
+      opacity: theme.size.segDoorOpacity,
+    });
+    expect(labelStyle('Competitive · 7').opacity).toBeUndefined();
+  });
+
+  it('is the same size and as easy to press as the live segment', () => {
+    renderDoor();
+
+    const door = screen.getByLabelText('For fun');
+    const live = screen.getByLabelText('Competitive · 7');
+    expect(door.props.hitSlop).toBe(live.props.hitSlop);
+    expect(styleOf(door)).toMatchObject({ flex: 1, minHeight: theme.size.seg });
+  });
+
+  it('is never announced as disabled, and its press is reported', async () => {
+    const onSelect = renderDoor();
+
+    const door = screen.getByLabelText('For fun');
+    expect(door.props.accessibilityState).toEqual({ selected: false });
+
+    await userEvent.press(door);
+
+    expect(onSelect).toHaveBeenCalledWith('forFun');
+  });
+});
+
 /** The style a `Pressable`'s style function produces with nothing pressed. */
 function styleOf(node: { readonly props: { readonly style?: unknown } }): ViewStyle {
   const style = node.props.style;

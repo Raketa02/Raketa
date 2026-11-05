@@ -1160,3 +1160,35 @@ sentence (_Karol.t and ania.k against …_); it now capitalises only _You_ and _
 nickname is said as its owner wrote it. The harness's deck and Home people are handles now
 (_karol.t_, _zofia.b_, _ania.k_, _piotr.s_, …), so the stems are exercised as they are drawn.
 `groupGames.test.tsx` holds _ania.k_ on a tile and on her record.
+
+**The kind you don't play is a door** ([#740](https://github.com/Raketa02/Raketa/issues/740),
+[ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+§2, Q127). The switch draws both kinds always (`switchSides`): the read's segments are the kinds the
+intent shows, and the one missing is drawn dimmed with no number — `Segment`'s `door`, its label at
+.8 and nothing else, so it is the same box and the same reach as the live kind. Ania reads
+_Competitive · 7_ and a bare _For fun_, Kuba the mirror, and Zofia's _Either suits me_ is unchanged;
+an undeclared sport still draws the first-time question and no switch. **The deck still never opens
+on it**: `resolveKind` corrects the remembered kind to a live one as before, and a press on the door
+moves nothing — it opens **`KindDoor`** over the deck's area, a sibling of what it covers
+(`behindOverlay`) and absolutely placed on the paper, so the stage keeps the size it measured and no
+route is pushed. To make that room the area is one `View` under the switch in both of the deck's
+states — the stage and its buttons, or the group's starting card — with the page's own step between
+them, so neither moved. The panel is the first-time question's dark card and answers, saying why the
+other kind is missing and what each answer costs in the live segment's count (`doorPresentation`, the
+words §28: a singular, and a zero that drops the number); _Either suits me_ is first, on the
+`primary` fill. An answer is `PUT /play-intents/{sport}` on `DECK` for the page's sport alone, and on
+landing the switch moves to the kind tapped and the group's decks are read again, as after the
+first-time question. _Keep_, a press on the live kind and Android's back close it and send nothing,
+and a refusal is the interstitial's coral note above the card. A read that shows the kind tapped
+closes it, and so does a change of sport, for good. **The write is the deck's, not the panel's**:
+`GamesDeck` holds `useDeclarePlayIntent` and hands the panel the answer in flight. The panel can go
+while an answer is out — a read that now shows the kind, or a change of sport — and an answer held
+by the panel's own mutation then lost its landing: the switch never moved and nothing was read
+again. While an answer is out nothing on the switch moves, and neither _Keep_ nor back closes it. The
+panel scrolls inside the area, so at a large text size _Keep_ is a drag away rather than cut off.
+**Calls made
+without a ruling**: the door is spoken _For fun, not a kind you play_; the panel's answers keep the
+first-time question's spoken names (_For fun, your usual at Padel_), so the cost line is not heard;
+the panel covers the cards on paper rather than over a scrim. `groupGamesDoor.test.tsx` walks it
+against a fake server that holds each sport's intent. **Not seen on a device**: the dim, and the
+panel over the stack — the ticket asks for that walk. _Finding…_ after an answer is #741's.

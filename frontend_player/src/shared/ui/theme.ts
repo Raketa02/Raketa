@@ -675,6 +675,13 @@ const size = {
   chip: 27,
   chipSm: 25,
   seg: 25,
+  /** **A door segment's label** (6.3 as amended 2026-11-05, ADR-0201 §2) — the Games switch's kind
+   *  the intent doesn't want: `muted` at .8, `#7A878A` over the `line2` track, **3,17:1**. Slightly
+   *  dimmed and no further: past 3:1 still, where every step down reads as *disabled*, which is the
+   *  one reading the door must not have. Under 1.4.3's 4,5:1, and recorded so: the state is said
+   *  in words too — the door carries no number — and the label is the kind's name, which the live
+   *  segment beside it prints whole. */
+  segDoorOpacity: 0.8,
   /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529),
    *  `CornerBadge`: a group page's Games and Fill in, and the group's tile on its page and on Info,
    *  counting the requests waiting on an Owner (Q125). **16, and it is

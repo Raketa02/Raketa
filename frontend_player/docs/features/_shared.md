@@ -376,3 +376,11 @@ it holds changes, so an API that moved with the order had every stage take its l
 it back at the end — a new order, a new API, and again, a render loop the full suite found as a
 worker out of memory. The back answers the newer stage first, being the newer subscription.
 `ModalStage.test.tsx` walks it.
+
+**A segment can be a door** ([#740](https://github.com/Raketa02/Raketa/issues/740), ADR-0201 §2,
+6.3 as amended). `Segment`'s `door` dims the option's label to `size.segDoorOpacity` and changes
+nothing else: the box, the slop, the press state and `selected: false` stay the unselected
+segment's, and it never carries `disabled`, because a door that reads as shut is one nobody opens.
+Its press is reported like any other, and the caller decides what a door opens — the Games switch's
+other kind, recorded in `proposals.md`. The dim stops at 3,17:1 on `line2`, under 1.4.3 and past
+3:1, and the words say the state as well: a door carries no number. `Segment.test.tsx` holds all three.

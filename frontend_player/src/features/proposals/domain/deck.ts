@@ -14,16 +14,18 @@
  * second answer to it.
  */
 
+import type { PlayIntent } from '@/shared/vocabulary/playIntent';
 import type { Weekday } from '@/shared/vocabulary/week';
 
-import type {
-  CardType,
-  ClubCancelReason,
-  CourtState,
-  DayRange,
-  GameKind,
-  OverlapGrade,
-  OverlapShade,
+import {
+  GAME_KINDS,
+  type CardType,
+  type ClubCancelReason,
+  type CourtState,
+  type DayRange,
+  type GameKind,
+  type OverlapGrade,
+  type OverlapShade,
 } from './vocabulary';
 
 /** One person on a card — the reader among them, marked. */
@@ -144,6 +146,71 @@ export function resolveKind(
   const first = segments?.[0];
   if (first === undefined) return chosen;
   return segments?.some((segment) => segment.kind === chosen) === true ? chosen : first.kind;
+}
+
+// ---------------------------------------------------------------------------
+// The door — the kind the intent does not show (ADR-0201 §2)
+// ---------------------------------------------------------------------------
+
+/**
+ * **One side of the switch** — a kind the intent shows, with its count, or **the door**: the kind
+ * it does not, drawn dimmed with no number, whose press opens the panel rather than the deck.
+ */
+export type SwitchSide =
+  | { readonly kind: GameKind; readonly door: false; readonly count: number }
+  | { readonly kind: GameKind; readonly door: true };
+
+/**
+ * **Both kinds, always, in the switch's order** (Q127): the read's segments are the kinds the
+ * intent shows, so a kind missing from them is the door. With no segments the intent is
+ * undeclared, the first-time question stands in the deck's place, and there is no switch.
+ */
+export function switchSides(segments: readonly DeckSegment[]): readonly SwitchSide[] {
+  if (segments.length === 0) return [];
+  return GAME_KINDS.map((kind): SwitchSide => {
+    const live = segments.find((segment) => segment.kind === kind);
+    return live === undefined ? { kind, door: true } : { kind, door: false, count: live.count };
+  });
+}
+
+/**
+ * **What a door's panel says** — the one kind the player plays, their count of it in this group
+ * (the number their switch shows, so it is as old as the read), and the kind they tapped.
+ */
+export interface DoorPanel {
+  readonly yours: GameKind;
+  readonly count: number;
+  readonly tapped: GameKind;
+}
+
+/**
+ * The panel a press on `tapped` opens — only on a door, `switchSides`' own, so the switch's drawing
+ * and the panel cannot disagree about which kind is one. *Either suits me* has no door (Q7), an
+ * undeclared sport has no switch, and beside a door stands the one kind the player plays.
+ */
+export function doorPanel(
+  segments: readonly DeckSegment[],
+  tapped: GameKind,
+): DoorPanel | undefined {
+  const sides = switchSides(segments);
+  if (!sides.some((side) => side.kind === tapped && side.door)) return undefined;
+  const yours = sides.find((side) => !side.door);
+  return yours === undefined || yours.door
+    ? undefined
+    : { yours: yours.kind, count: yours.count, tapped };
+}
+
+/** The panel's two answers that change something; *Keep* sends nothing. */
+export type DoorAnswer = 'either' | 'tapped';
+
+const INTENT_OF_KIND: Readonly<Record<GameKind, PlayIntent>> = {
+  competitive: 'COMPETITIVE',
+  forFun: 'FOR_FUN',
+};
+
+/** **The intent an answer declares** — *Either suits me*, or the kind tapped alone. */
+export function intentAnswering(panel: DoorPanel, answer: DoorAnswer): PlayIntent {
+  return answer === 'either' ? 'NO_PREFERENCE' : INTENT_OF_KIND[panel.tapped];
 }
 
 // ---------------------------------------------------------------------------

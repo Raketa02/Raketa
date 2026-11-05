@@ -259,7 +259,8 @@ describe('the switch', () => {
     expect(useGameIntent.getState().intent).toBe('forFun');
   });
 
-  it('shows only the segment a one-kind intent wants, whatever the switch last stood on', async () => {
+  // The other kind is a door with no number (#740) — `groupGamesDoor.test.tsx` walks it.
+  it('opens on the segment a one-kind intent wants, whatever the switch last stood on', async () => {
     const funCard = deckCard({ kind: 'FOR_FUN' });
     await openGames((kind) =>
       groupDeck({
@@ -271,6 +272,7 @@ describe('the switch', () => {
     expect(await screen.findByTestId(`game-card-${funCard.proposal_id}`)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'For fun, 1 game', selected: true })).toBeTruthy();
     expect(screen.queryByText(/^Competitive ·/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Competitive, not a kind you play' })).toBeTruthy();
   });
 });
 

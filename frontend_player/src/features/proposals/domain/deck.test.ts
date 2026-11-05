@@ -8,7 +8,9 @@ import {
   completesIt,
   countdownOf,
   courtTagOf,
+  doorPanel,
   foldOf,
+  intentAnswering,
   inAcrossVersions,
   refusalOutcome,
   rescueGoneOf,
@@ -16,6 +18,7 @@ import {
   ribbonOf,
   rowsOf,
   standingCards,
+  switchSides,
   weekCapOf,
   withOnTop,
   withoutCard,
@@ -76,6 +79,69 @@ describe('which segment the deck is read for', () => {
   it('stands as chosen while there is nothing to correct it against', () => {
     expect(resolveKind('forFun', undefined)).toBe('forFun');
     expect(resolveKind('forFun', [])).toBe('forFun');
+  });
+});
+
+describe('the switch’s two sides (ADR-0201 §2)', () => {
+  it('draws the kind a one-kind intent does not show as a door, with no count', () => {
+    expect(switchSides([{ kind: 'competitive', count: 7 }])).toEqual([
+      { kind: 'competitive', door: false, count: 7 },
+      { kind: 'forFun', door: true },
+    ]);
+    expect(switchSides([{ kind: 'forFun', count: 3 }])).toEqual([
+      { kind: 'competitive', door: true },
+      { kind: 'forFun', door: false, count: 3 },
+    ]);
+  });
+
+  it('draws both live for Either suits me, Competitive first', () => {
+    expect(
+      switchSides([
+        { kind: 'forFun', count: 1 },
+        { kind: 'competitive', count: 5 },
+      ]),
+    ).toEqual([
+      { kind: 'competitive', door: false, count: 5 },
+      { kind: 'forFun', door: false, count: 1 },
+    ]);
+  });
+
+  it('draws no switch while no intent is declared', () => {
+    expect(switchSides([])).toEqual([]);
+  });
+});
+
+describe('the panel a door opens', () => {
+  it('says the kind the player plays and their count of it in this group', () => {
+    expect(doorPanel([{ kind: 'competitive', count: 7 }], 'forFun')).toEqual({
+      yours: 'competitive',
+      count: 7,
+      tapped: 'forFun',
+    });
+  });
+
+  it('opens on nothing but a door', () => {
+    expect(doorPanel([{ kind: 'competitive', count: 7 }], 'competitive')).toBeUndefined();
+    expect(
+      doorPanel(
+        [
+          { kind: 'competitive', count: 7 },
+          { kind: 'forFun', count: 0 },
+        ],
+        'forFun',
+      ),
+    ).toBeUndefined();
+    expect(doorPanel([], 'forFun')).toBeUndefined();
+  });
+
+  it('answers Either suits me or the kind tapped, in the intent’s own words', () => {
+    const panel = { yours: 'competitive', count: 7, tapped: 'forFun' } as const;
+
+    expect(intentAnswering(panel, 'either')).toBe('NO_PREFERENCE');
+    expect(intentAnswering(panel, 'tapped')).toBe('FOR_FUN');
+    expect(intentAnswering({ ...panel, yours: 'forFun', tapped: 'competitive' }, 'tapped')).toBe(
+      'COMPETITIVE',
+    );
   });
 });
 

@@ -157,7 +157,10 @@ the segment already chosen — Play's _Find a game_ half re-enters the tab, whic
 rather than doing nothing. Its label is a whole string rather than a name plus a count slot,
 because anything beyond a name is copy and belongs to the feature that has something to say —
 Play drew _Match me · 3_ through that string and has since struck the number, which is a change
-of copy and not of this primitive.
+of copy and not of this primitive. **A segment can be a door** (`door`, ADR-0201 §2, 6.3 as amended): a view that
+isn't the player's yet, whose press the caller answers with a way to make it theirs — its label
+dimmed to `size.segDoorOpacity` and nothing else, never `disabled`, its press reported like any
+other. The Games switch's other kind is the one door today.
 
 **The five Play arrivals** are `Switch` (6.12), `FitPill` (7.10), `BalanceBar` (7.11),
 `Court` (7.12) and the availability grid's **diff variant** — and none of them reclaims a

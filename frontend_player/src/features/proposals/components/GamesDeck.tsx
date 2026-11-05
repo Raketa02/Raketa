@@ -46,11 +46,25 @@
  *
  * ## The switch is the page's, corrected by the intent
  *
- * *Competitive · 7 / For fun · 1* (mock 9) is drawn off the read's segments — only the one the
- * player's intent shows, or both for *Either* — and a press is the page's choice (`onChoose`, the
- * group page's game-intent store, which Friends' switch shares). A choice the intent does not show
- * is read as the segment it does (`useGroupDeck`), so the switch never stands on an empty deck the
- * player could not have wanted.
+ * *Competitive · 7 / For fun · 1* (mock 9) is drawn off the read's segments, and a press on a live
+ * kind is the page's choice (`onChoose`, the group page's game-intent store, which Friends' switch
+ * shares). A choice the intent does not show is read as the segment it does (`useGroupDeck`), so the
+ * switch never stands on an empty deck the player could not have wanted.
+ *
+ * ## The kind the intent doesn't want is a door (Q127)
+ *
+ * **Both kinds are always drawn** (`switchSides`; ADR-0201 §2, #740): the one the intent shows live
+ * with its count, or both for *Either*, and the other **dimmed, with no number** — `Segment`'s
+ * `door`, the same box and reach. A press on it moves nothing; it opens `KindDoor`, which asks to
+ * change the intent for this sport, and its answer lands the switch on the kind tapped and reads the
+ * group's decks again. The panel lies **over the deck's area** — the stage and its buttons, or the
+ * starting card, one `View` under the switch — so it is no route and takes no height from the cards;
+ * what it covers is hidden from a screen reader beside it (`behindOverlay`). It is open while the
+ * door tapped is still a door on this sport's read, so a read that now shows that kind closes it,
+ * and a change of sport closes it for good.
+ *
+ * **The answer is written here** (`useDeclarePlayIntent`), not in the panel: the panel can go while
+ * the answer is out, and the answer must still land. While it is out the switch is still.
  *
  * ## The stage was Players', and the card is this feature's
  *
@@ -103,6 +117,7 @@ import {
 } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
+import { useDeclarePlayIntent } from '@/features/player_profile/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
@@ -119,12 +134,17 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import {
   anyCountingDown,
   chargesAtOnce,
+  doorPanel,
+  intentAnswering,
   refusalOutcome,
   standingCards,
+  switchSides,
   weekCapOf,
   withOnTop,
   type DeckCard,
   type DeckPerson,
+  type DoorAnswer,
+  type DoorPanel,
 } from '../domain/deck';
 import { isRescue, type DealtIn } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
@@ -143,6 +163,7 @@ import { useLatest } from '../hooks/useLatest';
 import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
+import { doorSpoken } from './doorPresentation';
 import {
   answerLabels,
   capLine,
@@ -154,6 +175,7 @@ import {
 import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { GameCard } from './GameCard';
+import { KindDoor } from './KindDoor';
 import { ReadFailed } from './ReadFailed';
 import { gameRoute, rescueRoute } from './proposalRoutes';
 
@@ -164,6 +186,9 @@ const ON_THE_STAGE = 3;
 
 /** Whichever scroller the tab is in — the one the page's pull is on. */
 const BODY = 'games-deck-body';
+
+/** The surface a door's answer reports — the deck's, as the first-time question's does. */
+const DECLARED_ON = 'DECK';
 
 export interface GamesDeckProps {
   readonly groupId: string;
@@ -213,6 +238,23 @@ export function GamesDeck({
   const [underThumb, setUnderThumb] = useState<string | undefined>(undefined);
   /** Cards a refusal put back while their answer is still settling — drawn, not hidden. */
   const [putBack, setPutBack] = useState<ReadonlySet<string>>(() => new Set());
+  /** The door the player tapped, on the sport it was tapped on — its panel is open over the deck. */
+  const [door, setDoor] = useState<{ readonly sport: Sport; readonly kind: GameKind } | undefined>(
+    undefined,
+  );
+  /** Why the panel's last answer was refused — drawn in the panel until another is given. */
+  const [refusal, setRefusal] = useState<AppError | undefined>(undefined);
+  // The door's answer is written here rather than in the panel, so it lands — the switch moved,
+  // the group read again — when the panel has gone meanwhile (`KindDoor`).
+  const declare = useDeclarePlayIntent();
+  /** The intent on its way for this sport — nothing on the switch moves while it is. */
+  const declaring =
+    declare.isPending && declare.variables?.sport === sport ? declare.variables.intent : undefined;
+  // A panel belongs to the sport it was opened on, and a change of sport closes it.
+  useEffect(() => {
+    setDoor(undefined);
+    setRefusal(undefined);
+  }, [sport]);
   const onTheirWay = useAnswersOnTheirWay();
 
   const answer = useAnswerCard<DeckCard>(
@@ -357,15 +399,78 @@ export function GamesDeck({
     );
   }
 
-  const segments: readonly SegmentOption<GameKind>[] = deck.segments.map((segment) => ({
-    key: segment.kind,
-    label: segmentLabel(segment.kind, segment.count),
-    accessibilityLabel: segmentSpoken(segment.kind, segment.count),
-  }));
+  // Both kinds, always: the one the intent shows live with its count, the other a door (Q127).
+  const sides = switchSides(deck.segments);
+  const segments: readonly SegmentOption<GameKind>[] = sides.map((side) =>
+    side.door
+      ? {
+          key: side.kind,
+          label: COPY.kind[side.kind],
+          accessibilityLabel: doorSpoken(side.kind),
+          door: true,
+        }
+      : {
+          key: side.kind,
+          label: segmentLabel(side.kind, side.count),
+          accessibilityLabel: segmentSpoken(side.kind, side.count),
+        },
+  );
+  // Open while the door tapped is still a door on this sport's read — a read that now shows the
+  // kind closes it, and a panel opened on another sport is not this one's.
+  const panel =
+    door === undefined || door.sport !== sport ? undefined : doorPanel(deck.segments, door.kind);
+
+  /**
+   * A door opens its panel and moves nothing; a live kind is the page's choice, as ever. While an
+   * answer is on its way the switch is still: the answer lands it on the kind tapped.
+   */
+  const choose = (pressed: GameKind) => {
+    if (declaring !== undefined) return;
+    if (doorPanel(deck.segments, pressed) !== undefined) {
+      setRefusal(undefined);
+      setDoor({ sport, kind: pressed });
+      return;
+    }
+    setDoor(undefined);
+    onChoose(pressed);
+  };
+
+  /**
+   * The panel's answer, for this sport alone. On landing the switch moves to the kind tapped and
+   * the group's decks are read again, as after the first-time question; a refusal stays in the
+   * panel. Handed to this call because the deck outlives the panel — see `KindDoor`.
+   */
+  const answerTheDoor = (asked: DoorPanel, said: DoorAnswer) => {
+    setRefusal(undefined);
+    declare.mutate(
+      { sport, intent: intentAnswering(asked, said), surface: DECLARED_ON },
+      {
+        onSuccess: () => {
+          setDoor(undefined);
+          onChoose(asked.tapped);
+          void reread();
+        },
+        onError: (error) => setRefusal(error),
+      },
+    );
+  };
+
+  const overTheDeck =
+    panel === undefined ? null : (
+      <KindDoor
+        sport={sport}
+        panel={panel}
+        {...(declaring === undefined ? {} : { answering: declaring })}
+        {...(refusal === undefined ? {} : { refusal })}
+        onAnswer={(said) => answerTheDoor(panel, said)}
+        onClose={() => setDoor(undefined)}
+      />
+    );
+  const covered = behindOverlay(panel !== undefined);
 
   const above = (
     <>
-      <Segment options={segments} selected={kind} onSelect={onChoose} />
+      <Segment options={segments} selected={kind} onSelect={choose} />
       {/* Above the deck and under the switch, which sits under the tabs (A1, A2.1). */}
       {cap === undefined ? null : <Text style={s.cap}>{capLine(cap)}</Text>}
       {answer.isPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
@@ -374,9 +479,19 @@ export function GamesDeck({
 
   if (top === undefined) {
     return (
-      <ScrollView testID={BODY} contentContainerStyle={s.page} refreshControl={refreshControl}>
+      <ScrollView
+        testID={BODY}
+        contentContainerStyle={[s.page, s.grow]}
+        refreshControl={refreshControl}
+      >
         {above}
-        {empty}
+        {/* The deck's area, which the door's panel covers — see the module note. */}
+        <View style={s.area}>
+          <View style={s.under} {...covered}>
+            {empty}
+          </View>
+          {overTheDeck}
+        </View>
       </ScrollView>
     );
   }
@@ -392,44 +507,50 @@ export function GamesDeck({
       >
         {above}
 
-        <View style={s.stage}>
-          <DeckStage
-            leaving={
-              leaving !== undefined && leaving.card.proposalId === top.proposalId
-                ? leaving.said
-                : undefined
-            }
-            onAnswer={(said) => answerTo(said, top)}
-            onLeft={() => cardLeft(top)}
-            stamps={stampsFor(top, chargesAtOnce(top))}
-            cards={shown.slice(0, ON_THE_STAGE).map((card, depth) => ({
-              key: card.proposalId,
-              card: (
-                <GameCard
-                  card={card}
-                  seatsPerSide={seatsPerSide}
-                  at={at}
-                  day={gameDayOf(card.startsAt, at)}
-                  today={weekday}
-                  {...(depth === 0
-                    ? {
-                        onOpen: () => open(card),
-                        onPerson: (person: DeckPerson) => setReading(person),
-                      }
-                    : {})}
-                />
-              ),
-            }))}
-          />
-        </View>
+        {/* The deck's area, which the door's panel covers — see the module note. */}
+        <View style={s.area}>
+          <View style={s.under} {...covered}>
+            <View style={s.stage}>
+              <DeckStage
+                leaving={
+                  leaving !== undefined && leaving.card.proposalId === top.proposalId
+                    ? leaving.said
+                    : undefined
+                }
+                onAnswer={(said) => answerTo(said, top)}
+                onLeft={() => cardLeft(top)}
+                stamps={stampsFor(top, chargesAtOnce(top))}
+                cards={shown.slice(0, ON_THE_STAGE).map((card, depth) => ({
+                  key: card.proposalId,
+                  card: (
+                    <GameCard
+                      card={card}
+                      seatsPerSide={seatsPerSide}
+                      at={at}
+                      day={gameDayOf(card.startsAt, at)}
+                      today={weekday}
+                      {...(depth === 0
+                        ? {
+                            onOpen: () => open(card),
+                            onPerson: (person: DeckPerson) => setReading(person),
+                          }
+                        : {})}
+                    />
+                  ),
+                }))}
+              />
+            </View>
 
-        <DeckAnswers
-          labels={answerLabels(top)}
-          onPass={() => answerTo('no', top)}
-          onAccept={() => answerTo('yes', top)}
-          onRecord={() => open(top)}
-          answering={leaving !== undefined}
-        />
+            <DeckAnswers
+              labels={answerLabels(top)}
+              onPass={() => answerTo('no', top)}
+              onAccept={() => answerTo('yes', top)}
+              onRecord={() => open(top)}
+              answering={leaving !== undefined}
+            />
+          </View>
+          {overTheDeck}
+        </View>
       </ScrollView>
 
       {/* A sibling of the screen it covers, never a child: `behindOverlay` hides everything
@@ -458,6 +579,10 @@ const s = StyleSheet.create({
   page: { padding: theme.size.gutter, gap: theme.space.sm },
   // The page's height at least, so the stage below takes what the switch and the buttons leave.
   grow: { flexGrow: 1 },
+  // The deck's area — what the page leaves under the switch, and what the door's panel covers.
+  area: { flex: 1 },
+  // What the area holds: the stage and the buttons, or the starting card — the page's own step.
+  under: { flex: 1, gap: theme.space.sm },
   // The stage takes what the page leaves between the switch and the buttons.
   stage: { flex: 1, marginBottom: theme.space.sm },
   cap: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },

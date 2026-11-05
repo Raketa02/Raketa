@@ -45,6 +45,16 @@
  * it (a group page's Games and Fill in). Out of the layout, so a count arriving moves nothing.
  * **It announces nothing**: the caller puts the count in the option's `accessibilityLabel`, as the
  * tab bar puts it on the column's, and a badge that spoke too would be one number read twice.
+ *
+ * ## The door — a view that isn't yours yet
+ *
+ * The Games switch draws both kinds always, and the kind the player's intent doesn't want is a
+ * **door** (`door`; [ADR-0201](../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+ * §2): its press opens a way to change the intent rather than the view, and it reads *not yours
+ * yet*. **Dimmed, never disabled** — the label at `size.segDoorOpacity` and nothing else: the same
+ * box, the same slop, no `disabled` in its state, and its press reported like any other. A door
+ * that read as shut is one nobody opens. The words carry the state as well (the caller's door has
+ * no number), so the dim is never the whole fact.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -63,6 +73,11 @@ export interface SegmentOption<K extends string> {
    * Absent, or 0, draws nothing. The caller says the count in `accessibilityLabel`.
    */
   readonly badge?: number;
+  /**
+   * **A door** — a view that isn't the player's yet, whose press opens a way to make it theirs
+   * rather than the view: its label dimmed, nothing else changed — see the module note.
+   */
+  readonly door?: boolean;
 }
 
 export interface SegmentProps<K extends string> {
@@ -140,6 +155,7 @@ export function Segment<K extends string>({
                 prominent ? s.labelProminent : undefined,
                 onDark && !on ? s.labelOnDark : undefined,
                 on ? (prominent ? s.labelSelectedProminent : s.labelSelected) : undefined,
+                option.door === true ? s.labelDoor : undefined,
               ]}
               numberOfLines={1}
             >
@@ -184,6 +200,7 @@ const s = StyleSheet.create({
   label: { ...theme.type.seg, color: theme.color.muted },
   labelOnDark: { color: theme.color.onDarkTiny },
   labelSelected: { color: theme.color.ink },
+  labelDoor: { opacity: theme.size.segDoorOpacity },
   trackProminent: { backgroundColor: theme.color.paper2 },
   // `btn`'s height — the thumb is a control the size of a button, which is what the mock draws.
   segmentProminent: { minHeight: theme.size.btn },
