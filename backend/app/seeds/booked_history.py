@@ -49,7 +49,7 @@ where none was written.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Final, final
@@ -66,6 +66,7 @@ from app.bootstrap.composition import (
     build_group_code_minter,
     build_home_clubs,
     build_player_bookings,
+    build_play_intent_declaration_repository,
     build_player_names,
     build_published_sportsmanship,
     build_rated_player_query,
@@ -92,7 +93,16 @@ from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.groups.application.commands import CreatePlayerGroupCommand
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.domain.value_objects import GroupName, JoinPolicy
-from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.application.commands import (
+    DeclarePlayIntentCommand,
+)
+from app.modules.player_profile.application.declare_play_intent import (
+    DeclarePlayIntent,
+)
+from app.modules.player_profile.domain.play_intent import (
+    PlayIntent,
+    PlayIntentSurface,
+)
 from app.modules.proposals.domain.deck import GAME_LENGTH, week_of
 from app.modules.proposals.domain.home import HomeStatus
 from app.modules.sportsmanship.application.answer_the_card import AnswerTheCard
@@ -128,6 +138,16 @@ for _name in HISTORY_GROUPS.values():
     GroupName(_name)
 #: Competitive, so every game is counted.
 HISTORY_KIND: Final = SearchMode.COMPETITIVE
+#: **A counted game was played competitively by everybody on it**, and since
+#: Q127 a yes is held to the kind its player's intent wants. Somebody on one
+#: whose own intent in the sport is For fun — hers in tennis — played it
+#: competitively and switched after: their intent is declared competitive
+#: before the games are made and their own declared again once every game is
+#: written, both at the run's instant and on the You tab. A declaration that
+#: changes nothing records nothing, so a second run records neither.
+HISTORY_INTENT: Final = PlayIntent.COMPETITIVE
+#: The one intent that does not want ``HISTORY_KIND``.
+PLAYED_FOR_FUN: Final = PlayIntent.FOR_FUN
 
 #: How far ahead of its hour each game was made and filled.
 MADE_AHEAD: Final = timedelta(days=2)
@@ -333,6 +353,8 @@ class _Person:
     player_id: UUID
     #: The latest instant their profile could have been committed at.
     committed_at: Instant
+    #: Their own Play intent per sport, as the fixture declares it.
+    intents: Mapping[Sport, PlayIntent]
 
 
 async def _people(
@@ -352,6 +374,9 @@ async def _people(
         if handle.startswith("cohort-"):
             member = COHORT.by_handle(handle)
             email, days = member.email, member.committed_days_ago
+            intents = {
+                Sport(sport): PlayIntent(intent) for sport, intent in member.intents
+            }
         else:
             account = accounts.get(handle)
             if account is None or account.profile is None:
@@ -360,6 +385,7 @@ async def _people(
                     f"named account with a profile"
                 )
             email, days = account.email, account.profile.committed_days_ago
+            intents = dict(account.profile.intents)
         user = await users.get_by_email(email)
         if user is None:
             raise RuntimeError(f"{email} is not registered — the accounts run first")
@@ -367,8 +393,39 @@ async def _people(
             handle=handle,
             player_id=user.id,
             committed_at=days_before(now, days).now(),
+            intents=intents,
         )
     return people
+
+
+async def _declare(
+    session: AsyncSession,
+    switched: Iterable[tuple[_Person, Sport]],
+    *,
+    intent_of: Callable[[_Person, Sport], PlayIntent],
+    now: Instant,
+) -> None:
+    """Each of these people's Play intent in the sport declared, as they would
+    change it on the You tab — a declaration that changes nothing recording
+    nothing."""
+
+    store = build_domain_event_store(session)
+    declare = DeclarePlayIntent(
+        declarations=build_play_intent_declaration_repository(
+            event_store=store, events=build_event_publisher(session)
+        ),
+        uow=build_unit_of_work(session),
+        clock=FixedClock(at=now),
+    )
+    for person, sport in switched:
+        await declare.execute(
+            DeclarePlayIntentCommand(
+                player_id=person.player_id,
+                sport=sport,
+                intent=intent_of(person, sport),
+                surface=PlayIntentSurface.PROFILE_SCREEN,
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -472,6 +529,26 @@ async def write_the_played_history(
             for player in players:
                 busy.setdefault(player, []).append(start)
         found = _already_booked(planned, booked, groups, people)
+        # Who plays a game still to be made in a sport they now play for fun.
+        switched = [
+            (people[handle], Sport(sport))
+            for handle, sport in sorted(
+                {
+                    (handle, one.game.sport)
+                    for one in planned
+                    if one.order not in found
+                    for handle in one.game.players
+                    if people[handle].intents.get(Sport(one.game.sport))
+                    is PLAYED_FOR_FUN
+                }
+            )
+        ]
+        await _declare(
+            session,
+            switched,
+            intent_of=lambda person, sport: HISTORY_INTENT,
+            now=now,
+        )
 
         written: dict[int, WrittenGame] = {}
         game_ids: dict[int, UUID] = {}
@@ -513,6 +590,12 @@ async def write_the_played_history(
                 acts=acts,
                 this_week=start >= hour_start(week_of(now), 0),
             )
+        await _declare(
+            session,
+            switched,
+            intent_of=lambda person, sport: person.intents[sport],
+            now=now,
+        )
 
         cards = await _rate_her(
             session,

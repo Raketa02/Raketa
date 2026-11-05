@@ -50,7 +50,29 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   unlike a block, the filter takes back no yes, not even at the fill (a call, the grilling's
   *from then on*); a new yes, a join, a version dealt, the deck, the details, posting and
   rescues all ask it, and a booked game is never touched. A seat reopened when a time to pay
-  ran out is a yes again, so its late confirmation meets the filter (a call). **The court hour is
+  ran out is a yes again, so its late confirmation meets the filter (a call). **A changed Play
+  intent leaves the cards not yet answered** (Q127;
+  [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
+  §3, #738), the filter's *from then on* again: a name **not In, with no yes paused there**,
+  whose intent no longer wants a card's kind **holds no seat on it** — `domain/deck.py`'s
+  `left_the_kind`, read live and recorded nowhere, and **not a no**. Others' decks and the
+  details leave it off (`view_of(…, wants=…)`, every name's intent read through `WantedKinds`
+  by `wants_of`); the proposer counts it gone (`_gone`, and `_widens`), so its seat goes to
+  up to three next best fits at the next run (one in singles); and a new yes is
+  `no_longer_fits` (`Guards.refuse_a_yes_of_a_kind_not_wanted`, after the method, before the
+  fit — a join keeps `post_not_open_to_you` through *may play*). Wanting the kind again names
+  them again, beside any fits dealt meanwhile — the first yes takes the seat, and nothing is
+  dealt for the return. **Never asked of a yes already given**: somebody In or paused, the
+  fill's re-check, a paused yes coming back, a seat kept for a refused rescuer confirmed
+  (`RescueOffers.offered(…, already_kept=True)` skips the kind as it skips the filter). **An
+  empty intent is undeclared and never asked** — every declared intent wants a kind and
+  nothing deals to none, so only a changed intent leaves one — **nor is a post's poster**,
+  whose post is a one-off of the kind they chose (ADR-0201 §2), their yes said again after a
+  withdrawal included. Calls made without a ruling: a
+  reopened seat's late confirmation is a new yes and meets it, as it meets the filter; the
+  card stays open to the player who left its kind, whose details still offer *I'm in*; and
+  the name still counts as on a card at that hour, and among that card's people, for the
+  proposer, so a switch frees no hour for a card of the other kind. **The court hour is
   read, never supplied**: the share and the book-by come off `SellableCourtHours`
   (`CourtHours`), so a paused or unlive club, an unsold hour or one past its book-by is
   `court_hour_not_for_sale`. **Expired is read off the clock**: `standing_at` compares the
@@ -158,7 +180,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   version (`DealtVersion.first_named` is how many a version was dealt for, so a declining
   fit is replaced and a fit who said yes took the seat) — one in singles, where each fit is
   a version; a pick at half In with somebody named unswiped widens into new versions, three
-  in all. **A lost court hour** is `proposals.court_hour_lost` (ending `COURT_HOUR_LOST`,
+  in all. A name whose intent left the card's kind is gone exactly as a no is, for both
+  (Q127, above). **A lost court hour** is `proposals.court_hour_lost` (ending `COURT_HOUR_LOST`,
   migration 0038): no court is left at its club and hour — read off `CourtHours.held`,
   **the offer before any deadline**, so a club lengthening its release lead takes no card's
   court and a paused club's cards keep theirs — the card is over, and the people In are

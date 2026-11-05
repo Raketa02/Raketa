@@ -22,6 +22,13 @@ the phone meets them: a method to charge (the setup opens), and then the fit
 one of them: games per week and one game per hour already bound what a yes can
 book.
 
+**A new yes is held to the kind the player's intent wants** (Q127,
+``docs/adr/0201`` §3): somebody whose intent left a card's kind holds no seat on
+it, and their yes is refused as a card that has gone — ``no_longer_fits``,
+naming no rule. Like the reliability filter it acts from then on: a yes already
+given — the fill's re-check, a paused yes coming back, a kept seat confirmed —
+is never asked the kind.
+
 **A yes on a post is held to who the post is for** (#546): its *Who* and the
 range of the others' Levels, and on *Mixed pairs* never a third of a gender —
 read live, as the fit is, since yeses arrive from every version at once. A
@@ -40,6 +47,7 @@ from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.proposals.application.members import ReadMembers
+from app.modules.proposals.domain.deck import left_the_kind
 from app.modules.proposals.domain.errors import (
     NotInThePool,
     NoLongerFits,
@@ -53,6 +61,7 @@ from app.modules.proposals.domain.ports import (
     PlayersInPlay,
     Pools,
     SavedMethods,
+    WantedKinds,
 )
 from app.modules.proposals.domain.post import stand_together
 from app.modules.proposals.domain.proposal import Proposal
@@ -69,12 +78,14 @@ class Guards:
         methods: SavedMethods,
         players: PlayersInPlay,
         members: ReadMembers,
+        wanted: WantedKinds,
     ) -> None:
         self._pools = pools
         self._fit = fit
         self._methods = methods
         self._players = players
         self._members = members
+        self._wanted = wanted
 
     async def in_the_pool(self, pool: Pool, player_ids: Collection[UUID]) -> bool:
         wanted = frozenset(player_ids)
@@ -112,6 +123,17 @@ class Guards:
             capped=capped_weeks_of(member, now=now),
         ):
             raise PostNotOpenToYou()
+
+    async def refuse_a_yes_of_a_kind_not_wanted(
+        self, player_id: UUID, proposal: Proposal
+    ) -> None:
+        """The player's Play intent has not left the game's kind — the rule
+        that takes a name off the card (``left_the_kind``) — and
+        ``no_longer_fits`` otherwise, naming no rule (Q127)."""
+
+        wanted = await self._wanted.of(player_id, sport=proposal.sport)
+        if left_the_kind(proposal, player_id, wants=wanted or frozenset()):
+            raise NoLongerFits()
 
     async def refuse_a_yes_the_post_is_not_for(
         self, player_id: UUID, proposal: Proposal

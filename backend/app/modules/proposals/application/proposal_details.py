@@ -19,6 +19,8 @@ when** (#625, Q111), and to the payer that the payment is theirs.
 not exist, one that is nothing to the reader, one in a pool they are no longer
 in, and one with somebody In they may not share a court with while they are not
 In themselves: the deck withholds that card, and its details are the same card.
+A name not In whose Play intent no longer wants the game's kind is left off, as
+the deck leaves it off (Q127).
 """
 
 from __future__ import annotations
@@ -30,7 +32,7 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
-from app.modules.proposals.application.members import genders_on
+from app.modules.proposals.application.members import genders_on, wants_of
 from app.modules.proposals.domain.deck import (
     CardForecast,
     CardType,
@@ -66,6 +68,7 @@ from app.modules.proposals.domain.ports import (
     PlayersInPlay,
     Pools,
     ProposalRepository,
+    WantedKinds,
 )
 from app.modules.proposals.domain.proposal import Paying, Proposal, Reopened, TimeTo
 
@@ -122,9 +125,11 @@ class ReadProposalDetails:
         clubs: ClubNames,
         distances: ClubDistances,
         players: PlayersInPlay,
+        wanted: WantedKinds,
         clock: Clock,
     ) -> None:
         self._players = players
+        self._wanted = wanted
         self._pools = pools
         self._proposals = proposals
         self._fit = fit
@@ -163,6 +168,11 @@ class ReadProposalDetails:
             in_the_pool=in_the_pool,
             now=now,
             may_stand=may_stand_on(proposal, genders),
+            wants=await wants_of(
+                self._wanted,
+                {player for player in named if player not in proposal.yeses},
+                sport=proposal.sport,
+            ),
         )
         if view is None:
             raise ProposalNotFound()

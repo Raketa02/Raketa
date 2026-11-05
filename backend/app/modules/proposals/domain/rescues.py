@@ -127,17 +127,19 @@ def offered_to(
     *,
     unfit: Collection[frozenset[UUID]],
     now: Instant,
+    already_kept: bool = False,
 ) -> bool:
     """Whether this rescue is offered to this member at ``now``. ``unfit`` is
     every pair among them and the people on the game that may not share a
-    court."""
+    court. ``already_kept`` for a seat kept for this rescuer while their time
+    runs (#640): a claim made before, never asked the kind again (Q127)."""
 
     player = candidate.player_id
     if not rescuable(game, now=now, by=player):
         return False
     if player in game.players or player in game.leavers:
         return False
-    if game.kind not in candidate.wants:
+    if not already_kept and game.kind not in candidate.wants:
         return False
     if any(frozenset((player, other)) in unfit for other in game.players):
         return False

@@ -32,10 +32,12 @@ from app.bootstrap.jobs import HOW_DID_IT_GO_JOB
 from app.engines.matchfit.core import SearchMode
 from tests.api.console_world import SEED, runs
 from tests.api.proposals_world import (
+    INTENT_WANTING,
     MONDAY_MORNING,
     a_club_selling,
     a_group,
     a_member,
+    changes_intent,
     makes,
     says_yes,
     warsaw,
@@ -109,6 +111,9 @@ async def a_court(
         for name in ("marta", "ivan", "oscar", "paula")
     ]
     group = await a_group(client, marta, club, ivan, oscar, paula)
+    # Whom a game is booked for want its kind: a yes is held to it (Q127).
+    for player in (marta, ivan, oscar, paula):
+        await changes_intent(client, player, INTENT_WANTING[kind])
     proposal = await makes(
         session_factory,
         clock,

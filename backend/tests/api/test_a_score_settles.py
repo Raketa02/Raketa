@@ -23,8 +23,10 @@ from app.engines.matchfit.core import SearchMode
 from tests.api.console_world import SeedWorld, a_seed_world, home_of
 from tests.api.players_world import deliver_the_outbox
 from tests.api.proposals_world import (
+    INTENT_WANTING,
     MONDAY_MORNING,
     SATURDAY_FIVE,
+    changes_intent,
     makes,
     says_yes,
 )
@@ -61,6 +63,9 @@ async def a_booked_game(
     booking, its Game, who is on her side and who is across the net, and the
     sets in which her side wins and loses."""
 
+    # Whom a game is booked for want its kind: a yes is held to it (Q127).
+    for member in world.four:
+        await changes_intent(client, member, INTENT_WANTING[kind])
     proposal = await makes(
         session_factory,
         clock,

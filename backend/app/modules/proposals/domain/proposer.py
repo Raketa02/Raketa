@@ -43,7 +43,10 @@ the horizon, and the clubs' order and distances are the caller's.
 **Dealing a game still filling** (§6.2–§6.3, §7): **every seat a no left goes
 to up to three next best fits**, dealt into the version it was on — a name
 dealt first who said no, left the pool or stopped fitting somebody In leaves
-one, a fit who said no is replaced, and a fit who said yes took it. **In
+one, as does one not In whose Play intent no longer wants the game's kind
+(Q127, ``left_the_kind`` — read live, so wanting it again names them again,
+and never a yes already given), a fit who said no is replaced, and a fit who
+said yes took it. **In
 singles each fit is a version**, so a seat a no left goes to one. **At half its
 seats In, a pick widens**: while somebody named has not swiped, its open seats
 go out as new versions, up to three in all. A next best fit fits everybody In
@@ -108,6 +111,7 @@ from app.modules.proposals.domain.deck import (
     DECK_HORIZON,
     capped_weeks,
     hour_taken,
+    left_the_kind,
     named_on,
     week_of,
     weeks_ahead,
@@ -933,19 +937,28 @@ class _Batching:
 
     def _gone(self, proposal: Proposal, player: UUID) -> bool:
         """Whether a name on the game holds no seat on it any more: they said
-        no, left the pool, or no longer fit somebody In."""
+        no, left the pool, no longer fit somebody In, or — not In — their
+        intent no longer wants its kind (Q127)."""
 
         return (
             player in proposal.declined
             or player not in self._members
+            or self._left_the_kind(proposal, player)
             or not all(
                 self._fits(proposal.kind, player, there) for there in proposal.yeses
             )
         )
 
+    def _left_the_kind(self, proposal: Proposal, player: UUID) -> bool:
+        member = self._members.get(player)
+        return member is not None and left_the_kind(
+            proposal, player, wants=member.wants
+        )
+
     def _widens(self, proposal: Proposal) -> bool:
         """A pick at half its seats In with somebody named not yet swiped
-        (the mechanics §6.3). A post is dealt its versions when it is posted."""
+        (the mechanics §6.3) — a name whose intent left its kind is gone, not
+        waiting (Q127). A post is dealt its versions when it is posted."""
 
         return (
             proposal.origin is Origin.PICK
@@ -954,6 +967,7 @@ class _Batching:
                 player not in proposal.yeses
                 and player not in proposal.declined
                 and player not in proposal.withdrawn
+                and not self._left_the_kind(proposal, player)
                 for player in named_on(proposal)
             )
         )

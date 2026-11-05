@@ -17,6 +17,7 @@ a literal the calendar can check: the sixth is a Tuesday, the tenth a Saturday.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Final
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -331,6 +332,26 @@ async def the_cut_off_comes(session_factory, clock, *, at: datetime | None = Non
         return await build_the_cut_off(
             session, clock=clock, settings=get_settings()
         ).execute()
+
+
+async def changes_intent(
+    client, player: dict, intent: str, *, sport: Sport = Sport.PADEL
+) -> None:
+    """The player's Play intent changed from the Games deck — its door, or the
+    first-time question — as the phone sends it (``docs/adr/0201`` §2)."""
+
+    await players.declare_intent(
+        client, player["token"], intent=intent, sport=sport, surface="DECK"
+    )
+
+
+#: The Play intent that wants just this kind of game — what a game's people
+#: are declared before a test books them into it, a yes being held to its kind
+#: (Q127).
+INTENT_WANTING: Final = {
+    SearchMode.COMPETITIVE: "COMPETITIVE",
+    SearchMode.FOR_FUN: "FOR_FUN",
+}
 
 
 def yes_path(proposal_id: UUID) -> str:

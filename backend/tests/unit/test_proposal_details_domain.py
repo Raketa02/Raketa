@@ -129,6 +129,30 @@ def test_a_reader_still_deciding_sees_their_own_card():
     assert seen.beside_the_reader == (B, A, C)
 
 
+def test_a_name_whose_intent_no_longer_wants_the_kind_is_left_off_the_details():
+    pick = a_pick((ME, A, B, C))
+    pick.say_yes(B, at=NOW)
+    competitive = frozenset({SearchMode.COMPETITIVE})
+
+    seen = details_view(
+        pick,
+        ME,
+        unfit=frozenset(),
+        in_the_pool=EVERYBODY,
+        now=NOW,
+        wants={
+            ME: competitive,
+            A: frozenset({SearchMode.FOR_FUN}),
+            B: frozenset({SearchMode.FOR_FUN}),
+            C: competitive,
+        },
+    )
+
+    # B is In and stays; A, still deciding, holds no seat on a competitive game.
+    assert seen is not None
+    assert seen.people == (B, ME, C)
+
+
 def test_a_reader_in_sees_everybody_in_and_the_open_seats():
     """Nobody's deciding is shown to somebody In — *filled posters for everyone
     In, dashed empties for the open seats* (the screens A3.2)."""

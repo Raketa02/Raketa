@@ -265,6 +265,75 @@ def test_a_name_who_left_the_pool_is_left_off():
     assert seen.others == (A, C)
 
 
+COMPETITIVE = frozenset({SearchMode.COMPETITIVE})
+FOR_FUN = frozenset({SearchMode.FOR_FUN})
+
+
+def wanting(**changed: frozenset[SearchMode]) -> dict[UUID, frozenset[SearchMode]]:
+    """Everybody's Play intent in the sport — competitive, unless named."""
+
+    names = {"A": A, "B": B, "C": C, "D": D, "E": E, "F": F, "G": G}
+    wants = {player: COMPETITIVE for player in EVERYBODY}
+    wants.update({names[name]: kinds for name, kinds in changed.items()})
+    return wants
+
+
+def test_a_name_whose_intent_no_longer_wants_the_kind_is_left_off_for_the_next_one():
+    pick = a_pick((ME, A, B, C))
+    pick.deal((D, E, F), at=NOW, into=1)
+
+    seen = view_of(
+        pick,
+        ME,
+        unfit=frozenset(),
+        in_the_pool=EVERYBODY,
+        now=NOW,
+        wants=wanting(A=FOR_FUN),
+    )
+
+    # Exactly as a name that no longer fits: the next fit dealt takes the tile.
+    assert seen is not None
+    assert seen.others == (B, C, D)
+
+
+def test_a_name_whose_intent_wants_the_kind_again_is_on_the_card_again():
+    pick = a_pick((ME, A, B, C))
+    pick.deal((D, E, F), at=NOW, into=1)
+
+    seen = view_of(
+        pick,
+        ME,
+        unfit=frozenset(),
+        in_the_pool=EVERYBODY,
+        now=NOW,
+        wants=wanting(A=frozenset(SearchMode)),
+    )
+
+    assert seen is not None
+    assert seen.others == (A, B, C)
+
+
+def test_a_yes_already_given_stays_on_the_card_whatever_the_intent_now_says():
+    pick = a_pick((ME, A, B, C))
+    pick.say_yes(A, at=NOW)
+    pick.say_yes(B, at=NOW)
+    pick.pause_yes(B, at=NOW)
+
+    seen = view_of(
+        pick,
+        ME,
+        unfit=frozenset(),
+        in_the_pool=EVERYBODY,
+        now=NOW,
+        wants=wanting(A=FOR_FUN, B=FOR_FUN),
+    )
+
+    # A is In, and B's yes is paused by a full week and comes back by itself.
+    assert seen is not None
+    assert seen.in_ == (A,)
+    assert seen.others == (B, C)
+
+
 def test_a_card_that_would_show_nobody_but_me_is_not_dealt():
     assert view(a_pick((ME, A)), unfit=unfit((ME, A))) is None
 

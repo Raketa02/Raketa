@@ -11,10 +11,12 @@ before the next best fits dealt for its seat. Somebody who took their yes back
 is still named and simply not In; somebody who said no is gone. **Two people who
 may not share a court are never on one card** (§4.1): a card with somebody In I
 do not fit is withheld — my yes would be refused (``no_longer_fits``) — and a
-name that does not fit me, somebody In or a name already on the card, or who has
-left the pool, is left off for the next one. A pair *In* that stopped fitting is
-not mine to hide: it is the fill's to read, which lets the later yes go
-(``application/fill.py``). A card that would show nobody
+name that does not fit me, somebody In or a name already on the card, who has
+left the pool, or whose Play intent no longer wants the card's kind and who has
+given no yes on it (Q127, ``left_the_kind``), is left off for the next one. A
+name whose intent wants the kind again is on it again. A pair *In* that
+stopped fitting is not mine to hide: it is the fill's to read, which lets the
+later yes go (``application/fill.py``). A card that would show nobody
 but me is not dealt: there is no game on it.
 
 **A mixed pairs post keeps two of each** (#546): a card is withheld from a
@@ -163,12 +165,15 @@ def view_of(
     in_the_pool: Collection[UUID],
     now: Instant,
     may_stand: Callable[[Sequence[UUID]], bool] = anybody,
+    wants: Mapping[UUID, Collection[SearchMode]] | None = None,
 ) -> ReadersView | None:
     """The reader's card — ``None`` for a proposal that is not in their deck:
     never dealt to them, answered by them, no longer filling or full, withheld
     for somebody In they do not fit, or showing nobody but them. ``unfit`` is
     every pair on it that may not share a court; ``may_stand`` whether a set
-    of people may all be on the game — two of each on *Mixed pairs*."""
+    of people may all be on the game — two of each on *Mixed pairs*; and
+    ``wants`` the names' Play intents in the sport, where they are asked — a
+    name whose intent left the card's kind holds no seat on it (Q127)."""
 
     version = proposal.version_of(reader)
     if (
@@ -193,6 +198,11 @@ def view_of(
             player in on_the_card
             or player in proposal.declined
             or player not in in_the_pool
+            or (
+                wants is not None
+                and player in wants
+                and left_the_kind(proposal, player, wants=wants[player])
+            )
             or any(frozenset((player, there)) in unfit for there in on_the_card)
             or not may_stand((*on_the_card, player))
         ):
@@ -208,6 +218,31 @@ def named_on(proposal: Proposal) -> tuple[UUID, ...]:
     """Everybody any version of the proposal names, in dealt order."""
 
     return tuple(player for version in proposal.versions for player in version.players)
+
+
+def left_the_kind(
+    proposal: Proposal, player: UUID, *, wants: Collection[SearchMode]
+) -> bool:
+    """Whether this name holds no seat on the game because their Play intent —
+    ``wants``, empty while undeclared — no longer wants its kind (Q127;
+    ``docs/adr/0201`` §3). **Never a yes already given**: somebody In, or whose
+    yes a full week paused, holds their seat whatever their intent now says.
+    **Only a changed intent leaves a kind**: every declared intent wants one,
+    and nothing deals a card to somebody who has declared none (*may play*),
+    so a name with no intent — a card made through the dealer for them — is
+    never asked. **Nor is a post's poster**: Post a game is a one-off of
+    whatever kind they chose (``docs/adr/0201`` §2), their yes said again
+    after a withdrawal included. Read live and recorded nowhere — it is not a
+    no, so a name whose intent wants the kind again is a name on the card
+    again."""
+
+    return (
+        bool(wants)
+        and player not in proposal.yeses
+        and player not in proposal.paused
+        and player != proposal.poster_id
+        and proposal.kind not in wants
+    )
 
 
 def challenger_of(proposal: Proposal) -> UUID | None:

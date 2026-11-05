@@ -85,7 +85,8 @@ class ProposalIsFull(ConflictError):
 class NoLongerFits(ConflictError):
     """Somebody who said yes since this card was dealt is somebody this player
     does not fit, and a replacement must fit everybody already In — every pair
-    (the mechanics §6.1). The card has gone; **who** is not said."""
+    (the mechanics §6.1) — or the player's Play intent no longer wants the
+    game's kind (Q127). The card has gone; **who** or **why** is not said."""
 
     code = "no_longer_fits"
 

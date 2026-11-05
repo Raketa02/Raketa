@@ -160,13 +160,14 @@ async def declare_intent(
     *,
     intent: str = "COMPETITIVE",
     sport: Sport = SPORT,
+    surface: str = "RATING_TAIL",
 ) -> None:
-    """The player's Play intent, through ADR-0094's own route — ``RATING_TAIL``,
-    where a first declaration is made."""
+    """The player's Play intent, through ADR-0094's own route — from
+    ``RATING_TAIL``, where a first declaration is made, unless told otherwise."""
 
     response = await client.put(
         f"/api/v1/play-intents/{sport.value}",
-        json={"intent": intent, "surface": "RATING_TAIL"},
+        json={"intent": intent, "surface": surface},
         headers=auth(token),
     )
     assert response.status_code == 200, response.text

@@ -57,7 +57,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   fill the record she reads about herself) and the cohort's `PLAYED_GAMES`, which the
   runner hands in. Each game is made, filled by its last yes, played and scored through
   the use cases a phone runs, on a backdated clock, in a group she runs per sport at
-  Ogrody 33. Four things are load-bearing.
+  Ogrody 33. Five things are load-bearing.
+  - **Everybody on a counted game played it competitively** (Q127, #738): a yes is held to
+    the kind its player's intent wants, read live, so somebody on one whose own intent in
+    the sport is For fun — hers in tennis, and three of the cohort's — **played it
+    competitively and switched after**. Their intent is declared competitive before the
+    games are made and their own again once every game is written, both at the run's
+    instant and from `PROFILE_SCREEN`, the You tab (`HISTORY_INTENT`, `PLAYED_FOR_FUN`); a
+    declaration that changes nothing records nothing, so a second run records neither, and
+    every screen reads the fixture's intent.
   - **Every game is over before this week began.** A booked game counts toward its week's
     *games per week*, so a game this week would hold the deck, Fill in and posts to a
     smaller week. A declared game keeps its day where that is before the week, and starts

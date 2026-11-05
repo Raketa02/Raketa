@@ -39,6 +39,7 @@ from tests.api.proposals_world import (
     a_club_selling,
     a_group,
     a_player,
+    changes_intent,
     makes,
     says_no,
     says_yes,
@@ -802,6 +803,40 @@ async def test_a_player_still_deciding_reads_their_own_card(
     assert details["sides"]["yours"][0]["is_you"] is True
     assert [tile["nickname"] for tile in tiles if tile["is_in"]] == ["kuba"]
     assert len(details["overlap"]["cells"]) == 21
+
+
+async def test_a_name_whose_intent_left_the_kind_is_off_the_details_until_it_returns(
+    client, session_factory, clock, club, four, group
+):
+    ola, kuba, _, tomek = four
+    for player in four:
+        await changes_intent(client, player, "COMPETITIVE")
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    await says_yes(client, kuba, proposal)
+
+    await changes_intent(client, tomek, "FOR_FUN")
+    await changes_intent(client, kuba, "FOR_FUN")
+
+    # Ola's details stop naming Tomek, as her deck does; Kuba switched too,
+    # and his yes holds its seat — he reads it In himself.
+    details = (await proposal_of(client, ola, proposal)).json()
+    tiles = details["sides"]["yours"] + details["sides"]["theirs"]
+    assert sorted(names_of(tiles)) == ["ewa", "kuba", "ola"]
+    assert [tile["nickname"] for tile in tiles if tile["is_in"]] == ["kuba"]
+    assert details["in_count"] == 1
+    his = (await proposal_of(client, kuba, proposal)).json()
+    assert (his["in_count"], his["actions"]) == (1, ["WITHDRAW"])
+    # Opened from an old notice, the card is still his to read — and a yes
+    # on it is the card gone, naming no rule.
+    assert (await proposal_of(client, tomek, proposal)).status_code == 200
+    refused = await says_yes(client, tomek, proposal)
+    assert (refused.status_code, refused.json()["code"]) == (409, "no_longer_fits")
+
+    await changes_intent(client, tomek, "NO_PREFERENCE")
+
+    details = (await proposal_of(client, ola, proposal)).json()
+    tiles = details["sides"]["yours"] + details["sides"]["theirs"]
+    assert sorted(names_of(tiles)) == ["ewa", "kuba", "ola", "tomek"]
 
 
 async def test_a_player_in_reads_everybody_in_and_may_withdraw(

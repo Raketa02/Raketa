@@ -80,9 +80,9 @@ HOME, NEAR, FARTHER = (uuid4() for _ in range(3))
 POOL = Pool(id=uuid4(), kind=PoolKind.GROUP)
 COMPETITIVE = frozenset({SearchMode.COMPETITIVE})
 
-A, B, C, D, E, F, G, H, K, J = (uuid4() for _ in range(10))
+A, B, C, D, E, F, G, H, K, J, L, M = (uuid4() for _ in range(12))
 NAMES = {A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H"}
-NAMES.update({K: "K", J: "J"})
+NAMES.update({K: "K", J: "J", L: "L", M: "M"})
 
 
 def member(
@@ -484,14 +484,27 @@ def test_people_already_on_a_card_together_are_not_dealt_another_at_another_hour
 # --------------------------------------------------------------------------- #
 
 
+def a_seat_s_fits(*, b_wants: frozenset[SearchMode] = COMPETITIVE) -> list[Member]:
+    """A to H at the Levels that rank B's seat's next best fits G, F, H —
+    E, furthest off, waiting — with B wanting ``b_wants``."""
+
+    return [
+        member(A, 3.0),
+        member(B, 3.0, wants=b_wants),
+        member(C, 3.0),
+        member(D, 3.0),
+        member(E, 3.9),
+        member(F, 3.1),
+        member(G, 3.0),
+        member(H, 3.2),
+    ]
+
+
 def test_after_a_no_the_seat_goes_to_up_to_three_next_best_fits():
     pick = a_pick(A, B, C, D)
     pick.say_no(B, at=NOW)
-    members = [member(p, level) for p, level in ((A, 3.0), (B, 3.0), (C, 3.0))]
-    members += [member(D, 3.0), member(E, 3.9), member(F, 3.1), member(G, 3.0)]
-    members += [member(H, 3.2)]
 
-    dealt = batch(members, [on_sale(SAT_17)], filling=(pick,))
+    dealt = batch(a_seat_s_fits(), [on_sale(SAT_17)], filling=(pick,))
 
     # The evenest with A, C and D first; E, furthest off, waits.
     assert dealt.deals == (
@@ -646,6 +659,96 @@ def test_a_singles_pick_widens_after_its_first_yes_one_fit_per_version():
         (1, None),
         (1, None),
     ]
+
+
+# --------------------------------------------------------------------------- #
+# A changed intent (Q127; docs/adr/0201 §3)
+# --------------------------------------------------------------------------- #
+
+FOR_FUN = frozenset({SearchMode.FOR_FUN})
+
+
+def test_a_name_whose_intent_no_longer_wants_the_kind_frees_their_seat_as_a_no_does():
+    pick = a_pick(A, B, C, D)
+
+    dealt = batch(a_seat_s_fits(b_wants=FOR_FUN), [on_sale(SAT_17)], filling=(pick,))
+
+    # Exactly the seat a no leaves: the evenest three with A, C and D first.
+    assert dealt.deals == (
+        Deal(proposal_id=pick.proposal_id, players=(G, F, H), into=1),
+    )
+
+
+def test_a_name_who_wants_the_kind_again_is_named_again_and_nothing_more_is_dealt():
+    pick = a_pick(A, B, C, D)
+    switched = a_seat_s_fits(b_wants=FOR_FUN)
+    (deal,) = batch(switched, [on_sale(SAT_17)], filling=(pick,)).deals
+    pick.deal(deal.players, at=NOW, into=deal.into)
+
+    back = batch(
+        a_seat_s_fits(b_wants=frozenset(SearchMode)),
+        [on_sale(SAT_17)],
+        filling=(pick,),
+    )
+    still_away = batch(switched, [on_sale(SAT_17)], filling=(pick,))
+
+    # B shares the seat with its three fits, and the first yes takes it: one
+    # version, nobody named twice, and no fit dealt for B's return — nor again
+    # while B stays away.
+    assert back.deals == () and still_away.deals == ()
+    (version,) = pick.versions
+    assert version.players == (A, B, C, D, G, F, H)
+
+
+def test_a_member_in_who_changed_intent_holds_their_seat_and_no_fit_is_dealt_for_it():
+    pick = a_pick(A, B, C, D)
+    pick.say_yes(B, at=NOW)
+
+    dealt = batch(a_seat_s_fits(b_wants=FOR_FUN), [on_sale(SAT_17)], filling=(pick,))
+
+    assert dealt.deals == ()
+
+
+def test_a_paused_yes_holds_its_seat_whatever_the_intent_now_says():
+    pick = a_pick(A, B, C, D)
+    pick.say_yes(B, at=NOW)
+    pick.pause_yes(B, at=NOW)
+
+    dealt = batch(a_seat_s_fits(b_wants=FOR_FUN), [on_sale(SAT_17)], filling=(pick,))
+
+    # A yes already given, which comes back by itself: never asked the kind.
+    assert dealt.deals == ()
+
+
+def test_a_name_with_no_intent_declared_never_left_a_kind_and_holds_their_seat():
+    # Nothing deals a card to somebody who has declared nothing: only a
+    # changed intent leaves a kind.
+    pick = a_pick(A, B, C, D)
+
+    dealt = batch(
+        a_seat_s_fits(b_wants=frozenset()), [on_sale(SAT_17)], filling=(pick,)
+    )
+
+    assert dealt.deals == ()
+
+
+def test_a_name_whose_intent_no_longer_wants_the_kind_counts_as_gone_for_widening():
+    pick = a_pick(A, B, C, D)
+    pick.say_yes(A, at=NOW)
+    pick.say_yes(B, at=NOW)
+    pick.say_no(C, at=NOW)
+    spare = (E, F, G, H, K, J, L, M)
+    members = [*(member(p) for p in (A, B, C)), member(D, wants=FOR_FUN)]
+    members += [member(p) for p in spare]
+
+    dealt = batch(members, [on_sale(SAT_17)], filling=(pick,))
+
+    # D was the one name not yet swiped: gone, so the pick does not widen —
+    # the two spare members left after the fits get no version of their own
+    # — and both open seats go to next best fits on its version.
+    (deal,) = dealt.deals
+    assert deal.into == 1
+    assert len(deal.players) == 6 and set(deal.players) <= set(spare)
 
 
 # --------------------------------------------------------------------------- #

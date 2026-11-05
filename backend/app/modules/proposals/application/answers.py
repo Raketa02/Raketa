@@ -457,7 +457,11 @@ async def _yes(
         raise ProposalNotFound()
     await guards.refuse_an_unchargeable_yes(player_id)
     if joining:
+        # Dealing asks the kind too: a join of a kind not wanted is
+        # ``post_not_open_to_you``.
         await guards.refuse_a_join_dealing_would_not_make(player_id, proposal, now=now)
+    else:
+        await guards.refuse_a_yes_of_a_kind_not_wanted(player_id, proposal)
     await guards.refuse_a_yes_that_does_not_fit(player_id, proposal, at=now)
     await guards.refuse_a_yes_the_post_is_not_for(player_id, proposal)
     if joining:

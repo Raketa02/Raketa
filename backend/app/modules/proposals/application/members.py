@@ -17,6 +17,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
+from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport
 from app.modules.player_profile.domain.gender import Gender
 from app.modules.proposals.domain.deck import week_window, weeks_ahead
@@ -100,6 +101,19 @@ class ReadMembers:
                 )
             )
         return found
+
+
+async def wants_of(
+    wanted: WantedKinds, people: Collection[UUID], *, sport: Sport
+) -> dict[UUID, frozenset[SearchMode]]:
+    """Each of these people's Play intent in the sport — nothing while
+    undeclared — for whether a name still holds a seat on a card of a kind
+    (Q127). In a stable order, so the reads run alike on every process."""
+
+    return {
+        person: await wanted.of(person, sport=sport) or frozenset()
+        for person in sorted(people, key=str)
+    }
 
 
 async def genders_of(

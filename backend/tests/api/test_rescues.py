@@ -40,6 +40,7 @@ from tests.api.proposals_world import (
     a_club_and_its_desk,
     a_group,
     a_member,
+    changes_intent,
     live_ids,
     makes,
     runs_out,
@@ -282,6 +283,27 @@ async def test_the_board_offers_nothing_to_a_member_who_is_not_free_or_wants_fun
 
     assert (await fill_in(client, mornings, group))["badge"] == 0
     assert (await fill_in(client, for_fun, group))["badge"] == 0
+
+
+async def test_a_seat_open_offer_follows_a_changed_intent_both_ways(
+    client, group, booking, crowd
+):
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    assert (await fill_in(client, zosia, group))["badge"] == 1
+    assert [card["proposal_id"] for card in await deck_cards(client, zosia, group)] == [
+        booking
+    ]
+
+    await changes_intent(client, zosia, "FOR_FUN")
+
+    # Read live off her intent, as every offer is (Q127).
+    assert (await fill_in(client, zosia, group))["badge"] == 0
+    assert await deck_cards(client, zosia, group) == []
+
+    await changes_intent(client, zosia, "COMPETITIVE")
+
+    assert (await fill_in(client, zosia, group))["badge"] == 1
 
 
 async def test_a_stranger_reads_no_group_s_board(client, payments, group, crowd):
@@ -893,6 +915,24 @@ async def test_a_refused_rescuer_who_fixes_the_card_in_time_takes_the_seat_held(
     assert (card["status"], card["money"]["share_state"]) == ("BOOKED", "HELD")
     # Held, not taken: nothing to show for it until the cut-off.
     assert await receipts_of(client, mailbox, zosia) == []
+
+
+async def test_a_seat_kept_for_a_rescuer_is_hers_to_confirm_whatever_her_intent_says(
+    client, payments, clock, booking, crowd
+):
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    answer = await refused_rescuer(client, payments, booking, zosia)
+
+    await changes_intent(client, zosia, "FOR_FUN")
+    clock.move(timedelta(minutes=20))
+    confirmed = await confirms(client, payments, zosia, answer["your_payment"])
+
+    # A claim made before, which a changed intent takes no more than the
+    # reliability filter does (Q127).
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["booked"]["booking_id"] == booking
+    assert confirmed.json()["open_seats"] == 0
 
 
 async def test_a_refused_rescuer_whose_time_runs_out_has_the_seat_offered_again(

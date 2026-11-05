@@ -1394,7 +1394,8 @@ def build_proposal_guards(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> Guards:
     """The checks a version and a yes are held to outside the aggregate: the
-    pool, the fit, a method to charge — and, on a post, who it is for (#546)."""
+    pool, the fit, a method to charge, the kind the player's intent wants
+    (Q127) — and, on a post, who it is for (#546)."""
     return Guards(
         pools=build_pools(session),
         fit=build_player_fit(session, runtime=runtime),
@@ -1405,6 +1406,7 @@ def build_proposal_guards(
         ),
         players=build_players_in_play(session, runtime=runtime),
         members=build_read_members(session, runtime=runtime),
+        wanted=build_wanted_kinds(session, runtime=runtime),
     )
 
 
@@ -2755,6 +2757,7 @@ def build_read_proposal_details(
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
         players=build_players_in_play(session, runtime=runtime),
+        wanted=build_wanted_kinds(session, runtime=runtime),
         clock=clock,
     )
 

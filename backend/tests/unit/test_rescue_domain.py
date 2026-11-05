@@ -107,6 +107,16 @@ def test_a_seat_is_not_offered_for_a_kind_the_member_does_not_want():
     assert not offered_to(a_rescue(), nothing_declared, unfit=frozenset(), now=MONDAY)
 
 
+def test_a_seat_kept_for_its_rescuer_is_never_asked_the_kind_again():
+    # Q127: a claim made before, like a yes already given, stands whatever
+    # the rescuer's intent now says.
+    for_fun = a_candidate(wants=frozenset({SearchMode.FOR_FUN}))
+
+    assert offered_to(
+        a_rescue(), for_fun, unfit=frozenset(), now=MONDAY, already_kept=True
+    )
+
+
 def test_a_seat_is_not_offered_outside_the_member_s_week_or_at_an_hour_they_play():
     busy_saturday = a_candidate(
         week=WeeklyHours.of_cells((day, 18) for day in range(1, 8))

@@ -211,12 +211,13 @@ class RescueOffers:
         *,
         sport: Sport,
         now: Instant,
-        reliability_filter: bool = True,
+        already_kept: bool = False,
     ) -> dict[UUID, tuple[UUID, ...]]:
         """Each game's members it is offered to, in ``candidates``' order —
         one pair rule read over everybody for every kind, never one per game.
-        ``reliability_filter=False`` for a seat kept for its rescuer, a claim
-        made before (``docs/adr/0195`` §6)."""
+        ``already_kept`` for a seat kept for its rescuer, a claim made before:
+        asked neither the reliability filter (``docs/adr/0195`` §6) nor the
+        kind (Q127, ``docs/adr/0201`` §3), which take no claim back."""
 
         # In the enum's order rather than a set's, so the reads run alike on
         # every process (docs/adr/0105); every kind over one reading — one read
@@ -230,13 +231,19 @@ class RescueOffers:
             sport=sport,
             kinds=[kind for kind in SearchMode if any(g.kind is kind for g in games)],
             at=now,
-            reliability_filter=reliability_filter,
+            reliability_filter=not already_kept,
         )
         return {
             game.booking_id: tuple(
                 player
                 for player, candidate in candidates.items()
-                if offered_to(game, candidate, unfit=unfit[game.kind], now=now)
+                if offered_to(
+                    game,
+                    candidate,
+                    unfit=unfit[game.kind],
+                    now=now,
+                    already_kept=already_kept,
+                )
             )
             for game in games
         }
@@ -262,7 +269,7 @@ class RescueOffers:
         *,
         sport: Sport,
         now: Instant,
-        reliability_filter: bool = True,
+        already_kept: bool = False,
     ) -> list[BookedGame]:
         """Those of these games whose seat is offered to this one player."""
 
@@ -272,7 +279,7 @@ class RescueOffers:
             candidates,
             sport=sport,
             now=now,
-            reliability_filter=reliability_filter,
+            already_kept=already_kept,
         )
         return [game for game in games if player in offered[game.booking_id]]
 
@@ -287,8 +294,8 @@ class RescueOffers:
         """Whether this rescue is offered to this one player now — a member of
         its pool, as the board and the deck read only their own pool's.
         ``already_kept`` for a rescuer whose seat is kept for them while their
-        time runs (#640): a claim made before, which the reliability filter
-        never takes back (``docs/adr/0195`` §6)."""
+        time runs (#640): a claim made before, which neither the reliability
+        filter (``docs/adr/0195`` §6) nor a changed intent (Q127) takes back."""
 
         if not rescuable(game, now=now, by=player):
             return False
@@ -301,7 +308,7 @@ class RescueOffers:
                 player,
                 sport=game.sport,
                 now=now,
-                reliability_filter=not already_kept,
+                already_kept=already_kept,
             )
         )
 

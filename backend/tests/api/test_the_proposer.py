@@ -25,6 +25,7 @@ Saturday.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -46,7 +47,9 @@ from tests.api.proposals_world import (
     a_club_selling,
     a_group,
     a_member,
+    changes_intent,
     live_ids,
+    makes,
     says_no,
     says_yes,
     warsaw,
@@ -452,3 +455,182 @@ async def test_somebody_joining_makes_the_pool_due_and_the_tick_deals_to_it(
     assert proposed.made == 1
     [card] = await deck_of(client, tomek, group)
     assert names_on(card) == {"ola", "kuba", "ewa", "tomek"}
+
+
+# --------------------------------------------------------------------------- #
+# A changed intent (Q127; docs/adr/0201 §3)
+# --------------------------------------------------------------------------- #
+
+#: Thursday 8 October, 19:00.
+THURSDAY_SEVEN = warsaw(8, 19)
+SATURDAY_AT_FIVE = [{"day": 6, "hour": 17}]
+THURSDAY_AT_SEVEN = [{"day": 4, "hour": 19}]
+
+
+@dataclass(frozen=True)
+class AniasWeek:
+    group: UUID
+    saturday: UUID
+    thursday: UUID
+    ania: dict
+    marek: dict
+    piotr: dict
+    tomek: dict
+    zofia: dict
+
+
+async def anias_week(client, session_factory, payments, clock) -> AniasWeek:
+    """Ania, competitive at padel, is named on Marek's Saturday 17:00 card with
+    Ola and Kuba and hasn't answered it — Piotr, Jan and Lena are free then
+    too — and is In on Thursday 19:00 with Ewa, 2 of 4, Tomek and Zofia still
+    to answer. The club sells those two hours this week only, each held by
+    its card, so a run deals nothing but the seats on them."""
+
+    club, desk = await a_club_and_its_desk(client, hours=[(4, 19), (6, 17)])
+    closed = await client.post(
+        EXCEPTIONS,
+        json={
+            "court_ids": None,
+            "first_day": "2026-10-12",
+            "last_day": "2026-10-19",
+            "from_hour": 7,
+            "until_hour": 23,
+            "reason": "Holiday",
+        },
+        headers=desk,
+    )
+    assert closed.status_code == 201, closed.text
+    (ania,) = await members(
+        client,
+        session_factory,
+        payments,
+        "ania",
+        week=[*THURSDAY_AT_SEVEN, *SATURDAY_AT_FIVE],
+    )
+    saturday = await members(
+        client,
+        session_factory,
+        payments,
+        "marek",
+        "ola",
+        "kuba",
+        "piotr",
+        "jan",
+        "lena",
+        week=SATURDAY_AT_FIVE,
+    )
+    thursday = await members(
+        client,
+        session_factory,
+        payments,
+        "ewa",
+        "tomek",
+        "zofia",
+        week=THURSDAY_AT_SEVEN,
+    )
+    marek, ola, kuba, piotr = saturday[:4]
+    ewa, tomek, zofia = thursday
+    group = await a_group(client, marek, club, ania, *saturday[1:], *thursday)
+    saturday_card = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=((ania, marek, ola, kuba),),
+    )
+    thursday_card = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        start=THURSDAY_SEVEN,
+        versions=((ania, ewa, tomek, zofia),),
+    )
+    for player in (ewa, ania):
+        assert (await says_yes(client, player, thursday_card)).status_code == 200
+    assert await proposes(session_factory, clock, group) == Proposed(pools=1)
+    return AniasWeek(
+        group=group,
+        saturday=saturday_card,
+        thursday=thursday_card,
+        ania=ania,
+        marek=marek,
+        piotr=piotr,
+        tomek=tomek,
+        zofia=zofia,
+    )
+
+
+async def test_a_changed_intent_frees_her_unanswered_seat_for_the_next_best_fits(
+    client, session_factory, payments, clock
+):
+    week = await anias_week(client, session_factory, payments, clock)
+    group, saturday = week.group, week.saturday
+    ania, marek, piotr = week.ania, week.marek, week.piotr
+
+    await changes_intent(client, ania, "FOR_FUN")
+
+    # Marek's card stops naming her at once; nobody else holds her seat yet.
+    [card] = await deck_of(client, marek, group)
+    assert names_on(card) == {"marek", "ola", "kuba"}
+    assert await deck_of(client, piotr, group) == []
+    # The next run deals her seat to the three next best fits, as after a no.
+    assert await proposes(session_factory, clock, group) == Proposed(pools=1, dealt=1)
+    [card] = await deck_of(client, marek, group)
+    assert names_on(card) == {"marek", "ola", "kuba", "piotr"}
+    [card] = await deck_of(client, piotr, group)
+    assert card["proposal_id"] == str(saturday)
+    # A repeat deals nothing more.
+    assert await proposes(session_factory, clock, group) == Proposed(pools=1)
+
+
+async def test_switching_back_before_her_seat_is_taken_names_her_on_the_card_again(
+    client, session_factory, payments, clock
+):
+    week = await anias_week(client, session_factory, payments, clock)
+    group, saturday = week.group, week.saturday
+    ania, marek, piotr = week.ania, week.marek, week.piotr
+    await changes_intent(client, ania, "FOR_FUN")
+    await proposes(session_factory, clock, group)
+
+    await changes_intent(client, ania, "COMPETITIVE")
+
+    # A name again, sharing the seat with the fits dealt for it while she
+    # was away — and no fit is dealt for her return.
+    [card] = await deck_of(client, ania, group)
+    assert card["proposal_id"] == str(saturday)
+    assert names_on(card) == {"ania", "marek", "ola", "kuba"}
+    [card] = await deck_of(client, marek, group)
+    assert names_on(card) == {"marek", "ania", "ola", "kuba"}
+    assert str(saturday) in ids_of(await deck_of(client, piotr, group))
+    assert await proposes(session_factory, clock, group) == Proposed(pools=1)
+    # The first yes takes the seat — hers, this time.
+    taken = await says_yes(client, ania, saturday)
+    assert taken.status_code == 200, taken.text
+    assert taken.json()["open_seats"] == 3
+    assert await proposes(session_factory, clock, group) == Proposed(pools=1)
+
+
+async def test_a_changed_intent_keeps_her_yes_and_refuses_a_new_one_on_the_kind(
+    client, session_factory, payments, clock
+):
+    week = await anias_week(client, session_factory, payments, clock)
+    ania, saturday, thursday = week.ania, week.saturday, week.thursday
+
+    await changes_intent(client, ania, "FOR_FUN")
+
+    refused = await says_yes(client, ania, saturday)
+    assert (refused.status_code, refused.json()["code"]) == (409, "no_longer_fits")
+    # Her Thursday yes holds its seat — the run deals only the Saturday seat
+    # she left, nothing for Thursday's — and the game fills with her: the fill
+    # never asks a yes already given about the kind.
+    assert str(thursday) in await live_ids(client, ania)
+    assert await proposes(session_factory, clock, week.group) == Proposed(
+        pools=1, dealt=1
+    )
+    [card] = await deck_of(client, week.piotr, week.group)
+    assert card["proposal_id"] == str(saturday)
+    assert (await says_yes(client, week.tomek, thursday)).status_code == 200
+    last = await says_yes(client, week.zofia, thursday)
+    assert last.status_code == 200, last.text
+    assert last.json()["booked"] is not None

@@ -37,6 +37,7 @@ from tests.api.proposals_world import (
     a_club_and_its_desk,
     a_group,
     a_player,
+    changes_intent,
     live_ids,
     makes,
     says_yes,
@@ -444,6 +445,22 @@ async def test_a_paused_yes_comes_back_when_its_player_leaves_the_game_that_paus
     assert (await leaves(client, ola, booking)).status_code == 200
     await mailbox.drain()
 
+    assert str(sunday) in await live_ids(client, ola)
+
+
+async def test_a_paused_yes_comes_back_whatever_its_player_s_intent_now_says(
+    client, session_factory, clock, club, group, four, mailbox
+):
+    ola = four[0]
+    await changes_intent(client, ola, "COMPETITIVE")
+    sunday = await a_capped_week(client, session_factory, clock, club, group, four)
+    booking = await a_booked_game(client, session_factory, clock, club, group, four)
+
+    await changes_intent(client, ola, "FOR_FUN")
+    assert (await leaves(client, ola, booking)).status_code == 200
+    await mailbox.drain()
+
+    # A yes already given: coming back, it is never asked the kind (Q127).
     assert str(sunday) in await live_ids(client, ola)
 
 

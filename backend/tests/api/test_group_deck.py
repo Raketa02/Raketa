@@ -60,6 +60,7 @@ from tests.api.proposals_world import (
     a_club_selling,
     a_group,
     a_member,
+    changes_intent,
     every_hour_of_the_week,
     live_yeses,
     makes,
@@ -693,6 +694,9 @@ async def test_the_segments_follow_my_intent_and_nobody_is_dealt_before_i_answer
     competitive = await makes(
         session_factory, clock, pool_id=group, club_id=club, versions=((ola, a, b, c),)
     )
+    # Whom a for-fun card is dealt to want for-fun games (Q127).
+    for player in (d, e, f):
+        await players.declare_intent(client, player["token"], intent="FOR_FUN")
     for_fun = await makes(
         session_factory,
         clock,
@@ -905,6 +909,103 @@ async def test_a_club_whose_payments_stop_deals_nothing_more(
     assert linked.status_code == 200, linked.text
 
     assert await dealt_ids(client, ola, group) == []
+
+
+def nicknames_on(card: dict) -> set[str]:
+    return {tile["nickname"] for tile in tiles(card)}
+
+
+async def test_a_name_whose_intent_left_the_kind_is_off_others_decks_until_it_returns(
+    client, session_factory, clock, club, crowd, group
+):
+    _, kuba, ewa, _, ania, marek = crowd[:6]
+    saturday = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=((ania, marek, kuba, ewa),),
+    )
+
+    await changes_intent(client, ania, "FOR_FUN")
+
+    # Marek's card stops naming her, as a name that no longer fits — live,
+    # recorded nowhere, and no no: her own deck simply deals For fun now.
+    [card] = (await deck_of(client, marek, group))["cards"]
+    assert nicknames_on(card) == {"marek", "kuba", "ewa"}
+    assert (await deck_of(client, ania, group, kind="FOR_FUN"))["segments"] == [
+        {"kind": "FOR_FUN", "count": 0}
+    ]
+    # A new yes on the kind she left is the card gone, naming no rule.
+    refused = await says_yes(client, ania, saturday)
+    assert (refused.status_code, refused.json()["code"]) == (409, "no_longer_fits")
+
+    # Either suits me wants it again: she is a name on it, and her yes lands.
+    await changes_intent(client, ania, "NO_PREFERENCE")
+    [card] = (await deck_of(client, marek, group))["cards"]
+    assert nicknames_on(card) == {"marek", "ania", "kuba", "ewa"}
+    assert await dealt_ids(client, ania, group) == [str(saturday)]
+    taken = await says_yes(client, ania, saturday)
+    assert (taken.status_code, taken.json()["open_seats"]) == (200, 3)
+
+
+async def test_a_poster_says_yes_again_on_her_one_off_of_the_other_kind(
+    client, session_factory, clock, club, crowd, group
+):
+    _, kuba, ewa, tomek, ania = crowd[:5]
+    for player in (kuba, ewa, tomek):
+        await changes_intent(client, player, "FOR_FUN")
+    # Ania plays competitively and posts a for-fun game as a one-off.
+    post = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        kind=SearchMode.FOR_FUN,
+        poster=ania,
+        versions=((kuba, ewa, tomek),),
+    )
+    assert (await says_yes(client, kuba, post)).status_code == 200
+    assert (await withdraws(client, ania, post)).status_code == 204
+
+    again = await says_yes(client, ania, post)
+
+    # Her post, of the kind she chose: never asked her intent (Q127).
+    assert (again.status_code, again.json()["open_seats"]) == (200, 2)
+
+
+async def test_a_yes_already_given_holds_its_seat_and_fills_whatever_the_intent_says(
+    client, session_factory, clock, club, crowd, group
+):
+    ola, kuba, ewa, _, ania = crowd[:5]
+    thursday = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        start=warsaw(8, 19),
+        versions=((ania, ola, kuba, ewa),),
+    )
+    for player in (ewa, ania):
+        assert (await says_yes(client, player, thursday)).status_code == 200
+
+    await changes_intent(client, ania, "FOR_FUN")
+
+    # Ola, still deciding, reads her In; the game fills with her, and the
+    # fill never asks a yes already given about the kind.
+    [card] = (await deck_of(client, ola, group))["cards"]
+    assert card["in_count"] == 2
+    assert {tile["nickname"] for tile in tiles(card) if tile["is_in"]} == {
+        "ewa",
+        "ania",
+    }
+    assert nicknames_on(card) == {"ola", "kuba", "ewa", "ania"}
+    yeses = (await live_yeses(client, ania))["yeses"]
+    assert str(thursday) in [row["proposal_id"] for row in yeses]
+    assert (await says_yes(client, ola, thursday)).status_code == 200
+    last = await says_yes(client, kuba, thursday)
+    assert last.status_code == 200, last.text
+    assert last.json()["booked"] is not None
 
 
 # --------------------------------------------------------------------------- #
