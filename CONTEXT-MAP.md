@@ -60,6 +60,15 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). The terms
 > are in `CONTEXT.md` under those contexts; the spec set is `docs/specs/games-and-fill-in/`.
 >
+> **Friends comes without a new app either**
+> ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md),
+> PRD [#743](https://github.com/Raketa02/Raketa/issues/743); decided, not yet built). The backend
+> grows a **Friends** context, a friends game is a further birth in Bookings and its Cover a Seat
+> charge in Payments; the player app grows a friends feature; the public site grows a page for
+> `/f/<code>` beside its group, invitation and password-reset pages; and the club website only reads its
+> other-clubs setting as on by default. The terms are in `CONTEXT.md` under **Friends**, **Bookings**,
+> **Payments** and **Proposals**; the spec set is `docs/specs/friends/`.
+>
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them

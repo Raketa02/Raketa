@@ -1,6 +1,12 @@
 # ADR-0196 — Only Raketa until Raketa is the club's booking software, and a club's cancel moves the game when nothing changes
 
-- **Status:** Accepted
+- **Status:** Accepted — **its §3's *an official group stays at its home club*, and §1's *What
+  stays*' *the official group's other clubs' courts*, amended 2026-11-06 by
+  [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)** §7. An official
+  group's courts are read **hour by hour**: other clubs within the club's distance are offered only
+  at an hour its own club has no free court, and the club's switch is on by default. So the owed
+  card's second step, *another club at the same day and hour*, reaches an official group too,
+  whenever its club has no free court at that hour and the switch is on.
 - **Date:** 2026-10-12
 - **Amends [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)** in six places:
   - **§3's three ways of working.** **Only Raketa is the one way** until Raketa is the club's
@@ -206,6 +212,8 @@ and these documents.
   own desk by mistake, and should be able to say so honestly.
 - The release lead, its range and its default; the cut-off; Q113's money; rescues; the official
   group's other clubs' courts.
+  *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7: the official group's other
+  clubs' courts are read hour by hour, and the switch is on by default.)*
 
 **Every seeded club works Only Raketa** (call 16). Each keeps a release lead that leaves its seeded
 games fillable, and at least one has indoor and outdoor courts of one sport at the same hours.
@@ -291,6 +299,9 @@ never promised one, and still isn't.
 
 - **An official group stays at its home club**, unless its courts have no hour its players share in
   the next 14 days and the club offers other clubs' courts. That rule is unchanged.
+  *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7: the rule is hour by
+  hour, and the switch is on by default, so step 2 reaches an official group whenever its club has
+  no free court at that hour.)*
 - **The *never at this club and hour* rule goes entirely** (call 10). A refusal was its only other
   source.
 - **It is a card like any other.** Its players must all be free for its whole hour and fit each

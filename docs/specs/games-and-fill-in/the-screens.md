@@ -96,7 +96,8 @@
   there is no *+ Another sport*.
 - **The Competitive / For fun switch** (mock 9) sits under the tabs on **Games**:
   *Competitive · 7* / *For fun · 1* — the number is the cards of that kind in this group and
-  sport. It stays where it is today on **Friends** too (out of scope).
+  sport. It stays where it is today on **Friends** too, where it sets one friends game's kind and
+  never the intent ([the Friends spec set](../friends/README.md), Q128).
   - **Both kinds are always drawn** (Q127, [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
     §2). A player whose intent is one kind sees that kind live, with its number, and **the other
     dimmed, with no number**: Ania (Competitive) reads *Competitive · 7* and a dimmed *For fun*, and
@@ -178,7 +179,7 @@ Dark card, top to bottom:
 | Part | What it shows | Rules |
 | --- | --- | --- |
 | **Ribbon** | *Picked for you* (dark teal) · *Kuba challenged you* / *The group challenged you* (dark teal) · *Seat open · court booked* (**coral**) | No *· friendly* — the segment already says it. On the right, **⏱ 21 h 00** only when the deadline is under 24 h (book-by; for a rescue the cut-off, then the start); *45 min* under an hour, coral. At the deadline the card leaves silently. |
-| **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, the player's **nickname**, never with an @ (cut short visually, never an invented form — ADR-0199, which superseded ADR-0171; the mocks' *Karol T.* is mock data), level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) only once a friends feature exists (Q68). No other tag. On a rescue each player reads *2,75 · paid*. |
+| **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, the player's **nickname**, never with an @ (cut short visually, never an invented form — ADR-0199, which superseded ADR-0171; the mocks' *Karol T.* is mock data), level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) on the reader's own friends, and only theirs (Q68, applying since Q128). No other tag. On a rescue each player reads *2,75 · paid*. |
 | **Your tile** | *You*, your level | When your yes would fill the game: **You complete it** in volt (mocks 3, 7). On a rescue your seat is the **dashed** tile: *You complete it · 27 zł · court booked* (mock 2), or *You? · 27 zł* when more than one seat is open. |
 | **vs line** | *KAROL + YOU VS ANIA + KUBA* | The top row is one side, the bottom row the other (Q70). |
 | **Balance forecast** | percentage (green / amber / red by today's tones) + the bar | The bar names **the same sides as the rows, your side on the left** (light half). Computed for this version. Existing `BalanceBar`, `onDark`. |
@@ -723,7 +724,9 @@ Three sections on one page.
 One page, one form, **Save settings**:
 
 - **Release lead** · **Free-cancellation cut-off** — number fields with their defaults.
-- **Other clubs' courts for our groups** — on/off + distance (default 10 km).
+- **Other clubs' courts for our groups** — on/off + distance (default **on**, 10 km, since Q128). Its
+  help line says the club's groups are offered other clubs' courts *at an hour your courts are full*,
+  and only then ([the mechanics §4.3](the-mechanics.md#43-courts)).
 - **Pause Raketa bookings** — on/off with its consequence line.
 - **Leave Raketa** — a text link at the bottom, refused while anything is booked or unpaid.
 
@@ -753,7 +756,8 @@ that led to it are gone; players walk straight to the court, and whether somebod
 ## B8. Groups (changed)
 
 The *Games* column counts the games booked in each official group. A line above the table links
-to the *other clubs' courts* setting.
+to the *other clubs' courts* setting, and says it is on and offers other clubs *at an hour your
+courts are full* (Q128).
 
 ## B9. Emails to the club
 
@@ -838,8 +842,9 @@ proposals' needs, per club and hour.
   ([the mechanics §5.1](the-mechanics.md#51-what-it-does)); distance only picks a group's clubs.
   Deals versions at half-In and after every no. Respects games-per-week, most-I'll-pay and one
   card per people-set per batch. Since Q123 an **owed card** is chosen closest to the cancelled
-  game first: the same club, day and hour; for a player group, another club at that day and hour,
-  nearest first; then the closest hour, the home club first. Since Q127 a named player who is not
+  game first: the same club, day and hour; another club at that day and hour, nearest first (for an
+  official group, only under the hour-by-hour rule since Q128); then the closest hour, the home club
+  first. Since Q127 a named player who is not
   In and whose intent no longer wants the card's kind is **gone**, as after a no, and their seat is
   dealt to next best fits; and one pool's batch also runs on a player's asking, through
   `POST /pools/{id}/deal`, which makes no card itself

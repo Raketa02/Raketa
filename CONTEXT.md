@@ -600,7 +600,10 @@ about blocks, and the record asks only about the reader's own. The player app's 
   effect is symmetric.** `A → B` and `B → A` are two independent blocks, so one being lifted
   never lifts the other. What it reaches is **one court**: a blocked pair, either way, is never
   dealt a version together, never both **In**, never offered each other's **Rescue** and never
-  joined onto each other's **Post**. _Avoid_: hide, mute, ban — it hides nobody.
+  joined onto each other's **Post** — nor seated in one **Friends game**. **It also ends a
+  Friendship** ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §2, not yet built — [#745](https://github.com/Raketa02/Raketa/issues/745)):
+  the friendship and any open request between the pair end silently, and a request the blocked
+  person sends later is never shown to the blocker. _Avoid_: hide, mute, ban — it hides nobody.
 - **Blocker** / **blocked** — the two sides of the ordered pair. The blocker can see their own
   block. The blocked person can never discover it.
 - **Own block** — a block the reader made: the only kind of block a response may carry. Two reads
@@ -640,8 +643,11 @@ about blocks, and the record asks only about the reader's own. The player app's 
   reason for a block is ever wanted, it belongs to a Report and not to a Block.
 
 **Invariants**
-- **A block keeps two people off one court, and reaches nothing else.** Groups, Members lists, the
-  player record, booked games and chats already shared are untouched. Both stay in the group, see
+- **A block keeps two people off one court, and reaches nothing else but a friendship.** Groups,
+  Members lists, the player record, booked games and chats already shared are untouched. The one
+  further reach is [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §2's: a block ends a friendship and swallows the blocked
+  person's later requests, which the blocked person cannot tell from a silent removal or a request
+  set aside. Both stay in the group, see
   each other in its Members list and can open each other's record. Hiding a member of a crowd
   everybody can see would itself be the tell.
 - **Nobody is shown that they were blocked; you can see your own blocks.** A response may carry
@@ -1408,7 +1414,9 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   is no choice), allotment, Instant, On request.
 - **Raketa settings** — the terms a club **confirms**, its first save doing so defaults included:
   the **release lead** (1–13 days, default 3), the **Cut-off**, **other clubs' courts** for its
-  groups (off by default, within 10 km) and **Paused** (off). Each bound is domain, never
+  groups (within 10 km; **on by default** since [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7, existing clubs included, and
+  read hour by hour, as **Official group** says — not yet built,
+  [#746](https://github.com/Raketa02/Raketa/issues/746), [#747](https://github.com/Raketa02/Raketa/issues/747); it was off) and **Paused** (off). Each bound is domain, never
   configuration. The *minimum notice* and the *time to confirm* left them on 2026-10-12 with *Instant*
   and *On request* ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670)). *We check players in* left them on 2026-10-11 with **Check-in** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
   §4, not yet built — [#651](https://github.com/Raketa02/Raketa/issues/651)); the field stays
@@ -1474,6 +1482,12 @@ booked game has its chat (**Conversation**) —
   ([ADR-0191](docs/adr/0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)
   §1), and edits nothing in it. It **declares its sports** (a non-empty subset of the club's) and its **WhatsApp
   group size**. Whoever runs it can neither delete it nor stop running it; only the club moves it.
+  **Its courts are its club's, hour by hour** ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7, not yet built —
+  [#746](https://github.com/Raketa02/Raketa/issues/746)): at an hour its club has a free court, only
+  the club's are offered; at an hour it has none, other clubs within the club's distance are offered
+  too, after it and marked as offered because the club is full, unless the club switched **other
+  clubs' courts** off. Until then another club was used only when the players shared no hour at the
+  club in 14 days, and the switch was off by default.
   _Avoid_: club group, verified group, public group.
 - **Owner** — the player who runs a Player group: answers its Join requests and edits its name and
   Join policy. The creator is the first; **an Owner who leaves a group that has other members
@@ -1655,11 +1669,48 @@ charges' (**Payments**), its result the Game's (**Games**).
   cancel dialog previews it, and *Cancel the game anyway* skips it. The cancel decides afresh when
   the club confirms. Decided by [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2, not yet built ([#672](https://github.com/Raketa02/Raketa/issues/672)). _Avoid_: reschedule, transfer, and *move* for anything
   that changes the club, the day, the hour or the price — that is a new card.
+- **Friends game** — a Booking **born at its send**, booked by a friend: one player, the **sender**,
+  seats friends (**Friends**) on a group's Friends tab, picks the kind for this game only, and
+  sending it books the court at once — on the court-hour's unique index, with an id of its own, since
+  no proposal precedes it. It records the sender (In), an **Invited seat** for each other player, the
+  kind, the **Pay mode** (*Split the cost* or *Whole court*), the court and its number, the sides, the
+  cut-off and the pool, and opens the Game and its chat at send. **While its sender covers it — Split
+  the cost with the sender In, or Whole court — it is never called off at its cut-off**: each seat
+  without its own payment is paid by the sender's **Cover** (Payments) and, if empty, opened as a
+  Rescue. A sender has **at most 2 waiting for answers**, each counts in every player's games per
+  week, and its court and hour never change once sent: the sender calls it off, free until the
+  cut-off, or **leaves · the others play on**, which with Split the cost turns it into an ordinary
+  booking. Its card before sending, built from the fixed
+  line-up, is the **friends card** (Proposals), a read. Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §5–§6, not yet built
+  ([#751](https://github.com/Raketa02/Raketa/issues/751),
+  [#752](https://github.com/Raketa02/Raketa/issues/752)). _Avoid_: private game, invite game, and
+  *friendly* (For fun is a kind, and a friends game may be either).
+- **Invited seat** — a friends game's seat held for one invited friend for **24 hours**, never past
+  the cut-off when the invitation is made before it, nor past the start when made after it.
+  **Accepted** (the friend is In), **declined** with *Not this time*, or **run out** (silence is *Not
+  this time*). The screens call it an *invitation*, never an **Invitation** (a club naming an
+  Administrator). An **empty seat** is a friends game's seat with nobody In and no invitation
+  running. It is **not a Rescue** until its sender opens it to the group, or the cut-off arrives.
+  Anybody In may invite one of their own friends into it, before or after the cut-off; the first to
+  accept and pay takes it, or, once it is a Rescue, the first rescuer. _Avoid_: reserved seat, and
+  *held* for a seat (a share is held).
+- **Guest** — a friend seated in a friends game in a group they aren't a member of. The game is on
+  their Home, in its chat and on its result; the group's deck and Fill in are not theirs, and a
+  Rescue is never offered to one. _Avoid_: visitor, outsider, non-member (as a role).
+- **Pay mode** — how a friends game is paid, chosen on the send sheet: **Split the cost** or **Whole
+  court**. **Split the cost** (first): each seat's own player pays their share on accepting, and the
+  sender's card holds the sender's share plus a Cover for every other seat until the cut-off (*We hold
+  100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł for any seat still empty then.*).
+  **Whole court**: the sender pays every seat, and friends accept without paying (*Tomek paid the
+  court*). The specs shorten the first to *Split*, which is never the forecast's **Split** (Games).
+  _Avoid_: *Split* alone in the glossary, split payment, host pays, treat.
 
 **Invariants**
 - **A game plays full or not at all.** A seat that opened before the club's cut-off and is still
   open at it calls the game off, and the court is the club's again; a seat that opened after the
-  cut-off leaves the game going ahead short.
+  cut-off leaves the game going ahead short. **One exception: a friends game its sender covers**
+  ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §6). Its empty seats at the cut-off are paid by the Cover and opened as Rescues,
+  and a seat nobody takes stays empty, as after the cut-off.
 - **The club may move or cancel a game until it starts.** A move is to another court of the sport
   at the same hour — since ADR-0196 §2, of the same Kind of court or indoor for an outdoor game, and
   told to the players (not yet built — [#671](https://github.com/Raketa02/Raketa/issues/671)).
@@ -1680,7 +1731,9 @@ account by [#537](https://github.com/Raketa02/Raketa/issues/537).
 
 **How a player pays: a card or a wallet saved once, charged later by the club.** Every charge is
 made on the club's own account — **the club is the seller** — and a player's card is copied there
-for each one. Since ADR-0189's 2026-10-10 amendment (the mechanics Q113) a share is **held** when
+for each one. Money goes from players to the club, never from one player to another, and **a player
+pays only their own share, except a friends game's sender, whose Cover pays for seats that aren't
+theirs** (below). Since ADR-0189's 2026-10-10 amendment (the mechanics Q113) a share is **held** when
 its game fills and **taken** at the club's **Cut-off**; nothing is taken before it, and no
 estimated card fee is printed anywhere — decided, and not yet built
 ([#636](https://github.com/Raketa02/Raketa/issues/636)–[#641](https://github.com/Raketa02/Raketa/issues/641)).
@@ -1705,6 +1758,16 @@ estimated card fee is printed anywhere — decided, and not yet built
 
   **A held charge is not paid**: *paid*, and a club's *Collected*, mean taken. _Avoid_: *charged*
   for a share that is only held.
+- **Cover** — a Seat charge **paid by the sender of a friends game for a seat that isn't theirs**: the
+  one place a player pays for another player's seat ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §6, not yet built —
+  [#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)). At send the sender's own share and one Cover per
+  other seat are authorised together, all or nothing, **with the sender present**, and the amount
+  agreed to — stated above the button — is recorded with the sender's terms acceptance. **Every
+  Cover stays held until the cut-off**, or is checked and held at the Holding time like any seat charge, and is never let go and
+  held again in between. **At the cut-off it is taken only for a seat without its own payment**, and
+  let go otherwise. A later rescuer's share refunds it, less exactly the fee kept on it, as a late
+  leaver is refunded. Only friends games have one; nobody takes a Cover over from the sender.
+  _Avoid_: guarantee, deposit, *paying for a friend*.
 - **Time to pay** — the **30 minutes** a player whose share was refused **after the cut-off**,
   where money is taken at once — when a game filled, or taking a **Rescue** — has to pay, never past
   the game's book-by (a rescue: never past its start). An On request club's yes started one too
@@ -1796,7 +1859,10 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 **How a game fills: dealt to a pool, answered with a silent yes.**
 
 - **Pool** — the players who may be dealt a game plus the clubs whose courts they may use. A
-  **Group** is the first kind of pool; a city (Explore) will be the next. Every proposal carries
+  **Group** is the first kind of pool; a city (Explore) will be the next. **Its clubs are read per
+  hour**: a Player group's home club first, then other clubs within 10 km; an **Official group**'s by
+  the hour-by-hour rule under that term ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7). One source serves the deck, Post a game
+  and the **Friends card** alike. Every proposal carries
   its pool, and nothing names a group where it means a pool. A group's pool is filed under the
   group's own id, and its players are the group's members **now** — somebody who left the group
   has left its pool. _Avoid_: audience (that is an Official group's).
@@ -1849,7 +1915,10 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   second one ([#622](https://github.com/Raketa02/Raketa/issues/622), [#625](https://github.com/Raketa02/Raketa/issues/625)). Its *answers by · Nobody pays until
   it confirms*, at an On request club, retired with that way ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, [#676](https://github.com/Raketa02/Raketa/issues/676)).
 - **Home** — the first tab of the bottom bar: your games from the moment they fill, and the games
-  waiting for one payment, or full once and filling again (*Seat open*). A booked game's row names
+  waiting for one payment, or full once and filling again (*Seat open*). Above them since
+  [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) (not yet built — [#751](https://github.com/Raketa02/Raketa/issues/751), [#745](https://github.com/Raketa02/Raketa/issues/745)): **FRIENDS GAME**, the friends games you
+  are invited to, then **FRIEND REQUESTS**, each row gone once it is empty; a friends game you sent is
+  among your games from its send. A booked game's row names
   its court's **Kind of court** (ADR-0196 §4). Its badge
   counts only the games that need you. Proposals assembles it.
 - **Proposal events** (durable name / version) — none of them is told to anybody:
@@ -1891,10 +1960,11 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 - **Owed card** — the new card dealt first to the players still in a game that a club's cancel
   called off: the one **Move by cancel** (Bookings) couldn't save. It is chosen **closest to the
   cancelled game first**: the same club, day and hour, on a court of the other kind or at a new
-  price; then, for a **Player group** only, another club at the same day and hour, nearest first;
-  then the closest hour in time, the home club first. An **Official group** stays at its home club
-  unless its courts have no hour its players share in 14 days and the club offers other clubs'
-  courts. It is an ordinary pick — its players free and fit, and each swipes it — that **records the
+  price; then another club at the same day and hour, nearest first;
+  then the closest hour in time, the home club first. An **Official group** reads its courts hour by
+  hour, as every card does ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7). (Until 2026-11-06 it stayed at its home club
+  unless its courts had no hour its players shared in 14 days.)
+  It is an ordinary pick — its players free and fit, and each swipes it — that **records the
   players it is owed to**, and it is **first in each of their group decks** whenever they open it,
   until they answer it or it is gone, **with no mark**. A game no hour is found for stays owed until
   its old hour passes. Its notice is *Your new game*. Decided by [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §3, not yet built
@@ -1912,6 +1982,16 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   Evening 17–23: *bright* where everybody is free together for one whole hour of the range, *dim*
   where all but one are (on a card of three or more), the game's cell ringed; graded **High /
   Good / Slim** by the hours everybody shares over the narrowest week. Never one person's week.
+- **Friends card** — the card a fixed line-up of friends gets on a group's Friends tab before it is
+  sent: the deck's card without its tiles — the evenest sides (or the sides the sender swapped to),
+  the forecast, the overlap grid, and a court with the share. Its court is **the soonest hour still
+  sellable, up to 14 days ahead, where all are free, a court is free under the pool's court rule and
+  none has a game**; failing that, where most are free. *Find a court* lists every such court in the
+  window, by how many of them are free. Blocks and a level in the sport apply; **the level window,
+  the kind's tolerance and gender preferences don't**, because friends choose each other. **A read**:
+  it makes no proposal and books nothing — sending it books a **Friends game** (Bookings).
+  Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §5, not yet built ([#750](https://github.com/Raketa02/Raketa/issues/750)).
+  _Avoid_: a proposal or a card *dealt* for it (nothing is dealt).
 - **Games & money** — a player's two limits, across sports and pools: **Games per week** (1–7,
   default 2, counted Monday to Sunday: a week with that many games booked deals nothing more) and
   **Most I'll pay** (off, 35, 45 or 60 zł: a card whose share is above it is never dealt). An
@@ -1932,7 +2012,8 @@ told by the other contexts and tells none of them.
 
 - **Notice** — one thing a player was told about their games — a game booked, a payment to
   confirm, a game called off, a seat left, a card that needs only them, a level they need before
-  any game can be dealt to them (*Get your level*, below) — in the server's words, at the moment it
+  any game can be dealt to them (*Get your level*, below) — or about their friends (*Friends'
+  notices*, below), in the server's words, at the moment it
   happened. It is shown as a **banner** while the app is open, pushed once push is
   on, emailed when it is about money, and kept in the **recent notices**: the
   list behind the bell on Home, the newest 30. Most kinds are **always on**; three are the player's
@@ -1977,6 +2058,61 @@ told by the other contexts and tells none of them.
   it under a per-account key, so no process tells it twice; Groups answers when the account first
   joined a group. Decided by [ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §7, not yet built
   ([#727](https://github.com/Raketa02/Raketa/issues/727), [#731](https://github.com/Raketa02/Raketa/issues/731)).
+- **Friends' notices** — the kinds **Friends** and a **Friends game** tell, **all always on, pushed and
+  kept in the bell**, never emailed unless they are about money: a **friend request** (pushed once per
+  request, never again for it), ***you're friends***, a **friends game invitation**, ***can't make
+  it*** and ***didn't answer*** (to the sender), a **seat invitation** into an empty seat, ***seat
+  taken***, a **friends game called off**, the **cover warning** (once, 24 hours before the cut-off,
+  to a sender paying by *Split the cost* while a seat lacks its own payment: *At Fri 10:00 you pay 50 zł: your 25 zł and
+  Ania's seat.*), and ***level asked*** — a friend asking for a level in a sport, not the
+  once-per-account **Get your level** — with its answer, ***level got***.
+  Answering a request or an invitation on Home clears it from the bell. Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  §1, §4–§6, not yet built ([#745](https://github.com/Raketa02/Raketa/issues/745),
+  [#749](https://github.com/Raketa02/Raketa/issues/749), [#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)).
+
+### Friends
+
+Settled by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) on
+[#744](https://github.com/Raketa02/Raketa/issues/744), and specified in
+[`docs/specs/friends/`](docs/specs/friends/README.md). **Not yet built**: friendships are
+[#745](https://github.com/Raketa02/Raketa/issues/745), the link
+[#748](https://github.com/Raketa02/Raketa/issues/748) and asking for a level
+[#749](https://github.com/Raketa02/Raketa/issues/749). The game friends send each other is a
+**Friends game** (Bookings), and its sender's money a **Cover** (Payments).
+
+**The people you play with, kept.** A friend is the shortcut to a game with people you already know,
+instead of letting the deck pick them. Friends are made where people meet, in their groups, and held
+across all of them.
+
+- **Friend** — somebody you asked who said yes, or who asked you and you said yes: one **Friendship**
+  per pair of players, an **event-sourced aggregate**, held **across all their groups**. It survives
+  either of them leaving a group and ends when either account is deleted. **Removing** a friend, from
+  their record behind a confirmation, is silent and touches no game already sent or booked. **A block
+  ends it**, either way round, silently ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §2). **Only your own friends are
+  ever shown to you**: a response carries the reader's own relation to each player it names —
+  *none*, *sent*, *asked you* or *friend* — and a face carries only *friend*, so Kuba never learns
+  that Tomek and Magda are friends. _Avoid_: contact, connection, follower, buddy.
+- **Friend request** — one player asking another to be friends, recording **where it was made**: a
+  group, the record, a result, or a link. Nobody asks themselves, and nobody asks while a request of
+  theirs to that person is open. **Accept** makes them friends, and the requester is told. **Not
+  now** **sets it aside**: the request stays open and can still be accepted, and the requester is
+  never told and can't ask again. Two requests that **cross** — each asked the other before either
+  answered — make them friends at once. **Cancelling** your own request is silent. **A request from a
+  player the reader blocked is never shown to the reader**, read live, so the requester reads
+  *request sent* forever, exactly as after a request set aside. _Avoid_: invitation for a request
+  (an **Invitation** is a club naming an Administrator), friend invite, declined (nothing declines a
+  request).
+- **Friend link** — a player's own address on the public site, `/f/` and a **code**: random, shaped
+  like a group's code, made on its owner's first read of it, never reused, one per player. **New
+  link** replaces it, and the old code reads as not found. **Opening it never makes friends by
+  itself**: it puts the owner's **Friend request** on the opener's Home (*Invited you to Raketa*),
+  through sign-up and onboarding when the opener has no account. Nothing happens for the owner, or
+  for somebody already a friend; a request the opener already sent crosses it; and when the owner
+  blocked the opener, the owner's request is swallowed and nothing reaches the opener's Home. _Avoid_: invite link, referral link, and **Group link**,
+  which joins a group.
+- **Ask for a level** — a player asking a friend with no level in a sport to get one, so they can be
+  seated: a notice that opens that sport's questionnaire, and a notice back when the friend's first
+  level in it arrives. **Once per friend per sport.** _Avoid_: rating request, nudge.
 
 ## Cross-cutting concepts
 

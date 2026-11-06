@@ -22,8 +22,16 @@
   when nothing about it changes, and otherwise calls it off as before, its players owed a card that
   is closest to the lost game and first in their deck. **Players see the kind of court.** The
   mechanics Q121–Q123 log it, and a dated note marks each passage below.
+- **§8's *no friends list*, §2's *the last yes books the game* and §4's *nobody ever pays more for
+  an empty seat*, amended 2026-11-06 by
+  [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)**
+  §1, §5–§6. A player has friends. A **friends game** is a second birth of the Booking, **booked the
+  moment its sender sends it**, and its sender's **Cover** pays for any seat still without its own
+  payment at the cut-off: the one place a player pays for another's seat, up to the maximum he
+  agreed to above his button. The deck's, Post a game's and rescues' money is unchanged. The
+  mechanics Q128 logs it, and a dated note marks each passage below.
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, and the decision log Q1–Q127) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the rules, and the decision log Q1–Q128) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
   (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.
@@ -103,6 +111,9 @@ game, card, yes and post belongs to a pool, and the group is one kind of it.
   each other.
 - **The last yes books the game and charges every seat together, all or nothing**, after a
   ten-second undo. Every action that moves money gets that undo.
+  *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §5: a friends game is
+  booked at its send, before anybody else says yes. The deck's games still book on their last
+  yes.)*
 - There is **no clock of Raketa's own**. A card lives until its court's **book-by** (the
   club's release time, or the start minus its minimum notice) and then disappears; nobody paid.
 - **Fill in offers only rescues**: open seats of *booked* games. Games still filling are offered
@@ -143,6 +154,10 @@ Every game is **one hour**.
   a game still short is called off and everyone still in is refunded in full. **After the
   cut-off** a leaver is refunded only when someone takes the seat, and a seat nobody takes stays
   empty. Nobody ever pays more for an empty seat.
+  *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §6: the sender of a
+  friends game pays a **Cover** for each seat still without its own payment at the cut-off, up to
+  the maximum stated above his button, and a covered game is never called off for an empty seat.
+  Nobody else pays more for one.)*
 - **Payments sit behind one port** with two adapters: Stripe (test mode now, live later) and an
   in-process fake for local runs, seeds and tests. Launch methods are cards and wallets; BLIK
   waits on Stripe confirming a saved BLIK can pay a club.
@@ -206,6 +221,8 @@ waiting for its answer.
 - **0183 §13** — superseded, except *no friends list* and *no removing members*, which stand: a
   group picks games, members post them, courts are booked, money is handled, and a game has a
   chat. **0183 §11**'s *Games* reads the games actually booked in each official group.
+  *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md): *no friends list* no
+  longer stands. *No removing members* still does.)*
 - **0145** (*no booking will ever contradict the hour*), **0144** and **0164** (the plan),
   **0150** (the fill), **0151** and **0100** (answer windows), **0169** (the deck on Players) and
   **0175 §4** (leaving is one gesture on the Chats row) — **narrowed to Classic play**. They go

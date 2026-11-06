@@ -10,6 +10,7 @@
 - **§8 amended 2026-10-04 by [ADR-0192](0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md)**: a handover is **told to whom it was handed**, once
   (`handover_seen` on the group), on a sheet in the app.
 - **§13 superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**, except *no friends list* and *no removing members*, which stand: a group picks games, members post them, courts are booked, money is handled, and each game has a chat. **§11's *Games* amended by the same record**: it counts the games actually booked in each official group.
+- **§13's *no friends list* superseded 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)** §1: a player has friends, held across all their groups, and builds a game with them on a group's Friends tab. *No removing members* still stands.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for Groups:**
   *event-sourced*, with synchronous projections for groups, group members and join requests.
 - **Amends [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1's** *"Play
@@ -250,6 +251,9 @@ no friends list and no count badges on its tabs. The Games tab's *"3 of 4"* is r
 rated in the selected sport, with their faces in joining order. *Nothing picked right now* is the
 honest line once the seats could be filled. The Fill in tab's **+ Post a game** is drawn and does
 nothing. Each of these is a later record.
+
+> **Superseded by ADR-0189 on 2026-09-29, except *no friends list* and *no removing members*; and
+> *no friends list* by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) on 2026-11-06.**
 
 ## Consequences
 

@@ -38,7 +38,7 @@ mocks, numbered 1–11 and 13–20, with no 12) so that every session can read t
 | Join a group | play [23](mocks/play/23_join_group_empty_state.png)–[37](mocks/play/37_join_group_result_card_4.png) | [#512](https://github.com/Raketa02/Raketa/issues/512) |
 | The group page: header, fast filter, tab bar, Games | play [14](mocks/play/14_new_group_page_games_tennis.png)–[17](mocks/play/17_new_group_game_badminton.png), [39](mocks/play/39_group_page_general.png)–[43](mocks/play/43_group_page_tab_bar.png) | [#513](https://github.com/Raketa02/Raketa/issues/513) |
 | Fill in | play [45](mocks/play/45_group_page_fill_in.png)–[47](mocks/play/47_group_page_fill_in_post_a_game_button.png) | [#513](https://github.com/Raketa02/Raketa/issues/513) |
-| Friends: the court and the Friends screen | play [49](mocks/play/49_group_page_friends_general.png)–[55](mocks/play/55_group_page_friends_screen_empty_message.png) | [#513](https://github.com/Raketa02/Raketa/issues/513) |
+| Friends: the court and the Friends screen | play [49](mocks/play/49_group_page_friends_general.png)–[55](mocks/play/55_group_page_friends_screen_empty_message.png): the empty court in each sport and the empty picker. **Friends itself** — seating friends, the card, sending, requests — is drawn by the twelve mocks of [the Friends spec set](../friends/README.md) (PRD [#743](https://github.com/Raketa02/Raketa/issues/743)) | [#513](https://github.com/Raketa02/Raketa/issues/513); with friends, [#757](https://github.com/Raketa02/Raketa/issues/757) |
 | Info, the group's own screen, opened from the group page's header (Q125, [*Overrides*](#overrides)) | play [57](mocks/play/57_group_page_info_initial.png)–[60](mocks/play/60_group_page_info_cards_initial.png) | [#514](https://github.com/Raketa02/Raketa/issues/514); its own screen, [#721](https://github.com/Raketa02/Raketa/issues/721) |
 | Members | play [61](mocks/play/61_members_page.png) | [#514](https://github.com/Raketa02/Raketa/issues/514) |
 | The request card, **everywhere** | club [20](mocks/club/20_request_to_join_card.png), replacing play 62 | [#514](https://github.com/Raketa02/Raketa/issues/514), [#516](https://github.com/Raketa02/Raketa/issues/516) |
@@ -66,6 +66,10 @@ where the feature is going, and build nothing from them. They show things that a
 - a completed friends court
 - earlier drafts of the group page, which play 39–61 replace
 
+Play 56's completed friends court is now in scope (PRD [#743](https://github.com/Raketa02/Raketa/issues/743)),
+and *friends 7–8* in [the Friends spec set](../friends/README.md) draw it and lead; play 56 stays
+background.
+
 ## Overrides
 
 Each of these is a ruling in PRD #500, a later decision, or their tickets. The mock is correct
@@ -79,7 +83,6 @@ everywhere else.
 | club 8, 9 | the Administrator's Groups tab headed by the person's name, with the profile switcher chip | **Club 17's header**: *OGRODY 33 · ADMINISTRATOR / Groups*. The switcher chip sits **on the You tab only**, in both profiles (club 7; ADR-0185 §3). Club 8–9's button and empty card stand. |
 | every play mock | a three-tab bar: Games · Play · You | **The bar is Home · ⚡ Play · You** (#576); the five-tab bar went with Classic play. The Administrator's side has its own two tabs, **Groups · You** (club 17–19). |
 | club 15, 16 | *Games* of 8 and 9. The feature document beside them also says *Players* excludes the administrator and the rows aren't tappable | ***Games* counts the games booked in the group** — every game its deck filled into a booking, never one two of its members arranged elsewhere (ADR-0183 §11, amended by ADR-0189). *Players* is **the group's member count**, including an Administrator who joined as a player. **Every row is tappable** and opens the Hand over page (#500 story 108, [#524](https://github.com/Raketa02/Raketa/issues/524)), where any official group can be handed over (ADR-0183 §8). |
-| play 49–55 | friends and *friend* tags | **No friends feature.** The Friends picker always shows its empty card, and no Members row carries a friend tag. |
 | the group page: play 14–17, 39–60 and 62, and the games-and-fill-in mocks [1](../games-and-fill-in/mocks/player/1-games_tap_general_view.png), [9](../games-and-fill-in/mocks/player/9_competitive_forfun_tap.png) and [11](../games-and-fill-in/mocks/player/11_fill_in_tap_general.png) | a tab bar of four, *Games · Fill in · Friends · Info* (play 43, and every mock that shows the bar); Info's content on that fourth tab (play 57–60, 62); and a header that is not a button | **Three tabs: Games · Fill in · Friends.** **Info opens from the header** as its own screen, with the same content: the group's monogram, its name with the official mark and *N members · home club* are one button. **The Owner's count of waiting requests is on the monogram's corner.** The rest is Q125 in the [games-and-fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log). |
 | every mock | *Rakieta*, `rakieta.app/g/…` | **Raketa**, and `<public site>/join/<code>`. |
 

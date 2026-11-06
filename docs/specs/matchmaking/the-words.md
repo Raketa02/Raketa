@@ -1098,3 +1098,162 @@ The ellipsis is one character, `…`. Finding ends on the deck's own states, who
 written: the cards, or *Nothing picked right now* with **Post a game**. A new yes refused on a card of
 a dropped kind is `no_longer_fits`, whose words `proposalsCopy` already has
 (`frontend_player/src/features/proposals/components/proposalsCopy.ts`), cited.
+
+## 29. Friends
+
+> Added 2026-11-06 by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md),
+> the mechanics Q128, PRD [#743](https://github.com/Raketa02/Raketa/issues/743). The surfaces are
+> [the Friends spec set](../friends/README.md): [the mechanics](../friends/the-mechanics.md) say what
+> happens and [the screens](../friends/the-screens.md) where each sentence stands. Built by the
+> player app's [#753](https://github.com/Raketa02/Raketa/issues/753),
+> [#754](https://github.com/Raketa02/Raketa/issues/754) and
+> [#756](https://github.com/Raketa02/Raketa/issues/756)–[#760](https://github.com/Raketa02/Raketa/issues/760),
+> and the public site's [#755](https://github.com/Raketa02/Raketa/issues/755).
+>
+> **Every sentence of PRD #743's *Solution* is here**, with its singular and zero forms. Rows marked
+> *(a call)* are words the PRD doesn't give and a screen needs, written in while recording it, for the
+> product owner to overrule. **No sentence says *her*, *his*, *she* or *he* about another player**: a
+> gender never crosses to another player (ADR-0096, the glossary's **Gender**), so the PRD's *Ask Zofia
+> to get her padel level*, *so he can add you* and *Zofia has her padel level — you can seat her now*
+> are written without one below. The club website's two lines are its own copy
+> ([#747](https://github.com/Raketa02/Raketa/issues/747)) and say *at an hour your courts are full*.
+
+**Placeholders.** `{nickname}` is a player's whole nickname (§15). `{sport}` is the sport's name
+inside a sentence (*padel*), `{Sport}` at a line's start or after a `·` (*Padel*). `{share}` is the
+card's share and `{price}` the court's, both as money (*25 zł*, *100 zł*). `{when}` is the game's day
+and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20:00*), and
+`{cut-off}` the club's cut-off the same way (*Fri 10:00*). A list of names is joined `A`, `A and B`,
+`A, B and C`.
+
+### 29.1 Members, the record and the result
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Members, the pill | `+ Add` · `Accept` | black pills; the + is drawn. The pill acts, the rest of the row opens the record |
+| Members, the tag | `request sent` · `friend` | amber · green, lower-case as in mocks 1–2 |
+| Every face, the tag | `FRIEND` | the deck's tile tag (Q68), on the reader's own friends only; `friend` elsewhere |
+| The record, the left button | `Add friend` · `Request sent` ▾ · `Accept` · `Friend` ✓ ▾ | ✓ and ▾ are drawn, never characters (Archivo has no ✓) |
+| The record, the menus | `Cancel request` · `Remove friend` | |
+| The record, removing's confirmation | `Remove {nickname} as a friend?` · `Nobody is told, and your games together stay as they are.` · `Remove friend` · `Keep` | *(a call)* |
+| The record, someone you blocked | `Unblock` | the existing button, full width |
+| The result screen | `PLAYED WITH` | the eyebrow over the card; its rows are Members' |
+
+### 29.2 Friend requests
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Home, the row's title | `FRIEND REQUESTS · {n}` | `{n}` ≥ 1; at 0 the row and its title are gone |
+| The card, who | `{nickname} wants to be your friend` | |
+| The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*) |
+| The card, where (a link) | `Invited you to Raketa` | in place of the group line |
+| The card, buttons | `Not now` · `Accept` | |
+| Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request |
+| Notice, accepted | `{nickname} said yes — you're friends` | to the requester |
+| Notice, crossed | `You and {nickname} are friends now` | to both, each naming the other *(a call: nobody said yes)* |
+
+### 29.3 The Friends page and the Add friends sheet
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The page | `Friends` · `+ Add friends` | the + is drawn |
+| The tabs, from You | `Friends` · `Asked you` · `You asked` | |
+| *Asked you*'s count | `Asked you · {n}` | `{n}` ≥ 1; at 0, `Asked you` alone |
+| A row, *Friends* | `{Sport} {level}` joined by ` · ` | every sport they play (call 11) |
+| A row's button | `Accept` (*Asked you*) · `Cancel` (*You asked*) | |
+| Empty, *Friends* | `No friends yet. Add them from your groups, or send your link.` | *(a call)* |
+| Empty, *Asked you* | `Nobody has asked you yet.` | *(a call)* |
+| Empty, *You asked* | `You haven't asked anyone.` | *(a call)* |
+| The picker, a row | `{level} · {band}` | *2,75 · established*: the band's name, lower-case (`bandPresentation`, cited) |
+| The picker, no level in this sport | `No {sport} level yet` · `Ask {nickname} to get a {sport} level` · after asking, `Asked` | |
+| The picker, its foot | `Done` | |
+| The picker, no friends | `Nobody you know here yet` and its card | `groupsCopy`'s, cited (play 55) |
+| The sheet | `Add friends` · `From your groups` | |
+| The sheet, a group | `{n} members · {m} to add` · `{n} members · 1 to add` · `{n} members · nobody to add` · `1 member · …` | |
+| The sheet, the link | `Not on Raketa yet?` · `{public site}/f/{code}` · `Copy` · `New link` | |
+| The sheet, after *New link* | `New link made. The old one no longer works.` | *(a call)* |
+
+### 29.4 The link
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Home, the request | `{nickname} wants to be your friend` · `Invited you to Raketa` · `Not now` · `Accept` | the card of §29.2 |
+| The public page | `{nickname} invited you to play on Raketa` · the store buttons · `Open in Raketa` | the stores' own badges; the preview image carries the same sentence |
+| The public page, a replaced or unknown code | `Nothing at that link` | |
+
+### 29.5 Asking for a level
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Notice, to the friend | `{nickname} wants to play {sport} with you. Get your {sport} level so {nickname} can add you.` | the asker, twice; opens that sport's questionnaire |
+| Notice, back to the asker | `{nickname} has a {sport} level — you can seat {nickname} now.` | the friend, twice; opens the picker |
+
+### 29.6 The Friends tab
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind |
+| The court | `THEIR SIDE` · `YOUR SIDE` · `{nickname} {level}` · `You {level}` · `+ Friends` | mock 7 |
+| The court, unfilled | `Seat {n} more friends` · `Seat 1 more friend` | at 0, the card |
+| The card | the deck card's words, without tiles: the *vs* line (`YOU + EWA VS MAGDA + ANIA`; singles `YOU VS ANIA`), the balance (`87%` · `Very even`), the overlap's grade, `Court available`, `{share} each`, `{when} · {club} · {court}` and the kind of court | the screens A2.3, cited |
+| The card, another club | `{home club} is full at {HH:MM}` | under the court; the same marker on the deck's court block, Post a game's slot sheet and *Find a court* |
+| The card, buttons | `Send game and pay {share}` · `Pick a different court` | |
+| The card, refused | `These four can't all play together. Swap someone.` · singles: `These two can't play together. Swap someone.` | names nobody |
+| The card, no court | `No court is free in the next 14 days.` | *(a call)* |
+| *Find a court* | `Find a court` · day headings `TODAY` · `TOMORROW` · `SATURDAY` · `SAT 26 SEP` | upper-case by style, as mocks 10–11 |
+| *Find a court*, a row | `{HH:MM}` · `{club} · {court}` · `{share} each` | |
+| *Find a court*, who is free | `Everybody free` · `{names} busy` · `You're busy` · `You and {names} busy` | `{names}` the friends outside their weekly hours then; the reader is *You* *(a call, for the reader's own hours)* |
+
+### 29.7 Sending
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The send sheet, the choices | `Split the cost` · `Pay the whole court` | Split first, chosen |
+| Split, above the button | `We hold {price} on your card until {cut-off}. You pay {share}, plus {share} for any seat still empty then.` | doubles; the maximum, right above the order button |
+| … singles | `We hold {price} on your card until {cut-off}. You pay {share}, plus {share} if the other seat is still empty then.` | *(a call)* |
+| Split, the button | `Send game and pay {share}` | |
+| Whole court, the button | `Send game and pay {price}` | |
+| Refused, the court went | `court_just_taken`'s words, cited: `That court was just booked by another game. Nothing was charged — try again.` | `proposalsCopy`; the card is re-read |
+| Refused, two waiting | `You have 2 friends games waiting for answers. Send this one once one of them is settled.` | *(a call)* |
+| Refused, the sender's week or hour | the invitee's two sentences of §29.8, with the sender's own numbers | |
+
+### 29.8 The invitation, and the sender's game
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Home, the row's title | `FRIENDS GAME · {n}` | `{n}` ≥ 1; at 0 the row and its title are gone |
+| The card | `{nickname}'s game` · the clock · `{when} · {club} · {court} · {Sport} · {Kind}` | the clock is the deck ribbon's countdown, cited (`1 h 35`, `45 min`); `{Kind}` is `Competitive` or `For fun` |
+| The card, the faces | `{nickname}` under each, `You` under the reader | ✓ on those In; faded while waiting |
+| The card, Split | `Not this time` · `Accept and pay {share}` | |
+| The card, Whole court | `{nickname} paid the court` · `Not this time` · `Accept` | the sender's nickname |
+| Accept refused, a full week | `Your week is full: {n} games, the most you set in Games & money.` · `… 1 game, …` | *(a call)* |
+| Accept refused, a game at that hour | `You already have a game at {HH:MM}.` | *(a call)* |
+| Notice, the invitation | `{nickname} invited you to a game` · body: `{when} · {club} · {Sport} · {Kind}` | *(a call)*; opens Home on the card. A seat invitation into an empty seat says the same |
+| Notice, a seat taken | `Someone took that seat first.` · body: `{when} · {club}` | *(a call)*; `seat_just_taken`'s sense |
+| The last seat taken | *It's a game!*, cited | to all four |
+| Your games, the sender's game | `{k} of {m} friends in · waiting for {names}` · at `{k}` = 0, `Waiting for {names}` · `{k} of {m} friends in · 1 seat empty` · `… · {e} seats empty` | `{m}` is 3 in doubles, 1 in singles: `Waiting for Ania`, then the ordinary row once In |
+| The details, a seat | `In` · `waiting · {time} left` · `can't make it` · `didn't answer` · `empty` · `Seat open` | `{time}` the countdown, cited |
+| The details, the pay mode | `Split` · `{nickname} paid the court` | under the price |
+
+### 29.9 An empty seat
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Notice, a no | `{nickname} can't make it` · body: `{when} · Invite a friend, or open the seat to {group}.` | body *(a call)* |
+| Notice, silence | `{nickname} didn't answer` · body: the same | body *(a call)* |
+| … inside the last 24 hours | the body gains the cover line below | Split only |
+| The details, the actions | `Invite a friend` · `Open to {group}` | *Open to Ogrody* |
+| Opening, the confirmation | `Open this seat to {group}?` · `Anyone in {group} who fits can take it and pay {share}.` · `Open to {group}` · `Not yet` | *(a call)*; a stranger can take it (#760) |
+| The cover warning, one seat | `{when} · 1 seat still empty` · `At {cut-off} you pay {sum}: your {share} and {nickname}'s seat.` | `{nickname}` the seat's last invitee; `{sum}` your share plus the seat's |
+| … more seats | `{when} · {e} seats still empty` · `At {cut-off} you pay {sum}: your {share} and {e} empty seats.` | *(a call, for the plural)* |
+| The cover warning, its buttons | `Invite a friend` · `Open to {group}` · `Call it off` | |
+
+### 29.10 Leaving and calling off
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The sender's leave sheet | `Call it off for everyone` · `Leave · the others play on` | before the cut-off |
+| … under *Call it off* | `Everyone is told, nobody pays, and the court goes back to {club}.` | *(a call)* |
+| … under *Leave*, Split | `Your card stops covering the game. A seat still empty at {cut-off} calls it off, and nobody pays.` | *(a call)* |
+| … under *Leave*, Whole court | `You still pay the court. Whoever takes your seat pays you {share} back.` | *(a call)* |
+| Notice, called off | `{nickname} called off {when}` · body: `Nobody paid.` | the games and fill-in mechanics §17.2's *Game called off*, its reason the sender |
+| Notice, a friend left | `{nickname} left your game` | the existing *Someone left your game*, cited; inside the last 24 hours with Split, the cover line |

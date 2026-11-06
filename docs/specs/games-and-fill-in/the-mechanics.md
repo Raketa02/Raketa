@@ -123,11 +123,14 @@
   intent for that sport doesn't want is dimmed, with no number, and is a door to changing your
   intent in place ([§4.1](#41-players)); the deck never opens on it. With *Either suits me* both are
   live. Its badge counts the cards where somebody is already In
-  with you. The same switch also stays on the **Friends** tab, which is out of scope.
+  with you. The same switch also stays on the **Friends** tab, where it sets one friends game's kind
+  and never the intent (Q128).
 - **Fill in** has two sections: **Seats to fill** (rescues you can take; its count is the tab's
   badge) and **You're In** (your yeses in this group that have not filled yet, including the
   games you posted). The **Post a game** button floats over it.
-- **Friends** is out of scope.
+- **Friends** builds a game with your friends: you seat them on a court, Raketa builds the card, and
+  sending it books the court at once (Q128). It is specified in [the Friends spec set](../friends/README.md), not
+  here; what it shares with every game — the cut-off, holding, rescues, leaving — is this document's.
 
 **Info** is the group's own screen, not a tab (Q125). The group's header — its monogram, its name and
 *N members · home club* — opens it over the page, and Back returns to the tab you left. Its content
@@ -200,11 +203,14 @@ from the speech bubble on its Home card ([§14.3](#143-the-chat)).
 
 - **Player group:** its home club first, then other Raketa clubs within **10 km** of the home
   club. At the same hour, the home club's court is preferred.
-- **Official group:** only its own club's courts, unless the club switches on **"Offer our
-  groups other clubs' courts when ours are full"** (off by default, with a distance the club
-  sets, default 10 km). When it is on, another club's court is used for a set of players only
-  when the club has **no court at any hour those players share in the next 14 days**. The
-  club's own courts always win.
+- **Official group, hour by hour** (Q128, [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7): at an hour where its own club
+  has a free court, only its club's courts. At an hour where it has **none**, other Raketa clubs
+  **within the club's distance** (default 10 km) too, listed after it and marked *Ogrody 33 is full
+  at 10:00* — unless the club switched off **"Offer our groups other clubs' courts when ours are
+  full"**, which is **on by default**, existing clubs included. The same rule serves the deck (the
+  owed card included), Post a game and the friends card: a group never has two court rules.
+  *(Until Q128 the switch was off by default, and when on, another club's court was used only when
+  the club had no court at any hour those players shared in the next 14 days.)*
 - The engine looks **14 days ahead**. Start times are the club's own.
 
 ### 4.4 Several groups
@@ -453,7 +459,8 @@ Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-scr
   yes is the only tag that signals momentum: a player who hasn't answered simply has no tag (Q69,
   Q91). A game dealt in versions adds its one line ([§7](#7-one-game-several-versions)). On a
   rescue the players read **paid** and the open seat is a dashed **You?** tile with your share.
-  A **FRIEND** tag appears only once a friends feature exists (Q68).
+  A **FRIEND** tag marks the reader's own friends, and only theirs (Q68, which applies since Q128 —
+  [the Friends mechanics §3.6](../friends/the-mechanics.md#36-the-friend-tag)).
 - **The sides** — the two rows are the two sides; the *vs* line names them, and the balance bar
   names the same sides with **your side on the left** (Q70). On a rescue you take the leaver's
   seat and side.
@@ -684,7 +691,12 @@ When the last yes lands (after the 10-second undo, when it applies):
   ("paid to Bonarka Arena"). It pays the card processing fee on its sales, as it does at its own
   terminal. Raketa takes **no fee** and pays none.
 - **Money goes from players to the club through Raketa** — never from one player to another,
-  and no player ever pays another player's share.
+  and no player ever pays another player's share, **with one exception: a friends game's sender**
+  (Q128). His **cover** holds every other seat's share on his card until the cut-off, and pays for a
+  seat still without its own payment then. It applies to friends games alone, and only because he
+  agreed to the maximum shown above his button, *We hold 100 zł on your card until Fri 10:00…*
+  ([the Friends mechanics §8.3](../friends/the-mechanics.md#83-the-cover)). The deck's, Post a game's and rescues' money
+  is unchanged.
 - **Nothing is held until a game exists, and nothing is taken until the club's cut-off.** A yes
   costs nothing; so does a card that never fills. When a game fills, each share is **held** on
   its player's card, and it is **taken** at the club's cut-off (Q113).
@@ -885,6 +897,22 @@ judges only the words on the control itself (C-249/21). No authority has ruled o
 screen with a ***Pay 40 zł*** button. **The words count legally only in Polish.** The app shows
 English until it is translated, so the translation must land before a real club takes a player's
 money.
+
+**One more question for that review (Q128).** A friends game's sender pays for every seat still
+without its own payment at the cut-off ([the Friends mechanics §8](../friends/the-mechanics.md#8-sending-and-paying)). His
+send sheet states the maximum right above the order button:
+
+> *We hold 100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł for any seat still empty
+> then.*
+>
+> **Send game and pay 25 zł**
+
+3. **Does *Send game and pay 25 zł*, with *"We hold 100 zł … plus 25 zł for any seat still empty"*
+   stated above it, make a valid order for up to 100 zł under art. 17 ust. 3–4?** The button names
+   only his own share; the 100 zł he may pay is in the line above it. The Payment Services Act's
+   art. 49b (PSD2 art. 75) allows blocking an amount only with the payer's consent to that exact
+   amount, which the line gives, and the amount he agreed to is recorded with his terms acceptance.
+   With Whole court the button already says the whole sum, *Send game and pay 100 zł*.
 
 ### 12.6 The club's money
 
@@ -1309,13 +1337,14 @@ five steps until Q121: the second was *Choose how you work with Raketa*, which w
 | --- | --- |
 | Release lead: days before the game unsold courts return to us (1–13) | 3 days |
 | Free-cancellation cut-off (players leave free until it; a game still short at it is called off) | 24 h before |
-| Offer our groups other clubs' courts when ours are full ([§4.3](#43-courts)) | off · 10 km |
+| Offer our groups other clubs' courts when ours are full ([§4.3](#43-courts)) — offered only at an hour our courts are full | **on** · 10 km (Q128; it was off) |
 | Pause Raketa bookings ([§16.15](#1615-pausing-or-leaving-raketa)) ◇ | off |
 
 A changed setting applies to games booked **after** the change; a booked game keeps the cut-off it
 was booked with ◇. *We check players in* was removed with check-in on 2026-10-11 (Q116). *How we
 work with Raketa*, the *minimum notice* (2 h) and the *time to confirm* (30 min) were removed with
-*Instant* and *On request* on 2026-10-12 (Q121).
+*Instant* and *On request* on 2026-10-12 (Q121). *Other clubs' courts* turned **on by default** on
+2026-11-06, for existing clubs too, when it became hour by hour (Q128, *call 3*).
 
 ### 16.7 Bookings
 
@@ -1396,11 +1425,12 @@ asks a club to confirm a booking. Every full game is now booked at its fill
   A leaver the cancel refunds — one who left after the cut-off, whose seat was still paid — is told
   in a leaver's words and never promised a new game ([§13](#13-leaving-a-game), Q108).
 - **The owed card is the closest game to the lost one** (Q123): first **the same club, day and
-  hour**, on a court of the other kind or at a new price; then, **for a player group only, another
-  club at the same day and hour**, nearest first; then **the closest hour in time**, the home club
-  first. An official group stays at its home club unless its courts are full
-  ([§4.3](#43-courts)). The rule that never dealt the same players that club and hour again is gone
-  *(a call)*: it was written for a club that refused a game. The owed card is an ordinary card: its
+  hour**, on a court of the other kind or at a new price; then, **another club at the same day and
+  hour**, nearest first — for an official group only while its club has no free court then and
+  offers other clubs' courts, as at every hour since Q128 ([§4.3](#43-courts)); then **the closest
+  hour in time**, the home club first. *(Until Q128: for a player group only, an official group
+  staying at its home club unless its courts were full.)* The rule that never dealt the same
+  players that club and hour again is gone *(a call)*: it was written for a club that refused a game. The owed card is an ordinary card: its
   players must all be free for its hour and fit each other, and each swipes it. It is first in
   their decks ([§8.2](#82-the-order)). A game no hour is found for stays owed until its old hour
   passes.
@@ -1474,10 +1504,12 @@ game didn't go ahead* after an Accept that waited on a payment (Q112, Q113). All
 ### 16.13 Official groups and administrators
 
 - The **Groups** page's *Games* figure now counts the games booked in each official group.
-- **Offer our groups other clubs' courts when ours are full** (off · 10 km): when it is on, a set of
-  players in the club's official groups can be offered another Raketa club's court, but only when
-  the club has **no court at any hour those players share in the next 14 days** ([§4.3](#43-courts)).
-  The club's own courts always win.
+- **Offer our groups other clubs' courts when ours are full** (**on** · 10 km, Q128): the club's
+  official groups are offered another Raketa club's court **only at an hour the club has no free
+  court**, listed after the club's own and marked as offered because the club is full
+  ([§4.3](#43-courts)). At every hour it has a court, only its own are offered. Switched off, its
+  groups play only at the club. The help line under the setting, and the Groups page's line, say
+  *at an hour your courts are full*.
 - **Administrators** run the official groups in the player app. They never see bookings, money or
   court settings; they play in games like any member.
 
@@ -1672,9 +1704,9 @@ No notification is ever sent for a single swipe.
 | A refused rescuer keeps the seat | 30 minutes (to fix the card, or to pay), never past the game's start (a call, Q113) |
 | Recent notices | the newest 30 · the bell's number shows *99+* above 99 |
 | Book-by | the release time: the game's start − the release lead, so never later than a day before the game (Q121, a call) |
-| Club defaults | release lead 3 days (1–13) · cut-off 24 h · other clubs 10 km. The minimum notice (2 h) and the time to confirm (30 min) went with Q121 |
+| Club defaults | release lead 3 days (1–13) · cut-off 24 h · other clubs on, 10 km (on since Q128). The minimum notice (2 h) and the time to confirm (30 min) went with Q121 |
 | A court that absorbs a club's cancel | the same club, sport, day, hour and price; the same kind, or indoor for an outdoor game; indoor only for *weather*; the same kind first, then indoor, in the club's court order (Q122) |
-| An owed card's order | the same club, day and hour → for a player group, another club at the same day and hour, nearest first → the closest hour, home club first; first in each owed player's deck, soonest first (Q123) |
+| An owed card's order | the same club, day and hour → another club at the same day and hour, nearest first (an official group's only under [§4.3](#43-courts)'s hour-by-hour rule, Q128) → the closest hour, home club first; first in each owed player's deck, soonest first (Q123) |
 | Player group reach | home club + 10 km |
 | Attendance tap window | from the hour's start to 30 minutes after it — the first half of a one-hour game (Q115) |
 | On time · Came late · Didn't come | an arrival within 10 minutes of the start · 10 to 30 minutes after it · none by 30 minutes after it |
@@ -1759,7 +1791,7 @@ and a handed-over hour sold by mistake is cancelled as above.
 - Relaxing the level filter beyond what the engine allows.
 - Any Raketa revenue: no fee, no subscription. (Playtomic charges Polish players a 20 %
   service fee capped at 1.24–3.99 zł per seat; Raketa's absence of one is an advantage.)
-- The Friends tab.
+- *The Friends tab* left this list on 2026-11-06 (Q128): it is specified in [the Friends spec set](../friends/README.md).
 - **"Classic play"**: the Players deck, the Chats tab, challenges with the where/day/hour plan,
   and Find a game. They stayed behind one flag, off by default, until they were **removed on
   2026-10-06** with the flag itself ([#569](https://github.com/Raketa02/Raketa/issues/569)).
@@ -1799,7 +1831,8 @@ To settle with Stripe (and a lawyer) before building payments:
   since Q124:** whether a swipe stamped *PAY · 40 zł* is an order under art. 17 (if not, a
   money-moving yes opens a confirm screen with a *Pay 40 zł* button), and whether a vote stamped
   *I'M IN · 40 zł* binds the voter. The words count only in Polish, so the app's translation lands
-  before a real club takes a player's money.
+  before a real club takes a player's money. **One more since Q128:** whether a friends game's *Send
+  game and pay 25 zł*, with the 100 zł maximum stated above it, makes a valid order for up to 100 zł.
 - **O4 — Apple Pay** for one-off charges without the player present: test before launch.
 - **O5 — The club's receipts and invoices.** The club is the seller, so the Polish rules on fiscal
   receipts and invoices for online sales apply to the club. Confirm with a lawyer or accountant what
@@ -1828,7 +1861,9 @@ To settle with Stripe (and a lawyer) before building payments:
 - The "matched game without a court" that waited for everybody to confirm a new court.
 - The "already proposing this slot" collision card, the coach's court row, the "call with
   options", the "overlap only" and "stretch" cards.
-- The friends-first hour on open seats (there is no friends feature).
+- The friends-first hour on open seats (there was no friends feature). **It stays removed since
+  Q128**: friends games don't bring it back, and friends get no head start on a rescue
+  ([the Friends mechanics §16](../friends/the-mechanics.md#16-out-of-scope)).
 - Silence on a challenge counting against the record.
 
 ### 22.2 In the repository — recorded by ADR-0189
@@ -2092,7 +2127,7 @@ Aug–Sep 2026).
 | 26 | The record's rules. |
 | 27 | Settings: games per week, most I'll pay, notifications. |
 | 28 | Games per week stays a free setting (default 2). |
-| 29 | Official groups use other clubs only when theirs has no shared hour in 14 days; player groups home + 10 km. |
+| 29 | Official groups use other clubs only when theirs has no shared hour in 14 days; player groups home + 10 km. → amended by Q128: hour by hour, on by default |
 | 30 | 1-hour games; 14 days; hours must cover the game. |
 | 31 | Post a game. → Q40 |
 | 32 | The bottom tab is **Home**; the group tab stays **Games**; Players behind a flag. *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
@@ -2130,7 +2165,7 @@ Aug–Sep 2026).
 | 65 | A 10-second undo, only on the yes that fills a game. → amended by Q74 |
 | 66 | The club website's bookings and check-in pages. → the check-in page amended by Q116 |
 | 67 | After the session, on request: a dedicated club-website section ([§16](#16-the-club-website)). Its **◇** items were filled in while writing, not grilled. |
-| 68 | FRIEND shows only once a friends feature exists. |
+| 68 | FRIEND shows only once a friends feature exists. → applies since Q128, on the reader's own friends only |
 | 69 | The *asked / no answer yet* tag is removed. |
 | 70 | Rows are sides; the *vs* line and the bar name the same sides, yours on the left; a rescuer takes the leaver's seat and side. |
 | 71 | Card and posting grid use ranges Morning 07–12, Afternoon 12–17, Evening 17–23; bright / dim / ringed; today's High / Good / Slim grading. |
@@ -2190,3 +2225,4 @@ Aug–Sep 2026).
 | 125 | (2026-11-02, amends §3's four tabs and the screens' A1, and overrides the *Info* tab drawn on every group-page mock; ruled by the product owner in a grilling of its own, with no story or finding; specified by [#720](https://github.com/Raketa02/Raketa/issues/720)) *Where does a group's Info live?* **On its own screen, opened from the group's header, and a group page has three tabs: Games · Fill in · Friends.** The page still always opens on Games ([ADR-0188](../../adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md) §5, unchanged). The group's monogram, its name with the official mark and *N members · home club* are one button, which pushes **Info** over the page. The back arrow and the sport pill keep their own taps, and while the sport filter's bar is open it covers the monogram and a tap there goes to the bar. **Info moves; its content does not change:** the link card with *Share* and *Copy*, the Owner's *Want to join · N*, the members row that opens *Members*, and the Owner's *Edit group*, with *Leave the group* / *Delete the group* at the screen's foot, outside what scrolls. Info's header is the page's own without the sport pill, and it is not a button. Back returns to the tab the player left. **The Owner's count of waiting requests** moves from the Info tab to the monogram's corner: the same badge with the same count, and only the Owner sees it. **Re-reads:** Info re-reads the group when it opens, on a pull, and on coming back from Members or Edit group. The page's pull on Games and Fill in re-reads the group and its games, and Friends has no pull. The page doesn't re-read on coming back from Info, because Edit group already writes the group into the page's read. **A member who must add a sport** sees *Add a sport* on all three tabs; the header still opens Info, and the way out is there. **The mocks stay:** every group-page mock draws four tabs, and the play-groups [mock-override table](../play-groups/README.md#overrides) says what is built instead, as it did for the bottom bar ([#576](https://github.com/Raketa02/Raketa/issues/576)). No PNG is redrawn or removed. No backend or contract change, and no ADR, since none decides a group page's tabs. The product owner asked for a group page that carries only the three tabs drawn for a sport. Info is about the group, not one of its sports, so it opens from the group's own header. The whole header is the button rather than the monogram alone, because the monogram is a small target and WhatsApp, Telegram and iMessage all open a group's info from its header. |
 | 126 | (2026-11-03, amends §4.1's *every member rated in the sport* and its one-time intent ask, §9.1's sport step, §17.2 and §19, and the screens' A1, A2.1, A3, A5.1, A6, A8, A9 and B4; reverses the questionnaire at sign-up, whose reason it keeps; ruled by the product owner in the onboarding grilling (Q5, Q14–Q20, Q25–Q28 there, and Q13, Q23 and Q24 for the nickname), with no story or finding; specified by PRD [#722](https://github.com/Raketa02/Raketa/issues/722) and [#723](https://github.com/Raketa02/Raketa/issues/723); recorded by [ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §2–§7 and [ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)) *Now that sign-up asks no skill question, where is a level asked?* **Where play begins.** In a player group, a member rated in nothing sees one door on Games, Fill in, Friends, Post a game and Members: *Get your level — pick the sports you play, a few questions each*. It opens *Which sports do you play?* with nothing ticked; after each sport *Your rating* offers *Rate tennis* and *Done for now*; the last offers *Back to Wednesday padel*, which returns to the tab she began on, and on Games the intent question comes next, then the deck. A sport she rates needn't be one the group plays. An official group keeps its own card while she is rated in none of its sports, offering only those, and its button and Post a game's *Get rated in padel to post here* now return to the group. The sport chip appears only once she holds a rating, lists only rated sports, and ends with *+ Another sport* (any unrated sport in a player group; the group's unrated sports in an official one). An unfinished run is never forced: the door reads *Carry on with your padel questions — you're on question 5*. Members still lists only rated members. For a player who never opens a group, Home shows *Get your level — your groups can't deal you games until you have one.*, and one notice, *Get your level so your groups can deal you games.*, goes once per account ever, a day after the first group join, always on, opening Home, never emailed. **Every player in this document is named by their nickname, without an @** ([ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)): an example such as *Oscar Bertran left your game* reads *oscar.b left your game*. Calls made without a ruling: Members shows the door, and the device's back button skips *Your rating*'s guide. **Evidence:** sign-up took 20–24 screens; a rating is read only where play happens; Playtomic asks for a level only *if you want to join open matches or competitions*; and an unrated player still cannot say yes, post or take a seat, so nobody plays a first game unrated. |
 | 127 | (2026-11-05, amends §3's *You see only the segments that match your intent*, §4.1's intent bullet, §6.3, §8.3 and §19, and the screens' A1, A2.1, A10, C3 and C4; amends the proposals rule *no route makes a proposal*; ruled by the product owner in the intent grilling (Q1–Q8 there), with no story or finding; specified by PRD [#736](https://github.com/Raketa02/Raketa/issues/736) and [#737](https://github.com/Raketa02/Raketa/issues/737); recorded by [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)) *How does a player get the other kind of game, and what happens to the cards of the kind they drop?* **The other kind is a door, and a changed intent leaves the cards you haven't answered.** Eight rulings. **Q1:** one setting — what a player is dealt and who they are dealt to stay one fact, because a card is one game everybody on it sees — and card building is unchanged. **Q2:** the change happens in place, on the group page, never by a trip to the You tab. **Q3:** a changed intent takes the player off the cards of the dropped kind they haven't answered, and their seats go to the next best fits; yeses already given stay. **Q4:** the other kind is always on the switch, with no number and slightly dimmed, both ways round; the product owner rejected a `+ For fun` label, because the plus implies Raketa adds games on its own when the choice is the player's. **Q5:** tapping it opens a panel in the standard answers' words — *Either suits me* first, then the kind tapped — with a cost line under each, and *Keep competitive* closing it. **Q6:** after the answer the tab says *Finding for-fun games for you…* until the games are built, then the cards or the usual empty card, and the first-time question gets the same state (*Finding games for you…* after *Either suits me*). **Q7:** an *Either suits me* player narrows from the You tab only; a line under the switch was rejected because it eats deck height and could cut the cards. **Q8:** the You tab's *What kind of game* rows get the same cost lines, counted across all the player's groups. Four calls made while specifying, agreed by the product owner before PRD #736 was published: (1) the finding state ends when a new route, `POST /pools/{id}/deal`, has dealt the group, not on a timer — it runs the engine's batch for one pool and makes no card itself; (2) a player who switches back before her seat is taken is a name on her old card again; (3) a late yes on a dropped kind is refused with `no_longer_fits`; (4) a zero count drops the number from the line (*Raketa stops dealing you competitive games. Games you're In on stay.*). Defaults stated in the grilling and not objected to: the deck never opens on the dimmed kind; the remembered kind stays one for the app; no switch while the first-time question is up; the Friends tab's switch is untouched; intent stays per sport. **Evidence:** the deck showed only the kinds the intent wanted and the engine dealt only members whose intent wanted the kind, so a player answering Competitive once never saw that her group had for-fun games; an intent change marked her groups due and did nothing to cards already dealt, so her name stayed on others' cards and her seat was held for nobody; a yes on a pick did not ask the kind; and Seat open offers already read intent live. |
+| 128 | (2026-11-06, amends §3's *Friends is out of scope* and the switch on the Friends tab, §4.3's official-group bullet, Q29, Q68's *only once a friends feature exists*, §12.1's *no player ever pays another player's share*, §12.5 and O3, §16.6's default, §16.13, §18, §20 and §22.1, and the screens' A1, A2.3, B5 and B8; supersedes ADR-0199's *there is no friendship in Raketa* and ADR-0183 §13's *no friends list*; ruled by the product owner in the friends grilling (Q1–Q46 there), from their Friends brief and its twelve mocks, with no story or finding; specified by PRD [#743](https://github.com/Raketa02/Raketa/issues/743) and [#744](https://github.com/Raketa02/Raketa/issues/744), in [the Friends spec set](../friends/README.md); recorded by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)) *How does a player play with the people they know, and where does an official group play when its club is full?* **Friends are a request and an answer between people who met in a group or through a link; a friends game is booked the moment it is sent, its sender covering any seat still unpaid at the cut-off; and an official group uses other clubs' courts hour by hour.** **Rulings** (where a later answer replaced an earlier one, only the later one is listed): **Q1** *Not now* keeps the request open, untold. **Q2** an Accept pill on Members, and crossed requests make friends. **Q3** cancel and remove on the record, silently. **Q4/Q41** a You row opens the Friends page with three tabs (*Friends · Asked you · You asked*), and the group opens a picker. **Q5** a block ends a friendship and swallows requests. **Q6** the neutral sentence for a blocked pair, *These four can't all play together. Swap someone.* **Q7** a friend with no level greyed with *No padel level yet*. **Q9** a random-code link with *New link*, a deep link in production. **Q10** evenest sides on Done, with swapping; *the mock is just a mock*. **Q11** the request card names the group the request was made in. **Q12** the *friend* tag only on your own friends. **Q13** Home is friends game, then friend requests, then Your games. **Q14** any friend may be seated, as a guest when not in the group. **Q15** intent never excludes, and the invitation names the kind. **Q16** no card until every seat is filled. **Q19** *Call it off*, and no changing a sent game's court. **Q21** official groups hour by hour, in the deck and Post a game too, the switch kept and on by default. **Q23** a booked game's open seat goes to the group's Fill in. **Q24** every new notice is always on. **Q26** PLAYED WITH on the result screen. **Q28** booked at send, *Split* or *Whole court*, friends games only. **Q29** *pay* on every button, the maximum stated above the sender's: *We hold 100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł for any seat still empty then.* · **Send game and pay 25 zł**; friends **Accept and pay 25 zł**; Whole court **Send game and pay 100 zł** and **Accept** with *Tomek paid the court*; one lawyer question added (§12.5). **Q30** 24 hours to answer, never past the cut-off, and silence is *Not this time*; the sender can call off rather than pay. **Q31** *Invite a friend* or *Open to the group* for an empty seat, nothing automatic before the cut-off, and at the cut-off the seat charged to the sender and opened, a taker refunding him less the fee. **Q32** an accepted friend may leave free until the cut-off. **Q33** after the cut-off any leave is a rescue. **Q34** at most 2 friends games waiting, each one of every player's games that week. **Q35** the sender's game in Your games (*2 of 3 friends in · waiting for Ania*), and the tab resets. **Q36** *Find a court*'s rows tinted by how many of the four are free, all pickable. **Q37** the link ends in a request on Home, never a friendship by itself. **Q38** the store page with *Open in Raketa*, plus Android's install referrer for both kinds of link. **Q39/Q45** *Ask for a level*, by notification both ways, once per sport. **Q40** *Add friend* and *Block* side by side on the record. **Q42** the cover warning 24 hours before the cut-off, Split only. **Q43** *Leave · the others play on*: Split turns the game ordinary, Whole court keeps the sender paying. **Q44** anyone In may invite into an open seat, first to accept and pay wins; only the sender opens to the group before the cut-off. **Q46** nobody takes over the cover. **Calls agreed by the product owner before PRD #743 was published:** (1) the cover is one hold per seat, using today's hold, take and let-go steps, so partial capture isn't needed (refined by call 7); (2) sending and accepting are made with the player present, so a bank confirmation happens in the app; (3) the other-clubs switch is on by default for every club, existing ones included, and the club website keeps *when ours are full*; (4) the picker sorts friends by level, highest first, as in mock 3; (5) the card avoids any hour where one of the four has a game, and a full week refuses Accept with a sentence; (6) one row, Q128, records the grilling. **Calls made while writing, open for the product owner to overrule:** (7) **covers stay held until the cut-off**, and only then is each taken (its seat unpaid by its own player) or let go, because letting one go when its friend paid would need a new hold on the sender's card without him there if she later left; (8) the Split / Whole choice and the final order button sit on a **send sheet**, so the maximum is on screen when the binding button is pressed; (9) an invitation made after the cut-off, into a rescue seat, runs 24 hours but never past the game's start; (10) friends games ignore the level window, the kind's tolerance and gender preferences, and still respect blocks, a level in the sport, one game per hour and the weekly limit, a seat opened to the group being offered as any rescue is; (11) on You › Friends, friends are sorted alphabetically, each row showing the sports they play with their levels. **Defaults stated in the grilling and not objected to:** Info stays in the group header; the *friend* tag on every face; the Friends tab's kind switch is per game, never intent; hours from the club's book-by to 14 days where nobody has a game; the usual yes withdrawals; friendship survives leaving a group and ends on deletion; the administrator's Members view has no pills; the chat opens at send; a club's cancel moves the game; the club sees an ordinary booking. **Evidence:** the group page's Friends tab drew a court and a picker that always read *Nobody you know here yet*; an Ogrody game could never name Ania, who is only in Kazimierz crew; and Ogrody 33's 20 weekly hours left Tomek's four Tuesday or nothing while Wisła Park, 4 km away, was free on Saturday at 10:00. Rivals book at once and hold one person responsible: Playtomic's split booking has *the owner* book and charges the owner the unpaid rest; MATCHi holds the full court on the booker's card; Playmore's organiser pays the whole court, and its challenge reserves the court at once, *you pay only when the rival accepts, at the latest a day before the match*. LinkedIn and Strava don't tell a sender of a declined request, and MATCHi's shared profile link adds nobody by itself. The Payment Services Act's art. 49b (PSD2 art. 75) allows blocking an amount only with the payer's consent to that exact amount, and under the Civil Code the cover is the sender's own obligation. An iPhone has no install referrer; Android's Play Install Referrer keeps it for 90 days. A fill threshold (the brief's 70%) would offer Wisła Park beside a free Ogrody 33 hour at 70% booked and nothing at 30% if the one shared hour is gone; Raketa has no measure of a club's fullness. |

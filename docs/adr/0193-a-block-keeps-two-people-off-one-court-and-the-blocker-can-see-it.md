@@ -10,6 +10,13 @@
   so no booking waits for a club. A block takes back the blocker's yeses on **proposals still
   filling** and **never touches a booking**. The second case of §4, *a booking waiting for the club*,
   which told the others In that the blocker left, has nothing left to apply to.
+- **§2's *it reaches nothing else* extended 2026-11-06 by
+  [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)** §2. A block also
+  **ends a friendship**, and any open request between the pair, silently and in either direction, and
+  a request the blocked person sends later is **never shown to the blocker**. §3's *byte for byte the
+  same* now holds against a removal: what the blocked person reads is exactly what a silent removal,
+  or a request set aside, would show them. A friends game's line-up with a blocked pair in it is
+  refused naming nobody, as a yes is.
 - **Amends [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md)** in five
   places:
   - **§3's** *"from any surface where that player is visible"* becomes **no surface is recorded**
@@ -125,6 +132,11 @@ record, as any co-member can.
   or not she blocked him**. The record's other gates, and their one refusal, are unchanged.
 - **A chat they already share keeps working.** A booked game's arrangements are not cut off by a
   block on either side.
+
+> **Extended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §2.** A block now reaches one
+> more thing, a friendship: it ends the friendship and any open request between the pair, and a
+> request the blocked person sends later is never shown to the blocker, who reads nothing. The
+> blocked person keeps reading *request sent*, as after a request set aside.
 
 ### 3. Nobody is shown that they were blocked, and you can see your own blocks
 

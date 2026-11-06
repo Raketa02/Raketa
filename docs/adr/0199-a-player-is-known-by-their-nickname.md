@@ -1,6 +1,10 @@
 # ADR-0199 — A player is known by their nickname
 
-- **Status:** Accepted
+- **Status:** Accepted — **its *Context*'s *"there is no friendship in Raketa"* superseded
+  2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)**: players have
+  friends, held across their groups. The alternative that line argued against, *keep the name, show
+  it to friends only*, stays rejected: the Name is retired, and a friend reads the nickname everybody
+  reads.
 - **Date:** 2026-11-03
 - **Supersedes [ADR-0171](0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
   in full.** The **Name** is retired. The **Nickname** is what every sentence, row, card, sheet,
@@ -70,6 +74,8 @@ second. PRD #722 cuts onboarding to eight screens, and this is one of them.
   for nothing, about a real person, which is the opposite of what a newcomer expects.
 - **Keep the name, show it to friends only.** There is no friendship in Raketa (the Friends tab is
   out of scope), so this is a privacy setting to build and explain before anybody needs it.
+  *(Superseded 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md): there is now friendship. The alternative stays
+  rejected, since the Name is retired.)*
 - **Write the nickname with an @** (*@ania.k put a score up*). The @ is a chat app's mention mark.
   Raketa has no mentions, and inside a sentence it reads as markup (Q23).
 
