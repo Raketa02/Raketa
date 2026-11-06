@@ -24,6 +24,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 #: Every operation the public site may call today, as ``method path``.
 PUBLIC_OPERATIONS = {
+    "get /api/v1/public/friend-links/{code}",
     "get /api/v1/public/groups/{code}",
     "post /api/v1/public/invitations/by-token",
     "post /api/v1/public/invitations/password",

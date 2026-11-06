@@ -652,8 +652,8 @@ there; they are not repeated here.
   off the stream, because the `users` row has no column for it — and a `User` read from the row
   carries `adult_attested=None`, meaning *not read here*, never *not attested*.
 
-- **Friend relation row** — one row of `friend_relations`, the Friends context's one projection
-  beside its **Friendship** streams (#745,
+- **Friend relation row** — one row of `friend_relations`, the projection beside the Friends
+  context's **Friendship** streams (#745,
   [ADR-0202](../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
   §8): **the reader's side of one pair** — `SENT`, `ASKED_YOU` or `FRIEND`, since when, *Not now*
   on an `ASKED_YOU`, and where a request was made. Two rows per pair while something stands
@@ -661,6 +661,12 @@ there; they are not repeated here.
   `save`. Keyed on the reader first, so *my relation to these people* is one question on the
   primary key and there is no read about two other people at all. _Avoid_: "friend list
   table", a row per pair (a pair row is read from neither side).
+- **Friend link code row** — one row of `friend_link_codes`, the projection beside the
+  **Friend link** streams (#748): a code, its owner, and `current` — true while the owner's
+  link carries it, false for ever once **New link** replaced it. **Every code ever carried
+  keeps its row**, so the minter never hands one out twice; written from the events appended,
+  since a replaced code is no longer in the aggregate's state. _Avoid_: "invite code", "link
+  table".
 - **Unseen request** and **the reader's-side filter** — the two mechanisms behind the glossary's
   *a block swallows the blocked person's later requests* (ADR-0202 §2). A request asked while
   the addressee has blocked the requester is recorded **`unseen`** (`FriendRequested.unseen`):

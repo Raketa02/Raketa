@@ -326,7 +326,7 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   (`FriendsOfTheReader` in `told_by.py`, over Friends' `ReadRequestsWaiting` and `ReadRelations`;
   `notification_demands.py`'s tenth row). About no game: `game_id`, `game_kind`, `club_id` and
   `starts_at` are `None`, **the group a request was asked from rides as `pool_id`** and its sport
-  as `sport` (both `None` for a link's, whose `reason` is `LINK`), and the person is `people[0]`
+  as `sport` (both `None` for a link's, whose `reason` is `BY_LINK`), and the person is `people[0]`
   — `player_id` on the wire (`NoticeSchema.player_id`) and in the push data. Words from
   `words.py`'s `words_about_no_game(SaidOfNoGame)`, the group's name read through
   `Names.of_groups`. `FRIEND_REQUEST` is told **once per request, only while its card is on the
@@ -334,7 +334,9 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   list and the bell's number once the card leaves Home** — answered, set aside, cancelled, ended
   or hidden by a block — `ReadRecentNotices` leaving out (`NoticeDirectory.recent(…,
   leaving_out=)`, in the one reading) every `FRIEND_REQUEST` row whose `(people[0], given_at)` is
-  not a waiting `(requester, asked_at)` (`NoticeDirectory.of_kind`). `FRIENDS_MADE` goes to whoever
+  not a waiting `(requester, asked_at)` (`NoticeDirectory.of_kind`) — so a request set aside and
+  **brought back by opening its requester's link** (#748, `friends.friend_request_brought_back`,
+  told nobody) has its row back with its card. `FRIENDS_MADE` goes to whoever
   asked (*… said yes — you're friends*), and to both, `reason` `CROSSED`, when the requests
   crossed (*You and … are friends now*), while they still are, opening **`Opens.RECORD`**, the
   friend's record. No migration: every column was there.

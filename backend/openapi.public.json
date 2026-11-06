@@ -291,6 +291,59 @@
           }
         }
       }
+    },
+    "/api/v1/public/friend-links/{code}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Who a friend link is from",
+        "description": "`code` is what follows `/f/` in the link, read in any case. The owner's nickname and first photograph \u2014 **and nothing else about them**.",
+        "operationId": "friend_link_page_api_v1_public_friend_links__code__get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkedFriendResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`friend_link_not_found` \u2014 *Nothing at that link*: the code was replaced by a New link, no link ever carried it, or it could be no link's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -439,6 +492,33 @@
         ],
         "title": "InvitationPageResponse",
         "description": "What the invitation page greets with \u2014 **the least it needs**\n(``docs/adr/0187`` \u00a75), and no email: the page locks no field to it."
+      },
+      "LinkedFriendResponse": {
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "Their first photograph, a link that expires within minutes; `null` when they have none."
+          }
+        },
+        "type": "object",
+        "required": [
+          "nickname",
+          "photo_url"
+        ],
+        "title": "LinkedFriendResponse",
+        "description": "A Friend link's owner as the public site's `/f/<code>` page draws them for\nsomebody who has not signed in \u2014 *{nickname} invited you to play on\nRaketa* \u2014 **and nothing else about them**."
       },
       "LinkedGroupClubSchema": {
         "properties": {

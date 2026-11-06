@@ -1,7 +1,7 @@
 """The Friends context's durable event names, and who hears them.
 
 A name here is a **published contract** and outlives every Python class it maps
-to. Six names, all at version 1 (``domain/events.py``).
+to. Nine names, all at version 1 (``domain/events.py``).
 
 **Three listeners**: the audit line, which needs nothing per delivery; the
 block ender (``handlers/blocking.py``), which writes and so is subscribed per
@@ -19,6 +19,9 @@ from app.modules.friends.application.handlers import (
     LogFriendEvent,
 )
 from app.modules.friends.domain.events import (
+    FriendLinkMade,
+    FriendLinkReplaced,
+    FriendRequestBroughtBack,
     FriendRequestCancelled,
     FriendRequestCrossed,
     FriendRequested,
@@ -34,6 +37,9 @@ _CONTRACTS = (
     (FriendRequestCrossed, "friends.friend_request_crossed", 1),
     (FriendsMade, "friends.friends_made", 1),
     (FriendshipEnded, "friends.friendship_ended", 1),
+    (FriendRequestBroughtBack, "friends.friend_request_brought_back", 1),
+    (FriendLinkMade, "friends.friend_link_made", 1),
+    (FriendLinkReplaced, "friends.friend_link_replaced", 1),
 )
 
 

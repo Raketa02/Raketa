@@ -464,6 +464,7 @@ from app.modules.groups.domain.ports import (
     ReaderAreas,
 )
 from app.modules.friends.application.handlers import EndFriendshipsOnABlock
+from app.modules.friends.application.link import ReadYourFriendLink
 from app.modules.friends.application.reads import (
     ReadRelations,
     ReadRequestsOnHome,
@@ -477,11 +478,16 @@ from app.modules.friends.application.requests import (
 from app.modules.friends.domain.ports import (
     FriendFaces,
     FriendLevels,
+    FriendLinkCodes,
+    FriendLinkRepository,
     FriendReliabilities,
     FriendshipDirectory,
     FriendshipRepository,
     ReadersBlocks,
     ReadersGroups,
+)
+from app.modules.friends.infrastructure.event_sourced_friend_link_repository import (
+    EventSourcedFriendLinkRepository,
 )
 from app.modules.friends.infrastructure.event_sourced_friendship_repository import (
     EventSourcedFriendshipRepository,
@@ -490,6 +496,9 @@ from app.modules.friends.infrastructure.own_blocks import OwnBlocks
 from app.modules.friends.infrastructure.profile_friend_faces import ProfileFriendFaces
 from app.modules.friends.infrastructure.published_friend_reliability import (
     PublishedFriendReliability,
+)
+from app.modules.friends.infrastructure.random_friend_link_codes import (
+    RandomFriendLinkCodes,
 )
 from app.modules.friends.infrastructure.rated_friend_levels import RatedFriendLevels
 from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
@@ -3385,6 +3394,41 @@ def build_read_requests_on_home(
         levels=build_friend_levels(session, runtime=runtime),
         reliability=build_friend_reliabilities(session),
         groups=build_readers_groups(session),
+        clock=clock,
+    )
+
+
+def build_friend_link_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> FriendLinkRepository:
+    """Per unit of work. **It takes the session as well as the store**, because
+    its ``save`` writes the codes a link carried to ``friend_link_codes`` in the
+    same transaction (#748)."""
+    return EventSourcedFriendLinkRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_friend_link_codes(session: AsyncSession) -> FriendLinkCodes:
+    return RandomFriendLinkCodes(session)
+
+
+def build_read_your_friend_link(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> ReadYourFriendLink:
+    """The reader's link, made on their first read — built over one session for
+    a seed run as the route builds it per request."""
+    return ReadYourFriendLink(
+        links=build_friend_link_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        codes=build_friend_link_codes(session),
+        uow=build_unit_of_work(session),
         clock=clock,
     )
 

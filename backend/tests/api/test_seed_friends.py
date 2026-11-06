@@ -1,9 +1,9 @@
 """The seeded friends, read back the way the player app reads them (#745).
 
 ``app/seeds/friends.py`` makes friends, open requests both ways, a request set
-aside and a block case **through the use cases a request runs**, so each is
-asserted by signing in as a named account and reading the friend routes and
-Home — never a table. A second run asks nobody twice.
+aside, a block case and every named account's Friend link (#748) **through the
+use cases a request runs**, so each is asserted by signing in as a named account
+and reading the friend routes and Home — never a table. A second run asks nobody twice.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import pytest
 from app.bootstrap.composition import build_clock
 from app.core.config import get_settings
 from app.seeds.catalog import (
+    ACCOUNTS,
     ASSESSMENT_COMPLETED,
     RATED_IN_EVERY_SPORT,
     RATING_BARELY_ESTABLISHED,
@@ -97,6 +98,20 @@ async def test_the_blocked_players_request_reads_sent_and_the_blocker_sees_nothi
 
 
 async def test_a_second_run_asks_nobody_twice(session_factory, now, seeded):
+    """Nor makes anybody a second link: the same codes, read again."""
+
     again = await write_the_friends(session_factory, settings=get_settings(), now=now)
 
     assert again == seeded
+
+
+async def test_every_named_account_has_the_link_its_sheet_reads(client, seeded):
+    assert set(seeded.links) == {account.slug for account in ACCOUNTS}
+    her = await signed_in(client, THE_POPULATED_PLAYER)
+
+    read = await client.get("/api/v1/friends/link", headers=her)
+
+    assert read.status_code == 200, read.text
+    assert read.json()["link"] == seeded.links[THE_POPULATED_PLAYER.slug]
+    page = await client.get(f"/api/v1/public/friend-links/{read.json()['code']}")
+    assert page.json()["nickname"] == THE_POPULATED_PLAYER.nickname

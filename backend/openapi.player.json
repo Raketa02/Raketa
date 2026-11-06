@@ -1915,6 +1915,148 @@
         }
       }
     },
+    "/api/v1/friends/link": {
+      "get": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Your friend link",
+        "description": "The Add friends sheet's *Not on Raketa yet?* card: `<public site>/f/<code>`, **made the first time you read it** and the same on every read after, until you take a New link. Somebody who opens it finds your request on their Home.",
+        "operationId": "read_your_friend_link_api_v1_friends_link_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendLinkResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two reads or New links of yours raced: retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/friends/link/replacement": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "New link",
+        "description": "A fresh code, and **the old one dead at once**: opened in the app or on the public site, it reads `friend_link_not_found`. Requests already made through it stay as they are. No code is ever handed out twice.",
+        "operationId": "replace_your_friend_link_api_v1_friends_link_replacement_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendLinkResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two reads or New links of yours raced: retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/friends/links/{code}/opening": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Open a friend link",
+        "description": "`code` is what follows `/f/` in the link, read in any case. **The owner's request lands on your Home**, *{nickname} wants to be your friend \u00b7 Invited you to Raketa*, with Accept and Not now \u2014 whether or not you share a group. Opened again, it makes no second request, and a request of theirs you set aside comes back to Home.\n\n**Nothing happens** for your own link (`NONE`) or a friend's (`FRIEND`). **If you had asked them, the requests cross**: you are friends at once (`FRIEND`).",
+        "operationId": "open_a_friend_link_api_v1_friends_links__code__opening_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenedFriendLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`friend_link_not_found` \u2014 *Nothing at that link*: the code was replaced by a New link, or no link ever carried it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`unblock_them_first` \u2014 you blocked the link's owner; `concurrent_modification` \u2014 two acts on the two of you raced: retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/friends/requests": {
       "post": {
         "tags": [
@@ -9983,6 +10125,27 @@
         "title": "FreeCourtSchema",
         "description": "One *Free courts* row: a club and hour the post could be made at."
       },
+      "FriendLinkResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "What follows `/f/`: eight letters and digits, random, shaped like a group's code. **The same on every read** until you take a New link."
+          },
+          "link": {
+            "type": "string",
+            "title": "Link",
+            "description": "`<public site>/f/<code>` \u2014 what **Copy** puts on the clipboard."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "link"
+        ],
+        "title": "FriendLinkResponse",
+        "description": "Your Friend link, as the Add friends sheet's *Not on Raketa yet?* card\nshows it (#748)."
+      },
       "FriendRelation": {
         "type": "string",
         "enum": [
@@ -12896,6 +13059,19 @@
         ],
         "title": "OpenCardsResponse",
         "description": "Every card waiting for you, **soonest to expire first**.\n\nAn empty list is the ordinary answer and means nothing is waiting. It does\nnot distinguish *no games*, *not yet a day* and *already answered*: all three\nare simply not on the list, and none of them is something a client would draw\ndifferently.\n\n``cards`` is **required and never absent**, empty though it usually is: a\ndefault would emit it as optional and hand every client a list it has to\ncheck for existence before checking for length."
+      },
+      "OpenedFriendLinkResponse": {
+        "properties": {
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to the link's owner once it is opened. `ASKED_YOU` \u2014 their request is on your Home, *Invited you to Raketa*: land there. `FRIEND` \u2014 you were friends already, or you had asked them and the requests crossed. `NONE` \u2014 the link is your own, and nothing happened."
+          }
+        },
+        "type": "object",
+        "required": [
+          "relation"
+        ],
+        "title": "OpenedFriendLinkResponse"
       },
       "Opens": {
         "type": "string",

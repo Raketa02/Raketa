@@ -22,10 +22,18 @@ from app.api.dependencies import (
 from app.bootstrap.composition import (
     build_friend_faces,
     build_friend_levels,
+    build_friend_link_codes,
+    build_friend_link_repository,
     build_friendship_directory,
     build_friendship_repository,
     build_readers_blocks,
     build_readers_groups,
+)
+from app.modules.friends.application.link import (
+    OpenAFriendLink,
+    ReadAFriendLink,
+    ReadYourFriendLink,
+    ReplaceYourFriendLink,
 )
 from app.modules.friends.application.reads import (
     ReadFriendRequests,
@@ -41,6 +49,8 @@ from app.modules.friends.application.requests import (
 )
 from app.modules.friends.domain.ports import (
     FriendFaces,
+    FriendLinkCodes,
+    FriendLinkRepository,
     FriendshipDirectory,
     FriendshipRepository,
     ReadersBlocks,
@@ -197,3 +207,77 @@ def get_read_groups_to_add_from(
 ReadGroupsToAddFromDep = Annotated[
     ReadGroupsToAddFrom, Depends(get_read_groups_to_add_from)
 ]
+
+
+# -- the Friend link (#748) ---------------------------------------------------
+
+
+def get_friend_link_repository(
+    db: DbSession, event_store: DomainEventStoreDep, events: EventPublisherDep
+) -> FriendLinkRepository:
+    # Per request: it remembers the stream versions it read.
+    return build_friend_link_repository(db, event_store=event_store, events=events)
+
+
+FriendLinkRepositoryDep = Annotated[
+    FriendLinkRepository, Depends(get_friend_link_repository)
+]
+
+
+def get_friend_link_codes(db: DbSession) -> FriendLinkCodes:
+    return build_friend_link_codes(db)
+
+
+FriendLinkCodesDep = Annotated[FriendLinkCodes, Depends(get_friend_link_codes)]
+
+
+def get_read_your_friend_link(
+    links: FriendLinkRepositoryDep,
+    codes: FriendLinkCodesDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ReadYourFriendLink:
+    return ReadYourFriendLink(links=links, codes=codes, uow=uow, clock=clock)
+
+
+ReadYourFriendLinkDep = Annotated[
+    ReadYourFriendLink, Depends(get_read_your_friend_link)
+]
+
+
+def get_replace_your_friend_link(
+    links: FriendLinkRepositoryDep,
+    codes: FriendLinkCodesDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ReplaceYourFriendLink:
+    return ReplaceYourFriendLink(links=links, codes=codes, uow=uow, clock=clock)
+
+
+ReplaceYourFriendLinkDep = Annotated[
+    ReplaceYourFriendLink, Depends(get_replace_your_friend_link)
+]
+
+
+def get_open_a_friend_link(
+    codes: FriendLinkCodesDep,
+    friendships: FriendshipRepositoryDep,
+    blocks: ReadersBlocksDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> OpenAFriendLink:
+    return OpenAFriendLink(
+        codes=codes, friendships=friendships, blocks=blocks, uow=uow, clock=clock
+    )
+
+
+OpenAFriendLinkDep = Annotated[OpenAFriendLink, Depends(get_open_a_friend_link)]
+
+
+def get_read_a_friend_link(
+    codes: FriendLinkCodesDep, faces: FriendFacesDep
+) -> ReadAFriendLink:
+    return ReadAFriendLink(codes=codes, faces=faces)
+
+
+ReadAFriendLinkDep = Annotated[ReadAFriendLink, Depends(get_read_a_friend_link)]

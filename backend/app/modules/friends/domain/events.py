@@ -1,9 +1,12 @@
-"""The Friends context's durable events — six, and what each carries.
+"""The Friends context's durable events — nine, and what each carries.
 
 Primitive fields only, so the wire format survives a refactor of the Python
 types: the two players as their uuids, the enums as their values. **Every event
 names both players**, so *every friendship this player appears in* is a
 question the log itself can answer, as a Block's is.
+
+**A Friend link's two events name its owner alone** (#748): the code it carries
+is an address posted to chats, no secret (``domain/link.py``).
 
 **None of them is a notification by itself.** They ride the outbox because every
 event does; Notifications tells a request to the person asked and *friends made*
@@ -44,6 +47,18 @@ class FriendRequested:
 class FriendRequestSetAside:
     """``friends.friend_request_set_aside`` v1 — *Not now*. The request stays
     open; the card leaves the reader's Home, and the requester is never told."""
+
+    requester_id: UUID
+    addressee_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class FriendRequestBroughtBack:
+    """``friends.friend_request_brought_back`` v1 — the person asked opened the
+    requester's Friend link (#748) while the request stood **set aside**: it is
+    back on their Home, and nobody is told — they are the one who just opened
+    it."""
 
     requester_id: UUID
     addressee_id: UUID
@@ -101,4 +116,25 @@ class FriendshipEnded:
     ended_by: UUID
     other_id: UUID
     how: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class FriendLinkMade:
+    """``friends.friend_link_made`` v1 — the owner read their Friend link for
+    the first time, and it was made: ``<public site>/f/<code>``."""
+
+    owner_id: UUID
+    code: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class FriendLinkReplaced:
+    """``friends.friend_link_replaced`` v1 — **New link**: ``code`` from now on,
+    and ``replaced_code`` dead, never to lead anywhere again."""
+
+    owner_id: UUID
+    code: str
+    replaced_code: str
     occurred_at: datetime

@@ -23,6 +23,11 @@ pracy* until the first blocked the second; the friendship ended when the block
 was delivered, and ``rated-in-every-sport`` asked again — and reads *request
 sent* for ever while the blocker sees nothing.
 
+**Every named account has a Friend link** (#748), read through
+``ReadYourFriendLink`` as the Add friends sheet reads it — which makes it on the
+first run and reads the same code on every run after — and printed in the
+report, so a developer can open one on a phone signed in as somebody else.
+
 **After every layer that deals and before the screens**, because a block keeps
 two people off one court, and the block's delivery is drained here so the
 friendship has ended before the second request is made. **Re-running asks
@@ -47,6 +52,7 @@ from app.bootstrap.composition import (
     build_group_directory,
     build_read_relations,
     build_read_requests_on_home,
+    build_read_your_friend_link,
     build_readers_blocks,
     build_readers_groups,
     build_unit_of_work,
@@ -64,8 +70,10 @@ from app.modules.friends.application.requests import (
 )
 from app.modules.friends.domain.ports import FriendshipRepository
 from app.modules.friends.domain.friendship import Where
+from app.modules.friends.domain.link import friend_link_url
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
 from app.seeds.catalog import (
+    ACCOUNTS,
     ASSESSMENT_COMPLETED,
     BRAND_NEW_PLAYER,
     RATED_IN_EVERY_SPORT,
@@ -99,6 +107,8 @@ class SeededFriends:
     she_asked: tuple[str, ...]
     #: Whether the block case stands: friends ended by a block, a request since.
     block_case: bool
+    #: Every named account's Friend link, by slug.
+    links: Mapping[str, str]
 
 
 def _friendships(session: AsyncSession) -> FriendshipRepository:
@@ -250,6 +260,7 @@ async def write_the_friends(
         await acts.ask(her, BRAND_NEW_PLAYER, group=BONARKA, hours=26)
 
     block_case = await _the_block_case(session_factory, acts, money=money)
+    links = await _their_links(session_factory, settings=settings, now=now)
 
     async with session_factory() as session:
         home = await build_read_requests_on_home(
@@ -270,6 +281,7 @@ async def write_the_friends(
         ),
         she_asked=_with(relations, FriendRelation.SENT, slug_of),
         block_case=block_case,
+        links=links,
     )
     _refuse_a_seed_that_lies(seeded)
     return seeded
@@ -300,6 +312,30 @@ async def _the_block_case(
     )
 
 
+async def _their_links(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    settings: Settings,
+    now: Instant,
+) -> dict[str, str]:
+    """Every named account's link, read as the sheet reads it: made on the first
+    run, the same code on every run after."""
+
+    links: dict[str, str] = {}
+    for account in ACCOUNTS:
+        async with session_factory() as session:
+            user = await build_user_repository(session).get_by_email(account.email)
+            if user is None:
+                raise RuntimeError(
+                    f"{account.slug} is not registered — the accounts layer runs first"
+                )
+            code = await build_read_your_friend_link(
+                session, clock=FixedClock(at=now)
+            ).execute(user.id)
+        links[account.slug] = friend_link_url(settings.PUBLIC_SITE_URL, code)
+    return links
+
+
 def _with(
     relations: Mapping[UUID, FriendRelation],
     relation: FriendRelation,
@@ -328,6 +364,11 @@ def _refuse_a_seed_that_lies(seeded: SeededFriends) -> None:
         "she asked": ((BRAND_NEW_PLAYER.slug,), seeded.she_asked),
     }
     wrong = {what: (want, got) for what, (want, got) in expected.items() if want != got}
+    unlinked = [
+        account.slug for account in ACCOUNTS if account.slug not in seeded.links
+    ]
+    if unlinked:
+        raise RuntimeError(f"the friends layer gave no Friend link to {unlinked}")
     if wrong or not seeded.block_case:
         raise RuntimeError(
             f"the friends layer did not reach its states: {wrong}, "
@@ -391,4 +432,6 @@ def friend_lines(seeded: SeededFriends) -> list[str]:
         f"  she asked: {', '.join(seeded.she_asked)}",
         f"  {THE_BLANK_WEEK_PLAYER.slug} blocked {RATED_IN_EVERY_SPORT.slug}, "
         "their friendship ended, and the request made since reads sent",
+        "Friend links — open one signed in as somebody else:",
+        *(f"  {slug}: {link}" for slug, link in seeded.links.items()),
     ]

@@ -65,3 +65,16 @@ class FriendRequestNotFound(NotFoundError):
 
     def __init__(self) -> None:
         super().__init__("There is no request from them waiting for you.")
+
+
+class FriendLinkNotFound(NotFoundError):
+    """A link that leads nowhere: a code replaced by **New link**, one nobody's
+    link ever carried, or one that could be no link's code — one answer,
+    *Nothing at that link*, so the route is no oracle for which codes were ever
+    made (the mechanics §4.2). The public read gives it too for an owner nobody
+    can name."""
+
+    code = "friend_link_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("Nothing at that link.")

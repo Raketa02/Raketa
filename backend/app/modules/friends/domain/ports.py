@@ -1,6 +1,9 @@
 """The seams this context is built on, each in its own words.
 
 - ``FriendshipRepository`` — the aggregate's, keyed on the pair.
+- ``FriendLinkRepository`` and ``FriendLinkCodes`` — a player's Friend link,
+  and every code a link ever carried: a fresh one minted, and whose link a code
+  is **now** (#748).
 - ``FriendshipDirectory`` — the ``friend_relations`` projection, read **from one
   reader's side**: there is no method that answers about two other people,
   which is what keeps *Kuba never learns that Tomek and Magda are friends* a
@@ -24,6 +27,7 @@ from uuid import UUID
 from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Instant, Sport, invariant
 from app.modules.friends.domain.friendship import Friendship, Where
+from app.modules.friends.domain.link import FriendLink, FriendLinkCode
 from app.modules.friends.domain.relation import FriendRelation
 
 
@@ -38,6 +42,31 @@ class FriendshipRepository(Protocol):
     async def save(self, friendship: Friendship) -> None:
         """Append the pending events, publish them, and rewrite the pair's two
         projection rows — in the caller's transaction, never committing."""
+        ...
+
+
+@runtime_checkable
+class FriendLinkRepository(Protocol):
+    async def load(self, owner: UUID) -> FriendLink:
+        """The owner's link, replayed — **never ``None``**: a link never read is
+        a FriendLink with no code yet."""
+        ...
+
+    async def save(self, link: FriendLink) -> None:
+        """Append the pending events, publish them, and record the codes they
+        made and retired — in the caller's transaction, never committing."""
+        ...
+
+
+@runtime_checkable
+class FriendLinkCodes(Protocol):
+    async def mint(self) -> FriendLinkCode:
+        """A random code **no link has ever carried**, current or replaced."""
+        ...
+
+    async def owner_of(self, code: FriendLinkCode) -> UUID | None:
+        """Whose link carries ``code`` now — ``None`` for a code replaced, or one
+        no link ever carried."""
         ...
 
 

@@ -14,7 +14,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.kernel import Sport
+from app.kernel import Sport, invariant
 from app.modules.friends.application.reads import (
     Direction,
     Friend,
@@ -22,6 +22,8 @@ from app.modules.friends.application.reads import (
     GroupToAddFrom,
 )
 from app.modules.friends.domain.friendship import Where
+from app.modules.friends.domain.link import FriendLinkCode, friend_link_url
+from app.modules.friends.domain.ports import FriendFace
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
 
 
@@ -198,3 +200,53 @@ class GroupsToAddFromResponse(BaseModel):
     groups: list[GroupToAddFromSchema] = Field(
         description="Every group you are in, newest joined first."
     )
+
+
+class FriendLinkResponse(BaseModel):
+    """Your Friend link, as the Add friends sheet's *Not on Raketa yet?* card
+    shows it (#748)."""
+
+    code: str = Field(
+        description=(
+            "What follows `/f/`: eight letters and digits, random, shaped like a "
+            "group's code. **The same on every read** until you take a New link."
+        )
+    )
+    link: str = Field(
+        description="`<public site>/f/<code>` — what **Copy** puts on the clipboard."
+    )
+
+    @classmethod
+    def of(cls, code: FriendLinkCode, *, public_site: str) -> "FriendLinkResponse":
+        return cls(code=code.value, link=friend_link_url(public_site, code))
+
+
+class OpenedFriendLinkResponse(BaseModel):
+    relation: FriendRelation = Field(
+        description=(
+            "Your relation to the link's owner once it is opened. `ASKED_YOU` — "
+            "their request is on your Home, *Invited you to Raketa*: land there. "
+            "`FRIEND` — you were friends already, or you had asked them and the "
+            "requests crossed. `NONE` — the link is your own, and nothing "
+            "happened."
+        )
+    )
+
+
+class LinkedFriendResponse(BaseModel):
+    """A Friend link's owner as the public site's `/f/<code>` page draws them for
+    somebody who has not signed in — *{nickname} invited you to play on
+    Raketa* — **and nothing else about them**."""
+
+    nickname: str
+    photo_url: str | None = Field(
+        description=(
+            "Their first photograph, a link that expires within minutes; `null` "
+            "when they have none."
+        )
+    )
+
+    @classmethod
+    def of(cls, face: FriendFace) -> "LinkedFriendResponse":
+        nickname = invariant(face.nickname, f"a link's page with no name: {face!r}")
+        return cls(nickname=nickname, photo_url=face.photo_url)

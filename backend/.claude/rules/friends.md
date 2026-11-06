@@ -10,24 +10,26 @@ paths:
 
 # Friends
 
-Decisions that are load-bearing and not obvious from the code (#745;
+Decisions that are load-bearing and not obvious from the code (#745, #748;
 [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §1–§2, §8; [`docs/specs/friends/`](../../../docs/specs/friends/README.md), the mechanics §3, §12;
 the words §29.1–§29.3).
 
 - **A Friendship per pair, event-sourced, and a projection beside it.** `app/modules/friends/`
-  holds one aggregate, **one stream per unordered pair** (`domain/ids.py`: `uuid5` over the
+  holds two aggregates — the Friendship, and the Friend link (below). The Friendship is **one
+  stream per unordered pair** (`domain/ids.py`: `uuid5` over the
   sorted pair, its own namespace — the opposite of a Block's ordered pair, because a friendship
   is one fact about two people and the two requests that could stand between them are
   exclusive). **At most one thing stands between two players**: a friendship, or one open
   request — a second request **crosses** the first and they are friends at once — so the state
-  is `are_friends` and at most one `OpenRequest`. Six events, all v1:
+  is `are_friends` and at most one `OpenRequest`. Seven events, all v1:
   `friends.friend_requested`, `…friend_request_set_aside`, `…friend_request_cancelled`,
   `…friend_request_crossed` (followed in the same act by `…friends_made`), `…friends_made`
   (`how` `ACCEPTED` or `CROSSED`; `requester_id` asked first), `…friendship_ended` (`how`
-  `REMOVED` or `BLOCKED`, `ended_by`). **Every rule is the aggregate's**: no self-request
-  (`cannot_befriend_yourself`), none to a friend (`already_friends`), none while your own is
-  open, set aside or not (`friend_request_already_sent`); only the person asked accepts or sets
+  `REMOVED` or `BLOCKED`, `ended_by`), and the link's `…friend_request_brought_back` (below).
+  **Every rule is the aggregate's**: no self-request (`cannot_befriend_yourself`), none to a
+  friend (`already_friends`), none while your own is open, set aside or not
+  (`friend_request_already_sent`); only the person asked accepts or sets
   aside (`friend_request_not_found` otherwise); a cancel, a removal and a block are **no-ops**
   when there is nothing to take back, so their routes answer `204` either way. **The projection
   is `friend_relations`** (migration 0063): **the reader's side of the pair**, two rows while
@@ -41,7 +43,7 @@ the words §29.1–§29.3).
   - **a request is open to people from your groups** — the requester must share a group with
     them **now** (`ReadersGroups`, signed in `groups/infrastructure/`), else
     `player_not_in_your_groups`, one body for a stranger and an id nobody holds; a request made
-    by `LINK` (#748's) is the one way in from outside and skips it;
+    by `LINK` (the link's opening, below) is the one way in from outside and skips it;
   - **nobody asks somebody they blocked** (`unblock_them_first`) — it would offer friendship
     across their own block; it names only the reader's own block. A call made without a ruling:
     the mechanics say only that the record never offers it, and Members' **+ Add** shows on
@@ -93,7 +95,7 @@ the words §29.1–§29.3).
 - **Where a request was made** is the request's: `RequestOrigin` `MEMBERS · RECORD · RESULT ·
   LINK`, and the screen's `group_id` and `sport` when it showed them (`Where`; a link's names
   neither). The phone sends the first three (`AskedFrom`, `POST /friends/requests`); `LINK` is
-  never sent — it is #748's link opening. **The group is kept only if the two share it at
+  never sent — it is the link's opening (#748). **The group is kept only if the two share it at
   asking**, so a notice never names a group a client merely sent; the Home card names it only
   while both are still in it.
 - **The routes** (player surface, `presentation/routes.py`): `POST /friends/requests` (answers
@@ -133,9 +135,58 @@ the words §29.1–§29.3).
   which reads `SENT` and is hidden from the blocker. Each pair is read first, so a second run
   asks nobody twice; `_refuse_a_seed_that_lies` fails the run by name.
 - **Tested** over HTTP in `tests/api/test_friends.py` (every scene, the notices, the bell),
+  `tests/api/test_friend_link.py` (the code, New link, every opening case, the public read),
   `tests/api/test_friends_on_every_face.py` (each surface's tag, *PLAYED WITH*, Home's
   requests) and `tests/api/test_seed_friends.py`; the four lent ports in the record's,
   proposals' and notifications' demand registers (`tests/demands/friends_world.py` arranges
   them through the aggregates).
-- **Not built here**: the Friend link (#748), asking for a level (#749), the friends card and
-  the friends game (#750–#752). `Where(made_from=LINK)` and `by_link` are ready for #748.
+- **The Friend link** (#748; the mechanics §4; `domain/link.py`, `application/link.py`) — a
+  second aggregate, **one stream per player** (`friend_link_id`: `uuid5`, its own namespace,
+  over the owner), two events, v1: `friends.friend_link_made` (on the owner's **first read**)
+  and `…friend_link_replaced` (**New link**: `code`, `replaced_code`). **The code is in the
+  events**, as a group's is in `groups.created`: an address posted to chats on purpose, not a
+  credential — ADR-0184 §4 is about what signs somebody in. `FriendLinkCode` is a group code's
+  shape, **spelled twice** because Friends imports no group, held equal by
+  `tests/unit/test_friend_link_code.py`; read lower-cased, and anything that could be no
+  link's is `friend_link_not_found` like a code never made. **`friend_link_codes`** (migration
+  0064) holds **every code ever carried**, `current` false once replaced and never true
+  again, written by the repository from the events it appends (a replaced code is not in the
+  state); the minter (`RandomFriendLinkCodes`, `secrets`) checks every row, so **no code is
+  reused**, and the primary key is the guard behind it. A first read writes; two that race
+  are `concurrent_modification`, and the retry reads the winner's code.
+- **Opening a link records the owner's request to the opener** (`OpenAFriendLink`), made by
+  `LINK`, **asking for no group in common** — Home's *Invited you to Raketa*, its notice
+  `BY_LINK`. It answers **the opener's relation to the owner** (`OpenedFriendLinkResponse`):
+  - **your own link**: `NONE`, nothing recorded;
+  - **a friend's**: `FRIEND`, nothing;
+  - **the opener's own request open**: the aggregate crosses it, `FRIEND`, both told;
+  - **the owner's request open already**: no second one, `ASKED_YOU`. **One the opener set
+    aside comes back to Home** (`Friendship.bring_back`, `friends.friend_request_brought_back`,
+    told nobody — its notice row, if it was told, returns to the bell with the card). **A
+    call** the mechanics §12 left to this ticket and #756: opening the owner's link is asking
+    to see the owner's request, and *Not now* was the opener's to take back. **One recorded
+    `unseen` stays hidden** — asked while the opener had blocked the owner, it is one they
+    never see, and unblocking brings nothing back (§3.5); its card would name the group, and
+    tell them the owner asked across their block. Answered `ASKED_YOU` all the same, never
+    `NONE`, which means *your own link*;
+  - **the owner blocked the opener**: **swallowed** — nothing recorded, and the answer is
+    `ASKED_YOU`, exactly a request's, so the opener lands on an empty Home (the cost ADR-0202
+    names). The owner's blocks are read to decide and never answered;
+  - **the opener blocked the owner**: `unblock_them_first`, as asking them would be — **a
+    call**: the mechanics list the four cases above and say nobody is offered friendship with
+    somebody they blocked;
+  - **replaced, never made, or no code's shape**: `friend_link_not_found`.
+- **The link routes** (`presentation/link_routes.py`, player surface): `GET /friends/link`
+  (`code`, `link` = `<PUBLIC_SITE_URL>/f/<code>`; made on first read),
+  `POST /friends/link/replacement` (New link), `POST /friends/links/{code}/opening`. **The
+  public read** (`presentation/public_routes.py`, `/api/v1/public/friend-links/{code}`,
+  `ReadAFriendLink`): the owner's `nickname` and `photo_url`, **nothing else** — an owner
+  nobody can name (`FriendFace.nickname` `None`: an account gone) reads as not found there.
+  **The opening does not check it**: no account can be deleted yet, and a request from one
+  would be left off every list as any nameless row is; when deletion lands, it ends the
+  owner's link too. Requests made through a replaced code stay.
+- **Seeded**: every named account (`ACCOUNTS`) reads its link through `ReadYourFriendLink`
+  in the friends layer — made on the first run, the same code after — and the report prints
+  them.
+- **Not built here**: asking for a level (#749), the friends card and the friends game
+  (#750–#752).

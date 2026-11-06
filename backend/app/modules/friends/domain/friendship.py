@@ -13,6 +13,8 @@ them:
   request to that person is open, set aside or not;
 - a request made of somebody who asked you first crosses it: friends at once;
 - only the person asked accepts or sets it aside, and *Not now* keeps it open;
+- the person asked who opens the requester's link brings back a request they
+  set aside onto their Home (#748) — never one hidden from them;
 - only the requester cancels, and only a friend removes; both are silent no-ops
   when there is nothing to take back, so a route answers alike either way;
 - a block ends whatever stands, and is a no-op when nothing does.
@@ -38,6 +40,7 @@ from app.modules.friends.domain.errors import (
     FriendRequestNotFound,
 )
 from app.modules.friends.domain.events import (
+    FriendRequestBroughtBack,
     FriendRequestCancelled,
     FriendRequestCrossed,
     FriendRequested,
@@ -222,6 +225,24 @@ class Friendship:
             )
         )
 
+    def bring_back(self, *, by: UUID, at: Instant) -> None:
+        """The person asked opened the requester's link: a request they set aside
+        is back on their Home. **A no-op** on a request already there, on one
+        hidden from them as ``unseen`` — which they never see, not after an
+        unblock either — and on anything but a request made of them."""
+
+        self._other_than(by)
+        request = self.request
+        if request is None or request.addressee_id != by:
+            return
+        if not request.set_aside or request.unseen:
+            return
+        self._record_that(
+            FriendRequestBroughtBack(
+                requester_id=request.requester_id, addressee_id=by, occurred_at=at
+            )
+        )
+
     # -- taking back ------------------------------------------------------
 
     def cancel(self, *, by: UUID, at: Instant) -> None:
@@ -304,6 +325,9 @@ class Friendship:
         elif isinstance(event, FriendRequestSetAside):
             request = invariant(self.request, "set aside with nothing asked")
             self.request = replace(request, set_aside=True)
+        elif isinstance(event, FriendRequestBroughtBack):
+            request = invariant(self.request, "brought back with nothing asked")
+            self.request = replace(request, set_aside=False)
         elif isinstance(event, FriendRequestCancelled):
             self.request = None
         elif isinstance(event, FriendRequestCrossed):

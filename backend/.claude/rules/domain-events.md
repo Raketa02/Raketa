@@ -42,6 +42,14 @@ name, is what history is recorded under.
   kind of thing** (#549) — whoever holds it may push to the phone — so the Notification
   preferences stream names a phone by the token's SHA-256, and the token lives in
   `push_devices` alone, written beside the event and deleted with it (`notifications.md`).
+- **An address is not a credential**: a code that is *posted* — a group's code
+  (`groups.created`, ADR-0183 §4) and a Friend link's (`friends.friend_link_made`,
+  `…friend_link_replaced`, #748) — rides its event in the clear, because the aggregate is
+  rebuilt from it and the code is printed into chats on purpose. What it opens is a public page,
+  a group to join, or a request somebody still answers — never a session, an email or a
+  payment; and a replaced
+  friend link code is never reused, so history holds nothing that opens anything. A code that
+  signs somebody in, proves an address or pushes to a phone stays under the rule above.
 - **One table is event-free because it holds no domain fact**: `payment_notices`, the payment
   webhook's inbox — the id of every provider notice already read, written in the transaction
   that acted on it, the outbox's mirror (ADR-0190 §3). What a notice *moves* is still
