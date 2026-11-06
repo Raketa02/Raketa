@@ -48,6 +48,7 @@ import PostAGameRoute from '@/app/(app)/(tabs)/play/group/[groupId]/post';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
 import YouBlockedPlayersRoute from '@/app/(app)/(tabs)/you/blocked-players';
+import YouFriendsRoute from '@/app/(app)/(tabs)/you/friends';
 import YouGamesAndMoneyRoute from '@/app/(app)/(tabs)/you/games-and-money';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
@@ -177,6 +178,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/payments': YouPaymentsRoute,
   '(app)/(tabs)/you/notifications': YouNotificationsRoute,
   '(app)/(tabs)/you/blocked-players': YouBlockedPlayersRoute,
+  '(app)/(tabs)/you/friends': YouFriendsRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
   // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
   // Groups, and a group's settings and Start playing's first step pushed over You (#517).
@@ -987,6 +989,42 @@ export function stubGate(
   // Opening the list behind the bell records the visit (#627).
   transport.on('POST', NOTICES_VISIT_PATH, () => noContent());
   stubBlockedPlayers(transport);
+  stubFriends(transport);
+}
+
+export const FRIENDS_PATH = '/api/v1/friends';
+export const FRIEND_REQUESTS_PATH = '/api/v1/friends/requests';
+
+/**
+ * **Your friends and the requests each way**, as `GET /friends` and `GET /friends/requests` answer
+ * — **nobody** unless the suite says otherwise. The gate stubs them, because the You tab's *Friends*
+ * row reads your friends and *Asked you* on every visit (#754). One responder answers both
+ * directions, reading the one the request asked for.
+ */
+export function stubFriends(
+  transport: Transport,
+  {
+    friends = [],
+    askedYou = [],
+    youAsked = [],
+  }: {
+    readonly friends?: readonly Wire['FriendSchema'][];
+    readonly askedYou?: readonly Wire['FriendRequestSchema'][];
+    readonly youAsked?: readonly Wire['FriendRequestSchema'][];
+  } = {},
+) {
+  transport.on('GET', FRIENDS_PATH, () =>
+    json<Wire['FriendsResponse']>({ sport: null, friends: [...friends] }),
+  );
+  transport.on('GET', FRIEND_REQUESTS_PATH, (request) => {
+    const direction: Wire['Direction'] = request.path.includes('direction=YOU_ASKED')
+      ? 'YOU_ASKED'
+      : 'ASKED_YOU';
+    return json<Wire['FriendRequestsResponse']>({
+      direction,
+      requests: [...(direction === 'ASKED_YOU' ? askedYou : youAsked)],
+    });
+  });
 }
 
 export const BLOCKED_PLAYERS_PATH = '/api/v1/blocks';

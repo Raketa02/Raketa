@@ -78,7 +78,11 @@ export { HomeRail, type HomeRailProps } from './components/HomeRail';
 export { useHomeBadge } from './hooks/useHome';
 export { BookedGameScreen, type BookedGameScreenProps } from './components/BookedGameScreen';
 export { BookedGameChat, type BookedGameChatProps } from './components/BookedGameChat';
-export { BookedGameResult, type BookedGameResultProps } from './components/BookedGameResult';
+export {
+  BookedGameResult,
+  type BookedGameResultProps,
+  type PlayedWithInput,
+} from './components/BookedGameResult';
 export { parseBookingParams, parseRescueParams } from './schemas/bookingParams';
 export { bookedGameRoute } from './components/proposalRoutes';
 /** The words the Home and details suites hold the screens to. */

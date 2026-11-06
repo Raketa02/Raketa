@@ -476,3 +476,9 @@ before this change still shows the old sentence. **Not seen on a device.**
 rows and who called it off read the wire's `nickname`, so the court's eyebrow, the bar, the result
 screen's sentences, _oscar.n isn't here yet_ and the late claim's line say the whole nickname,
 never with an @. The stems on the bar cut at the first dot.
+
+**PLAYED WITH has a slot on the result screen** ([#754](https://github.com/Raketa02/Raketa/issues/754);
+the friends screens §3). `GameScreen` takes `playedWith`, a `ReactNode` it draws on every arm just
+above _How were they?_ — under everything about the score, and over the question about how they were.
+It is filled by `proposals`' `BookedGameResult` with `friends`' card, and this feature knows nothing
+about it but where it stands. The record is [`friends.md`](friends.md).

@@ -25,6 +25,7 @@ import type {
   GameKind,
   HomeStatus,
   LeavingKind,
+  PlayedWithRelation,
   ShareState,
   TimeTo,
   UncountedReason,
@@ -235,6 +236,56 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
   readonly leaving?: Leaving;
   /** The reader is not on the game, and its open seat is offered to them: a rescue seen from outside. */
   readonly rescue?: RescueOffer;
+  /**
+   * **PLAYED WITH** (#754; ADR-0202 §1): everybody else on the game, with **the reader's own**
+   * relation to each — empty for a reader not on the game.
+   */
+  readonly playedWith: readonly PlayedWith[];
+}
+
+/** **Somebody else on a booked game, and where the reader stands with them** (#754). */
+export interface PlayedWith {
+  readonly playerId: string;
+  readonly relation: PlayedWithRelation;
+}
+
+/**
+ * **One of PLAYED WITH's people, as the card draws them** (#754) — named off their seat. The shape
+ * `friends`' card takes, stated by this feature for its own demand (`PlayedWithRelation`'s note).
+ */
+export interface PlayedWithPerson {
+  readonly playerId: string;
+  /** Absent for a seat that can no longer be named — the card leaves them off. */
+  readonly nickname?: string;
+  readonly photoUrl?: string;
+  readonly level?: number;
+  readonly relation: PlayedWithRelation;
+}
+
+/**
+ * **PLAYED WITH's people** (#754; the friends screens §3) — each of the others named off their
+ * seat: the face, the whole nickname and the Level the card draws, beside where the reader stands
+ * with them. In the relations' order, which is the game's; anybody with no seat (a read caught
+ * mid-move) is left off, and a seat that can no longer be named is passed on unnamed, for the card
+ * to leave off. Whether the card is drawn at all is `friends`' rule.
+ */
+export function playedWithOf(
+  game: Pick<BookedGame, 'sides' | 'playedWith'>,
+): readonly PlayedWithPerson[] {
+  const seats = [...game.sides.yours, ...game.sides.theirs];
+  return game.playedWith.flatMap(({ playerId, relation }): PlayedWithPerson[] => {
+    const seat = seats.find((one) => one.playerId === playerId);
+    if (seat === undefined) return [];
+    return [
+      {
+        playerId,
+        relation,
+        ...(seat.name === undefined ? {} : { nickname: seat.name }),
+        ...(seat.level === undefined ? {} : { level: seat.level }),
+        ...(seat.photoUrl === undefined ? {} : { photoUrl: seat.photoUrl }),
+      },
+    ];
+  });
 }
 
 // ---------------------------------------------------------------------------

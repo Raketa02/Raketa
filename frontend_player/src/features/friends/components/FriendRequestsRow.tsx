@@ -59,15 +59,10 @@ import {
   wantsToBeYourFriend,
   whereLine,
 } from './friendsCopy';
+import { ROW_FACE } from './PersonRow';
 import { WriteNote } from './WriteNote';
 
 const COPY = FRIENDS_COPY.home;
-
-/**
- * 7.19's people-list face, spelled beside its caller as `groups`', `blocks`' and `conversations`'
- * lists spell it — kept out of `theme.ts` by #338 §5 until a change about faces decides its home.
- */
-const ROW_FACE = 38;
 
 export interface FriendRequestsRowProps {
   /** The requester's reliability chip — `player_record`'s, handed in by the shell. */

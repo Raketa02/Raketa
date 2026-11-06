@@ -487,6 +487,23 @@ describe('toBookedGame', () => {
     });
   });
 
+  it('reads PLAYED WITH: everybody else, with where the reader stands with each (#754)', () => {
+    const game = toBookedGame(
+      details({
+        played_with: [
+          { player_id: 'p-1', relation: 'FRIEND' },
+          { player_id: 'p-2', relation: 'NONE' },
+        ],
+      }),
+    );
+
+    expect(game?.playedWith).toEqual([
+      { playerId: 'p-1', relation: 'FRIEND' },
+      { playerId: 'p-2', relation: 'NONE' },
+    ]);
+    expect(toBookedGame(details())?.playedWith).toEqual([]);
+  });
+
   it('has no distance for a reader with no Location area', () => {
     const game = toBookedGame(details({ where: { id: 'club-1', name: null, distance_km: null } }));
 

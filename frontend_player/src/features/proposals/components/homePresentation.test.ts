@@ -231,6 +231,7 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
     freeToLeaveUntil: CUT_OFF,
   },
   showsForecast: true,
+  playedWith: [],
   ...extra,
 });
 

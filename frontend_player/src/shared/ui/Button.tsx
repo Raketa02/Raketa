@@ -87,7 +87,9 @@
  * friends 1–2; [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking),
  * 2026-11-06): **+ Add** and **Accept** are the `dark` button in a pill at `sm`, on the right of a
  * row, because the mock draws them so and the tags beside them on the next rows are pills too — a
- * 10pt corner among them would read as a different kind of thing.
+ * 10pt corner among them would read as a different kind of thing. **The Friends page draws the same
+ * pills** ([#754](https://github.com/Raketa02/Raketa/issues/754), friends 3; Part 16 2026-11-06):
+ * *+ Add friends* in its header, and a request row's **Accept** and **Cancel**.
  *
  * **`marks` are two drawn glyphs after the label, and they are not words**
  * ([#753](https://github.com/Raketa02/Raketa/issues/753); Part 16, 2026-11-06). The record's

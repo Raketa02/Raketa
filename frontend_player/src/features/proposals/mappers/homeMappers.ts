@@ -198,7 +198,19 @@ export function toBookedGame(wire: Schemas['BookingDetailsResponse']): BookedGam
     showsForecast: wire.shows_forecast,
     ...(wire.leaving === null ? {} : { leaving: toLeaving(wire.leaving) }),
     ...(rescue === null ? {} : { rescue: toRescue(rescue) }),
+    playedWith: toPlayedWith(wire),
   };
+}
+
+/**
+ * PLAYED WITH (#754) — the relation spelled as the wire spells it, which `friends`' wire agreement
+ * holds equal. A server older than the field sends none: nobody listed, and no card.
+ */
+function toPlayedWith(
+  wire: Pick<Schemas['BookingDetailsResponse'], 'played_with'>,
+): BookedGame['playedWith'] {
+  const playedWith: Schemas['BookingDetailsResponse']['played_with'] | undefined = wire.played_with;
+  return (playedWith ?? []).map((one) => ({ playerId: one.player_id, relation: one.relation }));
 }
 
 /** *Leave the game*, done — which of the three it was (#544). */

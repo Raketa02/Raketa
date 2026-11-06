@@ -625,3 +625,8 @@ was pressed on it — Add friend, Accept, Remove, Block — moves the row it was
 record reads `friends`' acts, not this list's key. The record is handed the group (`groupId`), for a
 request asked there. **The Administrator's Members draws no ends** (`MembersList`'s `friends`, off in
 the administrator area). The record of why the end looks as it does is [`friends.md`](friends.md).
+
+**A group's tile, by id, for the Add friends sheet** ([#754](https://github.com/Raketa02/Raketa/issues/754)).
+`MyGroupMonogram` draws one of the reader's groups' tiles off their own Groups list (`useMyGroups`),
+its box held empty until the list is in: the sheet's read names no tile, and a group's letters are
+cut once, by the server (ADR-0183 §5). The shell hands it, and `groupMembersRoute`, to `friends`' page.

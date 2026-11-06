@@ -83,9 +83,93 @@ removing's; the busy words; the two refusal sentences; the spoken names of the p
 buttons; a Home card whose group either of them left draws its sport and Level alone, and one asked
 from a screen with no sport draws the chip alone.
 
-**Not here**: You › Friends and the result screen's PLAYED WITH (#754), the link (#756), the picker,
-the friends card and the game (#757–#760).
+**Not here**: the link (#756), the picker, the friends card and the game (#757–#760).
 
 **Not seen on a device**: the pill and the tags at a row's right on a narrow phone; the record's two
 buttons at the narrowest width (#753 asks for that walk); the ✓ ▾ marks beside a label; the request
 card and the rail of two; the _friend_ tag across a Fill in square's foot.
+
+## You › Friends, the Add friends sheet, and PLAYED WITH (#754)
+
+**The Friends page is a frame, and its mode is its body.** [#754](https://github.com/Raketa02/Raketa/issues/754)
+builds the page from You; [#757](https://github.com/Raketa02/Raketa/issues/757) opens the same page
+from a group's Friends tab as a picker (the screens §4). What the two share is the header — back,
+_Friends_, **+ Add friends** top right, the black pill friends 3 draws — and the **Add friends** sheet
+it opens, so `FriendsPage` is that frame and takes its body (`children`) and its foot (`action`).
+From You the body is `FriendsTabs`; #757 hands in the picker and _Done_ without touching the frame.
+**No eyebrow**: the header is friends 3's in both modes, so a page shared with a group's court does
+not wear the You tab's group title. A pull re-reads every list on it.
+
+**Three tabs, and only _Asked you_ counts.** _Friends · Asked you · You asked_ on the design
+system's segmented control; _Asked you · 2_ while requests wait — set-aside ones included, since
+**Accept** still answers them (Q1) — and _Asked you_ alone at nought, the count in the label as §29.3
+writes it and as the Games switch writes _Competitive · 7_. Each list is the server's, in its order:
+friends by nickname (call 11), each with every sport they play and its Level (_Padel 2,75 · Tennis
+3,10_); requests newest first. **The rest of every row opens the record**; **Accept** (_Asked you_,
+`dark`) and **Cancel** (_You asked_, `secondary`) sit beside that press in the friend pill (Part 16,
+2026-11-06) and act on the press, staying busy until their list has read again, so the row leaves on
+the server's answer. Cancel asks nothing first, unlike the record's _Request sent ▾_: there it is a
+menu of one hiding the act, here the act is named on the row, and a cancelled request can be asked
+again from Members. Each tab has a one-line empty state (§29.3's calls), and a failed read says why
+with _Try again_.
+
+**Every friends write re-reads this feature's lists.** `friendKeys` names the page's three reads and
+the sheet's; `useFriendWrites`' `settle` invalidates them all, beside the surface's own re-read and
+the faces. So a request asked on Members opened from the sheet is on _You asked_ back on the page,
+an accept on Home is off _Asked you_ and on the You row, and an act on the record a row opened is on
+the tab under it when the sheet closes. They are this feature's own keys, so naming them costs no
+other feature a dependency.
+
+**The You tab's _Friends_ row closes _Your games_** (a call: the screens say only _a new row_). The
+group's rows are who and when a game is with, and a friend is the shortcut to one. Its line is the
+page's own two reads, _3 friends · 1 asked you_, and **waits for both** rather than growing a clause
+a moment after it is drawn.
+
+**The Add friends sheet: _From your groups_, built for the link card under it.** Each of your groups,
+newest joined first, with its tile, its name and _8 members · 2 to add_ (the server's count: not you,
+not a friend, no open request either way, nobody you blocked), and a chevron; a tap closes the sheet
+and pushes that group's Members, so _back_ is the page. The groups are read when the sheet opens, not
+with the page. The sheet's body is a column of sections and the groups are the first; **#756's link
+card is the second**, under them. A player in no group reads _You're in no group yet. Join one to add
+the people in it._ (a call).
+
+**The tile and the door are `groups'`, handed in by the shell.** The sheet's read names no tile, and
+a group's letters are cut once, by the server (ADR-0183 §5), so the tile is drawn off the player's
+own Groups list — `groups`' `MyGroupMonogram`, its box held empty until the list is in — and Members
+is a `groups` route. `groups` draws this feature's pills on Members, so the shell composes the page
+(`YouFriendsScreen`) with both handed in as `GroupDoors`, and with the record a row opens drawn
+beside it, as it composes Home's request cards. No navigation hook is used inside the sheet.
+
+**PLAYED WITH, between the score and the star card.** The others on a booked game in Members' rows —
+`PersonRow`: the face, the whole nickname, the game's sport over its dot and their Level, without
+Members' reliability chip, which the booking does not carry — each handed to `RowWithFriendEnd` for
+its pill or tag (the screens §3). A request asked there is `RESULT`'s, naming the game's group and
+sport. **Hidden once every one of them is your friend** (`playedWithShown`), and somebody who can no
+longer be named is left off first, so a card whose only stranger is a deleted account hides too.
+Drawn after a For fun game as after a Competitive one, on every arm of the screen.
+
+**Who builds PLAYED WITH, and who draws it.** The people are the booking's — its seats and its
+`played_with` — so `proposals` maps the relations, joins them to the seats (`playedWithOf`) and holds
+the record sheet a row opens, with the game's group and sport. The card is this feature's, and this
+feature reads `proposals`' keys and Home, so **the result route hands `PlayedWithCard` to
+`BookedGameResult`**, which hands the built card to `games`' `GameScreen` through a new `playedWith`
+slot, drawn just above _How were they?_. A pill waits for the booking to read again; the record
+closing reads it again too. **`proposals` imports nothing of this feature, not even a type** — a
+cycle is a defect (architecture Part 1 §6), and the review of #754 caught the type import that first
+closed one. It spells the relation itself (`PlayedWithRelation`, held to the wire by its own
+`wireVocabulary.ts`) and states what it builds (`PlayedWithInput`); the route passes it to the card,
+whose props agree with it structurally, and `tsc` checks the two at that one line.
+
+**One set of read states for every list here** (`ListReading`): offline, the amber line; refused,
+the recovery sentence and _Try again_; otherwise the caller's quiet line. The sheet's groups drew
+_Reading your groups…_ forever while offline until the review of #754 found it; both now draw the
+same three.
+
+**Calls for the product owner** (in `friendsCopy.ts` and the YouScreen note): the You row's place and
+line; the sheet's line with no group; the busy and reading words; _Cancel your request to michal.r_
+and _Add friends_ as spoken names; the + of _+ Add friends_ typed, as _+ Add_'s is. **The ticket's
+example _"Nobody's waiting for an answer."_** is not used: §29.3's three empty lines are.
+
+**Not seen on a device**: the header's pill beside _Friends_ at the narrowest width; the segmented
+control with _Asked you · 12_; the sheet's tiles and chevrons; PLAYED WITH's rows with a long
+nickname beside _request sent_.

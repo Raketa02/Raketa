@@ -58,6 +58,9 @@ export { HomeScreen } from './components/tabScreens';
  */
 export { YouScreen } from './components/YouScreen';
 
+/** **You › Friends** (#754) — `friends`' page, composed with the record and `groups`' doors. */
+export { YouFriendsScreen } from './components/YouFriendsScreen';
+
 /**
  * Open a tab from a screen inside another one — the tab bar's own move rather than a second one,
  * so a player sent here lands where pressing the column would have put them.

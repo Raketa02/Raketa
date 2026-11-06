@@ -1248,3 +1248,12 @@ was turned round.
 are in it, the sport and the Level, the reliability and its band) and crossed by
 `useHomeFriendRequests`. `friends` draws and answers them; the read is this feature's because it is
 Home's. They are not counted in `needingYou`.
+
+**A booked game's details carry PLAYED WITH** ([#754](https://github.com/Raketa02/Raketa/issues/754)):
+`BookedGame.playedWith` is the read's `played_with` — everybody else on the game with the reader's
+own relation — and `playedWithOf` joins it to the seats for the card's faces, names and Levels.
+`BookedGameResult` builds `PlayedWithInput` from it — this feature's own statement of what the card
+needs, with its own `PlayedWithRelation` held to the wire — and holds the record a row opens, with the
+game's group and sport. **The result route hands `friends`' card in**, since `friends` reads this
+feature's keys and Home: importing it back, even a type, would be a cycle. The screen is hidden
+behind the record while it is up. The record of the card is [`friends.md`](friends.md).

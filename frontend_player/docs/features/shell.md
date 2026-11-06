@@ -215,3 +215,11 @@ the friends screens §6; Q13): the level card, _TO CONFIRM_, then `friends`' `Fr
 the rail — drawn only while a request waits. The shell hands it the two things that are
 `player_record`'s, the reliability chip (`PlayerScoreTag`) and the record a card's face opens, so
 `friends` never imports the feature that draws its record button. #757 adds FRIENDS GAME above it.
+
+**You › Friends is composed here** ([#754](https://github.com/Raketa02/Raketa/issues/754)).
+`friends`' row closes the You tab's _Your games_ group, and `YouFriendsScreen` mounts `friends`' page
+with the three things that are other features' handed in: the record a row opens (`player_record`'s),
+and the Add friends sheet's group tiles and door into Members (`groups`' `MyGroupMonogram` and
+`groupMembersRoute`) — each of those features draws a `friends` control, so `friends` importing them
+back would be a dependency both ways. `you/friends` is a pushed screen. The record of the page is
+[`friends.md`](friends.md).

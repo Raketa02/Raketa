@@ -1,7 +1,7 @@
 /**
- * **The five friends routes this app sends**, and the only place their paths are written down
- * ([#753](https://github.com/Raketa02/Raketa/issues/753), on the contract
- * [#745](https://github.com/Raketa02/Raketa/issues/745) built; ADR-0202 §1).
+ * **The eight friends routes this app sends**, and the only place their paths are written down
+ * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#754](https://github.com/Raketa02/Raketa/issues/754),
+ * on the contract [#745](https://github.com/Raketa02/Raketa/issues/745) built; ADR-0202 §1).
  *
  * One of the two layers allowed to read generated types.
  *
@@ -12,6 +12,9 @@
  * | `POST /friends/requests/{id}/set-aside` | *Not now* — 204; the request stays open, untold |
  * | `DELETE /friends/requests/{id}` | cancel your own — 204 always, nobody told |
  * | `DELETE /friends/{id}` | remove a friend — 204 always, nobody told, no game touched |
+ * | `GET /friends` | your friends, by nickname, each with every sport they are rated in (#754) |
+ * | `GET /friends/requests?direction=` | *Asked you* or *You asked*, newest first (#754) |
+ * | `GET /friends/groups` | the Add friends sheet's groups, *8 members · 2 to add* (#754) |
  *
  * **The three writes that take something back are idempotent**, which is the correctness mechanism
  * under a double tap. Asking and accepting are not: a second ask is `friend_request_already_sent`,
@@ -26,7 +29,14 @@ type Schemas = components['schemas'];
 const REQUESTS_PATH = '/api/v1/friends/requests';
 const FRIENDS_PATH = '/api/v1/friends';
 
+const GROUPS_PATH = '/api/v1/friends/groups';
+
 const requestPath = (playerId: string) => `${REQUESTS_PATH}/${encodeURIComponent(playerId)}`;
+
+/** A read the caller may abandon — Query's signal, passed to the request. */
+export interface Cancellable {
+  readonly signal?: AbortSignal;
+}
 
 /**
  * **Ask to be friends.** Refused with `cannot_befriend_yourself`, `player_not_in_your_groups`,
@@ -73,5 +83,43 @@ export function deleteFriend(playerId: string): Promise<void> {
     method: 'DELETE',
     path: `${FRIENDS_PATH}/${encodeURIComponent(playerId)}`,
     authenticated: true,
+  });
+}
+
+/**
+ * **Your friends** — from every group, by nickname, each with every sport they are rated in. The
+ * picker's `?sport=` narrowing is #757's.
+ */
+export function getFriends({ signal }: Cancellable = {}): Promise<Schemas['FriendsResponse']> {
+  return httpRequest<Schemas['FriendsResponse']>({
+    method: 'GET',
+    path: FRIENDS_PATH,
+    authenticated: true,
+    signal,
+  });
+}
+
+/** **Open requests one way** — `ASKED_YOU`, set aside or not; `YOU_ASKED`. Newest first. */
+export function getFriendRequests(
+  direction: Schemas['Direction'],
+  { signal }: Cancellable = {},
+): Promise<Schemas['FriendRequestsResponse']> {
+  return httpRequest<Schemas['FriendRequestsResponse']>({
+    method: 'GET',
+    path: `${REQUESTS_PATH}?direction=${direction}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/** **Add friends — from your groups**: each group, its size, and how many you could still ask. */
+export function getGroupsToAddFrom({ signal }: Cancellable = {}): Promise<
+  Schemas['GroupsToAddFromResponse']
+> {
+  return httpRequest<Schemas['GroupsToAddFromResponse']>({
+    method: 'GET',
+    path: GROUPS_PATH,
+    authenticated: true,
+    signal,
   });
 }

@@ -7,11 +7,12 @@
 import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
-import type { AskedFrom, FriendRelation } from '../domain/vocabulary';
+import type { AskedFrom, FriendRelation, RequestDirection } from '../domain/vocabulary';
 
 type Schemas = components['schemas'];
 
 export const FRIENDS_VOCABULARY_AGREES: {
   readonly relation: Exact<FriendRelation, Schemas['FriendRelation']>;
   readonly askedFrom: Exact<AskedFrom, Schemas['AskedFrom']>;
-} = { relation: true, askedFrom: true };
+  readonly direction: Exact<RequestDirection, Schemas['Direction']>;
+} = { relation: true, askedFrom: true, direction: true };

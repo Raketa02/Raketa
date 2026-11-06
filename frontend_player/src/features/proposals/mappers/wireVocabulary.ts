@@ -22,6 +22,7 @@ import type {
   OverlapGrade,
   OverlapShade,
   PaymentRefusal,
+  PlayedWithRelation,
   ProposalStatus,
   ReaderAction,
   ShareState,
@@ -49,6 +50,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly proposalStatus: Exact<ProposalStatus, Schemas['ProposalStatus']>;
   readonly readerAction: Exact<ReaderAction, Schemas['ReaderAction']>;
   readonly who: Exact<Who, Schemas['Who']>;
+  readonly playedWith: Exact<PlayedWithRelation, Schemas['FriendRelation']>;
 } = {
   cardType: true,
   courtState: true,
@@ -66,4 +68,5 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   proposalStatus: true,
   readerAction: true,
   who: true,
+  playedWith: true,
 };

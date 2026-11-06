@@ -10,6 +10,11 @@
  * | `useCancelFriendRequest` | `DELETE /friends/requests/{id}` | the surface's own read |
  * | `useRemoveFriend` | `DELETE /friends/{id}` | the surface's own read, and every face |
  *
+ * **And every one re-reads this feature's own lists** (#754, `friendKeys`): You › Friends' three
+ * tabs, the Add friends sheet's *to add*, and the You tab's row — so a request asked on Members
+ * opened from the sheet is on *You asked* when the player comes back, and an accept on Home is off
+ * *Asked you*.
+ *
  * ## The surface hands its own read in
  *
  * **Members and the record each re-read themselves** — they hand `reread` down, because the reads
@@ -51,6 +56,8 @@ import {
   setAsideFriendRequest,
 } from '../use-cases/friends';
 
+import { friendKeys } from './friendKeys';
+
 /** The surface's own re-read, handed in by the screen that holds it — see the module note. */
 export type Reread = () => Promise<unknown>;
 
@@ -72,7 +79,7 @@ export function useAskToBeFriends(playerId: string, where: AskedWhere, reread: R
   return useMutation<FriendRelation, AppError, void>({
     mutationFn: () => askToBeFriends(playerId, where),
     onSuccess: (relation) => settle(client, reread, movesTheFaces('NONE', relation)),
-    onError: (error) => rereadIfMoved(error, reread),
+    onError: (error) => rereadIfMoved(client, error, reread),
   });
 }
 
@@ -82,10 +89,7 @@ export function useAcceptFriendRequest(playerId: string, reread?: Reread) {
     mutationFn: () => acceptFriendRequest(playerId),
     // Home is among the faces, always: the card asking for this answer leaves it.
     onSuccess: () => settle(client, reread, true),
-    onError: (error) =>
-      stateMoved(error)
-        ? Promise.all([reread?.(), client.invalidateQueries({ queryKey: proposalKeys.home() })])
-        : undefined,
+    onError: (error) => (stateMoved(error) ? rereadHomeToo(client, reread) : undefined),
   });
 }
 
@@ -94,8 +98,7 @@ export function useSetAsideFriendRequest(playerId: string, reread?: Reread) {
   const client = useQueryClient();
   return useMutation<void, AppError, void>({
     mutationFn: () => setAsideFriendRequest(playerId),
-    onSettled: () =>
-      Promise.all([client.invalidateQueries({ queryKey: proposalKeys.home() }), reread?.()]),
+    onSettled: () => rereadHomeToo(client, reread),
   });
 }
 
@@ -115,13 +118,31 @@ export function useRemoveFriend(playerId: string, reread: Reread) {
   });
 }
 
-function rereadIfMoved(error: AppError, reread: Reread) {
-  return stateMoved(error) ? reread() : undefined;
+function rereadIfMoved(client: QueryClient, error: AppError, reread: Reread) {
+  return stateMoved(error) ? Promise.all([reread(), rereadTheLists(client)]) : undefined;
 }
 
-/** The surface's own read, and every face where the friendship turned. */
+/** The surface's own read, this feature's lists, and every face where the friendship turned. */
 function settle(client: QueryClient, reread: Reread | undefined, faces: boolean) {
-  return Promise.all([reread?.(), ...(faces ? rereadEveryFace(client) : [])]);
+  return Promise.all([
+    reread?.(),
+    rereadTheLists(client),
+    ...(faces ? rereadEveryFace(client) : []),
+  ]);
+}
+
+/** The surface's own read, this feature's lists, and Home — where a request's card stood. */
+function rereadHomeToo(client: QueryClient, reread: Reread | undefined) {
+  return Promise.all([
+    reread?.(),
+    rereadTheLists(client),
+    client.invalidateQueries({ queryKey: proposalKeys.home() }),
+  ]);
+}
+
+/** **This feature's own lists** — the page's tabs, the sheet's groups, the You tab's row. */
+function rereadTheLists(client: QueryClient) {
+  return client.invalidateQueries({ queryKey: friendKeys.all });
 }
 
 /**

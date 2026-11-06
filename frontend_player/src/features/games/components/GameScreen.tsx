@@ -305,6 +305,15 @@ export interface GameScreenProps {
    * fail to come to.
    */
   readonly booked?: BookedFacts;
+  /**
+   * **PLAYED WITH, between the score and the star card** ([#754](https://github.com/Raketa02/Raketa/issues/754);
+   * the friends screens §3). A slot, as the card and the plan are: the people and where the reader
+   * stands with them are the booking's, and the rows are `friends`', so the composer hands it in and
+   * this screen only says where it stands — under everything about the score, over *How were
+   * they?*, on every arm. It draws itself or nothing (hidden once they are all friends); `null` is a
+   * composer with nobody to list.
+   */
+  readonly playedWith: ReactNode;
 }
 
 export function GameScreen({
@@ -315,6 +324,7 @@ export function GameScreen({
   entryLead,
   fill,
   booked,
+  playedWith,
 }: GameScreenProps) {
   const { game, isPending, error } = useGame(gameId);
   const me = useCurrentUser().data?.id;
@@ -345,6 +355,7 @@ export function GameScreen({
       entryLead={entryLead}
       fill={fill}
       booked={booked}
+      playedWith={playedWith}
     />
   );
 }
@@ -361,6 +372,7 @@ function Argument({
   entryLead,
   fill,
   booked,
+  playedWith,
 }: {
   readonly game: Game;
   readonly playerId: string;
@@ -370,6 +382,7 @@ function Argument({
   readonly entryLead: EntryLead;
   readonly fill: ReactNode;
   readonly booked: BookedFacts | undefined;
+  readonly playedWith: ReactNode;
 }) {
   const argument = resultArgument(game, playerId);
   // After any write here lands on a booked game, its booking's reads are read again — by the
@@ -801,6 +814,11 @@ function Argument({
           {problem}
         </Note>
       )}
+
+      {/* **PLAYED WITH** (#754) — the others on the game and where the reader stands with each,
+          under everything about the score and over the question about how they were: the friends
+          screens §3 put it between the two. The composer's slot; it draws itself or nothing. */}
+      {playedWith}
 
       {/* **How were they** — last, and under everything this screen exists to say. The moment a
           player has to think about how an evening went is the moment they are looking at what

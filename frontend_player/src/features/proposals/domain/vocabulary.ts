@@ -149,3 +149,12 @@ export type ProposalStatus =
  * waits for one payment, and *Confirm your payment* while their seat waits on a refused one.
  */
 export type ReaderAction = 'YES' | 'NO' | 'WITHDRAW' | 'LEAVE' | 'CONFIRM_PAYMENT';
+
+/**
+ * **Where the reader stands with somebody else on a booked game** — PLAYED WITH's relation (#754),
+ * spelled here as the wire spells it, and held equal to it in `mappers/wireVocabulary.ts`. The same
+ * four `friends` spells for its own surfaces: this feature names it itself rather than reading
+ * `friends`' type, since `friends` reads this feature's keys and Home, and an import back, even of
+ * a type, is a cycle (architecture Part 1 §6). The route hands the card both sides agree on.
+ */
+export type PlayedWithRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';

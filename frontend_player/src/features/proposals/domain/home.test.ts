@@ -14,6 +14,7 @@ import {
   openedToKeep,
   paymentOf,
   paymentWindowAt,
+  playedWithOf,
   resultActOf,
   shareAt,
   shownStatus,
@@ -721,5 +722,50 @@ describe('completesTheRescue — You complete it on a rescue seen from outside',
     expect(completesTheRescue({ rescue: offer, openSeats: 1 })).toBe(true);
     expect(completesTheRescue({ rescue: offer, openSeats: 2 })).toBe(false);
     expect(completesTheRescue({ openSeats: 1 })).toBe(false);
+  });
+});
+
+describe('playedWithOf — PLAYED WITH’s people, off the seats and the relations (#754)', () => {
+  it('names each of the others off their seat, in the relations’ order', () => {
+    const sides = {
+      yours: [person('me', { isYou: true }), person('ewa', { name: 'ewa.m', level: 2.6 })],
+      theirs: [
+        person('magda', { name: 'magda.p', level: 2.66, photoUrl: 'https://cdn.test/m.jpg' }),
+        person('ania', { name: 'ania.k' }),
+      ],
+    };
+
+    expect(
+      playedWithOf({
+        sides,
+        playedWith: [
+          { playerId: 'magda', relation: 'NONE' },
+          { playerId: 'ewa', relation: 'FRIEND' },
+          { playerId: 'ania', relation: 'SENT' },
+        ],
+      }),
+    ).toEqual([
+      {
+        playerId: 'magda',
+        relation: 'NONE',
+        nickname: 'magda.p',
+        level: 2.66,
+        photoUrl: 'https://cdn.test/m.jpg',
+      },
+      { playerId: 'ewa', relation: 'FRIEND', nickname: 'ewa.m', level: 2.6 },
+      { playerId: 'ania', relation: 'SENT', nickname: 'ania.k' },
+    ]);
+  });
+
+  it('leaves off anybody with no seat, and a seat that can no longer be named has no name', () => {
+    expect(
+      playedWithOf({
+        sides: { yours: [person('me', { isYou: true })], theirs: [person('gone')] },
+        playedWith: [
+          { playerId: 'gone', relation: 'NONE' },
+          { playerId: 'left', relation: 'NONE' },
+        ],
+      }),
+    ).toEqual([{ playerId: 'gone', relation: 'NONE' }]);
   });
 });

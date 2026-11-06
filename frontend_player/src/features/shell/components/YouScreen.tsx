@@ -6,7 +6,7 @@
  * ```
  * header card       the record's header, compact — tapping it opens How others see you
  * PLAYING           Skill passport · Player reliability · What kind of game
- * YOUR GAMES        Your week · Where you play · Who you play with
+ * YOUR GAMES        Your week · Where you play · Who you play with · Friends
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Nickname
  * ACCOUNT           Games & money · Payments · Notifications · Blocked players
  * ─────────────
@@ -38,6 +38,11 @@
  * A setting on this tab is one a proposed game still reads. The group was *Finding players* until
  * ADR-0200 §10 renamed it (#733): nothing on the tab finds players any more.
  *
+ * **_Friends_ closes Your games** ([#754](https://github.com/Raketa02/Raketa/issues/754), a call:
+ * the friends screens say only *a new row*). The group's rows are who and when a game is with, and a
+ * friend is the shortcut to one (ADR-0202) — `friends`' row, its line *3 friends · 1 asked you*,
+ * the door to You › Friends.
+ *
  * ## The switcher chip
  *
  * **The header's right slot is the profile switcher** ([#518](https://github.com/Raketa02/Raketa/issues/518),
@@ -66,6 +71,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AccountPanel, NicknameRow } from '@/features/auth/types';
 import { BlockedPlayersRow } from '@/features/blocks/types';
+import { FriendsRow } from '@/features/friends/types';
 import {
   IntroRow,
   PhotosRow,
@@ -123,6 +129,7 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <YourWeekRow />
             <WhereYouPlayRow divided />
             <WhoYouPlayWithRow divided />
+            <FriendsRow divided />
           </YouGroup>
 
           <YouGroup title={YOU_COPY.groups.onYourCard}>

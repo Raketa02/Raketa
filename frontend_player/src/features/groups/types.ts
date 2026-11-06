@@ -77,6 +77,13 @@ export type { SearchedClub } from './domain/group';
  * dependency points one way — `administrator` reads `groups`, never the reverse.
  */
 export { GroupMonogram } from './components/GroupMonogram';
+/**
+ * One of the reader's groups' tiles by id — the Add friends sheet's, handed to `friends` by the
+ * shell (#754).
+ */
+export { MyGroupMonogram } from './components/MyGroupMonogram';
+/** Members, pushed — where the Add friends sheet lands on a group (#754). */
+export { groupMembersRoute } from './components/groupRoutes';
 export { ClubTile } from './components/ClubTile';
 export { SportDots } from './components/SportDots';
 export { GroupNameCard, WhoCanJoinCard } from './components/GroupFormCards';

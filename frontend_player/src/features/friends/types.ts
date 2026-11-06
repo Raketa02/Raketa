@@ -8,9 +8,27 @@
  * (`player_record`) reads `recordFootOf` and draws `FriendButton` beside `blocks`' Block. The shell
  * composes `FriendRequestsRow` into Home above Your games. Each surface hands its own re-read in, so
  * this feature never names another's keys.
+ *
+ * **You › Friends** (#754) is a frame and a body: `FriendsPage` draws the header, *+ Add friends* and
+ * its sheet; `FriendsTabs` is what it holds from You, and the picker (#757) what it holds from a
+ * group. **PLAYED WITH** is drawn here and fed by `proposals`, whose booking it lists.
  */
 
 export { RowWithFriendEnd, type RowWithFriendEndProps } from './components/RowWithFriendEnd';
+
+/**
+ * **You › Friends and the result's PLAYED WITH** (#754). The shell composes the page — the frame
+ * (`FriendsPage`) holding the three tabs (`FriendsTabs`), with `groups`' tiles and Members route
+ * handed in as `GroupDoors` and the record a row opens drawn beside it — and puts `FriendsRow` on
+ * the You tab. The result route hands `PlayedWithCard` to `proposals`, which builds what it draws
+ * off the booking (`PlayedWithInput`, its own shape — `proposals` imports nothing of this feature)
+ * and draws it between the score and the star card.
+ */
+export { FriendsPage, type FriendsPageProps } from './components/FriendsPage';
+export { FriendsTabs, type FriendsTabsProps } from './components/FriendsTabs';
+export { FriendsRow, type FriendsRowProps } from './components/FriendsRow';
+export type { GroupDoors } from './components/AddFriendsSheet';
+export { PlayedWithCard, type PlayedWithCardProps } from './components/PlayedWithCard';
 export { FriendButton, type FriendButtonProps } from './components/FriendButton';
 export { FriendRequestsRow, type FriendRequestsRowProps } from './components/FriendRequestsRow';
 

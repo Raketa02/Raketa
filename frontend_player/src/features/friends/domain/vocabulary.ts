@@ -26,3 +26,10 @@ export type FriendRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
  * opening the link makes it.
  */
 export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT';
+
+/**
+ * **Which way an open request points** (#754) — the Friends page's two request tabs, each its own
+ * read: `ASKED_YOU`, made of the reader, set aside or not, **Accept** on each; `YOU_ASKED`, the
+ * reader's own, **Cancel** on each.
+ */
+export type RequestDirection = 'ASKED_YOU' | 'YOU_ASKED';

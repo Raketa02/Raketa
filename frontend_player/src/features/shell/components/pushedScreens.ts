@@ -58,4 +58,5 @@ export const PUSHED_SCREENS = [
   'you/payments',
   'you/notifications',
   'you/blocked-players',
+  'you/friends',
 ] as const;

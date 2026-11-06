@@ -42,3 +42,10 @@ export { StarCardSection, type StarCardSectionProps } from './components/StarCar
  * nothing else**, deliberately, and whoever holds the games supplies the words.
  */
 export type { RatedCourt, RatedSeat } from './domain/card';
+
+/**
+ * *How were they?* — the card's heading, exported for the suites that walk the result screen it
+ * stands at the foot of: PLAYED WITH is drawn above it (#754), and a test asserting a sentence it
+ * spelled itself passes the day the screen stops saying it.
+ */
+export { STARS_HEADING } from './components/starsPresentation';
