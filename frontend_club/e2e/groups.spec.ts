@@ -132,9 +132,10 @@ test.describe('Groups', () => {
     club.groups = [officialGroup({ name: 'Ogrody 33 Club', member_count: 11 })];
     await openGroups(page);
 
-    const line = page.getByRole('main').getByText(/^When your courts are full/);
+    // On by default (Q128), within 10 km.
+    const line = page.getByRole('main').getByText(/^At an hour your courts are full/);
     await expect(line).toHaveText(
-      "When your courts are full, your groups are offered only yours. Offer other clubs' courts in Raketa settings.",
+      "At an hour your courts are full, your groups are also offered other clubs' courts within 10 km. Change it in Raketa settings.",
     );
     await line.getByRole('link', { name: 'Raketa settings' }).click();
     await expect(page).toHaveURL(/\/raketa-settings#other-clubs$/);
@@ -142,17 +143,23 @@ test.describe('Groups', () => {
       page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
     ).toBeInViewport();
 
+    club.raketa.settings.other_clubs_courts = { offered: false, within_km: 15 };
+    await page.goto('/groups');
+    await expect(page.getByRole('main').getByText(/^Your groups are offered/)).toHaveText(
+      "Your groups are offered only your courts. Offer other clubs' courts in Raketa settings.",
+    );
+
     club.raketa.settings.other_clubs_courts = { offered: true, within_km: 15 };
     await page.goto('/groups');
-    await expect(page.getByRole('main').getByText(/^When your courts are full/)).toHaveText(
-      "When your courts are full, your groups are also offered other clubs' courts within 15 km. Change it in Raketa settings.",
+    await expect(page.getByRole('main').getByText(/^At an hour your courts are full/)).toHaveText(
+      "At an hour your courts are full, your groups are also offered other clubs' courts within 15 km. Change it in Raketa settings.",
     );
   });
 
   test('with no official groups, there is no line about other clubs', async ({ page, club }) => {
     void club;
     await openGroups(page);
-    await expect(page.getByText(/^When your courts are full/)).toHaveCount(0);
+    await expect(page.getByText(/other clubs' courts/)).toHaveCount(0);
   });
 
   test('From original group is drawn as a bar, full with the real figure past 100%', async ({

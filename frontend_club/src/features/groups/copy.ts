@@ -4,6 +4,7 @@
  */
 
 import { sportName } from '@/features/club-details/mappers';
+import { SETTINGS_COPY } from '@/features/raketa-settings/copy';
 import { sentenceAbout, type RefusalAbout } from '@/ui/forms';
 
 import type { SportLevel } from './mappers';
@@ -19,13 +20,17 @@ export const GROUPS_COPY = {
     fromOriginalGroup: 'From original group',
     games: 'Games',
   },
-  /** The line over the table: whether the groups are offered other clubs' courts (B8). */
+  /**
+   * The line over the table: whether the groups are offered other clubs' courts, which they are
+   * by default, and then only at an hour the club's own are full (B8, Q128). On, it is the
+   * setting's own help line.
+   */
   otherClubs: {
     /** The line up to its link: whether they are offered, and the way to change it. */
     lead: (offered: boolean, km: number) =>
       offered
-        ? `When your courts are full, your groups are also offered other clubs' courts within ${km} km. Change it in`
-        : "When your courts are full, your groups are offered only yours. Offer other clubs' courts in",
+        ? `${SETTINGS_COPY.otherClubs.hint(km)} Change it in`
+        : "Your groups are offered only your courts. Offer other clubs' courts in",
     settings: 'Raketa settings',
     end: '.',
   },

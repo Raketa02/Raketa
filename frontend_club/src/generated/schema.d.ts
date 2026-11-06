@@ -1613,7 +1613,7 @@ export interface components {
         OtherClubsCourtsSchema: {
             /**
              * Offered
-             * @description *Offer our groups other clubs' courts when ours are full*. Off by default.
+             * @description *Offer our groups other clubs' courts when ours are full*. **On by default**: the club's official groups are offered other clubs' courts within `within_km`, only at an hour its own courts are full; off, they play only at the club.
              */
             offered: boolean;
             /**

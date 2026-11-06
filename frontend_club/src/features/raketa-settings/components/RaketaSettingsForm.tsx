@@ -47,10 +47,10 @@ function submitLabel(confirmed: boolean, pending: boolean): string {
 
 /**
  * **Raketa settings** (the screens B5): one form, one save. The release lead and the cut-off;
- * then other clubs' courts, whose distance is asked only while they are offered and is otherwise
- * sent as the backend holds it, so a hidden box can never be what a save is refused for; then the
- * pause. The first save confirms the settings, the setup checklist's last step, and the button
- * says so.
+ * then other clubs' courts, on by default. Their help line names the distance the backend holds.
+ * The distance is asked only while they are offered, and is otherwise sent as the backend holds
+ * it, so a hidden box can never be what a save is refused for. Then the pause. The first save
+ * confirms the settings, the setup checklist's last step, and the button says so.
  */
 export function RaketaSettingsForm({
   settings,
@@ -114,7 +114,7 @@ export function RaketaSettingsForm({
         <div className={styles.toggles}>
           <Toggle
             label={COPY.otherClubs.label}
-            hint={COPY.otherClubs.hint}
+            hint={COPY.otherClubs.hint(settings.otherClubs.withinKm)}
             name="other_clubs"
             anchor="other-clubs"
             checked={draft.otherClubs}

@@ -155,9 +155,8 @@ test("The club's menu, the checklist and Raketa settings fit a phone", async ({ 
   await fitsSideways(page, '/overview, the menu open');
 
   await page.goto('/raketa-settings');
-  await page
-    .getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" })
-    .check();
+  // Other clubs' courts are on by default, so the distance box is drawn too.
+  await expect(page.getByLabel('Distance')).toBeVisible();
   await fitsSideways(page, '/raketa-settings');
   await page.getByRole('button', { name: 'Leave Raketa' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();

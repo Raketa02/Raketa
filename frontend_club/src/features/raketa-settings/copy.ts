@@ -24,11 +24,11 @@ export const SETTINGS_COPY = {
       hint: 'Kilometres from your club. 1 to 50; 10 by default.',
     },
   } satisfies Record<NumberField, { label: string; hint: string }>,
+  /** On by default, within 10 km (Q128); other clubs only at an hour the club's are full. */
   otherClubs: {
     label: "Offer our groups other clubs' courts when ours are full",
-    hint:
-      "Only when your courts have no hour your groups' players share in the next 14 days. Your " +
-      'own courts always come first.',
+    hint: (km: number) =>
+      `At an hour your courts are full, your groups are also offered other clubs' courts within ${km} km.`,
   },
   paused: {
     label: 'Pause Raketa bookings',

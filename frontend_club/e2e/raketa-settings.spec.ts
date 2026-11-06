@@ -10,6 +10,8 @@ import { refusal } from './stub/backend';
  * setup checklist's last step.
  */
 
+const OTHER_CLUBS_SWITCH = "Offer our groups other clubs' courts when ours are full";
+
 async function openSettings(page: Page) {
   await signIn(page);
   await page.goto('/raketa-settings');
@@ -17,7 +19,7 @@ async function openSettings(page: Page) {
 }
 
 test.describe('Raketa settings', () => {
-  test('a new club sees the release lead and the cut-off at their defaults, and no way to choose', async ({
+  test("a new club sees every setting at its default, other clubs' courts on within 10 km, and no way to choose", async ({
     page,
     club,
   }) => {
@@ -35,9 +37,13 @@ test.describe('Raketa settings', () => {
     await expect(page.getByLabel('Minimum notice')).toHaveCount(0);
     await expect(page.getByLabel('Time to confirm')).toHaveCount(0);
 
-    await expect(
-      page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
-    ).not.toBeChecked();
+    // On by default (Q128), and only at an hour the club's own courts are full.
+    const otherClubs = page.getByRole('switch', { name: OTHER_CLUBS_SWITCH });
+    await expect(otherClubs).toBeChecked();
+    await expect(otherClubs).toHaveAccessibleDescription(
+      "At an hour your courts are full, your groups are also offered other clubs' courts within 10 km.",
+    );
+    await expect(page.getByLabel('Distance')).toHaveValue('10');
     // The desk checks nobody in (ADR-0195): these two are the only switches.
     await expect(page.getByRole('main').getByRole('switch')).toHaveCount(2);
     await expect(page.getByRole('switch', { name: 'Pause Raketa bookings' })).not.toBeChecked();
@@ -58,7 +64,7 @@ test.describe('Raketa settings', () => {
       {
         release_lead_days: 1,
         cut_off_hours: 24,
-        other_clubs_courts: { offered: false, within_km: 10 },
+        other_clubs_courts: { offered: true, within_km: 10 },
         paused: false,
       },
     ]);
@@ -84,20 +90,20 @@ test.describe('Raketa settings', () => {
       {
         release_lead_days: 5,
         cut_off_hours: 12,
-        other_clubs_courts: { offered: false, within_km: 10 },
+        other_clubs_courts: { offered: true, within_km: 10 },
         paused: false,
       },
     ]);
   });
 
-  test("other clubs' courts asks how far once it is on", async ({ page, stub, club }) => {
+  test("other clubs' courts asks how far only while it is on", async ({ page, stub, club }) => {
     void club;
     await openSettings(page);
+    const otherClubs = page.getByRole('switch', { name: OTHER_CLUBS_SWITCH });
+    await otherClubs.uncheck();
     await expect(page.getByLabel('Distance')).toHaveCount(0);
 
-    await page
-      .getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" })
-      .check();
+    await otherClubs.check();
     await expect(page.getByLabel('Distance')).toHaveValue('10');
     await page.getByLabel('Distance').fill('15');
     await page.getByRole('switch', { name: 'Pause Raketa bookings' }).check();
@@ -109,6 +115,31 @@ test.describe('Raketa settings', () => {
       other_clubs_courts: { offered: true, within_km: 15 },
       paused: true,
     });
+    await expect(otherClubs).toHaveAccessibleDescription(
+      "At an hour your courts are full, your groups are also offered other clubs' courts within 15 km.",
+    );
+  });
+
+  test("switched off, other clubs' courts keeps its distance for when it is back on", async ({
+    page,
+    stub,
+    club,
+  }) => {
+    club.raketa.confirmed = true;
+    club.raketa.settings.other_clubs_courts = { offered: true, within_km: 25 };
+    await openSettings(page);
+    const otherClubs = page.getByRole('switch', { name: OTHER_CLUBS_SWITCH });
+    await otherClubs.uncheck();
+    await page.getByRole('button', { name: 'Save settings' }).click();
+
+    await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings saved.');
+    expect(stub.requests('put', '/api/v1/club/raketa-settings')[0]?.body).toMatchObject({
+      other_clubs_courts: { offered: false, within_km: 25 },
+    });
+    await page.reload();
+    await expect(otherClubs).not.toBeChecked();
+    await otherClubs.check();
+    await expect(page.getByLabel('Distance')).toHaveValue('25');
   });
 
   test('a setting out of its range is refused under it, by this site or the server', async ({
@@ -157,7 +188,7 @@ test.describe('Raketa settings', () => {
       {
         release_lead_days: 3,
         cut_off_hours: 24,
-        other_clubs_courts: { offered: false, within_km: 10 },
+        other_clubs_courts: { offered: true, within_km: 10 },
         paused: true,
       },
     ]);

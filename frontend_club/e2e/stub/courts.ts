@@ -51,7 +51,8 @@ const BOUNDS = {
 export const DEFAULT_SETTINGS: Settings = {
   release_lead_days: 3,
   cut_off_hours: 24,
-  other_clubs_courts: { offered: false, within_km: 10 },
+  // On by default, within 10 km, since Q128 (ADR-0202 §7).
+  other_clubs_courts: { offered: true, within_km: 10 },
   paused: false,
 };
 

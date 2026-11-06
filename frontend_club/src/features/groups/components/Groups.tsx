@@ -16,7 +16,7 @@ const OTHER_CLUBS_SETTING = '/raketa-settings#other-clubs';
 /**
  * **Groups** (#500 stories 105–107, the screens B8): the club's official groups, which its
  * administrators make in the app, so there is nothing to create here; over the table, whether
- * they are offered other clubs' courts when the club's are full, and the way to the setting.
+ * they are offered other clubs' courts at an hour the club's are full, and the way to the setting.
  * Before the first group, the page says so.
  */
 export function Groups({
