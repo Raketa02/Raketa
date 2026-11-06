@@ -61,6 +61,46 @@ describe('a push’s payload', () => {
     });
   });
 
+  // #753: *You're friends* opens the friend's record, named by `player_id` (#745's push data).
+  it('reads a friend’s notice, which opens their record by the person it names', () => {
+    const PERSON = '3f2b8c1e-0000-4000-8000-000000000102';
+    expect(
+      parsePushNotice({
+        notice_id: PAYLOAD.notice_id,
+        kind: 'FRIENDS_MADE',
+        opens: 'RECORD',
+        player_id: PERSON,
+      }),
+    ).toEqual({
+      noticeId: PAYLOAD.notice_id,
+      kind: 'FRIENDS_MADE',
+      opens: 'RECORD',
+      gameId: null,
+      poolId: null,
+      sport: null,
+      gameKind: null,
+      playerId: PERSON,
+    });
+  });
+
+  it('is nothing to open when a record’s push names nobody, or not by an id', () => {
+    const record = { notice_id: PAYLOAD.notice_id, kind: 'FRIENDS_MADE', opens: 'RECORD' };
+    expect(parsePushNotice(record)).toBeUndefined();
+    expect(parsePushNotice({ ...record, player_id: '../../me' })).toBeUndefined();
+  });
+
+  // A friend request names its requester too, and opens Home, where its card is.
+  it('reads a friend request as a notice that opens Home', () => {
+    expect(
+      parsePushNotice({
+        notice_id: PAYLOAD.notice_id,
+        kind: 'FRIEND_REQUEST',
+        opens: 'HOME',
+        player_id: '3f2b8c1e-0000-4000-8000-000000000102',
+      }),
+    ).toMatchObject({ kind: 'FRIEND_REQUEST', opens: 'HOME', gameId: null });
+  });
+
   it('is nothing to open when a game’s push names no game', () => {
     expect(
       parsePushNotice({ notice_id: PAYLOAD.notice_id, kind: 'GAME_BOOKED', opens: 'BOOKING' }),

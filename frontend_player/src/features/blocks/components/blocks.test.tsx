@@ -145,6 +145,7 @@ const PAGE: Wire['GroupResponse'] = {
 function recordOf(who: Person, blockedByYou: boolean | undefined): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
+    relation: 'NONE',
     nickname: who.name,
     area_code: 'A+050612+0019938',
     social_tags: [],

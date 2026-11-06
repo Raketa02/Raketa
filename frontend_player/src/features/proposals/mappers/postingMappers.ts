@@ -80,6 +80,7 @@ function toFit(wire: Schemas['SlotFitSchema']): SlotFit {
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
     ...(wire.forecast === null ? {} : { forecastPct: wire.forecast.pct }),
+    ...(wire.friend ? { friend: true } : {}),
   };
 }
 

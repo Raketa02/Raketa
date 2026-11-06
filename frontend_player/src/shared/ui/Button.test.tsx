@@ -24,6 +24,7 @@
  * the way back, and not at all under reduced motion.
  */
 
+import Feather from '@expo/vector-icons/Feather';
 import { act, render, screen } from '@testing-library/react-native';
 import { Pressable, StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
 
@@ -170,6 +171,24 @@ describe('the pill shape (6.1, amended)', () => {
  * on first paint, or on the way back, or under reduced motion, without anybody noticing in
  * the style table.
  */
+describe('the marks after the label (6.1, amended)', () => {
+  it('draws a tick and a chevron after the words, in the label’s own ink, and speaks the words alone', () => {
+    render(
+      <Button label="Friend" variant="secondary" marks={['tick', 'chevron']} onPress={() => {}} />,
+    );
+
+    const marks = screen.UNSAFE_getAllByType(Feather);
+    expect(marks.map((mark) => mark.props.name)).toEqual(['check', 'chevron-down']);
+    for (const mark of marks) expect(mark.props.color).toBe(theme.color.ink);
+    expect(screen.getByRole('button', { name: 'Friend' })).toBeTruthy();
+  });
+
+  it('draws none unless asked', () => {
+    render(<Button label="Add friend" variant="dark" onPress={() => {}} />);
+    expect(screen.UNSAFE_queryAllByType(Feather)).toHaveLength(0);
+  });
+});
+
 describe('the settled button (6.1, amended)', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());

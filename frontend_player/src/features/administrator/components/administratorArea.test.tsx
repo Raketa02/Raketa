@@ -526,6 +526,7 @@ describe('Members, from the members card', () => {
     is_owner: false,
     is_administrator: false,
     joined_at: '2026-09-24T09:00:00Z',
+    relation: 'NONE',
   });
 
   async function openMembers(setup: GroupSetup) {
@@ -553,6 +554,19 @@ describe('Members, from the members card', () => {
     ]);
     const asked = transport.requestsTo('GET', membersPath(OPEN_PLAY_GROUP.id));
     expect(asked.map((request) => request.path.split('?')[1])).toEqual(['sport=PADEL']);
+  });
+
+  // #753: the Administrator's view of an official group's Members draws no friend pills or tags,
+  // whatever the rows carry (the friends screens §1).
+  it('draws no friend pill or tag on any row', async () => {
+    serveMembers(OPEN_PLAY_GROUP.id, {
+      PADEL: [{ ...member(MICHAL, 2.44), relation: 'ASKED_YOU' }, member(TOMEK, 2.71)],
+    });
+    await openMembers(OPEN_PLAY_GROUP);
+
+    expect(await screen.findByRole('header', { name: 'Members · 2' })).toBeTruthy();
+    expect(screen.queryAllByTestId(/^friend-row-/)).toHaveLength(0);
+    expect(screen.queryByText(/^(\+ Add|Accept|request sent|friend)$/)).toBeNull();
   });
 
   // Marta plays nothing: the pill is the group's sports, never a *Rate Padel* card for hers.

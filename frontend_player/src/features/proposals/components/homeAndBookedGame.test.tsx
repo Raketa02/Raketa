@@ -740,6 +740,27 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.getByLabelText('Paid, 28 zł, Paid')).toBeTruthy();
   });
 
+  /** #753 (Q68, applying since Q128): a booked game's tiles mark the reader's own friends. */
+  it('tags the reader’s own friends FRIEND on the tiles, and nobody else', async () => {
+    const sides = bookedSides({ paid: true });
+    await openDetails(
+      bookingDetails({
+        money: takenMoney(),
+        sides: {
+          ...sides,
+          theirs: sides.theirs.map((seat) =>
+            seat.player_id === INES ? { ...seat, friend: true } : seat,
+          ),
+        },
+      }),
+    );
+
+    expect(await screen.findByLabelText('ines.d, level 3,40, paid, friend')).toBeTruthy();
+    expect(within(screen.getByTestId(`game-tile-${INES}`)).getByText('FRIEND')).toBeTruthy();
+    expect(screen.getAllByText('FRIEND')).toHaveLength(1);
+    expect(screen.getByLabelText('piotr.s, level 2,95, paid')).toBeTruthy();
+  });
+
   /** Q113: the money row says when the share is held and when it is taken. */
   it('says the share is held on the card, when it is taken, and free to leave until then', async () => {
     await openDetails();

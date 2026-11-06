@@ -268,6 +268,7 @@ function notice(extra: Partial<Wire['NoticeSchema']>): Wire['NoticeSchema'] {
     gathered: 0,
     new: true,
     your_own: false,
+    player_id: null,
     ...extra,
   };
 }
@@ -584,7 +585,12 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
   it('out of time, the row loses its time and its sheet names no window — confirm, never pay', async () => {
     let ranOut = false;
     transport.on('GET', HOME_PATH, () =>
-      json<Wire['HomeResponse']>({ read_at: HOME_READ_AT, needing_you: 1, games: [] }),
+      json<Wire['HomeResponse']>({
+        read_at: HOME_READ_AT,
+        needing_you: 1,
+        games: [],
+        friend_requests: [],
+      }),
     );
     transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
       json<Wire['PaymentsToConfirmResponse']>({
@@ -713,6 +719,7 @@ describe('paying in time (Q110)', () => {
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
         needing_you: paid ? 0 : 1,
+        friend_requests: [],
         games: [
           paid
             ? homeGame({ booking_id: BOOKING, game_id: GAME_ID })
@@ -762,6 +769,7 @@ describe('out of time (Q109, Q111)', () => {
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
         needing_you: 0,
+        friend_requests: [],
         games: [
           ranOut
             ? waitingForAPayment({
@@ -800,6 +808,7 @@ describe('out of time (Q109, Q111)', () => {
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
         needing_you: 1,
+        friend_requests: [],
         games: ranOut ? [] : [waitingForAPayment({ your_payment_due_by: DUE })],
       }),
     );

@@ -32,6 +32,7 @@ export { Bar, type BarProps } from './Bar';
 export { BottomSheet, type BottomSheetProps } from './BottomSheet';
 export {
   Button,
+  type ButtonMark,
   type ButtonProps,
   type ButtonShape,
   type ButtonSize,

@@ -27,6 +27,7 @@ is referenced from the other by a sentence, not copied.
 | [`auth.md`](auth.md)                         | Sign-up's attestation, the naming, the You tab, Forgot password, invitations, the last profile |
 | [`blocks.md`](blocks.md)                     | Block and Unblock at the foot of a record, the confirm sheet, You › Account › Blocked players  |
 | [`conversations.md`](conversations.md)       | A booked game's room, the optimistic send, the live layer, typing                              |
+| [`friends.md`](friends.md)                   | Friend requests: Members' pills, the record's Add friend beside Block, Home's FRIEND REQUESTS  |
 | [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore                                                        |
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, a booked game's result screen               |
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |

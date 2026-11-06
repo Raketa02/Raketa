@@ -82,8 +82,22 @@
  * *Later* the `onDark` one, each with its own fill, label and press exactly as above. The
  * default is 4.2's corner, so nothing that exists changes, and the next surface that wants a
  * pill reopens the record rather than reaching for the prop.
+ *
+ * **Members' friend pills reopened it** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+ * friends 1–2; [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking),
+ * 2026-11-06): **+ Add** and **Accept** are the `dark` button in a pill at `sm`, on the right of a
+ * row, because the mock draws them so and the tags beside them on the next rows are pills too — a
+ * 10pt corner among them would read as a different kind of thing.
+ *
+ * **`marks` are two drawn glyphs after the label, and they are not words**
+ * ([#753](https://github.com/Raketa02/Raketa/issues/753); Part 16, 2026-11-06). The record's
+ * *Friend ✓ ▾* and *Request sent ▾* need a tick and a down-chevron, and Archivo ships no ✓
+ * (`CLAUDE.md`), so they are Feather's `check` and `chevron-down`, in the label's own ink and at its
+ * size, after it. **Never spoken**: the name is the label (or the caller's `accessibilityLabel`), and
+ * a mark says nothing a sighted reader would read aloud. Two only, because two are asked for.
  */
 
+import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -110,6 +124,14 @@ export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 /** 4.2's 10pt corner, or the chip's pill — the yes screen's exception. See the module note. */
 export type ButtonShape = 'rounded' | 'pill';
 
+/** A drawn mark after the label — see the module note. */
+export type ButtonMark = 'tick' | 'chevron';
+
+const MARK_GLYPH: Readonly<Record<ButtonMark, 'check' | 'chevron-down'>> = {
+  tick: 'check',
+  chevron: 'chevron-down',
+};
+
 export interface ButtonProps {
   readonly label: string;
   /**
@@ -125,6 +147,8 @@ export interface ButtonProps {
   readonly size?: ButtonSize;
   /** Defaults to the rounded rectangle every button is. `pill` is one screen's, by record. */
   readonly shape?: ButtonShape;
+  /** Glyphs drawn after the label, never spoken — see the module note. */
+  readonly marks?: readonly ButtonMark[];
   readonly disabled?: boolean;
   /** Blocks presses and swaps the label. A busy button is not a disabled button. */
   readonly busy?: boolean;
@@ -152,6 +176,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   shape = 'rounded',
+  marks = [],
   disabled = false,
   busy = false,
   busyLabel,
@@ -165,6 +190,11 @@ export function Button({
   // announces "Rate 1 sport" hands two different apps to two different players.
   const shown = busy ? (busyLabel ?? label) : label;
   const arrival = useArrivalAtSettled(variant);
+  const words = (
+    <Text style={[s.label, LABEL[variant]]} numberOfLines={1}>
+      {shown}
+    </Text>
+  );
 
   return (
     <Pressable
@@ -203,9 +233,23 @@ export function Button({
         />
       )}
       <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
-        <Text style={[s.label, LABEL[variant]]} numberOfLines={1}>
-          {shown}
-        </Text>
+        {marks.length === 0 ? (
+          words
+        ) : (
+          <View style={s.marked}>
+            {words}
+            {marks.map((mark) => (
+              <Feather
+                key={mark}
+                name={MARK_GLYPH[mark]}
+                size={theme.type.btn.fontSize}
+                color={LABEL[variant].color}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            ))}
+          </View>
+        )}
         {/* No `numberOfLines`: a gloss is a sentence, and at large OS text sizes it wraps
             rather than being clipped — the rule `minHeight` above is written for. */}
         {gloss !== undefined ? <Text style={[s.gloss, GLOSS[variant]]}>{gloss}</Text> : null}
@@ -271,6 +315,8 @@ const s = StyleSheet.create({
   // `minHeight`, never `height`: at large OS text sizes the label has to grow the button
   // rather than be clipped by it.
   labelBox: { paddingVertical: theme.space.xs },
+  // The label and its marks on one line, the marks a hair apart — a label's own word gap.
+  marked: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
   label: { ...theme.type.btn },
   // Two lines read from the start, so the box stretches rather than centring each of them on
   // its own width. See the module note.

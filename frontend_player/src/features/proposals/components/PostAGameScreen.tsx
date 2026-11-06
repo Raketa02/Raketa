@@ -433,6 +433,7 @@ export function PostAGameScreen({
           onClose={closeRecord}
           subject={{ kind: 'player', playerId: record.playerId }}
           sport={sport}
+          groupId={groupId}
         />
       )}
     </SafeAreaView>

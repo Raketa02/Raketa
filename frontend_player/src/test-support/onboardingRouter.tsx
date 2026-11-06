@@ -809,6 +809,8 @@ const GATE_USER_NICKNAME = 'ada';
  */
 export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
   is_self: true,
+  // Nothing stands between a player and themself: the route answers `NONE` on your own record.
+  relation: 'NONE',
   nickname: GATE_USER_NICKNAME,
   area_code: 'A+050612+0019938',
   social_tags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],
@@ -1064,6 +1066,7 @@ export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse'
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       games: [],
+      friend_requests: [],
       ...home,
     }),
   );

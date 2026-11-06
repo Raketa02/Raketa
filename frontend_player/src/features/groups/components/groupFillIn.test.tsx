@@ -19,8 +19,10 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import {
+  ANIA,
   DECK_READ_AT,
   KAROL,
+  KUBA,
   deckCard,
   fillIn,
   fillInPath,
@@ -415,11 +417,36 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     );
   });
 
+  // #753 (Q68, applying since Q128): a square marks the reader's own friend, and only theirs.
+  it('marks the reader’s own friends friend on their squares, and nobody else', async () => {
+    const kuba = KUBA({ friend: true });
+    const row = seatToFill({
+      players: [KAROL(), ANIA(), kuba].map((tile) => ({
+        player_id: tile.player_id,
+        is_you: false,
+        nickname: tile.nickname,
+        photo_id: null,
+        photo_url: null,
+        level: tile.level,
+        paid: true,
+        friend: tile.friend,
+      })),
+    });
+    await openFillIn(() => [row]);
+
+    const rescue = await screen.findByTestId(`seat-to-fill-${row.booking_id}`);
+    expect(within(rescue).getByTestId(`fill-in-friend-${kuba.player_id}`)).toBeTruthy();
+    expect(within(rescue).getAllByText('friend')).toHaveLength(1);
+    expect(within(rescue).getByLabelText('kuba.w, friend')).toBeTruthy();
+    expect(within(rescue).getByLabelText('karol.t')).toBeTruthy();
+  });
+
   it('opens a player’s record from a held poster', async () => {
     const karol = KAROL();
     transport.on('GET', `/api/v1/players/${karol.player_id}/record`, () =>
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
+        relation: 'NONE',
         nickname: 'karol.t',
         area_code: 'A+050612+0019938',
         social_tags: [],

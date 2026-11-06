@@ -47,6 +47,12 @@ export interface DeckPerson {
    * rescue, which is the seat that opened.
    */
   readonly paid?: boolean;
+  /**
+   * **The reader's own friend** — the **FRIEND** tag on a tile, *friend* on a Fill in square (#753;
+   * Q68, applying since Q128). Present only when they are: nothing on the wire says who else is
+   * friends with whom, and a tile with no tag claims nothing.
+   */
+  readonly friend?: true;
 }
 
 /** One cell of the overlap grid. */

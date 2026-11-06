@@ -31,6 +31,7 @@
  * the same refusal one field further in.
  */
 
+import type { FriendRelation } from '@/features/friends/types';
 import type { GameResult } from '@/shared/vocabulary/gameResult';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -355,4 +356,11 @@ export interface PlayerRecord {
    * guess worth drawing.
    */
   readonly blockedByYou?: boolean;
+  /**
+   * **Where the reader stands with them** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+   * ADR-0202 §1) — the left button of the record's foot, beside *Block*: *Add friend*, *Request
+   * sent ▾*, *Accept* or *Friend ✓ ▾*. `NONE` on your own record, which draws neither, and asked
+   * for nothing when `blockedByYou` is `true`: *Unblock* stands alone (`friends`' `recordFootOf`).
+   */
+  readonly relation: FriendRelation;
 }

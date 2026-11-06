@@ -635,6 +635,7 @@ const KASIA_ROW: Wire['GroupMemberSchema'] = {
   is_owner: false,
   is_administrator: false,
   joined_at: '2026-09-20T10:00:00Z',
+  relation: 'NONE',
 };
 const MICHAL_ROW: Wire['GroupMemberSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000000042',
@@ -644,6 +645,7 @@ const MICHAL_ROW: Wire['GroupMemberSchema'] = {
   is_owner: false,
   is_administrator: false,
   joined_at: '2026-09-10T10:00:00Z',
+  relation: 'NONE',
 };
 
 function stubMembers(members: readonly Wire['GroupMemberSchema'][]) {
@@ -712,6 +714,7 @@ describe('Members of an official group', () => {
             is_owner: false,
             is_administrator: false,
             joined_at: '2026-09-20T10:00:00Z',
+            relation: 'NONE',
           },
           {
             player_id: MARTA.player_id,
@@ -722,6 +725,7 @@ describe('Members of an official group', () => {
             is_owner: false,
             is_administrator: true,
             joined_at: '2026-09-01T10:00:00Z',
+            relation: 'NONE',
           },
           {
             player_id: 'e0000000-0000-4000-8000-000000000042',
@@ -731,6 +735,7 @@ describe('Members of an official group', () => {
             is_owner: false,
             is_administrator: false,
             joined_at: '2026-09-10T10:00:00Z',
+            relation: 'NONE',
           },
         ],
       }),
@@ -766,6 +771,7 @@ describe('Members of an official group', () => {
             is_owner: false,
             is_administrator: true,
             joined_at: '2026-09-20T10:00:00Z',
+            relation: 'NONE',
           },
         ],
       }),

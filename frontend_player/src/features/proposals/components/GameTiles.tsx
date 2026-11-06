@@ -36,6 +36,13 @@
  * complete it* over *27 zł · court booked* when it is the last seat, *You?* over *27 zł* while more
  * are open (the screens A2.3). The seat is offered, not taken — so no face.
  *
+ * ## The reader's own friends carry FRIEND
+ *
+ * A **FRIEND** tag in volt after the name and its IN (#753; Q68, applying since Q128): only on the
+ * reader's own friends, since the wire says nothing about who else is friends with whom. Volt is
+ * the card's other tag fill (`CardTag`), so the two tags read as one family, and the name is what
+ * the box cuts when both are there.
+ *
  * ## A booked game's tiles say *paid*
  *
  * The same tiles draw a booked game's people (#556; details 8): nobody on a booked court is *In* —
@@ -179,6 +186,7 @@ function GameTile({
             {tileName(person)}
           </Text>
           {person.isIn ? <CardTag label={COPY.in} tone="green" /> : null}
+          {person.friend === true ? <CardTag label={COPY.friend} tone="volt" /> : null}
         </View>
         {person.isYou && completes ? (
           <Text style={s.completes} numberOfLines={1}>

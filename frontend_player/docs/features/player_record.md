@@ -409,3 +409,15 @@ cycle (`proposals` already draws this feature's sheet); and `hides 0` reads _hid
 served, rather than a sentence of its own, since the line is drawn only while a filter is on and a
 filter that hides nobody is still on. **Not seen on a device**: the three segment labels at a third
 of the content width under Dynamic Type, and the card between the dark card and the record card.
+
+**The record's foot is Add friend beside Block** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+the friends screens §2; Q3, Q40). The record reads the wire's `relation` — `NONE · SENT · ASKED_YOU ·
+FRIEND`, `friends`' spelling, `NONE` on your own — and its last row is `friends`' `recordFootOf` of it:
+**nothing on your own record**, **_Unblock_ alone and full width on somebody the reader blocked**, and
+otherwise **one row of two** — `friends`' `FriendButton` (_Add friend_, _Request sent ▾_, _Accept_,
+_Friend ✓ ▾_) on the left and `blocks`' _Block_ on the right, each half the row. A record whose blocks
+could not be read draws the friend button alone, since the Block row was never a guess. Both acts
+re-read this record before they settle, handed down as the block's was; a request asked here says it
+came from the record, with the sport the sheet was opened for and the group the caller names
+(`groupId`, a new optional prop — Members, the deck, a game's details, a booked game, Fill in and
+Post a game pass theirs). The rules and the words are [`friends.md`](friends.md)'s.

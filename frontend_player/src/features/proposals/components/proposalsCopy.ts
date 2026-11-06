@@ -54,6 +54,12 @@ export const PROPOSALS_COPY = {
   paidNow: 'paid now',
   in: 'IN',
   inSpoken: 'In',
+  /**
+   * **The reader's own friend** — the deck's tile tag in volt (#753; Q68, applying since Q128; the
+   * words §29.1), and *friend* where it is spoken and on a Fill in square.
+   */
+  friend: 'FRIEND',
+  friendSpoken: 'friend',
   /** A booked game's seat whose share was taken — beside the Level (details 8, #556). */
   paid: 'paid',
   versus: 'vs',

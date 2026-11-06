@@ -209,3 +209,9 @@ you play · Who you play with_ is named for what they are read by — a game pro
 `YOU_COPY.groups.findingPlayers` became `yourGames`, and the three screens behind the rows wear it
 as their eyebrow. The paragraph on #582 above that says _the group keeps its title_ was true until
 this one.
+
+**Home holds FRIEND REQUESTS above Your games** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+the friends screens §6; Q13): the level card, _TO CONFIRM_, then `friends`' `FriendRequestsRow`, then
+the rail — drawn only while a request waits. The shell hands it the two things that are
+`player_record`'s, the reliability chip (`PlayerScoreTag`) and the record a card's face opens, so
+`friends` never imports the feature that draws its record button. #757 adds FRIENDS GAME above it.

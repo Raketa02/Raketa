@@ -164,6 +164,13 @@ describe('a cell’s sheet', () => {
     expect(fitSpoken(fit)).toBe('karol.t, level 2,75, a 93 % even game');
   });
 
+  // #753 (Q68, applying since Q128): a fit who is the reader's own friend says so.
+  it('says friend after the name of the reader’s own friend', () => {
+    expect(fitSpoken({ playerId: 'p', name: 'karol.t', level: 2.75, friend: true })).toBe(
+      'karol.t, friend, level 2,75',
+    );
+  });
+
   it('lines a free court with its distance, share and book-by — its hour and count apart', () => {
     expect(courtHour(COURT)).toBe('17:00');
     expect(courtRowLine(COURT)).toBe('2,4 km · 27 zł if it fills · book by Sat 15:00');

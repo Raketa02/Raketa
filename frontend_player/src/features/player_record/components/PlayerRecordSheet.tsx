@@ -77,6 +77,18 @@
  * this feature's keys while this feature draws its row — and the row is the re-read's answer.
  * Drawn with the record only, as the foot is.
  *
+ * ## Its foot is two buttons: Add friend beside Block
+ *
+ * Since [#753](https://github.com/Raketa02/Raketa/issues/753) (the friends screens §2; Q3, Q40) the
+ * last row is **one row of two**: `friends`' `FriendButton` on the left — *Add friend*, *Request
+ * sent ▾*, *Accept* or *Friend ✓ ▾*, from this read's own `relation` — and `blocks`' *Block* on the
+ * right. **On somebody the reader blocked, *Unblock* stands alone, full width**, and nothing offers to
+ * befriend them; **on your own record, neither**. Which of the three is `friends`' `recordFootOf`,
+ * read off this record — the rule is that feature's, the read is this one's. Both acts re-read this
+ * record before they settle, handed down as the block's is. A request asked here says it was asked
+ * from the record, with the group and the sport the caller opened it from (`groupId`, `sport`),
+ * which the other person's Home card names.
+ *
  * ## The account is folded under the blocks
  *
  * The three blocks — Player reliability, Last 5, Counted — are the summary; the counted card and
@@ -104,6 +116,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { BlockRow } from '@/features/blocks/types';
+import { FriendButton, recordFootOf, type AskedWhere } from '@/features/friends/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { BottomSheet, Note, Button, SocialTagRow, theme } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
@@ -186,6 +199,11 @@ export interface PlayerRecordSheetProps {
    * says. See the module note.
    */
   readonly foot?: ReactNode;
+  /**
+   * **The group the record was opened from** — Members', or a game's — which a request asked here
+   * names on the other person's Home (#753). Absent where the surface has no group.
+   */
+  readonly groupId?: string;
 }
 
 export function PlayerRecordSheet({
@@ -198,6 +216,7 @@ export function PlayerRecordSheet({
   tagOverlap,
   pairing,
   foot,
+  groupId,
 }: PlayerRecordSheetProps) {
   const record = usePlayerRecord({
     subject,
@@ -229,6 +248,11 @@ export function PlayerRecordSheet({
             {...(tagOverlap === undefined ? {} : { tagOverlap })}
             {...(pairing === undefined ? {} : { pairing })}
             {...(foot === undefined ? {} : { foot })}
+            where={{
+              from: 'RECORD',
+              ...(groupId === undefined ? {} : { groupId }),
+              ...(sport === undefined ? {} : { sport }),
+            }}
             rereadRecord={() => record.refetch()}
           />
         )}
@@ -278,11 +302,14 @@ function Filled({
   tagOverlap,
   pairing,
   foot,
+  where,
   rereadRecord,
 }: {
   readonly record: PlayerRecord;
   readonly playerId: string;
-  /** This read again — what a block or an unblock at the foot awaits before it settles. */
+  /** Where a request asked from the foot is asked from. */
+  readonly where: AskedWhere;
+  /** This read again — what every act at the foot awaits before it settles. */
   readonly rereadRecord: () => Promise<unknown>;
 } & Pick<
   PlayerRecordSheetProps,
@@ -342,20 +369,71 @@ function Filled({
           last, which is the whole reason it is at the end and inside the scroll (9.1). */}
       {foot === undefined ? null : <View style={s.foot}>{foot}</View>}
 
-      {/* **Block or Unblock, last** (#587, ADR-0193): on every record but your own, from the
-          record's own answer — absent on yours, and where the blocks could not be read. The
-          act is `blocks`'; whether the reader blocked them is this read's, and so is the
-          re-read the act awaits. */}
-      {record.blockedByYou === undefined ? null : (
-        <BlockRow
-          playerId={playerId}
-          name={record.nickname}
-          blocked={record.blockedByYou}
-          rereadRecord={rereadRecord}
-        />
-      )}
+      {/* **Add friend beside Block, last** (#753, #587): on every record but your own, from the
+          record's own answers. The acts are `friends'` and `blocks'`; where the reader stands
+          with them is this read's, and so is the re-read every act awaits. */}
+      <RecordFoot record={record} playerId={playerId} where={where} rereadRecord={rereadRecord} />
     </>
   );
+}
+
+/**
+ * **The record's foot** — see the module note. `recordFootOf` says which of the three; a pair is two
+ * halves of the row, *Unblock* the row whole.
+ */
+function RecordFoot({
+  record,
+  playerId,
+  where,
+  rereadRecord,
+}: {
+  readonly record: PlayerRecord;
+  readonly playerId: string;
+  readonly where: AskedWhere;
+  readonly rereadRecord: () => Promise<unknown>;
+}) {
+  const foot = recordFootOf(record);
+  switch (foot.kind) {
+    case 'nothing':
+      return null;
+    case 'unblock':
+      return (
+        <View style={s.footRow}>
+          <View style={s.whole}>
+            <BlockRow
+              playerId={playerId}
+              name={record.nickname}
+              blocked
+              rereadRecord={rereadRecord}
+            />
+          </View>
+        </View>
+      );
+    case 'pair':
+      return (
+        <View style={s.footRow} testID="record-foot">
+          <View style={s.half}>
+            <FriendButton
+              playerId={playerId}
+              nickname={record.nickname}
+              button={foot.button}
+              where={where}
+              rereadRecord={rereadRecord}
+            />
+          </View>
+          {foot.block ? (
+            <View style={s.half}>
+              <BlockRow
+                playerId={playerId}
+                name={record.nickname}
+                blocked={false}
+                rereadRecord={rereadRecord}
+              />
+            </View>
+          ) : null}
+        </View>
+      );
+  }
 }
 
 const s = StyleSheet.create({
@@ -364,6 +442,17 @@ const s = StyleSheet.create({
   body: { minHeight: STANDING_HEIGHT, gap: theme.space.sm },
   // A step above the record, so the answers read as the sheet's foot and not the tags' tail.
   foot: { marginTop: theme.space.xs },
+  // A step above the record, so the two buttons read as the sheet's foot and not the tags' tail;
+  // two halves of one row, each taking what the other leaves, their notes under each.
+  footRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.space.sm,
+    marginTop: theme.space.xs,
+  },
+  half: { flex: 1 },
+  // Unblock alone takes the row whole.
+  whole: { flex: 1 },
   refusal: { ...theme.type.tiny, color: theme.color.muted },
   failure: { gap: theme.space.sm },
 });

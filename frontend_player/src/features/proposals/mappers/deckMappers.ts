@@ -64,6 +64,7 @@ export function toPerson(wire: Schemas['DeckTileSchema']): DeckPerson {
     isIn: wire.is_in,
     // Paid is a rescue's people's; a card still filling draws IN or nothing.
     ...(wire.paid ? { paid: true } : {}),
+    ...(wire.friend ? { friend: true } : {}),
     ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),

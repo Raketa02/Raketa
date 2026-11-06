@@ -98,8 +98,9 @@ licence for a second dark surface.
   _It's a game!_'s one word — the yes screen's, which it inherited — and nothing else (ADR-0167,
   Part 16). A word that wants to be that
   large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`.
-- **The pill is the chip's**, and _It's a game!_'s two buttons through `Button`'s `shape` —
-  the one exception, fenced. Everywhere else a button is 10pt.
+- **The pill is the chip's**, and _It's a game!_'s two buttons and Members' friend pills (#753)
+  through `Button`'s `shape` — two exceptions, each fenced by a Part 16 row. Everywhere else a
+  button is 10pt.
 
 This design system covers `frontend_player/` **only.** The club app has its own; the palettes
 converge because it is one brand, but the values are never shared.

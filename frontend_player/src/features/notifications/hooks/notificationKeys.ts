@@ -10,6 +10,8 @@
  * is pushed from that moment. A sign-out clears it with everything else.
  */
 
+import type { QueryClient } from '@tanstack/react-query';
+
 export const notificationKeys = {
   all: ['notifications'] as const,
   /** `GET /players/me/notifications`. */
@@ -19,3 +21,12 @@ export const notificationKeys = {
   /** The phone's answer: may this app show a notice. */
   permission: () => [...notificationKeys.all, 'permission'] as const,
 };
+
+/**
+ * **The bell's list, read again** — for a surface that answered what a notice was about (#753):
+ * answering a friend request on Home takes its row off the bell on the server, and the bell would
+ * otherwise say *1 new* until its next read. The shell, which composes both, hands this in.
+ */
+export function rereadNotices(client: QueryClient) {
+  return client.invalidateQueries({ queryKey: notificationKeys.notices() });
+}

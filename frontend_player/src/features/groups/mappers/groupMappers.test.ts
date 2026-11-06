@@ -312,7 +312,7 @@ describe('Info’s members row', () => {
 });
 
 describe('Members, for one sport', () => {
-  it('reads each row’s face, Level, points, band, ownership and when they joined, in the order served', () => {
+  it('reads each row’s face, Level, points, band, ownership, relation and when they joined, in the order served', () => {
     expect(
       toGroupMembers({
         sport: 'PADEL',
@@ -326,6 +326,7 @@ describe('Members, for one sport', () => {
             is_owner: false,
             is_administrator: false,
             joined_at: '2026-09-20T10:00:00Z',
+            relation: 'NONE',
           },
           {
             player_id: 'p1',
@@ -338,6 +339,7 @@ describe('Members, for one sport', () => {
             is_owner: true,
             is_administrator: false,
             joined_at: '2026-09-01T10:00:00Z',
+            relation: 'ASKED_YOU',
           },
         ],
       }),
@@ -350,6 +352,7 @@ describe('Members, for one sport', () => {
         reliabilityBand: 'VERY_HIGH',
         isOwner: false,
         isAdministrator: false,
+        relation: 'NONE',
       },
       {
         playerId: 'p1',
@@ -360,6 +363,7 @@ describe('Members, for one sport', () => {
         reliabilityBand: 'HIGH',
         isOwner: true,
         isAdministrator: false,
+        relation: 'ASKED_YOU',
       },
     ]);
   });
@@ -381,6 +385,7 @@ describe('Members, for one sport', () => {
           is_owner: false,
           is_administrator: false,
           joined_at: '2026-09-10T10:00:00Z',
+          relation: 'NONE',
         },
       ],
     });
@@ -402,6 +407,7 @@ describe('Members, for one sport', () => {
           is_owner: false,
           is_administrator: true,
           joined_at: '2026-09-01T10:00:00Z',
+          relation: 'NONE',
         },
       ],
     });

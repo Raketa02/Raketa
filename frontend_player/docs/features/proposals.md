@@ -1230,3 +1230,21 @@ fall-through. **Calls made without a ruling**:
 
 `groupGamesDoor.test.tsx` walks it against a server whose new kind has no cards until it is dealt.
 **Not seen on a device.**
+
+**The reader's own friends carry the tag on every face** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+Q68, applying since Q128). `DeckPerson.friend` is mapped from the wire's `friend` on the deck's tiles
+and a booked game's seats — present only when they are, so nothing claims who else is friends with
+whom — and drawn as **FRIEND** in volt (`CardTag`) after the name and its IN on a game card's tile:
+the deck, a game's details, a booked game and a rescue. **Fill in's squares** carry _friend_ across
+the square's foot, a word on `mintSoft` inside its 34, so the squares keep their spacing. **Post a
+game's best fits** carry Members' _friend_ tag (`ok`) under the name (`SlotFit.friend`). Each is
+spoken after the nickname (_ania.k, level 2,68, friend_). **Home's game card is the one face without
+it**: its header is three overlapping faces at `groupPage.stackFace`, where no word fits, and the
+details it opens say it. The test that asserted no friend tag on a deck tile (`groupGames.test.tsx`)
+was turned round.
+
+**Home's read carries the friend requests** (#753): `GET /home`'s `friend_requests` are mapped into
+`Home.friendRequests` (`HomeFriendRequest` — the face, the nickname, `byLink`, the group while both
+are in it, the sport and the Level, the reliability and its band) and crossed by
+`useHomeFriendRequests`. `friends` draws and answers them; the read is this feature's because it is
+Home's. They are not counted in `needingYou`.

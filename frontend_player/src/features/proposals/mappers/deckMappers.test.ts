@@ -76,6 +76,15 @@ describe('a card', () => {
     expect(read?.sides.yours[0]?.isYou).toBe(true);
   });
 
+  it('marks the reader’s own friends with the FRIEND tag, and nobody else (#753, Q68)', () => {
+    const read = toDeckCard(
+      deckCard({ sides: { yours: [youTile(), KUBA({ friend: true })], theirs: [ANIA(), EWA()] } }),
+    );
+    const [, kuba] = read?.sides.yours ?? [];
+    expect(kuba?.friend).toBe(true);
+    for (const other of read?.sides.theirs ?? []) expect(other).not.toHaveProperty('friend');
+  });
+
   it('reads a challenge whose poster withdrew as nobody named', () => {
     expect(
       toDeckCard(deckCard({ type: 'CHALLENGE', challenger: null }))?.challenger,

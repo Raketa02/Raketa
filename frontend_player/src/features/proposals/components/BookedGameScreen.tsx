@@ -351,6 +351,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           onClose={() => setReading(undefined)}
           subject={{ kind: 'player', playerId: reading.playerId }}
           sport={game.sport}
+          groupId={game.groupId}
         />
       )}
     </>

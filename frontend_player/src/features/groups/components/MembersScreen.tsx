@@ -16,8 +16,18 @@
  * Administrator who joined as a player (#519) — then newest joined first. Each row is the name,
  * the **score tag** (`PlayerScoreTag`: a spark and the points on the tint of the band the server
  * served, #660) and the admin tag, over the sport's dot and *Padel 2,71*; every row has one, since
- * everyone starts at 100. A block hides nobody here, either way round (ADR-0193 §2). **No friend tag**:
- * there is no friends feature (PRD #500 overrides play 61 by name).
+ * everyone starts at 100. A block hides nobody here, either way round (ADR-0193 §2).
+ *
+ * ## Each row ends in where the reader stands with them
+ *
+ * **+ Add**, *request sent*, *friend* or **Accept** on every row but your own
+ * ([#753](https://github.com/Raketa02/Raketa/issues/753); the friends screens §1; friends 1, 2):
+ * `friends`' `RowWithFriendEnd`, handed the row as it was and the list's own re-read. **The rows
+ * keep today's design** — only the right-hand end is new — and **the pill acts while the rest of the
+ * row opens the record**, two controls side by side. A request asked here names this group and the
+ * pill's sport, which the other person's Home card says. A record opened from a row and closed
+ * re-reads the list, since what was pressed on it — Add friend, Accept, Remove, Block — moves the
+ * row it was opened from. **The Administrator's view draws no pills** (the friends screens §1).
  *
  * ## Who runs it is always here
  *
@@ -58,6 +68,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LevelDoor, fromAGroup, sportColour } from '@/features/onboarding/types';
+import { RowWithFriendEnd } from '@/features/friends/types';
 import {
   PlayerRecordSheet,
   PlayerScoreTag,
@@ -143,6 +154,7 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
               sport={sport}
               refused={GROUPS_COPY.group.refused}
               group={group}
+              friends
             />
           )
         }
@@ -225,9 +237,14 @@ interface MembersListProps {
    * (`runnerApart`). Absent in the administrator area, whose reader is the one who runs it.
    */
   readonly group?: Pick<Group, 'kind' | 'administratorName' | 'isAdministrator' | 'homeClub'>;
+  /**
+   * **Each row ends in the reader's relation to them** (#753) — the player's Members. Off in the
+   * administrator area, whose view of an official group's members draws no pills.
+   */
+  readonly friends?: boolean;
 }
 
-function MembersList({ groupId, sport, refused, group }: MembersListProps) {
+function MembersList({ groupId, sport, refused, group, friends = false }: MembersListProps) {
   const read = useGroupMembers(groupId, sport);
   const readerId = useReaderId();
   const members = read.data;
@@ -260,17 +277,32 @@ function MembersList({ groupId, sport, refused, group }: MembersListProps) {
               <Card style={s.card}>
                 {members.map((member, at) => {
                   const you = member.playerId === readerId;
-                  return (
+                  const row = (
                     <MemberRow
-                      key={member.playerId}
                       member={member}
                       sport={sport}
                       you={you}
-                      divided={at > 0}
                       onOpen={() =>
                         setReading({ kind: you ? 'me' : 'player', playerId: member.playerId })
                       }
                     />
+                  );
+                  return (
+                    <View key={member.playerId} style={at > 0 ? s.divided : undefined}>
+                      {you || !friends ? (
+                        row
+                      ) : (
+                        <RowWithFriendEnd
+                          playerId={member.playerId}
+                          nickname={memberName({ ...member, you })}
+                          relation={member.relation}
+                          where={{ from: 'MEMBERS', groupId, sport }}
+                          reread={() => read.refetch()}
+                        >
+                          {row}
+                        </RowWithFriendEnd>
+                      )}
+                    </View>
                   );
                 })}
               </Card>
@@ -284,9 +316,14 @@ function MembersList({ groupId, sport, refused, group }: MembersListProps) {
       {reading === undefined ? null : (
         <PlayerRecordSheet
           visible
-          onClose={() => setReading(undefined)}
+          onClose={() => {
+            setReading(undefined);
+            // What was pressed on the record moves the row it was opened from — see the module note.
+            void read.refetch();
+          }}
           subject={reading}
           sport={sport}
+          groupId={groupId}
         />
       )}
     </>
@@ -330,11 +367,10 @@ interface MemberRowProps {
   readonly member: GroupMember;
   readonly sport: Sport;
   readonly you: boolean;
-  readonly divided: boolean;
   readonly onOpen: () => void;
 }
 
-function MemberRow({ member, sport, you, divided, onOpen }: MemberRowProps) {
+function MemberRow({ member, sport, you, onOpen }: MemberRowProps) {
   const person = { ...member, you };
 
   return (
@@ -346,11 +382,7 @@ function MemberRow({ member, sport, you, divided, onOpen }: MemberRowProps) {
       onPress={onOpen}
       hitSlop={theme.hit.peopleRow}
       // 6.6: the row is the target, so the row dims.
-      style={({ pressed }) => [
-        s.row,
-        divided ? s.divided : undefined,
-        pressed ? s.pressed : undefined,
-      ]}
+      style={({ pressed }) => [s.row, pressed ? s.pressed : undefined]}
     >
       <PlayerPhoto
         playerId={member.playerId}

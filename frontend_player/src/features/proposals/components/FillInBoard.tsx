@@ -135,6 +135,7 @@ export function FillInBoard({ groupId, sport, empty }: FillInBoardProps) {
           onClose={() => setReading(undefined)}
           subject={{ kind: 'player', playerId: reading.playerId }}
           sport={sport}
+          groupId={groupId}
         />
       )}
     </>

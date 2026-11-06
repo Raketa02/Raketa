@@ -64,6 +64,7 @@ import { usePostingSlot } from '../hooks/usePosting';
 import { LINE_JOIN, clubName, payLabel, paySpoken, yesButtonLabel } from './deckPresentation';
 import { FillInSquares } from './FillInSquares';
 import { POSTING_COPY } from './postingCopy';
+import { PROPOSALS_COPY } from './proposalsCopy';
 import {
   courtHour,
   courtRowLine,
@@ -302,6 +303,13 @@ function FitCard({
       <Text style={s.fitName} numberOfLines={1}>
         {fitName(fit)}
       </Text>
+      {/* The reader's own friend, in Members' green: a word on paper (#753; Q68). */}
+      {fit.friend === true ? (
+        // A tag stands at its own top-left (6.4); the box centres it under the name.
+        <View>
+          <Tag label={PROPOSALS_COPY.friendSpoken} variant="ok" />
+        </View>
+      ) : null}
       {line === undefined ? null : <Text style={s.fitLine}>{line}</Text>}
     </Pressable>
   );

@@ -16,7 +16,7 @@ import { currentUserQuery } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
-import { openedToKeep, type BookedGame, type Home } from '../domain/home';
+import { openedToKeep, type BookedGame, type Home, type HomeFriendRequest } from '../domain/home';
 import {
   keepDismissedGames,
   keepOpenedGames,
@@ -34,6 +34,15 @@ export function useHome() {
     queryKey: proposalKeys.home(),
     queryFn: ({ signal }) => readHome({ signal }),
   });
+}
+
+/**
+ * **FRIEND REQUESTS** (#753) — the requests waiting on the reader, off Home's one read: `undefined`
+ * while it is in flight or refused, which draws no row, as an empty list does. The cards are
+ * `friends`' to draw and answer; the read is Home's, and so this feature's.
+ */
+export function useHomeFriendRequests(): readonly HomeFriendRequest[] | undefined {
+  return useHome().data?.friendRequests;
 }
 
 /**

@@ -371,6 +371,7 @@ function Details({
           onClose={() => setReading(undefined)}
           subject={{ kind: 'player', playerId: reading.playerId }}
           sport={sport}
+          groupId={groupId}
         />
       )}
     </>

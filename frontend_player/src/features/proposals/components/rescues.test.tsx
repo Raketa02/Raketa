@@ -145,6 +145,7 @@ function bookedTile(tile: Wire['DeckTileSchema']): Wire['BookedTileSchema'] {
     photo_url: tile.photo_url,
     level: tile.level,
     paid: !tile.is_you,
+    friend: tile.friend,
   };
 }
 

@@ -14,6 +14,7 @@
  * Location area. This file holds what came, in the app's spelling.
  */
 
+import type { FriendRelation } from '@/features/friends/types';
 import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -192,6 +193,12 @@ export interface GroupMember extends GroupPerson {
   readonly isOwner: boolean;
   /** Whether they run this official group and joined it as a player. Always `false` on a player group. */
   readonly isAdministrator: boolean;
+  /**
+   * **Where the reader stands with them** (#753; ADR-0202 §1) — the pill or the tag on the row's
+   * right: **+ Add**, *request sent*, **Accept**, *friend*. `NONE` on the reader's own row, which
+   * draws neither, and the administrator's view draws none at all.
+   */
+  readonly relation: FriendRelation;
 }
 
 /** One sport a person is rated in, with its Level — *Padel 2,44*. */

@@ -103,6 +103,8 @@ export interface SlotFit {
   readonly level?: number;
   /** How even a game of the poster and them is forecast. */
   readonly forecastPct?: number;
+  /** The reader's own friend — *friend* under the name (#753; Q68). Present only when they are. */
+  readonly friend?: true;
 }
 
 /** **One *Free courts* row** — a club and hour the post could be made at. */

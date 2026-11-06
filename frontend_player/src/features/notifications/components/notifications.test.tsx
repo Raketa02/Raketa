@@ -15,8 +15,10 @@ import { focusManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Linking } from 'react-native';
 
+import { FRIENDS_COPY, requestsHeading, wantsToBeYourFriend } from '@/features/friends/types';
 import { gameKeys } from '@/features/games/types';
 import { GROUPS_COPY } from '@/features/groups/types';
+import { RECORD_TITLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { doorRowLabel, theme } from '@/shared/ui';
@@ -58,6 +60,7 @@ import {
   stubPush,
 } from '@/test-support/onboardingRouter';
 import { fakePush, PUSH_TOKEN, type FakePush } from '@/test-support/platform';
+import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
   installTransport,
@@ -135,6 +138,7 @@ function notice(extra: Partial<Wire['NoticeSchema']> = {}): Wire['NoticeSchema']
     gathered: 0,
     new: false,
     your_own: false,
+    player_id: null,
     ...extra,
   };
 }
@@ -1604,5 +1608,119 @@ describe('Get your level — a notice about no game, opening Home', () => {
 
     expect(await screen.findByRole('button', { name: 'Pick your sports' })).toBeTruthy();
     expect(screen).toHavePathname('/');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A friend's notices (#753, on #745's)
+// ---------------------------------------------------------------------------
+
+/**
+ * **A friend request opens Home, and *You're friends* opens the friend's record** (the friends
+ * mechanics §12). The backend pushes the person each names as `player_id` — a request opens Home,
+ * where its card is; *You're friends* opens `RECORD`, a sheet drawn over wherever the player is,
+ * since a record is not a screen.
+ */
+describe('a friend’s notices', () => {
+  const ASKED: Wire['HomeFriendRequestSchema'] = {
+    player_id: INES,
+    nickname: 'ines.d',
+    photo_id: null,
+    photo_url: null,
+    asked_at: '2026-10-02T12:00:00Z',
+    by_link: false,
+    group: { id: CREW_ID, name: 'Kazimierz crew' },
+    sport: 'PADEL',
+    level: 3.4,
+    player_score: 98,
+    reliability_band: 'VERY_HIGH',
+  };
+  const REQUEST = notice({
+    kind: 'FRIEND_REQUEST',
+    title: 'ines.d wants to be your friend',
+    body: 'With you in Kazimierz crew · Padel',
+    opens: 'HOME',
+    game_id: null,
+    pool_id: CREW_ID,
+    sport: null,
+    game_kind: null,
+    player_id: INES,
+    new: true,
+  });
+  const MADE = notice({
+    kind: 'FRIENDS_MADE',
+    title: 'ines.d said yes — you’re friends',
+    body: 'Find ines.d in You › Friends.',
+    opens: 'RECORD',
+    game_id: null,
+    pool_id: null,
+    sport: null,
+    game_kind: null,
+    player_id: INES,
+    new: true,
+  });
+  const MADE_PUSHED = {
+    notice_id: MADE.notice_id,
+    kind: 'FRIENDS_MADE',
+    opens: 'RECORD',
+    player_id: INES,
+  };
+
+  beforeEach(() => {
+    stubHomeGames(transport, [], { friend_requests: [ASKED] });
+    transport.on('GET', `/api/v1/players/${INES}/record`, () =>
+      json<Wire['PlayerRecordResponse']>({
+        is_self: false,
+        relation: 'FRIEND',
+        blocked_by_you: false,
+        nickname: 'ines.d',
+        area_code: 'A+050612+0019938',
+        social_tags: [],
+        sports: [{ sport: 'PADEL', level: 3.4, band: 'Established' }],
+        reliability: servedReliability({ player_score: 98, is_new: false }),
+      }),
+    );
+  });
+
+  it('a request’s row behind the bell opens Home, on its card', async () => {
+    stubNotices(transport, [REQUEST], { newCount: 1 });
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. ines\.d wants to be/ }));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(await screen.findByRole('header', { name: requestsHeading(1) })).toBeTruthy();
+    expect(screen.getByText(wantsToBeYourFriend('ines.d'))).toBeTruthy();
+    expect(screen.queryByLabelText('Back')).toBeNull();
+  });
+
+  it('You’re friends, behind the bell, opens the friend’s record over the list', async () => {
+    stubNotices(transport, [MADE], { newCount: 1 });
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. ines\.d said yes/ }));
+
+    expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: FRIENDS_COPY.record.friend })).toBeTruthy();
+    // A sheet over the list, not a screen pushed: the list is still where the player is.
+    expect(screen).toHavePathname('/notices');
+  });
+
+  it('You’re friends, pushed and tapped, opens the record over wherever the player is', async () => {
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('You'));
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+
+    act(() => phone.tap(MADE_PUSHED));
+
+    expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', `/api/v1/players/${INES}/record`)).toHaveLength(1),
+    );
+    expect(screen).toHavePathname('/you');
   });
 });

@@ -35,7 +35,11 @@ export type NoticeKind =
    * *Get your level so your groups can deal you games.* (#727) — the first notice about no game,
    * opening Home, where its card is (#731).
    */
-  | 'GET_YOUR_LEVEL';
+  | 'GET_YOUR_LEVEL'
+  /** *ines.d wants to be your friend* (#745, #753) — opens Home, where its card is. */
+  | 'FRIEND_REQUEST'
+  /** *kuba.w said yes — you're friends*, or *You and kuba.w are friends now* — opens their record. */
+  | 'FRIENDS_MADE';
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
@@ -59,18 +63,20 @@ export const NOTICE_KINDS = [
   'IS_THAT_RIGHT',
   'WERE_THEY_THERE',
   'GET_YOUR_LEVEL',
+  'FRIEND_REQUEST',
+  'FRIENDS_MADE',
 ] as const satisfies readonly NoticeKind[];
 
 /**
  * Where a tap opens a notice (the screens A9): a booked game's details, a game still filling's — or
  * one that did not fill — a group's deck with the card on top, a booked game's result screen
- * (#663), where each step at the court is acted on, and Home (#727, #731), for a notice about no
- * game.
+ * (#663), where each step at the court is acted on, Home (#727, #731), for a notice about no
+ * game, and a player's record (#753), for *You're friends*.
  */
-export type Opens = 'BOOKING' | 'PROPOSAL' | 'DECK' | 'RESULT' | 'HOME';
+export type Opens = 'BOOKING' | 'PROPOSAL' | 'DECK' | 'RESULT' | 'HOME' | 'RECORD';
 
-/** The places a tap opens that are a game's — every one but Home. */
-export type GameOpens = Exclude<Opens, 'HOME'>;
+/** The places a tap opens that are a game's — every one but Home and a record. */
+export type GameOpens = Exclude<Opens, 'HOME' | 'RECORD'>;
 
 /** The four a game's notice opens — what a push about a game is checked against. */
 export const GAME_OPENS = [

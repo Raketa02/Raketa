@@ -143,6 +143,7 @@ export function slotFit(tile: Wire['DeckTileSchema'], pct: number): Wire['SlotFi
     photo_id: tile.photo_id,
     photo_url: tile.photo_url,
     level: tile.level,
+    friend: tile.friend,
     forecast: { pct, provisional: false },
   };
 }

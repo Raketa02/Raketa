@@ -25,6 +25,8 @@ import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
 import {
   DECK_READ_AT,
+  KAROL,
+  ZOFIA,
   groupDeck,
   liveYes,
   proposalDetails,
@@ -81,6 +83,7 @@ import {
   postingSlot,
   postingSlotPath,
   postsPath,
+  slotFit,
   stubPostingGrid,
   stubPostingSlot,
 } from '@/test-support/posting';
@@ -721,6 +724,26 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
       day: SAT,
       range: 'EVENING',
     });
+  });
+
+  // #753 (Q68, applying since Q128): a fit who is the reader's own friend carries friend.
+  it('tags the reader’s own friends among the fits, and nobody else', async () => {
+    await openPosting();
+    stubPostingSlot(
+      transport,
+      CREW.id,
+      postingSlot({ fits: [slotFit(KAROL({ friend: true }), 93), slotFit(ZOFIA(), 95)] }),
+    );
+
+    fireEvent.press(cellOf(SAT, 'EVENING'));
+
+    const karol = await screen.findByTestId(`slot-fit-${KAROL().player_id}`);
+    expect(within(karol).getByText(PROPOSALS_COPY.friendSpoken)).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'karol.t, friend, level 2,75, a 93 % even game' }),
+    ).toBeTruthy();
+    const zofia = screen.getByTestId(`slot-fit-${ZOFIA().player_id}`);
+    expect(within(zofia).queryByText(PROPOSALS_COPY.friendSpoken)).toBeNull();
   });
 
   it('warns a thin cell may not fill, and says it outside the player’s hours', async () => {

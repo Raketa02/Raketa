@@ -23,6 +23,11 @@
  */
 
 export const BLOCKS_COPY = {
+  /**
+   * **The record's right button, drawn** (#753): *Block* beside the friend button, *Unblock* alone and
+   * full width. Spoken whole — `blockRowLabel`, `unblockRowLabel` — since the drawing names nobody.
+   */
+  row: { block: 'Block', unblock: 'Unblock' },
   sheet: {
     /** The act, once, on the control that does it. */
     block: 'Block',

@@ -9,9 +9,12 @@
  */
 
 import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
+import { FriendRequestsRow } from '@/features/friends/types';
 import { HomeLevelCard } from '@/features/groups/types';
-import { NoticeBell } from '@/features/notifications/types';
+import { NoticeBell, rereadNotices } from '@/features/notifications/types';
+import { PlayerRecordSheet, PlayerScoreTag } from '@/features/player_record/types';
 import { HomeRail, PaymentsToConfirm, rereadHome } from '@/features/proposals/types';
 
 import { ShellScreen } from './ShellScreen';
@@ -38,6 +41,12 @@ import { HOME_COPY } from './shellCopy';
  * [#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7): *Get your level — your
  * groups can't deal you games until you have one.*, at the top, since until she has one nothing
  * under it can happen. It draws nothing for anybody else.
+ *
+ * **FRIEND REQUESTS sits above Your games** (`friends`' row, [#753](https://github.com/Raketa02/Raketa/issues/753);
+ * the friends screens §6; Q13), drawn only while a request waits. The shell hands it the two things
+ * that are `player_record`'s — the reliability chip, and the record a face opens — so `friends` does
+ * not import the feature that draws its record button; and the bell's re-read, since answering a
+ * request takes its row off the bell.
  */
 export function HomeScreen() {
   const client = useQueryClient();
@@ -49,7 +58,35 @@ export function HomeScreen() {
     >
       <HomeLevelCard />
       <PaymentsToConfirm />
+      <HomeFriendRequests />
       <HomeRail empty={HOME_COPY.empty} />
     </ShellScreen>
+  );
+}
+
+/** *FRIEND REQUESTS · n*, and the record a card's face opens. */
+function HomeFriendRequests() {
+  const client = useQueryClient();
+  const [reading, setReading] = useState<string>();
+  return (
+    <>
+      <FriendRequestsRow
+        scoreTag={(request) => (
+          <PlayerScoreTag
+            score={request.playerScore}
+            {...(request.reliabilityBand === undefined ? {} : { band: request.reliabilityBand })}
+          />
+        )}
+        onFace={setReading}
+        onAnswered={() => rereadNotices(client)}
+      />
+      {reading === undefined ? null : (
+        <PlayerRecordSheet
+          visible
+          onClose={() => setReading(undefined)}
+          subject={{ kind: 'player', playerId: reading }}
+        />
+      )}
+    </>
   );
 }

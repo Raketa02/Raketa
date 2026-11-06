@@ -10,6 +10,12 @@
  * **A poster is held for its player's record** (A3.1: *long-press a poster → record*): the hold, and
  * the standard `longpress` action for VoiceOver and TalkBack, which cannot hold — the Members list's
  * own shape. The reader's own poster opens nothing.
+ *
+ * **The reader's own friends carry *friend*** (#753; Q68, applying since Q128), pinned across the
+ * square's foot as a tile carries its tags over its scrim: a word on `mintSoft`, *settled*, the
+ * colour Members draws the same tag in. At 9,5pt *friend* fits the square's 34 without a box wider
+ * than the square, so the squares keep their spacing and the row its height. Spoken after the
+ * nickname.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -18,8 +24,9 @@ import { SeatFace, theme } from '@/shared/ui';
 
 import type { DeckPerson } from '../domain/deck';
 
-import { tileName } from './deckPresentation';
+import { squareLabel, tileName } from './deckPresentation';
 import { FILL_IN_COPY } from './fillInCopy';
+import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = FILL_IN_COPY;
 const SEAT = theme.size.groupPage.seat;
@@ -54,7 +61,7 @@ export function FillInSquares({ people, open, question, onHold }: FillInSquaresP
         ) : (
           <Pressable
             key={person.playerId}
-            accessibilityLabel={tileName(person)}
+            accessibilityLabel={squareLabel(person)}
             accessibilityHint={COPY.holdHint}
             onLongPress={() => onHold(person)}
             accessibilityActions={[{ name: 'longpress' }]}
@@ -74,6 +81,13 @@ export function FillInSquares({ people, open, question, onHold }: FillInSquaresP
               }}
               ring="seated"
             />
+            {person.friend === true ? (
+              <View style={s.friend} testID={`fill-in-friend-${person.playerId}`}>
+                <Text style={s.friendWord} numberOfLines={1}>
+                  {PROPOSALS_COPY.friendSpoken}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
         ),
       )}
@@ -94,6 +108,18 @@ export function FillInSquares({ people, open, question, onHold }: FillInSquaresP
 }
 
 const s = StyleSheet.create({
+  // Across the square's foot, inside its 34 — see the module note.
+  friend: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    backgroundColor: theme.color.mintSoft,
+    borderBottomLeftRadius: theme.radius.tag,
+    borderBottomRightRadius: theme.radius.tag,
+  },
+  friendWord: { ...theme.type.tag, color: theme.color.mintInk },
   squares: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs, flexShrink: 1 },
   question: { ...theme.type.cardTitle, color: theme.color.muted },
   // 6.6's photo-tile value.

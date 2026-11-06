@@ -11,6 +11,9 @@
  * keys on a push that opens Home are left on the wire, and a game's push with none of them is not a
  * notice. The kinds — the notice's, the sport, the game's — are narrowed where the wire is read
  * (`mappers/`), since a code this build cannot name is a notice still told and nowhere to open.
+ * **A friend's notice** (#753) pushes the person it names as `player_id`: *You're friends* opens
+ * their record (`RECORD`) and is nothing to open without a well-formed id; a friend request opens
+ * Home, where its card is, and is read as any notice that opens Home.
  */
 
 import { z } from 'zod';
@@ -22,6 +25,9 @@ const Pushed = z.object({ notice_id: z.string().uuid(), kind: z.string() });
 
 const AboutNoGame = Pushed.extend({ opens: z.literal('HOME') });
 
+/** *You're friends* (#753): the person it names, whose record a tap opens — an id, or nothing. */
+const AboutAPerson = Pushed.extend({ opens: z.literal('RECORD'), player_id: z.string().uuid() });
+
 const AboutAGame = Pushed.extend({
   opens: z.enum(GAME_OPENS),
   game_id: z.string().uuid(),
@@ -30,7 +36,7 @@ const AboutAGame = Pushed.extend({
   game_kind: z.string(),
 });
 
-const PushNoticeData = z.union([AboutNoGame, AboutAGame]);
+const PushNoticeData = z.union([AboutNoGame, AboutAPerson, AboutAGame]);
 
 /**
  * A notice's facts as the backend sent them — a push's payload, or a listed row's. One about no game
@@ -43,6 +49,11 @@ export interface SentFacts {
   readonly poolId: string | null;
   readonly sport: string | null;
   readonly gameKind: string | null;
+  /**
+   * The person a notice about no game names — on *You're friends*, whose record it opens (#753).
+   * Absent or `null` on every notice that opens by a game or opens Home.
+   */
+  readonly playerId?: string | null;
 }
 
 /** A pushed notice: its id and its facts. */
@@ -55,14 +66,17 @@ export function parsePushNotice(data: unknown): PushedNotice | undefined {
   const parsed = PushNoticeData.safeParse(data);
   if (!parsed.success) return undefined;
   const pushed = parsed.data;
+  const noGame = { gameId: null, poolId: null, sport: null, gameKind: null };
   const about =
     pushed.opens === 'HOME'
-      ? { gameId: null, poolId: null, sport: null, gameKind: null }
-      : {
-          gameId: pushed.game_id,
-          poolId: pushed.pool_id,
-          sport: pushed.sport,
-          gameKind: pushed.game_kind,
-        };
+      ? noGame
+      : pushed.opens === 'RECORD'
+        ? { ...noGame, playerId: pushed.player_id }
+        : {
+            gameId: pushed.game_id,
+            poolId: pushed.pool_id,
+            sport: pushed.sport,
+            gameKind: pushed.game_kind,
+          };
   return { noticeId: pushed.notice_id, kind: pushed.kind, opens: pushed.opens, ...about };
 }

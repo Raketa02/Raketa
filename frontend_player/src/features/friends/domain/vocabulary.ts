@@ -1,0 +1,28 @@
+/**
+ * **The friends codes, spelled here** — held equal to the generated ones in
+ * `mappers/wireVocabulary.ts`, so a code the contract adds or renames fails `pnpm typecheck` in the
+ * one file whose job is saying so ([#753](https://github.com/Raketa02/Raketa/issues/753); ADR-0202
+ * §1–§2).
+ *
+ * The wire's own spellings, kept, as `groups`' relation to a group keeps its own: every surface that
+ * carries the reader's relation to a person — Members' rows, the record — keys its pill, its tag or
+ * its buttons by these four.
+ */
+
+/**
+ * **Where the reader stands with one person** — only the reader's own, on every surface (Q12):
+ *
+ * - `NONE` — nothing stands between them: **+ Add**, *Add friend*;
+ * - `SENT` — the reader asked, and it is open (set aside or not, which is never said): *request
+ *   sent*, *Request sent ▾*;
+ * - `ASKED_YOU` — they asked the reader: **Accept**;
+ * - `FRIEND` — *friend*, *Friend ✓ ▾*.
+ */
+export type FriendRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
+
+/**
+ * **The screen a request is asked from** — which the request keeps, and which its card on the other
+ * person's Home names through the group the screen showed. A link's request (#748) is never sent:
+ * opening the link makes it.
+ */
+export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT';

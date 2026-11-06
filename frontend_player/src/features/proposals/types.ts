@@ -102,3 +102,10 @@ export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
 export { bookedResultRoute, gameRoute, rescueRoute } from './components/proposalRoutes';
 export { proposalKeys } from './hooks/proposalKeys';
 export { rereadHome } from './hooks/useHome';
+
+/**
+ * **Home's friend requests** (#753) — they ride on `GET /home`, which this feature reads, and
+ * `friends` draws them and answers them: the read and its type cross, and nothing else does.
+ */
+export { useHomeFriendRequests } from './hooks/useHome';
+export type { HomeFriendRequest } from './domain/home';

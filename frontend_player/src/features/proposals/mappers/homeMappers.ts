@@ -9,10 +9,19 @@
  */
 
 import { toSport } from '@/features/onboarding/types';
+import { toReliabilityBand } from '@/features/player_record/types';
 import type { components } from '@/generated/schema';
 
 import type { DeckPerson } from '../domain/deck';
-import type { BookedGame, BookedMoney, Home, HomeGame, Leaving, RescueOffer } from '../domain/home';
+import type {
+  BookedGame,
+  BookedMoney,
+  Home,
+  HomeFriendRequest,
+  HomeGame,
+  Leaving,
+  RescueOffer,
+} from '../domain/home';
 import type { LeavingKind, ShareState, TimeTo } from '../domain/vocabulary';
 
 import { toClub, toKind } from './deckMappers';
@@ -27,6 +36,7 @@ export function toSeat(wire: Schemas['BookedTileSchema']): DeckPerson {
     // Nobody on a booked court is *In* — that word is a game still filling's.
     isIn: false,
     paid: wire.paid,
+    ...(wire.friend ? { friend: true } : {}),
     ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
@@ -146,6 +156,28 @@ export function toHome(wire: Schemas['HomeResponse']): Home {
     readAt: wire.read_at,
     needingYou: wire.needing_you,
     games: wire.games.map(toHomeGame).filter((game): game is HomeGame => game !== undefined),
+    friendRequests: wire.friend_requests.map(toHomeFriendRequest),
+  };
+}
+
+/**
+ * **A friend request on Home** (#753). A sport this build cannot name is left off with its Level —
+ * the card still says who asked and where — and a band it cannot name is dropped by `player_record`'s
+ * own reading of the code, as Members' rows drop it.
+ */
+function toHomeFriendRequest(wire: Schemas['HomeFriendRequestSchema']): HomeFriendRequest {
+  const sport = wire.sport === null ? undefined : toSport(wire.sport);
+  const band = toReliabilityBand(wire.reliability_band);
+  return {
+    playerId: wire.player_id,
+    nickname: wire.nickname,
+    ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
+    byLink: wire.by_link,
+    ...(wire.group === null ? {} : { group: { id: wire.group.id, name: wire.group.name } }),
+    ...(sport === undefined ? {} : { sport }),
+    ...(sport === undefined || wire.level === null ? {} : { level: wire.level }),
+    playerScore: wire.player_score,
+    ...(band === undefined ? {} : { reliabilityBand: band }),
   };
 }
 

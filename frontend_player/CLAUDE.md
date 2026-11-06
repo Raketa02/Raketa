@@ -140,7 +140,7 @@ src/
   the union itself in `domain/vocabulary.ts` and holds it equal to the generated one with a
   compile-time assertion in `mappers/wireVocabulary.ts`, so a contract change fails
   `pnpm typecheck` in the one file whose job is saying so (`games`, `proposals`, `groups`,
-  `player_record`, `payments`, `notifications` and `auth` do this).
+  `player_record`, `payments`, `notifications`, `friends` and `auth` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
   classes), and six platform ports in `shared/lib/platform/` — `location.ts`,

@@ -22,6 +22,7 @@ const PHOTO = 'https://photos.example/one.jpg';
 function response(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
+    relation: 'NONE',
     nickname: 'bea_k',
     area_code: 'A+050612+0019938',
     social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
@@ -109,6 +110,15 @@ describe('your own block', () => {
 
   it('is absent where the server could not read the blocks, rather than guessed', () => {
     expect('blockedByYou' in toPlayerRecord(response())).toBe(false);
+  });
+});
+
+/** **Where the reader stands with them** (#753) — the left button of the record's foot. */
+describe('the relation', () => {
+  it('carries each of the four as the server answered it', () => {
+    for (const relation of ['NONE', 'SENT', 'ASKED_YOU', 'FRIEND'] as const) {
+      expect(toPlayerRecord(response({ relation })).relation).toBe(relation);
+    }
   });
 });
 

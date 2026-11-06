@@ -147,6 +147,7 @@ const PAGE: Wire['GroupResponse'] = {
 function karolsRecord(): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
+    relation: 'NONE',
     nickname: 'karol.t',
     area_code: 'A+050612+0019938',
     social_tags: [],
@@ -486,7 +487,35 @@ describe('the card', () => {
     expect(screen.getAllByText(COPY.in, HIDDEN_TOO)).toHaveLength(3);
     // The side with more people In is the top row, and In reads before you: *Ania + You*.
     expect(screen.getByText('karol + zofia vs ania + You', HIDDEN_TOO)).toBeTruthy();
-    expect(screen.queryByText(/asked|no answer yet|^friend$/i, HIDDEN_TOO)).toBeNull();
+    expect(screen.queryByText(/asked|no answer yet/i, HIDDEN_TOO)).toBeNull();
+    // Nobody here is the reader's friend, so no tile says FRIEND.
+    expect(screen.queryByText(COPY.friend, HIDDEN_TOO)).toBeNull();
+  });
+
+  // #753 turned this round (Q68, applying since Q128): the reader's own friends carry FRIEND.
+  it('tags the reader’s own friends FRIEND, In or not, and nobody else', async () => {
+    await openGames(
+      groupDeck({
+        cards: [
+          deckCard({
+            in_count: 1,
+            sides: {
+              yours: [youTile(), ANIA({ friend: true })],
+              theirs: [KAROL({ is_in: true, friend: true }), ZOFIA()],
+            },
+          }),
+        ],
+      }),
+    );
+
+    expect(await screen.findByLabelText('ania.k, level 2,68, friend')).toBeTruthy();
+    expect(screen.getByLabelText('karol.t, level 2,75, In, friend')).toBeTruthy();
+    expect(screen.getByLabelText('zofia.b, level 2,69')).toBeTruthy();
+    expect(screen.getAllByText(COPY.friend, HIDDEN_TOO)).toHaveLength(2);
+    const ania = screen.getByTestId(`game-tile-${ANIA().player_id}`);
+    expect(within(ania).getByText(COPY.friend, HIDDEN_TOO)).toBeTruthy();
+    const zofia = screen.getByTestId(`game-tile-${ZOFIA().player_id}`);
+    expect(within(zofia).queryByText(COPY.friend, HIDDEN_TOO)).toBeNull();
   });
 
   it('says you complete it, and a Book it now stamp says Pay with its share — the ball stays I’m in', async () => {

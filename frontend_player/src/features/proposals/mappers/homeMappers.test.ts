@@ -12,6 +12,7 @@ const tile = (extra: Partial<Wire['BookedTileSchema']> = {}): Wire['BookedTileSc
   photo_url: null,
   level: 2.95,
   paid: true,
+  friend: false,
   ...extra,
 });
 
@@ -61,6 +62,7 @@ describe('toHome', () => {
     const home = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 2,
+      friend_requests: [],
       games: [
         homeGame({
           sides: {
@@ -74,6 +76,7 @@ describe('toHome', () => {
     expect(home).toEqual({
       readAt: '2026-10-01T08:00:00Z',
       needingYou: 2,
+      friendRequests: [],
       games: [
         {
           bookingId: 'b-1',
@@ -126,6 +129,7 @@ describe('toHome', () => {
     const [game] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [
         homeGame({
           club: { id: 'club-1', name: null },
@@ -160,6 +164,7 @@ describe('toHome', () => {
     const [game] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [
         homeGame({
           status: 'WAITING_FOR_A_PAYMENT',
@@ -178,6 +183,7 @@ describe('toHome', () => {
     const [everybody, payer, unset, older] = toHome({
       read_at: '2026-10-06T12:10:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [
         homeGame({ status: 'WAITING_FOR_A_PAYMENT', payment_due_by: '2026-10-06T12:40:00Z' }),
         homeGame({
@@ -203,6 +209,7 @@ describe('toHome', () => {
     const [fixing, paying, unset, older] = toHome({
       read_at: '2026-10-06T12:10:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [
         homeGame({ your_payment_due_by: '2026-10-06T12:40:00Z', time_to: 'FIX_THE_CARD' }),
         homeGame({
@@ -234,6 +241,7 @@ describe('toHome', () => {
     const [held, check, older] = toHome({
       read_at: '2026-09-27T08:00:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [homeGame(), homeGame({ money: checked }), homeGame({ money: OLDER_MONEY })],
     }).games;
 
@@ -255,6 +263,7 @@ describe('toHome', () => {
     const [off, short, open] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 1,
+      friend_requests: [],
       games: [
         homeGame({
           status: 'CALLED_OFF',
@@ -292,6 +301,7 @@ describe('toHome', () => {
     const [filling, booked, older] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [
         homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true }),
         homeGame({ status: 'SEAT_OPEN', open_seats: 1 }),
@@ -308,6 +318,7 @@ describe('toHome', () => {
     const [passed, lost] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [
         homeGame({
           status: 'CALLED_OFF',
@@ -330,10 +341,91 @@ describe('toHome', () => {
     const home = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friend_requests: [],
       games: [homeGame({ sport: 'CURLING' as Wire['Sport'] }), homeGame({ booking_id: 'b-2' })],
     });
 
     expect(home.games.map((one) => one.bookingId)).toEqual(['b-2']);
+  });
+});
+
+describe('toHome — the friend requests waiting on the reader (#753)', () => {
+  const request = (
+    extra: Partial<Wire['HomeFriendRequestSchema']> = {},
+  ): Wire['HomeFriendRequestSchema'] => ({
+    player_id: 'p-ines',
+    nickname: 'ines.d',
+    photo_id: 'f-1',
+    photo_url: 'https://photos.example/ines.jpg',
+    asked_at: '2026-10-01T07:00:00Z',
+    by_link: false,
+    group: { id: 'group-1', name: 'Kazimierz crew' },
+    sport: 'PADEL',
+    level: 3.4,
+    player_score: 98,
+    reliability_band: 'VERY_HIGH',
+    ...extra,
+  });
+  const home = (requests: Wire['HomeFriendRequestSchema'][]) =>
+    toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [],
+      friend_requests: requests,
+    });
+
+  it('reads each card in the order served: who, where, their level and reliability', () => {
+    expect(
+      home([request(), request({ player_id: 'p-2', nickname: 'kuba.w' })]).friendRequests,
+    ).toEqual([
+      {
+        playerId: 'p-ines',
+        nickname: 'ines.d',
+        photoUrl: 'https://photos.example/ines.jpg',
+        byLink: false,
+        group: { id: 'group-1', name: 'Kazimierz crew' },
+        sport: 'padel',
+        level: 3.4,
+        playerScore: 98,
+        reliabilityBand: 'VERY_HIGH',
+      },
+      expect.objectContaining({ playerId: 'p-2', nickname: 'kuba.w' }),
+    ]);
+  });
+
+  it('leaves off what the wire left null — a link’s request names no group and no sport', () => {
+    expect(
+      home([request({ by_link: true, group: null, sport: null, level: null, photo_url: null })])
+        .friendRequests,
+    ).toEqual([
+      {
+        playerId: 'p-ines',
+        nickname: 'ines.d',
+        byLink: true,
+        playerScore: 98,
+        reliabilityBand: 'VERY_HIGH',
+      },
+    ]);
+  });
+});
+
+describe('toSeat — the friend tag (#753)', () => {
+  it('marks the reader’s own friends, and only them', () => {
+    const [friend, other] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      friend_requests: [],
+      games: [homeGame({ sides: { yours: [tile({ friend: true })], theirs: [tile()] } })],
+    }).games[0]!.sides.yours.concat(
+      toHome({
+        read_at: '2026-10-01T08:00:00Z',
+        needing_you: 0,
+        friend_requests: [],
+        games: [homeGame({ sides: { yours: [tile()], theirs: [] } })],
+      }).games[0]!.sides.yours,
+    );
+    expect(friend).toEqual(expect.objectContaining({ friend: true }));
+    expect(other).not.toHaveProperty('friend');
   });
 });
 
@@ -375,6 +467,7 @@ describe('toBookedGame', () => {
     payment_due_by: null,
     your_payment_due_by: null,
     time_to: null,
+    played_with: [],
     ...extra,
   });
 

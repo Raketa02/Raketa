@@ -76,6 +76,7 @@ function tile(n: number, name: string, level: number, extra: Partial<Tile> = {})
     level,
     is_in: false,
     paid: false,
+    friend: false,
     ...extra,
   };
 }
@@ -244,6 +245,7 @@ function seatOf(tile: Tile): Wire['BookedTileSchema'] {
     photo_url: tile.photo_url,
     level: tile.level,
     paid: true,
+    friend: tile.friend,
   };
 }
 

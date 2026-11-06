@@ -611,3 +611,17 @@ list stale with the ratings.
 beside the pill (no mock draws it); Members' chip carries it too; the pill's hint for an unfold onto
 it alone is _Offers another sport to rate_. **Not seen on a device**: the pill and the bar with
 _+ Another sport_ in them, and their unfold.
+
+**Members' rows end in the reader's relation to them** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+[ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+§1; the friends screens §1). Every row but yours is handed, as it was, to `friends`' `RowWithFriendEnd`,
+which puts **+ Add**, _request sent_, _friend_ or **Accept** on its right — **the rows keep today's
+design** (the friends README's override 1), and the PRD #500 refusal of a friend tag that stood in
+`MembersScreen` is gone with it. The pill is a sibling of the row's press, so a tap on the rest of the
+row still opens the record and only the pill asks. A request asked here names this group and the
+pill's sport, which the other person's Home card says; the list's own re-read is handed in, so the
+row turns on the server's answer. **A record opened from a row and closed re-reads the list**: what
+was pressed on it — Add friend, Accept, Remove, Block — moves the row it was opened from, and the
+record reads `friends`' acts, not this list's key. The record is handed the group (`groupId`), for a
+request asked there. **The Administrator's Members draws no ends** (`MembersList`'s `friends`, off in
+the administrator area). The record of why the end looks as it does is [`friends.md`](friends.md).

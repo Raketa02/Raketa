@@ -97,6 +97,8 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
     ...(response.variety === undefined ? {} : { variety: variety(response.variety) }),
     ...opinion(response),
     ...ownBlock(response),
+    // Spelled as the wire spells it — `friends`' vocabulary holds the two equal.
+    relation: response.relation,
   };
 }
 

@@ -86,3 +86,12 @@ inside the stacked sheet, the row at the record's foot under a long name, and th
 the wire's `nickname`, and the record hands the row its `nickname`, so the row reads _Block kuba.w_,
 the sheet _Block kuba.w?_ and _"You won't be put in games with kuba.w. They aren't told."_ — whole,
 never with an @, and the paragraph above read through ADR-0199 §7.
+
+**Block is half a row now, and Unblock the whole of it** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+the friends screens §2). The record's foot became _Add friend_ beside _Block_, so the row draws
+**_Block_** and **_Unblock_** (`BLOCKS_COPY.row`) and still speaks _Block kuba.w_ / _Unblock kuba.w_ —
+a half-width button cannot hold the whole nickname, and the spoken name was always the one that
+mattered (the paragraph on the whole name above). On somebody the reader blocked, _Unblock_ stands
+alone and full width, and `friends` offers nothing beside it (the friends mechanics §3.5). The step
+above the row moved to the record's foot, which holds both buttons. A block also ends a friendship
+on the server (ADR-0202 §2); the record's re-read after it shows that, and nothing here names it.

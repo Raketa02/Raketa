@@ -351,3 +351,15 @@ the tab bar's own move, from the list, the banner or a tapped push, and does not
 already on screen. The ratings, the groups list and the run left halfway — what the card is drawn
 from — are marked stale first. The walk is `notifications.test.tsx`'s _Get your level_ block, with Home's card on the
 landing.
+
+**A friend's two notices** ([#753](https://github.com/Raketa02/Raketa/issues/753), on #745's;
+the friends mechanics §12). `FRIEND_REQUEST` opens **Home**, where its card is — the _Get your level_
+landing, with Home's own read now among the reads marked stale. `FRIENDS_MADE` opens **the new
+friend's record**: `Opens` gained `RECORD`, and the notice names its person as `player_id` (on the list
+and in the push, which is read as an id or not at all). **A record is a sheet, not a screen**, so
+there is no route to push: a tap — a list row, the banner, a push — names the person in
+`recordOpened.store` (feature-scoped, process-scoped), and `NoticesHost`, which is up as long as the
+tabs are, draws `player_record`'s sheet over wherever the player is, and forgets them when it closes.
+**Answering a request clears its row in the bell on the server**, and the bell reads again at
+once: `rereadNotices` crosses to the shell, which hands it to `friends`' request row — `friends`
+naming this feature's keys would loop back through the record.

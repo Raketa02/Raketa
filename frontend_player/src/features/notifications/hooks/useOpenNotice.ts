@@ -11,7 +11,8 @@
  * | a Fill in alert's open seat | the rescue, seen from outside, in its group (`rescueRoute`) | the booking |
  * | a game still filling, or one that did not fill | its details in its group (`gameRoute`) | the game |
  * | a card waiting for the player | the group's deck, the card on top (`groups`' `groupDeckRoute`) | the group's decks |
- * | no game — *Get your level* (#731) | Home, laid down (`shell`'s `openTab`) | the ratings, the groups, and a run left halfway |
+ * | no game — *Get your level* (#731), a friend request (#753) | Home, laid down (`shell`'s `openTab`) | the ratings, the groups, a run left halfway, and Home |
+ * | *You're friends* (#753) | the friend's record, a sheet over wherever the player is (`NoticesHost`) | nothing — a record reads itself on every open |
  *
  * **Pushed over wherever the player is**, and never a stack laid down: a notice is not a tab press,
  * and *back* goes where the player was — the list, or the screen the banner was over. Which tab's
@@ -50,14 +51,19 @@ import {
 import { openTab } from '@/features/shell/types';
 
 import type { NoticeTarget } from '../domain/notice';
+import { useRecordOpened } from '../store/recordOpened.store';
 
 /** A screen pushed over wherever the player is — every destination but Home. */
 type Pushed = Parameters<ReturnType<typeof useRouter>['push']>[0];
 
-/** Where a notice opens — pushed over the player's screen, or Home laid down — and its reads. */
+/**
+ * Where a notice opens — pushed over the player's screen, Home laid down, or a record drawn over
+ * wherever the player is — and its reads.
+ */
 type Destination =
   | { readonly route: Pushed; readonly reads: readonly QueryKey[] }
-  | { readonly home: true; readonly reads: readonly QueryKey[] };
+  | { readonly home: true; readonly reads: readonly QueryKey[] }
+  | { readonly record: string; readonly reads: readonly QueryKey[] };
 
 /** Where a notice opens, and the reads that screen draws. */
 function destinationOf(target: NoticeTarget): Destination {
@@ -65,8 +71,17 @@ function destinationOf(target: NoticeTarget): Destination {
     case 'home':
       return {
         home: true,
-        reads: [onboardingKeys.ratings(), groupKeys.mine(), onboardingKeys.runInProgress()],
+        // Home's own read too: a friend request's card is on it (#753).
+        reads: [
+          onboardingKeys.ratings(),
+          groupKeys.mine(),
+          onboardingKeys.runInProgress(),
+          proposalKeys.home(),
+        ],
       };
+    case 'record':
+      // A record is read afresh every time it opens, so there is nothing to mark stale.
+      return { record: target.playerId, reads: [] };
     case 'booking':
       return {
         route: bookedGameRoute(target.bookingId),
@@ -110,6 +125,7 @@ export function useOpenNotice(): (target: NoticeTarget) => void {
   const router = useRouter();
   const client = useQueryClient();
   const pathname = usePathname();
+  const openRecord = useRecordOpened((state) => state.open);
 
   return useCallback(
     (target: NoticeTarget) => {
@@ -119,8 +135,12 @@ export function useOpenNotice(): (target: NoticeTarget) => void {
         openTab('home', pathname);
         return;
       }
+      if ('record' in destination) {
+        openRecord(destination.record);
+        return;
+      }
       router.push(destination.route);
     },
-    [client, router, pathname],
+    [client, router, pathname, openRecord],
   );
 }

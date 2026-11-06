@@ -30,6 +30,13 @@
  * door is — one name on the row and the act, so the first press reaches the row and the second the
  * act. The sheet goes the moment the re-read record says the block stands.
  *
+ * ## Beside the friend button, or alone
+ *
+ * Since [#753](https://github.com/Raketa02/Raketa/issues/753) the record's foot is **one row of two**:
+ * `friends`' button on the left and this one on the right, drawn *Block* — the name is spoken, the
+ * drawing is the half-width button's word. On somebody the reader blocked it is *Unblock*, **alone
+ * and full width** (`friends`' `recordFootOf`), and no offer to befriend them stands beside it.
+ *
  * ## Said where it happened
  *
  * A refused block is said on the sheet, with the act still there; a refused unblock under the row
@@ -91,14 +98,20 @@ export function BlockRow({ playerId, name, blocked, rereadRecord }: BlockRowProp
       <View ref={row} style={s.row} {...behindOverlay(asking)}>
         {blocked ? (
           <Button
-            label={unblockRowLabel(name)}
+            label={COPY.row.unblock}
+            accessibilityLabel={unblockRowLabel(name)}
             variant="secondary"
             busy={unblocking.isPending}
             busyLabel={COPY.unblocking}
             onPress={() => unblocking.mutate()}
           />
         ) : (
-          <Button label={blockRowLabel(name)} variant="secondary" onPress={ask} />
+          <Button
+            label={COPY.row.block}
+            accessibilityLabel={blockRowLabel(name)}
+            variant="secondary"
+            onPress={ask}
+          />
         )}
         <WriteNote write={unblocking} />
       </View>
@@ -154,8 +167,8 @@ function BlockSheet({ visible, name, onBlock, onClose, write, returnFocusTo }: B
 }
 
 const s = StyleSheet.create({
-  // A step above the record, so the row reads as the sheet's foot and not the tags' tail.
-  row: { gap: theme.space.xs, marginTop: theme.space.xs },
+  // The record's foot puts the step above it, for both buttons at once.
+  row: { gap: theme.space.xs },
   body: { ...theme.type.tiny, color: theme.color.ink, paddingTop: theme.space.sm },
   actions: { gap: theme.space.sm, paddingTop: theme.space.xs },
 });

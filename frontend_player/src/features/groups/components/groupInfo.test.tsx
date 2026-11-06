@@ -205,6 +205,7 @@ function crew({
         is_owner: who.id === state.ownerId,
         is_administrator: false,
         joined_at: joinedAt(who),
+        relation: 'NONE',
       }));
 
   const requestOf = (who: Person): Wire['JoinRequestSchema'] => ({
@@ -1153,6 +1154,7 @@ describe('Members', () => {
     transport.on('GET', `/api/v1/players/${ZOFIA.id}/record`, () =>
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
+        relation: 'NONE',
         nickname: ZOFIA.name,
         area_code: 'A+050612+0019938',
         social_tags: [],

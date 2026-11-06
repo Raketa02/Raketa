@@ -181,6 +181,8 @@ export function toGroupMembers(wire: Schemas['GroupMembersResponse']): readonly 
       ...(band === undefined ? {} : { reliabilityBand: band }),
       isOwner: member.is_owner,
       isAdministrator: member.is_administrator,
+      // Spelled as the wire spells it — `friends`' vocabulary holds the two equal.
+      relation: member.relation,
     };
   });
 }

@@ -140,6 +140,11 @@ export function tileName(person: DeckPerson): string {
   return person.name ?? COPY.unnamed;
 }
 
+/** A Fill in square, spoken: the nickname, and *friend* after it on the reader's own friend (#753). */
+export function squareLabel(person: DeckPerson): string {
+  return person.friend === true ? `${tileName(person)}, ${COPY.friendSpoken}` : tileName(person);
+}
+
 /** A person as a drawn line names them — the stem, or *You*. */
 function stem(person: DeckPerson): string {
   if (person.isYou) return COPY.you;
@@ -213,6 +218,7 @@ export function tileLabel(person: DeckPerson, completes: boolean): string {
     ...level,
     ...(person.isIn ? [COPY.inSpoken] : []),
     ...(person.paid === true ? [COPY.paid] : []),
+    ...(person.friend === true ? [COPY.friendSpoken] : []),
   ];
   return parts.join(', ');
 }

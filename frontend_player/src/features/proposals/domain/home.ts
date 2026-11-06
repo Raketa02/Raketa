@@ -15,6 +15,7 @@
  * and never by this phone's idea of the time.
  */
 
+import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard } from './deck';
@@ -133,6 +134,38 @@ export interface Home {
   /** Home's badge: the cards that need the reader, and every payment they have to confirm. */
   readonly needingYou: number;
   readonly games: readonly HomeGame[];
+  /**
+   * **FRIEND REQUESTS** — the requests waiting on the reader, newest first (#753). Not counted in
+   * `needingYou`. This feature reads them because they ride on Home's read; `friends` draws them and
+   * answers them.
+   */
+  readonly friendRequests: readonly HomeFriendRequest[];
+}
+
+/**
+ * **One friend request on Home** (friends 5; the words §29.2): *Inés wants to be your friend · With
+ * you in Kazimierz crew · Padel 3,40 · ✦ 98*. Every part but the requester and their reliability is
+ * absent where the wire says nothing: a link's request names no group (`byLink`), a request asked
+ * from a screen with no group names none, and neither does one either of them has since left.
+ */
+export interface HomeFriendRequest {
+  readonly playerId: string;
+  /** Whole, never with an @ (ADR-0199 §1). */
+  readonly nickname: string;
+  /** Omitted when they have no photograph: the face draws their poster. */
+  readonly photoUrl?: string;
+  /** Made by their Friend link: *Invited you to Raketa* in place of the group line. */
+  readonly byLink: boolean;
+  /** The group they asked from, while both are in it. */
+  readonly group?: { readonly id: string; readonly name: string };
+  /** The sport of the screen they asked from — absent for one this build cannot name. */
+  readonly sport?: Sport;
+  /** Their Level in it, where they hold one. */
+  readonly level?: number;
+  /** Player reliability in points — the chip's *✦ 98*. */
+  readonly playerScore: number;
+  /** The band the server put it in — absent where this build cannot name the code. */
+  readonly reliabilityBand?: ReliabilityBand;
 }
 
 /**

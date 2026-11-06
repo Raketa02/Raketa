@@ -39,6 +39,7 @@ import { calendarDayOf, gameDayOf } from '../domain/when';
 import { LINE_JOIN, clubName, gameDayWords, shortMoment } from './deckPresentation';
 import { rowTitle } from './fillInPresentation';
 import { POSTING_COPY } from './postingCopy';
+import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = POSTING_COPY;
 
@@ -176,6 +177,7 @@ export function fitName(fit: SlotFit): string {
 export function fitSpoken(fit: SlotFit): string {
   return [
     fitName(fit),
+    ...(fit.friend === true ? [PROPOSALS_COPY.friendSpoken] : []),
     ...(fit.level === undefined ? [] : [`level ${formatLevel(fit.level)}`]),
     ...(fit.forecastPct === undefined ? [] : [`a ${fit.forecastPct} % even game`]),
   ].join(SPOKEN_JOIN);

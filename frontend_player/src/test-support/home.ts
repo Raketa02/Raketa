@@ -46,6 +46,7 @@ function seat(
     photo_url: null,
     level,
     paid: false,
+    friend: false,
     ...extra,
   };
 }
@@ -167,6 +168,7 @@ export function bookingDetails(
     payment_due_by: null,
     your_payment_due_by: null,
     time_to: null,
+    played_with: [],
     ...extra,
   };
 }

@@ -31,6 +31,7 @@ const NOTICE: Wire['NoticeSchema'] = {
   gathered: 0,
   new: true,
   your_own: false,
+  player_id: null,
 };
 
 describe('the three choices', () => {
@@ -246,6 +247,35 @@ describe('where a tap goes', () => {
     ).toEqual({ opens: 'home' });
   });
 
+  /** **You're friends** (#753, #745) opens the new friend's record, by the person it names. */
+  it('the record of the person a friend’s notice names', () => {
+    expect(
+      toTarget({
+        kind: 'FRIENDS_MADE',
+        opens: 'RECORD',
+        gameId: null,
+        poolId: null,
+        sport: null,
+        gameKind: null,
+        playerId: 'p-kuba',
+      }),
+    ).toEqual({ opens: 'record', playerId: 'p-kuba' });
+  });
+
+  it('nowhere for a record’s notice that names nobody', () => {
+    expect(
+      toTarget({
+        kind: 'FRIENDS_MADE',
+        opens: 'RECORD',
+        gameId: null,
+        poolId: null,
+        sport: null,
+        gameKind: null,
+        playerId: null,
+      }),
+    ).toBeUndefined();
+  });
+
   it('nowhere for a notice that names no game, wherever it says it opens', () => {
     expect(
       toTarget({
@@ -257,6 +287,38 @@ describe('where a tap goes', () => {
         gameKind: null,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe('a listed friend’s notice (#753)', () => {
+  it('a request opens Home, where its card is', () => {
+    expect(
+      toNotice({
+        ...NOTICE,
+        kind: 'FRIEND_REQUEST',
+        opens: 'HOME',
+        game_id: null,
+        pool_id: 'group-1',
+        sport: null,
+        game_kind: null,
+        player_id: 'p-ines',
+      }).target,
+    ).toEqual({ opens: 'home' });
+  });
+
+  it('You’re friends opens the friend’s record', () => {
+    expect(
+      toNotice({
+        ...NOTICE,
+        kind: 'FRIENDS_MADE',
+        opens: 'RECORD',
+        game_id: null,
+        pool_id: null,
+        sport: null,
+        game_kind: null,
+        player_id: 'p-kuba',
+      }).target,
+    ).toEqual({ opens: 'record', playerId: 'p-kuba' });
   });
 });
 

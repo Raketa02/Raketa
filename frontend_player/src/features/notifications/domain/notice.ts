@@ -19,10 +19,13 @@ import type { GameOpens, NoticeKind } from './vocabulary';
  * details, or its result screen; a game still filling and a card on a deck are both in the group the
  * pool is filed under, in a sport and a kind — the deck is the read for exactly those, and a game's
  * details draw the card that read dealt. **A notice about no game opens Home** (#727, #731) — *Get
- * your level*, whose card is there — and names nothing to open it by.
+ * your level*, whose card is there — and names nothing to open it by; so does a friend request
+ * (#753), whose card is there too. **You're friends opens the new friend's record**, by the person it
+ * names — a sheet over wherever the player is, since a record is a sheet and not a screen.
  */
 export type NoticeTarget =
   | { readonly opens: 'home' }
+  | { readonly opens: 'record'; readonly playerId: string }
   | { readonly opens: 'booking' | 'result'; readonly bookingId: string }
   | { readonly opens: 'rescue'; readonly groupId: string; readonly bookingId: string }
   | {

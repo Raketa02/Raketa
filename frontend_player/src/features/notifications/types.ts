@@ -16,6 +16,8 @@ export { NotificationsScreen } from './components/NotificationsScreen';
 export { NoticesScreen } from './components/NoticesScreen';
 export { NoticeBell } from './components/NoticeBell';
 export { NoticesHost } from './components/NoticesHost';
+/** The bell's list, read again — for the shell, once a request it was about is answered on Home. */
+export { rereadNotices } from './hooks/notificationKeys';
 
 /** The words the suites hold the screens to. */
 export { NOTIFICATIONS_COPY, NOTIFICATIONS_TITLE } from './components/notificationsCopy';
