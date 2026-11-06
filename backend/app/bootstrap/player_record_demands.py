@@ -4,8 +4,8 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks ten
-questions of eight others. Rows of the two kinds in one list would make every
+This one is the matcher's kind: a context that writes nothing and asks twelve
+questions of nine others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
@@ -48,6 +48,7 @@ from app.bootstrap.composition import (
     build_photo_storage,
     build_record_gates,
     build_record_photo_link,
+    build_relations_of_the_reader,
     build_reliability_filters,
     build_runner_disclosure,
     build_subject_identity_source,
@@ -63,6 +64,7 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    RelationsOfTheReader,
     ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
@@ -123,6 +125,12 @@ def _own_blocks(session: AsyncSession) -> BlocksByTheReader:
     return build_blocks_by_the_reader(build_block_query(session))
 
 
+def _relations(session: AsyncSession) -> RelationsOfTheReader:
+    """The reader's own relation, over Friends' read on the session."""
+
+    return build_relations_of_the_reader(session)
+
+
 PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=SubjectIdentitySource,
@@ -158,6 +166,11 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=BlocksByTheReader,
         name="OwnBlocksOfTheReader",
         build=_own_blocks,
+    ),
+    RegisteredImplementation(
+        port=RelationsOfTheReader,
+        name="FriendsRelationsOfTheReader",
+        build=_relations,
     ),
     RegisteredImplementation(
         port=SubjectRatings,

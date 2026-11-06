@@ -25,6 +25,7 @@ from app.modules.clubs.infrastructure.club_model import (
 from app.modules.conversations.infrastructure.conversation_model import (
     ConversationORM,
 )
+from app.modules.friends.infrastructure.friendship_model import FriendRelationORM
 from app.modules.groups.infrastructure.group_model import GroupMemberORM, GroupORM
 from app.modules.notifications.infrastructure.notification_models import (
     NoticeORM,
@@ -58,6 +59,7 @@ __all__ = [
     "ConversationORM",
     "EventOutboxORM",
     "EventStoreORM",
+    "FriendRelationORM",
     "GroupMemberORM",
     "GroupORM",
     "MailQueueORM",

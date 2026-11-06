@@ -27,6 +27,7 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Sport
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.groups.domain.home_club_search import ClubPage, in_card_order
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.monogram import Monogram, monogram_of
@@ -149,7 +150,10 @@ class MemberRow:
     ``reliability`` is every member's — everyone starts at a hundred (#659).
     ``is_administrator`` is the account running an official group, who joined
     it as a player — the row the **admin** tag is drawn on, as it is on a player
-    group's Owner's."""
+    group's Owner's.
+
+    ``relation`` is **the reader's** relation to them (``docs/adr/0202`` §1):
+    *+ Add*, *request sent*, *Accept* or *friend*."""
 
     face: GroupFace
     level: float
@@ -157,6 +161,8 @@ class MemberRow:
     is_owner: bool
     joined_at: datetime
     is_administrator: bool
+    #: The reader's relation to them — ``NONE`` on the reader's own row.
+    relation: FriendRelation
 
 
 @final

@@ -50,6 +50,9 @@ from app.bootstrap.composition import (
     build_proposal_player_names,
     build_seat_refunds,
     build_court_kinds,
+    build_clock,
+    build_friend_requests_on_home,
+    build_reader_relations,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
@@ -71,6 +74,8 @@ from app.modules.proposals.domain.ports import (
     PlayersInPlay,
     PoolOrigins,
     SeatRefunds,
+    ReaderRelations,
+    FriendRequestsOnHome,
 )
 
 P = TypeVar("P")
@@ -96,6 +101,8 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     BookingTakings,
     PoolOrigins,
     CourtKinds,
+    ReaderRelations,
+    FriendRequestsOnHome,
 )
 
 
@@ -190,6 +197,18 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PoolOrigins,
         name="GroupPoolOrigins",
         build=build_pool_origins,
+    ),
+    RegisteredImplementation(
+        port=ReaderRelations,
+        name="FriendsReaderRelations",
+        build=build_reader_relations,
+    ),
+    RegisteredImplementation(
+        port=FriendRequestsOnHome,
+        name="FriendsRequestsOnHome",
+        build=lambda session: build_friend_requests_on_home(
+            session, settings=get_settings(), clock=build_clock()
+        ),
     ),
 )
 

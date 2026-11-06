@@ -320,6 +320,24 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   (`GroupJoiners` → `DirectoryGroupJoiners`, over the groups' own
   `GroupDirectory.first_joined`) and who holds a rating (`RatedAccounts` →
   `RatingsRatedAccounts`, over rating's published `estimates_for`, one batch per sport).
+- **Two notices are about a friendship** (#745; ADR-0202 §1; `friends.md`) — **`FRIEND_REQUEST`**
+  and **`FRIENDS_MADE`**, always on, never capped, never emailed, told off `friends.friend_requested`
+  and `friends.friends_made` by the teller over a port of Notifications' own, `Friendships`
+  (`FriendsOfTheReader` in `told_by.py`, over Friends' `ReadRequestsWaiting` and `ReadRelations`;
+  `notification_demands.py`'s tenth row). About no game: `game_id`, `game_kind`, `club_id` and
+  `starts_at` are `None`, **the group a request was asked from rides as `pool_id`** and its sport
+  as `sport` (both `None` for a link's, whose `reason` is `LINK`), and the person is `people[0]`
+  — `player_id` on the wire (`NoticeSchema.player_id`) and in the push data. Words from
+  `words.py`'s `words_about_no_game(SaidOfNoGame)`, the group's name read through
+  `Names.of_groups`. `FRIEND_REQUEST` is told **once per request, only while its card is on the
+  reader's Home at delivery** (`Friendships.waiting_on`), opening `HOME`; **its row leaves the
+  list and the bell's number once the card leaves Home** — answered, set aside, cancelled, ended
+  or hidden by a block — `ReadRecentNotices` leaving out (`NoticeDirectory.recent(…,
+  leaving_out=)`, in the one reading) every `FRIEND_REQUEST` row whose `(people[0], given_at)` is
+  not a waiting `(requester, asked_at)` (`NoticeDirectory.of_kind`). `FRIENDS_MADE` goes to whoever
+  asked (*… said yes — you're friends*), and to both, `reason` `CROSSED`, when the requests
+  crossed (*You and … are friends now*), while they still are, opening **`Opens.RECORD`**, the
+  friend's record. No migration: every column was there.
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,
   so a push service down for an hour, raising, would hold the queue for that hour.

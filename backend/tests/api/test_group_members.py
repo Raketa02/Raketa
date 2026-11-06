@@ -140,8 +140,11 @@ async def test_a_row_is_a_face_the_level_in_that_sport_and_when_they_joined(clie
         "is_owner",
         "is_administrator",
         "joined_at",
+        "relation",
     }
     assert (owner["player_score"], owner["reliability_band"]) == (100, "VERY_HIGH")
+    # The reader's own row reads nothing; nothing stands between the two yet.
+    assert owner["relation"] == member["relation"] == "NONE"
     assert owner["player_id"] == str(karol["id"])
     # A player group is run by its Owner, never by an Administrator.
     assert owner["is_administrator"] is member["is_administrator"] is False

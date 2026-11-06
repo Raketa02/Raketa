@@ -38,6 +38,7 @@ from app.modules.player_record.domain.record import (
     OnCourtVerdict,
     OpponentVariety,
     BackWithEveryone,
+    RecordRelation,
     ReliabilityFilter,
     ReliabilityPanel,
     SubjectIdentity,
@@ -203,6 +204,16 @@ class OwnBlocks:
         return (reader_id, subject_id) in self.standing
 
 
+class Relations:
+    """The reader's own relation to each subject — ``NONE`` unless told."""
+
+    def __init__(self, **standing: RecordRelation) -> None:
+        self.standing = standing
+
+    async def relation_to(self, *, reader_id: UUID, subject_id: UUID) -> RecordRelation:
+        return self.standing.get(str(subject_id), RecordRelation.NONE)
+
+
 class Clock:
     def now(self) -> Instant:
         return NOW
@@ -223,6 +234,7 @@ def reading(
     use_case = ReadPlayerRecord(
         admission=Admission(admits),
         own_blocks=own_blocks or OwnBlocks(),
+        relations=Relations(),
         identities=identities,
         photos=links,
         ratings=ratings or Ratings(),
@@ -438,6 +450,7 @@ async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
     use_case = ReadPlayerRecord(
         admission=admission,
         own_blocks=OwnBlocks(),
+        relations=Relations(),
         identities=Identities(an_identity()),
         photos=Links(),
         ratings=Ratings({Sport.SQUASH: a_rating(Sport.SQUASH)}),

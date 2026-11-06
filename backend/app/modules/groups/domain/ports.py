@@ -22,6 +22,7 @@ from typing import Optional, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.engines.matchfit.core import ReliabilityBand
+from app.modules.friends.domain.relation import FriendRelation
 from app.kernel import Instant, Sport, invariant
 from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.value_objects import (
@@ -360,6 +361,20 @@ class GroupMemberReliability(Protocol):
         """Every one of these players' reliability — **all of them**: everyone
         starts at a hundred, so a member nothing has happened to reads 100. One
         question about the set, against one instant."""
+        ...
+
+
+@runtime_checkable
+class MemberRelations(Protocol):
+    """The reader's relation to each member a Members list draws — the pill or
+    tag on the right of the row (``docs/adr/0202`` §1–§2). **The reader's own
+    relations and nobody else's**, lent by Friends."""
+
+    async def relations_of(
+        self, reader: UUID, players: Collection[UUID]
+    ) -> Mapping[UUID, FriendRelation]:
+        """Everybody asked about is answered: ``NONE`` where nothing stands, the
+        reader included. One question about the rows."""
         ...
 
 

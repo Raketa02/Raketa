@@ -240,6 +240,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   is process memory and best effort; the sweep is the guarantee. **And at a member's
   request**, for one pool, from `POST /pools/{id}/deal` (#739, above) — the short tick still
   runs the pool the intent change made due, and deals nothing the route already dealt.
+- **Every face carries the reader's *friend* tag, and Home the friend requests** (#745;
+  ADR-0202 §1–§2; `friends.md`): `DeckPerson.friend`, marked for the reader by
+  `application/friends.py`'s `with_the_readers_friends` over `ReaderRelations` — one question for
+  the set — in the deck, the details, Home, a booked game's details, Fill in and Post a game's
+  slot sheet (`DeckTileSchema.friend`, `BookedTileSchema.friend`, `SlotFitSchema.friend`);
+  `DeckPeople` itself knows no reader, so a read that forgets to mark them sends `false`. `GET /bookings/{id}` adds `played_with`, the reader's whole
+  relation to everybody else on the game — the result's *PLAYED WITH* card — and `GET /home` adds
+  `friend_requests` (`FriendRequestsOnHome`), not counted in `needing_you`. Both ports are signed
+  in `proposals/infrastructure/friends.py`, so the arrow runs `proposals → friends`.
 - **A game still filling has its details, for anybody dealt it** (#542; the mechanics §14.2):
   `GET /proposals/{id}` (`application/proposal_details.py`, rules in `domain/details.py`) is the
   deck's card as a screen for the readers the deck does not serve — a card's *i*, a You're In row,

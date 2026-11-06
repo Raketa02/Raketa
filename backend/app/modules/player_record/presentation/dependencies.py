@@ -28,11 +28,13 @@ from app.api.dependencies import (
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    EventRuntimeDep,
     SettingsDep,
 )
 from app.bootstrap.composition import (
     build_account_gates,
     build_blocks_by_the_reader,
+    build_relations_of_the_reader,
     build_game_disclosure,
     build_group_disclosure,
     build_record_gates,
@@ -60,6 +62,7 @@ from app.modules.player_record.application.read_player_record import (
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
     RecordPhotoLink,
+    RelationsOfTheReader,
     ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
@@ -182,9 +185,24 @@ def get_blocks_by_the_reader(blocks: BlockQueryDep) -> BlocksByTheReader:
 BlocksByTheReaderDep = Annotated[BlocksByTheReader, Depends(get_blocks_by_the_reader)]
 
 
+def get_relations_of_the_reader(
+    db: DbSession, runtime: EventRuntimeDep
+) -> RelationsOfTheReader:
+    """The reader's own relation to the person on the record, over the
+    request's session (``docs/adr/0202`` §1)."""
+
+    return build_relations_of_the_reader(db, runtime=runtime)
+
+
+RelationsOfTheReaderDep = Annotated[
+    RelationsOfTheReader, Depends(get_relations_of_the_reader)
+]
+
+
 def get_read_player_record(
     admission: RecordAdmissionDep,
     own_blocks: BlocksByTheReaderDep,
+    relations: RelationsOfTheReaderDep,
     identities: SubjectIdentitySourceDep,
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
@@ -197,6 +215,7 @@ def get_read_player_record(
     return ReadPlayerRecord(
         admission=admission,
         own_blocks=own_blocks,
+        relations=relations,
         identities=identities,
         photos=photos,
         ratings=ratings,

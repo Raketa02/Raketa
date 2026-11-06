@@ -1,0 +1,1 @@
+"""Friends use cases."""

@@ -20,6 +20,7 @@ from app.api.dependencies import (
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    EventRuntimeDep,
     SettingsDep,
     UnitOfWorkDep,
 )
@@ -32,6 +33,7 @@ from app.bootstrap.composition import (
     build_group_member_reliability,
     build_group_repository,
     build_home_clubs,
+    build_member_relations,
     build_rated_group_members,
     build_reader_areas,
 )
@@ -74,6 +76,7 @@ from app.modules.groups.application.read_my_groups import ReadMyGroups
 from app.modules.groups.application.search_groups_to_join import SearchGroupsToJoin
 from app.modules.groups.application.search_home_clubs import SearchHomeClubs
 from app.modules.groups.domain.ports import (
+    MemberRelations,
     GroupAdministrators,
     GroupBornGames,
     GroupDirectory,
@@ -130,6 +133,15 @@ def get_group_member_reliability(db: DbSession) -> GroupMemberReliability:
 GroupMemberReliabilityDep = Annotated[
     GroupMemberReliability, Depends(get_group_member_reliability)
 ]
+
+
+def get_member_relations(db: DbSession, runtime: EventRuntimeDep) -> MemberRelations:
+    # Over the request's session, so a request made a moment ago is the
+    # relation the next read draws.
+    return build_member_relations(db, runtime=runtime)
+
+
+MemberRelationsDep = Annotated[MemberRelations, Depends(get_member_relations)]
 
 
 def get_group_administrators(db: DbSession) -> GroupAdministrators:
@@ -357,6 +369,7 @@ def get_read_group_members(
     faces: GroupFacesDep,
     reliability: GroupMemberReliabilityDep,
     administrators: GroupAdministratorsDep,
+    relations: MemberRelationsDep,
     clock: ClockDep,
 ) -> ReadGroupMembers:
     return ReadGroupMembers(
@@ -365,6 +378,7 @@ def get_read_group_members(
         faces=faces,
         reliability=reliability,
         administrators=administrators,
+        relations=relations,
         clock=clock,
     )
 

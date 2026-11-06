@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.player_record.domain.record import (
     LAST_FIVE,
     GameOutcome,
@@ -502,6 +503,17 @@ class PlayerRecordResponse(BaseModel):
             "route when a client asks about itself."
         ),
     )
+    relation: FriendRelation = Field(
+        description=(
+            "**Your** relation to this person — the left button of the record's "
+            "foot, beside *Block* (`docs/adr/0202` §1): `NONE` — **Add friend**; "
+            "`SENT` — **Request sent ▾** (*Cancel request*), for as long as your "
+            "request stays open; `ASKED_YOU` — **Accept**; `FRIEND` — **Friend "
+            "✓ ▾** (*Remove friend*). `NONE` on your own record, which draws "
+            "neither button, and draw only *Unblock* when `blocked_by_you` is "
+            "`true`. Nothing here says who else they are friends with."
+        )
+    )
     blocked_by_you: bool = Field(
         default=OMITTED,
         description=(
@@ -707,6 +719,7 @@ class PlayerRecordResponse(BaseModel):
                 for one in record.sports
             ],
         }
+        fields["relation"] = FriendRelation(record.relation.value)
         if record.blocked_by_reader is not None:
             # Omitted when the reader's blocks could not be read (`docs/adr/0193`).
             fields["blocked_by_you"] = record.blocked_by_reader

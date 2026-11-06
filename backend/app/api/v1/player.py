@@ -19,6 +19,7 @@ from app.modules.blocks.presentation.routes import router as blocks_router
 from app.modules.conversations.presentation.routes import (
     router as conversations_router,
 )
+from app.modules.friends.presentation.routes import router as friends_router
 from app.modules.games.presentation.routes import router as games_router
 from app.modules.groups.presentation.administrator_routes import (
     handovers_router,
@@ -86,6 +87,7 @@ player_api_router.include_router(profile_surface_router)
 player_api_router.include_router(play_intents_router)
 player_api_router.include_router(photos_router)
 player_api_router.include_router(blocks_router)
+player_api_router.include_router(friends_router)
 player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)
 player_api_router.include_router(sportsmanship_router)

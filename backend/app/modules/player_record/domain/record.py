@@ -456,6 +456,19 @@ class ReliabilityPanel:
         )
 
 
+class RecordRelation(StrEnum):
+    """**The reader's** relation to the person on the record (``docs/adr/0202``
+    §1) — what the left button of the record's foot reads: **Add friend**,
+    **Request sent ▾**, **Accept**, **Friend ✓ ▾**. The record's own spelling of
+    Friends' four words, held to them by a test, so this context borrows no
+    other's type."""
+
+    NONE = "NONE"
+    SENT = "SENT"
+    ASKED_YOU = "ASKED_YOU"
+    FRIEND = "FRIEND"
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class PlayerRecord:
@@ -469,10 +482,11 @@ class PlayerRecord:
     visible. So the subject's id is deliberately **not** on this type: there is
     nothing here to compare.
 
-    **One field is about the reader rather than the subject**:
-    ``blocked_by_reader``, the reader's own block (``docs/adr/0193`` §3). It is
-    the only reader-relative fact here, and it is directed so that it can never
-    say anything to the person blocked.
+    **Two fields are about the reader rather than the subject**:
+    ``blocked_by_reader``, the reader's own block (``docs/adr/0193`` §3), directed
+    so that it can never say anything to the person blocked; and ``relation``,
+    the reader's own relation to them (``docs/adr/0202`` §2), which says nothing
+    about anybody else's.
 
     **Nothing on this type turns on ``is_self``.** It used to hold two
     sportsmanship fields, at most one ever filled, and an invariant deciding
@@ -488,6 +502,10 @@ class PlayerRecord:
     #: own record: nobody can block themselves. ``None`` when the reader's
     #: blocks could not be read, and the sheet omits it rather than guessing.
     blocked_by_reader: bool | None
+    #: **The reader's** relation to this person — ``NONE`` on your own record,
+    #: where there is no button. A request their own block hides from the
+    #: reader reads ``NONE``, as it does everywhere.
+    relation: RecordRelation
     #: A short-lived signed URL for ``identity.photo_id``, minted for this
     #: response and stored nowhere. **Present exactly when the photo id is**:
     #: signing is a signature over a request that is never sent, so there is no

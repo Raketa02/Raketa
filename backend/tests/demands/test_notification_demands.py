@@ -38,6 +38,8 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score
 from app.modules.notifications.domain.ports import (
+    Friendships,
+    WaitingRequest,
     GameCourts,
     Decks,
     EndedHours,
@@ -867,3 +869,64 @@ async def test_a_rating_in_any_sport_counts_and_none_does_not(implementation, se
 
     assert await ratings.rated_among([OLA, KUBA, EWA]) == {OLA, KUBA}
     assert await ratings.rated_among([]) == frozenset()
+
+
+# --------------------------------------------------------------------------- #
+# Friendships — a request told and listed while its card stands (#745)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(Friendships))
+async def test_a_request_waits_on_its_readers_home_until_it_is_set_aside(
+    implementation, session
+):
+    from tests.demands.friends_world import ASKED_AT, asks
+
+    await asks(session, KUBA, OLA)
+    await asks(session, EWA, OLA, set_aside=True)
+    friendships: Friendships = implementation.build(session)
+
+    waiting = await friendships.waiting_on(OLA)
+
+    assert waiting == frozenset({WaitingRequest(requester_id=KUBA, asked_at=ASKED_AT)})
+    assert await friendships.waiting_on(KUBA) == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(Friendships))
+async def test_a_request_from_somebody_the_reader_blocked_never_waits(
+    implementation, session
+):
+    from tests.demands.friends_world import asks, blocks
+
+    await blocks(session, OLA, TOMEK)
+    await asks(session, TOMEK, OLA)
+    friendships: Friendships = implementation.build(session)
+
+    assert await friendships.waiting_on(OLA) == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(Friendships))
+async def test_friends_are_friends_either_way_round(implementation, session):
+    from tests.demands.friends_world import asks, befriends
+
+    await befriends(session, OLA, KUBA)
+    await asks(session, OLA, EWA)
+    friendships: Friendships = implementation.build(session)
+
+    assert await friendships.are_friends(OLA, KUBA) is True
+    assert await friendships.are_friends(KUBA, OLA) is True
+    assert await friendships.are_friends(OLA, EWA) is False
+
+
+@pytest.mark.parametrize("implementation", registered(Names))
+async def test_a_group_is_called_its_name_and_a_missing_one_nothing(
+    implementation, session
+):
+    group = await _a_group_joined(
+        session, OLA, at=NOW, joins={}, code="frnd7qab"
+    )
+    names: Names = implementation.build(session)
+
+    assert await names.of_groups([group.id, new_uuid()]) == {
+        group.id: "Wednesday padel"
+    }

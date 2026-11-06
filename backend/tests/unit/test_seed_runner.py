@@ -115,6 +115,10 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: `groups` joined the day after (#504), the same way: a group exists because a
 #: player created it, so each is created through `CreatePlayerGroup` and joined
 #: through `JoinGroup`, and the projections are the repository's to write.
+#:
+#: `friends` and `blocks` joined with #745: friendships asked and answered
+#: through their use cases, and one block through `BlockPlayer`, whose delivery
+#: ends the friendship it stands between.
 WRITTEN_CONTEXTS = frozenset(
     {
         "administrators",
@@ -128,6 +132,8 @@ WRITTEN_CONTEXTS = frozenset(
         "conversations",
         "payments",
         "proposals",
+        "friends",
+        "blocks",
     }
 )
 
@@ -195,6 +201,14 @@ AGGREGATE_WRITERS = {
     # A player's saved card, set up the way a phone sets it up — start, the
     # terms, the save — over the one repository all three take (#536).
     "build_payment_method_repository": "payments",
+    # Friendships asked, accepted and set aside through `AskToBeFriends`,
+    # `AcceptFriendRequest` and `SetAsideFriendRequest`, over the one repository
+    # all three take (#745).
+    "build_friendship_repository": "friends",
+    # The friends layer's block case: one player blocks another through
+    # `BlockPlayer`, the block route's own use case, so the friendship ends as a
+    # block's delivery ends it (#745, `docs/adr/0202` §2).
+    "build_block_repository": "blocks",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -289,6 +303,7 @@ def test_the_walk_has_something_to_walk():
         "club_courts.py",
         "clubs.py",
         "cohort.py",
+        "friends.py",
         "groups.py",
         "guard.py",
         "money.py",

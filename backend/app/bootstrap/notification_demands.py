@@ -32,6 +32,7 @@ from app.bootstrap.composition import (
     build_game_courts,
     build_decks,
     build_ended_hours,
+    build_notice_friendships,
     build_game_briefs,
     build_group_joiners,
     build_notice_names,
@@ -45,6 +46,7 @@ from app.modules.notifications.domain.ports import (
     GameCourts,
     Decks,
     EndedHours,
+    Friendships,
     GameBriefs,
     GroupJoiners,
     Names,
@@ -67,6 +69,7 @@ NOTIFICATION_DEMANDS: tuple[type, ...] = (
     Names,
     GroupJoiners,
     RatedAccounts,
+    Friendships,
 )
 
 
@@ -101,6 +104,9 @@ NOTIFICATION_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=RatedAccounts, name="RatingsRatedAccounts", build=build_rated_accounts
+    ),
+    RegisteredImplementation(
+        port=Friendships, name="FriendsOfTheReader", build=build_notice_friendships
     ),
 )
 

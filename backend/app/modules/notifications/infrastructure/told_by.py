@@ -40,7 +40,13 @@ from app.modules.games.domain.windows import (
     hour_ends_at,
     late_claim_closes_at,
 )
-from app.modules.notifications.domain.ports import CourtBrief, GameBrief, PaidShare
+from app.modules.friends.application.reads import ReadRelations, ReadRequestsWaiting
+from app.modules.notifications.domain.ports import (
+    CourtBrief,
+    GameBrief,
+    PaidShare,
+    WaitingRequest,
+)
 from app.modules.payments.domain.ports import SeatChargeRepository
 from app.modules.payments.domain.seat_charge import PAID, RefundReason, SeatCharge
 from app.modules.proposals.application.group_deck import ReadGroupDeck
@@ -318,9 +324,12 @@ def _share(charge: SeatCharge) -> PaidShare:
 
 @final
 class PlatformNames:
-    def __init__(self, *, users: UserRepository, clubs: ClubNames) -> None:
+    def __init__(
+        self, *, users: UserRepository, clubs: ClubNames, groups: GroupDirectory
+    ) -> None:
         self._users = users
         self._clubs = clubs
+        self._groups = groups
 
     async def of_people(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         if not player_ids:
@@ -331,6 +340,36 @@ class PlatformNames:
         if not club_ids:
             return {}
         return await self._clubs.names_of(club_ids)
+
+    async def of_groups(self, group_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        if not group_ids:
+            return {}
+        listings = await self._groups.listings(group_ids)
+        return {group_id: listing.name.value for group_id, listing in listings.items()}
+
+
+@final
+class FriendsOfTheReader:
+    """``Friendships`` over Friends' own reads — the requests on the reader's
+    Home, and the reader's friends — so a request is told and listed only while
+    its card stands, and *friends made* only while they are (#745)."""
+
+    def __init__(
+        self, *, waiting: ReadRequestsWaiting, relations: ReadRelations
+    ) -> None:
+        self._waiting = waiting
+        self._relations = relations
+
+    async def waiting_on(self, reader: UUID) -> frozenset[WaitingRequest]:
+        return frozenset(
+            WaitingRequest(
+                requester_id=request.requester_id, asked_at=request.asked_at
+            )
+            for request in await self._waiting.waiting(reader)
+        )
+
+    async def are_friends(self, one: UUID, other: UUID) -> bool:
+        return other in await self._relations.friends_among(one, [other])
 
 
 @final

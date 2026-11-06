@@ -45,6 +45,7 @@ from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import BalanceRules
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.clubs.domain.court_hours import DAY_OPENS, hour_start, local_day
+from app.modules.proposals.application.friends import with_the_readers_friends
 from app.modules.proposals.application.commands import (
     MakeProposalCommand,
     PostAGameCommand,
@@ -83,6 +84,7 @@ from app.modules.proposals.domain.ports import (
     ClubNames,
     CourtHours,
     DeckPeople,
+    ReaderRelations,
     DeckPerson,
     PlayerFit,
     Pools,
@@ -374,8 +376,10 @@ class ReadPostingSlot:
         people: DeckPeople,
         clubs: ClubNames,
         distances: ClubDistances,
+        relations: ReaderRelations,
         clock: Clock,
     ) -> None:
+        self._relations = relations
         self._posting = posting
         self._forecasts = forecasts
         self._people = people
@@ -440,16 +444,21 @@ class ReadPostingSlot:
             ),
             club_names=names,
             distances=await self._distances.from_player(poster, clubs),
-            people=await self._people.people(
-                sorted(
-                    {
-                        *(fit.player_id for fit in fits),
-                        *(player for game in rescues for player in game.players),
-                        *(player for post in posts for player in post.yeses),
-                    },
-                    key=str,
+            # The poster's friends carry the *friend* tag (`docs/adr/0202` §2).
+            people=await with_the_readers_friends(
+                await self._people.people(
+                    sorted(
+                        {
+                            *(fit.player_id for fit in fits),
+                            *(player for game in rescues for player in game.players),
+                            *(player for post in posts for player in post.yeses),
+                        },
+                        key=str,
+                    ),
+                    sport=read.sport,
                 ),
-                sport=read.sport,
+                reader=poster,
+                relations=self._relations,
             ),
         )
 

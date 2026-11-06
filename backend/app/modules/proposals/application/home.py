@@ -50,6 +50,7 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.proposals.application.booked_people import people_on
+from app.modules.proposals.application.friends import with_the_readers_friends
 from app.modules.proposals.application.payments_to_confirm import owed_by
 from app.modules.proposals.domain.home import (
     BookedGame,
@@ -65,6 +66,9 @@ from app.modules.proposals.domain.ports import (
     ClubNames,
     DeckPeople,
     DeckPerson,
+    FriendRequestsOnHome,
+    HomeFriendRequest,
+    ReaderRelations,
     GameResults,
     PlayerBookings,
     ProposalDirectory,
@@ -92,8 +96,12 @@ class Home:
     games: tuple[HomeGame, ...]
     #: The cards that need the reader, and their payments to confirm.
     needing_you: int
-    #: Everybody on every card, each in the sport of the card they are on.
+    #: Everybody on every card, each in the sport of the card they are on —
+    #: the reader's friends marked.
     people: Mapping[tuple[Sport, UUID], DeckPerson]
+    #: *FRIEND REQUESTS* — the requests waiting on the reader, newest first
+    #: (``docs/adr/0202`` §1). Empty, and the row gone, once all are answered.
+    friend_requests: tuple[HomeFriendRequest, ...] = ()
 
 
 @final
@@ -109,8 +117,12 @@ class ReadHome:
         clubs: ClubNames,
         games: BookedGameChanges,
         holding_times: HoldingTimes,
+        relations: ReaderRelations,
+        friend_requests: FriendRequestsOnHome,
         clock: Clock,
     ) -> None:
+        self._relations = relations
+        self._friend_requests = friend_requests
         self._bookings = bookings
         self._results = results
         self._proposals = proposals
@@ -172,7 +184,12 @@ class ReadHome:
             read_at=now,
             games=tuple(cards),
             needing_you=sum(card.state.needs_you for card in cards) + len(owed),
-            people=await people_on([card.game for card in cards], self._people),
+            people=await with_the_readers_friends(
+                await people_on([card.game for card in cards], self._people),
+                reader=reader,
+                relations=self._relations,
+            ),
+            friend_requests=await self._friend_requests.of(reader),
         )
 
     async def _without_a_booking(

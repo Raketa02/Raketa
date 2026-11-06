@@ -96,6 +96,7 @@ def teller(told: Told, charged: Charged, brief: GameBrief) -> TellThePlayers:
         shares=charged,  # type: ignore[arg-type]
         offers=None,  # type: ignore[arg-type]
         preferences=None,  # type: ignore[arg-type]
+        friendships=None,  # type: ignore[arg-type]
     )
 
 

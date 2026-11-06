@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.groups.application.club_groups import (
     ClubGroupRow,
     ClubGroupAdministrator,
@@ -626,6 +627,16 @@ class GroupMemberSchema(GroupPersonSchema):
             "counts from their return."
         )
     )
+    relation: FriendRelation = Field(
+        description=(
+            "**Your** relation to them — the pill or tag on the right of the "
+            "row (`docs/adr/0202` §1): `NONE` — **+ Add**; `SENT` — *request "
+            "sent*, for as long as your request stays open; `ASKED_YOU` — "
+            "**Accept**; `FRIEND` — *friend*. `NONE` on your own row. Only "
+            "your own relations: nothing here says who else is friends with "
+            "whom."
+        )
+    )
 
     @classmethod
     def from_row(cls, row: MemberRow) -> "GroupMemberSchema":
@@ -637,6 +648,7 @@ class GroupMemberSchema(GroupPersonSchema):
             "joined_at": row.joined_at,
             "player_score": row.reliability.points,
             "reliability_band": row.reliability.band,
+            "relation": row.relation,
         }
         return cls(**fields)
 

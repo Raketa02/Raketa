@@ -2,8 +2,9 @@
 (#549; the mechanics §6.3, §6.4, §9.2, §10.1, §12–§13, §17.2; the screens A9).
 
 ``proposals``, ``bookings``, ``payments`` and ``games`` publish what happened
-to a game and its money; this subscribes, as a room does (``docs/adr/0146`` §5),
-and asks them nothing but reads. Each event is read against the game **as it
+to a game and its money, and ``friends`` a request and its answer; this
+subscribes, as a room does (``docs/adr/0146`` §5), and asks them nothing but
+reads. Each event is read against the game **as it
 stands** — ``GameBriefs``, and for a game's own events its court (``GameCourts``),
 at the event's own instant — so a game that moved on before the delivery is
 told as it is, and a card that filled meanwhile needs nobody.
@@ -83,6 +84,12 @@ told as it is, and a card that filled meanwhile needs nobody.
   go?* is no event's — a clock passing announces nothing — so ``asking.py``
   tells it when the hour ends.
 
+- ``FriendRequested`` — *Inés wants to be your friend*, to the person asked,
+  once per request and only while its card is on their Home; ``FriendsMade``
+  — *Kuba said yes — you're friends* to whoever asked, *You and Kuba are
+  friends now* to both when the requests crossed (#745). About no game; always
+  on. *Not now*, a cancel, a removal and a block are told nobody.
+
 **An alert never points at a card the reader cannot find**: *You complete it*,
 a challenge and *Your new game* go only to a reader whose deck shows the card
 now (``Decks``, the deck's own filters). **And *You complete it* is the named player's**
@@ -106,7 +113,7 @@ from typing import Any, Final, final
 from uuid import UUID
 
 from app.application.events import DeliveryContext
-from app.kernel import Instant, instant
+from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.events import (
     CalledOffAtCutOff,
     CourtMoved,
@@ -122,14 +129,20 @@ from app.modules.games.domain.events import (
     ResultCountered,
     ResultProposed,
 )
+from app.modules.friends.domain.events import FriendRequested, FriendsMade
+from app.modules.friends.domain.relation import HowFriendsWereMade, RequestOrigin
 from app.modules.notifications.domain.notices import (
     CHOSEN,
     Notice,
     NoticeKind,
     NoticeReason,
     Opens,
+    friend_request_notice,
+    friends_made_notice,
 )
 from app.modules.notifications.domain.ports import (
+    Friendships,
+    WaitingRequest,
     CourtBrief,
     GameCourts,
     Decks,
@@ -165,6 +178,9 @@ from app.modules.proposals.domain.events import (
     YesSaid,
 )
 from app.shared.domain import DomainEvent
+
+#: How friends made by two requests crossing are recorded (#745).
+CROSSED_REQUESTS: Final = HowFriendsWereMade.CROSSED.value
 
 #: A refund's reason, and what the player is told when it is decided — a
 #: leaver's own refund is told nobody: it is their act, and its email says so.
@@ -266,6 +282,7 @@ class TellThePlayers:
         shares: PaidShares,
         offers: SeatOffers,
         preferences: NotificationPreferencesRepository,
+        friendships: Friendships,
     ) -> None:
         self._give = give
         self._games = games
@@ -274,6 +291,7 @@ class TellThePlayers:
         self._shares = shares
         self._offers = offers
         self._preferences = preferences
+        self._friendships = friendships
 
     async def __call__(self, event: DomainEvent, context: DeliveryContext) -> None:
         # Always on: the event is the news, so the delivered event is the key.
@@ -297,6 +315,53 @@ class TellThePlayers:
             await self._give.execute(
                 player,
                 replace(notice, own=True) if player == whose_act else notice,
+                at=at,
+            )
+
+    # -- friends (#745) ---------------------------------------------------------
+
+    async def _friend_request(
+        self, event: FriendRequested, *, key: str, at: Instant
+    ) -> None:
+        """*{nickname} wants to be your friend*, to the person asked — **once per
+        request**, and only while its card is on their Home: a request cancelled,
+        answered or set aside before the delivery, or one the reader's own block
+        hides, is told nobody (``docs/adr/0202`` §2)."""
+
+        waiting = await self._friendships.waiting_on(event.addressee_id)
+        if WaitingRequest(requester_id=event.requester_id, asked_at=at) not in waiting:
+            return
+        await self._give.execute(
+            event.addressee_id,
+            friend_request_notice(
+                key=key,
+                requester=event.requester_id,
+                group_id=event.group_id,
+                sport=None if event.sport is None else Sport(event.sport),
+                by_link=event.made_from == RequestOrigin.LINK.value,
+            ),
+            at=at,
+        )
+
+    async def _friends_made(self, event: FriendsMade, *, key: str, at: Instant) -> None:
+        """*{nickname} said yes — you're friends*, to whoever asked; *You and
+        {nickname} are friends now* to both, when the requests crossed — while
+        they still are."""
+
+        if not await self._friendships.are_friends(
+            event.requester_id, event.addressee_id
+        ):
+            return
+        crossed = event.how == CROSSED_REQUESTS
+        await self._give.execute(
+            event.requester_id,
+            friends_made_notice(key=key, friend=event.addressee_id, crossed=crossed),
+            at=at,
+        )
+        if crossed:
+            await self._give.execute(
+                event.addressee_id,
+                friends_made_notice(key=key, friend=event.requester_id, crossed=True),
                 at=at,
             )
 
@@ -1104,6 +1169,8 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     ResultProposed: TellThePlayers._score_up,
     ResultCorrected: TellThePlayers._score_up,
     ResultCountered: TellThePlayers._score_up,
+    FriendRequested: TellThePlayers._friend_request,
+    FriendsMade: TellThePlayers._friends_made,
 }
 
 #: What ``subscribe_the_teller`` hears.

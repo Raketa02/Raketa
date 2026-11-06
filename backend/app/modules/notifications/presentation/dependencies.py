@@ -7,11 +7,10 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.api.dependencies import ClockDep, DbSession, UnitOfWorkDep
+from app.api.dependencies import ClockDep, DbSession, EventRuntimeDep, UnitOfWorkDep
 from app.bootstrap.composition import (
     build_bell_repository,
-    build_notice_directory,
-    build_notice_words,
+    build_read_recent_notices,
     build_notification_preferences_repository,
 )
 from app.modules.notifications.application.preferences import (
@@ -83,10 +82,10 @@ def get_remove_a_phone(
 RemoveAPhoneDep = Annotated[RemoveAPhone, Depends(get_remove_a_phone)]
 
 
-def get_read_recent_notices(db: DbSession) -> ReadRecentNotices:
-    return ReadRecentNotices(
-        notices=build_notice_directory(db), words=build_notice_words(db)
-    )
+def get_read_recent_notices(
+    db: DbSession, runtime: EventRuntimeDep
+) -> ReadRecentNotices:
+    return build_read_recent_notices(db, runtime=runtime)
 
 
 ReadRecentNoticesDep = Annotated[ReadRecentNotices, Depends(get_read_recent_notices)]

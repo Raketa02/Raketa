@@ -1915,6 +1915,409 @@
         }
       }
     },
+    "/api/v1/friends/requests": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Ask to be friends",
+        "description": "**+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it, and they are told once.\n\n**If they had already asked you, the requests cross**: you are friends at once, both are told, and the answer is `FRIEND`.\n\n**Otherwise `SENT`, for as long as the request is open.** Nothing ever tells you whether they set it aside: *request sent* is all you read, and a request never expires. Cancel it with `DELETE /friends/requests/{player_id}`.",
+        "operationId": "ask_to_be_friends_api_v1_friends_requests_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskToBeFriendsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`cannot_befriend_yourself` \u2014 you named yourself.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`player_not_in_your_groups` \u2014 they are in none of your groups. Somebody outside them can be asked only through your link.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`already_friends`; `friend_request_already_sent` \u2014 your request to them is still open, set aside or not, and nobody asks twice; `unblock_them_first` \u2014 you blocked them; `concurrent_modification` \u2014 two acts on the two of you raced: retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Asked you \u00b7 You asked",
+        "description": "Open requests in one direction, newest first: `ASKED_YOU` \u2014 made of you, **Accept** on each; `YOU_ASKED` \u2014 yours, **Cancel** on each.",
+        "operationId": "read_friend_requests_api_v1_friends_requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "direction",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Direction",
+              "description": "Which tab."
+            },
+            "description": "Which tab."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequestsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends/requests/{player_id}/acceptance": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Accept a friend request",
+        "description": "**Accept** \u2014 on their Home card, their Members row, their record or *Asked you* \u2014 also after **Not now**. You are friends at once, and they are told *\u2026 said yes \u2014 you're friends*.",
+        "operationId": "accept_friend_request_api_v1_friends_requests__player_id__acceptance_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`friend_request_not_found` \u2014 no request from them is waiting for you: never made, cancelled, answered or ended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends/requests/{player_id}/set-aside": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Not now",
+        "description": "**Not now is not no.** The card leaves your Home and its notice leaves your bell; the request stays open, **Accept** still answers it, and they are never told \u2014 they keep reading *request sent* and cannot ask again.",
+        "operationId": "set_aside_friend_request_api_v1_friends_requests__player_id__set_aside_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Set aside \u2014 also when it already was."
+          },
+          "404": {
+            "description": "`friend_request_not_found` \u2014 no request from them is waiting for you: never made, cancelled, answered or ended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends/requests/{player_id}": {
+      "delete": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Cancel your friend request",
+        "description": "**Request sent \u25be \u203a Cancel request**, or *You asked*'s **Cancel**. It leaves their Home and their bell, and **nobody is told**.",
+        "operationId": "cancel_friend_request_api_v1_friends_requests__player_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Your request to them is cancelled \u2014 also the answer when none was open."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends/{player_id}": {
+      "delete": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Remove a friend",
+        "description": "**Friend \u2713 \u25be \u203a Remove friend**, behind its confirmation. **Nobody is told, and no game is touched**: a game already sent or booked with them stays as it is.",
+        "operationId": "remove_friend_api_v1_friends__player_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "You are no longer friends \u2014 also the answer when you were not."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends": {
+      "get": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Your friends",
+        "description": "Every friend you have, from all your groups, each with every sport they are rated in \u2014 their Level and its band. With `sport`, each carries that sport alone (empty where they have no Level in it), highest Level first: the picker's list.",
+        "operationId": "read_friends_api_v1_friends_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Narrow every friend's sports to this one.",
+              "title": "Sport"
+            },
+            "description": "Narrow every friend's sports to this one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends/groups": {
+      "get": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Add friends \u2014 from your groups",
+        "description": "Each of your groups with how many people are in it and how many of them you could still ask \u2014 *8 members \u00b7 2 to add*. Tapping one opens its Members.",
+        "operationId": "read_groups_to_add_from_api_v1_friends_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupsToAddFromResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/conversations": {
       "get": {
         "tags": [
@@ -7244,6 +7647,60 @@
         "title": "ArrivalRequest",
         "description": "*I'm here* \u2014 your own id \u2014 or *they're here*, somebody else's."
       },
+      "AskToBeFriendsRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who to ask. You are never sent."
+          },
+          "made_from": {
+            "$ref": "#/components/schemas/AskedFrom",
+            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, or the result screen's *PLAYED WITH* card."
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id",
+            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none."
+          },
+          "sport": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "made_from"
+        ],
+        "title": "AskToBeFriendsRequest"
+      },
+      "AskedFrom": {
+        "type": "string",
+        "enum": [
+          "MEMBERS",
+          "RECORD",
+          "RESULT"
+        ],
+        "title": "AskedFrom",
+        "description": "The screen a request is asked from. **Not a link**: a request by link is\nmade by opening the link, never sent here."
+      },
       "AssessmentStepResponse": {
         "properties": {
           "assessment_id": {
@@ -7749,6 +8206,11 @@
             "type": "boolean",
             "title": "Paid",
             "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for a payment, on a game that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
+          },
+          "friend": {
+            "type": "boolean",
+            "title": "Friend",
+            "description": "**Your** friend \u2014 the *FRIEND* tag (`docs/adr/0202` \u00a72). Only your own friends ever carry it: nothing here says who else is friends with whom. `false` on your own tile."
           }
         },
         "type": "object",
@@ -7759,7 +8221,8 @@
           "photo_id",
           "photo_url",
           "level",
-          "paid"
+          "paid",
+          "friend"
         ],
         "title": "BookedTileSchema",
         "description": "One seat on a booked game."
@@ -7959,6 +8422,14 @@
               }
             ],
             "description": "Present for a reader **not on the game** whom its open seat is offered to \u2014 a Seat open card, a Seats to fill row (#545): they stand in the seat that opened first, unpaid (*You?*), and **I'm in \u00b7 `money.share_grosze`** is `POST /bookings/{id}/seats`. No Chat and no Leave. `null` for a player in it."
+          },
+          "played_with": {
+            "items": {
+              "$ref": "#/components/schemas/PlayedWithSchema"
+            },
+            "type": "array",
+            "title": "Played With",
+            "description": "*PLAYED WITH* on the result screen (`docs/adr/0202` \u00a71): everybody else on the game with **your** relation to them \u2014 Members' pills, **+ Add**, *request sent*, **Accept**, *friend*. Hide the card when every one is `FRIEND`. Empty for a reader not on the game. Only your own relations: nothing says who else is friends with whom."
           }
         },
         "type": "object",
@@ -7987,7 +8458,8 @@
           "your_payment_due_by",
           "time_to",
           "shows_forecast",
-          "leaving"
+          "leaving",
+          "played_with"
         ],
         "title": "BookingDetailsResponse",
         "description": "A booked game's details, for a player in it \u2014 or for a member its open\nseat is offered to (#545)."
@@ -9153,6 +9625,11 @@
             "type": "boolean",
             "title": "Paid",
             "description": "On a `SEAT_OPEN` card, a player on the booked game \u2014 *2,75 \u00b7 paid* (#545). `false` on a game still filling, and on the reader's own tile, which is the open seat."
+          },
+          "friend": {
+            "type": "boolean",
+            "title": "Friend",
+            "description": "**Your** friend \u2014 the *FRIEND* tag (`docs/adr/0202` \u00a72). Only your own friends ever carry it: nothing here says who else is friends with whom. `false` on your own tile."
           }
         },
         "type": "object",
@@ -9164,7 +9641,8 @@
           "photo_url",
           "level",
           "is_in",
-          "paid"
+          "paid",
+          "friend"
         ],
         "title": "DeckTileSchema",
         "description": "One person on a card."
@@ -9201,6 +9679,14 @@
         ],
         "title": "DepartureResponse",
         "description": "*Leave the game*, done."
+      },
+      "Direction": {
+        "type": "string",
+        "enum": [
+          "ASKED_YOU",
+          "YOU_ASKED"
+        ],
+        "title": "Direction"
       },
       "EditGroupRequest": {
         "properties": {
@@ -9490,6 +9976,209 @@
         ],
         "title": "FreeCourtSchema",
         "description": "One *Free courts* row: a club and hour the post could be made at."
+      },
+      "FriendRelation": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "SENT",
+          "ASKED_YOU",
+          "FRIEND"
+        ],
+        "title": "FriendRelation",
+        "description": "Where the reader stands with one player."
+      },
+      "FriendRequestSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "asked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asked At"
+          },
+          "set_aside": {
+            "type": "boolean",
+            "title": "Set Aside",
+            "description": "On *Asked you*: you said **Not now** \u2014 it stays open, and **Accept** still answers it. Always `false` on *You asked*: whether they set yours aside is never said."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "asked_at",
+          "set_aside"
+        ],
+        "title": "FriendRequestSchema"
+      },
+      "FriendRequestsResponse": {
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/Direction"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/FriendRequestSchema"
+            },
+            "type": "array",
+            "title": "Requests",
+            "description": "Open requests, **newest first** \u2014 `ASKED_YOU`: made of you, set aside or not (*Asked you \u00b7 n* counts them); `YOU_ASKED`: yours. An answered or cancelled request is in neither."
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "requests"
+        ],
+        "title": "FriendRequestsResponse"
+      },
+      "FriendSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` with `photo_url` draws initials."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "friends_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Friends Since"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/FriendSportSchema"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport they are rated in, in the sports' own order \u2014 or, with `sport`, that one alone, and **empty** when they have no Level in it: *No padel level yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "friends_since",
+          "sports"
+        ],
+        "title": "FriendSchema"
+      },
+      "FriendSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their published Level in the sport."
+          },
+          "band": {
+            "type": "string",
+            "title": "Band",
+            "description": "The Level band's published name (*Established*), RacketSkill's own word \u2014 the picker's *2,75 \u00b7 established*. Never derived from `level`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level",
+          "band"
+        ],
+        "title": "FriendSportSchema"
+      },
+      "FriendsResponse": {
+        "properties": {
+          "sport": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sport asked for, if one was."
+          },
+          "friends": {
+            "items": {
+              "$ref": "#/components/schemas/FriendSchema"
+            },
+            "type": "array",
+            "title": "Friends",
+            "description": "**Your** friends, from every group. Without `sport`, by nickname (You \u203a Friends); with it, highest Level in it first and anybody with no Level in it last (the picker). Empty when you have none: *No friends yet. Add them from your groups, or send your link.*"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "friends"
+        ],
+        "title": "FriendsResponse"
       },
       "GameKind": {
         "type": "string",
@@ -10213,6 +10902,10 @@
             "format": "date-time",
             "title": "Joined At",
             "description": "When they joined \u2014 this stay: somebody who left and came back counts from their return."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "**Your** relation to them \u2014 the pill or tag on the right of the row (`docs/adr/0202` \u00a71): `NONE` \u2014 **+ Add**; `SENT` \u2014 *request sent*, for as long as your request stays open; `ASKED_YOU` \u2014 **Accept**; `FRIEND` \u2014 *friend*. `NONE` on your own row. Only your own relations: nothing here says who else is friends with whom."
           }
         },
         "type": "object",
@@ -10224,7 +10917,8 @@
           "reliability_band",
           "is_owner",
           "is_administrator",
-          "joined_at"
+          "joined_at",
+          "relation"
         ],
         "title": "GroupMemberSchema",
         "description": "One row of Members, for one sport \u2014 *Padel 2,71 \u00b7 92 Very high*."
@@ -10483,6 +11177,54 @@
         "title": "GroupSportSchema",
         "description": "One sport's *N of M* for the Games tab."
       },
+      "GroupToAddFromSchema": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Everybody in it, you included."
+          },
+          "to_add": {
+            "type": "integer",
+            "title": "To Add",
+            "description": "Members you could still ask: not you, not a friend, nobody with an open request either way, and nobody you blocked \u2014 *8 members \u00b7 2 to add*, *nobody to add* at 0."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id",
+          "name",
+          "member_count",
+          "to_add"
+        ],
+        "title": "GroupToAddFromSchema"
+      },
+      "GroupsToAddFromResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupToAddFromSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "Every group you are in, newest joined first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "GroupsToAddFromResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -10584,6 +11326,135 @@
           "next_page"
         ],
         "title": "HomeClubPageResponse"
+      },
+      "HomeFriendRequestGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "HomeFriendRequestGroupSchema"
+      },
+      "HomeFriendRequestSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who asked. `POST /friends/requests/{player_id}/acceptance` accepts, `\u2026/set-aside` is **Not now**."
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws initials."
+          },
+          "asked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asked At"
+          },
+          "by_link": {
+            "type": "boolean",
+            "title": "By Link",
+            "description": "Made by their Friend link: draw *Invited you to Raketa* in place of the group line."
+          },
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeFriendRequestGroupSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group they asked from \u2014 *With you in Kazimierz crew* \u2014 **while you are both in it**. `null` for a link's request, for one asked from a screen that showed no group, and once either of you left."
+          },
+          "sport": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sport of the screen they asked from, if it showed one."
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in `sport` \u2014 *Padel 3,40*. `null` with no sport, or when they hold no Level in it."
+          },
+          "player_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Player Score",
+            "description": "Their Player reliability in points \u2014 the chip's *\u2726 98*."
+          },
+          "reliability_band": {
+            "$ref": "#/components/schemas/ReliabilityBand",
+            "description": "The band of that figure, the code their record serves."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "asked_at",
+          "by_link",
+          "group",
+          "sport",
+          "level",
+          "player_score",
+          "reliability_band"
+        ],
+        "title": "HomeFriendRequestSchema",
+        "description": "One card in *FRIEND REQUESTS* \u2014 *In\u00e9s wants to be your friend \u00b7 With you\nin Kazimierz crew \u00b7 Padel 3,40 \u00b7 \u2726 98*, **Not now** and **Accept**."
       },
       "HomeGameSchema": {
         "properties": {
@@ -10795,16 +11666,25 @@
             "type": "array",
             "title": "Games",
             "description": "The reader's booked games \u2014 and their full games waiting for one payment, or gone back to filling \u2014 **soonest first**, and only what Home draws: **every live game** (waiting for a payment, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`). Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here."
+          },
+          "friend_requests": {
+            "items": {
+              "$ref": "#/components/schemas/HomeFriendRequestSchema"
+            },
+            "type": "array",
+            "title": "Friend Requests",
+            "description": "*FRIEND REQUESTS \u00b7 n* \u2014 the requests waiting on you, **newest first** (`docs/adr/0202` \u00a71). A card leaves once you accept it, say **Not now**, or they cancel; the row and its title are gone when this is empty. They are not counted in `needing_you`."
           }
         },
         "type": "object",
         "required": [
           "read_at",
           "needing_you",
-          "games"
+          "games",
+          "friend_requests"
         ],
         "title": "HomeResponse",
-        "description": "**Home**: the reader's games from the moment they fill."
+        "description": "**Home**: the reader's games from the moment they fill, and the friend\nrequests waiting on them."
       },
       "HomeStatus": {
         "type": "string",
@@ -11736,7 +12616,9 @@
           "HOW_DID_IT_GO",
           "IS_THAT_RIGHT",
           "WERE_THEY_THERE",
-          "GET_YOUR_LEVEL"
+          "GET_YOUR_LEVEL",
+          "FRIEND_REQUEST",
+          "FRIENDS_MADE"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -11767,7 +12649,7 @@
           },
           "opens": {
             "$ref": "#/components/schemas/Opens",
-            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727)."
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` \u2014 the record of `player_id`, a new friend."
           },
           "game_id": {
             "anyOf": [
@@ -11792,7 +12674,8 @@
                 "type": "null"
               }
             ],
-            "title": "Pool Id"
+            "title": "Pool Id",
+            "description": "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`."
           },
           "sport": {
             "anyOf": [
@@ -11813,6 +12696,19 @@
                 "type": "null"
               }
             ]
+          },
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Id",
+            "description": "On a notice about no game that names somebody \u2014 `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens. `null` on every other notice."
           },
           "gathered": {
             "type": "integer",
@@ -11842,6 +12738,7 @@
           "pool_id",
           "sport",
           "game_kind",
+          "player_id",
           "gathered",
           "new",
           "your_own"
@@ -12001,7 +12898,8 @@
           "PROPOSAL",
           "DECK",
           "RESULT",
-          "HOME"
+          "HOME",
+          "RECORD"
         ],
         "title": "Opens",
         "description": "The screen a notice opens on when tapped (the screens A9)."
@@ -12402,6 +13300,25 @@
         "title": "PlayIntentSurface",
         "description": "Which screen a declaration was made on.\n\nIt is context recorded beside a fact, never a thing any decision branches\non.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep.\n\n**Three of its five screens are gone** \u2014 the search screen's toggle, the\ndeck and the drift prompt went with the searches (#579) \u2014 and their codes\nstay, because a code already in a stream has to keep meaning what it meant\nwhen it was written. Nothing emits them any more.\n\n**It widened rather than renaming, and the reason was cost** (#280). The\ndeck earned the fifth member: ``POST /deck`` has no mode to read, so it\nreads the declaration, is refused with ``play_intent_not_declared`` exactly\nas a search is, and draws the same interstitial. Reporting that as\n``SEARCH_SWITCH`` was a small untruth in the one field whose whole job is to\nsay which screen it was. The alternative argued was to rename\n``SEARCH_SWITCH`` to ``PLAY_SWITCH`` \u2014 one value true of both Play surfaces\nrather than two that each name one \u2014 and it lost on cost, not on taste: the\ncode is stored verbatim in ``PlayIntentDeclared`` and read back through\n``PlayIntentSurface(event.surface)``, so a rename is an event migration\nbought on a field nothing branches on, while a widening is one member and\nleaves every code already in a stream meaning what it meant when it was\nwritten."
       },
+      "PlayedWithSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "relation"
+        ],
+        "title": "PlayedWithSchema",
+        "description": "One person on the game with **your** relation to them."
+      },
       "PlayerProfileOptionsResponse": {
         "properties": {
           "social_tag_groups": {
@@ -12548,6 +13465,10 @@
             "title": "Is Self",
             "description": "Whether this is the reader's own record. **The server's answer, and the client never derives it** by comparing the id it asked about against its session \u2014 the sheet retitles to *How others see you* and drops the distance and the fit pill, and getting that wrong is most visible on the one screen it matters on. It decides the title and nothing on the sheet: every zone, what other players said included, is the same fact whoever is reading.\n\n`true` on `/players/me/record` always, and on the parameterised route when a client asks about itself."
           },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "**Your** relation to this person \u2014 the left button of the record's foot, beside *Block* (`docs/adr/0202` \u00a71): `NONE` \u2014 **Add friend**; `SENT` \u2014 **Request sent \u25be** (*Cancel request*), for as long as your request stays open; `ASKED_YOU` \u2014 **Accept**; `FRIEND` \u2014 **Friend \u2713 \u25be** (*Remove friend*). `NONE` on your own record, which draws neither button, and draw only *Unblock* when `blocked_by_you` is `true`. Nothing here says who else they are friends with."
+          },
           "blocked_by_you": {
             "type": "boolean",
             "title": "Blocked By You",
@@ -12619,6 +13540,7 @@
         "type": "object",
         "required": [
           "is_self",
+          "relation",
           "nickname",
           "area_code",
           "social_tags",
@@ -13623,6 +14545,19 @@
         ],
         "title": "RefreshRequest"
       },
+      "RelationResponse": {
+        "properties": {
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them now: `SENT` once asked \u2014 *request sent*, for as long as the request stays open, whatever they do with it \u2014 or `FRIEND`, when they had asked you first and the requests crossed, or when you accepted."
+          }
+        },
+        "type": "object",
+        "required": [
+          "relation"
+        ],
+        "title": "RelationResponse"
+      },
       "ReliabilityBand": {
         "type": "string",
         "enum": [
@@ -14373,6 +15308,11 @@
             "title": "Level",
             "description": "Their published Level in the sport."
           },
+          "friend": {
+            "type": "boolean",
+            "title": "Friend",
+            "description": "**Your** friend \u2014 the *FRIEND* tag (`docs/adr/0202` \u00a72); only your own friends ever carry it."
+          },
           "forecast": {
             "anyOf": [
               {
@@ -14392,6 +15332,7 @@
           "photo_id",
           "photo_url",
           "level",
+          "friend",
           "forecast"
         ],
         "title": "SlotFitSchema",

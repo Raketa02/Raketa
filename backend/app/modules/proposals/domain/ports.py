@@ -37,9 +37,10 @@ from enum import StrEnum
 from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.engines.matchfit.core import SearchMode
+from app.engines.matchfit.core import ReliabilityBand, SearchMode
 from app.engines.matchfit.scorable import LevelReading
 from app.kernel import Instant, Sport, invariant
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.club_bookings import (
@@ -415,12 +416,70 @@ class DeckPerson:
     level: float | None
     #: Blank for somebody with no Player profile: free for nothing.
     week: WeeklyHours
+    #: **The reader's** friend — the *friend* tag on the face
+    #: (``docs/adr/0202`` §2). ``False`` as ``DeckPeople`` answers, which knows
+    #: no reader; a read marks it for its reader (``application/friends.py``).
+    friend: bool = False
 
     def __post_init__(self) -> None:
         invariant(
             (self.photo_id is None) == (self.photo_url is None),
             f"a photograph with only half an address: {self!r}",
         )
+
+
+@runtime_checkable
+class ReaderRelations(Protocol):
+    """**The reader's** relations to the people a screen draws, lent by Friends
+    (``docs/adr/0202`` §2): a face carries only *friend*, and the result's
+    *PLAYED WITH* card the whole relation. Only the reader's own — nothing here
+    answers whether two other people are friends."""
+
+    async def friends_among(
+        self, reader: UUID, players: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these are the reader's friends — one question for the set."""
+        ...
+
+    async def relations_of(
+        self, reader: UUID, players: Collection[UUID]
+    ) -> Mapping[UUID, FriendRelation]:
+        """The reader's relation to each of these, ``NONE`` where nothing
+        stands. Everybody asked about is answered."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class HomeFriendRequest:
+    """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
+    and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, or *Invited
+    you to Raketa* for a link's."""
+
+    requester_id: UUID
+    nickname: str
+    photo_id: UUID | None
+    photo_url: str | None
+    asked_at: Instant
+    #: Made by the requester's link.
+    by_link: bool
+    #: The group it was asked from, **while both are in it**.
+    group_id: UUID | None
+    group_name: str | None
+    #: The sport of the screen it was asked from, and the requester's published
+    #: Level in it, when they hold one.
+    sport: Sport | None
+    level: float | None
+    reliability_points: int
+    reliability_band: ReliabilityBand
+
+
+@runtime_checkable
+class FriendRequestsOnHome(Protocol):
+    async def of(self, reader: UUID) -> tuple[HomeFriendRequest, ...]:
+        """The requests on the reader's Home, newest first: open, not set
+        aside, and none from somebody the reader blocked."""
+        ...
 
 
 @runtime_checkable

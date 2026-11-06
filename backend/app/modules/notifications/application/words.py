@@ -55,7 +55,11 @@ from typing import Final
 from app.kernel import Instant, Sport, invariant
 from app.modules.bookings.domain.booking import CancelReason
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
-from app.modules.notifications.domain.notices import NoticeKind, NoticeReason, Opens
+from app.modules.notifications.domain.notices import (
+    NoticeKind,
+    NoticeReason,
+    Opens,
+)
 from app.modules.payments.application.seat_charge_emails import zloty
 from app.modules.payments.domain.seat_charge import FailureReason
 
@@ -174,10 +178,51 @@ _ABOUT_NO_GAME: Final[dict[NoticeKind, Words]] = {
 }
 
 
-def words_about_no_game(kind: NoticeKind) -> Words:
-    """The words of a notice that carries no game's facts — *Get your level*."""
+@dataclass(frozen=True, slots=True)
+class SaidOfNoGame:
+    """What a notice about no game is put into words from: the person it names,
+    and for a friend request the group and sport it was asked from (#745)."""
 
+    kind: NoticeKind
+    #: The nickname of the person it names, if it names one and they can still
+    #: be named.
+    name: str | None = None
+    #: The group it was asked from, while it exists.
+    group: str | None = None
+    sport: Sport | None = None
+    reason: str | None = None
+
+
+def words_about_no_game(said: SaidOfNoGame) -> Words:
+    """The words of a notice that carries no game's facts — *Get your level*,
+    and a friend's two (the words §29.2). **No sentence says *her* or *him***
+    about another player (ADR-0096)."""
+
+    kind = said.kind
+    name = said.name or "Somebody"
+    if kind is NoticeKind.FRIEND_REQUEST:
+        return Words(title=f"{name} wants to be your friend", body=_asked_from(said))
+    if kind is NoticeKind.FRIENDS_MADE:
+        # The body is a call: §29.2 gives the title alone.
+        body = f"Find {name} in You › Friends."
+        if said.reason == NoticeReason.CROSSED:
+            return Words(title=f"You and {name} are friends now", body=body)
+        return Words(title=f"{name} said yes — you're friends", body=body)
     return invariant(_ABOUT_NO_GAME.get(kind), f"{kind} is about a game")
+
+
+def _asked_from(said: SaidOfNoGame) -> str:
+    """The card's where-line, as far as a push can say it: *With you in
+    Kazimierz crew · Padel*, or *Invited you to Raketa* for a link's. The card
+    on Home adds the Level and the reliability chip, which are live (a call)."""
+
+    if said.reason == NoticeReason.BY_LINK:
+        return "Invited you to Raketa"
+    sport = None if said.sport is None else _SPORT_WORDS[said.sport]
+    if said.group is not None:
+        return f"With you in {said.group}" + ("" if sport is None else f" · {sport}")
+    # Asked from a screen that showed no group (a call).
+    return "Answer it on Home."
 
 
 def words_for(said: Said) -> Words:

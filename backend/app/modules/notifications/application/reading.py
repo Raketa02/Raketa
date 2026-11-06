@@ -21,6 +21,7 @@ from uuid import UUID
 from app.kernel import Instant, Sport, instant, invariant
 from app.modules.notifications.application.words import (
     Said,
+    SaidOfNoGame,
     Words,
     words_about_no_game,
     words_for,
@@ -28,6 +29,7 @@ from app.modules.notifications.application.words import (
 from app.modules.notifications.domain.events import NoticeGiven
 from app.modules.notifications.domain.notices import NoticeKind, Opens
 from app.modules.notifications.domain.ports import (
+    Friendships,
     Names,
     NoticeDirectory,
     RecordedNotice,
@@ -80,7 +82,19 @@ class NoticeWords:
         clubs = await self._names.of_clubs(
             {notice.club_id for notice in notices if notice.club_id is not None}
         )
-        return [_drawn(notice, people=people, clubs=clubs) for notice in notices]
+        # A notice about no game that names a group names the one a friend
+        # request was asked from (#745).
+        groups = await self._names.of_groups(
+            {
+                notice.pool_id
+                for notice in notices
+                if notice.game_id is None and notice.pool_id is not None
+            }
+        )
+        return [
+            _drawn(notice, people=people, clubs=clubs, groups=groups)
+            for notice in notices
+        ]
 
 
 def _drawn(
@@ -88,13 +102,25 @@ def _drawn(
     *,
     people: Mapping[UUID, str],
     clubs: Mapping[UUID, str],
+    groups: Mapping[UUID, str],
 ) -> Words:
-    """One notice's words — from its kind alone when it is about no game
-    (*Get your level*, #727), else from the game's facts and the names."""
+    """One notice's words — from its kind and the person it names when it is
+    about no game (*Get your level*, #727; a friend's two, #745), else from the
+    game's facts and the names."""
 
     kind = NoticeKind(notice.kind)
     if notice.game_id is None:
-        return words_about_no_game(kind)
+        return words_about_no_game(
+            SaidOfNoGame(
+                kind=kind,
+                name=next(
+                    (people[one] for one in notice.people if one in people), None
+                ),
+                group=None if notice.pool_id is None else groups.get(notice.pool_id),
+                sport=notice.sport,
+                reason=notice.reason,
+            )
+        )
     club_id = invariant(notice.club_id, f"{kind} names its club")
     return words_for(
         Said(
@@ -137,13 +163,28 @@ class RecentNotices:
 
 @final
 class ReadRecentNotices:
-    def __init__(self, *, notices: NoticeDirectory, words: NoticeWords) -> None:
+    """**A friend request is listed only while its card is on Home** (#745):
+    answered, set aside, cancelled, ended by a block or hidden by the reader's
+    own, its row leaves the list and the bell's number in the same reading. A
+    row is matched to its request by whose it is and when it was asked — the
+    instant the notice was given."""
+
+    def __init__(
+        self,
+        *,
+        notices: NoticeDirectory,
+        words: NoticeWords,
+        friendships: Friendships,
+    ) -> None:
         self._notices = notices
         self._words = words
+        self._friendships = friendships
 
     async def execute(self, player_id: UUID, *, limit: int) -> RecentNotices:
         recent = await self._notices.recent(
-            player_id, limit=max(1, min(limit, MOST_RECENT))
+            player_id,
+            limit=max(1, min(limit, MOST_RECENT)),
+            leaving_out=await self._requests_answered(player_id),
         )
         return RecentNotices(
             notices=[
@@ -154,4 +195,18 @@ class ReadRecentNotices:
             ],
             new_count=recent.new_count,
             last_opened_at=recent.last_opened_at,
+        )
+
+    async def _requests_answered(self, player_id: UUID) -> frozenset[UUID]:
+        requests = await self._notices.of_kind(player_id, NoticeKind.FRIEND_REQUEST)
+        if not requests:
+            return frozenset()
+        waiting = {
+            (request.requester_id, request.asked_at)
+            for request in await self._friendships.waiting_on(player_id)
+        }
+        return frozenset(
+            notice.notice_id
+            for notice in requests
+            if (notice.person_named, notice.given_at) not in waiting
         )

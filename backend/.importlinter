@@ -679,6 +679,7 @@ forbidden_modules =
     app.modules.bookings
     app.modules.clubs
     app.modules.conversations
+    app.modules.friends
     app.modules.games
     app.modules.groups
     app.modules.matchmaking
@@ -691,3 +692,25 @@ forbidden_modules =
     app.modules.sportsmanship
     app.modules.users
 allow_indirect_imports = false
+
+# Friends lends the reader's relations to every face, and knows none of the
+# faces (docs/adr/0202 §8, #745). Members, the record, the deck, Home and the
+# bell each declare the port they read it through, **signed on their own side**
+# — `groups/infrastructure/`, `player_record/infrastructure/`,
+# `proposals/infrastructure/`, `notifications/infrastructure/` — and the one
+# thing Friends asks of a group, the reader's groups and their members, is a
+# port in Friends' words signed in `groups/infrastructure/` too. So every arrow
+# runs into `friends`, and none out of it towards a reader.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:friends-knows-none-of-its-readers]
+name = The Friends context imports none of the contexts that read it
+type = forbidden
+source_modules =
+    app.modules.friends
+forbidden_modules =
+    app.modules.groups
+    app.modules.notifications
+    app.modules.player_record
+    app.modules.proposals
+allow_indirect_imports = true

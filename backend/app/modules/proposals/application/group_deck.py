@@ -53,6 +53,7 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.proposals.application.friends import with_the_readers_friends
 from app.modules.proposals.application.commands import (
     ReadDeckCountsCommand,
     ReadGroupDeckCommand,
@@ -89,6 +90,7 @@ from app.modules.proposals.domain.ports import (
     ClubTerms,
     CourtKinds,
     DeckPeople,
+    ReaderRelations,
     DeckPerson,
     GamesAndMoneyRepository,
     PlayerFit,
@@ -169,9 +171,11 @@ class ReadGroupDeck:
         clubs: ClubNames,
         offers: RescueOffers,
         players: PlayersInPlay,
+        relations: ReaderRelations,
         clock: Clock,
     ) -> None:
         self._offers = offers
+        self._relations = relations
         self._players = players
         self._pools = pools
         self._directory = directory
@@ -236,6 +240,10 @@ class ReadGroupDeck:
                 *([reader] if rescues else []),
             },
             sport=sport,
+        )
+        # The reader's friends carry the *friend* tag (`docs/adr/0202` §2).
+        people = await with_the_readers_friends(
+            people, reader=reader, relations=self._relations
         )
 
         cards: list[DeckCard] = []

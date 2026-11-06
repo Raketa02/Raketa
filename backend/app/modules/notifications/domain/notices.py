@@ -100,6 +100,16 @@ class NoticeKind(StrEnum):
     #: at all**: once per account, ever, a day after a first group join while
     #: rated in nothing (#727, Q126). Always on, opening Home, never emailed.
     GET_YOUR_LEVEL = "GET_YOUR_LEVEL"
+    #: *Inés wants to be your friend* — to the person asked, **once per
+    #: request** (``docs/adr/0202`` §1; #745). About no game; it names the
+    #: requester, and the group and sport it was asked from. Listed only while
+    #: its card is on the reader's Home: answered, set aside or cancelled, the
+    #: row is gone from the bell too.
+    FRIEND_REQUEST = "FRIEND_REQUEST"
+    #: *Kuba said yes — you're friends* — to the requester; *You and Kuba are
+    #: friends now* to both, for a crossed request (``reason`` ``CROSSED``).
+    #: About no game, opening the friend's record.
+    FRIENDS_MADE = "FRIENDS_MADE"
 
 
 class Opens(StrEnum):
@@ -113,8 +123,11 @@ class Opens(StrEnum):
     DECK = "DECK"
     #: The booked game's result screen — who turned up, and the score (#663).
     RESULT = "RESULT"
-    #: Home — where *Get your level* stands on a card too (#727).
+    #: Home — where *Get your level* stands on a card too (#727), and a friend
+    #: request (#745).
     HOME = "HOME"
+    #: The player record of the person the notice names — a new friend (#745).
+    RECORD = "RECORD"
 
 
 class NoticeReason(StrEnum):
@@ -148,6 +161,11 @@ class NoticeReason(StrEnum):
     CORRECTED = "CORRECTED"
     #: The other side put a different score up: two scores stand (#663).
     COUNTERED = "COUNTERED"
+    #: Two friend requests crossed: nobody said yes (#745).
+    CROSSED = "CROSSED"
+    #: A friend request made by the requester's link: *Invited you to Raketa*
+    #: (#745, #748).
+    BY_LINK = "BY_LINK"
 
 
 @dataclass(frozen=True, slots=True)
@@ -268,6 +286,55 @@ def get_your_level_notice(player_id: UUID) -> Notice:
         club_id=None,
         starts_at=None,
         opens=Opens.HOME,
+    )
+
+
+def friend_request_notice(
+    *,
+    key: str,
+    requester: UUID,
+    group_id: UUID | None,
+    sport: Sport | None,
+    by_link: bool,
+) -> Notice:
+    """*{nickname} wants to be your friend* (#745) — about no game: **the group
+    rides as ``pool_id``** (a group's pool is filed under the group's own id) and
+    the sport as ``sport``, so the body can say where it was asked; a link's
+    request names neither (its ``Where`` cannot) and says so as its ``reason``.
+    Opens Home, where the card is."""
+
+    return Notice(
+        kind=NoticeKind.FRIEND_REQUEST,
+        key=key,
+        game_id=None,
+        pool_id=group_id,
+        sport=sport,
+        game_kind=None,
+        club_id=None,
+        starts_at=None,
+        opens=Opens.HOME,
+        people=(requester,),
+        reason=NoticeReason.BY_LINK.value if by_link else None,
+    )
+
+
+def friends_made_notice(*, key: str, friend: UUID, crossed: bool) -> Notice:
+    """*{nickname} said yes — you're friends*, or for a crossed request *You and
+    {nickname} are friends now* (#745). About no game; opens the friend's
+    record."""
+
+    return Notice(
+        kind=NoticeKind.FRIENDS_MADE,
+        key=key,
+        game_id=None,
+        pool_id=None,
+        sport=None,
+        game_kind=None,
+        club_id=None,
+        starts_at=None,
+        opens=Opens.RECORD,
+        people=(friend,),
+        reason=NoticeReason.CROSSED.value if crossed else None,
     )
 
 

@@ -22,7 +22,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
@@ -121,6 +121,13 @@ class RecordedNotice:
     #: opened it, and not their own: one the bell counts.
     new: bool = False
 
+    @property
+    def person_named(self) -> UUID | None:
+        """The person a notice **about no game** is about — who asked, or the
+        new friend (#745) — and ``None`` on every other notice."""
+
+        return self.people[0] if self.game_id is None and self.people else None
+
 
 @dataclass(frozen=True, slots=True)
 class RecordedNotices:
@@ -143,7 +150,22 @@ class NoticeDirectory(Protocol):
         — what *once per account, ever* is read against (#727)."""
         ...
 
-    async def recent(self, player_id: UUID, *, limit: int) -> RecordedNotices:
+    async def of_kind(
+        self, player_id: UUID, kind: NoticeKind
+    ) -> Sequence[RecordedNotice]:
+        """Every notice of this kind the player was ever given — what the list
+        asks of the friend requests, to leave out the rows whose card is gone
+        from Home (#745). Bounded by how many such notices one player has
+        had."""
+        ...
+
+    async def recent(
+        self,
+        player_id: UUID,
+        *,
+        limit: int,
+        leaving_out: Collection[UUID] = (),
+    ) -> RecordedNotices:
         """The player's notices, the newest first, each saying whether it is
         new to them — and how many are new in all, in the same reading.
 
@@ -151,7 +173,10 @@ class NoticeDirectory(Protocol):
         is new when it reached the list after the newest one the list held
         when it was last opened — given, or gathered into and so moved up —
         whatever the instant of what it tells, since the outbox delivers after
-        the act."""
+        the act.
+
+        ``leaving_out`` names notices no longer listed — **neither listed nor
+        counted**, in the same reading."""
         ...
 
 
@@ -425,13 +450,44 @@ class Names(Protocol):
 
     async def of_clubs(self, club_ids: Collection[UUID]) -> Mapping[UUID, str]: ...
 
+    async def of_groups(self, group_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """Each group's name — where a friend request was asked from (#745). A
+        group deleted since is absent."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class WaitingRequest:
+    """A friend request whose card is on its reader's Home: whose, and when it
+    was made — which is the instant its notice was given, so the two are
+    matched on it."""
+
+    requester_id: UUID
+    asked_at: Instant
+
+
+@runtime_checkable
+class Friendships(Protocol):
+    """What Notifications reads of Friends (#745), in its own words — a request
+    is told, and listed, **only while its card is on the reader's Home**; *friends
+    made* only while they still are."""
+
+    async def waiting_on(self, reader: UUID) -> frozenset[WaitingRequest]:
+        """The requests on the reader's Home now: open, not set aside, and not
+        from somebody the reader blocked."""
+        ...
+
+    async def are_friends(self, one: UUID, other: UUID) -> bool: ...
+
 
 __all__ = [
+    "WaitingRequest",
     "BellRepository",
     "CourtBrief",
     "GameCourts",
     "Decks",
     "EndedHours",
+    "Friendships",
     "GameBrief",
     "GameBriefs",
     "GroupJoiners",

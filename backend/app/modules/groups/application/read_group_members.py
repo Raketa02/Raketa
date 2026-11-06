@@ -13,6 +13,7 @@ from app.modules.groups.domain.ports import (
     GroupDirectory,
     GroupFaces,
     GroupMemberReliability,
+    MemberRelations,
     RatedGroupMembers,
 )
 
@@ -41,6 +42,10 @@ class ReadGroupMembers:
     whatever the size of the group — the Levels, the faces and Player reliability —
     each one question about the rows it serves, and on an official group a
     fourth, asked first: who runs it now.
+
+    **Each row carries the reader's relation to them** (``docs/adr/0202`` §1) —
+    one more question about the rows, lent by Friends, and only the reader's:
+    nothing here says who else is friends with whom.
     """
 
     def __init__(
@@ -51,6 +56,7 @@ class ReadGroupMembers:
         faces: GroupFaces,
         reliability: GroupMemberReliability,
         administrators: GroupAdministrators,
+        relations: MemberRelations,
         clock: Clock,
     ) -> None:
         self._directory = directory
@@ -58,6 +64,7 @@ class ReadGroupMembers:
         self._faces = faces
         self._reliability = reliability
         self._administrators = administrators
+        self._relations = relations
         self._clock = clock
 
     async def execute(
@@ -77,6 +84,7 @@ class ReadGroupMembers:
         reliability = await self._reliability.reliability_of(
             shown, now=self._clock.now()
         )
+        relations = await self._relations.relations_of(reader_id, shown)
         return tuple(
             MemberRow(
                 face=face_of(faces, member),
@@ -85,6 +93,7 @@ class ReadGroupMembers:
                 is_owner=member == listing.owner_id,
                 joined_at=listing.joined_at[member],
                 is_administrator=member == runner,
+                relation=relations[member],
             )
             for member in shown
         )

@@ -90,6 +90,7 @@ from app.modules.player_profile.domain.weekly_hours import (
 )
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
+    RelationsOfTheReader,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -104,6 +105,7 @@ from app.modules.player_record.domain.ports import (
 from app.modules.player_record.domain.record import (
     BackWithEveryone,
     OpponentVariety,
+    RecordRelation,
     ReliabilityFilter,
     ReliabilityPanel,
     WhatPlayersSaid,
@@ -1230,3 +1232,39 @@ async def _stars(
         )
     )
     await session.commit()
+
+
+# ---------------------------------------------------------------------------
+# RelationsOfTheReader — where the reader stands with the subject (#745)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(RelationsOfTheReader))
+async def test_the_readers_relation_to_the_subject_either_way(implementation, session):
+    from tests.demands.friends_world import asks, befriends
+
+    reader, friend, asked, asker = (new_uuid() for _ in range(4))
+    await befriends(session, reader, friend)
+    await asks(session, reader, asked)
+    await asks(session, asker, reader)
+    relations = implementation.build(session)
+
+    async def of(subject):
+        return await relations.relation_to(reader_id=reader, subject_id=subject)
+
+    assert await of(friend) is RecordRelation.FRIEND
+    assert await of(asked) is RecordRelation.SENT
+    assert await of(asker) is RecordRelation.ASKED_YOU
+    assert await of(new_uuid()) is RecordRelation.NONE
+    assert await of(reader) is RecordRelation.NONE
+
+
+def test_the_records_relation_spells_friends_four_words():
+    """The record's own spelling, held to Friends' by value — the wire carries
+    Friends' (``presentation/schemas.py``)."""
+
+    from app.modules.friends.domain.relation import FriendRelation
+
+    assert [one.value for one in RecordRelation] == [
+        one.value for one in FriendRelation
+    ]

@@ -31,7 +31,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **reader's own** — `blocked_by_you`, asked once admitted through the tenth demand,
   `BlocksByTheReader` (`OwnBlocksOfTheReader`, over `BlockQuery.blocks_made_by` with the
   reader as the blocker), a fact on the sheet that refuses nothing and is `false` on your own
-  record; nothing on any port can answer *did they block me* (§3). It is the one demand
+  record; nothing on any port can answer *did they block me* (§3). **The reader's relation
+  is the twelfth demand** (#745; ADR-0202 §1): `RelationsOfTheReader`
+  (`FriendsRelationsOfTheReader`, over Friends' `ReadRelations`), in the record's own spelling
+  `RecordRelation` — held to `FriendRelation` by a test and put on the wire as that enum,
+  `relation` — asked once admitted and never a gate, `NONE` on your own record;
+  `app.modules.friends` is on this context's forbidden list (`friends.md`). `blocked_by_you`
+  is the one demand
   here that **stands down rather than raising**: an unreadable block state omits
   `blocked_by_you` and takes no record down (ADR-0193, Consequences). **No gender preference is asked of any strand**: a preference says who a player is
   willing to be *matched* with, and every strand here already put the pair in front of each

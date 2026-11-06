@@ -45,6 +45,7 @@ from app.kernel import Instant, Sport
 from app.modules.player_record.domain.record import (
     GameOutcome,
     OpponentVariety,
+    RecordRelation,
     ReliabilityFilter,
     ReliabilityPanel,
     SubjectIdentity,
@@ -156,6 +157,18 @@ class RecordGates(Protocol):
 
     async def admits(self, *, reader_id: UUID, subject_id: UUID) -> bool:
         """Whether the live gates still admit this pair."""
+        ...
+
+
+@runtime_checkable
+class RelationsOfTheReader(Protocol):
+    """Where **the reader** stands with this person (``docs/adr/0202`` §1–§2) —
+    the twelfth demand, lent by Friends. **A fact on the sheet and never a
+    gate**: asked only once the record is admitted, and it refuses nothing."""
+
+    async def relation_to(self, *, reader_id: UUID, subject_id: UUID) -> RecordRelation:
+        """The reader's relation to the subject: ``NONE`` where nothing stands,
+        and on the reader's own record."""
         ...
 
 
@@ -392,6 +405,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     PriorDisclosure,
     RecordGates,
     BlocksByTheReader,
+    RelationsOfTheReader,
     SubjectRatings,
     SubjectForm,
     SubjectReliability,
@@ -407,6 +421,7 @@ __all__ = [
     "PriorDisclosure",
     "RecordGates",
     "RecordPhotoLink",
+    "RelationsOfTheReader",
     "ReliabilityFilters",
     "SubjectForm",
     "SubjectIdentitySource",

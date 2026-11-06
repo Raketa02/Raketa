@@ -13,7 +13,7 @@ transaction.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from datetime import date
 from typing import final
 from uuid import UUID
@@ -354,7 +354,23 @@ class SqlAlchemyNoticeDirectory:
         )
         return frozenset(rows)
 
-    async def recent(self, player_id: UUID, *, limit: int) -> RecordedNotices:
+    async def of_kind(
+        self, player_id: UUID, kind: NoticeKind
+    ) -> Sequence[RecordedNotice]:
+        rows = await self._session.scalars(
+            select(NoticeORM).where(
+                NoticeORM.player_id == player_id, NoticeORM.kind == kind.value
+            )
+        )
+        return [_recorded(row, new=False) for row in rows]
+
+    async def recent(
+        self,
+        player_id: UUID,
+        *,
+        limit: int,
+        leaving_out: Collection[UUID] = (),
+    ) -> RecordedNotices:
         visit = (
             await self._session.execute(
                 select(NoticesOpenedORM.opened_at, NoticesOpenedORM.seen_through).where(
@@ -365,18 +381,26 @@ class SqlAlchemyNoticeDirectory:
         # A player who never opened the list holds nothing seen.
         seen_through = -1 if visit is None else visit.seen_through
         counted = aliased(NoticeORM)
+        left_out = sorted(set(leaving_out), key=str)
         # One statement, so the rows' flags and the number are one reading.
         new_count = (
             select(func.count())
             .select_from(counted)
-            .where(counted.player_id == player_id, _is_new(counted, seen_through))
+            .where(
+                counted.player_id == player_id,
+                _is_new(counted, seen_through),
+                counted.notice_id.not_in(left_out),
+            )
             .scalar_subquery()
         )
         is_new = _is_new(NoticeORM, seen_through)
         rows = (
             await self._session.execute(
                 select(NoticeORM, is_new, new_count)
-                .where(NoticeORM.player_id == player_id)
+                .where(
+                    NoticeORM.player_id == player_id,
+                    NoticeORM.notice_id.not_in(left_out),
+                )
                 .order_by(NoticeORM.given_at.desc(), NoticeORM.sequence_no.desc())
                 .limit(limit)
             )

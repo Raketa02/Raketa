@@ -22,11 +22,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.engines.matchfit.core import SearchMode
+from app.engines.matchfit.core import ReliabilityBand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.booking_details import BookingDetails
 from app.modules.proposals.application.group_deck import DeckCounts, GroupDeck
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.proposals.application.home import Home, HomeGame
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
 from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
@@ -68,7 +69,11 @@ from app.modules.proposals.domain.home import (
     ShareState,
     UncountedReason,
 )
-from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
+from app.modules.proposals.domain.ports import (
+    DeckPerson,
+    HomeFriendRequest,
+    PaymentRefusal,
+)
 from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.domain.post import LevelRange, Who
 from app.modules.proposals.domain.posting_grid import GridCell
@@ -376,6 +381,13 @@ class DeckTileSchema(BaseModel):
             "tile, which is the open seat."
         )
     )
+    friend: bool = Field(
+        description=(
+            "**Your** friend — the *FRIEND* tag (`docs/adr/0202` §2). Only your "
+            "own friends ever carry it: nothing here says who else is friends "
+            "with whom. `false` on your own tile."
+        )
+    )
 
 
 class DeckSidesSchema(BaseModel):
@@ -585,6 +597,7 @@ def _deck_sides(
             level=None if person is None else person.level,
             is_in=player_id in in_,
             paid=player_id in paid,
+            friend=person is not None and person.friend,
         )
 
     return DeckSidesSchema(
@@ -955,6 +968,13 @@ class BookedTileSchema(BaseModel):
             "open seat — the dashed *You?* (#545)."
         )
     )
+    friend: bool = Field(
+        description=(
+            "**Your** friend — the *FRIEND* tag (`docs/adr/0202` §2). Only your "
+            "own friends ever carry it: nothing here says who else is friends "
+            "with whom. `false` on your own tile."
+        )
+    )
 
 
 class BookedSidesSchema(BaseModel):
@@ -1050,6 +1070,7 @@ def _tile(
         photo_url=None if person is None else person.photo_url,
         level=None if person is None else person.level,
         paid=paid,
+        friend=person is not None and person.friend,
     )
 
 
@@ -1226,8 +1247,83 @@ def _time_to(
     return kept.time_to if kept is not None else game.time_to
 
 
+class HomeFriendRequestGroupSchema(BaseModel):
+    id: UUID
+    name: str
+
+
+class HomeFriendRequestSchema(BaseModel):
+    """One card in *FRIEND REQUESTS* — *Inés wants to be your friend · With you
+    in Kazimierz crew · Padel 3,40 · ✦ 98*, **Not now** and **Accept**."""
+
+    player_id: UUID = Field(
+        description=(
+            "Who asked. `POST /friends/requests/{player_id}/acceptance` accepts, "
+            "`…/set-aside` is **Not now**."
+        )
+    )
+    nickname: str = Field(description="Whole, never with an @ (docs/adr/0199 §1).")
+    photo_id: UUID | None
+    photo_url: str | None = Field(
+        description="A short-lived link to their first photograph; `null` with "
+        "`photo_id` draws initials."
+    )
+    asked_at: datetime
+    by_link: bool = Field(
+        description=(
+            "Made by their Friend link: draw *Invited you to Raketa* in place of "
+            "the group line."
+        )
+    )
+    group: HomeFriendRequestGroupSchema | None = Field(
+        description=(
+            "The group they asked from — *With you in Kazimierz crew* — **while "
+            "you are both in it**. `null` for a link's request, for one asked "
+            "from a screen that showed no group, and once either of you left."
+        )
+    )
+    sport: Sport | None = Field(
+        description="The sport of the screen they asked from, if it showed one."
+    )
+    level: float | None = Field(
+        description=(
+            "Their published Level in `sport` — *Padel 3,40*. `null` with no "
+            "sport, or when they hold no Level in it."
+        )
+    )
+    player_score: int = Field(
+        ge=0,
+        le=100,
+        description="Their Player reliability in points — the chip's *✦ 98*.",
+    )
+    reliability_band: ReliabilityBand = Field(
+        description="The band of that figure, the code their record serves."
+    )
+
+    @classmethod
+    def of(cls, request: HomeFriendRequest) -> "HomeFriendRequestSchema":
+        return cls(
+            player_id=request.requester_id,
+            nickname=request.nickname,
+            photo_id=request.photo_id,
+            photo_url=request.photo_url,
+            asked_at=request.asked_at,
+            by_link=request.by_link,
+            group=None
+            if request.group_id is None or request.group_name is None
+            else HomeFriendRequestGroupSchema(
+                id=request.group_id, name=request.group_name
+            ),
+            sport=request.sport,
+            level=request.level,
+            player_score=request.reliability_points,
+            reliability_band=request.reliability_band,
+        )
+
+
 class HomeResponse(BaseModel):
-    """**Home**: the reader's games from the moment they fill."""
+    """**Home**: the reader's games from the moment they fill, and the friend
+    requests waiting on them."""
 
     read_at: datetime = Field(
         description=(
@@ -1255,12 +1351,23 @@ class HomeResponse(BaseModel):
             "it. A game a Classic play challenge opened is not here."
         )
     )
+    friend_requests: list[HomeFriendRequestSchema] = Field(
+        description=(
+            "*FRIEND REQUESTS · n* — the requests waiting on you, **newest "
+            "first** (`docs/adr/0202` §1). A card leaves once you accept it, say "
+            "**Not now**, or they cancel; the row and its title are gone when "
+            "this is empty. They are not counted in `needing_you`."
+        )
+    )
 
     @classmethod
     def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
         return cls(
             read_at=home.read_at,
             needing_you=home.needing_you,
+            friend_requests=[
+                HomeFriendRequestSchema.of(request) for request in home.friend_requests
+            ],
             games=[
                 HomeGameSchema.from_card(
                     card, reader=reader, people=home.people, read_at=home.read_at
@@ -1369,6 +1476,13 @@ class RescueOfferSchema(BaseModel):
     )
 
 
+class PlayedWithSchema(BaseModel):
+    """One person on the game with **your** relation to them."""
+
+    player_id: UUID
+    relation: FriendRelation
+
+
 class BookingDetailsResponse(BaseModel):
     """A booked game's details, for a player in it — or for a member its open
     seat is offered to (#545)."""
@@ -1444,6 +1558,15 @@ class BookingDetailsResponse(BaseModel):
             "No Chat and no Leave. `null` for a player in it."
         ),
     )
+    played_with: list[PlayedWithSchema] = Field(
+        description=(
+            "*PLAYED WITH* on the result screen (`docs/adr/0202` §1): everybody "
+            "else on the game with **your** relation to them — Members' pills, "
+            "**+ Add**, *request sent*, **Accept**, *friend*. Hide the card when "
+            "every one is `FRIEND`. Empty for a reader not on the game. Only "
+            "your own relations: nothing says who else is friends with whom."
+        )
+    )
 
     @classmethod
     def from_details(
@@ -1511,6 +1634,11 @@ class BookingDetailsResponse(BaseModel):
                     fills_by_the_cut_off=details.rescue.fills_by_the_cut_off,
                 )
             ),
+            played_with=[
+                PlayedWithSchema(player_id=player, relation=relation)
+                for player in game.players
+                if (relation := details.played_with.get(player)) is not None
+            ],
         )
 
 
@@ -1960,6 +2088,12 @@ class SlotFitSchema(BaseModel):
     photo_id: UUID | None
     photo_url: str | None
     level: float | None = Field(description="Their published Level in the sport.")
+    friend: bool = Field(
+        description=(
+            "**Your** friend — the *FRIEND* tag (`docs/adr/0202` §2); only your "
+            "own friends ever carry it."
+        )
+    )
     forecast: DeckForecastSchema | None = Field(
         description=(
             "How even a game of the poster and them is forecast — `null` where "
@@ -2048,6 +2182,7 @@ class PostingSlotResponse(BaseModel):
                 photo_id=None if person is None else person.photo_id,
                 photo_url=None if person is None else person.photo_url,
                 level=None if person is None else person.level,
+                friend=person is not None and person.friend,
                 forecast=_forecast(forecast),
             )
 

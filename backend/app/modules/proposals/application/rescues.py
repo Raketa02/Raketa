@@ -48,6 +48,7 @@ from uuid import UUID
 from app.application.ports import UnitOfWork
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, Instant, Sport, instant, invariant
+from app.modules.proposals.application.friends import with_the_readers_friends
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import (
     ReadFillInCommand,
@@ -79,6 +80,7 @@ from app.modules.proposals.domain.ports import (
     BookedGames,
     ClubNames,
     DeckPeople,
+    ReaderRelations,
     DeckPerson,
     GamesAndMoneyRepository,
     GameToCharge,
@@ -669,11 +671,13 @@ class ReadFillIn:
         offers: RescueOffers,
         people: DeckPeople,
         clubs: ClubNames,
+        relations: ReaderRelations,
         clock: Clock,
     ) -> None:
         self._pools = pools
         self._offers = offers
         self._people = people
+        self._relations = relations
         self._clubs = clubs
         self._clock = clock
 
@@ -705,8 +709,14 @@ class ReadFillIn:
                 )
                 for game in rows
             ),
-            people=await self._people.people(
-                sorted({player for game in rows for player in game.players}, key=str),
-                sport=sport,
+            people=await with_the_readers_friends(
+                await self._people.people(
+                    sorted(
+                        {player for game in rows for player in game.players}, key=str
+                    ),
+                    sport=sport,
+                ),
+                reader=reader,
+                relations=self._relations,
             ),
         )

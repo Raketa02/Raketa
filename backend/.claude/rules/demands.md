@@ -106,6 +106,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   first joined a group it is in now, off the groups' own directory (`GroupJoiners`), and who
   holds a rating, off rating's published read (`RatedAccounts`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
+  **Friends' lent relations are rows in three registers** (#745; `friends.md`): the record's
+  twelfth demand `RelationsOfTheReader`; Proposals' `ReaderRelations` (the faces' *friend* tag and
+  the result's *PLAYED WITH*) and `FriendRequestsOnHome` (Home's row, whose cards are driven over
+  HTTP — a card needs a named account); and Notifications' `Friendships`. Friends publishes no
+  register of its own: every port onto it is a reader's, signed on the reader's side.
+  `tests/demands/friends_world.py` arranges the friendships and blocks through their aggregates.
   **The sixteenth, `player_profile_demands.py`, is the Player profile's consumer register**
   (#726): where a club is (`ClubPoints`), for a Location area picked as a club in place of a
   reading ([ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §10) —

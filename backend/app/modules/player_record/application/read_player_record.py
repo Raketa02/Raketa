@@ -62,6 +62,7 @@ from app.modules.player_record.domain.errors import (
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
     RecordPhotoLink,
+    RelationsOfTheReader,
     ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
@@ -73,6 +74,7 @@ from app.modules.player_record.domain.ports import (
 from app.modules.player_record.domain.record import (
     GameOutcome,
     PlayerRecord,
+    RecordRelation,
     SkillPanel,
     SubjectRating,
 )
@@ -84,6 +86,7 @@ async def assemble_record(
     subject_id: UUID,
     is_self: bool,
     blocked_by_reader: bool | None,
+    relation: RecordRelation,
     arrived_from: Sport | None,
     now: Instant,
     identities: SubjectIdentitySource,
@@ -148,6 +151,7 @@ async def assemble_record(
     return PlayerRecord(
         is_self=is_self,
         blocked_by_reader=blocked_by_reader,
+        relation=relation,
         identity=identity,
         photo_url=photo_url,
         sports=pills_of(held),
@@ -186,6 +190,7 @@ class ReadPlayerRecord:
         *,
         admission: RecordAdmission,
         own_blocks: BlocksByTheReader,
+        relations: RelationsOfTheReader,
         identities: SubjectIdentitySource,
         photos: RecordPhotoLink,
         ratings: SubjectRatings,
@@ -197,6 +202,7 @@ class ReadPlayerRecord:
     ) -> None:
         self._admission = admission
         self._own_blocks = own_blocks
+        self._relations = relations
         self._identities = identities
         self._photos = photos
         self._ratings = ratings
@@ -238,6 +244,10 @@ class ReadPlayerRecord:
             # Asked of the reader's own blocks only, and only once admitted: a
             # fact on the sheet, never a gate (`docs/adr/0193` §2–§3).
             blocked_by_reader=await self._own_blocks.has_blocked(
+                reader_id=reader_id, subject_id=subject_id
+            ),
+            # The reader's own relation, asked once admitted (`docs/adr/0202`).
+            relation=await self._relations.relation_to(
                 reader_id=reader_id, subject_id=subject_id
             ),
             arrived_from=arrived_from,
@@ -304,6 +314,7 @@ class ReadOwnRecord:
             subject_id=reader_id,
             is_self=True,
             blocked_by_reader=False,
+            relation=RecordRelation.NONE,
             arrived_from=arrived_from,
             now=now,
             ratings=self._ratings,

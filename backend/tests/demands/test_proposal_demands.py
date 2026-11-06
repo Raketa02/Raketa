@@ -54,7 +54,10 @@ from app.modules.proposals.domain.club_bookings import (
 )
 from app.modules.proposals.domain.home import ResultStage
 from app.modules.proposals.domain.home import ClubCancelReason, LateRefund
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.proposals.domain.ports import (
+    FriendRequestsOnHome,
+    ReaderRelations,
     PaymentRefusal,
     RefusedPayment,
     BookedGameChanges,
@@ -1430,3 +1433,65 @@ async def test_a_pool_is_the_group_it_is_filed_under(
 
     assert list(found) == [group_id]
     assert (found[group_id].name, found[group_id].official) == ("Sobotni padel", False)
+
+
+# --------------------------------------------------------------------------- #
+# ReaderRelations and FriendRequestsOnHome — the faces' tag and Home's row
+# (#745). What Home draws of a card is driven whole over HTTP in
+# ``tests/api/test_friends_on_every_face.py``: a card needs a named account,
+# which this suite's arrangements do not make.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(ReaderRelations))
+async def test_only_the_readers_own_relations_are_answered(implementation, session):
+    from tests.demands.friends_world import asks, befriends
+
+    reader, friend, asked, asker, stranger = (new_uuid() for _ in range(5))
+    await befriends(session, reader, friend)
+    await asks(session, reader, asked)
+    await asks(session, asker, reader)
+    await befriends(session, friend, stranger)
+    relations: ReaderRelations = implementation.build(session)
+
+    everyone = [reader, friend, asked, asker, stranger]
+    assert await relations.friends_among(reader, everyone) == frozenset({friend})
+    assert await relations.relations_of(reader, everyone) == {
+        reader: FriendRelation.NONE,
+        friend: FriendRelation.FRIEND,
+        asked: FriendRelation.SENT,
+        asker: FriendRelation.ASKED_YOU,
+        stranger: FriendRelation.NONE,
+    }
+
+
+@pytest.mark.parametrize("implementation", registered(ReaderRelations))
+async def test_a_request_from_somebody_the_reader_blocked_reads_none(
+    implementation, session
+):
+    from tests.demands.friends_world import asks, blocks
+
+    reader, blocked = new_uuid(), new_uuid()
+    await blocks(session, reader, blocked)
+    await asks(session, blocked, reader)
+    relations: ReaderRelations = implementation.build(session)
+
+    assert (await relations.relations_of(reader, [blocked]))[blocked] is (
+        FriendRelation.NONE
+    )
+    assert (await relations.relations_of(blocked, [reader]))[reader] is (
+        FriendRelation.SENT
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(FriendRequestsOnHome))
+async def test_nobody_asked_and_nobody_nameable_draw_no_card(implementation, session):
+    from tests.demands.friends_world import asks
+
+    reader, unnamed = new_uuid(), new_uuid()
+    requests: FriendRequestsOnHome = implementation.build(session)
+    assert await requests.of(reader) == ()
+
+    await asks(session, unnamed, reader)
+
+    assert await requests.of(reader) == ()

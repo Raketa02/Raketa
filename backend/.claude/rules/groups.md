@@ -57,7 +57,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`DELETE /groups/{id}`) is the Owner's, only while alone (`group_has_other_members`).
   **Members** (`GET /groups/{id}/members?sport=`) lists only the members rated in the
   sport, the reader, then the Owner, then newest joined first (`domain/members.py`), each
-  with the published Level and **Player reliability** — `player_score` and
+  with **the reader's relation to them** (`relation`, `NONE` on the reader's own row; lent by
+  Friends through `MemberRelations`, signed in `groups/infrastructure/friends_member_relations.py`,
+  which also signs Friends' `ReadersGroups` — so the arrow runs `groups → friends`; #745,
+  `friends.md`), the published Level and **Player reliability** — `player_score` and
   `reliability_band`, copied from their record (`MemberReliability`), and on every row since
   #659: everyone starts at a hundred. It is the one read also open to **whoever runs an official group now**
   (`listing_for_a_member_or_its_runner`, #566), who reads the same rows and is one only once

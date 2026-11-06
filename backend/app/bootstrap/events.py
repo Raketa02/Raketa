@@ -43,6 +43,11 @@ from app.modules.blocks.application.event_subscriptions import (
     register_block_events,
     subscribe_block_handlers,
 )
+from app.modules.friends.application.event_subscriptions import (
+    register_friend_events,
+    subscribe_friend_handlers,
+    subscribe_the_block_ender,
+)
 from app.modules.clubs.application.event_subscriptions import (
     register_club_events,
     subscribe_club_handlers,
@@ -220,6 +225,7 @@ class EventRuntime:
             build_settle_seat_charges,
             build_tell_the_players,
             build_tell_the_room,
+            build_end_friendships_on_a_block,
             build_withdraw_a_blockers_yeses,
             build_withdraw_a_leavers_yeses,
         )
@@ -269,6 +275,11 @@ class EventRuntime:
         subscribe_the_blocker(
             dispatcher, build_withdraw_a_blockers_yeses(session, runtime=self)
         )
+        # And a block ends the pair's friendship and any open request between
+        # them, in the same transaction (`docs/adr/0202` §2).
+        subscribe_the_block_ender(
+            dispatcher, build_end_friendships_on_a_block(session, runtime=self)
+        )
         # A paused week comes back when a booked game stops being a player's —
         # and a yes that comes back as a game's last seat fills it, over this
         # run's provider (#544).
@@ -308,6 +319,7 @@ def build_event_runtime() -> EventRuntime:
     register_rating_events(catalog)
     register_player_profile_events(catalog)
     register_block_events(catalog)
+    register_friend_events(catalog)
     register_game_events(catalog)
     register_conversation_events(catalog)
     register_club_events(catalog)
@@ -324,6 +336,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_rating_handlers(dispatcher)
     subscribe_player_profile_handlers(dispatcher)
     subscribe_block_handlers(dispatcher)
+    subscribe_friend_handlers(dispatcher)
     subscribe_game_handlers(dispatcher)
     subscribe_conversation_handlers(dispatcher)
     subscribe_club_handlers(dispatcher)

@@ -219,6 +219,7 @@ from app.seeds.photos import (
     an_image,
     the_store_answers,
 )
+from app.seeds.friends import SeededFriends, friend_lines, write_the_friends
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import (
     assert_the_club_bookings,
@@ -1187,6 +1188,9 @@ class SeedReport:
     #: Her played history as past booked games (#573). ``None`` on the same
     #: callers.
     history: SeededHistory | None = None
+    #: Her friends and requests, and the block case (#745). ``None`` on the
+    #: same callers.
+    friends: SeededFriends | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1365,6 +1369,13 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         rooms = await open_the_rooms(
             session_factory, settings=settings, now=now, money=money
         )
+        # **Friends after the rooms and before the screens** (#745): a block keeps
+        # two people off one court, so the block case comes after every layer
+        # that deals, and its delivery — which ends the friendship — is drained
+        # by the layer itself before the request made since.
+        friends = await write_the_friends(
+            session_factory, settings=settings, now=now, money=money
+        )
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1401,6 +1412,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             rescues=rescues,
             post=post,
             history=history,
+            friends=friends,
             photographs=photographs,
         )
     finally:
@@ -1504,6 +1516,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *official_group_lines(run_report.official_groups)])
     if run_report.history is not None:
         lines.extend(["", *history_lines(run_report.history)])
+    if run_report.friends is not None:
+        lines.extend(["", *friend_lines(run_report.friends)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])

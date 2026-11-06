@@ -32,6 +32,7 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.proposals.application.friends import with_the_readers_friends
 from app.modules.proposals.application.members import genders_on, wants_of
 from app.modules.proposals.domain.deck import (
     CardForecast,
@@ -63,6 +64,7 @@ from app.modules.proposals.domain.ports import (
     ClubTerms,
     CourtKinds,
     DeckPeople,
+    ReaderRelations,
     DeckPerson,
     PlayerFit,
     PlayersInPlay,
@@ -126,8 +128,10 @@ class ReadProposalDetails:
         distances: ClubDistances,
         players: PlayersInPlay,
         wanted: WantedKinds,
+        relations: ReaderRelations,
         clock: Clock,
     ) -> None:
+        self._relations = relations
         self._players = players
         self._wanted = wanted
         self._pools = pools
@@ -188,9 +192,13 @@ class ReadProposalDetails:
             options, await self._forecasts.forecasts(options, sport=proposal.sport)
         )
         challenger = challenger_of(proposal)
-        people = await self._people.people(
-            {*view.people, *(() if challenger is None else (challenger,))},
-            sport=proposal.sport,
+        people = await with_the_readers_friends(
+            await self._people.people(
+                {*view.people, *(() if challenger is None else (challenger,))},
+                sport=proposal.sport,
+            ),
+            reader=reader,
+            relations=self._relations,
         )
         terms = (await self._terms.of([proposal.club_id], now=now)).get(
             proposal.club_id

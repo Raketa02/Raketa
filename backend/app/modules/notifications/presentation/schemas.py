@@ -90,7 +90,8 @@ class NoticeSchema(BaseModel):
             "sport and kind, with this card on top; `RESULT` — the booked "
             "game's result screen (`GET /bookings/{game_id}`): who turned up, "
             "and the score (#663); `HOME` — Home, for a notice about no game "
-            "(*Get your level*, #727)."
+            "(*Get your level*, #727; a friend request, whose card is there, "
+            "#745); `RECORD` — the record of `player_id`, a new friend."
         )
     )
     game_id: UUID | None = Field(
@@ -101,9 +102,21 @@ class NoticeSchema(BaseModel):
             "too."
         )
     )
-    pool_id: UUID | None
+    pool_id: UUID | None = Field(
+        description=(
+            "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from "
+            "(a group's pool is filed under its id), or `null`."
+        )
+    )
     sport: Sport | None
     game_kind: SearchMode | None
+    player_id: UUID | None = Field(
+        description=(
+            "On a notice about no game that names somebody — `FRIEND_REQUEST`, "
+            "who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` "
+            "opens. `null` on every other notice."
+        )
+    )
     gathered: int = Field(
         description=(
             "How many more notices of its kind the day bundled into this one — "
@@ -142,6 +155,7 @@ class NoticeSchema(BaseModel):
             game_kind=None
             if notice.game_kind is None
             else SearchMode(notice.game_kind),
+            player_id=notice.person_named,
             gathered=notice.gathered,
             new=notice.new,
             your_own=notice.own,

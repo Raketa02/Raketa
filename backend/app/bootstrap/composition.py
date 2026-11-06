@@ -154,6 +154,8 @@ from app.modules.proposals.application.propose_games import (
 from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
+    FriendRequestsOnHome,
+    ReaderRelations,
     BookedGameChanges,
     BookedGames,
     BookingTakings,
@@ -357,7 +359,10 @@ from app.modules.payments.infrastructure.sqlalchemy_notice_inbox import (
 from app.modules.payments.infrastructure.stripe_notices import StripeNotices
 from app.modules.payments.infrastructure.stripe_payments import StripePayments
 from app.modules.notifications.application.pushing import NoticePushes, PushTheNotice
-from app.modules.notifications.application.reading import NoticeWords
+from app.modules.notifications.application.reading import (
+    NoticeWords,
+    ReadRecentNotices,
+)
 from app.modules.notifications.application.asking import AskHowDidItGo
 from app.modules.notifications.application.get_your_level import TellGetYourLevel
 from app.modules.notifications.application.telling import GiveNotice, TellThePlayers
@@ -366,6 +371,7 @@ from app.modules.notifications.domain.ports import (
     GameCourts,
     Decks,
     EndedHours,
+    Friendships,
     GameBriefs,
     GroupJoiners,
     Names,
@@ -388,6 +394,7 @@ from app.modules.notifications.infrastructure.told_by import (
     BookedAndProposedGames,
     BookedHours,
     DirectoryGroupJoiners,
+    FriendsOfTheReader,
     GameStreamCourts,
     PlatformNames,
     ProposalsDecks,
@@ -452,8 +459,51 @@ from app.modules.groups.domain.ports import (
     GroupMemberReliability,
     GroupRepository,
     HomeClubs,
+    MemberRelations,
     RatedGroupMembers,
     ReaderAreas,
+)
+from app.modules.friends.application.handlers import EndFriendshipsOnABlock
+from app.modules.friends.application.reads import (
+    ReadRelations,
+    ReadRequestsOnHome,
+    ReadRequestsWaiting,
+)
+from app.modules.friends.application.requests import (
+    AcceptFriendRequest,
+    AskToBeFriends,
+    SetAsideFriendRequest,
+)
+from app.modules.friends.domain.ports import (
+    FriendFaces,
+    FriendLevels,
+    FriendReliabilities,
+    FriendshipDirectory,
+    FriendshipRepository,
+    ReadersBlocks,
+    ReadersGroups,
+)
+from app.modules.friends.infrastructure.event_sourced_friendship_repository import (
+    EventSourcedFriendshipRepository,
+)
+from app.modules.friends.infrastructure.own_blocks import OwnBlocks
+from app.modules.friends.infrastructure.profile_friend_faces import ProfileFriendFaces
+from app.modules.friends.infrastructure.published_friend_reliability import (
+    PublishedFriendReliability,
+)
+from app.modules.friends.infrastructure.rated_friend_levels import RatedFriendLevels
+from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
+    SqlAlchemyFriendshipDirectory,
+)
+from app.modules.proposals.infrastructure.friends import (
+    FriendsReaderRelations,
+    FriendsRequestsOnHome,
+)
+from app.modules.groups.infrastructure.friends_member_relations import (
+    FriendsMemberRelations,
+)
+from app.modules.groups.infrastructure.friends_readers_groups import (
+    DirectoryReadersGroups,
 )
 from app.modules.groups.infrastructure.administrators_group_administrators import (
     AdministratorsGroupAdministrators,
@@ -639,6 +689,7 @@ from app.modules.player_record.infrastructure.score_subject_reliability import (
 )
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
+    RelationsOfTheReader,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -657,6 +708,9 @@ from app.modules.player_record.infrastructure.disclosures import (
 )
 from app.modules.player_record.infrastructure.live_record_gates import (
     LiveRecordGates,
+)
+from app.modules.player_record.infrastructure.friends_relations import (
+    FriendsRelationsOfTheReader,
 )
 from app.modules.player_record.infrastructure.own_blocks import (
     OwnBlocksOfTheReader,
@@ -1700,6 +1754,7 @@ def build_read_group_deck(
             session, booked=booked, runtime=runtime, event_store=store
         ),
         players=build_players_in_play(session, runtime=runtime, event_store=store),
+        relations=build_reader_relations(session, runtime=runtime),
         clock=clock,
     )
 
@@ -2495,6 +2550,7 @@ def build_read_fill_in(
         offers=build_rescue_offers(session, booked=booked, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
+        relations=build_reader_relations(session, runtime=runtime),
         clock=clock,
     )
 
@@ -2577,6 +2633,7 @@ def build_read_posting_slot(
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
+        relations=build_reader_relations(session, runtime=runtime),
         clock=clock,
     )
 
@@ -2722,8 +2779,37 @@ def build_read_home(
         clubs=build_proposal_club_names(session),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         holding_times=build_holding_times(session, runtime=runtime),
+        relations=build_reader_relations(session, runtime=runtime),
+        friend_requests=build_friend_requests_on_home(
+            session, settings=settings, clock=clock, runtime=runtime
+        ),
         clock=clock,
     )
+
+
+def build_friend_requests_on_home(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> FriendRequestsOnHome:
+    """Home's *FRIEND REQUESTS* — Friends' read, signed in
+    ``proposals/infrastructure/`` (``docs/adr/0202`` §1)."""
+    return FriendsRequestsOnHome(
+        build_read_requests_on_home(
+            session, settings=settings, clock=clock, runtime=runtime
+        )
+    )
+
+
+def build_reader_relations(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReaderRelations:
+    """The *friend* tag on every face a proposals read draws, and the result's
+    *PLAYED WITH* pills — Friends' read, signed in
+    ``proposals/infrastructure/`` (``docs/adr/0202`` §2)."""
+    return FriendsReaderRelations(build_read_relations(session, runtime=runtime))
 
 
 def build_read_payments_to_confirm(
@@ -2771,6 +2857,7 @@ def build_read_booking_details(
         late_refunds=build_late_refunds(session, runtime=runtime),
         offers=build_rescue_offers(session, runtime=runtime),
         holding_times=build_holding_times(session, runtime=runtime),
+        relations=build_reader_relations(session, runtime=runtime),
         clock=clock,
     )
 
@@ -2799,6 +2886,7 @@ def build_read_proposal_details(
         distances=build_club_distances(session, runtime=runtime),
         players=build_players_in_play(session, runtime=runtime),
         wanted=build_wanted_kinds(session, runtime=runtime),
+        relations=build_reader_relations(session, runtime=runtime),
         clock=clock,
     )
 
@@ -3151,6 +3239,175 @@ def build_blocked_faces(
         photos=build_photo_storage(settings),
         photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
     )
+
+
+# --------------------------------------------------------------------------
+# Friends
+# --------------------------------------------------------------------------
+
+
+def build_friendship_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> FriendshipRepository:
+    """Per unit of work, as every aggregate repository is. **It takes the session
+    as well as the store**, because its ``save`` rewrites the pair's
+    ``friend_relations`` rows in the same transaction (``docs/adr/0202`` §8)."""
+    return EventSourcedFriendshipRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_friendship_directory(session: AsyncSession) -> FriendshipDirectory:
+    return SqlAlchemyFriendshipDirectory(session)
+
+
+def build_readers_blocks(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadersBlocks:
+    """Whom the reader blocked — over the one directed read ``BlockQuery`` has,
+    so a blocked player's request is hidden from the blocker alone
+    (``docs/adr/0202`` §2)."""
+    return OwnBlocks(build_block_query(session, runtime=runtime))
+
+
+def build_readers_groups(session: AsyncSession) -> ReadersGroups:
+    """The reader's groups and their members, **signed in
+    ``groups/infrastructure/``** over the groups' own directory, so the arrow runs
+    ``groups → friends``."""
+    return DirectoryReadersGroups(build_group_directory(session))
+
+
+def build_friend_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> FriendFaces:
+    """A name from ``users``, a face from the Player profile, a link from the
+    store — ``build_blocked_faces``' three providers."""
+    return ProfileFriendFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_friend_levels(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FriendLevels:
+    return RatedFriendLevels(build_rated_player_query(session, runtime=runtime))
+
+
+def build_friend_reliabilities(session: AsyncSession) -> FriendReliabilities:
+    return PublishedFriendReliability(build_published_score_query(session))
+
+
+def build_read_relations(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadRelations:
+    """**The reader's relations, the one read every face is lent**
+    (``docs/adr/0202`` §2): Members, the record, the deck, the details, Home,
+    Fill in and the result all ask it, each through a port of its own."""
+    return ReadRelations(
+        directory=build_friendship_directory(session),
+        blocks=build_readers_blocks(session, runtime=runtime),
+    )
+
+
+def build_ask_to_be_friends(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> AskToBeFriends:
+    """Asking, built over one session for a seed run and a test as the route
+    builds it per request."""
+    return AskToBeFriends(
+        friendships=build_friendship_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        blocks=build_readers_blocks(session, runtime=runtime),
+        groups=build_readers_groups(session),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_accept_friend_request(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> AcceptFriendRequest:
+    return AcceptFriendRequest(
+        friendships=build_friendship_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        blocks=build_readers_blocks(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_set_aside_friend_request(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> SetAsideFriendRequest:
+    return SetAsideFriendRequest(
+        friendships=build_friendship_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        blocks=build_readers_blocks(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_read_requests_on_home(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadRequestsOnHome:
+    """Home's *FRIEND REQUESTS*, and what the bell asks to clear a request's
+    row once its card is gone."""
+    return ReadRequestsOnHome(
+        directory=build_friendship_directory(session),
+        blocks=build_readers_blocks(session, runtime=runtime),
+        faces=build_friend_faces(session, settings=settings, runtime=runtime),
+        levels=build_friend_levels(session, runtime=runtime),
+        reliability=build_friend_reliabilities(session),
+        groups=build_readers_groups(session),
+        clock=clock,
+    )
+
+
+def build_end_friendships_on_a_block(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> EndFriendshipsOnABlock:
+    """A block ends a friendship — built per delivery run, over the session the
+    delivery commits in."""
+    return EndFriendshipsOnABlock(
+        build_friendship_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_member_relations(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> MemberRelations:
+    """Members' pills, **signed in ``groups/infrastructure/``** over Friends' read."""
+    return FriendsMemberRelations(build_read_relations(session, runtime=runtime))
 
 
 # --------------------------------------------------------------------------
@@ -3791,6 +4048,15 @@ def build_blocks_by_the_reader(blocks: BlockQuery) -> BlocksByTheReader:
     return OwnBlocksOfTheReader(blocks)
 
 
+def build_relations_of_the_reader(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RelationsOfTheReader:
+    """The record's left button — the reader's own relation to the person on it,
+    over Friends' read (``docs/adr/0202`` §1)."""
+
+    return FriendsRelationsOfTheReader(build_read_relations(session, runtime=runtime))
+
+
 # --------------------------------------------------------------------------
 # Background runs
 # --------------------------------------------------------------------------
@@ -4287,11 +4553,38 @@ def build_notice_names(session: AsyncSession) -> Names:
     return PlatformNames(
         users=build_user_repository(session),
         clubs=build_proposal_club_names(session),
+        groups=build_group_directory(session),
     )
 
 
 def build_notice_words(session: AsyncSession) -> NoticeWords:
     return NoticeWords(names=build_notice_names(session))
+
+
+def build_notice_friendships(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> Friendships:
+    """What Notifications reads of Friends: the requests on a reader's Home and
+    whether two are friends (#745)."""
+    return FriendsOfTheReader(
+        waiting=ReadRequestsWaiting(
+            directory=build_friendship_directory(session),
+            blocks=build_readers_blocks(session, runtime=runtime),
+        ),
+        relations=build_read_relations(session, runtime=runtime),
+    )
+
+
+def build_read_recent_notices(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadRecentNotices:
+    """The list behind the bell — a friend request listed only while its card
+    is on Home (#745)."""
+    return ReadRecentNotices(
+        notices=build_notice_directory(session),
+        words=build_notice_words(session),
+        friendships=build_notice_friendships(session, runtime=runtime),
+    )
 
 
 def build_notice_pushes(session: AsyncSession) -> NoticePushes:
@@ -4324,6 +4617,7 @@ def build_tell_the_players(
         shares=build_paid_shares(session, runtime=runtime),
         offers=build_seat_offers(session, runtime=runtime),
         preferences=preferences,
+        friendships=build_notice_friendships(session, runtime=runtime),
     )
 
 

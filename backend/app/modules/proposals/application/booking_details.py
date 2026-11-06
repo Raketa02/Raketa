@@ -45,12 +45,14 @@ says nothing about whose evening it is.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import final
 from uuid import UUID
 
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.proposals.application.booked_people import people_on
+from app.modules.proposals.application.friends import with_the_readers_friends
+from app.modules.friends.domain.relation import FriendRelation
 from app.modules.proposals.application.home import the_game
 from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.deck import Sides
@@ -76,6 +78,7 @@ from app.modules.proposals.domain.ports import (
     ClubDistances,
     ClubNames,
     DeckPeople,
+    ReaderRelations,
     DeckPerson,
     GameResults,
     LateRefunds,
@@ -109,6 +112,10 @@ class BookingDetails:
     #: ``None`` for a reader with no Location area.
     distance_km: float | None
     people: Mapping[tuple[Sport, UUID], DeckPerson]
+    #: **The reader's** relation to everybody else on the game — the result's
+    #: *PLAYED WITH* card and its pills (``docs/adr/0202`` §1). Empty for a
+    #: reader not on the game.
+    played_with: Mapping[UUID, FriendRelation] = field(default_factory=dict)
     #: What *Leave the game* would cost now — ``None`` where there is no button.
     leaving: LeaveTerms | None = None
     #: The open seat offered to a reader not on the game — ``None`` for a
@@ -130,8 +137,10 @@ class ReadBookingDetails:
         late_refunds: LateRefunds,
         offers: RescueOffers,
         holding_times: HoldingTimes,
+        relations: ReaderRelations,
         clock: Clock,
     ) -> None:
+        self._relations = relations
         self._offers = offers
         self._holding_times = holding_times
         self._bookings = bookings
@@ -181,7 +190,14 @@ class ReadBookingDetails:
             shows_forecast=shows_forecast(state.status),
             club_name=names.get(game.club_id),
             distance_km=distances.get(game.club_id),
-            people=await people_on([game], self._people),
+            people=await with_the_readers_friends(
+                await people_on([game], self._people),
+                reader=reader,
+                relations=self._relations,
+            ),
+            played_with=await self._relations.relations_of(
+                reader, [player for player in game.players if player != reader]
+            ),
             leaving=leave_terms(game, state.status, late_refund=late_refund, now=now),
         )
 
@@ -230,7 +246,9 @@ class ReadBookingDetails:
             shows_forecast=False,
             club_name=names.get(game.club_id),
             distance_km=distances.get(game.club_id),
-            people=people,
+            people=await with_the_readers_friends(
+                people, reader=reader, relations=self._relations
+            ),
             rescue=RescueOffer(
                 deadline=rescue_deadline(game, now=now),
                 fills_by_the_cut_off=fills_by_the_cut_off(game, now=now),

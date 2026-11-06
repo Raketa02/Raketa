@@ -652,5 +652,29 @@ there; they are not repeated here.
   off the stream, because the `users` row has no column for it — and a `User` read from the row
   carries `adult_attested=None`, meaning *not read here*, never *not attested*.
 
+- **Friend relation row** — one row of `friend_relations`, the Friends context's one projection
+  beside its **Friendship** streams (#745,
+  [ADR-0202](../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  §8): **the reader's side of one pair** — `SENT`, `ASKED_YOU` or `FRIEND`, since when, *Not now*
+  on an `ASKED_YOU`, and where a request was made. Two rows per pair while something stands
+  between them, none once nothing does, rewritten whole from the aggregate by the repository's
+  `save`. Keyed on the reader first, so *my relation to these people* is one question on the
+  primary key and there is no read about two other people at all. _Avoid_: "friend list
+  table", a row per pair (a pair row is read from neither side).
+- **Unseen request** and **the reader's-side filter** — the two mechanisms behind the glossary's
+  *a block swallows the blocked person's later requests* (ADR-0202 §2). A request asked while
+  the addressee has blocked the requester is recorded **`unseen`** (`FriendRequested.unseen`):
+  open, the requester's row `SENT`, and **no row on the addressee's side**, not after an unblock
+  either. A request asked before a block whose delivery has not yet ended it is dropped from the
+  reader's reads by **`as_the_reader_sees`**, live, off the reader's own blocks. Either way the
+  reader reads `NONE` and an answer is `friend_request_not_found`. _Avoid_: "hidden flag" (nothing
+  is flipped after asking), and a filter on the requester's side (they always read `SENT`).
+- **Lent relation** — the reader's relation as another context reads it: through a port that
+  context declares in its own words (`MemberRelations`, `RelationsOfTheReader`,
+  `ReaderRelations`, `Friendships`), **signed on the reader's side of the arrow**, so Friends
+  imports none of the contexts that read it (`.importlinter`). A face asks only `friends_among`,
+  which reads no block (a block ends a friendship); a pill asks `relations_of`. _Avoid_: a
+  `friend` flag on a shared person type that knows no reader.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

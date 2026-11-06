@@ -30,6 +30,9 @@ class StandInNames:
     async def of_clubs(self, club_ids: Collection[UUID]) -> Mapping[UUID, str]:
         return {CLUB: "Bonarka Arena"}
 
+    async def of_groups(self, group_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        return {}
+
 
 def a_card_that_needs_only_you(*, gathered: int) -> RecordedNotice:
     return RecordedNotice(

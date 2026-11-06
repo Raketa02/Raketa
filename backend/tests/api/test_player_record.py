@@ -278,6 +278,8 @@ async def test_a_group_you_share_opens_their_record(
     assert body == {
         "is_self": False,
         "blocked_by_you": False,
+        # Nothing stands between them (`docs/adr/0202` §1).
+        "relation": "NONE",
         # The nickname and no name (``docs/adr/0199`` §6).
         "nickname": "subject",
         "area_code": "A+05151-000013",
