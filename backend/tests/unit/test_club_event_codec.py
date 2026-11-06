@@ -21,6 +21,7 @@ from app.application.events.envelope import SerializedEventEnvelope
 from app.application.ports.events import EventDecodingError
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.clubs.application.event_subscriptions import register_club_events
+from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.club_courts_events import (
     CourtAdded,
     CourtChanged,
@@ -35,6 +36,7 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaResumed,
     RaketaSettingsChanged,
 )
+from app.modules.clubs.domain.raketa_terms import OtherClubsCourts
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
     ClubDetailsChanged,
@@ -224,8 +226,9 @@ def test_the_club_courts_events_are_filed_in_the_clubs_namespace():
         ("clubs.exception_removed", 1),
         ("clubs.prices_set", 1),
         ("clubs.prices_set", 1),
-        # Version 2 since the minimum notice and the time to confirm went (#670).
-        ("clubs.raketa_settings_changed", 2),
+        # Version 2 since the minimum notice and the time to confirm went
+        # (#670), and 3 since other clubs' courts are on by default (#746).
+        ("clubs.raketa_settings_changed", 3),
         ("clubs.raketa_paused", 1),
         ("clubs.raketa_resumed", 1),
     ]
@@ -277,3 +280,63 @@ def test_settings_saved_under_version_1_are_refused_rather_than_misread():
                 occurred_at=NOW,
             )
         )
+
+
+def _settings_under_version_2(*, other_clubs_courts: bool) -> SerializedEventEnvelope:
+    return SerializedEventEnvelope(
+        id=uuid4(),
+        event_type="clubs.raketa_settings_changed",
+        schema_version=2,
+        payload={
+            "club_id": str(CLUB),
+            "release_lead_days": 2,
+            "cut_off_hours": 12,
+            "other_clubs_courts": other_clubs_courts,
+            "other_clubs_within_km": 15,
+            "occurred_at": NOW.isoformat(),
+        },
+        occurred_at=NOW,
+    )
+
+
+@pytest.mark.parametrize("recorded", [False, True])
+def test_settings_saved_under_version_2_read_other_clubs_courts_on(recorded):
+    """``docs/adr/0202`` §7 (#746): the switch is **on by default, for existing
+    clubs too**. Version 2 was written while off was the default and the form
+    saved every field, so its *off* cannot be told from a default nobody
+    touched: it reads on, at the distance it kept, and everything else as it
+    was saved."""
+
+    decoded = _codec().decode(_settings_under_version_2(other_clubs_courts=recorded))
+    settings = ClubCourts.from_history(CLUB, [decoded]).settings
+
+    assert settings.other_clubs_courts == OtherClubsCourts(offered=True, within_km=15)
+    assert (settings.release_lead_days, settings.cut_off_hours) == (2, 12)
+
+
+def test_settings_saved_under_version_3_keep_other_clubs_courts_off():
+    """From version 3 *off* is a club's own choice, and is read as one."""
+
+    saved = RaketaSettingsChanged(
+        club_id=CLUB,
+        release_lead_days=2,
+        cut_off_hours=12,
+        other_clubs_courts=False,
+        other_clubs_within_km=15,
+        occurred_at=NOW,
+    )
+    codec = _codec()
+    encoded = codec.encode(saved)
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=uuid4(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=encoded.payload,
+            occurred_at=NOW,
+        )
+    )
+
+    assert ClubCourts.from_history(CLUB, [decoded]).settings.other_clubs_courts == (
+        OtherClubsCourts(offered=False, within_km=15)
+    )

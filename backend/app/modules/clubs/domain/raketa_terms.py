@@ -46,12 +46,14 @@ def _within(value: int, bounds: tuple[int, int], *, named: str) -> None:
 @final
 @dataclass(frozen=True, slots=True)
 class OtherClubsCourts:
-    """*Offer our groups other clubs' courts when ours are full*: off by
-    default, and within 10 km when on (the mechanics §4.3). The distance is
-    kept while it is off, so switching it back on restores it. Its range is
-    refused by ``RaketaSettings``, in the form's order."""
+    """*Offer our groups other clubs' courts when ours are full*: **on by
+    default**, within 10 km (``docs/adr/0202`` §7; the mechanics §4.3) — an
+    official group is offered other clubs within the distance at an hour its
+    club has no free court, and only its club's while switched off. The
+    distance is kept while it is off, so switching it back on restores it. Its
+    range is refused by ``RaketaSettings``, in the form's order."""
 
-    offered: bool = False
+    offered: bool = True
     within_km: int = 10
 
 

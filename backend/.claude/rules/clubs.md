@@ -55,8 +55,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`domain/raketa_terms.py`, `PUT /club/raketa-settings`) are the release lead, the
   cut-off, other clubs' courts for the club's groups, and pause, and saving them needs
   nothing chosen first. A clean cut: `clubs.way_of_working_chosen` is unregistered and
-  `clubs.raketa_settings_changed` is at version 2 (version 1, which carried the two
+  `clubs.raketa_settings_changed` went to version 2 (version 1, which carried the two
   settings and the retired `check_in`, is a decoding error), with the local store reset.
+  **Other clubs' courts are on by default, for existing clubs too** (#746;
+  [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  §7): `OtherClubsCourts.offered` defaults to `True`, and the club's official groups are
+  offered other clubs within its distance **only at an hour its own courts are full** — the
+  court source's rule (`proposals.md`), not this context's. Saves are written at **version
+  3**, the same shape; **version 2 stays registered, decode-only**
+  (`RaketaSettingsChangedV2`) and **its switch folds on**, keeping its distance — an
+  upcaster, not a reset, because a v2 *off* was the form saving the old default and cannot be
+  told from a club's choice. From version 3, *off* is the club's own.
   The *double booking* cancel reason stays: a desk can still sell a handed-over hour by
   mistake. **Money is integer grosze** and a price
   must **split** among the sport's seats (`price_does_not_split`), so a share is exact and

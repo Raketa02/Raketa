@@ -35,6 +35,7 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
+    RaketaSettingsChangedV2,
 )
 from app.modules.clubs.domain.courts import Court, CourtName
 from app.modules.clubs.domain.errors import (
@@ -451,12 +452,15 @@ class ClubCourts:
             )
         elif isinstance(event, ExceptionRemoved):
             del self.exceptions[event.exception_id]
-        elif isinstance(event, RaketaSettingsChanged):
+        elif isinstance(event, (RaketaSettingsChanged, RaketaSettingsChangedV2)):
             self.settings = RaketaSettings(
                 release_lead_days=event.release_lead_days,
                 cut_off_hours=event.cut_off_hours,
                 other_clubs_courts=OtherClubsCourts(
-                    offered=event.other_clubs_courts,
+                    # A v2 off was the old default, and the switch is on for
+                    # existing clubs too (docs/adr/0202 §7).
+                    offered=event.other_clubs_courts
+                    or isinstance(event, RaketaSettingsChangedV2),
                     within_km=event.other_clubs_within_km,
                 ),
             )

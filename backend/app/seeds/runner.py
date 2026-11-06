@@ -220,6 +220,12 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.friends import SeededFriends, friend_lines, write_the_friends
+from app.seeds.full_hour import (
+    SeededFullHour,
+    assert_the_full_hour,
+    full_hour_lines,
+    make_ogrody_33_full,
+)
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import (
     assert_the_club_bookings,
@@ -1191,6 +1197,9 @@ class SeedReport:
     #: Her friends and requests, and the block case (#745). ``None`` on the
     #: same callers.
     friends: SeededFriends | None = None
+    #: The hour Ogrody 33 is full, which its official groups play elsewhere at
+    #: (#746). ``None`` on the same callers.
+    full_hour: SeededFullHour | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1299,6 +1308,12 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         official_groups = await write_the_official_groups(
             session_factory, settings=settings, now=now
         )
+        # **Ogrody 33 full at one hour, before anything deals or books** (#746):
+        # its official groups are offered other clubs then, and no layer below
+        # meets a card at an hour the desk closes after it.
+        full_hour = await make_ogrody_33_full(
+            session_factory, now=now, official_groups=official_groups
+        )
         # **The played history first, and on the path the product makes games
         # on** (#573): her evenings and the cohort's games, each a past booked
         # game, played and scored. Before every layer that reads a
@@ -1393,6 +1408,9 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 on=bookings.bookings[0].start,
             ),
             await assert_her_history(session_factory, settings=settings, now=now),
+            await assert_the_full_hour(
+                session_factory, settings=settings, now=now, full=full_hour
+            ),
         )
         return SeedReport(
             accounts=accounts,
@@ -1413,6 +1431,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             post=post,
             history=history,
             friends=friends,
+            full_hour=full_hour,
             photographs=photographs,
         )
     finally:
@@ -1514,6 +1533,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *administrator_lines(run_report.administrators)])
     if run_report.official_groups is not None:
         lines.extend(["", *official_group_lines(run_report.official_groups)])
+    if run_report.full_hour is not None:
+        lines.extend(["", *full_hour_lines(run_report.full_hour)])
     if run_report.history is not None:
         lines.extend(["", *history_lines(run_report.history)])
     if run_report.friends is not None:

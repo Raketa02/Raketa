@@ -234,8 +234,9 @@ class WherePoolsPlay(Protocol):
         """The clubs the pool plays at, at ``now``: a player group's home club
         and the clubs within ten kilometres of it, nearest first; an official
         group's own club, and — while the club offers its groups other clubs'
-        courts — the clubs within the distance it set. ``None`` for a pool that
-        no longer exists."""
+        courts — the clubs within the distance it set, **offered only at an
+        hour its own club has no free court** (``PoolClubs.offered``,
+        ``docs/adr/0202`` §7). ``None`` for a pool that no longer exists."""
         ...
 
 

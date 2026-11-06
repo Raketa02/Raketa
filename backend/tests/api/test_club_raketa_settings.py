@@ -24,7 +24,8 @@ from tests.api.club_courts_world import (
 DEFAULTS = {
     "release_lead_days": 3,
     "cut_off_hours": 24,
-    "other_clubs_courts": {"offered": False, "within_km": 10},
+    # On by default since #746 (docs/adr/0202 §7).
+    "other_clubs_courts": {"offered": True, "within_km": 10},
     "paused": False,
 }
 
@@ -46,7 +47,8 @@ async def test_the_desk_saves_its_settings_with_nothing_to_choose_first(client):
     changed = settings(
         release_lead_days=5,
         cut_off_hours=12,
-        other_clubs_courts={"offered": True, "within_km": 15},
+        # Switched off: the club's groups play only at the club.
+        other_clubs_courts={"offered": False, "within_km": 15},
     )
 
     saved = await confirms_settings(client, desk, **changed)

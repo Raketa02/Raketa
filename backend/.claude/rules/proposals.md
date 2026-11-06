@@ -195,8 +195,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   which, with **a pick's id being its game** (`domain/ids.py`, `uuid5`), is what makes N
   processes safe with no lock. **Where**: `GroupClubs` — a player group's home club, then
   clubs within `PLAYER_GROUP_CLUBS_WITHIN_KM` of it nearest first (the matcher's
-  `distance_km` over the Club directory's `inside` box); an official group only its club,
-  unless `other_clubs_courts` is on, and then only for players who share no hour at home.
+  `distance_km` over the Club directory's `inside` box); an official group its club, and —
+  while `other_clubs_courts` is on, **on by default** — the clubs within the club's distance
+  **only at a sport and hour its club has no free court** (#746; ADR-0202 §7): **the court
+  source answers per hour**, `PoolClubs.offered`, read by the proposer's `_selling` and
+  Post a game's grid — and by the friends card when it is built — so a group never has two
+  court rules. The
+  old *no shared hour at home in 14 days* refusal is gone. **No free court is read off what
+  Raketa may sell now** — booked out, closed, outside the Raketa hours, past its book-by,
+  or the club paused — as the old refusal read *an hour at home* (a call, #746's handover):
+  so inside the home club's release lead, a neighbour with a shorter one is offered at
+  every hour it sells, and the soonest-first dealing reaches it first.
   **Dealing**: every seat a no left goes to up to three next best fits dealt into its
   version (`DealtVersion.first_named` is how many a version was dealt for, so a declining
   fit is replaced and a fit who said yes took the seat) — one in singles, where each fit is
@@ -215,12 +224,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   lost card's people and an owed game's: by distance in time, then **the lost card's own
   club at its own hour**, then the home club and the others nearest first, then the earlier
   of two hours as close — so the same club, day and hour come first (sold again on a court of the other
-  kind, or at a new price), then, for a player group, another club at that hour, then the
-  closest hour, home club first. **The *never at this club and hour* exclusion is gone
+  kind, or at a new price), then another club at that hour — for an official group only
+  where its club has no free court then — then the closest hour, home club first. **The *never at this club and hour* exclusion is gone
   entirely**; the court the club cancelled is closed for the hour instead (`bookings.md`),
-  so the same club and hour is never the broken court. An official group's refusal of
-  another club while its players share an hour at home within the fourteen days stays
-  (`_refusal`, as for any card), every owed player must still be free to play it (free
+  so the same club and hour is never the broken court. An official group reaches another
+  club at that hour too, **whenever its club has no free court then** (the court source,
+  as for any card — ADR-0196 §3's second step since #746), every owed player must still be free to play it (free
   for the hour, a week under the cap, within *most I'll pay* at the new price), and a game with no hour stays
   owed until its old hour passes. **The card records whom it is owed to**:
   `Pick.owed_card_for` → `MakeProposalCommand.owed_card_for` → `ProposalMade.owed_card_for`
@@ -294,7 +303,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   to. **A cell counts at one hour**: the best hour in its range that has a free court (else
   the best of the range), an hour the poster is free for first — never people overlapping the
   poster at different hours (Q92). A free court is one `MakeProposal` would accept: a pool
-  club, taking new cards, before its book-by. **Who it is for is stored on it**
+  club, taking new cards, before its book-by — **and the court source's own, hour by hour**
+  (`PoolClubs.offered`, #746): an official group's grid and sheet list another club only
+  where its club is full then, each such row `FreeCourtSchema.home_club_full`, and a post
+  there at any other hour is `court_hour_not_for_sale`. **Who it is for is stored on it**
   (`ProposalMade.who`, `level_low`, `level_high`, defaulted for older streams, which read as
   *for anybody*): the range starts as **the engine's own window** around the poster —
   `PlayerFit.level_window`, the matcher's `level_tolerance` through the same

@@ -23,6 +23,7 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
+    RaketaSettingsChangedV2,
 )
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
@@ -41,7 +42,15 @@ from app.modules.clubs.domain.events import (
 #: *We check players in*. ``clubs.way_of_working_chosen`` is unregistered with
 #: the choice (``docs/adr/0196`` §1): Only Raketa is the one way, and a class
 #: kept only so an old row decodes would be a reader for a fact nothing reads.
-RAKETA_SETTINGS_CHANGED_VERSION = 2
+#:
+#: **Version 3 is version 2's shape with a new meaning for one field** (#746,
+#: ``docs/adr/0202`` §7): other clubs' courts are on by default, for existing
+#: clubs too, and a v2 row cannot tell a club's *off* from the old default the
+#: form saved for it. So **version 2 stays registered, decode-only**
+#: (``RaketaSettingsChangedV2``), and the fold reads its switch on — an
+#: upcaster rather than a store reset, so a developer's local clubs read on
+#: without reseeding. From version 3, *off* is the club's own choice.
+RAKETA_SETTINGS_CHANGED_VERSION = 3
 
 
 def register_club_events(catalog: EventCatalog) -> None:
@@ -63,6 +72,9 @@ def register_club_events(catalog: EventCatalog) -> None:
     catalog.register(ExceptionAdded, name="clubs.exception_added", version=1)
     catalog.register(ExceptionRemoved, name="clubs.exception_removed", version=1)
     catalog.register(PricesSet, name="clubs.prices_set", version=1)
+    catalog.register(
+        RaketaSettingsChangedV2, name="clubs.raketa_settings_changed", version=2
+    )
     catalog.register(
         RaketaSettingsChanged,
         name="clubs.raketa_settings_changed",
@@ -96,6 +108,8 @@ def subscribe_club_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(ExceptionRemoved, LogClubCourtsEvent())
     dispatcher.subscribe(PricesSet, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaSettingsChanged, LogClubCourtsEvent())
+    # A v2 row still in the outbox is delivered like any other.
+    dispatcher.subscribe(RaketaSettingsChangedV2, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaPaused, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaResumed, LogClubCourtsEvent())
     dispatcher.subscribe(PaymentsAccountOpened, LogClubCourtsEvent())

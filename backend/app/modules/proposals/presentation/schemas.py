@@ -2107,6 +2107,14 @@ class FreeCourtSchema(BaseModel):
 
     club: BookedClubSchema
     home_club: bool = Field(description="The group's home club, listed first.")
+    home_club_full: bool = Field(
+        description=(
+            "Offered **because the group's home club has no free court at this "
+            "hour** — another club's, for an official group, which is offered "
+            "other clubs only then: *Ogrody 33 is full at 10:00*. Always "
+            "`false` for the home club and for a player group."
+        )
+    )
     distance_km: float | None = Field(
         description="How far it is from the poster; `null` with no Location area."
     )
@@ -2205,6 +2213,7 @@ class PostingSlotResponse(BaseModel):
                         name=slot.club_names.get(court.hour.club_id),
                     ),
                     home_club=court.home,
+                    home_club_full=court.home_club_full,
                     distance_km=slot.distances.get(court.hour.club_id),
                     starts_at=court.hour.start,
                     share_grosze=court.hour.share_grosze,

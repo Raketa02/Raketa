@@ -26,8 +26,11 @@ the men and the women beside them a mixed game needs, never three of one.
 
 **A free court is one a new card may be made at**: at one of the clubs the
 pool plays at, taking new cards, before its book-by — what ``MakeProposal``
-would accept. Each sheet row is one club and hour, **with its own count** (Q77),
-the home club first.
+would accept — and, for an official group, another club's **only at an hour its
+own club has none** (``PoolClubs.offered``; ``docs/adr/0202`` §7), the
+proposer's own court rule. Each sheet row is one club and hour, **with its own
+count** (Q77), the home club first, and another club's row an official group is
+offered because its club is full then says so.
 
 **Earlier today is past**: a range whose every hour has started, with no court
 still ahead in it. **Already happening** marks a cell with a rescue or a post
@@ -107,6 +110,9 @@ class FreeCourt:
     fits_free: int
     #: The pool's home club.
     home: bool
+    #: Offered because the home club has no free court then — another club's,
+    #: for an official group: *Ogrody 33 is full at 10:00*.
+    home_club_full: bool
 
 
 @final
@@ -206,11 +212,8 @@ class PostingGrid:
             sorted(
                 (
                     hour
-                    for hour in hours
+                    for hour in clubs.offered(hours, now=now)
                     if hour.sport is sport
-                    and hour.taking_new_cards
-                    and now < hour.book_by
-                    and clubs.rank_of(hour.club_id) is not None
                 ),
                 key=lambda hour: (clubs.rank_of(hour.club_id), hour.start),
             )
@@ -278,6 +281,7 @@ class PostingGrid:
                 hour=hour,
                 fits_free=len(self._free_at(hour.start, hour.share_grosze)),
                 home=hour.club_id == self._clubs.home_club_id,
+                home_club_full=self._clubs.because_home_is_full(hour),
             )
             for hour in self._courts_in(day, range_)
         )

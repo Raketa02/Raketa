@@ -676,5 +676,21 @@ there; they are not repeated here.
   which reads no block (a block ends a friendship); a pill asks `relations_of`. _Avoid_: a
   `friend` flag on a shared person type that knows no reader.
 
+- **Court source** — where a pool's court hours come from, **answered per hour** (#746,
+  [ADR-0202](../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  §7): `WherePoolsPlay.of` reads the clubs (`GroupClubs` — the switch and distance off the
+  club's published offer, the clubs around it off the Club directory), and the
+  `PoolClubs` it answers says which hours on sale are offered — `offered(hours, now=)`: a
+  **free court** (a pool club, taking new cards, before its book-by), and for an Official
+  group another club's **only at a sport and hour where the home club has none**;
+  `because_home_is_full(hour)` is the mark on such a row, true only of an hour `offered`
+  answered. **One source for every reader**: the proposer (picks and the owed card) and
+  Post a game's grid and slot sheet today, the friends card when it is built, so a group
+  never has two court rules. *No free court* is read off what Raketa may sell now: booked
+  out, closed, outside the club's Raketa hours, past its book-by, or the club paused — the
+  notion the old refusal's *an hour at home* used too. _Avoid_: a refusal per set of players
+  (the old *no shared hour at home in 14 days*), and filtering hours on sale in a reader of
+  its own.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

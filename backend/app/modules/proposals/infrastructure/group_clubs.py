@@ -1,14 +1,15 @@
 """``WherePoolsPlay`` for a group's pool — its home club, and the clubs around it
-it may also play at (the mechanics §4.3, §18).
+it may also play at (the mechanics §4.3, §18; ``docs/adr/0202`` §7).
 
 **A player group** plays at its home club first and then at any club within
 ``PLAYER_GROUP_CLUBS_WITHIN_KM`` of it, nearest first. **An official group**
-plays at its own club only, unless the club offers its groups other clubs' courts — a
-setting it holds in its Raketa settings, read off the offer the Club context
-publishes — and then at the clubs within the distance it chose, for players who
-share no hour at home (the proposer's rule, not this read's). A club that is
-not live sells nothing, so a club nearby that is not live costs a read and deals
-nothing; its courts never reach a deck.
+plays at its own club, and — while the club offers its groups other clubs'
+courts, a setting it holds in its Raketa settings (on by default), read off the
+offer the Club context publishes — at the clubs within the distance it chose,
+**only at an hour its own club has no free court**: that is
+``PoolClubs.offered``'s rule, hour by hour, and this read answers only the
+clubs. A club that is not live sells nothing, so a club nearby that is not live
+costs a read and deals nothing; its courts never reach a deck.
 
 **Distance is measured here, between two clubs' own points**, by the matcher's
 great-circle function over the box it draws (``matchmaking/domain/geography.py``)

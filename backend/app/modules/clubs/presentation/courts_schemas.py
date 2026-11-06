@@ -324,7 +324,10 @@ class OtherClubsCourtsSchema(BaseModel):
 
     offered: bool = Field(
         description=(
-            "*Offer our groups other clubs' courts when ours are full*. Off by default."
+            "*Offer our groups other clubs' courts when ours are full*. **On by "
+            "default**: the club's official groups are offered other clubs' "
+            "courts within `within_km`, only at an hour its own courts are full; "
+            "off, they play only at the club."
         )
     )
     within_km: int = Field(

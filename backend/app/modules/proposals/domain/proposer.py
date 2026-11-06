@@ -33,12 +33,14 @@ cards are considered. A four already on a card together, a court hour already
 holding its cards, and a person already on a card at that hour are not dealt
 again, which is what makes a batch safe to repeat.
 
-**Where** (§4.3): a player group's home club first, then the other clubs it
-plays at, nearest first — at the same hour the home club's court wins. An
-official group plays at its own club only, unless the club lets other clubs'
-courts serve its groups, and then only for players who share **no** hour at its
-own club in the fourteen days. A paused club deals no new card, fourteen days is
-the horizon, and the clubs' order and distances are the caller's.
+**Where** (§4.3; ``docs/adr/0202`` §7): a player group's home club first, then
+the other clubs it plays at, nearest first — at the same hour the home club's
+court wins. An official group plays at its own club, and **at another club only
+at an hour its own has no free court**, while the club lets other clubs' courts
+serve its groups — ``PoolClubs.offered``, the one court rule the deck and Post
+a game read (the friends card will too). A paused club deals no new card,
+fourteen days is the horizon, and the clubs' order and distances are the
+caller's.
 
 **Dealing a game still filling** (§6.2–§6.3, §7): **every seat a no left goes
 to up to three next best fits**, dealt into the version it was on — a name
@@ -236,12 +238,14 @@ class CourtHourOnSale:
 @dataclass(frozen=True, slots=True)
 class PoolClubs:
     """Where a pool may play: its home club, and the other clubs it may use,
-    nearest first."""
+    nearest first — and, through ``offered``, **the court hours it is offered,
+    hour by hour** (``docs/adr/0202`` §7): the one court rule the deck and Post
+    a game read, and the friends card will, so a group never has two."""
 
     home_club_id: UUID
     others: tuple[UUID, ...] = ()
-    #: An official group's: another club's court only for players who share no
-    #: hour at the home club (the mechanics §4.3).
+    #: An official group's: another club's court **only at an hour the home
+    #: club has no free court** in the sport (``docs/adr/0202`` §7).
     others_only_when_home_is_full: bool = False
 
     @property
@@ -249,6 +253,47 @@ class PoolClubs:
         """Every club the pool plays at, home first."""
 
         return (self.home_club_id, *self.others)
+
+    def offered(
+        self, hours: Iterable[CourtHourOnSale], *, now: Instant
+    ) -> tuple[CourtHourOnSale, ...]:
+        """The court hours among ``hours`` a new card in the pool may be made
+        at, in their own order: **a free court** — at a club the pool plays at,
+        taking new cards, before its book-by — and, for an official group,
+        another club's **only at an hour where the home club has no free court
+        of the sport**. *None* is read off what Raketa may sell now, as every
+        free court here is: an hour booked out, closed, outside the club's
+        Raketa hours, past its book-by or while the club is paused all leave
+        the home club nothing to sell then (a call, #746)."""
+
+        free = [
+            hour
+            for hour in hours
+            if hour.taking_new_cards
+            and now < hour.book_by
+            and self.rank_of(hour.club_id) is not None
+        ]
+        if not self.others_only_when_home_is_full:
+            return tuple(free)
+        at_home = {
+            (hour.sport, hour.start)
+            for hour in free
+            if hour.club_id == self.home_club_id
+        }
+        return tuple(
+            hour
+            for hour in free
+            if hour.club_id == self.home_club_id
+            or (hour.sport, hour.start) not in at_home
+        )
+
+    def because_home_is_full(self, hour: CourtHourOnSale) -> bool:
+        """Whether an hour ``offered`` answers is there **because the home club
+        is full then** — another club's, for an official group: *Ogrody 33 is
+        full at 10:00*. Never for a player group, whose other clubs are offered
+        at every hour."""
+
+        return self.others_only_when_home_is_full and hour.club_id != self.home_club_id
 
     def rank_of(self, club_id: UUID) -> int | None:
         """``0`` for the home club, the others after it in order, and ``None``
@@ -464,30 +509,17 @@ class _Batching:
         self._owed = tuple(sorted(owed, key=lambda p: (p.start, str(p.proposal_id))))
 
         horizon = now + HORIZON
+        # The pool's courts, hour by hour (docs/adr/0202 §7): an official
+        # group's other clubs only where its own has no free court then.
         self._selling = tuple(
             sorted(
                 (
                     hour
-                    for hour in hours
-                    if hour.taking_new_cards
-                    and clubs.rank_of(hour.club_id) is not None
-                    and now < hour.book_by
-                    and hour.start < horizon
+                    for hour in clubs.offered(hours, now=now)
+                    if hour.start < horizon
                 ),
                 key=lambda hour: (hour.start, clubs.rank_of(hour.club_id)),
             )
-        )
-        #: For each hour the home club sells, everybody free for the whole of it.
-        self._free_at_home = tuple(
-            self._mask(
-                player
-                for player in self._ids
-                if free_for_the_hour(
-                    self._members[player].week, start=hour.start, zone=CLUB_ZONE
-                )
-            )
-            for hour in self._selling
-            if hour.club_id == clubs.home_club_id
         )
 
         self._picks: list[Pick] = []
@@ -548,9 +580,8 @@ class _Batching:
 
         free_courts = hour.courts - self._picks_at(hour)
         pool = self._pool_at(kind, hour)
-        refused = self._refusal(hour)
         while free_courts > 0:
-            people = self._evenest(kind, pool, self._seats, refused=refused)
+            people = self._evenest(kind, pool, self._seats, refused=self._together)
             if people is None:
                 return
             self._pick(kind, hour, people)
@@ -563,11 +594,11 @@ class _Batching:
         owed card — dealt a new card first, **the closest to the one they
         lost** (#673; Q123): its own club and hour, sold again on a court of the
         other kind or at a new price; then the same hour at another club the
-        pool plays at, nearest first — an official group's refusal of another
-        club while its players share an hour at home is ``_refusal``'s, as for
-        any card; then the closest hour, the home club first, the earlier of
-        two as close — completed by their best fits, or as many of them as
-        there are. Whether a card was dealt."""
+        pool plays at, nearest first — for an official group only where its
+        club has no free court then, as for any card (``PoolClubs.offered``);
+        then the closest hour, the home club first, the earlier of two as close
+        — completed by their best fits, or as many of them as there are.
+        Whether a card was dealt."""
 
         kind = lost.kind
         in_ = tuple(player for player in lost.owed_to if player in self._members)
@@ -593,9 +624,10 @@ class _Batching:
             ):
                 continue
             pool = self._pool_at(kind, hour, besides=in_)
-            refused = self._refusal(hour)
             for size in range(self._seats, len(in_) - 1, -1):
-                people = self._evenest(kind, pool, size, must=in_, refused=refused)
+                people = self._evenest(
+                    kind, pool, size, must=in_, refused=self._together
+                )
                 if people is not None:
                     self._pick(
                         kind,
@@ -1019,26 +1051,9 @@ class _Batching:
     def _fits(self, kind: SearchMode, one: UUID, other: UUID) -> bool:
         return frozenset((one, other)) not in self._unfit[kind]
 
-    def _refusal(self, hour: CourtHourOnSale) -> Callable[[_Members], bool]:
-        """What a set of people may not be dealt at ``hour``: a card with all of
-        them on it already, and — at another club, for an official group — a
-        game they could have had at home."""
-
-        elsewhere = (
-            hour.club_id != self._clubs.home_club_id
-            and self._clubs.others_only_when_home_is_full
-        )
-
-        def refused(people: _Members) -> bool:
-            return self._together(people) or (
-                elsewhere and any(people & ~free == 0 for free in self._free_at_home)
-            )
-
-        return refused
-
     def _together(self, people: _Members) -> bool:
         """Whether these people are already on a card together, of either
-        kind."""
+        kind — what a set may not be dealt at any hour."""
 
         if people.bit_count() == self._seats:
             return people in self._full_games_on_cards

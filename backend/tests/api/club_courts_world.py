@@ -78,7 +78,8 @@ def settings(**overrides) -> dict:
     return {
         "release_lead_days": 3,
         "cut_off_hours": 24,
-        "other_clubs_courts": {"offered": False, "within_km": 10},
+        # On by default since #746 (docs/adr/0202 §7).
+        "other_clubs_courts": {"offered": True, "within_km": 10},
         "paused": False,
         **overrides,
     }

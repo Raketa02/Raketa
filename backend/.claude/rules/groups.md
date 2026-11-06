@@ -126,10 +126,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   cannot untick a sport one declares**: `ChangeClubDetails` asks `OfficialGroupSports`,
   clubs' demand **signed in `groups/infrastructure/`** so the arrow runs `groups →
   clubs` only (an `.importlinter` contract), and answers `409
-  club_sport_declared_by_group` naming the group. Seeded by `app/seeds/official_groups.py`
+  club_sport_declared_by_group` naming the group. **Its courts are its club's, hour by
+  hour** (#746; ADR-0202 §7): at an hour its club has a free court of the sport, only the
+  club's are offered; at an hour it has none, other clubs within the club's distance too,
+  each marked as offered because the club is full — unless the club switched other clubs'
+  courts off (on by default). A player group is unchanged: home first, then within 10 km,
+  at every hour. One court source serves the deck and Post a game, and will serve the
+  friends card (`proposals.md`, *Where*). Seeded by `app/seeds/official_groups.py`
   after the administrators: Marta's *Ogrody 33 Club* (*People I approve*, 48, padel,
   three players, one waiting) and *Ogrody open play*, run by `rated-in-every-sport`,
-  who plays in it.
+  who plays in it; and `app/seeds/full_hour.py` closes every Ogrody 33 court on the first
+  Saturday at 10:00 from two days out, so both are offered other clubs then and only
+  Ogrody 33 at its other hours.
   **The club watches its official groups and hands them over, on the club surface**
   (#510, ADR-0183 §8, §11). `GET /api/v1/club/groups` is the Groups table — every
   official group at the club, by name: who runs it (`administrator`, the name the club

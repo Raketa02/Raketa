@@ -15,9 +15,10 @@ can afford it, have no game then and a week to spare — and who fit every pair
 among them. *Most even* is the engine's own forecast.
 
 **Courts.** A player group's home club first, then the other clubs it plays
-at; an official group only its own club, unless the club lets others' courts
-serve players who share no hour at its own. Fourteen days ahead, never a paused
-club, and never the same people twice in one batch — of either kind.
+at; an official group its own club, and another club only at an hour its own
+has no free court, while the club lets others' courts serve it (``docs/adr/0202``
+§7). Fourteen days ahead, never a paused club, and never the same people twice
+in one batch — of either kind.
 
 **Dealing.** After a no, the seat goes to up to three next best fits — one in
 singles, where each fit is a version; at half its seats In, a pick's
@@ -375,36 +376,45 @@ def test_a_paused_club_takes_no_new_card():
     assert [pick.club_id for pick in dealt.picks] == [NEAR]
 
 
-def test_an_official_group_plays_at_home_while_its_players_share_an_hour_there():
-    official = PoolClubs(
-        home_club_id=HOME, others=(NEAR,), others_only_when_home_is_full=True
-    )
+OFFICIAL = PoolClubs(
+    home_club_id=HOME, others=(NEAR,), others_only_when_home_is_full=True
+)
 
+
+def test_an_official_group_plays_at_another_club_at_an_hour_its_club_is_full():
+    # Home sells nothing on Saturday at 17:00, and has a court on Sunday that
+    # the same four share (docs/adr/0202 §7): an hour they share at home no
+    # longer keeps them from another club's court at an hour it is full.
     dealt = batch(
         four_even_and_one_apart()[:4],
         [on_sale(SAT_17, NEAR), on_sale(SUN_17, HOME)],
-        clubs=official,
-    )
-
-    assert [(pick.club_id, pick.start) for pick in dealt.picks] == [(HOME, SUN_17)]
-
-
-def test_an_official_group_goes_elsewhere_for_players_with_no_hour_at_home():
-    official = PoolClubs(
-        home_club_id=HOME, others=(NEAR,), others_only_when_home_is_full=True
-    )
-    saturdays = [member(p, cells=((6, 17),)) for p in (A, B, C, D)]
-
-    dealt = batch(
-        saturdays, [on_sale(SAT_17, NEAR), on_sale(SUN_17, HOME)], clubs=official
+        clubs=OFFICIAL,
     )
     alone = batch(
-        saturdays, [on_sale(SAT_17, NEAR)], clubs=PoolClubs(home_club_id=HOME)
+        four_even_and_one_apart()[:4],
+        [on_sale(SAT_17, NEAR), on_sale(SUN_17, HOME)],
+        clubs=PoolClubs(home_club_id=HOME),
     )
 
     assert [(pick.club_id, pick.start) for pick in dealt.picks] == [(NEAR, SAT_17)]
-    # Without the club's leave, another club's court serves nobody.
-    assert alone.picks == ()
+    # Switched off, another club's court serves nobody.
+    assert [(pick.club_id, pick.start) for pick in alone.picks] == [(HOME, SUN_17)]
+
+
+def test_an_official_group_plays_only_at_home_at_an_hour_its_club_has_a_court():
+    eight = [member(p) for p in (A, B, C, D, E, F, G, H)]
+    hours = [on_sale(SAT_17, HOME), on_sale(SAT_17, NEAR)]
+
+    official = batch(eight, hours, clubs=OFFICIAL)
+    players = batch(eight, hours, clubs=PoolClubs(home_club_id=HOME, others=(NEAR,)))
+
+    # Home's one court takes one four; the next four wait for an hour home is
+    # full rather than play elsewhere — a player group sends them to NEAR.
+    assert [(pick.club_id, pick.start) for pick in official.picks] == [(HOME, SAT_17)]
+    assert [(pick.club_id, pick.start) for pick in players.picks] == [
+        (HOME, SAT_17),
+        (NEAR, SAT_17),
+    ]
 
 
 def test_the_engine_looks_fourteen_days_ahead():
@@ -944,22 +954,30 @@ def test_a_player_group_s_owed_card_is_another_club_at_the_hour_before_another_h
     assert (card.club_id, card.start) == (NEAR, SAT_17)
 
 
-def test_an_official_group_s_owed_card_stays_home_while_its_players_share_an_hour():
-    official = PoolClubs(
-        home_club_id=HOME, others=(NEAR,), others_only_when_home_is_full=True
-    )
+def test_an_official_group_s_owed_card_is_another_club_at_the_hour_its_club_is_full():
     cancelled = a_cancelled_game(A, B, C, D)
 
-    dealt = batch(
+    full = batch(
         [member(p) for p in (A, B, C, D)],
         [on_sale(SAT_17, NEAR), on_sale(SUN_17)],
-        clubs=official,
+        clubs=OFFICIAL,
+        owed=(cancelled,),
+    )
+    a_court_left = batch(
+        [member(p) for p in (A, B, C, D)],
+        [on_sale(SAT_17, NEAR), on_sale(SAT_17), on_sale(SUN_17)],
+        clubs=OFFICIAL,
         owed=(cancelled,),
     )
 
-    # Never another club at the same hour while home has an hour they share.
-    card = owed_card(dealt, cancelled)
-    assert (card.club_id, card.start) == (HOME, SUN_17)
+    # Its club has nothing left at 17:00: another club then, before Sunday at
+    # home (docs/adr/0196 §3's second step, reaching an official group).
+    card = owed_card(full, cancelled)
+    assert (card.club_id, card.start) == (NEAR, SAT_17)
+    # With a court left at home at 17:00, home — and never another club then.
+    card = owed_card(a_court_left, cancelled)
+    assert (card.club_id, card.start) == (HOME, SAT_17)
+    assert [pick.club_id for pick in a_court_left.picks] == [HOME]
 
 
 def test_after_the_hour_the_owed_card_is_the_closest_hour_the_home_club_first():

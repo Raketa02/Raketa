@@ -158,8 +158,30 @@ class RaketaSettingsChanged:
     The first one is also the club **confirming** them — defaults included —
     which is the setup checklist's last step.
 
-    Written under version 2 since #670 (``event_subscriptions.py`` says
+    Written under version 3 since #746 (``event_subscriptions.py`` says
     why)."""
+
+    club_id: UUID
+    release_lead_days: int
+    cut_off_hours: int
+    other_clubs_courts: bool
+    other_clubs_within_km: int
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class RaketaSettingsChangedV2:
+    """``clubs.raketa_settings_changed`` **v2**, decode-only: the settings as
+    they were saved while other clubs' courts were **off by default**
+    (#670–#745).
+
+    Never written. The form saved every field, so a v2 *off* cannot be told
+    from a default nobody touched, and the switch is now **on by default for
+    existing clubs too** (``docs/adr/0202`` §7): **the fold reads it on**, at
+    the distance it kept, and every other setting as saved. Kept beside
+    :class:`RaketaSettingsChanged` rather than folded into it, because the
+    codec builds an event from every key its row carries.
+    """
 
     club_id: UUID
     release_lead_days: int

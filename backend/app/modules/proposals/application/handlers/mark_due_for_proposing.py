@@ -42,6 +42,7 @@ from app.modules.clubs.domain.club_courts_events import (
     RaketaPaused,
     RaketaResumed,
     RaketaSettingsChanged,
+    RaketaSettingsChangedV2,
 )
 from app.modules.groups.domain.events import GroupJoined, JoinRequestApproved
 from app.modules.player_profile.domain.events import (
@@ -100,6 +101,8 @@ CLUB_EVENTS = (
     ExceptionRemoved,
     PricesSet,
     RaketaSettingsChanged,
+    # Decode-only (#746): a v2 row still in the outbox changes what is sold.
+    RaketaSettingsChangedV2,
     RaketaPaused,
     RaketaResumed,
     # Ready is the checklist's first step: a club goes live on it, and off.

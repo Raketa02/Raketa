@@ -122,6 +122,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   provider controls (`provider_not_the_fake`) and anything measured in days. Stripe is
   asked by `tests/api/test_seed_on_the_sandbox.py` only where the test keys and the
   mapping are both placed, and skipped by name otherwise.
+- **Ogrody 33 is full at one hour** (#746, `app/seeds/full_hour.py`): its desk closes every
+  court for its *Club tournament* on the first Saturday at 10:00 from two days out, through
+  `AddException`, **before anything deals or books** and on any run that finds no
+  tournament that day. A closure, not bookings: the court source reads a court that is not
+  free whatever made it so, and the crowd is spoken for. `assert_the_full_hour` reads her
+  Post a game sheet in *Ogrody 33 Club* and fails the run unless another club is offered
+  then, marked, and none at an hour Ogrody 33 has a court.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

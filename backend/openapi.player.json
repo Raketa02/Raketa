@@ -9924,6 +9924,11 @@
             "title": "Home Club",
             "description": "The group's home club, listed first."
           },
+          "home_club_full": {
+            "type": "boolean",
+            "title": "Home Club Full",
+            "description": "Offered **because the group's home club has no free court at this hour** \u2014 another club's, for an official group, which is offered other clubs only then: *Ogrody 33 is full at 10:00*. Always `false` for the home club and for a player group."
+          },
           "distance_km": {
             "anyOf": [
               {
@@ -9967,6 +9972,7 @@
         "required": [
           "club",
           "home_club",
+          "home_club_full",
           "distance_km",
           "starts_at",
           "share_grosze",
