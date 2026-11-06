@@ -12,9 +12,13 @@ import { loadConfig } from '@/server/config';
  * links; which paths it takes is the app's own intent filters' business (#520).
  */
 
-/** The links the app opens itself (#520). The preview image and all else stay with the site. */
+/**
+ * The links the app opens itself (#520, #756). The preview images, the face included, and all
+ * else stay with the site.
+ */
 const CLAIMED = [
   { '/': `/${APP_ROUTES.group}/*`, comment: 'A group link' },
+  { '/': `/${APP_ROUTES.friend}/*`, comment: 'A friend link' },
   { '/': `/${APP_ROUTES.invitation}/*`, comment: "An administrator's invitation" },
   { '/': `/${APP_ROUTES.reset}/*`, comment: 'A password reset' },
 ];

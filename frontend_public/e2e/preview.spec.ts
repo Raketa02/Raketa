@@ -1,6 +1,5 @@
-import type { APIRequestContext } from '@playwright/test';
-
 import { expect, test } from './fixtures';
+import { headOf, MESSENGERS } from './reading';
 import { GROUP_PATH, linkedGroup } from './stub/groups';
 import { SITE_URL } from './suite';
 
@@ -9,38 +8,6 @@ import { SITE_URL } from './suite';
  * chat, and the card shows *Ogrody 33 Club*. A messenger runs no JavaScript and reads `<head>`, so
  * these tests read the HTML the server sends and nothing else (ADR-0187 §4).
  */
-
-/** WhatsApp's link fetcher, and a user agent no list of bots names. */
-const MESSENGERS = ['WhatsApp/2.24.6.77 A', 'Mozilla/5.0 (compatible; SomeNewMessenger/1.0)'];
-
-/** The `<head>` of the HTML the server sends, and the tags in it by `property` or `name`. */
-async function headOf(request: APIRequestContext, path: string, userAgent: string) {
-  const response = await request.get(path, { headers: { 'user-agent': userAgent } });
-  const html = await response.text();
-  const head = html.slice(0, html.indexOf('</head>'));
-  const tags = new Map<string, string>();
-  for (const [tag] of head.matchAll(/<meta\s[^>]*>/g)) {
-    const key = /(?:property|name)="([^"]+)"/.exec(tag)?.[1];
-    const content = /content="([^"]*)"/.exec(tag)?.[1];
-    if (key !== undefined && content !== undefined) tags.set(key, decode(content));
-  }
-  const title = /<title>([^<]*)<\/title>/.exec(head)?.[1];
-  return {
-    status: response.status(),
-    title: title === undefined ? undefined : decode(title),
-    tags,
-  };
-}
-
-function decode(text: string): string {
-  return text
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#x27;', "'")
-    .replaceAll('&#39;', "'")
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&');
-}
 
 for (const userAgent of MESSENGERS) {
   test(`the group's preview tags are in the head the server sends, for ${userAgent.split('/')[0]}`, async ({

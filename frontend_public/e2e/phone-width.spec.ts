@@ -1,7 +1,9 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { portrait } from './photographs';
 import { invitation, token } from './stub/credentials';
+import { tomek } from './stub/friends';
 import { GROUP_PATH, linkedGroup } from './stub/groups';
 
 /**
@@ -38,6 +40,25 @@ test('the group page fits a phone, however long the name and however many the sp
     await page.goto(`/join/${code}`);
     await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
     await fitsSideways(page, `/join/${code}`);
+  }
+});
+
+test('the friend link’s page fits a phone, however long the nickname', async ({
+  page,
+  friendLinks,
+}) => {
+  const photo = await portrait(page);
+  // As long as a nickname may be, with nowhere to break it: 64 letters, digits and . _ -.
+  friendLinks.seat('k7pq2mxa', tomek({ nickname: 'tomek', photo }));
+  friendLinks.seat(
+    'k7pq2mxb',
+    tomek({ nickname: 'tomasz.kowalski_z_grzegorzek-padel.tenis.squash_wieczorami-20266', photo }),
+  );
+
+  for (const code of ['k7pq2mxa', 'k7pq2mxb']) {
+    await page.goto(`/f/${code}`);
+    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await fitsSideways(page, `/f/${code}`);
   }
 });
 

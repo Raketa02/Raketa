@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { sizeOf } from './reading';
 import { GROUP_PATH, linkedGroup } from './stub/groups';
 
 /**
@@ -8,11 +9,6 @@ import { GROUP_PATH, linkedGroup } from './stub/groups';
  * the group's name is the tile the page draws, and the app. Satori draws it from values in
  * `src/ui/tokens.ts`, which repeat `tokens.css`; these tests fail when the two disagree.
  */
-
-/** The PNG's width and height, from its header. */
-function sizeOf(png: Buffer): { width: number; height: number } {
-  return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
-}
 
 /**
  * What the browser sees in the image at `/preview/<code>`: the colour at one corner, and how many

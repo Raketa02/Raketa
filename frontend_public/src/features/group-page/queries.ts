@@ -8,13 +8,7 @@ import { loadConfig } from '@/server/config';
 
 import { toLinkedGroup, type LinkedGroup } from './mappers';
 import type { PreviewLinks } from './metadata';
-
-/**
- * **What a code could be**: letters and digits. The code arrives in the address, so it is
- * untrusted route input (ADR-0187 §7); anything else leads nowhere without asking the backend,
- * and nothing but letters and digits is ever put into a link this site draws.
- */
-const A_CODE = /^[a-z0-9]{1,64}$/i;
+import { isACode } from './schemas';
 
 /**
  * **The group a link opens**, or `null` when the link leads nowhere: no group has the code, it
@@ -23,7 +17,7 @@ const A_CODE = /^[a-z0-9]{1,64}$/i;
  * Next's own memoizing of `fetch` does. Any other answer is a failure the error page reports.
  */
 export const readGroupByLink = cache(async (code: string): Promise<LinkedGroup | null> => {
-  if (!A_CODE.test(code)) return null;
+  if (!isACode(code)) return null;
   const outcome = await fromBackend((api) =>
     api.GET('/api/v1/public/groups/{code}', { params: { path: { code } } }),
   );

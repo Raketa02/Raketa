@@ -32,6 +32,7 @@ test('an invitation link greets the person by name for the club, with the code a
     'href',
     APP_STORE_URL,
   );
+  // No install referrer: Play would keep the link, and its token, for 90 days.
   await expect(page.getByRole('link', { name: 'Google Play' })).toHaveAttribute(
     'href',
     GOOGLE_PLAY_URL,

@@ -81,12 +81,15 @@ test.describe('Configuration', () => {
       ...SUITE_ENV,
       API_URL: 'localhost:8000',
       PUBLIC_SITE_URL: 'raketa.example',
+      // Starts like one, and is none: the Android button's link is built from it.
+      GOOGLE_PLAY_URL: 'https://[play.google.com/store',
       APP_SCHEME: 'raketa://',
     });
 
     expect(code).toBe(1);
     expect(output).toContain('API_URL: must be an absolute http:// or https:// URL');
     expect(output).toContain('PUBLIC_SITE_URL: must be an absolute http:// or https:// URL');
+    expect(output).toContain('GOOGLE_PLAY_URL: must be an absolute http:// or https:// URL');
     expect(output).toContain('APP_SCHEME: must be a URL scheme such as raketa, without ://');
   });
 

@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
-import { APP_STORE_URL, GOOGLE_PLAY_URL } from './suite';
+import { googlePlayLink } from './reading';
+import { APP_STORE_URL, GOOGLE_PLAY_URL, SITE_URL } from './suite';
 
 /**
  * **The group page** (#525, #500 story 47): Kasia taps Marta's link without the app and lands on
@@ -35,10 +36,12 @@ test('the page shows the way in: both stores, where the link goes after sign-up,
     'href',
     APP_STORE_URL,
   );
-  await expect(page.getByRole('link', { name: 'Google Play' })).toHaveAttribute(
-    'href',
-    GOOGLE_PLAY_URL,
-  );
+  // Android's carries the page's link through the install, which the app reads on first launch
+  // (the friends mechanics §4.3): the person lands in the group without pasting anything.
+  expect(await googlePlayLink(page)).toEqual({
+    listing: GOOGLE_PLAY_URL,
+    referrer: `${SITE_URL}/join/k7pq2mxa`,
+  });
   await expect(page.getByText('After you sign up, paste this link in Play › Join')).toBeVisible();
   // For a phone where the app is installed and the link didn't open it: the app's own scheme.
   await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(

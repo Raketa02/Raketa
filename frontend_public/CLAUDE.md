@@ -1,8 +1,9 @@
 # Raketa — the public site
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. The pages a link opens when the app isn't
-installed: the group page (`/join/<code>`) and its preview, the invitation page
-(`/invite/<token>`) and the reset page (`/reset/<token>`), and the app-link files
+installed: the group page (`/join/<code>`) and its preview, the friend link's page (`/f/<code>`)
+and its owner's face (`/face/<code>`), the invitation page (`/invite/<token>`) and the reset page
+(`/reset/<token>`), and the app-link files
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §4).
 Every page is server-rendered, and the site talks to the backend's **public surface**
 (`backend/openapi.public.json`) **from its server only**. It holds nothing: no session, no
@@ -19,10 +20,12 @@ glossary's.
 
 ## The standard, in one screen
 
-- **`src/app/`** holds routes: pages, the preview image's and the app-link files' route handlers,
+- **`src/app/`** holds routes: pages, the preview images' and the app-link files' route handlers,
   _Nothing at that link_ and _Something went wrong_.
 - **`src/server/`** is the only code that reaches the backend or the configuration, and every file
-  in it imports `server-only`. **One door, `fromBackend`**, because there is nobody to call as.
+  in it imports `server-only`. **One door, `fromBackend`**, because there is nobody to call as. A
+  photograph the backend signs a link to is fetched there too (`fetchPhotograph`), never by the
+  browser, and the link is never kept: it expires within minutes.
 - **`src/features/<page>/`**: `queries.ts` reads, `actions.ts` writes, `mappers.ts` holds the
   view models and turns wire into them (**the only file outside `src/server/` and `e2e/` that
   imports a generated type**), `schemas.ts` checks what arrives (a form, or a code, token or
@@ -30,9 +33,9 @@ glossary's.
   `metadata.ts` builds the preview tags, `preview.tsx` draws the preview image, and `components/`
   are server components unless a page needs interaction. A feature may use another feature's
   components, schemas, copy and mappers, never its queries or actions.
-- **Decisions branch on the backend's error `code`, never its message.** `group_not_found` and
-  `credential_not_found` on a read are a dead link; any other failure is _Something went wrong_,
-  never a dead link.
+- **Decisions branch on the backend's error `code`, never its message.** `group_not_found`,
+  `friend_link_not_found` and `credential_not_found` on a read are a dead link; any other failure
+  is _Something went wrong_, never a dead link.
 - **A code or token in an address is untrusted route input**: it is asked about, or put into a
   link this site draws, only once it is known to be letters, digits (and, for a token, `-` and
   `_`). A page binds its token to its action on the server, and the action checks it again.
@@ -69,12 +72,14 @@ bad one. `APP_ENV` is one of the four names and only `local` runs today.
 
 Playwright drives the built pages while `API_URL` points at **the stub backend** in `e2e/stub/`,
 which answers with payloads typed from the generated contract and records every request. The
-fixtures reset it before each test and install **the fake group directory** and **the fake
-credentials** (`e2e/stub/groups.ts`, `e2e/stub/credentials.ts`): a test seats a group behind a
-code with `groups.seat`, and a link behind a token with `credentials.invite` or
-`credentials.reset` (`token(n)` makes one), and overrides an operation with `stub.on` only for a
-test about one reply. One worker, because the one server
-talks to the one stub.
+fixtures reset it before each test and install **the fake group directory**, **the fake
+credentials** and **the fake friend links** (`e2e/stub/groups.ts`, `credentials.ts`,
+`friends.ts`): a test seats a group behind a code with `groups.seat`, a link behind a token with
+`credentials.invite` or `credentials.reset` (`token(n)` makes one), and a friend link with
+`friendLinks.seat`, and overrides an operation with `stub.on` only for a test about one reply. The
+stub is the photo storage too: a face is a signed link to `/storage/`, which
+`stub.expireSignedLinks()` ends, and `e2e/photographs.ts` draws the JPEG in the browser. One
+worker, because the one server talks to the one stub.
 
 - **The preview tags are read from the raw HTML**, never from the browser's DOM, which would have
   run JavaScript that a messenger never runs.

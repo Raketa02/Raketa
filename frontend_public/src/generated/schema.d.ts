@@ -55,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Set your password here, by the invitation's link
-         * @description **The same rules and the same results as the app's *Set your password***: a new person's account is created — its Name the one the club typed, no nickname, no Adult attestation — or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Raketa and sign in with this email and password.
+         * @description **The same rules and the same results as the app's *Set your password***: a new person's account is created — no player name, no nickname, no Adult attestation — or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Raketa and sign in with this email and password.
          */
         post: operations["set_password_on_the_invitation_page_api_v1_public_invitations_password_post"];
         delete?: never;
@@ -98,6 +98,26 @@ export interface paths {
          * @description **The same rules and the same results as the app's *Forgot password?***: the password rule, the link spent, and **every session signed out** — every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked. **Nobody is signed in**: the page then says to open Raketa and sign in with the new password.
          */
         post: operations["set_password_on_the_reset_page_api_v1_public_password_resets_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/friend-links/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who a friend link is from
+         * @description `code` is what follows `/f/` in the link, read in any case. The owner's nickname and first photograph — **and nothing else about them**.
+         */
+        get: operations["friend_link_page_api_v1_public_friend_links__code__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -183,7 +203,7 @@ export interface components {
         InvitationPageResponse: {
             /**
              * Name
-             * @description The name the club typed, **whole** — *Marta Wójcik*, never a first name cut out of it (``docs/adr/0171`` §4). It becomes the person's Name when they set a password.
+             * @description The name the club typed, **whole** — *Marta Wójcik*, never a first name cut out of it. It is the Administrator's and stays theirs: the account a password opens holds no player name (``docs/adr/0199`` §4).
              */
             name: string;
             /** Club Name */
@@ -195,6 +215,21 @@ export interface components {
              * @description The 8-character code the email carries under its button, for *after you install, open Raketa and enter this code* — **only while `valid`**, `null` otherwise.
              */
             code: string | null;
+        };
+        /**
+         * LinkedFriendResponse
+         * @description A Friend link's owner as the public site's `/f/<code>` page draws them for
+         *     somebody who has not signed in — *{nickname} invited you to play on
+         *     Raketa* — **and nothing else about them**.
+         */
+        LinkedFriendResponse: {
+            /** Nickname */
+            nickname: string;
+            /**
+             * Photo Url
+             * @description Their first photograph, a link that expires within minutes; `null` when they have none.
+             */
+            photo_url: string | null;
         };
         /**
          * LinkedGroupClubSchema
@@ -537,6 +572,46 @@ export interface operations {
             };
             /** @description `credential_expired` (ask again), `credential_used` or `credential_locked` (five wrong codes). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    friend_link_page_api_v1_public_friend_links__code__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkedFriendResponse"];
+                };
+            };
+            /** @description `friend_link_not_found` — *Nothing at that link*: the code was replaced by a New link, no link ever carried it, or it could be no link's. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

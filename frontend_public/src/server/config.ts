@@ -56,12 +56,16 @@ function required(otherwise: string) {
 }
 
 /**
- * An absolute http(s) URL. `z.url()` alone accepts `localhost:8000`, whose *protocol* is
- * `localhost:` — exactly what someone types.
+ * An absolute http(s) URL that parses. `z.url()` alone accepts `localhost:8000`, whose *protocol*
+ * is `localhost:` — exactly what someone types.
  */
 const httpUrl = z
   .string({ error: required('must be an absolute http:// or https:// URL') })
-  .regex(/^https?:\/\/[^\s/]+/i, { error: 'must be an absolute http:// or https:// URL' });
+  // One check, so one complaint: `https://[play.google.com` starts like a URL and parses as none,
+  // and the Android store button's address is built from its setting by parsing it.
+  .refine((url) => /^https?:\/\/[^\s/]+/i.test(url) && URL.canParse(url), {
+    error: 'must be an absolute http:// or https:// URL',
+  });
 
 /** A SHA-256 certificate fingerprint as Android prints one: 32 hex pairs joined by colons. */
 const FINGERPRINT = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/i;

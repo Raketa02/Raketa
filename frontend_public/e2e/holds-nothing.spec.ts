@@ -1,6 +1,8 @@
 import { expect, test } from './fixtures';
+import { portrait } from './photographs';
 import { refusal } from './stub/backend';
 import { token } from './stub/credentials';
+import { tomek } from './stub/friends';
 import { GROUP_PATH } from './stub/groups';
 import { SITE_PORT } from './suite';
 
@@ -28,6 +30,28 @@ test('a page sets no cookie, loads no script from anywhere else, and sends no re
   expect(await response?.headerValue('referrer-policy')).toBe('no-referrer');
   const site = new URL(page.url()).origin;
   expect(scripts.filter((url) => new URL(url).origin !== site)).toEqual([]);
+});
+
+test('a link owner’s face comes from this site: the browser asks the photo storage nothing', async ({
+  page,
+  stub,
+  friendLinks,
+}) => {
+  friendLinks.seat('k7pq2mxa', tomek({ photo: await portrait(page) }));
+  const elsewhere: string[] = [];
+  const site = `http://127.0.0.1:${SITE_PORT}`;
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin !== site) elsewhere.push(request.url());
+  });
+
+  const response = await page.goto('/f/k7pq2mxa');
+  await expect(page.getByRole('main').locator('img')).toHaveJSProperty('naturalWidth', 300);
+
+  expect(elsewhere).toEqual([]);
+  expect(await response?.headerValue('set-cookie')).toBeNull();
+  expect(await response?.headerValue('referrer-policy')).toBe('no-referrer');
+  // The face was fetched once, by this site's server, by the link the backend signed.
+  expect(stub.storageOpened()).toHaveLength(1);
 });
 
 test('the backend asked with no session, and nothing else', async ({ page, stub, groups }) => {

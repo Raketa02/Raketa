@@ -7,7 +7,8 @@
  * wordmark, a white card — by copying its values here, never by importing them (ADR-0187 §6). The
  * group's tile and its sport dots are drawn as the player app draws them, so a group looks the
  * same on this page as in the app: the sport dots sampled from play 38, the tile's eight fills
- * copied from the app's MONOGRAM_HUES. A component reads these through var();
+ * copied from the app's MONOGRAM_HUES. A link owner's face is a box rounded as the app rounds one.
+ * A component reads these through var();
  * scripts/check-tokens.sh fails on a literal anywhere else.
  */
 
@@ -83,6 +84,7 @@
   --radius-control: 0.75rem;
   --radius-mark: 0.5rem;
   --radius-tile: 1.125rem; /* 0.27 of the tile, as the app draws it */
+  --radius-face: 1.3125rem; /* 0.33 of the face: a box, not a circle, as the app draws one */
   --radius-dot: 999px;
 
   /* Size */
@@ -92,6 +94,7 @@
   --size-control: 3.25rem;
   --size-mark: 2rem;
   --size-tile: 4rem;
+  --size-face: 4rem; /* where a group's page draws its tile */
   --size-dot: 0.625rem;
   --size-card: 29.75rem;
 }

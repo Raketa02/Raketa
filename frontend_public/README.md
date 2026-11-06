@@ -5,6 +5,9 @@ The pages a link opens when the app isn't installed:
 - **A group link**, `/join/<code>`, shows the group's tile, name, club and district, sports and
   size, with the App Store and Google Play, what to do once signed up, and **Open in Raketa**. Its
   preview tags let WhatsApp draw a card for the link.
+- **A friend link**, `/f/<code>`, says who invited you, with their face, the stores and **Open in
+  Raketa**; its preview tags let WhatsApp draw a card with the face beside it. On both these pages
+  the Google Play button carries the link through the install.
 - **An invitation link**, `/invite/<token>`, greets the new administrator for the club, shows the
   code to type into the app, and lets them set their password right there.
 - **A reset link**, `/reset/<token>`, sets a new password for a player or an administrator.

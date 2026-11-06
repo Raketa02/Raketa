@@ -9,6 +9,9 @@
  * {@link StubBackend.requests}. An operation is named by its path as the contract writes it,
  * `{code}` and all, and a handler reads the ids it was called with in `params`.
  *
+ * Beside the API it is **the stand-in photo storage**, at `/storage/`: a face the public surface
+ * answers with is a signed link there, which expires, as the backend's are links into MinIO.
+ *
  * This is the public site's own copy of the club website's stub, and changes on its own.
  */
 
@@ -98,17 +101,34 @@ export function refusal(code: string, field?: string): ErrorBody {
   };
 }
 
+/** Where the stand-in photo storage answers, beside the API as MinIO answers beside the backend. */
+const STORAGE = '/storage/';
+
+/** A photograph the stand-in storage holds. */
+interface StoredFile {
+  readonly bytes: Buffer;
+  readonly type: string;
+}
+
 export class StubBackend {
   private readonly handlers = new Map<string, AnyHandler>();
   private readonly log: Received[] = [];
+  private readonly files = new Map<string, StoredFile>();
+  /** The signatures still good, as `<key>?signature=<n>`: S3's presigned links, which expire. */
+  private readonly signed = new Set<string>();
+  private readonly opened: string[] = [];
+  private signatures = 0;
 
-  private constructor(private readonly server: http.Server) {}
+  private constructor(
+    private readonly server: http.Server,
+    private readonly origin: string,
+  ) {}
 
   static async start(port: number): Promise<StubBackend> {
     const server = http.createServer((request, response) => {
       void stub.handle(request, response);
     });
-    const stub = new StubBackend(server);
+    const stub = new StubBackend(server, `http://127.0.0.1:${port}`);
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject);
       server.listen(port, '127.0.0.1', () => resolve());
@@ -121,10 +141,66 @@ export class StubBackend {
     return new Promise((resolve) => this.server.close(() => resolve()));
   }
 
-  /** Forget every handler and every request: each test starts from nothing. */
+  /** Forget every handler, request and photograph: each test starts from nothing. */
   reset(): void {
     this.handlers.clear();
     this.log.length = 0;
+    this.files.clear();
+    this.signed.clear();
+    this.opened.length = 0;
+  }
+
+  /**
+   * **The stand-in photo storage**: keep a photograph under `key`, outside the contract, as the
+   * backend keeps one in MinIO, always a JPEG. It is reached only by a link {@link signedLink}
+   * mints.
+   */
+  store(key: string, jpeg: Buffer): void {
+    this.files.set(key, { bytes: jpeg, type: 'image/jpeg' });
+  }
+
+  /**
+   * A fresh signed link to a stored photograph, as the backend mints one for each response that
+   * carries a face. It works until {@link expireSignedLinks}, as a presigned link works for
+   * minutes, so whoever keeps one instead of reading again is refused.
+   */
+  signedLink(key: string): string {
+    this.signatures += 1;
+    const signed = `${encodeURIComponent(key)}?signature=${this.signatures}`;
+    this.signed.add(signed);
+    return `${this.origin}${STORAGE}${signed}`;
+  }
+
+  /** Every signed link minted so far stops working: the minutes have passed. */
+  expireSignedLinks(): void {
+    this.signed.clear();
+  }
+
+  /** Every link the storage was opened by, oldest first, as `<key>?signature=<n>`. */
+  storageOpened(): string[] {
+    return [...this.opened];
+  }
+
+  /**
+   * A signed link's photograph, `403` once the link has expired, as S3 refuses one, or `404` when
+   * nothing is stored under the key.
+   */
+  private serveStored(url: URL, response: http.ServerResponse): void {
+    const signed = `${url.pathname.slice(STORAGE.length)}${url.search}`;
+    this.opened.push(signed);
+    const file = this.files.get(decodeURIComponent(url.pathname.slice(STORAGE.length)));
+    if (file === undefined) {
+      response.writeHead(404, { 'content-type': 'text/plain' });
+      response.end('NoSuchKey');
+      return;
+    }
+    if (!this.signed.has(signed)) {
+      response.writeHead(403, { 'content-type': 'text/plain' });
+      response.end('Request has expired');
+      return;
+    }
+    response.writeHead(200, { 'content-type': file.type, 'content-length': file.bytes.length });
+    response.end(file.bytes);
   }
 
   on<P extends Path, M extends MethodOf<P>>(
@@ -165,6 +241,10 @@ export class StubBackend {
 
   private async handle(request: http.IncomingMessage, response: http.ServerResponse) {
     const url = new URL(request.url ?? '/', 'http://stub');
+    if (url.pathname.startsWith(STORAGE)) {
+      this.serveStored(url, response);
+      return;
+    }
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(chunk as Buffer);
     const raw = Buffer.concat(chunks).toString('utf8');

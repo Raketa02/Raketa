@@ -1,0 +1,23 @@
+.owner {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.face {
+  width: var(--size-face);
+  height: var(--size-face);
+  flex: none;
+  border-radius: var(--radius-face);
+  background: var(--colour-rule);
+  object-fit: cover;
+}
+
+.invited {
+  min-width: 0;
+  font-size: var(--text-name);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-tight);
+}

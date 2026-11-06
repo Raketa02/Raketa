@@ -1,7 +1,8 @@
 /**
  * **The test seam's fixtures**: a stub backend per worker, reset before every test and given the
- * fake group directory ({@link FakeGroups}) and the fake credentials ({@link FakeCredentials})
- * whether or not a test names them, so a group or a link nobody seated leads nowhere.
+ * fake group directory ({@link FakeGroups}), the fake credentials ({@link FakeCredentials}) and the
+ * fake friend links ({@link FakeFriendLinks}) whether or not a test names them, so a group or a
+ * link nobody seated leads nowhere.
  *
  * The site under test is started once by `playwright.config.ts`, pointed at {@link STUB_PORT}.
  * The suite runs on one worker because that one server talks to one stub; each test resets it.
@@ -11,6 +12,7 @@ import { expect, test as base } from '@playwright/test';
 
 import { StubBackend } from './stub/backend';
 import { FakeCredentials } from './stub/credentials';
+import { FakeFriendLinks } from './stub/friends';
 import { FakeGroups } from './stub/groups';
 import { STUB_PORT } from './suite';
 
@@ -18,6 +20,7 @@ interface Fixtures {
   stub: StubBackend;
   groups: FakeGroups;
   credentials: FakeCredentials;
+  friendLinks: FakeFriendLinks;
 }
 
 interface WorkerFixtures {
@@ -47,6 +50,12 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
   credentials: [
     async ({ stub }, use) => {
       await use(new FakeCredentials(stub).install());
+    },
+    { auto: true },
+  ],
+  friendLinks: [
+    async ({ stub }, use) => {
+      await use(new FakeFriendLinks(stub).install());
     },
     { auto: true },
   ],

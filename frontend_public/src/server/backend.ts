@@ -18,8 +18,11 @@ import { settle, type FetchResult, type Outcome } from './outcome';
  */
 export type PublicApi = Client<paths>;
 
-/** No call waits longer than this for an answer; past it, the backend counts as unreachable. */
-const TIMEOUT_MS = 10_000;
+/**
+ * No call waits longer than this for an answer; past it, the backend counts as unreachable. A
+ * photograph it signed a link to waits as long (`photos.ts`).
+ */
+export const TIMEOUT_MS = 10_000;
 
 let client: PublicApi | undefined;
 

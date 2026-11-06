@@ -14,13 +14,16 @@ src/
   app/                 routes and layouts only
     join/[code]/       the group page (#525)
     preview/[code]/    the group page's preview image, a route handler
+    f/[code]/          the friend link's page (#755)
+    face/[code]/       its owner's face, the page's picture and its preview image, a route handler
     invite/[token]/    the invitation page (#526)
     reset/[token]/     the reset page, for players and administrators (#526)
     .well-known/       the app-link files, route handlers (#526)
     not-found.tsx      Nothing at that link: every address here is reached by a link
     error.tsx          Something went wrong: the backend failed, which is not a dead link
   instrumentation.ts   refuses to start without the configuration (§6)
-  server/              the only code that reaches the backend or the configuration; `server-only`
+  server/              the only code that reaches the backend, the photographs it signs links to,
+                       or the configuration; `server-only`
   features/<page>/     queries.ts · actions.ts · mappers.ts · schemas.ts · copy.ts · metadata.ts ·
                        preview.tsx · components/
   ui/                  tokens.css, tokens.ts and the primitives
@@ -33,14 +36,16 @@ e2e/                   the Playwright suite and its stub backend (§7)
   `@/server/*` everywhere but `src/server/` itself and a feature's `queries.ts` and `actions.ts`,
   so the backend and the configuration are only ever reached through a query or an action.
 - **A feature is a page, or a part several pages have**:
-  - `group-page`: the group, its preview tags and its preview image;
+  - `group-page`: the group, its preview tags and its preview image, and what a code could be
+    (`schemas.ts`), which a friend link's code is shaped like;
+  - `friend-link`: whose a friend link is, its preview tags, and their face;
   - `invitation` and `password-reset`: reading a link, and what each page says in each state;
   - `set-password`: what both of those pages share: a link's state, the form, its checks and its
     actions;
   - `get-the-app`: the two stores and **Open in Raketa**, which every page about a link offers
     (ADR-0187 §4). A dead link and the error page offer neither: there is nothing there for the
     app to open. It also holds `APP_ROUTES`, the routes the app and this site both answer
-    (`join`, `invite`, `reset`), written once for every link, redirect and claim;
+    (`join`, `f`, `invite`, `reset`), written once for every link, redirect and claim;
   - `app-link-files`: Apple's association file and Android's asset links.
 
   A feature may use another feature's components, schemas, copy and mappers, never its queries
@@ -69,7 +74,11 @@ is nobody to call as. Setting a password signs nobody in, here or anywhere.
 - **No response sets a cookie**, setting a password included, and the suite asserts it.
 - **The browser asks nothing of any other site**: no script, no font, no picture. A link here can
   carry a code or a token, and nothing may carry it off in analytics. The suite watches every
-  request an invitation page makes, through setting the password.
+  request an invitation page makes, through setting the password, and a friend link's page.
+- **A friend link owner's face is fetched by this server, never by the browser.** The backend
+  answers it as a link into its photo storage, signed for minutes (#748); `src/server/photos.ts`
+  fetches it, `no-store`, so Next's data cache writes nothing to disk, and the site serves the
+  picture as its own (`/face/<code>`). The page never carries the signed link.
 - **Every response sends `Referrer-Policy: no-referrer`** (`next.config.ts`), so nothing an
   address carries leaves in a `Referer`. The same headers keep every page out of somebody else's
   frame.
@@ -84,14 +93,14 @@ into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code
 `backend_failed` (an answer with no envelope) and `request_invalid` (any `422`, a bug here).
 Failures that are nobody's doing are logged by code and trace id, never with a payload.
 
-- **Decisions branch on `code`, never on `message`.** `group_not_found` and `credential_not_found`
-  on a read are a dead link; every other failed read throws, and the page says _Something went
-  wrong_ with a 500. A backend that could not be reached never says _Nothing at that link_: that
-  would send away somebody holding a live link.
-- **A code or token in an address is untrusted route input** (ADR-0187 §7). A group code that is
-  not letters and digits, or a token that is not the URL-safe letters the backend mints, leads
-  nowhere without asking the backend, and nothing else is ever put into a link this site draws,
-  the preview's and **Open in Raketa**'s included.
+- **Decisions branch on `code`, never on `message`.** `group_not_found`, `friend_link_not_found` and
+  `credential_not_found` on a read are a dead link; every other failed read throws, and the page
+  says _Something went wrong_ with a 500. A backend that could not be reached never says _Nothing at
+  that link_: that would send away somebody holding a live link.
+- **A code or token in an address is untrusted route input** (ADR-0187 §7). A group's or a friend
+  link's code that is not letters and digits, or a token that is not the URL-safe letters the
+  backend mints, leads nowhere without asking the backend, and nothing else is ever put into a link
+  this site draws, the preview's and **Open in Raketa**'s included.
 - **A token travels in a body**, as the contract has it, so it is in no backend access log. It is
   in this site's own, since it is in the page's address.
 - **A page and its preview tags read once.** `generateMetadata` and the page both ask; the query
@@ -106,6 +115,12 @@ sees (ADR-0187 §4). The suite reads the raw HTML to prove it.
   description where it plays, its sports and its size, and the image its tile. Every address in
   them is absolute and made from `PUBLIC_SITE_URL`, the address people reach the site by. The
   invitation and reset pages have a title and no preview: a credential's page describes nobody.
+- **A friend link's preview** is _Tomek invited you to play on Raketa_, whole, without the site's
+  name after it, over _Tomek wants to be your friend_, beside his face. Somebody with no photograph
+  has no picture, on the page or in the preview: the app's stand-in, a poster, is drawn from an id
+  the public read withholds, and a face carries no initials (ADR-0167 §3). The page asks never to
+  be listed (`noindex, nofollow`): it names somebody and shows their face by a link they can turn
+  off.
 - **They are in `<head>` for every user agent.** `htmlLimitedBots: /.*/` turns off Next's
   streaming of metadata, which would put the tags in the body for any messenger missing from
   Next's list of bots once a page flushes its shell early. Today no page has a loading boundary,
@@ -125,6 +140,13 @@ sees (ADR-0187 §4). The suite reads the raw HTML to prove it.
   only those letters; without a network the letter is missing from the picture.
 - **The image is cached for ten minutes, never for good.** A rename redraws the tile; next/og's
   default is `immutable` for a year.
+- **A friend link owner's face is their photograph, square, 300 px** (`/face/<code>`, outside
+  `/f/`), cut to fill it from the middle, since the backend keeps a photograph's own shape. It is
+  smaller than the tile because a photograph does not shrink as a PNG the way two letters on one
+  fill do. **It is read afresh for every picture**: its own request reads the link again and fetches
+  the photograph by the link that read signed, because a signed link expires within minutes. Cached
+  ten minutes, as the tile, but `private`: no cache in between keeps a person's face, so a New link
+  ends it for everybody but whoever already fetched it.
 
 ## 5. Setting a password by a link
 
@@ -177,10 +199,18 @@ is the app's own scheme, without `://`, and a web or script scheme is refused, s
 Raketa** can only ever open the app.
 
 **The app-link files** (`/.well-known/apple-app-site-association` and
-`/.well-known/assetlinks.json`) are made per request from those settings, as JSON with no
-redirect. Apple's claims `/join/*`, `/invite/*` and `/reset/*` for the app; Android's names the
-app and every key it is signed with, and the paths it takes are the app's own intent filters'
-(#520). Both go live only once a domain exists; locally nothing reads them.
+`/.well-known/assetlinks.json`) are made per request from those settings, as JSON with no redirect.
+Apple's claims `/join/*`, `/f/*`, `/invite/*` and `/reset/*` for the app; Android's names the app
+and every key it is signed with, and the paths it takes are the app's own intent filters' (#520).
+Both go live only once a domain exists; locally nothing reads them.
+
+**The Google Play button carries the page's own link as the install referrer** on the group page
+and the friend link's page (the friends mechanics §4.3): `referrer=<PUBLIC_SITE_URL>/join/<code>`
+or `/f/<code>`, set on `GOOGLE_PLAY_URL` by parsing it, so a setting that does not parse is
+refused at start. Play hands it to the app on its first launch, which opens it as if it had been
+tapped (#756). An iPhone has no such thing, so the App Store button is the listing as it is, and
+the friend link's page says to come back and tap **Open in Raketa**. The invitation and reset
+pages carry nothing: Play keeps a referrer for 90 days, and a token is a credential.
 
 ## 7. The test seam
 
@@ -195,11 +225,16 @@ the two suites can run side by side.
   the backend sends without declaring per route (`422`, `5xx`), and `drop`, which closes the
   connection unanswered. It records every request. An operation is named by its path as the
   contract writes it, `/api/v1/public/groups/{code}`.
-- **The fake group directory and the fake credentials** install the default handlers, keeping the
-  backend's rules: a test seats a group behind a code (`groups.seat`), and an invitation or a
-  reset behind a token (`credentials.invite`, `credentials.reset`); anything nobody seated leads
-  nowhere, and a set spends its link. A test about one reply overrides the operation with
-  `stub.on`.
+- **The fake group directory, the fake credentials and the fake friend links** install the
+  default handlers, keeping the backend's rules: a test seats a group behind a code
+  (`groups.seat`), an invitation or a reset behind a token (`credentials.invite`,
+  `credentials.reset`), and a friend link behind a code (`friendLinks.seat`, `replace`); anything
+  nobody seated leads nowhere, and a set spends its link. A test about one reply overrides the
+  operation with `stub.on`.
+- **The stub is the photo storage too**, at `/storage/`: a seated owner's photograph (a JPEG a
+  test draws in the browser, `e2e/photographs.ts`) is answered as a fresh signed link on every
+  read, which works until the test calls `stub.expireSignedLinks()`, so a site that kept one would
+  be refused. `stub.storageOpened()` is every link it was opened by.
 - **Tests assert what a person, a messenger or the backend would see**: text on the page, the
   status, the tags in the raw HTML's `<head>`, the pixels of the preview image, the headers, and
   the requests that arrived at the stub.
@@ -226,7 +261,8 @@ font from the network. `pnpm test:tokens` fails on a literal anywhere else, and 
 inline `style` everywhere but the preview image. A media query's width is the one literal CSS
 allows no variable for.
 
-**Laid out for phones first**: one white card, the full width less a gutter, that stops growing
-at a narrow column on anything wider. A button that leaves the site (for a store, or for the app)
-is a plain `<a>`: the stores' are filled with ink, as their own badges are, and **Open in
+**Laid out for phones first**: one white card, the full width less a gutter, that stops growing at a
+narrow column on anything wider. A link owner's face stands where a group's tile does, a box rounded
+at a third of its side, as the app rounds a face. A button that leaves the site (for a store, or for
+the app) is a plain `<a>`: the stores' are filled with ink, as their own badges are, and **Open in
 Raketa** is outlined. A form's one button is coral, as the club website's is.

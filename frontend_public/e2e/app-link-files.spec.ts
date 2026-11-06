@@ -7,7 +7,7 @@ import { ANDROID_CERT_FINGERPRINTS, ANDROID_PACKAGE, APPLE_TEAM_ID, IOS_BUNDLE_I
  * path as JSON, with no redirect, since neither Apple nor Android follows one.
  */
 
-test("Apple's association file claims the group, invitation and reset links for the app", async ({
+test("Apple's association file claims the group, friend, invitation and reset links for the app", async ({
   request,
 }) => {
   const response = await request.get('/.well-known/apple-app-site-association', {
@@ -23,6 +23,7 @@ test("Apple's association file claims the group, invitation and reset links for 
           appIDs: [`${APPLE_TEAM_ID}.${IOS_BUNDLE_ID}`],
           components: [
             { '/': '/join/*', comment: 'A group link' },
+            { '/': '/f/*', comment: 'A friend link' },
             { '/': '/invite/*', comment: "An administrator's invitation" },
             { '/': '/reset/*', comment: 'A password reset' },
           ],

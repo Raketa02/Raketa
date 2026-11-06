@@ -33,7 +33,10 @@ export default async function GroupPage({ params }: Props) {
   return (
     <PageCard brand={SITE_COPY.name}>
       <GroupCard group={group} />
-      <GetTheApp links={appLinks(groupRoute(code))} next={GROUP_PAGE_COPY.pasteInstruction} />
+      <GetTheApp
+        links={appLinks(groupRoute(code), { carryThroughInstall: true })}
+        next={GROUP_PAGE_COPY.pasteInstruction}
+      />
     </PageCard>
   );
 }
