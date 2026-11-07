@@ -1,0 +1,55 @@
+Extract for topics/gaps-S-01A-hold.md, written 2026-10-11 by the gaps researcher (S-01A hold round).
+
+## A. tenis4U public grids, read 2026-10-11 12:48 CEST (Sunday)
+Source: GET https://api.tenis4u.pl/occupancy/{id} with header X-Tenis-User-Agent: tenis4u-web-frontoffice/3.6.1, no sign-in, as in the 2026-10-09 and 2026-10-10 extracts.
+Garden Padel (483): 0 station-days with any free hour, of 56 returned (2026/10/11 to 2026/10/24)
+Padel House (480): 0 station-days with any free hour, of 56 returned (2026/10/11 to 2026/10/24)
+Fame Sport Club (104): 0 station-days with any free hour, of 390 returned (2026/10/11 to 2026/11/09)
+Bajada Padel Club (421): 0 station-days with any free hour, of 70 returned (2026/10/11 to 2026/10/24)
+PADEL LOUNGE (407): 0 station-days with any free hour, of 28 returned (2026/10/11 to 2026/10/24)
+Reading: as on 2026-10-10 17:11, the visitor endpoint serves no free hour anywhere, so no new booking curve could be read this round.
+
+## B. Weekday-evening share taken by lead time, computed from the 2026-10-09 08:20 read
+Input: ../shots/gaps-S-01-tenis4u-krakow-padel-occupancy-2026-10-09.txt (17:00-22:00 columns). Days Mon-Thu only.
+Lead 3-6 days = Mon 12 to Thu 15 October; lead 10-13 days = Mon 19 to Thu 22 October. Court-hours not free / sellable.
+club                         | lead 10-13 days      | lead 3-6 days
+Garden Padel                 |  20.5 of  80.0 =  26 % |  53.5 of  80.0 =  67 %
+Padel House                  |  80.0 of  80.0 = 100 % |  80.0 of  80.0 = 100 %
+Fame Sport Club              |  28.5 of  40.0 =  71 % |  35.0 of  40.0 =  88 %
+Bajada Padel Club            |  40.5 of 100.0 =  40 % |  55.0 of 100.0 =  55 %
+PADEL LOUNGE                 |  10.0 of  17.0 =  59 % |  12.0 of  19.0 =  63 %
+All five                     | 179.5 of 317.0 =  57 % | 235.5 of 319.0 =  74 %
+Four, without Padel House    |  99.5 of 237.0 =  42 % | 155.5 of 239.0 =  65 %
+Reading: two different weeks read at one moment, so this is a cross-section, not one hour followed over time; it counts every booking the grid holds (standing weekly slots and classes included).
+
+## C. Playmore's served web app: the open-games calls, 2026-10-11
+Source: the 102 entry bundles referenced by https://playmore.pl/ (index fetched 2026-10-11). The openGames API object lists these calls:
+  GET    /open-games/${t}/contacts
+  GET    /open-games/${t}/result
+  GET    /open-games/${t}/roster
+  GET    /open-games/me/results
+  GET    /open-games/mine
+  GET    /open-games/seek-pool
+  POST   /open-games
+  POST   /open-games/${t}/result
+  POST   /open-games/${t}/result/confirm
+  POST   /open-games/${t}/result/dispute
+  POST   /open-games/${t}/welcome
+  POST   /open-games/signup-complete
+  POST   /open-games/trainer
+No call lists the open games of a club or a city for a visitor; reading every lazy-loaded chunk was not attempted.
+
+## D. Kraków club and booking-system home pages: payment providers named, 2026-10-11 12:4x CEST
+Source: GET https://<domain>/ (one page each, no sign-in); case-insensitive counts of each provider's name in the served HTML.
+  famesport.pl            136501 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  gardenpadel.pl          201994 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  www.squash4you.pl        43851 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  www.atrassquash.pl       79047 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  www.miazgasquash.pl      28628 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  saosports.pl            302656 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  bajada.pl                58101 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  padellounge.pl          227620 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  playmore.pl             967964 bytes  stripe:0 przelewy24:0 tpay:0 payu:0 adyen:0
+  kluby.org               205132 bytes  stripe:0 przelewy24:2 tpay:0 payu:1 adyen:0
+  padelhouse.pl: no page served. app.tenis4u.pl: a 1,960-byte app shell, not counted.
+Reading: a home page rarely names the gateway; the providers in use come from the clubs' and systems' terms (see the topic file).

@@ -1,0 +1,122 @@
+Extracts for topics/gaps-payments-02.md, read 2026-10-20 by the payments-pass Researcher (gaps mode).
+Each line: the published bundle file it was read from, then the exact text or code. Bundles are served to every visitor (no sign-in).
+
+## A. Playmore player web app (https://playmore.pl/assets/<file>), 1,709 script files crawled from the home page
+C9ye8j_u.js | rule = Gracie, jeśli do potwierdzenia nikt się nie wypisze. Gdy ktoś się wypisze i nikt nie zajmie jego miejsca, odwołamy grę, a całe wpisowe wróci na portfel Playmore.
+C9ye8j_u.js | body = Jeśli do {cutoff} nikt nie zajmie Twojego miejsca, gra zostanie odwołana dla całego składu. Pozostali dostaną wtedy zwrot całego wpisowego na portfel Playmore.
+C9ye8j_u.js | sheetBodyConfirmed = Gra się odbędzie. Do zobaczenia na korcie!
+C9ye8j_u.js | confirmedHint = Skład tej gry jest już zamknięty.
+C9ye8j_u.js | roster = {count}/{limit} · skład potwierdzony
+C9ye8j_u.js | refundLate = Termin bezpłatnego odwołania minął — za Twoje miejsce nic nie wróci.
+C9ye8j_u.js | refundLateIfCancelled = Termin bezpłatnego odwołania minął — wpisowe za Twoje miejsce wróci tylko wtedy, gdy gra się nie odbędzie.
+C9ye8j_u.js | leaveOnly = Gra ma komplet, a termin bezpłatnego odwołania minął — nie odwołasz jej już wszystkim, bo reszta składu na nią liczy. Możesz się wypisać.
+C9ye8j_u.js | freeCancel = Do {hours} h przed startem wypiszesz się ze zwrotem całego wpisowego; później wpisowe przepada (anulacja nie na czas).
+C9ye8j_u.js | complete = Gra dochodzi do skutku tylko w komplecie - bez kompletu odwołujemy ją automatycznie, a całe wpisowe wraca na portfel Playmore.
+CuTXkj_H.js | lateLeaveRefund = Termin bezpłatnego wypisania minął, więc wpisowe na razie przepada. Jeśli gra nie zbierze składu albo odwoła ją klub, całe wpisowe wróci do Ciebie.
+CuTXkj_H.js | modalNote = To gra otwarta: zwalniasz miejsce, a gra bez kompletu odwoła się automatycznie — pozostali zapisani dostaną wtedy zwrot całego wpisowego na portfel Playmore.
+CuTXkj_H.js | pendingTitle = Rozliczymy to po terminie gry
+CuTXkj_H.js | pendingDetail = O tym, czy środki wrócą po odwołaniu po terminie, decyduje regulamin klubu. Rozliczenie idzie w nocy po terminie rezerwacji — wtedy zobaczysz wynik w portfelu.
+CuTXkj_H.js | noneLateTitle = Odwołanie po terminie — opłata zostaje w klubie
+CuTXkj_H.js | noneLateDetail = Zgodnie z regulaminem obiektu rezerwacja odwołana po terminie nie podlega zwrotowi.
+CuTXkj_H.js | clubRefundTitle = Zwrot {amount} realizuje klub
+CuTXkj_H.js | clubRefundDetail = Płatność online trafiła prosto do klubu, więc to klub oddaje pieniądze na Twoją kartę lub konto. W sprawie zwrotu skontaktuj się z recepcją. Opłata serwisowa nie podlega zwrotowi.
+CuTXkj_H.js | clubRefundOrderedTitle = Zleciliśmy zwrot {amount} na Twoją kartę lub konto
+CuTXkj_H.js | clubRefundOrderedDetail = Zwrot idzie tą samą drogą co płatność. Bank księguje go zwykle w ciągu kilku dni roboczych.
+
+Code:
+DNDBLHel.js (outcome card source) | var c=new Set(["wallet","club_refund","carnet","carnet_entry","pending","none","venue"]),y="cancelled",u="cancelled_not_on_time",f=new Set(["wallet","carnet","carnet_entry"]),p=new Set(["wallet","club_refund","carnet"]);function m(n){const e=l(n);return e?i(e.raw,e.isLateCancel):null}function l(n){const e=n??{},t=String(e.cancellation_status??"").trim();if(t!==y&&t!==u||String(e.payment_status??"").trim()!=="paid")return null;const a=e.cancellation_refund;return!a||typeof a!="object"||Array.isArray(a)?null:{raw:a,isLateCancel:t===u}}function i(n,e){if(!n||typeof n!="object"||Array.isArray(n))return null;const t=String(n.destination??"").trim().toLowerCase();if(!c.has(t))return null;const a=o
+BcrPl5q_.js (card drawn only for the owner) | nction,default:null}},setup(e){const t=e,{t:a,locale:s}=T(),r=m(()=>t.isOwner?No(t.reservation):[]),i=c=>X(c,s.value,t.c
+BcrPl5q_.js (leave press) | ed:v,isFreeCancellation:d,showCancellationConfirm:()=>{u.value=!0},confirmCancellation:async y=>{try{t.value=!0;const{reservationId:b,venueId:k}=s.params,w=typeof y?.split_liable=="string"?y:void 0,x=await H.users.deleteUserReservation(b,w);o("reservation_canc
+DKpNMi8e.js (leave request) | async deleteUserReservation(a,t){return(t&&typeof t=="object"?await e.delete(`/reservation/${a}`,{params:t}):await e.delete(`/reservation/${a}`)).data},async ge
+DKpNMi8e.js (organiser cancels for all) | async cancel(a,t,{confirmedPlayers:r,reasonCode:n}={}){const s={...Number.isInteger(r)&&r>=0?{confirmedPlayers:r}:{},...typeof n=="string"&&n!==""?{reasonCode:n}:{}};return(await e.delete(`/open-games/${t}`,{...Te(a),...Object.keys(s).length>0?{data:s}:{}})).d
+BXfZGVTf.js (late-leave refund line shown) | function P(e){if(e?.lateLeaveRefund!==!0)return!1;const{count:t,limit:r}=i(e);return r>0&&t<r}export{C as a,y 
+CvcDIatB.js (organiser sheet line) | e.isFreeCancellation?"refundFree":e.lateLeaveRefund?"refundLateIfCancelled":"refundLate"}`
+CvcDIatB.js (reschedule refusals) | Se={OPEN_GAME_RESCHEDULE_FAILED:"generic",OPEN_GAME_RESCHEDULE_DISABLED:"notAllowed",OPEN_GAME_RESCHEDULE_FEE_CHANGED:"feeChanged",OPEN_GAME_SLOT_TAKEN:"slotTaken",OPEN_GAME_PRICE_UNAVAILABLE:"slotTaken",OPEN_GAME_TOO_SOON:"tooSoon",OPEN_GAME_TOO_FAR_AHEAD:"to
+CWQZrcVT.js (cancel-for-all refusals) | p={OPEN_GAME_NOT_OWNER:"reservations.openGames.cancel.errors.notOwner",OPEN_GAME_ALREADY_STARTED:"reservations.openGames.cancel.errors.alreadyStarted",OPEN_GAME_NOT_CANCELLABLE:"reservations.openGames.cancel.errors.notCancellable",OPEN_GAME_CANCEL_FAILED:"reservations.openGames.cancel.errors.generic",OPEN_GAME_LATE_FULL_LEAVE_ONLY:"reservations.openGames.organizerExit.leaveOnlyCancel"}
+C9ye8j_u.js | leaveOnlyCancel:"Pełnej gry po terminie bezpłatnego odwołania nie odwołasz już wszystkim. Możesz się z niej wypisać — odwołaj swoją rezerwację, a organizację przejmie kolejna osoba ze składu."
+
+Feature-flag registry shipped in BlUiZcxz.js (Playmore's own notes, Polish):
+open-game-waitlist | Lista rezerwowa na pełnej grze otwartej (E3.6a, PLA-4828), klient listy zajęć Xano (PLA-496): osoba spoza składu widzi na karcie pełnej gry „Na rezerwie czeka {n} os.” i przycisk „Zapisz się na rezerwę”, to samo w arkuszu podglądu B1 w stanie `full` (tylko gra otwarta; potwierdzona po cut-offie nie ma „Dołącz”, więc nie ma też listy); po zapisie „Jesteś na liście rezerwowej · czeka {n} os.” i „Zrezygnuj z rezerwy”. Zdanie o zasadzie: „Gdy zwolni się miejsce, powiadomimy wszystkich z listy naraz — kto pierwszy, ten gra.” (bez pozycji w kolejce). Payload {venueIds:[…]} zawęża do klubów GRY. Od 10.10.2026 (PLA-6092) payload bez `venueIds` = każdy klub z włączonymi grami (pozostałe klucze payloadu zostają); stan „przed” do wycofania w PLA-6095.
+open-game-waitlist why | 3 z 10 kompletów, które się nie odbyły, padły po wypisaniu bez dosadzenia; lista w Xano działa dla gier, a player jej nie pokazywał. Fail-closed (=== true, openGameWaitlistFlag.js): nierozstrzygnięta flaga (ładowanie, PostHog zablokowany, błąd) daje dzisiejszą pełną kartę bez akcji; panel i jego odczyty (sonda /seats, własne wpisy, własne rezerwacje) montują się dopiero za bramką. Kluby sandbox 13 i 121 zawsze ON w kodzie (isSandboxVenue). Payload {"venueIds":[13]} (pusty klucz = wszystkie kluby, uszkodzony = nigdzie). Rampa 20.10.2026 00:00 (Warszawa): payload {"venueIds":[13,136,140,180]} bez deployu — start produktu E3 (dźwignia Ac, poza oknem baseline\'u 26.09–09.10), pod warunkiem że link Xano `/reservation/{venue}/open-games?classId=` (PLA-4830a) jest już na v1 (inaczej powiadomienie „zwolniło się miejsce” otwiera listę zajęć) i że kluby mają „Class waitlist enabled” (sprawdzić w Managerze albo na kopii bazy). Licznik z `waitlistCount` karty ligi (PLA-4829a), bez niego sonda /seats. Zdarzenia: open_game_waitlist_joined / _left / _join_failed / _promoted (zamiast class_waitlist_converted) w OPEN_GAME_FUNNEL i open_game_filled_card_action{action: waitlist}; wolumen i cięcie: docs_internal/posthog-event-budget.md, sekcja E3.6a. Moment ankiety: brak, wyjątek od §10 zatwierdzony w PLA-4743 (#16); ankiety zajęć classWaitlistJoinSurvey dla gier nie odpalamy. Flaga założona w PostHogu 26.09 (id 289242) na 100% z payloadem {"venueIds":[13]}. QA: ?openGameWaitlist=1 wymusza, =0 w
+class-waitlist-queue | „Lista rezerwowa 2.0” w playerze (PLA-6474, faza 1): na liście rezerwowej zajęć gracz widzi swoje miejsce w kolejce („Jesteś 3. w kolejce”) zamiast samej długości listy, a pełny turniej (americano, mexicano, hell_and_heaven, knockout) dostaje przycisk „Zapisz się na listę rezerwową” zamiast wyłączonego „Lista pełna”. Faza 3: zakładka „Listy rezerwowe” na ekranie „Obserwowane” (wpisy ze wszystkich klubów, oferta, miejsce w kolejce, rezygnacja). Payload {venueIds:[…]} zawęża do klubów.
+class-waitlist-queue why | Klub w trybie „queue” (ustawienie Xano `Class waitlist mode`) proponuje zwolnione miejsce po kolei: pierwsza osoba dostaje je na wyłączność na określony czas (liczy liga, moduł class-watch), a reszta czeka. Flaga przełącza wyłącznie NOWE powierzchnie playera: numer w kolejce i listę rezerwową na turniejach (bramka `=== true` w src/views/reservations/venueGroupClasses/lib/classWaitlistQueueFlag.js; nierozstrzygnięty PostHog = zachowanie sprzed zmiany). Celowo NIE za flagą: panel oferty („Miejsce czeka na Ciebie do 14:30” · „Biorę” / „Nie tym razem”), przepuszczenie przez bramkę pełnych zajęć i komunikaty o przegapionej ofercie — miejsce trzyma backend bez względu na flagę, więc osoba z ofertą musi móc je wziąć albo oddać zawsze. Payload {"venueIds":[…]} (pusty klucz = wszystkie kluby, uszkodzony = nigdzie). Włączać razem z ustawieniem klubu `queue` w Xano i klubem na liście ligi (CLASS_WATCH_VENUE_IDS) — bez nich backend i tak rozsyła powiadomienia do wszystkich naraz, a numer w kolejce niczego nie obiecuje. Zdarzenia: class_waitlist_offer_seen / _taken_tapped / _declined / _decline_failed. Zakładka „Listy rezerwowe” w „Obserwowane” (src/modules/userNotifications/composables/useObservedTabs.js + useObservedTabAccess.js) nie ma własnego klubu: pokazuje się, gdy któryś z klubów gracza (aktywne profile klubowe, jak useSeekAvailability) jest w payloadzie — albo gdy gracz już czeka na jakiejś liście (jeden odczyt na sesję, tylko gdy pilot działa, a kluby gracza są poza nim). Bez ob
+open-game-organizer-leave | Arkusz wyjścia organizatora: wypisz się z przekazaniem roli zamiast odwołania gry. Organizator gry, w której jest ktoś poza nim, ma jedno wejście „Zrezygnuj z gry” (szczegóły rezerwacji, karta w feedzie klubu) → „Co chcesz zrobić?”: pierwsza opcja „Wypisz się — gra zostaje” (zwykła rezygnacja z własnej rezerwacji; organizację przejmuje najwcześniej zapisany — liga, roster watch, ≤ 5 min), druga „Odwołaj grę wszystkim” → modal z liczbą graczy („Tak, odwołaj grę {n} graczom”), liczba jedzie do ligi jako `confirmedPlayers`. Organizator sam w składzie: dzisiejszy modal.
+
+## B. Playmore club panel (https://manager.playmore.pl/assets/<file>), 482 script files crawled from its sign-in page
+open-games-CtT_Xj4X.js | hint = Gry otwarte tworzą wyłącznie gracze w aplikacji — recepcja niczego nie obsługuje. Ty tylko włączasz funkcję i ustalasz zasady.
+open-games-CtT_Xj4X.js | description = Komplet graczy = gra potwierdzona i opłacona. Brak kompletu przed startem = automatyczna anulacja, pełne zwroty i wolny kort.
+venue-settings-OPJNS5u4.js | description = Gracze sami tworzą otwarte gry i szukają partnerów w aplikacji. Tutaj ustawiasz zasady obowiązujące w Twoim obiekcie — recepcja nie tworzy gier otwartych, tylko je przegląda i w razie potrzeby anuluje z grafiku.
+venue-settings-OPJNS5u4.js | hint = Jeśli na tyle godzin przed startem nie zbierze się komplet, gra zostanie automatycznie anulowana, a wpisowe zwrócone. Zakres 1–48.
+venue-settings-OPJNS5u4.js | hint = Do tylu godzin przed startem gracz może wypisać się z gry bez kosztów. Zakres 0–72.
+venue-settings-OPJNS5u4.js | recommendation = Zalecamy 12 h: przy 24 h gracze częściej tracą wpisowe i rzadziej zakładają kolejne gry.
+venue-settings-OPJNS5u4.js | v =  godz.), inaczej zmiana nie zostanie zapisana. Dzięki temu nikt nie wypisze się bezpłatnie z gry, którą Playmore już potwierdził, a klub nie dopłaca za zwolnione miejsce.
+venue-settings-OPJNS5u4.js | cancelled = Gra otwarta odwołana
+venue-settings-OPJNS5u4.js | description = Automatycznie powiadamiaj inne aplikacje, gdy w klubie coś się dzieje — np. nowa rezerwacja czy wynik meczu. Działa z Zapier, n8n lub własnym serwerem.
+venue-settings-OPJNS5u4.js | description = Nie trafiają do klienta — idą na numer lub adres recepcji, do trenera albo do pracownika, którego dotyczy sprawa.
+venue-settings-OPJNS5u4.js | reservation_with_trainer_cancelled = Nie idzie do klienta: SMS do trenera przypisanego do rezerwacji oraz na numer SMS recepcji, gdy taka rezerwacja zostanie anulowana — obojętnie przez kogo i niezależnie od opłacenia.
+venue-settings-OPJNS5u4.js | group_class_spot_freed_reception_alert_sms = Nie idzie do klienta: SMS na numer recepcji, gdy klient odwoła w aplikacji zapis na zajęcia grupowe i nie zostaje na nich już żaden uczestnik.
+venue-settings-OPJNS5u4.js | reception_user_resignation_notification = Nie idzie do klienta: e-mail dla recepcji, wysyłany natychmiast, gdy klient sam zrezygnuje z kursu w aplikacji.
+calendar-DawkByxO.js | cancelledBySystem = Anulowane automatycznie przez system
+calendar-views-D40b467p.js (automatic-cancellation reasons in a booking's history) | var uPe={auto_cancel_payment_timeout:`paymentTimeout`,auto_cancel_online_payment_timeout:`onlinePaymentTimeout`,stripe_payment_not_started:`onlinePaymentNotStarted`,carnet_insufficient:`carnetInsufficient`,carnet_balance_changed:`carnetBalanceChanged`,wallet_balance_changed:`walletPaymentRefused`,wallet_sheet_not_applicable:`walletPaymentRefused`,wallet_amount_recheck_failed:`walletPaymentRefused`,court_deleted_refund_failed:`courtDeleted`,og_seat_resold:`openGameSeatResold`}
+calendar-DawkByxO.js (their labels) | walletPaymentRefused:{t:0,b:{t:2,i:[{t:3}],s:`płatność z portfela została odrzucona`}},courtDeleted:{t:0,b:{t:2,i:[{t:3}],s:`kort został usunięty`}},openGameSeatResold:{t:0,b:{t:2,i:[{t:3}],s:`miejsce w grze otwartej zostało odsprzedane`}}}
+calendar-DawkByxO.js | v = Zwrot po stronie klubu: 
+calendar-DawkByxO.js | description = Klient zapłacił online, a pieniądze trafiły prosto na konto klubu. Rezerwacja została odwołana w terminie, więc zwrot robi klub — przelewem albo na miejscu. Playmore go nie zleca. Klient widzi w aplikacji, że o zwrot ma się zgłosić do recepcji. Opłata serwisowa nie podlega zwrotowi.
+calendar-DawkByxO.js | v = Automatyczny zwrot przez Stripe: 
+calendar-DawkByxO.js | description = Rezerwacja została odwołana w terminie, więc Playmore zlecił zwrot tą samą drogą, którą klient zapłacił (kartą albo inną metodą płatności). Pieniądze zejdą z salda klubu w Stripe. Z tą kwotą recepcja nie musi nic robić.
+reports-Ct22FugR.js | clubRefundsNote = Pozycje „Rezerwacja – anulowana, zwrot po stronie klubu” to rezerwacje opłacone online i odwołane w terminie. Klub oddaje klientowi pełną wpłatę sam. Prowizja Playmore została pobrana przy płatności i jest ujęta w sumach oraz na fakturze.
+venue-settings-OPJNS5u4.js | step1 = Kliknij „Połącz ze Stripe” — przeniesiemy Cię na bezpieczną stronę logowania Stripe.
+venue-settings-OPJNS5u4.js | step2 = Zaloguj się swoim kontem Stripe i autoryzuj dostęp dla Playmore.
+venue-settings-OPJNS5u4.js | usesStripeDescription = Jeśli gracze nie mogą zapłacić online albo chcesz podłączyć inne konto Stripe, połącz konto przyciskiem poniżej. Po zmianie konta wcześniejsze płatności i ich zwroty zostają na poprzednim koncie.
+venue-settings-OPJNS5u4.js | description = Stripe nie pozwala jeszcze temu kontu przyjmować płatności, więc nie włączyliśmy płatności przez Stripe. Sprawdź w panelu Stripe, czego brakuje, i połącz konto ponownie.
+growth-CeB9gCIc.js | s = Wypłaty idą prosto na Twoje konto Stripe
+
+## C. Playtomic Android 6.94.0 (com.playtomic, XAPK from APKPure, 2026-10-20): base and config.en resources.arsc, strings matched by pattern
+Card adding and errors:
+  'Add a card'
+  'Add a payment card'
+  'Add card'
+  'Add credit/debit card'
+  'Add new card'
+  'Add payment card'
+  'Added card'
+  'Card added'
+  'EEThere was an error processing your card -- try again in a few seconds'
+  'Invalid card number'
+  'ttAdd balance to your account and enjoy advantages such as promos and discounts or bookings with no credit card needed'
+  'xxAdd balance to your account and enjoy advantages such as promos and discounts or reservations with no credit card needed'
+Any "limit / maximum / too many / attempts" string: 'Groups limit'; 'Took the first set and pushed it to the limit'; 'Play without limits with your friends and new people around you'; 'Select the maximum search distance'; 'You reached the maximum of members'; 'Too many follow actions. Try again later.'; 'https://playerhelp.playtomic.com/hc/en-gb/articles/19831696399633-Subscription-Unlimited-Plan'; 'Character limit exceeded %1$d of %2$d'; 'Less is more, %1$s characters maximum'; 'The maximum level you can obtain in the initial form is %1$s'; 'Stripe Technology Europe Limited ("Stripe") has acquired the claim for payment. Therefore your payment will be made to Stripe.'; 'Two sets, zero doubts! Maximum control out there.'; 'autoLimit'; 'ffGet to know yourself better as a player and improve with advanced statistics from Playtomic Unlimited.'; 'limitBoundsTo'; 'Limited offers'; 'NNYou reached the limit of 200 members.'; 'ooYou already have a priority alert created. Upgrade to Premium to create unlimited alerts and never miss a match'; 'ooYou reached the limit of 100 groups created'; 'Stripe Technology Europe Limited ('; 'Too many options?'; 'TTYour money will be refunded via the payment method in a maximum of 2-10 working days'; 'UNLIMITED'
+Transactions:
+  'All transactions'
+  'All transactions you make will be displayed here.'
+  'Confirming transaction'
+  'Difficult transaction'
+  'EEprofile_menu_payments_transactions_pending_payments_alert_description'
+  'Payment history'
+  'Payment methods, transactions, Club Memberships...'
+  'Payment methods, transactions, club memberships...'
+  'Smooth transaction'
+  'Transaction complete'
+  'Transactions'
+  't have any transactions'
+Removing a method:
+  'Are you sure you want to remove this card?'
+  'Are you sure you want to remove this credit card?'
+  'If you decide to cancel one of the places, both will be removed. The amount will be refunded to the original payment method.'
+  'Remove card'
+  'Remove card?'
+  'Remove payment method'
+  'SSThis payment method will be removed but will remain available for %s subscriptions.'
+  'payment_methods_remove_credit_card_confirmation_message'
+  'payment_methods_remove_credit_card_confirmation_title'
+  'payment_methods_remove_credit_card_remove_button'
+  'stripe_paymentsheet_remove_card'
+  'stripe_paymentsheet_remove_card_title'
+  'stripe_wallet_remove_card_confirmation'
+  't need to confirm each payment, as the club will charge your saved card when needed. You can manage or remove your saved cards anytime.'
+
+## D. Padel Mates web strings (https://padelmates.se/locales/en/translation.json)
+findReplacementSpotDescription = 'To find a replacement, copy the link below and share it. If someone joins using this link, you will be automatically removed from the activity and receive a refund within '
+cancelWithoutRefund = 'Cancel without a refund'
+rel.4.t = 'Stripe integration for payouts'
+rel.4.d = 'April 2, 2026'
+rel.4.b = 'Clubs can now handle payouts and refunds directly through Stripe — faster and more secure.'

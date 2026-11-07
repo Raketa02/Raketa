@@ -1,0 +1,23 @@
+- [`areas/POSTGRID.md`](../areas/POSTGRID.md) — digest for Post a game: the doors, the controls, the WHEN grid and a cell's sheet (R-POSTGRID-1 to R-POSTGRID-40): what Playtomic, the other platforms and the status quo do, and what each side complains about. Written 2026-10-08 from the topic files and `games-and-fill-in-market.md` (§7.5, §7.7, S02-G14, S03-G16, S04-G1, S04-G5, S05-G-1/2/8/13/14, S08-G1); 57 cited lines, 15,0k characters. Sections:
+  - `#1-the-way-in-and-what-the-poster-chooses-r-postgrid-1-r-postgrid-3-r-postgrid-39`
+  - `#2-sport-and-kind-r-postgrid-4-to-r-postgrid-8`
+  - `#3-who-anyone-men-women-mixed-pairs-r-postgrid-9-to-r-postgrid-11`
+  - `#4-the-level-range-r-postgrid-12-to-r-postgrid-14`
+  - `#5-the-when-grid-two-weeks-three-ranges-a-count-per-cell-r-postgrid-15-to-r-postgrid-17-r-postgrid-19-r-postgrid-22-r-postgrid-23-r-postgrid-26`
+  - `#6-who-counts-as-one-of-her-best-fits-r-postgrid-18`
+  - `#7-free-courts-and-the-cells-sheet-r-postgrid-20-r-postgrid-21-r-postgrid-27-to-r-postgrid-32`
+  - `#8-already-happening-here-and-joining-from-the-sheet-r-postgrid-24-r-postgrid-33-to-r-postgrid-35`
+  - `#9-pressing-post--youre-in-r-postgrid-25-r-postgrid-36-r-postgrid-38`
+  - `#gaps-for-the-gaps-round` (R-POSTGRID-3, R-POSTGRID-9/10/11, R-POSTGRID-15, R-POSTGRID-17/19)
+- [`areas/POST.md`](../areas/POST.md) — digest for the post itself: its refusals, Challenges, joining it, withdrawing and its book-by (R-POST-1 to R-POST-35). Written 2026-10-08 from the topic files and `games-and-fill-in-market.md` (§7.5, §7.7, S03-G16, S05-G-8/14, S08-G1); 62 cited lines, 15,2k characters. Sections:
+  - `#1-posting-is-her-yes-and-nothing-is-charged-until-it-fills-r-post-1-to-r-post-3-r-post-35`
+  - `#2-what-may-refuse-a-post-r-post-4-to-r-post-7-r-post-33`
+  - `#3-who-and-the-level-range-stay-on-the-post-r-post-8-to-r-post-11-r-post-15`
+  - `#4-who-it-goes-to-versions-and-staying-dealt-r-post-12-r-post-13`
+  - `#5-the-challenge-and-who-is-told-r-post-14-r-post-16-r-post-18`
+  - `#6-withdrawing-and-other-ways-her-yes-leaves-r-post-17-r-post-19-to-r-post-23`
+  - `#7-joining-a-post-from-the-sheet-r-post-24-to-r-post-27`
+  - `#8-the-book-by-a-post-that-doesnt-fill-r-post-28-to-r-post-30`
+  - `#9-the-post-fills-or-loses-its-court-r-post-31-r-post-32`
+  - `#10-situations`
+  - `#gaps-for-the-gaps-round` (R-POST-4, R-POST-9/21, R-POST-12/13, R-POST-22/25/26, R-POST-27, R-POST-29, R-POST-30)

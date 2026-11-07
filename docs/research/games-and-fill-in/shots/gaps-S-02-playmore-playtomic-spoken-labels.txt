@@ -1,0 +1,41 @@
+Spoken labels of seat counts and badges in Playmore's web app (the code its phone apps load), as served by https://playmore.pl/ on 2026-10-10
+(entry assets/index-l-ePYLJ-.js, 1,419 bundles reachable), and in Playtomic's Android app 6.93.2 (APKPure copy of 2026-10-08, decompiled
+with jadx 1.5.1 by the NOTIFY gaps round; App Store version on 2026-10-10 is also 6.93.2). Read by the gaps researcher, S-02 round.
+
+== Playmore: Polish strings, https://playmore.pl/assets/E4x38PLO.js (reservations.openGames.card.*)
+:"Dołącz",price:"{fee} {currency}",perPerson:"za osobę",organizedBy:"Organizuje {name}",missing:{one:"brakuje {count} gracza",few:"brakuje {count} graczy",many:"brakuje {count} graczy",other:"brakuje {count} graczy"},lastSpot:"Ostatnie miejsce",full:"Komplet",seatsA11y:"{count} z {limit} graczy, brakuje {missing}",seatsA11yFull:"{count} z {limit} graczy, komplet",yourGame:"Twoja gra",newG
+
+== Playmore: the seat meter component OpenGameSeatsMeter, https://playmore.pl/assets/mFrbX9po.js
+c=f(()=>{const{count:v,limit:m,missing:d,isFull:g}=s.value;return g?t("reservations.openGames.card.seatsA11yFull",{count:v,limit:m}):t("reservations.openGames.card.seatsA11y",{count:v,limit:m,missing:d})});return(v,m)=>s.value.limit>0?(p(),h("div",zc,[y("div",{"data-testid":"seats-meter",role:"img","aria-label":c.value,class:"flex h-1.5 w-24 shrink-0 gap-1"},[o.value?(p(!0),h(j
+... the visible line's wrapper:
+Dc=["aria-label"]
+Mc={class:"text-sm text-gray-600 dark:text-gray-300","aria-hidden":"true"}
+y("span",Mc,[y("span",jc,b(s.value.count)+"/"+b(s.value.limit),1),s.value.isLastSpot?G("",!0):(p(),h(j,{key:0},[U(" · "+b(u.value),1)],64))]),s.value.isLastSpot?(p(),h("span",Bc,b(n(t)(
+
+== Playmore: navigation strings, https://playmore.pl/assets/ntkaKkR_.js
+notificationCenter:{label:"Skrzynka powiadomień",unread:"nieprzeczytane: {count}"},themeToggle:{toLight:"Przełącz na tryb jasny",toDark:"Przełącz na tryb ciemny"},language:{label:"Zmień ję
+
+== Playmore: bottom tab item BottomTabItem, https://playmore.pl/assets/index-l-ePYLJ-.js
+"aria-hidden":"true","data-testid":"tab-badge"
+d=R(()=>c.value>9?"9+":String(c.value)),p=R(()=>c.value>0?`${n(r.tab.labelKey)}, ${n("nav.tabs.badgeCount",{count:c.value})}`:n(r.tab.labelKey));function v(I,N){if(m.path===r.tab.path){I.pr
+
+== Playmore: the bell, https://playmore.pl/assets/CZeoPNe3.js
+u=a(()=>t.value>0?`${e("nav.notificationCenter.label")}, ${e("nav.notificationCenter.unread",{count:t.value})}`:e("nav.notificationCenter.label"));return l(o,c=>c?i():void 0,{immediate:!0}
+m(()=>o.value?i():void 0,3e4)
+
+== Playtomic Android 6.93.2: tab bar (com.playtomic.mozart.managers.navigation.tabbar)
+TabBarActivity.m(): tabs are added as plain menu items with a title only:
+    menuItem = menu.add(0, 0, i, b != null ? getString(b.intValue()) : null);
+Badge.java: the tab badge is Playtomic's own view, a RelativeLayout holding one TextView (10 sp, bold, white on badge_background_16),
+added into the tab's BottomNavigationItemView by TabBarNavigationManager:
+    Badge r7 = (Badge) r6.findViewById(Badge.c); if (r7 == null) { r7 = new Badge(context); r7.setId(Badge.c); r6.addView(r7); }
+    ((TextView) r7.f24217a.getValue()).setText(count);
+No setContentDescription / importantForAccessibility call in Badge.java, TabBarActivity.java or TabBarNavigationManager.java.
+Material's NavigationBarItemView (same package): setTitle(title) -> setContentDescription(title) when the menu item has none;
+onInitializeAccessibilityNodeInfo appends ", " + badge text ONLY for Material's own BadgeDrawable (field a1):
+    if (badgeDrawable != null && badgeDrawable.isVisible()) { ... setContentDescription(title + ", " + this.a1.f()); }
+Playtomic's own content-description strings in its table: back_navigation_icon_content_description "Back navigation icon",
+close_modal_icon_content_description "Close modal icon", open_play_onboarding_hero_a11y "Players rotating positions on a court";
+the others (mtrl_badge_content_description "%d new notification | %d new notifications", ...) belong to Material and Braze.
+Card texts a reader hears as written: match_list_warning_few_seats "Hurry up! Only %1$s place/s available",
+match_list_warning_min_few_seats "%1$s places left to confirm the match".

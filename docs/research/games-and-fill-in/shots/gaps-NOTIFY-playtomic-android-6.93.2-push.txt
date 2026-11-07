@@ -1,0 +1,75 @@
+Playtomic Android 6.93.2 (com.playtomic, XAPK from APKPure, 2026-10-08). Evidence for topics/gaps-NOTIFY.md. Strings from base/config.en resources.arsc (key<TAB>English text); code paths from a jadx 1.5.1 decompile of the same package (class names as shipped).
+
+## Push permission asks (strings)
+activity_notifications_modal_add_location_button	Add my location
+activity_notifications_modal_dont_ask_again_checkbox	Don’t ask me again
+activity_notifications_modal_not_now_button	Not now
+activity_notifications_modal_subtitle	Add the location to your profile for efficient, accurate, and relevant notifications.
+activity_notifications_modal_title	Want to know when your friends are playing nearby?
+not_now	Not now
+open_device_settings	Open device settings
+push_banner_description	Click here to get instant alerts, direct messages, and match updates!
+push_banner_title	Turn on Notifications
+push_denied	Turn on Notifications
+push_denied_action	Get important match updates, personal messages and last-minute reminders when you turn on notifications
+push_popup_description	Enable notifications to receive alerts, last minute deals and discounts. Do you want to activate them now?
+push_popup_title	Notifications
+
+## Push permission asks (code)
+- com.playtomic.modules.home.presenter.HomeTabPresenter, on Home tab viewLoad: unless key-value 'onboarding_finish_notification_permission' is TRUE, and when 'notification_permission_prompt_count' >= 1 (NotifPermissionPromptDisplayControl default threshold 1) and status != authorized, calls INotificationManager.h(push_popup_title, push_popup_description, ...). Otherwise increments 'notification_permission_prompt_count' (once per presenter) and returns.
+- com.playtomic.general.manager.notification.PermissionBridgeNotificationManager.h(): Android < 13 -> authorized (no ask). notDetermined -> pre-prompt then system request. denied -> DialogIntent(title=push_denied 'Turn on Notifications', message=push_denied_action, buttons yes / not_now); yes opens the system settings. Gated by a static boolean f (initially true).
+- Settings > Notifications screens (NotificationSettingsViewState / ProfileMenuSettingsNotificationsViewState) carry showNotificationPermissionBanner and a PromptNotificationsPermissions action.
+
+## Android channels (code)
+- com.playtomic.modules.local_notification.LocalNotificationCategory: general / chat / social(rawValue notificationCenter); getChannelImportance() returns 4 (IMPORTANCE_HIGH) for all.
+local_notification_chat_description	Chat notifications
+local_notification_chat_name	Chat
+local_notification_general_description	General notifications
+local_notification_general_name	General
+local_notification_social_description	Community notifications
+local_notification_social_name	Community
+
+## Inbox and unread (strings + code)
+inbox_chats_option_title	Chats
+inbox_clubs_updates_option_title	Clubs
+inbox_notifications_option_title	Notifications
+inbox_title	Inbox
+social_notifications_activity_title	Activity
+social_notifications_alert_last_minute_cancellation	<b>Last minute cancellation</b> for <b>%1$s</b>
+social_notifications_alert_last_spot	<b>Last available spot</b> for <b>%1$s</b>
+social_notifications_empty_title	No new notifications
+social_notifications_like_multiple	<b> %1$s and %2$s more </b>liked your post
+social_notifications_new_title	New
+social_notifications_share_match_joined_multiple	<b> %1$s and other %2$s contacts </b>have joined a match
+- com.playtomic.modules.notification.inbox.middleware.InboxBadgeMiddleware: notificationsBadgeChanged(Boolean) from INotificationService; chatsBadgeChanged(unreadCount > 0); clubsUpdatesBadgeChanged. A boolean per chip, no number.
+- com.anemonesdk.model.notification.NotificationSummary reads 'unseen_notifications' (no module uses the class).
+- AndroidManifest.xml declares no launcher-badge permission.
+
+## Priority alerts (strings)
+notification_priority_alerts_expires_after	Expires on %1$s
+notification_wizard_date_selection_title	Choose your days (max. %1$s)
+notification_wizard_duration_subtitle	The alert will not expire if no option is selected
+notification_wizard_durations_title	Keep alert active
+notification_wizard_select_specific_hours_max_hours	Max. %1$s hours
+notification_wizard_type_cancelations	Last minute cancellations
+notification_wizard_type_few_courts	Few courts available
+notification_wizard_type_last_match_spot	Last place in an Open Match
+priority_alert_create_with_free_dialog_message	You already have a priority alert created. Upgrade to Premium to create unlimited alerts and never miss a match
+
+## Account language field (code)
+- com.anemonesdk.model.people.User reads 'communications_language'; com.anemonesdk.service.request.UserUpdateRequest can send 'communications_language'.
+
+## Notification settings channels (strings)
+notification_settings_channel_email	Email
+notification_settings_channel_phone	WhatsApp / SMS
+notification_settings_channel_push	Push
+notification_settings_clubs_section_title	Club commercial communications
+profile_menu_payments_transactions_refund_badge_label	Refund
+profile_menu_settings_notifications_club_commercial_title	Commercial communications from clubs
+
+## Marketing SDK push ask (classes.dex strings)
+- BRAZE_PUSH_NOTIFICATION_BADGE_COUNT_KEY
+- Lcom/braze/ui/actions/brazeactions/steps/RequestPushPermissionStep;
+- com_braze_optin_when_push_authorized
+- is_push_primer
+- Requesting push prompt from Braze bridge html interface

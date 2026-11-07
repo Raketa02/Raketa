@@ -1,0 +1,30 @@
+WhatsApp Messenger for Android 2.26.39.79 (package com.whatsapp, versionCode 263907900, targetSdk 36), APKPure copy last modified
+2026-10-09 23:50 GMT (https://d.apkpure.net/b/APK/com.whatsapp?version=latest), read 2026-10-10 by the gaps researcher (S-02 round)
+with the Android SDK's own tools: aapt2 36.0.0 (dump badging, dump xmltree AndroidManifest.xml), dexdump 36.0.0, and `strings` over the
+twelve classes*.dex. Nothing was run on a phone.
+
+== Manifest (aapt2 dump xmltree)
+uses-permission android.permission.RECEIVE_BOOT_COMPLETED
+receiver com.whatsapp.infra.systemreceivers.boot.BootReceiver        enabled=true exported=true
+    intent-filter: android.intent.action.BOOT_COMPLETED
+receiver com.whatsapp.infra.systemreceivers.appupdated.AppUpdatedReceiver  enabled=true exported=true
+    intent-filter: android.intent.action.MY_PACKAGE_REPLACED
+receiver androidx.work.impl.background.systemalarm.RescheduleReceiver   enabled=false (switched on by WorkManager when needed)
+    intent-filter: android.intent.action.BOOT_COMPLETED, android.intent.action.TIME_SET, ...
+(other BOOT_COMPLETED receivers belong to Meta's crash reporter and the launcher-icon updater)
+
+== BootReceiver (dexdump -d, classes3.dex)
+on BOOT_COMPLETED it logs the line  "BootManager; boot completed."  and then, after an obfuscated check, calls one method on each
+object in a set (the boot observers); the check and the set's members were not read further.
+
+== Observer names in the string table (source-file names kept by the build)
+MessagingBootCompleteObserver.kt
+NotificationBootCompleteObserver.kt
+PaymentsBootCompleteObserver.kt
+EventStartAlarmBootCompletedObserver.kt   with its log lines:
+    "EventStartAlarmBootCompletedObserver/onBootCompleted"
+    "EventStartAlarmBootCompletedObserver/message store is ready, setting event start alarms"
+
+== Not read
+What MessagingBootCompleteObserver does (the code of the observers was not read), and whether a message marked with the clock is
+sent at boot before WhatsApp is opened. Only a device test settles that.

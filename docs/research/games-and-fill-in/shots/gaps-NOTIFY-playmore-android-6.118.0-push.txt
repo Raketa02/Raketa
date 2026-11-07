@@ -1,0 +1,350 @@
+Playmore Android 6.118.0 (com.reservise.reserviseapp, from APKPure 2026-10-08): a Capacitor shell whose assets/public/assets/*.js.map carry the web app's source (sourcesContent). The shell loads https://playmore.pl live (assets/capacitor.config.json server.url). Excerpts below are verbatim from those sources; paths are the source paths inside the maps. Evidence for topics/gaps-NOTIFY.md.
+
+## src/composables/pushConsentCadence.js
+5:// Server-first push-prompt cadence (PLA-2216). The escalating "ask again later"
+13:// Escalating snooze (days) after each "maybe later". A gentle, long tail: only
+14:// once the whole ladder is exhausted (the 6th dismissal, ~7 months in) do we
+16:// out. An explicit opt-out (optOut) still silences it immediately.
+17:const SNOOZE_DAYS = [3, 7, 14, 30, 60, 90];
+
+## src/composables/usePushConsent.js (shouldPrompt)
+107:  // Eligible for the value-based prompt: undecided permission, not opted out,
+112:    return (await getStatus()) === "default";
+
+## src/composables/pushPromptTrigger.js
+// PushConsentHost). The prompt is NO LONGER auto-shown on app entry — it fires
+// only at a moment of delivered value (a successful booking) and only when it
+// won't stack on top of another success prompt. Fires on BOTH platforms
+// (PLA-2409): web unconditionally, native behind the `push_native_prompt` kill
+// switch. PushNudge in the account hub stays as the passive native surface —
+// the shared cadence keeps the two from double-nagging.
+export const pushPromptOpen = ref(false);
+export const pushPromptSource = ref(null);
+
+22:// Push is the LOWEST-priority booking-success prompt. On the same success, ahead
+61:// exceptions. The onboarding permission steps do NOT count: skipping push in
+65:const PUSH_IGNORES = ["onboardingPermissionAsked", "pushPromptShown"];
+66:const anotherPromptOwnsSession = () => sharedArbitration({ ignore: PUSH_IGNORES });
+68:// The user already gets push on some device (auth/me → has_active_push: ≥1 token
+
+## src/modules/account/hub/components/PushNudge.vue
+// Subtle "enable push" CTA in the native account hub — the passive native
+// surface, coexisting with the post-booking value modal (PLA-2409); shows only
+// when push is still undecided AND the shared consent cadence allows it. The X
+// records a dismissal on that SAME cadence
+// (escalating snooze 3→7→14→30→60→90d, one counter across the app) instead of a
+// fixed 72h snooze — so the nudge and the value modal never nag out of sync,
+// and only the exhausted ladder (6 dismissals) opts out for good (PLA-2216).
+import { ref, onMounted } from "vue";
+
+## src/i18n/messages/pl/onboarding.js (push step)
+    reassurance: "Wszystko ustawisz też później w ustawieniach konta.",
+  },
+  push: {
+    title: "Nie przegap wolnego kortu",
+    subtitle: "Włącz powiadomienia — damy Ci znać o tym, co ważne:",
+    benefits: {
+      reservations: "Potwierdzenia i przypomnienia o rezerwacjach",
+      slots: "Zwolnione terminy i odwołania w Twoich obiektach",
+      league: "Wyzwania, wyniki i ruchy w Twojej lidze",
+    },
+    enable: "Włącz powiadomienia",
+    later: "Może później",
+    // Ramię B eksperymentu copy (PLA-2409 H2): konkretna obietnica remindera
+    // zamiast ogólnej korzyści. Przyciski enable/later wspólne dla obu ramion.
+    b: {
+      title: "Przypomnimy Ci o grze",
+      subtitle: "„Za 40 minut gra: Kort 2, z Markiem” — włącz powiadomienia, a nic Ci nie umknie:",
+      benefits: {
+        reservations: "Przypomnienie przed każdą grą — kort, godzina, z kim",
+        slots: "Alert, gdy zwolni się termin w Twoim klubie",
+        league: "Twoje mecze i wyniki w lidze na bieżąco",
+      },
+    },
+
+## src/i18n/messages/pl/pushConsent.js
+export default {
+  menu: "Powiadomienia push",
+  metaTitle: "Powiadomienia push — Playmore",
+  defaultTitle: "Playmore",
+  // Skok do ustawień systemowych — działa tylko na iOS, więc przycisk z tą
+  // etykietą w ogóle nie renderuje się tam, gdzie nie ma dokąd skoczyć.
+  openSettings: "Otwórz ustawienia",
+  enableCta: "Włącz powiadomienia",
+  prompt: {
+    benefits: {
+      reservations: "Potwierdzenia i przypomnienia o rezerwacjach",
+      slots: "Wolne terminy i odwołania w Twoich obiektach",
+      league: "Wyzwania, wyniki i ruchy w Twojej lidze",
+    },
+    enable: "Włącz powiadomienia",
+    later: "Może później",
+  },
+  postBooking: {
+    title: "Gotowe! Przypomnimy Ci o tej grze",
+    subtitle:
+      "Włącz powiadomienia — damy znać o zmianach w rezerwacji i przypomnimy o grze:",
+  },
+  settings: {
+    title: "Powiadomienia push",
+    description:
+      "Powiadomienia o rezerwacjach, wolnych terminach i lidze — prosto na to urządzenie.",
+    toggleLabel: "Powiadomienia push",
+    toggleOn: "Włączone",
+    toggleOff: "Wyłączone",
+    blockedTitle: "Powiadomienia zablokowane",
+    blockedHint:
+      "Powiadomienia są zablokowane w ustawieniach przeglądarki lub systemu. Odblokuj je tam, aby z nich korzystać.",
+    // Nie wyliczamy tu wszystkiego, co gracz traci — o zmianach w rezerwacji i
+    // tak dostanie maila. Milczy dokładnie jedna wiadomość i tylko o niej mówimy.
+    // Świadomie bez wyliczanki „ani SMS-em, ani mailem": przegląd nie rozstrzygnął
+    // jednoznacznie ścieżki SMS-a, a zdanie ma być prawdziwe bez gwiazdki.
+    blockedConsequence:
+      "Dopóki są wyłączone, nie damy Ci znać o wolnym miejscu na zajęciach, na które czekasz.",
+    unsupported:
+      "To urządzenie lub przeglądarka nie obsługuje powiadomień push.",
+  },
+  leagues: {
+    title: "Powiadomienia push w ligach",
+    description:
+      "Wybierz, z których lig chcesz dostawać powiadomienia push (wyzwania, wyniki, przypomnienia).",
+
+## src/i18n/messages/pl/permissionNudge.js
+export default {
+  push: {
+    text: "Włącz powiadomienia, aby nie przegapić potwierdzeń i przypomnień o grze.",
+    cta: "Włącz push",
+  },
+  location: {
+
+## src/i18n/messages/pl/pushCategories.js
+// PLA-3954 — sekcja „O czym dawać Ci znać" na /your-account/notifications.
+// Przestrzeń LAZY (src/i18n/namespaces.js): renderuje się wyłącznie na tej
+// trasie, a trasa czeka na chunk, więc nic tu nie może trafić do barrela.
+//
+// Ton: mówimy do gracza na „ty", opisy są PRZYKŁADAMI, nie definicjami — i nie
+// wymieniają wiadomości, których i tak nie da się wyciszyć, bo obietnica
+// w opisie musi być prawdziwa. Poza kategoriami (czyli ZAWSZE wysyłane) są:
+// płatności, wszystkie odwołania i zmiany rezerwacji, kody do drzwi i kody
+// logowania, lista rezerwowa, split-payment, portfel i zwroty, karta
+// partnerska, wpisowe, Live Activities — oraz zgłoszenia obecności skierowane
+// do KONKRETNEJ osoby: do trenera i do ekipy z rezerwacji kortu. Żadnej z tych
+// rzeczy nie wolno tu podać jako przykładu — gracz wyciszyłby kategorię,
+// dostał tego pusha i słusznie uznał, że przełącznik nie działa.
+// Wyjątek, który ma własny przełącznik: `class_absence` (PLA-3868) — wiadomość
+// o cudzej nieobecności w małej grupie. Jako jedyna z tej rodziny nie wymaga
+// od odbiorcy żadnej reakcji, więc wolno ją wyciszyć.
+// Przykład musi też trafiać we WŁAŚCIWY slug: „ktoś dołączył do Twojej
+// otwartej gry" to `league`, a nie `social` (tam idzie dopisanie do
+// rezerwacji i znajomi).
+export default {
+  title: "O czym dawać Ci znać",
+  intro:
+    "Wybierz, o czym mamy pisać na telefon. Wyciszone i tak znajdziesz w dzwonku w aplikacji.",
+  categories: {
+    reservation: {
+      label: "Rezerwacje",
+      description: "np. potwierdzenie rezerwacji, przypomnienie przed grą",
+    },
+    classes: {
+      label: "Zajęcia i kursy",
+      description: "np. zapis na zajęcia, przypomnienie przed zajęciami",
+    },
+    class_absence: {
+      label: "Nieobecności w Twojej grupie",
+      description: "np. ktoś z Twojej małej grupy nie przyjdzie na zajęcia",
+    },
+    league: {
+      label: "Liga i gry",
+      description:
+        "np. wyzwanie od gracza, wynik meczu, ktoś dołączył do Twojej otwartej gry",
+    },
+    social: {
+      label: "Społeczność",
+      description: "np. ktoś dopisał Cię do rezerwacji, nowy gracz w znajomych",
+    },
+    club_announcements: {
+      label: "Komunikaty klubu",
+      description: "np. zmiana godzin otwarcia, wiadomość od recepcji",
+    },
+  },
+  // Rząd z kłódką zamiast przełącznika. Nie jest ozdobą: mówi wprost, czego
+  // gracz nie wyciszy, żeby nie szukał tego wśród przełączników i nie uznał
+  // później, że coś przepadło przez ustawienie.
+  always: {
+    label: "Płatności i bezpieczeństwo",
+    description:
+      "Tego nie wyciszysz. O płatnościach, odwołanych grach, kodach do drzwi i kodach logowania piszemy zawsze — inaczej przepada Ci gra albo dostęp do konta.",
+  },
+  // Master to URZĄDZENIE, kategorie to KONTO. Przy masterze off lista zostaje
+  // aktywna, bo push może chodzić na telefonie, a być wyłączony w przeglądarce.
+
+## src/i18n/messages/pl/notificationCenter.js
+// Centrum powiadomień (PLA-2923) — skrzynka z historią tego, co przyszło pushem.
+// UWAGA: to NIE jest ten sam moduł co `notifications` (powiadomienia o wolnych
+// terminach, /my-notifications) ani `pushConsent` (zgody na pushe).
+export default {
+  title: "Powiadomienia",
+  markAllRead: "Oznacz wszystkie",
+  loadMore: "Pokaż starsze",
+  empty: "Nie masz jeszcze żadnych powiadomień. Damy znać, gdy coś się wydarzy.",
+  unreadLabel: "Nieprzeczytane",
+  // CTA na kartach płatniczych (PLA-3892) — cała karta i tak prowadzi w to samo
+  // miejsce, przycisk tylko podnosi widoczność akcji.
+  payNow: "Opłać teraz",
+  // Nagłówki kart (PLA-3891). Serwer wysyła jako tytuł NAZWĘ KLUBU, od której
+  // treść i tak się zaczyna — te teksty mówią, co się stało, a klub schodzi do
+  // linii meta. Klucze odpowiadają polu `headline` w notificationEventMap.js.
+  headlines: {
+    reservationCreated: "Rezerwacja utworzona",
+    reservationUpdated: "Zmiana w rezerwacji",
+    reservationCancelled: "Rezerwacja odwołana",
+    courtAvailable: "Zwolnił się termin",
+    doorAccess: "Kod wejścia",
+    paymentWindow: "Opłać rezerwację",
+    paymentReminder: "Przypomnienie o płatności",
+    paymentLastCall: "Ostatnie wezwanie do zapłaty",
+    paymentStarted: "Płatność rozpoczęta",
+    coursePaymentReminder: "Płatność za kurs",
+    cancelledUnpaid: "Rezerwacja anulowana — brak płatności",
+    classBooked: "Zapis na zajęcia potwierdzony",
+    classCancelled: "Zajęcia odwołane",
+    enrolmentAccepted: "Zapis na kurs przyjęty",
+    enrolmentRejected: "Zapis na kurs odrzucony",
+    enrolmentPending: "Zapis na kurs czeka na potwierdzenie",
+    courseEnding: "Kurs dobiega końca",
+    passBought: "Karnet aktywny",
+    passExpiring: "Karnet wygasa",
+    walletRefund: "Zwrot na portfel",
+    documentExpiring: "Dokument wygasa",
+  },
+  day: {
+    today: "Dzisiaj",
+    yesterday: "Wczoraj",
+    unknown: "Wcześniej",
+  },
+  errors: {
+    load: "Nie udało się wczytać powiadomień. Spróbuj ponownie.",
+
+## src/modules/notificationCenter/utils/unreadDisplay.js
+15:export const MAX_SHOWN_UNREAD = 99;
+19: * says "99+", which is the honest statement: more than we are going to count.
+26:  return safe > MAX_SHOWN_UNREAD ? `${MAX_SHOWN_UNREAD}+` : String(safe);
+32: * a "99+" on an icon; whatever integer we hand over is what the player sees. So
+46:  return Math.min(safe, MAX_SHOWN_UNREAD);
+
+## src/modules/notificationCenter/badge/appIconBadge.js
+/**
+ * The number on the app icon (PLA-3924) — @capawesome/capacitor-badge.
+ *
+ * Two halves keep this badge honest and they meet nowhere in the code: the
+ * PUSH payload carries the count while the app is dead (Xano writes
+ * `aps.badge` / `notification_count`), and this module writes it while the app
+ * is alive. Anything the client knows about the unread total therefore has to
+ * come through here, or the icon and the bell start telling different stories.
+ *
+ * Registered by name rather than by importing the package: we call two of its
+ * methods, and `registerPlugin` keeps @capacitor/core a lazy chunk the web
+ * bundle never fetches. The thenable trap and the retry-on-failed-import live
+ * in createLazyPluginLoader.
+ *
+ * Android is best-effort by nature — the plugin drives ShortcutBadger, which
+ * only a subset of launchers honours (stock Pixel shows a dot, no number). iOS
+ * is where the count is a promise.
+
+## src/modules/notificationCenter/composables/useNotificationCenterAvailability.js
+/**
+ * Does this backend have a notification centre at all?
+ *
+ * The league keeps the whole router dark until `NOTIFICATION_CENTER_ENABLED=true`
+ * and answers `404 FEATURE_DISABLED` until then — deliberately, so a player app
+ * that ships the bell early reads it as "this surface does not exist here" and
+ * hides it, instead of showing a red failure and retrying an outage that isn't
+ * one. The gap is reachable in production: the PostHog ramp and the league env
+ * var are two switches, flipped by two people, at two moments.
+
+## src/modules/notificationCenter/utils/notificationEventMap.js (excerpt)
+36:  reservation_update: { category: RESERVATION, headline: "reservationUpdated" },
+37:  reservation_cancellation: { category: RESERVATION, headline: "reservationCancelled" },
+38:  reservation_cancellation_not_on_time: {
+42:  court_available: { category: RESERVATION, headline: "courtAvailable" },
+61:  reservation_cancellation_due_to_payment_failed: {
+80:  wallet_first_partner_card_refund: { category: WALLET, headline: "walletRefund" },
+
+## src/modules/notificationCenter/utils/notificationTarget.js + src/utils/pushTarget.js
+modules/notificationCenter/utils/notificationTarget.js:10: * expand-in-place "details" behaviour instead of navigating somewhere wrong.
+modules/notificationCenter/utils/notificationTarget.js:35: * says the booking is already gone (its target is the reservation list), while
+utils/pushTarget.js:21: * - an absolute Universal/App-link URL (`https://playmore.pl/wallet`), which is
+utils/pushTarget.js:23: * - a ROOT-RELATIVE path (`/p/{uuid}`, `/my-reservations`) — what the Xano
+
+## src/i18n/messages/pl/lookingForGame.js (alerts, invites, caps)
+  boost: {
+    matching:
+      "nikt jeszcze nie czeka na taką grę | {count} pasująca osoba dostanie powiadomienie o Twojej grze | {count} pasujące osoby dostaną powiadomienie o Twojej grze | {count} pasujących osób dostanie powiadomienie o Twojej grze",
+    created:
+      "Gra utworzona | Powiadomimy {count} osobę szukającą grania | Powiadomimy {count} osoby szukające grania | Powiadomimy {count} osób szukających grania",
+  },
+    push: {
+      title: "Nie przegap zaproszeń",
+      body: "Na powiadomieniach stoi cała ta funkcja: pasujące gry i wiadomość, gdy ktoś chce z Tobą zagrać.",
+      cta: "Włącz powiadomienia",
+      later: "Później",
+    },
+  // Arkusz po tapnięciu powiadomienia „nadal szukasz?" (PLA-2874). Celowo nie
+  // rozróżnia „zaraz wygaśnie" od „wygasła" — zapis działa tak samo w obu.
+  renew: {
+    title: "Nadal szukasz grania?",
+    subtitleOne:
+      "Odświeżymy Twoje zgłoszenie ({sport}) na kolejne 4 tygodnie - albo je wyłączymy.",
+    subtitleMany:
+      "Wybierz, które zgłoszenia mamy odświeżyć na kolejne 4 tygodnie.",
+    confirm: "Tak, przedłuż",
+    decline: "Nie, wyłącz",
+    renewedToast: "Przedłużone - szukamy Ci grania dalej.",
+  },
+    activeUntil: "Aktywne do {date}",
+    reactivate: "Włącz ponownie",
+    alertsLabel: "Powiadamiaj mnie o pasujących grach",
+    alertsHint: "Wyłącz, jeśli chcesz zostać na liście, ale bez powiadomień.",
+    actionsFor: "Zgłoszenie: {sport}",
+    sentBadge: "Zaproszono ✓",
+    title: "Zaproś: {name}",
+    subtitle: "Wybierz swoją grę - wyślemy jedno powiadomienie z terminem.",
+    freeSpots: "brak wolnych miejsc | {count} wolne miejsce | {count} wolne miejsca | {count} wolnych miejsc",
+    emptyGames: "Nie masz gry, do której można kogoś zaprosić. Załóż grę i wróć tu jednym tapnięciem.",
+    createGame: "Załóż grę",
+    privacyHint:
+      "Zaproszony zobaczy tylko Twoje imię, termin i format. Nie widzi, kogo jeszcze zaprosiłeś.",
+    sentToast: "Zaproszenie poszło do: {name}.",
+    limitHint: "Dzienny limit zaproszeń wyczerpany - wróć jutro.",
+    errors: {
+      generic: "Nie udało się wysłać zaproszenia. Spróbuj ponownie.",
+      // Cel zniknął z listy między wyświetleniem karty a tapnięciem.
+      seekerGone: "Ta osoba nie szuka już grania.",
+      self: "Nie zaprosisz sam siebie.",
+      gameUnavailable: "Ta gra nie przyjmie już zaproszenia - sprawdź termin i wolne miejsca.",
+      dailyLimit: "Dziś wysłałeś już maksymalną liczbę zaproszeń. Wróć jutro.",
+      cooldown: "Tę osobę zaprosiłeś niedawno - daj jej chwilę.",
+    },
+  },
+
+## src/composables/liveActivity/liveActivityGame.js + pl/liveActivity.js
+// A game earns a lock-screen Live Activity from 60 min before start until its
+// end. `useUpcomingReservations` already drops cancelled rows and anything with
+  channel: {
+    name: "Nadchodząca gra",
+    description: "Karta z odliczaniem do najbliższej gry.",
+  },
+
+## src/switchRegistry/posthog.data.json (summaries, abridged)
+- looking-for-game | active | 2026-08-11 | Pilot „Szukam grania” (PLA-2867): karta + wizard deklaracji na zakładce gier otwartych; payload venueIds ogranicza powierzchnię do klubów pilotażowych. | why: Staged ramp pilota: powierzchnia startuje TYLKO w klubach pilotażowych — payload { "venueIds": [13, 136, 140] }. Okęcie Tennis Club (140) to od początku jedyny klub generujący realny ruch; Padel Point Białystok (136) dołożony 2026-08-11 po weryfikacji danych (PLA-3153), bo pilot potrzebuje drugiego 
+- onboarding_push_copy | active | 2026-07-12 | A/B copy kroku push w onboardingu: obecny tekst (a) vs obietnica konkretnego przypomnienia (b). | why: Wariant rozstrzygany raz przy setupie kroku — użytkownik przeszedł wcześniej krok klubu, więc flagi są już załadowane. Analiza po property `variant` w evencie, nie po breakdownie flagowym PostHoga.
+- preferred-sport-prompt | active | 2026-09-02 | Modal „W co grasz najczęściej?” przy wejściu na Szukam kortu, gdy gracz nie ma jeszcze sportu wiodącego. | why: Kill-switch, nie ramp — funkcja wychodzi włączona, flaga służy do zgaszenia pytania bez release'u sklepowego, gdyby okazało się nagabywaniem. Tylko jawne `false` wyłącza; undefined (flagi jeszcze się ładują na zimnym starcie) czyta ON, czyli tak jak wypuszczone. Kadencja i tak trzyma to w ryzach: ma
+- push-category-prefs | active | 2026-09-02 | Sekcja „O czym dawać Ci znać” na /your-account/notifications — pięć przełączników kategorii push (rezerwacje, zajęcia, liga, społeczność, komunikaty klubu). | why: Start jako OFF, bo front jedzie przed backendem: sekcja zapisuje kolumnę user_preferences.push_muted_categories, ale honorować ją mają dopiero bramka w Xano (PLA-3952) i serwis ligi (PLA-3953). Dopóki którejkolwiek nie ma na live, gracz, który wyciszy kategorię, dostanie push i tak — a przełącznik, 
+- push_native_prompt | active | 2026-07-12 | Prośba o zgodę na push w apce natywnej w momencie dostarczonej wartości (po rezerwacji). | why: Świadoma inwersja konwencji `!== false`: zimny start po redirectcie z płatności odpala prompt w sekundy od bootu, zanim /decide odpowie w sieci komórkowej — fail-open ominąłby ramp i kill awaryjny. Koszt: jedna natywna rezerwacja w tym oknie pomija prompt, kolejna go uzbraja. Web ma prompt zawsze, b
+
+## assets/capacitor.config.json (plugins)
+{"FirebaseMessaging": {"presentationOptions": ["badge", "sound"]}, "Badge": {"persist": false}, "SplashScreen": {"launchAutoHide": false, "backgroundColor": "#f15a23"}}
+
+## AndroidManifest.xml / resources.arsc
+- Declares android.permission.POST_NOTIFICATIONS and launcher badge permissions (com.sec.android.provider.badge.permission.READ, me.everything.badger.permission.BADGE_COUNT_WRITE, com.huawei.android.launcher.permission.CHANGE_BADGE, ...). No com.google.firebase.messaging.default_notification_channel_id meta-data; resources: fcm_fallback_notification_channel_label = Miscellaneous. The web sources create no Android channel (no createChannel call).

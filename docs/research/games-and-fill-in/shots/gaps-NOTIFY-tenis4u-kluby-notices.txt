@@ -1,0 +1,68 @@
+tenis4U web app (https://app.tenis4u.pl/ main.js) and club panel (decoded panel bundle), both fetched 2026-10-08 by an earlier researcher; Play listing pl.tenis4u.android.free and com.multiplatform.kluby read 2026-10-08. Evidence for topics/gaps-NOTIFY.md.
+
+## Player web app: UserNotificationsComponent (verbatim excerpts)
+class NotificationRepository {
+    constructor(http) {
+        this.http = http;
+    }
+    getNotifications() {
+        return this.http.get(`${(0,_shared_utils_api_config__WEBPACK_IMPORTED_MODULE_0__.getApiHost)()}/notification/?limit=50`);
+    }
+    markAsRead(notificationId) {
+        return this.http.post(`${(0,_shared_utils_api_config__WEBPACK_IMPORTED_MODULE_0__.getApiHost)()}/notification/${notificationId}/isread`, {});
+    }
+    readAll() {
+        return this.http.post(`${(0,_shared_utils_api_config__WEBPACK_IMPORTED_MODULE_0__.getApiHost)()}/no
+    parseNotifications(notifications) {
+        this.unreadCount = notifications.filter(n => !n.is_read).length;
+        if (this.notifications.length !== 0 &&
+            this.notifications.filter(n => !n.is_read).length === notifications.filter(m => !m.is_read).length) {
+            return this.notifications;
+        }
+        return notifications.map(n => {
+            n.title = this.changeIcons(n.title);
+            if (!n.is_read) {
+                n.title = `${n.title}<i class="fa fa-circle color-green-500"></i>`;
+            }
+            n.conten
+    findAction(notification) {
+        if (!notification.action) {
+            return;
+        }
+        if (notification.action.includes('openMyMatches?tournamentId=')) {
+            const parts = notification.action.split('tournamentId=');
+            const tournamentId = parts[1];
+            this.router.navigate([`tournament/${tournamentId}`]);
+        }
+        if ('tenis4u://myReservations' === notification.action) {
+            this.router.navigate([`user/dashboard`]);
+            // this.state.openMyReservation(true);
+        }
+        if (notification.action.includes('openMatch?externalId=')) {
+            const externalId = notification.action.split('externalId=')[1];
+            this.router.navigate([`match/${externalId}`]);
+        }
+    
+Template strings: "Powiadomienia", "Brak powiadomie\u0144", tooltip "oznacz wszystkie jako przeczytane" (disabled when unreadCount === 0)
+
+## Club panel strings
+- Lista osób powiadamianych o rezerwacji w korcie
+- Numer telefonu do powiadomień SMS
+- opcja powiadomień sms jest dodatkowo płatna 30 gr za każdy sms
+- SMS / Push — podgląd ustawień powiadomień kortu; zmiana w ustawieniach kortu.
+- Wiadomość widoczna dla użytkowników (textarea, maxlength 512)
+- Treść widoczna dla gracza w szczegółach rezerwacji
+- Treść wyświetlana użytkownikowi po dokonaniu rezerwacji i na liście rezerwacji
+- Powiadom o rozpoczęciu turnieju
+- Wyślij powiadomienia zapraszające
+
+## Google Play pl.tenis4u.android.free (read 2026-10-08)
+- 4,2 star, 161 opinii, 50 tys.+ Pobrania; Ostatnia aktualizacja 6 paź 2026.
+- Review, Kris Kristofferson, 4 września 2025: "apka ok, ale nie d się zarządzać powiadomieniami, tak żeby wyłączyć informacje o turniejach tenisowych, a pozostawić powiadomienia o rezerwacjach"; developer reply 4 września 2025: "Cześć Kris, dobry pomysł - wprowad[zimy go w życie :)]"
+
+## Google Play com.multiplatform.kluby (read 2026-10-08)
+- Kluby.org, IT Sports Solutions: 3,0 star, 13 opinii, 5 tys.+ Pobrania; Ostatnia aktualizacja 31 sie 2026. Description names search, booking and competitions; no notification feature.
+
+## Store counts used as an iPhone proxy (read 2026-10-08)
+- App Store PL ratings (iTunes lookup/search API, country=pl): Reservise Playmore 475; tenis4U 100; Kluby.org 4; Playtomic 1484.
+- Google Play (pl) reviews: Playmore 2,73 tys., 50 tys.+ downloads; tenis4U 161, 50 tys.+; Kluby.org 13, 5 tys.+; Playtomic 110 tys., 1 mln+ (worldwide listing).

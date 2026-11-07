@@ -1,0 +1,145 @@
+Playmore, read 2026-10-10 by the gaps researcher (S-01B refresh). Two sources:
+(1) the web app as served by https://playmore.pl on 2026-10-10 (1,432 bundles reachable from entry index-CFpbCOgi.js; the Android and iOS apps are Capacitor shells that load this same site, see ../shots/gaps-NOTIFY-playmore-android-6.118.0-push.txt);
+(2) the source maps shipped inside Playmore Android 6.118.0 (APKPure, unpacked by the NOTIFY round on 2026-10-08), whose sourcesContent carries the original files with comments. Each (2) quote below was checked against (1): the served code does the same thing.
+Quotes are verbatim; '...' marks a cut.
+
+## A. R-NOTIFY-36: the unread count lives on the server; a second phone re-reads it when the app comes to the front
+### served DvfNGzcV.js (the bell's hook): refresh on mount, then refetch-on-focus throttled to 30 s
+function L(n){const{t:e}=v(),{unreadCount:t}=p(),o=g(),s=a(()=>`/notification-center?src=${f(n)}`),r=a(()=>C(t.value)),u=a(()=>t.value>0?`${e("nav.notificationCenter.label")}, ${e("nav.notificationCenter.unread",{count:t.value})}`:e("nav.notificationCenter.label"));return l(o,c=>c?i():void 0,{immediate:!0}),m(()=>o.value?i():void 0,3e4),{enabled:o,target:s,unreadCount:t,badgeLabel:r,ariaLabel:u}}export{g as n,L as t};  //# debugId=156ec7c5-270a-5c2e-9eea-ea4bc72991fb 
+### served DSQ7hmTs.js (useRefetchOnFocus, exported as A): runs only on appStateChange isActive / visibilitychange / focus, at most once per t=3e4 ms
+function Ca(e,t=3e4){let r=Date.now(),n=!1;St(()=>{n=!0}),Rt(()=>{n=!1});const a=()=>{if(!(n||typeof e!="function")&&!(Date.now()-r<t)){r=Date.now();try{Promise.resolve(e()).catch(f=>{o.warn("[RefetchOnFocus] refetch failed:",f)})}catch(f){o.warn("[RefetchOnFocus] refetch failed:",f)}}},s=()=>{document.visibilityState!=="hidden"&&a()},i=()=>{document.visibilityState==="visible"&&s()};let c=null,u=null,l=!1;return Tt(async()=>{if(u=s,Q())try{const{App:f}=await Z(async()=>{const{App:R}=await import("./BwAiLf6a.js");return{App:R}},__vite__mapDeps([0,1,2,3]));if(l)return;const _=await f.addListener("appStateChange",({isActive:R})=>{R&&!l&&a()});l?_?.remove?.():c=_;return}catch(f){o.warn("[RefetchOnFocus] native listener unavailable:",f),u=a}l||(document.addEventListener("visibilitychange",i),window.addEventListener("focus",u))}),Ot(()=>{l=!0,document.removeEventListener("visibilitychange",i),u&&window.removeEven
+### served BQRNRCzY.js (API module): mark-read and unread-count are server calls
+async markRead(e){const t=ct(e);return t.length?ie((await a.post(`${T}/mark-read`,{ids:t})).data?.data):{updated:0,unreadCount:null}},async markAllRead(){return ie((await a.post(`${T}/mark-read`,{all:!0})).data?.data)},async unreadCount(){return z((await a.get(`${T}/unread-count`)).data?.data?.unreadCount)}}),_t=["additional_settings","fav_venue_id","fav_venue_engine","user_venues_display_prefe
+### served D-kdY-r0.js (the list): opening the centre remembers the unread ids, then marks everything read on the server (ne = markAllRead from DvFO-X_-.js)
+async function o(i){n(i.items);const u=i.items.some(l=>l?.readAt==null);if(i.unreadCount===0){te(0);return}i.unreadCount==null&&!u||(await a(i),ne())}return{unreadIds:e,hasUnread:t,remember:n,clear:r,settleOnOpen:o}}var X=20,kt="n
+import{a as te,s as j,t as ne}from"./DvFO-X_-.js"
+### 6.118.0 source src/composables/useRefetchOnFocus.js (comment)
+/**
+ * Re-runs `refetch` when the tab/app regains focus or becomes visible again,
+ * throttled to once per `ttlMs`.
+ *
+ * For views that stay mounted while backgrounded (NOT <KeepAlive>-cached, so
+ * onMounted won't re-run on return). Use case: a trainer leaves the app open,
+ * a court gets reassigned server-side, then comes back — the on-screen data
+ * must reflect the change without a manual reload. The API itself is no-cache,
+ * so the only staleness is the SPA not re-asking while idle.
+ *
+ * Native WKWebView/Android: appStateChange is the reliable foreground signal
+ * (visibilitychange is unreliable there — see useAvailabilityResumeRefresh);
+ * web tab: visibilitychange + focus. One source per environment, no double
+ * fire; a failed native registration falls back to the web listeners.
+ *
+ * `refetch` should be SILENT (no spinner / list-clear), so the refresh swaps in
+ * fresh data without flashing the UI on every focus.
+ */
+### 6.118.0 source src/modules/notificationCenter/composables/useUnreadNotifications.js (comments)
+// Module-level singleton, same rationale as useTabBadges: the bell renders in
+// one place per platform (web navbar / native home header) but the count is
+// written from OUTSIDE any component too — the push listener on a foreground
+// notification, and every mark-read the centre performs.
+/**
+ * Re-reads the badge from the server. Silent by contract (useRefetchOnFocus
+ * calls it): a failure keeps the previous count rather than blanking the bell.
+ */
+/**
+ * Marks the whole inbox read — fired when the centre opens. Optimistic: the
+ * badge drops immediately (the user IS looking at the list), and a failure only
+ * means the next refresh brings the count back.
+ */
+### 6.118.0 source src/modules/notificationCenter/badge/appIconBadge.js (comment, quoted in full in gaps-NOTIFY-playmore-android-6.118.0-push.txt)
+ * PUSH payload carries the count while the app is dead (Xano writes `aps.badge` / `notification_count`), and this module writes it while the app is alive.
+
+## B. R-PAY-49: the 30-minute payment countdown runs from the booking's creation and never looks at its start
+### served BW9d7bZN.js (usePaymentCountdown) + D5nZmz0m.js (constants: n = M = 18e5 ms = 30 min)
+function Xu({reservation:e}){const t=wn(),a=A(null),s=A(Date.now()),r=v(()=>{if(!e.value?.created_at||e.value?.payment_status==="paid"||e.value?.cancellation_status)return 0;const u=parseInt(e.value.created_at);return Math.max(0,u+Ws-s.value)}),l=v(()=>{const u=r.value;if(u<=0)return"00:00";const m=Math.floor(u/6e4),c=Math.floor(u%6e4/1e3);return`${String(
+var a={CASH:1,CARNET:2,ONLINE:3},E=/^\d{6}$/,_=18e4,N=1e4,M=18e5,T={week:7,month:30,threeMonths:90},O=432e5;export{_ as a,N as i,M as n,T as o,a as r,O
+### 6.118.0 source src/modules/userReservations/composables/usePaymentCountdown.js
+const paymentTimeRemaining = computed(() => {
+    if (!reservation.value?.created_at || reservation.value?.payment_status === "paid" || reservation.value?.cancellation_status) return 0;
+    const createdAt = parseInt(reservation.value.created_at);
+    return Math.max(0, createdAt + PAYMENT_COUNTDOWN_MS - currentTime.value);
+  });
+### 6.118.0 source src/modules/reserviseBooking/composables/useReservisePaymentStatus.js
+const POLL_INTERVAL_MS = 4000;
+// Reservise auto-cancels an unpaid dotpay reservation after 30 minutes.
+const MAX_DURATION_MS = 30 * 60 * 1000;
+### 6.118.0 source src/modules/createPayment/composables/usePaymentDeadline.js (desk-made bookings with an online-payment deadline)
+/**
+   * PLA-2736: the deadline itself is behind us, whatever the backend decided so
+   * far. The sweep only runs every 5 minutes, so between this flipping true and
+   * the cancellation landing the page has to stop offering payment on its own.
+   */
+### 6.118.0 source src/modules/userReservations/utils/paymentWindow.js (comment)
+* Termin celowo nie zamyka okna — endpointy płatności nie mają bramki na
+ * deadline, więc zapłata przed przejściem sweepu wciąż ratuje rezerwację.
+### strings (served AEIQ8K1Z.js / 6.118.0 i18n/messages/pl/payment.js, reserviseBooking.js)
+deadline: {
+      title: "Opłać do {time}",
+      message:
+        "Zostało {minutes} min — po tym czasie rezerwacja zostanie anulowana.",
+    },
+    expiring: {
+      title: "Czas na opłacenie minął",
+      message:
+        "Sprawdzamy, czy termin jest jeszcze zajęty — może to zająć kilka minut. Jeśli obiekt go nie zwolnił, płatność wciąż utrzyma rezerwację.",
+      timeout:
+        "Nie udało się potwierdzić statusu rezerwacji. Odśwież stronę za kilka minut lub skontaktuj się z obiektem.",
+    },
+pendingDetail: "Rezerwacja została utworzona. Dokończ płatność online, aby ją potwierdzić — jeśli nie zrobisz tego w ciągu 30 minut, rezerwacja zostanie automatycznie anulowana.",
+expiredDetail: "Nie otrzymaliśmy potwierdzenia płatności w ciągu 30 minut, więc rezerwacja została anulowana. Wybierz termin ponownie.",
+
+## C. R-EMAIL-41: the unpaid booking's lapse is a templated notice, sent by push (or SMS without the app) and kept in the bell
+### served 85oPQRfV.js (event map; codes are Xano template_ids)
+reservation_cancellation_due_to_payment_failed:{category:e,headline:"cancelledUnpaid"},"reservation.price_
+### served AEIQ8K1Z.js (Polish headline)
+cancelledUnpaid:"Rezerwacja anulowana — brak płatności"
+### 6.118.0 source notificationEventMap.js (header comment) and notificationTarget.js
+/**
+ * What each notification IS — one row per event code the backend can send.
+ *
+ * `category` drives the icon; `headline` is the leaf under
+ * `notificationCenter.headlines` that replaces the server title. The server
+ * title for a mirrored Xano message is the CLUB NAME (Push - send with
+ * template sets it from `venue.name`), which is why a card reads
+ * "Okęcie Tennis Club" over "Okęcie Tennis Club: Mateusz, rezerwacja…" — the
+ * same words twice, and neither of them says what happened. With a headline
+ * here the club name moves to the meta line where it belongs.
+ *
+ * Codes are Xano `template_id`s verbatim, so this file is the join with the
+ * backend and reads like the templates it names. A code that is missing keeps
+ * today's behaviour exactly (server title, neutral icon) — the map is an
+ * improvement, never a dependency.
+ */
+ment_window` is the deadline variant of a confirmation:
+  // it says "pay within N minutes", so it belongs with the payments, not with
+  // the bookings it is otherwise a twin of.
+  reservation_payment_window: { category: PAYMENT, headline: "paymentWindow" },
+  reservation_venue_group_classes_payment_window: {
+    category: PAYMENT,
+    headline: "paymentWindow",
+  },
+  payment_reminder: { category: PAYMENT, headline: "paymentReminder" },
+  reservation_payment_last_call: { category: PAYMENT, headline: "paymentLastCall" },
+  payment_initiate: { category: PAYMENT, headline: "paymentStarted" },
+  course_billing_payment_reminder: { category: PAYMENT, headline: "coursePaymentReminder" },
+  course_billing_payment_reminder_no_link: {
+    category: PAYMENT,
+    headline: "coursePaymentReminder",
+  },
+  reservation_cancellation_due_to_payment_failed: {
+    category: PAYMENT,
+    headline: "cancelledUnpaid",
+  },
+* Deliberately about the DESTINATION, not the category. The category is a guess
+ * from the event code, and it is wrong in both directions here:
+ * `reservation_cancellation_due_to_payment_failed` is filed under payments and
+ * says the booking is already gone (its target is the reservation list), while
+ * a plain `reservation_confirmation` whose body carries a payment link really
+ * does go to a pay screen. Asking the target keeps the button honest in both
+ * cases, and an uncatalogued code containing the word "payment" — a refund
+ * notice, say — no longer grows a pay button by accident.
+### served CIr6Arwx.js (account settings, 'SMS-y o rezerwacjach') and an email-bounce banner
+ge={title:"SMS-y o rezerwacjach",description:"Potwierdzenia, przypomnienia i odwołania wysyłamy SMS-em. Jeśli masz aplikację, te same informacje dostajesz jako powiadomienie — wtedy SMS-a już nie wysyłamy.",toggleLabel:"SMS-y o rezerwacjach",toggleOn:"Włączone",toggleOff:"Wyłączone",criticalHint:"Kody do drzwi i kody logowania przychodzą SMS-em zawsze, niezale
+emailBounced:{text:"Nie możemy dostarczyć wiadomości na Twój adres e-mail — możesz przegapić potwierdzenia rezerwacji.",cta:"Zaktualizuj e-mail"},dismiss:"Zamkn
+### served Cw-tKkmq.js (partner terms: what the club pays for)
+ w płatnościach realizowanych przez Użytkowników, opłaty za pozyskanie nowych Użytkowników – klientów dla Partnera oraz opłaty za wysyłkę powiadomień push, e-mail, SMS do Użytkownika związanych z Rezerwacjami oraz Umowami Rezerwacyjnymi;","<strong>Partner</

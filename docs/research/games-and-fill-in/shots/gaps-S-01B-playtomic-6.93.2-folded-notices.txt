@@ -1,0 +1,64 @@
+Playtomic Android 6.93.2 (com.playtomic, from APKPure; decompiled with jadx by the NOTIFY round on 2026-10-08), read again 2026-10-10 by the gaps researcher (S-01B refresh). Verbatim decompiled lines; long lines cut at 400 characters.
+
+## The folded row is one server notification: one id, one status, a list of users
+### com/anemonesdk/model/social/SocialNotificationStatus.java: three states
+31:        com.anemonesdk.model.social.SocialNotificationStatus socialNotificationStatus = new com.anemonesdk.model.social.SocialNotificationStatus("UNSEEN", 0, "UNSEEN");
+33:        com.anemonesdk.model.social.SocialNotificationStatus socialNotificationStatus2 = new com.anemonesdk.model.social.SocialNotificationStatus("SEEN", 1, "SEEN");
+35:        com.anemonesdk.model.social.SocialNotificationStatus socialNotificationStatus3 = new com.anemonesdk.model.social.SocialNotificationStatus("READ", 2, "READ");
+### SocialNotificationsPresenter.java j(): read/seen flags come from the row's own status; the line names the first user and counts the rest
+        com.anemonesdk.model.social.SocialNotificationContext socialNotificationContext = socialNotification.e;
+        java.util.List<com.anemonesdk.model.people.User> list = socialNotification.d;
+        com.anemonesdk.model.social.SocialNotificationStatus socialNotificationStatus = socialNotification.b;
+        java.lang.String str = "";
+        kotlin.Pair pair = socialNotificationContext instanceof com.anemonesdk.model.social.SocialNotificationContext.PriorityAlertLastMinute ? new kotlin.Pair(java.lang.Boolean.TRUE, ((com.anemonesdk.model.social.SocialNotificationContext.PriorityAlertLastMinute) socialNotificationContext).f9635a) : socialNotificationContext instanceof com.anemonesdk.model.social.SocialNotificationContext.Priorit
+        com.anemonesdk.model.generic.Id id = socialNotification.f9631a;
+        java.lang.String str2 = id.f9393a;
+        java.util.Date date = socialNotification.f;
+        boolean z = socialNotificationStatus == com.anemonesdk.model.social.SocialNotificationStatus.READ || this.u.contains(id);
+        boolean z2 = socialNotificationStatus != com.anemonesdk.model.social.SocialNotificationStatus.UNSEEN;
+        com.anemonesdk.model.social.SocialNotificationContext socialNotificationContext2 = socialNotification.e;
+            int i = com.playtomic.modules.social.profile.presenter.SocialNotificationsPresenter.WhenMappings.f23495a[socialNotificationPostContextType.ordinal()];
+            if (i == 1 || i == 2 || i == 3) {
+                int size = list.size();
+                str = (size == 0 || size == 1) ? socialNotificationPostContextType == com.anemonesdk.model.social.SocialNotificationPostContextType.COMMENT ? com.playtomicui.utils.ContextKt.b(com.playtomic.R.string.social_notifications_comment, str3) : socialNotificationPostContextType == com.anemonesdk.model.social.SocialNotificationPostContextType.LIKE ? com.playtomicui.utils.ContextKt.b(com.pla
+            } else if (i == 4) {
+        } else if (socialNotificationContext2 instanceof com.anemonesdk.model.social.SocialNotificationContext.ShareMatch) {
+            int size2 = list.size();
+            str = (size2 == 0 || size2 == 1) ? ((com.anemonesdk.model.social.SocialNotificationContext.ShareMatch) socialNotificationContext2).b ? com.playtomicui.utils.ContextKt.b(com.playtomic.R.string.social_notifications_share_match_created, str3) : com.playtomicui.utils.ContextKt.b(com.playtomic.R.string.social_notifications_share_match_joined, str3) : size2 != 2 ? com.playtomicui.utils.Conte
+        } else if (!socialNotificationContext2.equals(com.anemonesdk.model.social.SocialNotificationContext.Unknown.f9638a)) {
+            defpackage.n32.a();
+### SocialNotificationsPresenter.java d(): when the list closes, every row still UNSEEN is marked seen by id
+    @Override // com.playtomic.mozart.architecture.presenter.Presenter, com.playtomic.mozart.architecture.presenter.IPresenter
+    public final void d() {
+        java.util.ArrayList i = i();
+        java.util.ArrayList arrayList = new java.util.ArrayList();
+        java.util.Iterator it = i.iterator();
+        while (it.hasNext()) {
+            java.lang.Object next = it.next();
+            if (((com.anemonesdk.model.social.SocialNotification) next).b == com.anemonesdk.model.social.SocialNotificationStatus.UNSEEN) {
+                arrayList.add(next);
+            }
+        }
+        java.util.ArrayList arrayList2 = new java.util.ArrayList(kotlin.collections.CollectionsKt.q(arrayList, 10));
+        java.util.Iterator it2 = arrayList.iterator();
+        while (it2.hasNext()) {
+            arrayList2.add(((com.anemonesdk.model.social.SocialNotification) it2.next()).f9631a);
+        }
+        if (!arrayList2.isEmpty()) {
+            this.h.a(arrayList2);
+        }
+        this.s.dispose();
+    }
+### com/anemonesdk/service/NotificationService.java: both marks are server calls
+        return this.c.g(kotlin.collections.MapsKt.i(pair, new kotlin.Pair("notification_ids", arrayList2), new kotlin.Pair("status", com.anemonesdk.model.social.SocialNotificationStatus.SEEN.getRawValue())), "/v2/notifications/mark").j(false, new defpackage.e11(25)).a(false, new defpackage.rx0(this, 20));
+        return this.c.g(kotlin.collections.MapsKt.i(pair, new kotlin.Pair("notification_ids", arrayList2), new kotlin.Pair("status", com.anemonesdk.model.social.SocialNotificationStatus.READ.getRawValue())), "/v2/notifications/mark").j(false, new defpackage.e11(28));
+
+## String table (en), the fold's words
+social_notifications_comment_multiple	<b> %1$s and %2$s more </b> commented on your post
+social_notifications_comment_plus_one	<b> %1$s and 1 more </b> commented on your post
+social_notifications_like_comment_multiple	<b> %1$s and %2$s more </b> liked your comment
+social_notifications_like_comment_plus_one	<b> %1$s and 1 more </b>liked your comment
+social_notifications_like_multiple	<b> %1$s and %2$s more </b>liked your post
+social_notifications_like_plus_one	<b> %1$s and 1 more </b>liked your post
+social_notifications_share_match_joined_multiple	<b> %1$s and other %2$s contacts </b>have joined a match
+social_notifications_share_match_joined_plus_one	<b> %1$s and another contact </b>has joined a match

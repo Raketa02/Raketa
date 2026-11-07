@@ -1,0 +1,24 @@
+Playtomic Android 6.93.2 (com.playtomic, XAPK from APKPure, 2026-10-08): English string table (config.en resources.arsc), rows whose key or text names reliability. Extracted 2026-10-09 by the gaps researcher (S-01 round) from the same table as gaps-NOTIFY-playtomic-android-6.93.2-push.txt. Columns: locale, type, key, English text.
+
+en	string	dupr_card_rating_realiability	Reliability: %1$s
+en	string	level_challenge_detail_rule_4	Only players with <b>%1$s reliability or higher</b> are eligible for the challenge
+en	string	level_challenge_intro_alert_message	Only players with <b>%1$s reliability or higher</b> are eligible for the challenge
+en	string	level_info_midmenu_reliability_item	The Level: Reliability & Variation
+en	string	match_detail_confidence_info_how_works_message	The more games you play the more your ranking increases and you can call the club to do a test, improve your ranking and play in all matches.
+en	string	match_detail_confidence_info_how_works_title	How can I up my ranking?
+en	string	match_detail_confidence_info_message	Your reliability rating reflects the confidence Playtomic has in your level of reliability. The match requires a player reliability level of <b>%1$s</b>, your reliability level is <b>%2$s</b>.
+en	string	match_detail_confidence_info_title	What is the match ranking?
+en	string	match_detail_confidence_negative	Need more reliability
+en	string	match_detail_confidence_positive	Reliability ok!
+en	string	match_detail_request_spot_out_of_range_confidence	A reliability of %1$s and a Level in the range of %2$s is required. Request a place to join.
+en	string	match_vote_spot_requests_user_reliability	Reliability %1$s
+en	string	profile_level_level_reliability_hight_status	HIGH
+en	string	profile_level_level_reliability_invalid_status	INVALID
+en	string	profile_level_level_reliability_low_status	LOW
+en	string	profile_level_level_reliability_medium_status	MEDIUM
+en	string	profile_level_level_reliability_percentage_title	Level reliability: %1$s
+en	string	profile_level_level_reliability_title	Level reliability
+en	string	profile_level_reliability_dialog_confirmation	Got it!
+en	string	profile_level_reliability_dialog_message	So we know a player's level is accurate\n\nThe reliability depends on the number of competitive matches you play. The more you play the higher the percentage
+en	string	profile_level_reliability_dialog_title	Reliability Level
+en	string	profile_player_stats_level_reliability	Level reliability %1$s

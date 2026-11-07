@@ -1,0 +1,42 @@
+Playtomic Android 6.93.2 (package com.playtomic, XAPK from APKPure, 2026-10-08): strings read from base resources.arsc, matched by pattern. Evidence for topics/gaps-PAY.md.
+
+## Removing a card
+'Are you sure you want to remove this card?'
+'Are you sure you want to remove this credit card?'
+'Manage, add, and delete your payment methods, including your Wallet and credit or debit cards.'
+'Remove card'
+'Remove card?'
+'Remove payment method'
+'Save your card to allow the club to charge any pending payments for your bookings or services. You won’t need to confirm each payment, as the club will charge your saved card when needed. You can manage or remove your saved cards anytime.'
+"This card can't be deleted.\nIt is being used as a guarantee in an ongoing split payment booking."
+'This payment method will be removed but will remain available for %s subscriptions.'
+
+## Your payments, transactions, receipts
+'All transactions'
+'All transactions you make will be displayed here.'
+'Get Service Fee receipt by email'
+'Get cancellation receipt by email'
+'Get the invoice by email'
+'Payment history'
+'Transactions'
+'We have sent your invoice by email.'
+'You don’t have any transactions'
+'You will receive a receipt for Playtomic fees. For other reservation-related receipts, please contact the club.'
+'Your payments'
+'Your payments are protected by the %s.'
+
+## Declines and card updates
+'Card brand was not updated. Please try again.'
+'Card was not updated. Please try again.'
+'Insufficient balance (%1$s)'
+'Payment declined'
+'This card has expired. Update your card info or choose a different payment method.'
+'Update card'
+'We are unable to authenticate your payment method. Please choose a different payment method and try again.'
+'Your card has expired'
+'Your card has insufficient funds.'
+'Your card was declined'
+'Your payment method was declined.'
+
+## The Your payments entry's subtitle
+' Payment methods, transactions, club memberships...'

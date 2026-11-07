@@ -1,0 +1,33 @@
+- [`areas/FILL.md`](../areas/FILL.md) — digest for the moment a game fills (R-FILL-1 to R-FILL-48): what Playtomic, the other platforms and the status quo do, and what each side complains about. Written 2026-10-08 from the topic files and `games-and-fill-in-market.md` (§7.7, §7.8, §8 S08-G1/G9, Stripe sections). Sections:
+  - `#1-a-yes-that-moves-money-undo-and-the-countdown-r-fill-1-to-r-fill-9`
+  - `#2-everyone-pays-together-or-nobody-pays-r-fill-10-to-r-fill-17`
+  - `#3-the-booked-game-court-sides-chat-and-the-players-other-yeses-r-fill-18-to-r-fill-26`
+  - `#4-its-a-game-and-what-everyone-is-told-r-fill-27-to-r-fill-30`
+  - `#5-on-request-the-last-yes-asks-the-club-r-fill-31-r-fill-32`
+  - `#6-a-refused-share-and-its-recovery-r-fill-33-to-r-fill-48`
+  - `#gaps-for-the-gaps-round` (R-FILL-1–4, R-FILL-5/6/8, R-FILL-27, R-FILL-35)
+- [`areas/WEEK.md`](../areas/WEEK.md) — digest for your week in hours and Games & money (R-WEEK-1 to R-WEEK-30). Written 2026-10-08 from the topic files and `games-and-fill-in-market.md` (§7.5, §7.7, S05-G-8, S03-G2, S08-G1/G8/G9). Sections:
+  - `#1-ticking-the-week-r-week-1-to-r-week-8-r-week-29-r-week-30`
+  - `#2-reading-the-week-against-a-games-hour-r-week-9-to-r-week-11`
+  - `#3-what-others-see-of-a-players-week-r-week-12`
+  - `#4-games-per-week-and-most-ill-pay-r-week-13-to-r-week-17-r-week-23-r-week-24`
+  - `#5-a-full-week-counting-pausing-and-coming-back-r-week-18-to-r-week-22-r-week-25`
+  - `#6-posting-and-open-seats-against-the-week-r-week-26-to-r-week-28`
+  - `#gaps-for-the-gaps-round` (R-WEEK-4, R-WEEK-16, R-WEEK-18, R-WEEK-20)
+- [`areas/DECK.md`](../areas/DECK.md) — digest for the Games deck (R-DECK-1 to R-DECK-39). Written 2026-10-08 from the topic files and `games-and-fill-in-market.md` (§7.5, §7.7, S05-G-8/9/11, S03-G2, S08-G1/G9). Sections:
+  - `#1-a-groups-games-tab-r-deck-1-r-deck-2`
+  - `#2-competitive-or-for-fun-r-deck-3-to-r-deck-6`
+  - `#3-which-games-are-dealt-r-deck-8-r-deck-10-to-r-deck-18-r-deck-21`
+  - `#4-card-types-and-their-order-r-deck-19-r-deck-20-r-deck-22-r-deck-23`
+  - `#5-what-a-card-shows-r-deck-9-r-deck-24-to-r-deck-35`
+  - `#6-an-empty-deck-r-deck-36-r-deck-37`
+  - `#7-keeping-the-deck-current-r-deck-7-r-deck-38-r-deck-39`
+  - `#gaps-for-the-gaps-round` (R-DECK-7, R-DECK-23, R-DECK-29, R-DECK-38)
+- [`areas/SWIPE.md`](../areas/SWIPE.md) — digest for a yes, a no and a withdrawn yes (R-SWIPE-1 to R-SWIPE-33). Written 2026-10-08 from the topic files and `games-and-fill-in-market.md` (§7.5, §7.7, S05-G-2/9/11, S08-G1/G9, Stripe robustness). Sections:
+  - `#1-a-yes-before-the-last-seat-r-swipe-1-r-swipe-2-r-swipe-14-r-swipe-15-r-swipe-21-r-swipe-27-r-swipe-28-r-swipe-32`
+  - `#2-what-may-refuse-a-yes-r-swipe-3-to-r-swipe-8-r-swipe-20-r-swipe-22-to-r-swipe-25`
+  - `#3-a-no-r-swipe-9-to-r-swipe-11`
+  - `#4-a-named-seat-nobody-answered-and-a-game-needs-only-you-r-swipe-12-r-swipe-13`
+  - `#5-withdrawing-a-yes-r-swipe-16-to-r-swipe-19-r-swipe-26`
+  - `#6-when-the-answer-meets-the-network-r-swipe-29-to-r-swipe-31-r-swipe-33`
+  - `#gaps-for-the-gaps-round` (R-SWIPE-9, R-SWIPE-12, R-SWIPE-19, R-SWIPE-31)

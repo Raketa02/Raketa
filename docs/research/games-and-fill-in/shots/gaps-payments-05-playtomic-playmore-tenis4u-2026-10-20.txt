@@ -1,0 +1,251 @@
+gaps-payments-05 — extracts read 2026-10-20 (Europe/Warsaw). Verbatim strings and code lines from what each product serves to any visitor.
+Files were fetched with curl into a scratch folder and grepped; nothing was signed in to.
+
+§A Playtomic Manager — https://manager.playtomic.io/locales/en/<namespace>.json
+Namespaces served (200): schedule reservations transactions bookings club_payments refunds integrations billing onboarding customers organization wallets invoices reports payment_methods pricing venue courts admins dashboard notifications match_history_record common yup
+Probed, 403: payments settings payouts payout stripe stripe_connect wallet club_settings venue_settings finance payment_collection payment_settings kyc disputes refund statements balance compliance account accounts merchant merchant_account bank_account sales accounting tenant tenants club clubs player_details customer players home banners banner calendar invoicing payments_report reports_payments payment
+  -- schedule.json
+  schedule:availability_blocks.event_type.availability_block = Blocking
+  schedule:availability_blocks.notification_title.beta_feature = BETA feature
+  schedule:availability_blocks.title.create_block = Create blocking
+  schedule:availability_blocks:checkbox_label.block_description = Ability to add a blocking description
+  schedule:availability_blocks:checkbox_label.multiple_courts = Option to select multiple courts
+  schedule:availability_blocks:checkbox_label.recurring_blocks = Ability to create recurring blockings
+  schedule:calendar.error.exceeded_preauthorization_amount = Exceeding the preauthorized amount for the booking is not allowed
+  schedule:calendar.error.resource_size_mismatch = Moving an event to a court with a different size is not allowed
+  schedule:calendar.error.resource_sport_mismatch = Moving an event to a court with a different sport is not allowed
+  schedule:cancel_reservation = Cancel booking
+  schedule:cancel_reservation.confirm = Yes, cancel it
+  schedule:cancel_reservation.paid_text = When you cancel a paid booking, it will be removed from the schedule but it can still be found in the Bookings list. If the payment was made online it will be refunded automatically and if it was paid at the club you must refund it to the client.
+  schedule:cancel_reservation.question = Cancel booking?
+  schedule:cancel_reservation.success = Booking successfully canceled
+  schedule:cancel_reservation.unpaid_text = When you cancel a booking, it will be removed from the schedule but it can still be found in the Bookings list.
+  schedule:delete_reservation.confirm = Yes, cancel it
+  schedule:delete_reservation.question = Cancel booking?
+  schedule:delete_reservation.text = When you cancel a paid booking, you lose the booking with all its data and, since it’s paid, you need to provide a refund.
+  schedule:edit_match.notification.preauthorized_amount_exceeded_label = The pre-authorized amount of {amount} has been exceeded for this booking, and the online payment for the additional amount cannot be guaranteed.
+  schedule:participants.status.app = Pay in the App
+  schedule:participants.status.cash = Cash: Paid
+  schedule:participants.status.credit_card = Credit Card: Paid
+  schedule:participants.status.invoiced = Invoiced
+  schedule:participants.status.invoiced_cancelled = invoiced: Canceled
+  schedule:participants.status.invoiced_draft = invoiced: Draft
+  schedule:participants.status.invoiced_error = invoiced: Error
+  schedule:participants.status.invoiced_paid = invoiced: Paid
+  schedule:participants.status.invoiced_sending = Invoiced: Sending
+  schedule:participants.status.invoiced_sent = invoiced: Sent
+  schedule:participants.status.invoiced_uncollectible =  invoiced: Uncollectible
+  schedule:participants.status.invoiced_void = invoiced: Void
+  schedule:participants.status.onsite = Paid at the club
+  schedule:participants.status.paid = Paid
+  schedule:participants.status.paid_app = App: Paid
+  schedule:participants.status.paid_by_owner = Paid by Owner
+  schedule:participants.status.paid_with = Paid with "{with}"
+  schedule:participants.status.paid_with_debt = Paid with debt
+  schedule:participants.status.paid_with_terminal = Paid at the club
+  schedule:participants.status.paid_with_wallet = Paid with "{wallet}"
+  schedule:participants.status.unpaid = Unpaid
+  schedule:participants.status.wallet = Wallet: Paid
+  schedule:pick_time_lock_type.entry_description.availability_block = Mark courts as unavailable
+  schedule:pick_time_lock_type.entry_name.availability_block = Block a court
+  schedule:price_prompt.paid.cancel = Do not change
+  schedule:price_prompt.paid.save = Move anyway
+  schedule:price_prompt.paid.text = This booking has been paid and the price can't be updated. Would you like to change it anyway?
+  schedule:price_prompt.title = Booking Update
+  schedule:price_prompt.unpaid.cancel = Keep price {price}
+  schedule:price_prompt.unpaid.save = Update Price to {price}
+  schedule:price_prompt.unpaid.text = Though the booking is unpaid, the price won't be updated, but you can manually edit the price from the details. Would you like to change it anyway?
+  schedule:reschedule_booking_dialog.button.cancel = Cancel
+  schedule:reschedule_booking_dialog.button.confirm = Confirm
+  schedule:reschedule_booking_dialog.checkbox.do_not_update_players_prices = Do not update the players prices
+  schedule:reschedule_booking_dialog.checkbox_helper_text.prices_will_be_updated = Note, that the prices for empty slots will still be updated.
+  schedule:reschedule_booking_dialog.heading.players_price_update = Players price update
+  schedule:reschedule_booking_dialog.label.change_will_cause_preauthorized_amount_to_be_exceeded = This change will cause the pre-authorized booking amount to be exceeded. The payment for the additional amount cannot be guaranteed.
+  schedule:reschedule_booking_dialog.label.price_update = Price update
+  schedule:reschedule_booking_dialog.link.more_info = More info.
+  schedule:reschedule_booking_dialog.text.prices_will_be_updated = Player prices will be updated automatically based on the club's pricing rules. This will affect one or more enrolled players.
+  -- transactions.json
+  transactions:authorized_amount_info.desc.split_payment_authorization_process = The owner's card is authorized for the entire split-payment booking, and settlement takes place two hours after the booking. This covers the owner's portion as well as any pending payments from other participants.
+  transactions:authorized_amount_info.tooltip.authorized_amount = Total authorized amount is {amount}
+  transactions:transaction_status.authorized = Authorized
+  transactions:transaction_status.paid = Paid
+  transactions:transaction_status.pending = Pending
+  transactions:transaction_status.refunded = Refund
+  transactions:transaction_status.voided = Voided
+  transactions:transaction_status_chip.tooltip.has_assigned_refund = Payment has assigned refund
+  -- reservations.json
+  reservations:cancel_reservation = Cancel booking
+  reservations:cancel_reservation.button.aria_label = Cancel booking
+  reservations:cancel_reservation.desc.cancellation_disclaimer = Once cancelled, participants will be informed by email and notification to their Playtomic app. Booking will be removed from the schedule but can still be found in the Bookings section.
+  reservations:cancel_reservation.dialog.not_now = Keep it
+  reservations:cancel_reservation.dialog.paid_text = When you cancel a paid booking, it will be removed from the schedule but it can still be found in the Bookings list. If the payment was made online it will be refunded automatically and if it was paid at the club you must refund it to the client.
+  reservations:cancel_reservation.dialog.question = Cancel booking?
+  reservations:cancel_reservation.dialog.unpaid_text = When you cancel a booking, it will be removed from the schedule but it can still be found in the Bookings list.
+  reservations:cancel_reservation.option_desc.per_participant = Let me choose how to refund each participant
+  reservations:cancel_reservation.option_desc.to_wallet = Refund all eligible participants to the club wallet
+  reservations:cancel_reservation.radio_label.original_payment_method = Refund all participants to their original payment methods
+  reservations:cancel_reservation.refund.product_name = {product_type}: <court_name>{court_name}</court_name>, <datetime>{datetime}</datetime>
+  reservations:cancel_reservation.refund.recurring_booking = Recurring booking
+  reservations:cancel_reservation.refund.regular_booking = Regular booking
+  reservations:cancel_reservation.section_header.refund = Refund
+  reservations:cancel_reservation.success = Booking successfully canceled
+  reservations:cancel_reservation.tooltip.coming_soon = Additional refund options are coming in the following months.
+  reservations:cancel_reservation.tooltip.only_for_commission_model = Additional refund options are only supported for products paid under the commission model.
+  -- bookings.json
+  bookings:payment_status.chip.not_applicable = N/A
+  bookings:payment_status.chip.paid = Paid
+  bookings:payment_status.chip.partially_paid = Partially paid
+  bookings:payment_status.chip.pending = Pending
+  bookings:payment_status.chip.refunded = Refunded
+  bookings:payment_status.chip.unpaid = Unpaid
+  bookings:status.cancelled = Canceled
+  bookings:status.finished = Finished
+  bookings:status.in_progress = In progress
+  bookings:status.pending = Pending
+  -- match_history_record.json
+  match_history_record:end_time_updated.key1 = End time updated
+  match_history_record:end_time_updated.key2 = from {oldTime} to {newTime} by {requestUserName} ({role})
+  match_history_record:label.resource_automatically_assigned = Court automatically assigned
+  match_history_record:level_updated_automatically.key1 = Match level updated
+  match_history_record:level_updated_automatically.key2 = from {old_min_level} - {old_max_level} to {new_min_level} - {new_max_level}
+  match_history_record:level_updated_manually.key1 = Match level updated
+  match_history_record:level_updated_manually.key2 = from {old_min_level} - {old_max_level} to {new_min_level} - {new_max_level} by {requestUserName} ({role})
+  match_history_record:managed_match_created.key2.v1 = in the app ({-date} at {time})
+  match_history_record:managed_match_created.key2.v10 = in the app by {requestUserName} ({role}) ({match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v11 = in the app by {requestUserName} ({role}) ({resource_name} - {-date} at {time})
+  match_history_record:managed_match_created.key2.v12 = in the app by {requestUserName} ({role}) ({resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v13 = in the app by {requestUserName} ({role}) ({sport} - {-date} at {time})
+  match_history_record:managed_match_created.key2.v14 = in the app by {requestUserName} ({role}) ({sport} - {match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v15 = in the app by {requestUserName} ({role}) ({sport} - {resource_name} - {-date} at {time})
+  match_history_record:managed_match_created.key2.v16 = in the app by {requestUserName} ({role}) ({sport} - {resource_name} - {match_duration} min - {-date} at {oldTime})
+  match_history_record:managed_match_created.key2.v2 = in the app ({match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v3 = in the app ({resource_name} - {-date} at {time})
+  match_history_record:managed_match_created.key2.v4 = in the app ({resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v5 = in the app ({sport} - {-date} at {time})
+  match_history_record:managed_match_created.key2.v6 = in the app ({sport} - {match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v7 = in the app ({sport} - {resource_name} - {-date} at {time})
+  match_history_record:managed_match_created.key2.v8 = in the app ({sport} - {resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:managed_match_created.key2.v9 = in the app by {requestUserName} ({role}) ({-date} at {time})
+  match_history_record:match_created.key2.v1 = automatically ({-date} at {time})
+  match_history_record:match_created.key2.v2 = automatically ({match_duration} min - {-date} at {time})
+  match_history_record:match_created.key2.v3 = automatically ({resource_name} - {-date} at {time})
+  match_history_record:match_created.key2.v4 = automatically ({resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:match_created.key2.v5 = automatically ({sport} - {-date} at {time})
+  match_history_record:match_created.key2.v6 = automatically ({sport} - {match_duration} min - {-date} at {time})
+  match_history_record:match_created.key2.v7 = automatically ({sport} - {resource_name} - {-date} at {time})
+  match_history_record:match_created.key2.v8 = automatically ({sport} - {resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:price_updated.key1 = Price updated
+  match_history_record:price_updated.key2 = from {oldPrice} to {newPrice} by {requestUserName} ({role})
+  match_history_record:resource_locked.key1 = Court booked
+  match_history_record:resource_locked_automatically.key2.v1 = automatically ({-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v2 = automatically ({match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v3 = automatically ({resource_name} - {-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v4 = automatically ({resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v5 = automatically ({sport} - {-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v6 = automatically ({sport} - {match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v7 = automatically ({sport} - {resource_name} - {-date} at {time})
+  match_history_record:resource_locked_automatically.key2.v8 = automatically ({sport} - {resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v1 = manually ({-date} at {time})
+  match_history_record:resource_locked_manually.key2.v2 = manually ({match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v3 = manually ({resource_name} - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v4 = manually ({resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v5 = manually ({sport} - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v6 = manually ({sport} - {match_duration} min - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v7 = manually ({sport} - {resource_name} - {-date} at {time})
+  match_history_record:resource_locked_manually.key2.v8 = manually ({sport} - {resource_name} - {match_duration} min - {-date} at {time})
+  match_history_record:resource_unlocked.key1 = {resourceName} was unassigned
+  match_history_record:resource_unlocked.key2 = from the match
+  match_history_record:resource_updated.key1 = Court updated
+  match_history_record:resource_updated.key2 = from {oldResourceName} to {newResourceName} by {requestUserName} ({role})
+  match_history_record:start_time_updated.key1 = Start time updated
+  match_history_record:start_time_updated.key2 = from {oldTime} to {newTime} by {requestUserName} ({role})
+  -- ns/club_payments.json
+  club_payments:detail_view.button_refund_payment = Refund payment
+  club_payments:payment_status.paid = Paid
+  club_payments:payment_status.pending = Pending
+  club_payments:payment_status.refunded = Refunded
+  club_payments:payment_status.voided = Voided
+  club_payments:payment_status_chip.tooltip.voided_by_player = Cancellation requested by player on {date}
+  club_payments:payment_status_chip.tooltip.voided_by_staff = Player removed by staff on {date}
+  club_payments:payment_status_chip.tooltip.voided_expired = Benefit expired on {date}
+  club_payments:payment_status_chip.tooltip.voided_lapsed_payment = Removed after unpaid grace period on {date}
+  -- ns/refunds.json
+  refunds:refund_dialog_option_disabled_reason.label.incompatible_family = Unallowed payment method combination.
+  refunds:refund_dialog_option_disabled_reason.label.incompatible_for_guest_or_contact = Additional payment method not supported for guests or contacts.
+  refunds:refund_dialog_option_disabled_reason.label.invalid_tenant_commission_type = Additional refund options are only supported for products paid under the commission model.
+  refunds:refund_dialog_option_disabled_reason.label.not_implemented = Additional refund options are coming in the following months.
+  refunds:strategy_type.label.full_refund = Full refund
+  refunds:strategy_type.label.no_refund = No refund
+  refunds:strategy_type.label.partial_refund = Partial refund
+  -- integrations.json
+  integrations:stripe_connect.required_fields_missing = Your Stripe Connect Account has missing information. Solve this issue immediately, otherwise online payments and payouts will be interrupted.
+  integrations:stripe_connect.required_fields_missing.title = Your payments are about to be interrupted
+
+§B Playmore club panel — https://manager.playmore.pl/assets/ (499 files)
+  calendar-DawkByxO.js :: stripeRefundOrdered:{title:{t:0,b:{t:2,i:[Automatyczny zwrot przez Stripe: ,{amount}, ,{currency}]}},description:`Rezerwacja została odwołana w terminie, więc Playmore zlecił zwrot tą samą drogą, którą klient zapłacił (kartą albo inną metodą płatności). Pieniądze zejdą z salda klubu w Stripe. Z tą kwotą recepcja nie musi nic robić.`},cardRefundShortfall:{title:{t:0,b:{t:2,i:[Kaucja do pobrania w recepcji: ,{amount}, 
+  calendar-DawkByxO.js :: clubRefundDue:{title:{t:0,b:{t:2,i:[Zwrot po stronie klubu: ,{amount}, ,{currency}]}},description:`Klient zapłacił online, a pieniądze trafiły prosto na konto klubu. Rezerwacja została odwołana w terminie, więc zwrot robi klub — przelewem albo na miejscu. Playmore go nie zleca. Klient widzi w aplikacji, że o zwrot ma się zgłosić do recepcji. Opłata serwisowa nie podlega zwrotowi.`},stripeRefundOrdered:{title:{t:0,b:{t:2,i:[Automatyczny zwrot przez Stripe: ,{amount}, ,{currency}]}},description:`Rezerwacja została od
+  calendar-DawkByxO.js :: cancelReasons:{paymentTimeout:`brak płatności w terminie`,onlinePaymentTimeout:`płatność online nie została dokończona w terminie`,onlinePaymentNotStarted:`płatność online nie wystartowała`,carnetInsufficient:`za mało środków na karnecie`,carnetBalanceChanged:`saldo karnetu zmieniło się w trakcie rezerwacji`,walletPaymentRefused:`płatność z portfela została odrzucona`,courtDeleted:`kort został usunięty`,openGameSeatResold:`miejsce w grze otwartej zostało odsprzedane`},fieldNames:{annotation:`Adnotacja`,app_payment_methods_id:`Metoda płatności`,cancellation_status:`Status anulowania`,created_at:`Stworzona o`,created_by_employee_id:`Stworzona przez`,created_by_user_id:`Stworzona przez użytkownika`,discount_cards:`Karty zniżkowe`,discount_cards_scanned:`Odbite karty zniżkowe`,end_time:`Czas zakończenia`,id:`ID`,invoice:`Faktura`,is_first_booking:`Pierwsza rezerwacja`,is_recurring:`Rezerwacj
+  calendar-DawkByxO.js :: slotTaken:`Ten termin na tym korcie jest już zajęty. Nic nie zapisaliśmy — wybierz inną godzinę albo kort.`,movedRefreshFailed:`Ta rezerwacj
+  calendar-DawkByxO.js :: unavailability:{addTitle:`Dodaj niedostępność`,detailsTitle:`Szczegóły niedostępności`,loadingDetails:`Ładowanie szczegółów niedostępności...`,cancelUnavailability:`Anuluj niedostępność`,cancelling:`Anulowanie...`,noHistory:`Brak historii niedostępności.`,loadError:`Nie można załadować szczegółów niedostępności. Spróbuj ponownie później.`,noSportObjectId:`Brak identyfikatora obiektu sportowego`,cancelled:`Niedostępność została anulowana`,annotationUpdated:`Adnotacja została zaktualizowana`,noUnavailabilityId:`Brak identyfikatora niedostępności`,tabs:{details:`Szczegóły`,history:`Historia`},validation:{dateRequired:`Data jest wymagana`,timeRequired:`Godzina jest wymagana`,durationPositive:`Czas trwania musi być większy od 0`,recurringEndRequired:`Data końca powtarzania jest wymagana`,recurringEndAfterStart:`Data końca powtarzania musi być późniejsza niż data rozpoczęcia`,maxOneYear:`Maksymalny okres powtarzania to 1 rok`},selectedSuffix:`(wybrany)`,helperText:`Niedostępność zostanie utworzona dla wszystkich wybranych kortów.`,progress:{doNotCloseTitle:`Nie zamykaj tej karty`,doNotCloseBody:`Niedostępności zapisują się po kolei. Zamknięcie lub odświeżenie karty przerwie zapis w połowie.`,counter:{t:0,b:{t:2,i:[Dodaję niedostępności — ,{current}, z ,{total}]}},remainingMinutes:{t:0,b:{t:2,i:[Zostało około ,{minutes}, min]}},remainingUnderMinute:`Zostało mniej niż minuta`},submit:{success:{t:0,b:{t:2,i:[Dodano ,{count}, niedostępności]}},failed:`Nie udało się dodać żadnej niedostępności. Spróbuj ponownie.`,invalidData:`Formularz ma niekompletne dane. Odśwież stronę i wypełnij go jeszcze raz.`},failureModal:{titlePartial:{t:0,b:{t:2,i:[Nie zapisało się ,{failed}, z ,{total}]}},titleAll:`Nie dodano żadnej niedostępności`,bodyPartialDates:{t:0,b:{t:2,i:[Dodano ,{done}, z ,{total},. Te terminy dodaj ponownie:]}},bodyPartialCourts:{t:0,b:{t:2,i:[Dodano ,{done}, z ,{total},. Te
+  calendar-DawkByxO.js :: conflicts:{checkFailed:`Nie udało się sprawdzić kolizji. Możesz utworzyć cykl — zajęte terminy sprawdzimy jeszcze raz przy zapisie.`,noConflicts:`Brak konfliktów`,slotUnavailableSingular:`termin niedostępny`,slotUnavailablePlural:`terminy niedostępne`,createDespiteLabel:`Utwórz mimo kolizji terminów`,createDespiteHint:`Cykl zostanie utworzony, nawet jeśli część terminów jest już zajęta.`},documents:{title:`Dokumenty`,noDocuments:`Brak dokumentów dla tej rezerwacji`,createdAt:`Utworzono`,type:`Typ`,description:`Opis`,link:`Link`,openDocument:`Otwórz dokum
+  calendar-views-D40b467p.js :: var uPe={auto_cancel_payment_timeout:`paymentTimeout`,auto_cancel_online_payment_timeout:`onlinePaymentTimeout`,stripe_payment_not_started:`onlinePaymentNotStarted`,carnet_insufficient:`carnetInsufficient`,carnet_balance_changed:`carnetBalanceChanged`,wallet_balance_changed:`walletPaymentRefused`,wallet_sheet_not_applicable:`walletPaymentRefused`,wallet_amount_recheck_failed:`walletPaymentRefused`,court_deleted_refund_failed:`courtDeleted`,og_seat_resold:`openGameSeatResold`},dPe=e=>{let t=e?.data_after?.reason??e?
+  calendar-views-D40b467p.js :: prepareUnavailabilityData:(t,r)=>{let c=t?new Date(t):pt(i.value,a.value);if(!c)throw Error(`Unavailability needs a valid date and time`);let l=new Date(c.getTime()+o.value*6e4),u=n.getters[`employees/currentVenueId`];if(!u)throw Error(`Venue ID is required to create unavailability`);return{venue_id:u,venue_sport_object_id:r||e.selectedCourt.id,start_time:c.getTime(),end_time:l.getTime(),type:`unavailable`,annotation:s.value,source:`reception`}},validateForm:()=>(u.value=kVe({unavailabilityDate:i.value,unavailabili
+  calendar-views-D40b467p.js :: var PVe=500,FVe=3,IVe=e=>new Promise(t=>setTimeout(t,e)),PR=(e,t)=>j.global.t(`calendar.unavailability.`+e,t);function LVe(e,t){let n=z({current:0,total:0,etaSeconds:null}),r=async e=>{let n=t.prepareUnavailabilityData(e.date,e.courtId),{isValid:r,errors:i}=t.validateUnavailabilityData(n);return r?(await YM(()=>Bn.createReservation(n),{isRetryable:JM}),`ok`):(R.error(`useUnavailabilitySubmit.invalidPayload`,{court:e.courtId,errors:i}),`invalid`)},i=({done:e,total:n,failedLabels:r,invalid:i,kind:a})=>{if(e===n){t.showSuccessMessage(PR(`submit.success`,{count:e}));return}if(i===n){t.showErrorMessage(PR(`submit.invalidData`));return}if(n===1){t.showErrorMessage(PR(`submit.failed`));return}t.showFailureSummary({done:e,total:n,failedLabels:r,kind:a})};return{submitUnavailability:async()=>{try{if(!t.validateForm())return;let{jobs:a,kind:o}=jVe(t),s=Date.now(),c=[],l=0,u=0,d=0;n.value={current:0,total:a.length,etaSeconds:null};for(let[e,t]of a.entries()){t.date&&!t.firstOfCourt&&await IVe(PVe);try{await r(t)===`ok`?(l+=1,d=0):(u+=1,c.push(t.label),d+=1)}catch(e){R.error(`useUnavailabilitySubmit.writeFailed`,{label:t.label,error:e}),c.push(t.label),d+=1}let i=l+c.length;if(n.value={current:i,total:a.length,etaSeconds:NVe({current:i,total:a.length,elapsedMs:Date.now()-s})},d>=FVe){c.push(...a.slice(e+1).map(e=>e.label));break}}i({done:l,total:a.length,failedLabels:c,invalid:u,kind:o}),l
+  reports-Ct22FugR.js :: Pozycje „Rezerwacja – anulowana, zwrot po stronie klubu” to rezerwacje opłacone online i odwołane w terminie. Klub oddaje klientowi pełną wpłatę sam. Prowizja Playmore została pobrana przy płatności i jest ujęta w sumach oraz na fakturze.`,columns:{category:`K
+  reports-Ct22FugR.js :: W klubie bez portfela Playmore zwroty oddaje klub poza systemem, więc rejestr ich nie zawiera.`,shop:`Rejestr nie obejmuje sprzedaży ze Sklepu: paragony ze Sklepu trafiają prosto do Fakturowni albo wFirmy.`}}},payments:{page:{title:`Raport płatności`,descripti
+  venue-settings-OPJNS5u4.js :: playerReschedule:{title:`Przełożenie rezerwacji przez gracza`,description:`Gracz może sam przenieść swoją rezerwację na inny wolny termin, ale tylko do końca czasu bezpłatnego odwołania. Po tym czasie zostaje mu zwykłe odwołanie na Twoich zasadach.`,toggleLabel:`Gracze mogą sami przełożyć rezerwację kortu`,toggleDescription:`Domyślnie włączone. Po wyłączeniu gracze nie zobaczą w aplikacji przycisku „Przełóż” — zostaje im tylko odwołanie rezerwacji.`,info:`Gracz przełoży tylko pojedynczą rezerwację kortu i tylko na termin w tej samej cenie, więc niczego nie dopłaca ani nie dostaje zwrotu — płatność zostaje przy rezerwacji. Nie dotyczy rezerwacji stałych, zajęć, gier otwartych, lekcji z trenerem ani rezerwacji opłaconych karnetem albo z podziałem kosztów. Zmiana obowiązuje od razu — gracz zobaczy ją przy najbliższym otwarciu rezerwacji w aplikacji.`,loadError:`Nie udało się wczytać tego us
+
+§C Playmore player app — https://playmore.pl/assets/ (1,490 files)
+  BlUiZcxz.js :: x0="open-game-filled-moment",V0="release-ramp",J0="active",Q0="Moment „Komplet” gry otwartej (E3.4b): tap w push ligi „Komplet w Waszej grze” albo „Mecz potwierdzony” (`?moment=full|confirmed`) otwiera członkowi składu arkusz z awatarami, „Kontakty do składu”, „Dodaj do kalendarza” i „Zaproś na kolejną” (feed klubu, `surface=join_full`); przy wypisaniu uczestnika z pełnej gry przed cutoffem modal anulowania mówi „Gra ma komplet” z przyciskami „Zostaję w grze” / „Wypisz się mimo to”; na feedzie karta pełnej gry pokazuje członkowi składu (bez trenera-organizatora) zasadę („Gracie, jeśli do potwierdzenia nikt się nie wypisze…”) i od `filledAt` przycisk „Kontakty do składu” (PLA-4834). Kontaktów od kompletu flaga NIE bramkuje — robi to serwer ligi (PLA-4822); zdejmuje tylko ich wejście z karty.",X0="fail-closed";var ab="2026-09-25",eb="2026-09-26",ib="Fail-closed (=== true, openGameFilledMomentFlag.js), bo modal wypisania stoi na ścieżce rezygnacji z pieniędzmi, a nierozstrzygnięta flaga (ładowanie, PostHog zablokowany, błąd) ma dawać dzisiejszy modal i sam fokus karty po pushu. Host na feedzie czeka na odpowiedź flag najwyżej 4 s (zimny start z pushu). Kluby sandbox 13 i 121 zawsze ON w kodzie (isSandboxVenue). Bez payloadu klubów: push „Komplet” (PLA-4822) wychodzi we wszystkich klubach od 25.09, a metryka PLA-4821 (komplet → gra odbyta, 57% → ≥ 75%) porównuje 4 tygodnie przed i 
+  BlUiZcxz.js :: Bez payloadu klubów: push „Komplet” (PLA-4822) wychodzi we wszystkich klubach od 25.09, a metryka PLA-4821 (komplet → gra odbyta, 57% → ≥ 75%) porównuje 4 tygodnie przed i po wdrożeniu we wszystkich klubach naraz. Zdarzenia: open_game_success_sheet_shown{variant: filled|confirmed, surface: moment, via: push} (istniejąca nazwa) o
+  BlUiZcxz.js :: ny w PLA-4743 (#16). Flaga założona w PostHogu (id 288862); od 26.09.2026 na 100% (wszystkie kluby) — po wydaniu prod playera (#3545) i sondzie na playmore.pl: link z pushu zdejmuj
+  BlUiZcxz.js :: aT="whatsapp-group-moments",eT="release-ramp",iT="active",oT='„Daj znać grupie” (PLA-6266, W3 epiku PLA-6225): po udanej akcji w apce arkusz WhatsApp z gotowym tekstem i linkiem dla składu — rezerwacja zrobiona (krok zapraszania), zmiana terminu (właściciel przełożył kort, PLA-6380), wolne miejsce (wypisanie z gry otwartej; współgracz wypisał się z kortu albo właściciel go zdjął, PLA-6380), komplet (ostatnie miejsce; organizator po arkuszu z pushu, PLA-6380), płatność do zrobienia (podział ze szczegółów), anulacja (kort i gra otwarta) i wynik (kort, gra otwarta, liga: wyzwania i mecze grupowe). Pomijany przy składzie 1 osoby; z podpiętą grupą składu najpierw „Otwórz grupę”, potem „Wyślij tekst”. Payload {"venueIds":[…],"moments":[…]} zawęża kluby i momenty.',rT="fail-closed";var nT="2026-10-11",tT="2026-10-11",sT='Osobna flaga zamiast `whatsapp-quick-messages`: tamta stoi na 100%, a arku
+  BlUiZcxz.js :: Flaga założona w PostHogu 11.10.2026 (id 308991) na 0% z payloadem pilota {"venueIds":[140,136,85,182,18]} (kluby z W0, decyzja orkiestratora PLA-6225); zostaje na 0% do deployu prod playera, rampę robi orkiestrator. Dane W0: 47% otwarć arkusza szybkich wiadomości kończy się przekazaniem do WhatsAppa, najwięcej ze szczegółów rez
+  BlUiZcxz.js :: Osobna flaga zamiast `whatsapp-quick-messages`: tamta stoi na 100%, a arkusz, który sam wyskakuje PO akcji, nie może wejść wszystkim razem z deployem (spec PLA-
+  BXfZGVTf.js :: function y(e){return Number(e?.id)>0?e.status==="confirmed"?!0:e.status==="open"&&e.filledAt!=null:!1}function S(e,{nowMs:t=Date.now(),isOrg
+  C9ye8j_u.js :: contacts:{title:"Współgracze",subtitle:"Gra potwierdzona.",subtitleFull:"Skład jest pełny.",subtitleSpotFreed:"Ktoś się wypisał — w składzie zwolniło się miejsce.",action:"Pokaż kontakt",modalTitle:"Dane kontaktowe współgraczy",hint:"Numery widzą tylko gracze z tego składu - użyj ich, by ustalić szczegóły meczu.",error:"Nie udał
+  C9ye8j_u.js :: Mamy komplet ✅ Gramy: {when}, {venue}. Do zobaczenia na korc
+  C9ye8j_u.js :: Nie dam rady zagrać: {when}, {venue}, {court}. Zwolniło się miejsce — kto wskaku
+  CYtOXQ7t.js :: moments:{title:"Daj znać grupie",lead:{booked:"Kort zarezerwowany. Wyślij składowi szczegóły.",changed:"Zmiana zapisana. Daj znać reszcie składu.",open_spot:"Zwolniło się miejsce. Napisz do grupy, może ktoś wskoczy.",full:"Macie komplet. Daj znać grupie, że gracie.",payment:"Podział gotowy. Przypomnij składowi o płatności.",cancelled:"Odwołane. Daj znać składowi, żeby nikt nie przyjechał na próżno.",result:"Wynik zapisany. Pochwal się grupie."}}};export{e as default};  //# debugId=4e98e663-19c1-5a66-a7d7-01c47942e0
+  CAjrtWH8.js :: var _="REQUEST_IN_PROGRESS",E=3e3,f=45,v=1200,T=2,L=t=>t.toString(16).padStart(2,"0");function d(){const t=new Uint8Array(16);globalThis.crypto.getRandomValues(t),t[6]=t[6]&15|64,t[8]=t[8]&63|128;const s=Array.from(t,L).join("");return[s.slice(0,8),s.slice(8,12),s.slice(12,16),s.slice(16,20),s.slice(20)].join("-")}var w=t=>S(t)===_,M=t=>{const s=t?.response?.status;return s==null||s===429||y(s)},P=t=>t?.response?.status===429&&R(t),g=t=>new Promise(s=>setTimeout(s,t));async function C(t,s,c,{pollIntervalMs:l=E,maxPolls:u=f,idempotencyKey:m,multiclickWaitMs:p=v}={}){const I={...c,idempotency_key:m??d()};let a=!1,o=0;for(let i=0;;i+=1)try{return await t.post(s,I)}catch(e){const n=w(e);a||=n;const r=!a&&P(e);if(!(n||r||a&&M(e))||!(r?o<T:i<u))throw e;r&&(o+=1),await g(r?p:l)}}export{d as n,C as r,_ as t};  //# debugId=5525fa8a-fb5c-5d18-ad4f-5b75a77bb3cf 
+  DKpNMi8e.js :: import import{n as qe,r as S}from"./CAjrtWH8.js"
+  DKpNMi8e.js :: endpoints posted through S: "/payment/create", "/payment/create_auth", "/payment/reservation/bulk", "/payment/settlements/bulk", "/reservation", "/reservation/batch", "/user_venue_carnet", "/user_wallet/topup", `/split/${t}/pay`
+  DKpNMi8e.js :: async createReservation(a,t,r,n,s,o,u,i,c,_,p,m,h,y,b,P,G="single",F,J,w,sa=!1,oa,ia=[],ye,ua,Z,ee,la,fe,me,ae,ca,te){try{return(await S(e,"/reservation",{source:ge(),type:G,venue_id:a,venue_sport_object_id:t,start_time:r,end_time:n,discount_cards:s,app_payment_methods_id:u,price:i,phone_number:c,fi
+  CXX7vfQ6.js :: authorize:({wallet_token:_,wallet_order_id:g,client_amount:k})=>e.users.createReservation(...aa({...t,walletPayment:{wallet_token:_,wallet_order_id:g,client_amo
+  CXX7vfQ6.js :: function _i(e){if(e?.type==="open_game")try{Nr()&&ye().refre
+  CCIEGau6.js :: var T=864e5,p=t=>t&&!t.cancellation_status&&D(t)!=="group"&&!(Number(t.venue_group_classes_id)>0),N=(t,r)=>t!=null&&r!=null&&String(t)===String(r);function H(t,{venueId:r,timeZone:s,nowMs:n}){const a=(Array.isArray(t)?t:[]).filter(o=>{const f=parseInt(o?.start_time);return p(o)&&N(o.venue_id,r)&&Number.isFinite(f)&&f<=n&&f>=n-5184e6}),u=[...b(A(a)).values()][0],e=u?_(u.items,s,{nowMs:n}):null;if(!e||e.count<2||e.share<.4&&e.recentCount<2)return null;const i=c(e.startMs,s);return i==null?null:{venueId:r,startMs:e.st
+  CuTXkj_H.js :: closed:"Tymczasowo nieczynny",closedUntil:"Tymczasowo nieczynny do {date}",stats:{games:"{n} gier w 60 dni | {n} gra w 6
+  CuTXkj_H.js :: usual:{label:"Jak zwykle",recentLabel:"Zagraj znowu",duration:"{minutes} min",checking:"Sprawdzam wolne korty…",book:"Za
+
+§D tenis4U club panel — https://panel.tenis4u.pl/main.bf9c0f8a156c883a.js (unicode escapes decoded)
+  :: cancelReservation(){if(!this.details||this.cancelling)return;const e=this.cancelAction;e&&Ii("Anulować rezerwację ze zwrotem?",()=>{this.cancelling=!0,this.v3Service.cancel(this.details.public_uuid,!0).subscribe({next:o=>{this.cancelling=!1,this.toastr.success(o.message||"Rezerwacja anulowana"),this.onEventUpdated.emit(),this.close()},error:o=>{this.cancelling=!1,jt(o?.error?.message||"Nie udało się anulować rezerwacji")}})},e.warning?`<p style="color:#FF9800;font-size:13px"><i class="fa fa-exclamation-triangle"></i> ${e.warning}</p>`:"","Tak, anuluj ze zwrotem","Nie")}forceCancelReservation(){if(!this.details||this.cancelling)return;const e=this.forceCancelAction;e&&Ii("Anulować rezerwację BEZ zwrotu?",()=>{this.cancelling=!0,this.v3Service.cancel(this.details.public_uuid,!1).subscribe({next:n=>{this.cancelling=!1,this.toastr.success(n.message||"Rezerwacja anulowana (bez zwrotu)"),this.onEventUpdated.emit(),this.close()},error:n=>{this.cancelling=!1,jt(n?.error?.message||"Nie udało się anulować rezerwacji")}})},e.warning||"Rezerwacja zostanie anulowana bez zwrotu środków","Tak, anuluj bez zwrotu","Nie")}openEditModal(){!this.details||!this.selectedEvent||(this.editModalDto={closingWeekend:this.courtData.closing_weekend,closing:this.courtData.closing,eventToSwitch:this.selectedEv
+  :: save(){const e={starts_at:Te(this.model.begin).minutes(this.startsAt.min).hours(this.startsAt.hour).seconds(0).milliseconds(0).format("YYYY-MM-DD[T]HH:mm:ss.SSS[Z]"),ends_at:Te(this.model.end).minutes(this.endsAt.min).hours(this.endsAt.hour).seconds(0).milliseconds(0).format("YYYY-MM-DD[T]HH:mm:ss.SSS[Z]"),name:this.model.name},n=this.stationsToAddBlockade.map(o=>this.service.setBlockedPeriod(o,e));(0,QO.zip)(...n).subscribe(()=>{this.onPeriodChanged.emit(this.model),this.closeModal(),this.toastr.success("Ok")},o=>
+  :: Nie można usunąć rezerwacji opłaconej online, która się już rozpoczęła lub zakończyła. Automatyczny zwrot opłaty następuje przy usunięciu rezerwacji przed jej rozpoczęciem. Jeśli chcesz wygenerować zwrot po czasie rozpoczęcia rezerwacji, sk
+
+§E Kraków clubs' terms
+  KS Grzegórzecki, https://grzegorzecki.pl/wp-content/uploads/2026/08/Regulamin_KSG_2026_2027_Aktualny.pdf (in force from 30 Aug 2026):
+    II.3 "Opłata za wstęp na kort ustalana jest według aktualnego cennika, chyba że dla danego rodzaju rezerwacji określono inne zasady."
+    II.5 "Rezygnację z jednorazowej rezerwacji należy zgłosić najpóźniej 24 godziny przed jej rozpoczęciem. W przypadku późniejszego odwołania albo niestawienia się na kort osoba dokonująca rezerwacji jest zobowiązana do uiszczenia pełnej opłaty za wstęp na kort."
+    II.10 "Klub może zmienić lub odwołać rezerwację z uzasadnionych przyczyn organizacyjnych, technicznych lub niezależnych od Klubu, w szczególności w razie awarii, czasowego wyłączenia kortu z użytkowania, niekorzystnych warunków atmosferycznych, organizacji zawodów, turniejów albo innych wydarzeń klubowych."
+    II.12 "W przypadku odwołania rezerwacji przez Klub, Klub zaproponuje w miarę dostępności inny kort lub termin. Jeżeli skorzystanie z rezerwacji w innym terminie nie będzie możliwe, wniesiona opłata zostanie, według wyboru klienta, zaliczona na poczet kolejnej rezerwacji albo zwrócona."
+    II.13 "Zmiana numeru kortu w ramach tego samego obiektu, na kort o porównywalnych warunkach do gry, nie stanowi odwołania rezerwacji i nie wymaga zgody osoby dokonującej rezerwacji."
+    VII.4 "... Zmiany nie naruszają praw nabytych ani warunków usług już opłaconych."
+  Miazga, https://www.miazgasquash.pl/regulamin/ : "Zmiana terminu gry jest równoznaczna z anulowaniem dotychczasowej gry i rezerwacją nowego terminu"; "Klubowicz zostanie zwolniony z opłaty za nieterminową anulację jeżeli kort zostanie zarezerwowany i opłacony przez innego gracza"
+  Atras, https://www.atrassquash.pl/regulamin/ : "... chyba że kort zostanie wynajęty przez innego klienta"; "... chyba że w zastępstwie wskaże inną osobę, która wynajmie kort"; "Ceny mogą ulegać zmianom"
+  Squash4You, https://www.squash4you.pl/regulamin : "W przypadku opłacenia rezerwacji on-line i anulacji kortu przed terminem 24h uiszczona opłata za kort zostanie przeniesiona na kolejną, najbliższą rezerwację ale nie podlega zwrotowi"
+  Garden Padel, https://gardenpadel.pl/regulamin/ : nothing on moving, price changes or rebooking.
+  Fame Sport: https://famesport.pl/wp-content/uploads/2026/08/Regulamin_Fame_Sport_Club_2026_Aktualny.pdf -> HTTP 404; https://famesport.pl/regulamin/ -> 404.
+
+§F kluby.org
+  https://oferta.kluby.org/changelog?rok=2016..2023 (2010–2015, 2024–2026 serve no entries). Lines naming notices:
+    2019 "Możliwość wysyłania wiadomości SMS z informacją o zaległości przez pracownika"; "Możliwość wysyłania wiadomości SMS z zaproszeniem do rezerwacji ONLINE przez pracownika"; "Automatyczne powiadomienie administratora o chęci połączenia gracza z kontem na portalu"; "Automatyczne powiadomienie administratora o chęci dodania pracownika, który ma już konto na portalu"
+    2020 "Powiadomienie dla pracownika o odwołanej rezerwacji"
+    2022 "Edycja powiadomień uczestnika przez administratora"; "Podgląd wysłanych powiadomień w historii klienta o rezerwacjach"
+  https://oferta.kluby.org/funkcje : "Powiadomienia SMS/MAIL"
+  https://oferta.kluby.org/pomoc : chapters "2.5. Powiadomienia" (YouTube 1ibSZxbDhrE) and, under "9. Ustawienia", "9.11. Powiadomienia" (YouTube n_V5Z4d9zeo).
+  oEmbed titles: "Rozdział 9.11. Powiadomienia", "Rozdział 2.5. Powiadomienia" (author "Kluby org"). timedtext for n_V5Z4d9zeo (pl, asr) returned an empty body; the watch page served a 3,4 kB consent wall; thumbnails show the kluby.org logo only.
+
+§G Help centres and providers' documents (quoted in the topic file with links)
+  Playtomic club help, Zendesk API https://helpmanager.playtomic.com/api/v2/help_center/... : articles 37355604106129, 50423411876881, 20534487294097, 46647891110673, 20535417606161, 51376628311441, 50457368851729, 20535256445969, 20534669386641, 20534585454097, 50654517291537, 50251519067921, 20535331224721, 20535292080145, 20534894210833; searches "restricted" (19), "missing information" (68), "Stripe account" (49), "payouts" (17), "payments interrupted" (99), "refund failed" (60), "refund pending" (64), "preauthorized" (1), "pre-authorized" (15), "authorized amount" (52), "split payment" (101), "cancel reservation refund" (52), "commission refund" (58), "notify players" (119), "reschedule email" (61).
+  Google Pay API: https://developers.google.com/pay/api/faq ; https://developers.google.com/pay/api/android/reference/request-objects ; https://developers.google.com/pay/api/android/guides/resources/payment-data-cryptography
+  Recurly: https://docs.recurly.com/recurly-subscriptions/v2.29/docs/google-pay (updated 2025-10-20)

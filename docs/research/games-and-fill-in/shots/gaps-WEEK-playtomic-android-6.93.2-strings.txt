@@ -1,0 +1,58 @@
+Playtomic Android 6.93.2 (package com.playtomic, XAPK from APKPure, 2026-10-08): string keys and values read from base and config.en resources.arsc, matched by pattern. Evidence for topics/gaps-WEEK.md.
+
+## Leaving an edit with unsaved changes
+community_match_discard_dialog_discard	Discard
+community_match_discard_dialog_dont_discard	Don’t discard
+community_match_discard_dialog_message	If you discard your changes, your data will not be saved and you’ll lose any changes made.
+community_match_discard_dialog_title	Discard and leave
+profile_menu_edit_discard_dialog_confirm	Discard changes
+profile_menu_edit_discard_dialog_msg	You will lose any changes you have made
+profile_menu_edit_discard_dialog_title	Discard changes?
+social_feed_create_post_discard	Discard
+social_feed_create_post_discard	Discard post
+social_feed_create_post_discard_dialog_message	If you discard it now, the post won't be published in your Feed and you will lose any changes made
+social_feed_create_post_discard_dialog_message	If you discard now, your changes won't be saved.
+social_feed_create_post_discard_dialog_title	Are you sure?
+social_feed_create_post_discard_dialog_title	Discard this post?
+
+## Preferred time to play (player preferences)
+calendar_time_selector_all_day	All day
+home_pending_actions_preferences_subtitle	Best hand, court side, match type, preferred time to play
+home_pending_actions_preferences_title	Edit your player preferences
+profile_add_day_to_play_player_preferences_edit_title	Edit time preferences
+profile_add_day_to_play_player_preferences_save_button	Save preferences
+profile_add_day_to_play_player_preferences_select_day_title	Select day
+profile_add_day_to_play_player_preferences_select_time_subtitle	You can select a fixed time frame or specify by the hour
+profile_add_day_to_play_player_preferences_select_time_title	Select time
+profile_add_day_to_play_player_preferences_successfully_removed	Data correctly removed
+profile_add_day_to_play_player_preferences_successfully_saved	Data correctly saved
+profile_add_day_to_play_player_preferences_title	Add match schedule
+profile_edit_player_pref_best_time_to_play_add_new_day_button	Add new day
+profile_edit_player_pref_best_time_to_play_by_days_toggle_title	Set by days
+profile_edit_player_pref_best_time_to_play_by_timeframe_toggle_title	Set by time frame
+profile_edit_player_pref_best_time_to_play_title	Your preferred time to play
+profile_player_pref_best_time_to_play_title	Preferred time to play
+
+## Club membership limits
+membership_detail_view_benefit_active_bookings_max	Up to %1$s active bookings
+membership_detail_view_benefit_book_ahead_days	Book up to %1$s days in advance
+membership_detail_view_benefit_bookings_per_day_max	Up to %1$s bookings per day
+membership_detail_view_benefit_interval_month	month
+membership_detail_view_benefit_interval_week	week
+membership_detail_view_benefit_interval_year	year
+
+## Empty lists that name the filters
+activity_list_search_no_results_message	No activities match your filters. Try adjusting them to see more options.
+match_wizard_flexible_matches_empty	There aren’t any flexible matches available with your filters; try later ⏰
+match_wizard_marketplace_empty_matches_description	There are no matches with your filters. Try adjusting them or create your own match.
+match_wizard_matches_empty_filters	Apply filters in order to be able to see available matches
+match_wizard_matches_empty_filters	Apply filters in order to be able to see available matches.
+
+## Join refusals
+activity_detail_generic_required_message	You cannot join the activity - check your level and gender information.
+add_my_partner_fit_gender_error	This player does not fit the gender option of the match
+match_user_join_request_approved_time_limit	Your match request has been approved. You must join at least %1$s before it starts.
+
+## Membership wallet top-up
+membership_detail_view_benefit_wallet_top_up	Wallet top-up
+membership_detail_view_benefit_wallet_top_up_amount_per_interval	Wallet top-up: %1$s/%2$s

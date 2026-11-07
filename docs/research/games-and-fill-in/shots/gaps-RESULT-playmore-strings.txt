@@ -1,0 +1,90 @@
+Evidence for topics/gaps-RESULT.md, read 2026-10-08. Playmore web bundles are served at https://playmore.pl/assets/<file>; the file names are content hashes and change with each deploy, so the excerpts are kept here verbatim. The Android 6.118.0 excerpts come from the source maps (sourcesContent) inside com.reservise.reserviseapp from APKPure, 2026-10-08.
+
+## 93jAIRDY.js: reservations.openGames.results (Polish strings)
+results:{pill:{report:"Wpisz wynik",confirm:"Potwierdź wynik"},section:{title:"Wynik meczu",reportSubtitle:"Gra zakończona? Wpisz wynik - trafi do Waszej historii meczów.",reportCta:"Wpisz wynik",waiting:"Wynik czeka na potwierdzenie drugiej strony.",autoConfirmAt:"Potwierdzi się automatycznie {date}.",confirmSubtitle:"Przeciwnik wpisał wynik - potwierdź go albo zgłoś zastrzeżenie.",confirmCta:"Zobacz wynik",confirmed:"Wynik potwierdzony ✓",disputed:"Wynik ma zgłoszone zastrzeżenie - skontaktuje się z Wami recepcja klubu.",editCta:"Popraw wynik",winnerLine:"Wygrali: {names}",winnerLineSingle:"Wygrywa: {names}"},modal:{title:"Wynik meczu",stepLabel:"Krok {step}/{total}",back:"Wstecz",next:"Dalej",submit:"Zapisz wynik",submitting:"Zapisujemy…",sides:{question:"Kto grał z kim?",hint:"Przypisz graczy do drużyn. Gracze bez przypisania nie wejdą do wyniku.",teamA:"Drużyna A",teamB:"Drużyna B",invalid:"Przypisz graczy 1 na 1 albo 2 na 2."},winner:{question:"Kto wygrał?",you:"Ty"},sets:{title:"Sety (opcjonalnie)",hint:"Możesz dopisać wyniki setów - bez rygoru formatu, maks. 7.",setN:"Set {n}",add:"Dodaj set",remove:"Usuń set"}},confirmModal:{title:"Potwierdź wynik",intro:"{name} zgłosił(a) wynik Waszej gry. Zgadza się?",winnerLine:"Zwycięzcy: {names}",confirm:"Potwierdzam wynik",dispute:"Zgłoś zastrzeżenie",disputeLabel:"Co się nie zgadza? (opcjonalnie)",disputePlaceholder:"Np. wynik był 2:1, nie 2:0.",disputeSubmit:"Wyślij zastrzeżenie",disputeInfo:"Zastrzeżenie zamraża wynik do wyjaśnienia przez klub. Po wyjaśnieniu wynik można wpisać ponownie.",confirmed:"Wynik potwierdzony - dzięki!",disputed:"Zastrzeżenie zgłoszone. Klub wyjaśni sprawę."},errors:{disabled:"Wpisywanie wyników jest w tym klubie wyłączone.",notConfirmedGame:"Wynik można wpisać tylko dla potwierdzonej gry.",trainerGame:"Treningi z trenerem nie mają wyników meczowych.",notStarted:"Gra jeszcze się nie rozpoczęła - wynik wpiszesz po jej zakończeniu.",deadlineExpired:"Minął termin na wpisanie wyniku tej gry.",alreadyExists:"Ktoś już wpisał wynik tej gry.",notFound:"Nie znaleziono wyniku tej gry.",invalidSides:"Nieprawidłowy skład drużyn - przypisz graczy 1 na 1 albo 2 na 2.",notEnoughPlayers:"Za mało graczy w tej grze, żeby wpisać wynik.",notReportable:"Ten wynik nie czeka już na potwierdzenie.",confirmerWrongSide:"Wynik potwierdza gracz drużyny przeciwnej.",submitterCannotConfirm:"Nie możesz potwierdzić wyniku, który sam zgłosiłeś.",generic:"Nie udało się zapisać wyniku. Spróbuj ponownie."}}
+
+## BcyMCC7n.js: result state per entry (code; `reportable` comes from the server)
+function F(r){const e=r?.result;if(!e)return r?.reportable?"report":null;if(e.status==="confirmed")return"confirmed";if(e.status==="disputed")return"disputed";if(e.status!=="played")return null;if(e.reportedByMe)return"waiting";const n=A(e,_(r)),a=G(e);return n&&a&&n!==a?"confirm":"waiting"}
+
+## BqgRINoI.js: winner step offers only the two sides (code)
+xt={__name:"OpenGameResultWinner",props:{homeLabel:{type:String,required:!0},awayLabel:{type:String,required:!0},winnerSide:{type:String,default:null}},emits:["update:winnerSide"],setup(e){const{t}=O(),a=["home","away"];return(n,r)=>(d(),h("div",bt,[b("h4",kt,p(s(t)("reservations.openGames.results.modal.winner.question")),1),b("div",{class:"grid gap-2",role:"radiogroup","aria-label":s(t)("reservations.openGames.resul
+
+## D4AshuGr.js: API client (code): confirm sends no body
+async reportResult(e,t,r){return(await a.post(`/open-games/${t}/result`,r,i(e))).data.data},async result(e,t){return(await a.get(`/open-games/${t}/result`,i(e))).data?.data??null},async confirmResult(e,t){return(await a.post(`/open-games/${t}/result/confirm`,null,i(e))).data.data},async disputeResult(e,t,r){const n=r?{reason:r}:{};return(await a.post(`/open-games/${t}/result/dispute`,n,i(e))).data.data}},quickTournaments
+
+## D_jVwDzs.js: feature-flag register, flag open-game-postgame (summary and why, abridged at the end)
+{key:"open-game-postgame",type:"release-ramp",status:"active",summary:"Arkusz „Po meczu” gier otwartych (E4.2, PLA-4844): w jednym miejscu wynik („Wpisz wynik” / „Potwierdź wynik” przez istniejące modale), „Dodaj wszystkich do znajomych (N)”, „Zagrajcie znowu” (rewanż lite z `rematchPrefill` ligi, PLA-4841) i pytanie „Czy wszyscy dotarli?” (tylko zdarzenie). Wejścia: push po meczu na /my-reservations (arkusz zamiast modala z #3611), pigułka „Po meczu” na kafelku (zamiast „Wpisz wynik”, link do szczegółów z ?postGame=) i karta „Po meczu” na szczegółach rezerwacji, od startu gry do startu + 72 h. Payload {venueIds:[…]} zawęża do klubów GRY.",semantics:"fail-closed",defaultWhenUnavailable:!1,owner:"mat",addedAt:"2026-09-26",lastDecisionAt:"2026-09-26",why:'Pętla po meczu jest martwa (od 8.06: 3 wyniki, 6 follow), a z potwierdzonej gry do kolejnej przechodzi 2/9 graczy. Powierzchnia leży na ścieżce powrotu po meczu, więc fail-closed (=== true, postGameSheetFlag.js): nierozstrzygnięta flaga (ładowanie, PostHog zablokowany, błąd) daje dokładnie zachowanie #3611 — modal wyniku z „Zagrajcie znowu”, pigułka „Wpisz/Potwierdź wynik”, brak karty. Wejście z pushu czeka na flagi najwyżej tyle, ile trwa odczyt me/results (nigdy dłużej niż #3611). Allowlista klubów GRY w payloadzie (brak klucza = wszystkie kluby, uszkodzony payload = nigdzie), bez klubów sandbox w kodzie. Fala 2 (R4): flaga założona w PostHogu 26.09 (id 289333) na 100% z payloadem {"venueIds":[13]} = tylko sandbox 13 do QA; 
+
+## CPLsdYdo.js: Challenger (ladder) rules a club picks
+reportResultDeadline:"Po zakończeniu zarezerwowanego terminu kortu masz {duration} na wpisanie wyniku. Jeśli nikt nie wpisze, mecz zostaje automatycznie anulowany. Działa tylko gdy mecz ma podpiętą rezerwację.",lateCancelCutoff:"Jeśli odwołasz mecz mniej niż {duration} przed ustalonym terminem, prze
+noResult:{reminder:{description:"Jeśli przez {duration} po zaplanowanym starcie meczu żaden z Was nie wpisze wyniku, system wyśle Wam przypomnienie. Bez kary — wpiszcie wynik kiedy zdążycie."},cancel:{description:"Jeśli przez {duration} po zaplanowanym starcie meczu żaden z Was nie wpisze wyniku, mecz zostanie anulowany. Bez kary, ale drabina nie zmieni się jakby ten mecz w ogóle się nie odbył."},walkover_to_challenger:{description:"Jeśli przez {duration} po zaplanowanym starcie meczu żaden z Was nie wpisze wyniku, wyzywający dostanie walkower, a wyzwany — ostrzeżenie + spadek w drabinie. Najczęściej to wyzwany unika wpisania przegranej."}}
+resultDeadline:{info:"Wpisz wynik meczu — pozostało {hours} h.",soft:"Za {hours} h recepcja zostanie powiadomiona o braku wyniku — wpisz go teraz.",urgent:{walkover:"Za {hours} h walkower przeciwnikowi — wpisz wynik!",cancel:"Za {hours} h mecz zostanie automatycznie anulowany — wpisz wynik!"}},result:{title:"Zgłoś wynik meczu",f
+
+## 1zI0w1-9.js: league post-match rating
+var a={title:"Jak było na meczu?",subtitle:"Twoja ocena pomaga klubowi zadbać o dobrą atmosferę w lidze.",subtitleWithOpponent:"Jak wypadł mecz z {name}?",punctuality:"Punktualność",atmosphere:"Atmosfera",atmosphereHint:"3 = w porządku, 5 = było mega miło",fairPlay:"Fair play",schedulingEase:"Jak łatwo było się umówić?",schedulingEaseHint:"1 = bardzo trudno, 5 = bardzo łatwo",commentLabel:"Chcesz coś dodać? (opcjonalnie)",commentPlaceholder:"Np. co zadziałało dobrze, a co można poprawić",privacyIntro:"Ocenę widzi tylko obsługa klubu.",privacyStrong:"Druga osoba jej nie zobaczy.",submit:"Wyślij ocenę",errors:{alreadySubmitted:"Ta ocena została już wysłana.",disabled:"Ta liga nie zbiera opinii o meczach.",notRateable:"Tego meczu nie można ocenić."},skip:"Pomiń"};export{a as default};
+
+## Android 6.118.0 source map: src/api/modules/league.js lines (open-game results)
+    /**
+     * GET /open-games/me/results — cross-venue: the caller's recent open
+     * games (30-day lookback) with their result state. Entries:
+     * `{ gameId, venueId, venueGroupClassesId, name, startTime,
+     * participants: [{ uvpId, playerId, displayName, initials, avatarUrl,
+     * publicProfileSlug, isMe }], result: OpenGameResult|null, reportable }`.
+     * The ONLY surface where roster participants carry ids — don't leak them
+     * elsewhere.
+     *
+     * `publicProfileSlug` (PLA-3946) is nullable and NOT a guarantee of the
+     * deployment: a league older than that ticket omits it entirely, which the
+     * post-game buddy suggestion reads as "nobody here can be followed" and
+     * drops in silence. Treat a missing field as null, never as an error.
+     * POST /open-games/{id}/result — report a loose result: explicit winner
+     * side + optional sets (max 7, ints 0–99, no sport-format validation).
+     * Payload: `{ homeUvpIds: [1..2], awayUvpIds: [1..2], winnerSide:
+     * 'home'|'away', sets?: [{ home, away }] }`. Sides are validated
+     * server-side against the LIVE roster (disjoint (1,1) or (2,2),
+     * reporter on a side). Re-report by the original submitter overwrites
+     * and restarts the auto-confirm clock.
+     *
+     * Error codes: OPEN_GAME_RESULTS_DISABLED (403),
+     * OPEN_GAME_RESULT_INVALID_SIDES / _NOT_ENOUGH_PLAYERS (400),
+     * OPEN_GAME_RESULT_NOT_CONFIRMED_GAME / _NOT_STARTED /
+     * _DEADLINE_EXPIRED / _ALREADY_EXISTS (409),
+     * OPEN_GAME_RESULT_TRAINER_GAME (403),
+     * OPEN_GAME_ROSTER_UNAVAILABLE (502).
+    /**
+     * POST /open-games/{id}/result/confirm — opposing side accepts; the
+     * result settles. Error codes: SUBMITTER_CANNOT_CONFIRM,
+     * OPEN_GAME_RESULT_CONFIRMER_WRONG_SIDE (403),
+     * OPEN_GAME_RESULT_NOT_FOUND (404), OPEN_GAME_RESULT_NOT_REPORTABLE (409).
+    /**
+     * POST /open-games/{id}/result/dispute — any participant except the
+     * submitter freezes the result (reason ≤280 chars, optional) until the
+     * venue resolves it (manager invalidate → re-report).
+     */
+
+## Android 6.118.0 source map: src/views/reservations/openGames/lib/openGameResult.js
+/**
+ * Pure helpers for open-game match results (report / confirm / dispute).
+ * Operate on `GET /open-games/me/results` entries: `{ gameId, venueId,
+ * venueGroupClassesId, participants: [{ uvpId, playerId, displayName,
+ * initials, avatarUrl, isMe }], result, reportable }`. Convention: the
+ * reporter's team A maps to the backend's `home` side.
+ */
+
+/**
+ * Caller-facing state machine of one entry:
+ * 'report'    — no result yet and the window is still open,
+ * 'waiting'   — pending; the caller can't confirm (own report / own side),
+ * 'confirm'   — pending; the caller is on the opposing side,
+ * 'confirmed' | 'disputed' — settled states,
+ * null        — nothing to show (window closed, no result).
+/**
+ * Report payload (team A = home). Set rows where both numbers are filled
+ * make it through; an all-empty grid omits `sets` entirely (sets are an
+ * optional annotation, not a scoring source).
+ */
+
+## Android 6.118.0 source map: src/modules/userReservations/components/OpenGameResultSection.vue
+    case "waiting":
+      // Re-report is the submitter's privilege (restarts the confirm clock).
+      if (!result.value?.reportedByMe) return null;

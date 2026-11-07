@@ -1,0 +1,100 @@
+Evidence for topics/gaps-payments-00.md, read 2026-10-20 by the gaps researcher (payments pass, market-00).
+
+== A. Playtomic for Android 6.94.0 (package com.playtomic, versionCode 37947, XAPK from APKPure; manifest.json "version_name":"6.94.0")
+Decompiled with jadx 1.5.1 (--no-res). Class names as shipped; obfuscated helper lambdas live in defpackage/.
+
+A1. Sign-out (R-PLATFORM-31)
+- com.playtomic.modules.profile.middleware.ProfileMenuLogOutMiddleware: on ProfileMenuViewAction.logOut shows a dialog
+  (profile_menu_logout / profile_menu_logout_confirmation_message); its confirm button calls IAuthenticationService.logout().
+- com.anemonesdk.service.AuthenticationService.logout():
+      access_token = null; refresh_token = null; access_expiration = null;
+      two user-bound stores cleared (.q()); CookieManager.removeAllCookies(null); logged-in flag set to false.
+  Nothing else: no HTTP call, no FirebaseMessaging.deleteToken (no deleteToken / deleteInstanceId anywhere in
+  com/playtomic or com/anemonesdk).
+- com.anemonesdk.service.NotificationService.g(token): POST "/v1/notifications/tokens" with
+      fir_token, platform, device_id, application, language
+  The service has no call that removes a token (its endpoints: /v2/notifications, /v2/notifications/mark,
+  /v1/notifications/settings, /v1/notifications/tokens, /v2/notifications/{id}).
+- com.playtomic.general.manager.notification.NotificationManagerDelegate.a(token): returns early only when the token
+  AND the signed-in user id are both the ones it last sent; otherwise registers the token again (5 tries, 20 s).
+  Called from NotificationManager.d()/j() and from NotificationsListenerService.onNewToken.
+
+A2. Home before its read lands, between reads, offline (R-PLATFORM-50, -51)
+- com.playtomic.modules.home.view.HomeTabFragmentKt wires lifecycle effects (com.playtomicui.utils.LifecycleEffectsKt:
+  b = ON_PAUSE, c = ON_RESUME, d = ON_START):
+      ON_START  -> HomeTabViewAction.viewLoad          (defpackage/hh0 case 15)
+      ON_RESUME -> HomeTabViewAction.loadPendingActions (hh0 case 16) -> HomeTabInteractor.c()
+- HomeTabPresenter: loadPendingActions -> iHomeTabInteractor.c(); the only postDelayed in the presenter (1000 ms)
+  belongs to the onboarding paywall / notification prompt, not to a refresh.
+- HomeTabInteractor.c(): GetUserPendingActions.a(onSuccess = mg0 case 9, onError = nd0 case 20)
+      mg0 case 9 : interactor.c.l(actionsData)                       (publish the new read)
+      nd0 case 20: interactor.c.l(new ActionsData(<all empty>))      (publish an empty read)
+- com.playtomic.modules.home.domain.GetUserPendingActions.a(): every part of the read (matches, tournaments, lessons,
+  academy classes, payments, preferences ...) is built as <request>.c(emptyList); Promise.c(value) recovers a failure
+  with that value (defpackage/ux case 8: then -> pass result; catch -> fulfil with the given value).
+- HomeActivitiesPresenter starts from HomeActivitiesViewState(isLoading = true, ...); infoLoaded sets isLoading = false.
+  HomeActivitiesFragmentKt shows the "Your next activity" carousel (home_activities_carousel_title) only when
+  !list.isEmpty() || isLoading, and passes isLoading to the carousel.
+
+A3. A match's screen (R-PLATFORM-50, -51)
+- com.playtomic.modules.match.interactor.MatchDetailInteractor(matchTeam, matchId, match, ...): the Match handed in
+  by the card is published at once (this.m = ThreadMutableLiveData(match)); status starts notInitialized; H() reads
+  the match by id (IMatchService.q).
+- MatchDetailObserverMiddleware: on MatchDetailViewAction.subscribe (each time the screen is shown) calls H() again.
+- H()'s failure handler (defpackage/vt0 case 5):
+      if (interactor.g() == null) status = MatchDetailInteractorStatus.error(exc)
+  i.e. an error only when no match is on screen; otherwise the shown match stays.
+- No Timer / postDelayed / scheduleAtFixedRate in com/playtomic/modules/match except a wizard cell.
+
+A4. Keys and retries (R-PLATFORM-2, -6, -14)
+- com.playtomic.general.services.AppHttpClient default headers: "X-Requested-With: com.playtomic.app <version>",
+  "User-Agent: Android <release>", "X-Playtomic-Device-Id". HttpRequest constants: X-Playtomic-Include-Total-Header,
+  X-Playtomic-Allow-Stale-Reads. No idempotency header, key or request id in com/anemonesdk, com/playtomic/general,
+  foundation or mozart; no retry in com/anemonesdk/general/client.
+- com.anemonesdk.service.PaymentIntentService.i(request): POST "/v1/payment_intents" with
+      allowed_payment_method_types, user_id, cart.requested_item
+- com.playtomic.modules.local_notification: categories general / chat / social; delegates for chat and general only;
+  no locally scheduled result reminder.
+
+== B. Playmore web app (playmore.pl, the code its phone app wraps), as served 2026-10-20. 1 489 JavaScript files.
+
+B1. After-game asks (R-PLATFORM-72)
+- assets/-UbPNqVj.js:  function dr(r,e=Date.now()){const t=D(r);return Number.isFinite(t)?e>=t&&e<t+2592e5:!1}
+  (2592e5 ms = 72 h), exported as C; used by assets/CB8J5ee6.js component "OpenGamePostGameEntry":
+  active = enabledFor(venueId) && C(reservation.start_time ?? entry.startTime).
+  Same file: B=6048e5 (7 days); S(r,e) = started && e <= (end_time ?? start_time) + B  -> "report"/"confirm" prompts.
+  A post-game entry saved from a push link ("openGamePostGameEntry", query "postGame"/"afterGame") is kept 18e5 ms (30 min).
+- Strings (assets/C9ye8j_u.js, pl): postGame = {title:"Po meczu", pill:"Po meczu", cardBody:"Wynik, znajomi z gry i
+  kolejny mecz w jednym miejscu.", actions:{result:"Wpisz wynik", confirmResult:"Potwierdź wynik", ...},
+  attendance:{question:"Czy wszyscy dotarli?", ...}}  (English, assets/B0fBgVCP.js: "After the game", "Add the score").
+- Strings (assets/CtEmagZ3.js, pl), ladder ("Challenger") settings: noResult.reminder = "Jeśli przez {duration} po
+  zaplanowanym starcie meczu żaden z Was nie wpisze wyniku, system wyśle Wam przypomnienie. Bez kary — wpiszcie wynik
+  kiedy zdążycie."; leagues: results.reportDeadline = "... Po tym czasie przypomnimy Wam automatycznie; ...",
+  reportDeadlineSelfArranged = "Wpiszcie wynik zaraz po meczu. Jeśli zapomnicie, przypomnimy Wam {duration} po końcu kolejki."
+- No open-game result reminder string, and no client-side scheduling of one, was found (searched "przypomn", "remind",
+  "reminder" near result/score/game in every file).
+
+B2. Payment keys (R-PLATFORM-2, -6, -14)
+- assets/Deodb_08.js, exported r = C(t,s,c,{pollIntervalMs=3e3,maxPolls=45,idempotencyKey,multiclickWaitMs=1200}):
+  body = {...c, idempotency_key: idempotencyKey ?? <new random UUID v4>}; re-posts the same body while the server
+  answers REQUEST_IN_PROGRESS (every 3 s, up to 45), or on a 429 multi-click (up to 2 more, 1,2 s apart).
+- assets/DVlTFZ4d.js imports it as S: createOnlinePayment(...) -> S(e,"/payment/create",w) (no key passed, so a new key
+  per call); createAuthPayment -> S(e,"/payment/create_auth",y); payShare -> S(e,`/split/${t}/pay`,r).
+
+B3. Reservise's partner terms (R-PLATFORM-24)
+- /legal/partner-terms -> assets/DwxVO15y.js "PartnerTermsPage", "last-updated":"15.08.2025"; text in assets/Cw-tKkmq.js:
+  "W przypadku dokonania Rezerwacji przez Użytkownika płatność jest realizowana przez Użytkownika za pośrednictwem
+  Systemu chwilowo na nasz rachunek (chyba, że Użytkownik wybrał metodę płatności bezpośrednio przy realizacji Umowy
+  Rezerwacyjnej) ..."
+  "Rozliczenia Opłat zmiennych zgodnie z Cennikiem, w tym w szczególności: i) prowizji za dokonanie płatności przez
+  Użytkownika za naszym pośrednictwem; ii) opłat za wysyłkę komunikatów ...; iii) prowizji za pozyskanie nowego
+  Użytkownika-klienta w ramach Systemu, będą dokonywane w okresie rozliczeniowym obejmującym jeden miesiąc kalendarzowy."
+  "Po rozliczeniu przekazujemy na Twój rachunek bankowy łączną kwotę wpłaconą przez Użytkowników z tytułu zapłaty za
+  Usługi Partnera w danym okresie rozliczeniowym. Pamiętaj jednak, że Opłaty, o których mowa powyżej są potrącane z
+  wypłaty, którą od nas otrzymujesz."
+
+== C. WhatsApp for Android (APKPure "latest", 80 023 373 bytes, 13 dex files), R-PLATFORM-48
+- "MessagingBootCompleteObserver.kt" occurs once, in classes7.dex's string pool; "BootManager; boot completed." in classes3.dex.
+- jadx 1.5.1 on classes7.dex (also with --use-source-name-as-class-name-alias always) and dexdump 36.0.0: no class
+  carries that name as its source file and no decompiled class contains the string, so the observer's code could not
+  be found. Nothing run on a phone.

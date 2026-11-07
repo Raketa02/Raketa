@@ -1,0 +1,25 @@
+tenis4U public booking grids of five Kraków padel clubs, read 2026-10-10 at 17:11 and 17:21 CEST (Saturday) by the gaps researcher (S-01B refresh), to time how fast a last free weekday-evening court sells.
+Source and header as in ../shots/gaps-S-02-tenis4u-krakow-padel-weekend-2026-10-10.txt: GET https://api.tenis4u.pl/occupancy/{id}, X-Tenis-User-Agent: tenis4u-web-frontoffice/3.6.1 (the version the served main.cf446af5e9523413.js still sends).
+
+## Result: no free hour was served for any court on any day
+Per read, the number of free-hour entries across every station and every day returned (the same call returned free hours at 05:02 the same day):
+2026-10-10T171132 | Garden Padel (483): 0 free-hour entries over 56 station-days | Padel House (480): 0 free-hour entries over 56 station-days | Fame Sport Club (104): 0 free-hour entries over 390 station-days | Bajada Padel Club (421): 0 free-hour entries over 70 station-days | PADEL LOUNGE (407): 0 free-hour entries over 28 station-days
+2026-10-10T172134 | Garden Padel (483): 0 free-hour entries over 56 station-days | Padel House (480): 0 free-hour entries over 56 station-days | Fame Sport Club (104): 0 free-hour entries over 390 station-days | Bajada Padel Club (421): 0 free-hour entries over 70 station-days | PADEL LOUNGE (407): 0 free-hour entries over 28 station-days
+Spot checks 17:29 and 17:31 CEST: club 483 again 0; three other tenis4U venues taken from GET /court/all (ids 50, 200, 300): 0 free-hour entries each over 93, 5 and 60 station-days. HTTP 200, Content-Type application/json, Cache-Control no-cache.
+The served web app still builds its booking grid from this field: default-src_app_routes_court_reservation_module_ts.4bc62d27781ed739.js reads `reservationDay.free_hours.forEach(function (freeHour) { ... activateReservationHourInTable ... })`.
+Reading: from a visitor's side the grid now shows every hour as taken, so the third read the S-01B gap needed could not be taken; why (a change, a block of anonymous reads, an outage) is not known. The poll was stopped after two reads.
+
+## The desks' named blockades in the same reads (14 days ahead, 17:21 read)
+tenis4U returns, per court and day, the hours a desk has blocked under a name. Names and how many court-days carry each:
+Garden Padel (483): "zamkniete" x48
+Padel House (480): "nieczynne" x12
+Fame Sport Club (104): "." x3; "BLOKADA EVENT" x6; "Event Atalaia" x9; "KLUB ZAMKNIĘTY - ŚWIĘTO" x13; "PADEL LIGA / ROTATION" x6; "RTL FINALS" x17; "RTL FINALS." x11; "TRYBUNY - RTL FINALS" x1
+Bajada Padel Club (421): 
+PADEL LOUNGE (407): "Ania - lekcja z Marcinem" x2; "Holiwear poniedzialki 19-20" x1; "Kids 18-19 poniedziałki" x2; "Very Well" x1; "nieczynne" x42
+PADEL LOUNGE examples (lessons and standing groups typed in as blockades):
+  padel hala VERY WELL 2026/10/19: "Kids 18-19 poniedziałki" 2026-10-19T18:00:00 - 2026-10-19T19:00:00
+  padel hala VERY WELL 2026/10/19: "Holiwear poniedzialki 19-20" 2026-10-19T19:00:00 - 2026-10-19T20:00:00
+  padel hala VERY WELL 2026/10/19: "Ania - lekcja z Marcinem" 2026-10-19T20:00:00 - 2026-10-19T21:00:00
+  padel hala VERY WELL 2026/10/19: "Ania - lekcja z Marcinem" 2026-10-19T20:00:00 - 2026-10-19T21:00:00
+  padel hala VERY WELL 2026/10/13: "Very Well" 2026-10-13T10:00:00 - 2026-10-13T12:00:00
+  padel hala VERY WELL 2026/10/12: "Kids 18-19 poniedziałki" 2026-10-12T18:00:00 - 2026-10-12T19:00:00

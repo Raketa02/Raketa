@@ -1,0 +1,86 @@
+How Playmore and tenis4U date a row in their notice lists. Read 2026-10-09 by the gaps researcher (S-01 round).
+Playmore: Android 6.118.0 (com.reservise.reserviseapp, APKPure), a Capacitor shell over https://playmore.pl whose web source ships in source maps (same package as gaps-NOTIFY-playmore-android-6.118.0-push.txt). tenis4U: player web app https://app.tenis4u.pl/ main.js (APP_VERSION 3.6.1), fetched 2026-10-08.
+
+## Playmore — src/modules/notificationCenter/utils/groupByDay.js (excerpt)
+/**
+ * Day bucketing for the notification list headers ("Dzisiaj" / "Wczoraj" / a
+ * date). Pure and defensive: the feed is written by several producers, so one
+ * row with a broken `createdAt` must not take the whole screen down — it lands
+ * in its own trailing bucket instead.
+ */
+}
+
+/**
+ * "today" / "yesterday" / `null` (render the date instead). Compares calendar
+ * days in LOCAL time, not elapsed hours — 23:59 yesterday is "Wczoraj" even
+ * when it is two minutes old.
+ */
+export function relativeDayKind(key, now = Date.now()) {
+  if (typeof key !== "string" || key === "unknown") return null;
+  const today = new Date(now);
+  if (Number.isNaN(today.getTime())) return null;
+  if (key === dayKeyOf(today)) return "today";
+  // Calendar arithmetic, not `now - 24h`: the day a DST shift lands on is 23 or
+  // 25 hours long and the subtraction would name the wrong date.
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  return key === dayKeyOf(yesterday) ? "yesterday" : null;
+}
+
+## Playmore — src/modules/notificationCenter/components/NotificationDayGroup.vue (heading)
+const heading = computed(() => {
+  const kind = relativeDayKind(props.dayKey);
+  if (kind) return t(`notificationCenter.day.${kind}`);
+  if (!props.date) return t("notificationCenter.day.unknown");
+  // Locale from useI18n, never a hardcoded pl-PL — the year only when it is not
+  // the current one, so the common case stays short ("12 lipca").
+  const sameYear = props.date.getFullYear() === new Date().getFullYear();
+  return props.date.toLocaleDateString(locale.value, {
+    day: "numeric",
+    month: "long",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+});
+</script>
+
+## Playmore — src/modules/notificationCenter/composables/useNotificationRowView.js (the row's time)
+  const createdAt = computed(() => {
+    const value = item.value.createdAt;
+    if (value == null) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  });
+  const isoTime = computed(() => createdAt.value?.toISOString() ?? "");
+  const timeLabel = computed(() =>
+    createdAt.value
+      ? createdAt.value.toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit" })
+      : "",
+  );
+
+## Playmore — src/i18n/messages/pl/notificationCenter.js and en (day labels)
+  day: {
+    today: "Dzisiaj",
+    yesterday: "Wczoraj",
+    unknown: "Wcześniej",
+  },
+  day: {
+    today: "Today",
+    yesterday: "Yesterday",
+    unknown: "Earlier",
+  },
+
+## tenis4U — UserNotificationsComponent row template (main.js, decoded)
+function UserNotificationsComponent_div_10_Template(rf, ctx) { if (rf & 1) {
+    const _r4 = _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵgetCurrentView"]();
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵelementStart"](0, "div", 11);
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵlistener"]("click", function UserNotificationsComponent_div_10_Template_div_click_0_listener() { const restoredCtx = _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵrestoreView"](_r4); const n_r2 = restoredCtx.$i
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵelementStart"](1, "div", 12);
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵelement"](2, "h3", 13)(3, "p", 13);
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵelementEnd"]()();
+} if (rf & 2) {
+    const n_r2 = ctx.$implicit;
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵadvance"](2);
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵproperty"]("innerHTML", n_r2.title, _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵsanitizeHtml"]);
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵadvance"](1);
+    _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵproperty"]("innerHTML", n_r2.content, _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵɵsanitizeHtml"]);
+} }
+(The row renders n.title and n.content as server HTML; the component's parseNotifications adds only a green dot to an unread title. No date or time field of the notice is bound anywhere in the component.)

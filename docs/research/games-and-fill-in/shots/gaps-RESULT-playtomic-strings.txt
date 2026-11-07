@@ -1,0 +1,45 @@
+Evidence for topics/gaps-RESULT.md, read 2026-10-08.
+
+## Playtomic Android 6.93.2 (com.playtomic, XAPK from APKPure, 2026-10-08), default-locale resources.arsc: key<TAB>English text
+
+add_result_detail_result_saved_successfully	New results have been added. The other team has to confirm them.
+add_result_detail_result_confirmed_successfully	Results have been successfully confirmed.
+home_pending_actions_add_result_title	Upload score
+home_pending_actions_confirm_result_title	Confirm result
+match_detail_warning_validating_match_title	Results under validation
+match_detail_warning_validating_match_message	One team adds the result, and the other team must confirm or amend it, or it will be automatically approved after 24 hours.
+match_edit_pending_result_add_message	After adding a result, the other team must confirm or amend it, or it will be automatically approved after 24 hours.
+match_edit_pending_result_review_message	After you add the score, the other team can review or edit it, and you can approve or update their changes. If they don't respond within 24 hours, it's validated automatically.
+match_edit_pending_result_validate_message	Confirm the match score or modify it if needed. Unchanged scores are automatically validated after 24 hours.
+match_detail_warning_edited_match	The other team modified this match’s result
+match_detail_warning_rejected_match	The result was rejected
+match_detail_rejected_by_other_warning_message	This result has been canceled by another player
+match_edit_result_reject_button	Modify
+match_result_detail_review_title	Review score
+match_result_detail_validate_title	Validate score
+match_score_celebration_victory_title	Victory, match won
+match_score_celebration_lost_title	Solid effort, match lost
+match_score_celebration_tie_title	Close match, tied
+match_score_celebration_no_result_title	No score recorded
+match_score_celebration_invalid_score_title	Invalid score
+match_detail_score_recap_cta	Match recap
+result_card_status_tie	Tie
+result_card_status_forfeit	Forfeit
+result_card_status_double_forfeit	Double forfeit
+result_card_status_missing_result	No result
+result_card_status_without_result	Without result
+result_card_status_invalid	Invalid
+profile_match_detail_card_level_difference_up	Up
+profile_match_detail_card_level_difference_down	Down
+paywall_profile_level_graph_banner_ten_results_title	Unlock more results
+paywall_profile_level_graph_banner_all_results_title	Unlock all results
+premium_feature_interactive_level_graph_description	Access all the level changes and navigate through the historic results
+p2p_motive_player_no_show	A player was missing
+p2p_motive_player_late	A player arrived late
+
+## Playtomic Manager web app, English locale files (https://manager.playtomic.io/locales/en/<ns>.json): key<TAB>text
+
+bookings:match_history.text.history_will_appear_here	Player attendance, booking changes, payments, and cancellations will appear here once available.
+matches:match_cancellation_unsupported_dialog.message.confirmed_results	This booking cannot be cancelled as it has confirmed results.
+customers:reservation_history.status.played	Played
+customers:reservation_history.status.confirmed	Confirmed

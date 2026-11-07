@@ -1,0 +1,40 @@
+Playtomic Android 6.93.2 (package com.playtomic, XAPK from APKPure, 2026-10-08): key and English text read from base resources.arsc (default locale). Evidence for topics/gaps-DECK.md. Same build as gaps-HOME-playtomic-android-6.93.2-strings.txt.
+
+## Find a match: sections and sort
+match_wizard_flexible_matches_description = 'These matches are available and are similar to your search'
+match_wizard_flexible_matches_title = 'Are you flexible?'
+match_wizard_more_filter_sort_by = 'Sort by'
+match_wizard_more_filters_sort_distance = 'Nearest'
+match_wizard_more_filters_sort_players = 'Number of players'
+match_wizard_more_filters_sort_recent = 'More recent'
+match_wizard_more_filters_sort_relevance = 'Relevance'
+match_wizard_promoted_matches_description = 'Here are some matches that may interest you'
+match_wizard_promoted_matches_title = 'Playtomic suggestions'
+match_wizard_proposals_section_title = 'Availability from Playtomic clubs'
+match_wizard_request_to_join_matches_description = 'These matches are not at your level. You need to request a spot to join. '
+match_wizard_request_to_join_matches_title = 'Request your place'
+match_wizard_results_match_description = 'These matches fit your search and your level perfectly'
+match_wizard_results_match_title = 'For your level'
+match_wizard_results_proposal_description = 'Create a new match by selecting the hour you want'
+match_wizard_results_proposal_title = 'Be the first player!'
+
+## Golden Matches
+onboarding2_premium_golden_matches_body = 'Golden Matches will give your matches more visibility so they get filled sooner.'
+payment_paywall_pay_feature_priority_court_booking = 'Promote your matches to Golden Matches'
+profile_premium_plan_golden_matches_description = 'Promote your matches to Golden Matches to find faster partners and rivals'
+
+## Priority alerts: types, inbox lines, where a push lands
+configure_your_alert_one_click_with_predefined_filters = 'Configure your alert in one click with your predefined filters'
+notification_upgrade_banner_manage_alerts = 'Create or manage your alerts'
+notification_wizard_duration_subtitle = 'The alert will not expire if no option is selected'
+notification_wizard_durations_title = 'Keep alert active'
+notification_wizard_type_cancelations = 'Last minute cancellations'
+notification_wizard_type_few_courts = 'Few courts available'
+notification_wizard_type_last_match_spot = 'Last place in an Open Match'
+notification_wizard_types_title = 'What alerts do you want to receive?'
+payment_app_link_handler_match_no_available_seats_message = 'The match is full, and there are no available spots'
+priority_alert_create_with_free_dialog_message = 'You already have a priority alert created. Upgrade to Premium to create unlimited alerts and never miss a match'
+social_notifications_alert_last_minute_cancellation = '<![CDATA[<b>Last minute cancellation</b> for <b>%1$s</b>]]>'
+social_notifications_alert_last_spot = '<![CDATA[<b>Last available spot</b> for <b>%1$s</b>]]>'
+tenant_detail_push_empty_slots_error = 'The time slot is no longer available.'
+tenant_detail_push_expired_error = 'The date for that availability has already passed.'

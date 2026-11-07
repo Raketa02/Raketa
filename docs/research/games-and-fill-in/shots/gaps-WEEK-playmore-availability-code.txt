@@ -1,0 +1,36 @@
+Playmore web app as shipped on 2026-10-08 (entry https://playmore.pl/assets/index-C8d-0CWt.js, linked from https://playmore.pl/). Minified code excerpts, unchanged. Evidence for topics/gaps-WEEK.md.
+
+## useMyAvailability store - https://playmore.pl/assets/0fXvRGhI.js
+# a change marks the week dirty and saves it 600 ms later; a change made while a save is out leaves it 'dirty' and is saved next; flush() saves now
+async function L(e,t,o){const r=e.rev,i=++e.saveSeq;e.state.saveState="saving";const u=M(e.state.hourSet);try{const f=await H.league.availability.replace(t,u);return i!==e.saveSeq?{ok:!0}:(e.state.saveState=e.rev===r?"saved":"dirty",typeof o=="function"&&o(t,f),{ok:!0})}catch(f){const h=q(f,"useMyAvailability.persist");return e.retryable=K(f),i===e.saveSeq&&(e.state.saveState=e.rev===r?"error":"dirty"),{ok:!1,error:h.message}}}function p(e,t,o){if(e.pending)return e.chain;const r=e.chain;return r&&(e.pending=!0),e.chain=Promise.resolve(r).catch(()=>{}).then(()=>(e.pending=!1,L(e,t,o))).finally(()=>{e.pending||(e.chain=null)}),e.chain}function V(e,t,o,r){e.rev+=1,e.state.hourSet=o,e.state.fromHistory=!1,e.state.saveState="dirty",e.retryable=!0,clearTimeout(e.timer),e.timer=setTimeout(()=>p(e,t,r),600)}function b(e,t,o){return clearTimeout(e.timer),p(e,t,o)}async function x(e){const t=T().filter(([,o])=>A(o));await Promise.all(t.map(([o,r])=>(clearTimeout(r.timer),p(r,o,e))))}function Q(e){const{trackEvent:t}=_(),o=()=>Number(typeof e=="function"?e():e?.value??e),r=()=>{const a=o();return Number.isFinite(a)&&a>0?g(a):null};function i(a,s){C(),typeof t=="function"&&t(s.length===0?"league_availability_cleared":"league_availability_set",{venue_id:a,slot_count:s.length,days_covered:new Set(s.map(d=>d.dayOfWeek)).size,weekly_hours:O(s).size})}async function u(){const a=r();return a?a.state.loaded?a.state.hourSet:a.loadPromise?a.loadPromise:k(a,o()):null}function f(){const a=r();a&&(A(a)?b(a,o(),i):a.state.saveState==="saved"&&(a.state.saveState="idle"))}function h(){const a=r();if(a){if(a.state.loadError){a.state.loadError=null,k(a,o());return}F(a)&&b(a,o(),i)}}function c(a){const s=o();if(!Number.isFinite(s)||s<=0)return;const d=g(s);d.state.loaded&&V(d,s,a,i)}function P(a){const s=r();s?.state.loaded&&c(B(s.state.hourSet,a))}const n=l(()=>r()?.state??null);return{hourSet:l(()=>n.value?.hourSet??new Set),loaded:l(()=>n.value?.loaded??!1),loading:l(()=>n.value?.loading??!1),loadError:l(()=>n.value?.loadError??null),saveState:l(()=>n.value?.saveState??"idle"),isEmpty:l(()=>(n.value?.hourSet?.size??0)===0),fromHistory:l(()=>n.value?.fromHistory===!0),needsOwnHours:l(()=>(n.value?.hourSet?.size??0)===0||n.value?.fromHistory===!0),activePresetKeys:l(()=>N(n.value?.hourSet??new Set)),ensureLoaded:u,resume:f,retry:h,flush:()=>x(i),setCells:(a,s)=>c(m(r()?.state.hourSet??new Set,a,s)),replaceCells:a=>c(m(new Set,a,!0)),togglePreset:P,clearAll:()=>c(new Set)}}export{
+
+## AvailabilityPage - https://playmore.pl/assets/DdhlT6ee.js
+# flushes on tab hidden, on pagehide and when the page unmounts
+__name:"AvailabilityPage",props:{venueId:{type:[String,Number],required:!0}},setup(i){const a=i,{t:l}=b(),r=V(),{trackEvent:s}=R(),t=Q(()=>Number(a.venueId)),d=A(!1),u=()=>{document.visibilityState==="hidden"&&t.flush()},c=()=>{t.flush()};q(()=>{t.ensureLoaded(),t.resume(),document.addEventListener("visibilitychange",u),window.addEventListener("pagehide",c),s("league_availability_opened",{venue_id:Number(a.venueId),source:typeof r.query.source=="string"?r.query.source:"direct"})}),H(()=>{document.removeEventListener("visibilitychange",u),window.removeEventListener("pagehide",c),t.flush()});const $=x=>
+
+## AvailabilityWeeklyGrid drag - https://playmore.pl/assets/DQ5ScoLS.js
+# touch: 250 ms hold before painting, >10 px move before that cancels (page scrolls); each cell painted once per drag toward the first cell's opposite state; a pointer off the cells paints nothing
+var U=10;function W({isCellOn:t,applyCells:k}){const o=I(!1);let y=!0,d=null,f=null,g=null,v=!1;const p=e=>{const n=document.elementFromPoint(e.clientX,e.clientY)?.closest?.("[data-avail-cell]")?.dataset?.availCell;if(!n)return null;const[c,P]=n.split(":").map(Number);return Number.isInteger(c)&&Number.isInteger(P)?{day:c,hour:P,key:n}:null},r=e=>{!e||d.has(e.key)||(d.add(e.key),typeof k=="function"&&k([{day:e.day,hour:e.hour}],y))},a=e=>{o.value&&e.cancelable&&e.preventDefault()},C=e=>{o.value=!0,v=!0,d=new Set,y=typeof t=="function"?!t(e.day,e.hour):!0,r(e)},O=()=>{clearTimeout(f),f=null,g=null},E=e=>{if(o.value){r(p(e));return}g&&Math.hypot(e.clientX-g.x,e.clientY-g.y)>U&&O()},b=()=>{O(),o.value=!1,d=null,window.removeEventListener("pointermove",E),window.removeEventListener("pointerup",b),window.removeEventListener("pointercancel",b),window.removeEventListener("touchmove",a)},m=e=>{if(o.value||f)return;const n=p(e);if(n){if(b(),v=!1,window.addEventListener("pointermove",E),window.addEventListener("pointerup",b),window.addEventListener("pointercancel",b),e.pointerType==="touch"){window.addEventListener("touchmove",a,{passive:!1}),g={x:e.clientX,y:e.clientY},f=setTimeout(()=>{g=null,C(n)},250);return}e.preventDefault(),C(n)}},i=()=>{const e=v;return v=!1,e};return B(b),{isPainting:o,onCellPointerdown:m,consumeClick:i}}function Z(t)
+
+## Grid hours - https://playmore.pl/assets/_5DcUrM8.js
+var v=[{key:"morning",from:6,to:12},{key:"day",from:12,to:17},{key:"evening",from:17,to:23}],f=[0,1,2,3,4,5,6]
+
+## Strings (PL) - https://playmore.pl/assets/CPLsdYdo.js
+saveStatus:{saving:"Zapisuję…",saved:"Zapisano",error:"Nie udało się zapisać - zaznaczenie zachowane"}
+clearConfirm:{title:"Wyczyścić cały tydzień?",body:"Usuniemy wszystkie zaznaczone godziny. Rywale przestaną widzieć, kiedy zwykle grasz.",confirm:"Wyczyść"}
+presets:{afterWork:"Po pracy",weekendMornings:"Weekendy rano",weekendAfternoons:"Weekendy po południu",lateEvenings:"Późne wieczory",clear:"Wyczyść wszystko"}
+gridHeading:"Twój tydzień"
+slotFit:"Pasuje do Twojej dostępności"
+provisional:"To wstępna dostępność - termin i tak potwierdzicie razem."
+
+## Strings (PL) - https://playmore.pl/assets/Ct1XsxUt.js (open-game limits)
+offPeak:"Limit gier: maks. {max} aktywne gry naraz. Gry startujące w dni robocze {from}–{to} mają osobny limit {offPeakMax} i nie liczą się do podstawowego limitu."
+tooManyActive:"Masz już maksymalną liczbę aktywnych gier otwartych w tym klubie."
+tooManyActivePrime:"Masz już {max} aktywne gry w godzinach szczytu w tym klubie. Sloty oznaczone „nie liczy się do limitu” mają osobny limit - wybierz taki termin albo poczekaj, aż któraś gra się zakończy."
+tooManyActiveOffPeak:"Masz już {max} aktywnych gier poza szczytem w tym klubie. Poczekaj, aż któraś się zakończy, albo wybierz termin w godzinach szczytu."
+
+## Playmore Score quiz frequency question - https://playmore.pl/assets/CzIUSdk1.js
+freq:{title:"Jak często lądujesz na korcie?",opts:[{t:"Okazjonalnie",s:"jak się zbierze czwórka"},{t:"Mniej więcej raz w tygodniu"},{t:"2–3 razy w tygodniu"},{t:"4+ razy w tygodniu",s:"kort to mój drugi dom"}]
+
+## Playmore Score quiz frequency question - https://playmore.pl/assets/DRmOUUGX.js
+freq:{title:"Jak często w sezonie lądujesz na korcie?",opts:[{t:"Okazjonalnie",s:"jak się zbierze ekipa"},{t:"Mniej więcej raz w tygodniu"},{t:"2–3 razy w tygodniu"},{t:"4+ razy w tygodniu",s:"kort to mój drugi dom"}]

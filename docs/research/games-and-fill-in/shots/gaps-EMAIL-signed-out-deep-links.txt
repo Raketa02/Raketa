@@ -1,0 +1,16 @@
+Signed-out deep links, opened in headless Chrome (fresh profile, no cookies) on 2026-10-08 ~22:00 Europe/Warsaw.
+Page URL read from Chrome's DevTools target list (http://127.0.0.1:<port>/json/list) every 2 s.
+
+1. Playtomic Manager
+   opened:  https://manager.playtomic.io/payments/payouts
+   t=2 s:   https://manager.playtomic.io/auth/login?return_to=%2Fpayments%2Fpayouts
+   screen:  gaps-EMAIL-playtomic-manager-deep-link-signed-out.png ("Log in", Sign in with Google / Email / Password)
+
+2. tenis4U club panel (Angular, hash routing: useHash)
+   opened:  https://panel.tenis4u.pl/#/calendar/149
+   t=4 s:   https://panel.tenis4u.pl/#/login   (no return parameter)
+   screen:  gaps-EMAIL-tenis4u-panel-deep-link-signed-out.png ("Dostęp tylko dla zalogowanych użytkowników")
+   code:    panel main.333e76605ded56e6.js — guard: if !userExists -> toast "Dostęp tylko dla zalogowanych
+            użytkowników", router.navigate(["login"]); after login getCourtListSuccess: one court ->
+            /calendar/{id} (or /tournaments/{id} for TOURNAMENT_ORGANIZER), several -> returnUrl "/courts".
+   (A path URL https://panel.tenis4u.pl/calendar/149 is not routed at all and stays on the bare page.)

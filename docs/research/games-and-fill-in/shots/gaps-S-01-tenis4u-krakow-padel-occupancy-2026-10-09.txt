@@ -1,0 +1,89 @@
+tenis4U public occupancy grid for five Kraków padel clubs, read 2026-10-09 08:20 CEST by the gaps researcher (S-01 round).
+Source: the endpoints the public web app https://app.tenis4u.pl/ calls for a visitor, no sign-in: GET https://api.tenis4u.pl/court/all (club list), GET https://api.tenis4u.pl/court/{id} (hours, courts), GET https://api.tenis4u.pl/occupancy/{id} (per court, per day: free_hours and blockades), sent with the web app's own header X-Tenis-User-Agent: tenis4u-web-frontoffice/3.6.1 (main.js).
+Method: per padel court and day, sellable = opening hours minus the club's named blockades (e.g. 'zamkniete'); not_free = sellable minus the free_hours offered online. not_free counts every booking the grid holds (online, desk, phone, standing weekly slots, classes) and any hour the club keeps off sale without naming it; it is a snapshot of what is already taken 0-13 days ahead, not final occupancy. The 2026-10-09 rows include the hours already past at 08:20. Only stations whose type name contains 'padel' are counted (Fame Sport's tennis and badminton, PADEL LOUNGE's sauna left out).
+
+## Garden Padel (tenis4U id 483): 4 padel court(s); weekday hours 9-22, weekend 9-22; books 14 days ahead
+date        day  sellable_h  not_free_h  %    | 17-22 sellable_h  not_free_h  %
+2026-10-09  Fri    28.0     4.0    14 |   20.0     3.0    15
+2026-10-10  Sat    52.0     9.0    17 |   20.0     2.5    12
+2026-10-11  Sun    52.0     5.5    11 |   20.0     2.0    10
+2026-10-12  Mon    28.0    10.0    36 |   20.0     9.0    45
+2026-10-13  Tue    28.0    16.0    57 |   20.0    12.5    62
+2026-10-14  Wed    28.0    17.5    62 |   20.0    15.5    78
+2026-10-15  Thu    28.0    18.0    64 |   20.0    16.5    82
+2026-10-16  Fri    28.0     4.0    14 |   20.0     3.5    18
+2026-10-17  Sat    52.0     0.0     0 |   20.0     0.0     0
+2026-10-18  Sun    52.0     0.0     0 |   20.0     0.0     0
+2026-10-19  Mon    28.0     4.0    14 |   20.0     2.0    10
+2026-10-20  Tue    28.0     4.5    16 |   20.0     3.5    18
+2026-10-21  Wed    28.0    11.5    41 |   20.0    10.5    52
+2026-10-22  Thu    28.0     6.0    21 |   20.0     4.5    22
+
+## Padel House (tenis4U id 480): 4 padel court(s); weekday hours 7-24, weekend 7-24; books 14 days ahead
+date        day  sellable_h  not_free_h  %    | 17-22 sellable_h  not_free_h  %
+2026-10-09  Fri    68.0    61.0    90 |   20.0    18.0    90
+2026-10-10  Sat    68.0    51.0    75 |   20.0    18.0    90
+2026-10-11  Sun    62.0    55.0    89 |   20.0    20.0   100
+2026-10-12  Mon    68.0    57.0    84 |   20.0    20.0   100
+2026-10-13  Tue    68.0    58.0    85 |   20.0    20.0   100
+2026-10-14  Wed    68.0    58.0    85 |   20.0    20.0   100
+2026-10-15  Thu    68.0    57.0    84 |   20.0    20.0   100
+2026-10-16  Fri    68.0    62.0    91 |   20.0    20.0   100
+2026-10-17  Sat    68.0    56.0    82 |   20.0    20.0   100
+2026-10-18  Sun    62.0    53.0    85 |   20.0    19.0    95
+2026-10-19  Mon    68.0    56.0    82 |   20.0    20.0   100
+2026-10-20  Tue    68.0    59.0    87 |   20.0    20.0   100
+2026-10-21  Wed    68.0    55.0    81 |   20.0    20.0   100
+2026-10-22  Thu    68.0    56.0    82 |   20.0    20.0   100
+
+## Fame Sport Club (tenis4U id 104): 2 padel court(s); weekday hours 7-23, weekend 7-23; books 30 days ahead
+date        day  sellable_h  not_free_h  %    | 17-22 sellable_h  not_free_h  %
+2026-10-09  Fri    32.0    16.0    50 |   10.0     6.0    60
+2026-10-10  Sat    32.0    17.0    53 |   10.0     5.0    50
+2026-10-11  Sun    32.0    15.5    48 |   10.0     4.5    45
+2026-10-12  Mon    30.0    18.0    60 |   10.0     9.5    95
+2026-10-13  Tue    32.0    15.0    47 |   10.0     9.0    90
+2026-10-14  Wed    32.0    17.0    53 |   10.0     7.5    75
+2026-10-15  Thu    32.0    14.0    44 |   10.0     9.0    90
+2026-10-16  Fri    32.0    14.5    45 |   10.0     7.5    75
+2026-10-17  Sat    32.0    16.5    52 |   10.0     5.0    50
+2026-10-18  Sun    32.0    22.5    70 |   10.0     9.0    90
+2026-10-19  Mon    32.0    11.5    36 |   10.0     7.5    75
+2026-10-20  Tue    32.0     9.0    28 |   10.0     5.0    50
+2026-10-21  Wed    32.0    13.0    41 |   10.0     8.0    80
+2026-10-22  Thu    32.0    14.5    45 |   10.0     8.0    80
+
+## Bajada Padel Club (tenis4U id 421): 5 padel court(s); weekday hours 7-23, weekend 7-23; books 14 days ahead
+date        day  sellable_h  not_free_h  %    | 17-22 sellable_h  not_free_h  %
+2026-10-09  Fri    80.0    34.0    42 |   25.0    16.0    64
+2026-10-10  Sat    80.0    25.5    32 |   25.0     6.5    26
+2026-10-11  Sun    80.0    30.0    38 |   25.0     8.5    34
+2026-10-12  Mon    80.0    14.5    18 |   25.0    12.5    50
+2026-10-13  Tue    80.0    24.5    31 |   25.0    15.5    62
+2026-10-14  Wed    80.0    19.0    24 |   25.0    15.0    60
+2026-10-15  Thu    80.0    21.5    27 |   25.0    12.0    48
+2026-10-16  Fri    80.0    22.0    28 |   25.0    10.5    42
+2026-10-17  Sat    80.0    14.5    18 |   25.0     3.0    12
+2026-10-18  Sun    80.0    17.5    22 |   25.0     5.5    22
+2026-10-19  Mon    80.0    10.0    12 |   25.0     8.0    32
+2026-10-20  Tue    80.0    12.5    16 |   25.0    10.5    42
+2026-10-21  Wed    80.0    14.0    18 |   25.0    11.0    44
+2026-10-22  Thu    80.0    14.0    18 |   25.0    11.0    44
+
+## PADEL LOUNGE (tenis4U id 407): 1 padel court(s); weekday hours 0-24, weekend 0-24; books 14 days ahead
+date        day  sellable_h  not_free_h  %    | 17-22 sellable_h  not_free_h  %
+2026-10-09  Fri    24.0    13.0    54 |    5.0     4.0    80
+2026-10-10  Sat    24.0    11.0    46 |    5.0     3.0    60
+2026-10-11  Sun    24.0     9.0    38 |    5.0     4.0    80
+2026-10-12  Mon    23.0     7.0    30 |    4.0     2.0    50
+2026-10-13  Tue    24.0     3.0    12 |    5.0     3.0    60
+2026-10-14  Wed    24.0     4.0    17 |    5.0     3.0    60
+2026-10-15  Thu    24.0     7.0    29 |    5.0     4.0    80
+2026-10-16  Fri    24.0     6.0    25 |    5.0     0.0     0
+2026-10-17  Sat    24.0     0.0     0 |    5.0     0.0     0
+2026-10-18  Sun    24.0     2.0     8 |    5.0     2.0    40
+2026-10-19  Mon    21.0     2.0    10 |    2.0     0.0     0
+2026-10-20  Tue    24.0     8.0    33 |    5.0     4.0    80
+2026-10-21  Wed    24.0     4.0    17 |    5.0     2.0    40
+2026-10-22  Thu    24.0     7.0    29 |    5.0     4.0    80
+
