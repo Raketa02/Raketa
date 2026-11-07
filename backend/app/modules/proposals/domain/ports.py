@@ -716,6 +716,45 @@ class FriendsGameBookings(Protocol):
         at ``now``."""
         ...
 
+    async def invite(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        by: UUID,
+        seat_of: UUID,
+        at: Instant,
+    ) -> BookedGame:
+        """A friend of ``by``'s invited into the empty seat named ``seat_of``
+        (#752), theirs to accept for 24 hours — never past the cut-off, or
+        made after it the start. Whether ``by`` may, and the friend, is the
+        caller's question. In the caller's transaction."""
+        ...
+
+    async def open(self, booking_id: UUID, seat_of: UUID, *, at: Instant) -> None:
+        """*Open to the group* (#752): the empty seat named ``seat_of`` a
+        rescue from now on. In the caller's transaction."""
+        ...
+
+    async def open_at_the_cut_off(
+        self, booking_id: UUID, *, at: Instant
+    ) -> tuple[UUID, ...]:
+        """**At the cut-off** (#752), on a game its sender's card covers:
+        every seat still empty opened to the group — an invitation whose time
+        is up run out first. Answers the seats opened, by whose they were. In
+        the caller's transaction."""
+        ...
+
+    async def warn(self, booking_id: UUID, *, at: Instant) -> bool:
+        """**The cover warning** (#752), recorded once if it is due: whether
+        it was. In the caller's transaction."""
+        ...
+
+    async def cover_warnings_due(self, *, now: Instant) -> Sequence[UUID]:
+        """Every friends game still on whose cut-off is less than a day ahead
+        — candidates for the cover warning, the soonest first."""
+        ...
+
 
 @runtime_checkable
 class BookedGameChanges(Protocol):
@@ -988,6 +1027,17 @@ class SeatRefunds(Protocol):
         follows the commit.
         ``because`` is the club's reason, on a game it cancelled — what the
         email tells the player (#547)."""
+        ...
+
+    async def seat_taken(
+        self, booking_id: UUID, payer: UUID, *, cover: bool, at: Instant
+    ) -> None:
+        """**Somebody took a seat this payer paid** (#545, #752): one charge
+        of theirs given back, less exactly the fee kept on it — their own
+        share, a leaver's after the cut-off; or, ``cover``, one of a friends
+        game's sender's covers — and **nothing while his covers are still
+        held**, since the cut-off lets one go for the taker's own payment. In
+        the caller's transaction."""
         ...
 
     async def left_after_the_cut_off(

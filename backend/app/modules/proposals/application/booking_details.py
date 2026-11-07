@@ -40,7 +40,10 @@ no court, and no *Leave* of its own — its way out is a game still filling's,
 **A friends game's invitee reads it from outside too** (#751): a friend its
 seat is held for — waiting, or once they answered — sees the court with every
 seat the card drew, their own among them, its share and its pay mode, and
-nothing to leave.
+nothing to leave; a friend invited into an empty seat (#752) is drawn in it.
+**A friends game is left like any game** (#752): the details carry
+``leaving``, and the sender's two choices are the phone's to draw off
+``friends_game``.
 
 **Refused with one code** — ``booking_not_found`` — for a booking that does not
 exist and one the reader has no seat on and is not offered, so a booking id
@@ -205,10 +208,10 @@ class ReadBookingDetails:
             played_with=await self._relations.relations_of(
                 reader, [player for player in game.players if player != reader]
             ),
-            # Leaving a friends game is #752's: no *Leave* until then.
-            leaving=None
-            if game.is_friends_game
-            else leave_terms(game, state.status, late_refund=late_refund, now=now),
+            # A friends game is left too (#752): a friend's leave is the
+            # ordinary one; the sender's before the cut-off is *Leave · the
+            # others play on*, beside *Call it off* (`friends_game`).
+            leaving=leave_terms(game, state.status, late_refund=late_refund, now=now),
         )
 
     async def _as_invited(
@@ -234,7 +237,8 @@ class ReadBookingDetails:
                 called_off=state.called_off,
                 uncounted=state.uncounted,
             ),
-            sides=game.seen_by(reader),
+            # Their own face in the seat they were invited into (#752).
+            sides=game.seen_by(reader, now=now),
             shows_forecast=False,
             club_name=names.get(game.club_id),
             distance_km=distances.get(game.club_id),

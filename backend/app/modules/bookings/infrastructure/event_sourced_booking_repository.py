@@ -18,6 +18,8 @@ theirs (#640).
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
@@ -41,14 +43,18 @@ from app.modules.bookings.domain.events import (
     CardFixed,
     CardToFix,
     CourtMoved,
+    CoverWarned,
     InvitedSeatAccepted,
     InvitedSeatDeclined,
     InvitedSeatRanOut,
+    InvitedSeatTaken,
     KeptSeatRanOut,
     PlayerCheckedIn,
     NoSaidToTheSeat,
+    SeatInvited,
     SeatKept,
     SeatLeft,
+    SeatOpened,
     SeatRescued,
 )
 from app.modules.bookings.domain.ports import HeldCourtHour
@@ -184,14 +190,35 @@ class EventSourcedBookingRepository:
                 )
             )
             await self._answered(event.booking_id, event.player_id, booking)
+            # Into a seat open to the group, it is taken (#752).
+            await self._open_or_not(booking)
         elif isinstance(event, (InvitedSeatDeclined, InvitedSeatRanOut)):
             await self._answered(event.booking_id, event.player_id, booking)
-        elif isinstance(event, SeatLeft):
-            await self._row(
-                event.booking_id,
-                state=BookingState.SEAT_OPEN.value,
-                open_since=booking.open_since,
+            # On a game turned ordinary the seat is a rescue at once (#752).
+            await self._open_or_not(booking)
+        elif isinstance(event, SeatInvited):
+            # An invitation into an empty seat (#752): Home's FRIENDS GAME row
+            # and the invitations job read it as they read the card's own.
+            self._session.add(
+                BookingInvitationORM(
+                    booking_id=event.booking_id,
+                    player_id=event.player_id,
+                    side=event.side,
+                    until=event.until,
+                    answer=Answer.WAITING.value,
+                )
             )
+        elif isinstance(event, InvitedSeatTaken):
+            await self._answered(event.booking_id, event.player_id, booking)
+        elif isinstance(event, SeatOpened):
+            await self._open_or_not(booking)
+        elif isinstance(event, CoverWarned):
+            # Once per game is the booking's to fold; no read asks a row.
+            pass
+        elif isinstance(event, SeatLeft):
+            # Open to be taken — or, on a friends game its sender covers, a
+            # seat left empty before the cut-off, no rescue (#752).
+            await self._open_or_not(booking)
             await self._statement(
                 update(BookingSeatORM)
                 .where(
@@ -301,6 +328,16 @@ class EventSourcedBookingRepository:
                 BookingInvitationORM.player_id == player_id,
             )
             .values(answer=seat.answer.value, answered_at=seat.answered_at)
+        )
+
+    async def _open_or_not(self, booking: Booking) -> None:
+        """The row's state and the first seat open since that may call it off,
+        as the booking folds them now."""
+
+        await self._row(
+            booking.booking_id,
+            state=booking.state.value,
+            open_since=booking.open_since,
         )
 
     async def _unkeep(self, booking_id: UUID, player_id: UUID) -> None:
@@ -565,6 +602,21 @@ class SqlAlchemyBookingDirectory:
             )
         )
         return int(count or 0)
+
+    async def cover_warnings_due(
+        self, *, now: Instant, before: timedelta
+    ) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingORM.id)
+            .where(
+                BookingORM.sender_id.is_not(None),
+                BookingORM.state != BookingState.CALLED_OFF.value,
+                BookingORM.cut_off > now,
+                BookingORM.cut_off <= now + before,
+            )
+            .order_by(BookingORM.cut_off, BookingORM.id)
+        )
+        return list(rows.all())
 
     async def ever_seated(
         self, player_ids: Collection[UUID]

@@ -16,7 +16,16 @@ here commits**:
 - **declined** and **run out** — the seat is empty; the Game's seat stays open;
 - **called off** — the sender's, before the cut-off: the booking off, the court
   the club's again (the partial index), the Game called off whole by nobody and
-  its room with it.
+  its room with it;
+- **invited into an empty seat** (#752) — a friend of anybody In, the seat
+  theirs to accept until their 24 hours end, unless somebody takes it first —
+  and accepted, seated on that seat's side;
+- **opened to the group** (#752) — the sender's, before the cut-off, and the
+  cut-off's own for every seat still empty on a game the sender covers;
+- **the cover warning** (#752) — recorded once, a day before the cut-off.
+
+Leaving is the ordinary ``LeaveTheBooking``: what becomes of the seat is the
+booking's fold to say.
 
 Whether the act may be done — whose seat, whose week, whose money — is the
 caller's question, asked before this.
@@ -142,6 +151,50 @@ class FriendsGames:
         )
         await self._bookings.save(booking)
         return ran_out
+
+    async def invite(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        by: UUID,
+        seat_of: UUID,
+        at: Instant,
+    ) -> Booking:
+        """The friend invited into the empty seat named ``seat_of``."""
+
+        booking = await _loaded(self._bookings, booking_id)
+        booking.invite(player_id, by=by, seat_of=seat_of, at=at)
+        await self._bookings.save(booking)
+        return booking
+
+    async def open(self, booking_id: UUID, seat_of: UUID, *, at: Instant) -> Booking:
+        """The empty seat named ``seat_of`` put to the group: a rescue."""
+
+        booking = await _loaded(self._bookings, booking_id)
+        booking.open_to_the_group(seat_of, at=at)
+        await self._bookings.save(booking)
+        return booking
+
+    async def open_at_the_cut_off(
+        self, booking_id: UUID, *, at: Instant
+    ) -> tuple[UUID, ...]:
+        """Every seat still empty at the cut-off, opened: answers whose they
+        were."""
+
+        booking = await _loaded(self._bookings, booking_id)
+        opened = booking.open_at_the_cut_off(at=at)
+        await self._bookings.save(booking)
+        return opened
+
+    async def warn(self, booking_id: UUID, *, at: Instant) -> bool:
+        """The cover warning, recorded if it is due."""
+
+        booking = await _loaded(self._bookings, booking_id)
+        if not booking.warn_the_cover(at=at):
+            return False
+        await self._bookings.save(booking)
+        return True
 
     async def call_off(self, booking_id: UUID, *, at: Instant) -> Booking:
         """The sender calls it off: the court the club's again, the Game and its

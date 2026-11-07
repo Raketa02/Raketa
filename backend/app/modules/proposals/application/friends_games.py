@@ -32,6 +32,15 @@ taken is *It's a game!* to all four — Notifications', off the booking's events
 **The sender may call it off before the cut-off** (``CallOffAFriendsGame``):
 every hold and cover let go, everybody told, the court the club's again.
 
+**Its empty seats** (#752; the friends mechanics §10–§11): anybody In
+**invites** one of their own friends into one (``InviteIntoASeat``) — refused,
+naming nobody, for a block, no level, a game at that hour or a full week —
+and the first accept, or the first rescue, takes it; **the sender opens** one
+to the group before the cut-off (``OpenASeat``), a rescue from then on; **the
+cover warning** (``WarnTheCovers``) tells a *Split* sender once, a day before
+the cut-off, what it will take for seats still without their own payment.
+Leaving and the cut-off are ``leave_the_game.py``'s and ``cut_off.py``'s.
+
 **Every act locks the booking's own row first** — no proposal stands for a
 friends game — and commits once.
 """
@@ -49,24 +58,34 @@ from app.kernel import SPORT_SPECS, Clock, Instant, instant
 from app.modules.bookings.domain.booking import invited_until
 from app.modules.proposals.application.commands import (
     FriendsGameCommand,
+    SeatActCommand,
     SendAFriendsGameCommand,
 )
-from app.modules.proposals.application.answers import YesAnswer
+from app.modules.proposals.application.answers import JoinsARescue, YesAnswer
 from app.modules.proposals.application.fill import Booked, Fill
 from app.modules.proposals.application.friends_card import ReadFriendsLineUp
 from app.modules.proposals.application.members import ReadMembers
+from app.modules.proposals.application.rescues import the_seat_paid_back
 from app.modules.proposals.domain.deck import cut_off_of, hour_taken, week_of
 from app.modules.proposals.domain.errors import (
+    AlreadyOnTheGame,
     BookingIsCalledOff,
     BookingNotFound,
+    CannotPlayTogether,
     CourtHourNotForSale,
     CourtJustTaken,
     CutOffHasPassed,
+    FriendPlaysThen,
     FriendsGamesWaiting,
+    FriendsWeekIsFull,
     GameHasStarted,
     GamesPerWeekBooked,
     InvitationNotWaiting,
+    NoLevel,
+    NotAFriend,
     PaymentMethodRequired,
+    RescueNotOffered,
+    SeatJustTaken,
     YouPlayThen,
 )
 from app.modules.proposals.domain.friends_card import court_at, the_sides, ways_to_stand
@@ -74,6 +93,7 @@ from app.modules.proposals.domain.home import (
     BookedGame,
     InvitationAnswer,
     PayMode,
+    SeatState,
 )
 from app.modules.proposals.domain.limits import FRIENDS_GAMES_WAITING
 from app.modules.proposals.domain.ports import (
@@ -86,6 +106,8 @@ from app.modules.proposals.domain.ports import (
     FriendsGameBookings,
     GameToCharge,
     PlayerBookings,
+    PlayerFit,
+    ReaderRelations,
     RefundReason,
     RefusedPayment,
     SavedMethods,
@@ -300,12 +322,16 @@ class Accepting:
         members: ReadMembers,
         methods: SavedMethods,
         charges: SeatCharges,
+        refunds: SeatRefunds,
+        undecided: UndecidedCharges,
         fill: Fill,
     ) -> None:
         self._friends_games = friends_games
         self._members = members
         self._methods = methods
         self._charges = charges
+        self._refunds = refunds
+        self._undecided = undecided
         self._fill = fill
 
     async def locked(self, booking_id: UUID, player: UUID) -> BookedGame:
@@ -329,6 +355,17 @@ class Accepting:
             raise InvitationNotWaiting()
         friend = (await self._members.of([player], sport=game.sport, now=now))[0]
         _refuse_unless_free(friend, start=game.start, now=now)
+        # Invited into a seat open to the group (#752): taken from whoever
+        # paid it, once theirs is paid.
+        open_seat = next(
+            (
+                left
+                for left in game.open
+                if seat.seat_of is not None and left.left_by == seat.seat_of
+            ),
+            None,
+        )
+        taken: frozenset[UUID] = frozenset()
         if game.pay_mode is PayMode.SPLIT_THE_COST:
             if not await self._methods.saved_for(player):
                 raise PaymentMethodRequired()
@@ -357,7 +394,17 @@ class Accepting:
                     your_payment=refused,
                     confirm_by=seat.until,
                 )
+            taken = frozenset(charged.taken.values())
         accepted = await self._friends_games.accept(game.booking_id, player, at=now)
+        if open_seat is not None:
+            if game.pay_mode is PayMode.SPLIT_THE_COST:
+                # Their own share pays the seat now; with *Whole court* the
+                # sender's still does, as he agreed.
+                await the_seat_paid_back(self._refunds, game, open_seat, now=now)
+            if not accepted.open:
+                # The board is gone: a rescue's payment confirmed for a seat
+                # here is let go, and nobody pays it.
+                await self._undecided.release(game.booking_id, keeping=taken, at=now)
         await self._fill.other_yeses(
             [player], booked_id=game.booking_id, start=game.start, now=now
         )
@@ -469,6 +516,7 @@ class FriendsGameConfirmation:
         *,
         friends_games: FriendsGameBookings,
         accepting: Accepting,
+        rescuer: JoinsARescue,
         cards: CardsToFix,
         games: BookedGameChanges,
         undecided: UndecidedCharges,
@@ -476,6 +524,7 @@ class FriendsGameConfirmation:
     ) -> None:
         self._friends_games = friends_games
         self._accepting = accepting
+        self._rescuer = rescuer
         self._cards = cards
         self._games = games
         self._undecided = undecided
@@ -497,6 +546,10 @@ class FriendsGameConfirmation:
             return self._answered(game)
         if player in game.players:
             return self._answered(game)
+        if game.invitation_of(player) is None:
+            # Nobody invited them: a rescuer's payment, on a seat open to the
+            # group (#752) — the join again.
+            return await self._rescued(game, player, confirmed=confirmed, now=now)
         try:
             answer = await self._accepting.accepted(game, player, now=now)
         except (
@@ -520,6 +573,27 @@ class FriendsGameConfirmation:
             kept_until=answer.confirm_by,
         )
 
+    async def _rescued(
+        self, game: BookedGame, player: UUID, *, confirmed: UUID, now: Instant
+    ) -> YesAnswer:
+        try:
+            return await self._rescuer.join(
+                None, game.booking_id, player, now=now, confirmed=confirmed
+            )
+        except (
+            SeatJustTaken,
+            BookingIsCalledOff,
+            GameHasStarted,
+            RescueNotOffered,
+            BookingNotFound,
+        ):
+            # Nobody pays a hold for a seat they cannot take.
+            await self._undecided.release(
+                game.booking_id, keeping=(), of_player=player, at=now
+            )
+            await self._uow.commit()
+            raise
+
     @staticmethod
     def _answered(game: BookedGame) -> YesAnswer:
         return YesAnswer(
@@ -529,6 +603,197 @@ class FriendsGameConfirmation:
             if game.game_id is None
             else Booked(booking_id=game.booking_id, game_id=game.game_id),
         )
+
+
+# --------------------------------------------------------------------------- #
+# An empty seat (#752)
+# --------------------------------------------------------------------------- #
+
+
+async def _an_empty_seat(
+    friends_games: FriendsGameBookings,
+    game: BookedGame,
+    seat_of: UUID,
+    *,
+    now: Instant,
+) -> tuple[BookedGame, SeatState]:
+    """The seat named ``seat_of`` while nobody holds it — or ``seat_just_taken``.
+    A friend's time up and not yet run out is run out first, as the job would,
+    so the seat is empty on the record as it reads."""
+
+    seat = game.vacancy(seat_of, now=now)
+    if seat is None:
+        raise SeatJustTaken()
+    invited = game.invitation_of(seat_of)
+    if (
+        invited is not None
+        and invited.seat_of is None
+        and invited.answer is InvitationAnswer.WAITING
+    ):
+        await friends_games.run_out(game.booking_id, at=now)
+        again = await friends_games.locked(game.booking_id)
+        assert again is not None
+        game = again
+    return game, seat.state
+
+
+@final
+class InviteIntoASeat:
+    """***Invite a friend*** into an empty seat (#752; the friends mechanics
+    §10.1, §10.3, Q44): anybody In, before or after the cut-off, invites one of
+    **their own** friends — the same invitation and clock as the card's, 24
+    hours never past the cut-off (or, made after it, the start). Refused,
+    **naming nobody**: not their friend, no level in the sport, a block with
+    anybody on the game, a game at that hour, a full week — and somebody
+    already on the game or ever invited to it."""
+
+    def __init__(
+        self,
+        *,
+        friends_games: FriendsGameBookings,
+        relations: ReaderRelations,
+        members: ReadMembers,
+        fit: PlayerFit,
+        uow: UnitOfWork,
+        clock: Clock,
+    ) -> None:
+        self._friends_games = friends_games
+        self._relations = relations
+        self._members = members
+        self._fit = fit
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: SeatActCommand) -> None:
+        now = instant(self._clock.now())
+        inviter, friend = command.player_id, command.friend_id
+        assert friend is not None
+        game = await _locked_for(self._friends_games, command.booking_id, inviter)
+        if inviter not in game.players:
+            # Only somebody In invites: an invitee still answering learns
+            # nothing they may do.
+            raise BookingNotFound()
+        if not game.may_invite(inviter, now=now):
+            _refuse_a_game_no_longer_on(game, now=now)
+            raise BookingNotFound()
+        if (
+            friend in game.players
+            or friend in game.leavers
+            or game.invitation_of(friend) is not None
+        ):
+            raise AlreadyOnTheGame()
+        if not await self._relations.friends_among(inviter, [friend]):
+            raise NotAFriend()
+        person = (await self._members.of([friend], sport=game.sport, now=now))[0]
+        if person.level is None:
+            raise NoLevel()
+        # Everybody they would share the court with: those In, and every friend
+        # still invited into another seat.
+        others = {
+            *game.players,
+            *(
+                seat.player_id
+                for seat in game.invited
+                if seat.waiting_at(now) and seat.seat != command.seat_of
+            ),
+        }
+        blocked = await self._fit.blocked_pairs({*others, friend})
+        if any(friend in pair for pair in blocked):
+            raise CannotPlayTogether()
+        if hour_taken(game.start, person.booked):
+            raise FriendPlaysThen()
+        if week_of(game.start) in capped_weeks_of(person, now=now):
+            raise FriendsWeekIsFull()
+        game, _ = await _an_empty_seat(
+            self._friends_games, game, command.seat_of, now=now
+        )
+        await self._friends_games.invite(
+            game.booking_id, friend, by=inviter, seat_of=command.seat_of, at=now
+        )
+        await self._uow.commit()
+
+
+@final
+class OpenASeat:
+    """***Open to Ogrody*** (#752; the friends mechanics §10.1): the sender
+    puts an empty seat to the group before the cut-off — from then on a rescue,
+    offered as any rescue is: to members who fit, are free and aren't blocked,
+    never to a guest. Opened already, nothing more is recorded."""
+
+    def __init__(
+        self, *, friends_games: FriendsGameBookings, uow: UnitOfWork, clock: Clock
+    ) -> None:
+        self._friends_games = friends_games
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: SeatActCommand) -> None:
+        now = instant(self._clock.now())
+        game = await self._friends_games.locked(command.booking_id)
+        if (
+            game is None
+            or game.sender != command.player_id
+            or command.player_id not in game.players
+        ):
+            raise BookingNotFound()
+        _refuse_a_game_no_longer_on(game, now=now)
+        if now >= game.cut_off:
+            # Every seat still empty opened at the cut-off on its own.
+            raise CutOffHasPassed()
+        game, state = await _an_empty_seat(
+            self._friends_games, game, command.seat_of, now=now
+        )
+        if state is SeatState.SEAT_OPEN:
+            return
+        await self._friends_games.open(game.booking_id, command.seat_of, at=now)
+        await self._uow.commit()
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CoverWarningsRun:
+    """What one run of the cover warning recorded, and how many games another
+    process reached first."""
+
+    warned: int
+    conflicts: int
+
+
+@final
+class WarnTheCovers:
+    """**The cover warning** (#752; the friends mechanics §10.2, Q42): 24 hours
+    before the cut-off of a *Split* game its sender covers from inside it, while
+    a seat lacks its own payment, he is warned once what the cut-off will take
+    — *Saturday 10:00 · 1 seat still empty · At Fri 10:00 you pay 50 zł* — by
+    Notifications, off the booking's ``bookings.cover_warned``. **It buys the
+    telling, not correctness**: the cut-off takes the covers whether or not it
+    ran. One transaction per game, its row locked first, over a clock-derived
+    list in one order on every process; the booking's own *once* refuses a
+    second warning, and a conflict is counted and stepped over."""
+
+    def __init__(
+        self, *, friends_games: FriendsGameBookings, uow: UnitOfWork, clock: Clock
+    ) -> None:
+        self._friends_games = friends_games
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self) -> CoverWarningsRun:
+        now = instant(self._clock.now())
+        warned = conflicts = 0
+        for booking_id in await self._friends_games.cover_warnings_due(now=now):
+            try:
+                if await self._friends_games.locked(
+                    booking_id
+                ) is not None and await self._friends_games.warn(booking_id, at=now):
+                    await self._uow.commit()
+                    warned += 1
+                else:
+                    await self._uow.rollback()
+            except EventStreamVersionConflict:
+                await self._uow.rollback()
+                conflicts += 1
+        return CoverWarningsRun(warned=warned, conflicts=conflicts)
 
 
 # --------------------------------------------------------------------------- #
@@ -556,7 +821,12 @@ class CallOffAFriendsGame:
     async def execute(self, command: FriendsGameCommand) -> None:
         now = instant(self._clock.now())
         game = await self._friends_games.locked(command.booking_id)
-        if game is None or game.sender != command.player_id:
+        if (
+            game is None
+            or game.sender != command.player_id
+            # A sender who left calls nothing off for those playing on (#752).
+            or command.player_id not in game.players
+        ):
             raise BookingNotFound()
         _refuse_a_game_no_longer_on(game, now=now)
         if now >= game.cut_off:
@@ -643,6 +913,10 @@ class RunOutTheInvitations:
 __all__ = [
     "AcceptAFriendsGame",
     "Accepting",
+    "CoverWarningsRun",
+    "InviteIntoASeat",
+    "OpenASeat",
+    "WarnTheCovers",
     "DeclineAFriendsGame",
     "FriendsGameConfirmation",
     "CallOffAFriendsGame",

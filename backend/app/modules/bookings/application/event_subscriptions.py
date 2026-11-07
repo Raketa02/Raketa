@@ -30,6 +30,13 @@ reads as the club's own — the way ``notifications.notice_given`` grows.
 ``bookings.booked_by_a_friend`` — the Booking's second birth, court kind and
 all — and its invited seats' ``…invited_seat_accepted``, ``…invited_seat_declined``
 and ``…invited_seat_ran_out``, and ``bookings.called_off_by_the_sender``.
+
+**A friends game's empty seats add four, version 1** (#752): a friend invited
+into one, ``bookings.seat_invited``, and that invitation ended because somebody
+else took the seat first, ``bookings.invited_seat_taken``; a seat put to the
+group, ``bookings.seat_opened``; and the sender warned a day before the
+cut-off, ``bookings.cover_warned``. The defaults ``InvitedSeat`` grew are the
+fold's, never the wire's: ``bookings.booked_by_a_friend`` is unchanged.
 """
 
 from __future__ import annotations
@@ -48,15 +55,19 @@ from app.modules.bookings.domain.events import (
     CardFixed,
     CardToFix,
     CourtMoved,
+    CoverWarned,
     InvitedSeatAccepted,
     InvitedSeatDeclined,
     InvitedSeatRanOut,
+    InvitedSeatTaken,
     KeptSeatRanOut,
     NewBookingsSummarised,
     PlayerCheckedIn,
     NoSaidToTheSeat,
+    SeatInvited,
     SeatKept,
     SeatLeft,
+    SeatOpened,
     SeatRescued,
 )
 
@@ -79,6 +90,10 @@ _EVENTS = (
     (InvitedSeatDeclined, "bookings.invited_seat_declined"),
     (InvitedSeatRanOut, "bookings.invited_seat_ran_out"),
     (CalledOffBySender, "bookings.called_off_by_the_sender"),
+    (SeatInvited, "bookings.seat_invited"),
+    (InvitedSeatTaken, "bookings.invited_seat_taken"),
+    (SeatOpened, "bookings.seat_opened"),
+    (CoverWarned, "bookings.cover_warned"),
 )
 
 
@@ -115,4 +130,8 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(InvitedSeatDeclined, LogBookingEvent())
     dispatcher.subscribe(InvitedSeatRanOut, LogBookingEvent())
     dispatcher.subscribe(CalledOffBySender, LogBookingEvent())
+    dispatcher.subscribe(SeatInvited, LogBookingEvent())
+    dispatcher.subscribe(InvitedSeatTaken, LogBookingEvent())
+    dispatcher.subscribe(SeatOpened, LogBookingEvent())
+    dispatcher.subscribe(CoverWarned, LogBookingEvent())
     dispatcher.subscribe(NewBookingsSummarised, LogNewBookingsSummary())

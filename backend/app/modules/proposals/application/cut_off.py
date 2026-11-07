@@ -19,6 +19,10 @@ of two things happens to it:
   and **a cover is taken for each seat whose own player hasn't paid and let go
   otherwise** — decided here and nowhere before, then taken with the shares. A
   game sent after its cut-off has its covers decided once its invitations end.
+  **Every seat still empty then opens to the group** (#752): a rescue until the
+  start, whose taker pays and refunds the sender's cover, less the fee. A
+  friends game its *Split* sender left before the cut-off is ordinary, and is
+  called off short like any game.
 
 **Correctness depends on it**, as time to pay's does: every read says
 *called off*, and *paid*, from the cut-off on (``BookedGame.called_off_reason``,
@@ -132,8 +136,9 @@ class TheCutOff:
 
     async def _call_off(self, booking_id: UUID, *, now: Instant) -> bool:
         # The booking's id is its proposal's, whose row every act on the game
-        # locks first.
-        await self._proposals.load_for_update(booking_id)
+        # locks first — a friends game, which has none, its own (#752).
+        if await self._proposals.load_for_update(booking_id) is None:
+            await self._friends_games.locked(booking_id)
         still_in = await self._games.call_off_at_the_cut_off(booking_id, at=now)
         if still_in is None:
             return False
@@ -163,4 +168,9 @@ class TheCutOff:
             # Each cover decided here, never before: let go for a seat its own
             # player paid, taken below for every other.
             await self._covers.settle(booking_id, at=now)
-        return await self._held.take(booking_id, at=now) > 0
+        taken = await self._held.take(booking_id, at=now) > 0
+        opened: tuple[UUID, ...] = ()
+        if game.covering:
+            # Every seat still empty opens to the group: its cover is paid.
+            opened = await self._friends_games.open_at_the_cut_off(booking_id, at=now)
+        return taken or bool(opened)

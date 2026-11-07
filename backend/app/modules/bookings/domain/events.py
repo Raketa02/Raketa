@@ -48,7 +48,12 @@ still decodes.
 sender In and every other seat **invited** — held for its friend until a
 moment — then ``InvitedSeatAccepted``, ``InvitedSeatDeclined`` or
 ``InvitedSeatRanOut`` answers each, and ``CalledOffBySender`` is the sender
-calling it off before the cut-off.
+calling it off before the cut-off. **Its empty seats** (#752): ``SeatInvited``
+is a friend invited into one — ended ``InvitedSeatTaken`` when somebody else
+took it first — ``SeatOpened`` puts one to the group as a rescue, by its
+sender or at the cut-off, and ``CoverWarned`` is the warning its sender gets
+a day before the cut-off. Leaving one is the ordinary ``SeatLeft``: what
+becomes of the seat — empty, or a rescue — is the fold's to say.
 
 Every event carries ``booking_id``, the stream's own key. Sport and kind travel
 as their codes, as a proposal's do.
@@ -376,6 +381,70 @@ class CalledOffBySender:
     def __post_init__(self) -> None:
         object.__setattr__(self, "player_ids", _uuids(self.player_ids))
         object.__setattr__(self, "invited", _uuids(self.invited))
+
+
+@dataclass(frozen=True)
+class SeatInvited:
+    """**A friend invited into an empty seat** (#752; the friends mechanics
+    §10.1, §10.3): anybody In may invite one of their own friends into a seat
+    nobody holds — empty, or open to the group — before or after the cut-off.
+    ``seat_of`` names the seat by whose it was: the friend who said *Not this
+    time*, didn't answer or left it, or the sender. ``side`` is the seat's.
+    Theirs until ``until`` — 24 hours on, never past the cut-off (made before
+    it) or the start (made after it) — unless somebody else takes the seat
+    first."""
+
+    booking_id: UUID
+    player_id: UUID
+    invited_by: UUID
+    seat_of: UUID
+    side: str
+    until: datetime
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class InvitedSeatTaken:
+    """**Somebody else took the seat first** (#752): this friend's invitation
+    into it ended — *seat taken* — because ``taken_by`` accepted an invitation
+    into the same seat, or took it as a rescue, a moment earlier."""
+
+    booking_id: UUID
+    player_id: UUID
+    taken_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatOpened:
+    """**An empty seat opened to the group** (#752; the friends mechanics
+    §10.1, §10.3): from now on it is a **rescue** — a *Seat open* card in the
+    decks of members who fit, a row in Fill in, an alert — named by whose it
+    was (``seat_of``). Opened by its sender before the cut-off, or, on a game
+    its sender's card covers, **by the cut-off** (``at_the_cut_off``) for every
+    seat still empty then."""
+
+    booking_id: UUID
+    seat_of: UUID
+    occurred_at: datetime
+    at_the_cut_off: bool = False
+
+
+@dataclass(frozen=True)
+class CoverWarned:
+    """**The cover warning** (#752; the friends mechanics §10.2): 24 hours
+    before the cut-off of a *Split the cost* game its sender still covers,
+    ``seats`` — each named by whose it is — still lacked their own payment, so
+    the sender was warned what the cut-off would take from him. **Once per
+    game.**"""
+
+    booking_id: UUID
+    sender_id: UUID
+    seats: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "seats", _uuids(self.seats))
 
 
 @dataclass(frozen=True)

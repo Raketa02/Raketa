@@ -26,6 +26,7 @@ from app.bootstrap.jobs import (
     GET_YOUR_LEVEL_JOB,
     HOW_DID_IT_GO_JOB,
     INVITATIONS_JOB,
+    COVER_WARNING_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
@@ -119,6 +120,7 @@ def _nothing_but(**overrides):
             "PROPOSER_ENABLED": False,
             "TIME_TO_PAY_ENABLED": False,
             "INVITATIONS_ENABLED": False,
+            "COVER_WARNING_ENABLED": False,
             "CUT_OFF_ENABLED": False,
             "HOLDING_ENABLED": False,
             "CLUB_PAYOUTS_ENABLED": False,
@@ -735,4 +737,40 @@ async def test_the_invitations_job_runs_end_to_end_through_the_real_wiring(
 
     assert not any(
         record.message == "invitations finished" for record in caplog.records
+    )
+
+
+def test_the_cover_warning_job_is_registered_at_the_seat_jobs_cadence():
+    """How often a friends game's cover warning is looked for is a setting —
+    every thirty seconds, like the other seat jobs; the day before the cut-off
+    is domain (#752)."""
+
+    assert get_settings().COVER_WARNING_INTERVAL_SECONDS == 30
+    settings = _nothing_but(
+        COVER_WARNING_ENABLED=True, COVER_WARNING_INTERVAL_SECONDS=45.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [(job.name, job.interval_seconds) for job in jobs] == [
+        (COVER_WARNING_JOB, 45.0)
+    ]
+
+
+async def test_the_cover_warning_job_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """With no friends game near its cut-off, a run warns nobody and says
+    nothing."""
+
+    [job] = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(COVER_WARNING_ENABLED=True),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await job.run_once()
+
+    assert not any(
+        record.message == "cover warning finished" for record in caplog.records
     )

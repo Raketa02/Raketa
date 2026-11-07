@@ -28,7 +28,11 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant
-from app.modules.bookings.domain.booking import Booking
+from app.modules.bookings.domain.booking import (
+    COVER_WARNING_BEFORE,
+    Booking,
+    PayMode,
+)
 from app.modules.bookings.domain.ports import BookingDirectory, BookingRepository
 from app.modules.games.domain.attendance import NOT_HERE_STATES, AttendanceState
 from app.modules.games.domain.game import Game
@@ -192,11 +196,8 @@ def _a_friends_game(booking: Booking, *, at: Instant) -> GameBrief:
         filled_by=None,
         book_by=booking.start,
         fell_back_at=None,
-        left_it_short=tuple(
-            left.player_id
-            for left in booking.departures
-            if left.is_open and left.at < booking.cut_off
-        ),
+        # A seat its sender's card covers calls nothing off (#752).
+        left_it_short=tuple(left.player_id for left in booking.open_before_the_cut_off),
         paying={**booking.fixing_until, **booking.kept_until},
         fixing=frozenset(booking.cards_to_fix)
         | frozenset(
@@ -205,7 +206,30 @@ def _a_friends_game(booking: Booking, *, at: Instant) -> GameBrief:
         sender=booking.sender,
         invited=tuple(seat.player_id for seat in booking.waiting_at(at)),
         whole=booking.is_whole,
+        invited_by={
+            seat.player_id: seat.invited_by or booking.sender
+            for seat in booking.invited
+            if booking.sender is not None
+        },
+        cut_off=booking.cut_off,
+        unpaid=_the_cover_line(booking, at=at),
+        empty=tuple(seat.seat_of for seat in booking.empty),
     )
+
+
+def _the_cover_line(booking: Booking, *, at: Instant) -> tuple[UUID, ...]:
+    """The seats a *Split* sender's cover pays if the cut-off came now — told
+    only inside the day before it, while he covers the game from inside it
+    (#752; the friends mechanics §10.2)."""
+
+    if (
+        booking.pay_mode is not PayMode.SPLIT_THE_COST
+        or not booking.covering
+        or booking.sender not in booking.players
+        or not booking.cut_off - COVER_WARNING_BEFORE <= at < booking.cut_off
+    ):
+        return ()
+    return booking.unpaid_seats(now=at)
 
 
 @final

@@ -78,7 +78,7 @@ def keeping_of(booking: Booking, player_id: UUID, *, now: Instant) -> Keeping | 
     if player_id in booking.players:
         # Kept is the hour coming with every seat held; a game called off, or
         # one that went ahead short, puts nothing on the record of who stayed.
-        whole = booking.is_booked and booking.open_seats == 0
+        whole = booking.is_booked and booking.is_whole
         if not whole or now < booking.start:
             return None
         return Keeping(at=booking.start)

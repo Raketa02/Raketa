@@ -4,7 +4,9 @@ and *No* on a rescue, *Post a game* at a court hour its sheet lists, and after
 the game a score entered, agreed with or countered (#593) — and, at the court,
 *isn't here yet*, *I'm here*, *they're here*, *I was there* and *yes, they were
 here*, the first three **at the club or away** (#657) — and a friends game sent,
-accepted, declined and called off (#751). *Join* on a post they
+accepted, declined and called off (#751), a friend invited into its empty seat
+and that seat opened to the group (#752; leaving it and taking a seat open to
+the group are the rescue's own presses). *Join* on a post they
 were never dealt is the *Yes* here, as it is the phone's.
 
 **Each route is the player's own route with the acting account in place of the
@@ -72,6 +74,7 @@ from app.modules.proposals.application.commands import (
     PostingCommand,
     ReadPostingSlotCommand,
     RescueCommand,
+    SeatActCommand,
 )
 from app.modules.proposals.domain.overlap import DayRange
 from app.modules.proposals.domain.post import Who
@@ -79,6 +82,8 @@ from app.modules.proposals.presentation.dependencies import (
     AcceptAFriendsGameDep,
     DeclineAFriendsGameDep,
     CallOffAFriendsGameDep,
+    InviteIntoASeatDep,
+    OpenASeatDep,
     ReadFriendsCardDep,
     SendAFriendsGameDep,
     JoinARescueDep,
@@ -94,6 +99,7 @@ from app.modules.proposals.presentation.schemas import (
     FriendsCardResponse,
     FriendsGameAnswerResponse,
     FriendsGameSentResponse,
+    SeatInvitationRequest,
     SendFriendsGameRequest,
     DepartureResponse,
     PostedResponse,
@@ -758,6 +764,58 @@ async def call_off_a_friends_game(
 ) -> Response:
     await call_off.execute(
         FriendsGameCommand(player_id=acting, booking_id=booking_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/bookings/{booking_id}/seats/{seat_of}/invitations",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses=_REFUSED,
+    summary="Invite a friend into an empty seat, as this person",
+    description=(
+        "`POST /api/v1/bookings/{id}/seats/{seat_of}/invitations` as the acting "
+        "account (#752): one of their own friends invited into the empty seat "
+        "named `seat_of`, theirs to accept for 24 hours unless somebody takes "
+        "it first."
+    ),
+)
+async def invite_into_a_seat(
+    booking_id: UUID,
+    seat_of: UUID,
+    body: SeatInvitationRequest,
+    acting: ActingDep,
+    invite: InviteIntoASeatDep,
+) -> Response:
+    await invite.execute(
+        SeatActCommand(
+            player_id=acting,
+            booking_id=booking_id,
+            seat_of=seat_of,
+            friend_id=body.friend_id,
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/bookings/{booking_id}/seats/{seat_of}/opening",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses=_REFUSED,
+    summary="Open an empty seat to the group, as its sender",
+    description=(
+        "`POST /api/v1/bookings/{id}/seats/{seat_of}/opening` as the acting "
+        "account (#752): the empty seat a rescue from now on — a *Seat open* "
+        "card, a Seats to fill row, Fill in alerts."
+    ),
+)
+async def open_a_seat(
+    booking_id: UUID, seat_of: UUID, acting: ActingDep, open_: OpenASeatDep
+) -> Response:
+    await open_.execute(
+        SeatActCommand(player_id=acting, booking_id=booking_id, seat_of=seat_of)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

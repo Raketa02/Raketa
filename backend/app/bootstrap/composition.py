@@ -152,8 +152,11 @@ from app.modules.proposals.application.friends_games import (
     Accepting,
     DeclineAFriendsGame,
     CallOffAFriendsGame,
+    InviteIntoASeat,
+    OpenASeat,
     RunOutTheInvitations,
     SendAFriendsGame,
+    WarnTheCovers,
 )
 from app.modules.proposals.application.posting import (
     PostAGame,
@@ -2033,6 +2036,7 @@ def build_leave_the_game(
             events=build_event_publisher(session, runtime=runtime),
         ),
         bookings=build_player_bookings(session, runtime=runtime),
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
@@ -2547,6 +2551,7 @@ def build_join_a_rescue(
     )
     return JoinARescue(
         proposals=proposals,
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
         rescuer=build_rescuer(
             session,
             proposals=proposals,
@@ -2573,6 +2578,7 @@ def build_say_no_to_a_rescue(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
         bookings=build_player_bookings(session, runtime=runtime),
         offers=build_rescue_offers(session, runtime=runtime),
         changes=build_booked_game_changes(session, settings=settings, runtime=runtime),
@@ -2897,6 +2903,8 @@ def build_accepting(
         charges=build_seat_charges(
             session, provider=provider, settings=settings, runtime=runtime
         ),
+        refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         fill=_the_fill_of_a_friends_game(
             session, provider=provider, settings=settings, runtime=runtime
         ),
@@ -2949,11 +2957,23 @@ def build_friends_game_confirmation(
     runtime: EventRuntime | None = None,
 ) -> FriendsGameConfirmation:
     """A payment confirmed in the app on a friends game (#751) — the send's,
-    or an accept's again — for ``ConfirmPayment``."""
+    an accept's again, or a rescuer's join on a seat open to the group (#752)
+    — for ``ConfirmPayment``."""
     return FriendsGameConfirmation(
         friends_games=build_friends_game_bookings(session, runtime=runtime),
         accepting=build_accepting(
             session, provider=provider, settings=settings, runtime=runtime
+        ),
+        rescuer=build_rescuer(
+            session,
+            proposals=build_proposal_repository(
+                session,
+                event_store=build_domain_event_store(session, runtime=runtime),
+                events=build_event_publisher(session, runtime=runtime),
+            ),
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
         ),
         cards=build_cards_to_fix(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
@@ -2991,6 +3011,47 @@ def build_run_out_the_invitations(
     return RunOutTheInvitations(
         friends_games=build_friends_game_bookings(session, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_invite_into_a_seat(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> InviteIntoASeat:
+    """*Invite a friend* into a friends game's empty seat (#752)."""
+    return InviteIntoASeat(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        relations=build_reader_relations(session, runtime=runtime),
+        members=build_read_members(session, booked=booked, runtime=runtime),
+        fit=build_player_fit(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_open_a_seat(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> OpenASeat:
+    """The sender's *Open to the group*, before the cut-off (#752)."""
+    return OpenASeat(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_warn_the_covers(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> WarnTheCovers:
+    """One run of the cover warning over this session — the job's, the
+    console's and a test's (#752)."""
+    return WarnTheCovers(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )

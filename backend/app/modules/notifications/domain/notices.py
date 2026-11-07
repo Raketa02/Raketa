@@ -130,6 +130,15 @@ class NoticeKind(StrEnum):
     #: *Ania didn't answer* — to a friends game's sender: the friend's 24 hours
     #: ran out (#751).
     DIDNT_ANSWER = "DIDNT_ANSWER"
+    #: *Someone took that seat first.* — to a friend invited into an empty seat
+    #: of a friends game somebody else took first (#752; the words §29.8).
+    INVITED_SEAT_TAKEN = "INVITED_SEAT_TAKEN"
+    #: *Saturday 10:00 · 1 seat still empty* / *At Fri 10:00 you pay 50 zł:
+    #: your 25 zł and Ania's seat.* — **the cover warning**, to a *Split*
+    #: friends game's sender a day before the cut-off (#752; the words §29.9):
+    #: ``amount_grosze`` what the cut-off takes from him, ``until`` the cut-off,
+    #: ``people`` every seat still unpaid, named.
+    COVER_WARNING = "COVER_WARNING"
 
 
 class Opens(StrEnum):
@@ -163,6 +172,10 @@ class NoticeReason(StrEnum):
 
     #: Somebody left a booked game: their seat is open.
     SEAT_OPEN = "SEAT_OPEN"
+    #: An accepted friend left a friends game its sender's card covers, before
+    #: the cut-off: their seat is **empty**, the sender's to fill, no rescue
+    #: (#752).
+    SEAT_EMPTY = "SEAT_EMPTY"
     #: Somebody left a full game waiting for one payment: it is filling again.
     FILLING_AGAIN = "FILLING_AGAIN"
     #: A full game went back to filling and nobody is named: whose week
@@ -276,6 +289,11 @@ class Notice:
     starts_at: Instant | None
     opens: Opens
     amount_grosze: int | None = None
+    #: The people it names, in order. **The cover line** (#752) — a friends
+    #: game's *can't make it*, *didn't answer* or *left your game* to its
+    #: *Split* sender inside the day before the cut-off — puts the one it is
+    #: about first, then every seat his cover would pay, beside
+    #: ``amount_grosze`` (what he pays) and ``until`` (the cut-off).
     people: tuple[UUID, ...] = ()
     reason: str | None = None
     #: Of the player's own act, which they saw happen: born seen — listed, and

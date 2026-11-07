@@ -15,9 +15,13 @@ from app.modules.bookings.domain.events import (
     BookingConfirmed,
     CalledOffAtCutOff,
     CalledOffBySender,
+    CoverWarned,
     InvitedSeatAccepted,
     InvitedSeatDeclined,
     InvitedSeatRanOut,
+    InvitedSeatTaken,
+    SeatInvited,
+    SeatOpened,
     CancelledByClub,
     CardFixed,
     CardToFix,
@@ -51,6 +55,10 @@ BookingEvent = (
     | InvitedSeatDeclined
     | InvitedSeatRanOut
     | CalledOffBySender
+    | SeatInvited
+    | InvitedSeatTaken
+    | SeatOpened
+    | CoverWarned
 )
 
 _NAMES = {
@@ -71,6 +79,10 @@ _NAMES = {
     InvitedSeatDeclined: "bookings.booking.invited_seat_declined",
     InvitedSeatRanOut: "bookings.booking.invited_seat_ran_out",
     CalledOffBySender: "bookings.booking.called_off_by_the_sender",
+    SeatInvited: "bookings.booking.seat_invited",
+    InvitedSeatTaken: "bookings.booking.invited_seat_taken",
+    SeatOpened: "bookings.booking.seat_opened",
+    CoverWarned: "bookings.booking.cover_warned",
 }
 
 

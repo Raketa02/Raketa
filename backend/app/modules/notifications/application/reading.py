@@ -145,6 +145,7 @@ def _drawn(
             moved_from=notice.moved_from,
             game_kind=notice.game_kind,
             group=None if notice.pool_id is None else groups.get(notice.pool_id),
+            people_count=len(notice.people),
         )
     )
 

@@ -22,6 +22,8 @@ from app.bootstrap.composition import (
     build_accept_a_friends_game,
     build_decline_a_friends_game,
     build_call_off_a_friends_game,
+    build_invite_into_a_seat,
+    build_open_a_seat,
     build_send_a_friends_game,
     build_booked_games,
     build_cancel_the_game,
@@ -89,6 +91,8 @@ from app.modules.proposals.application.friends_games import (
     AcceptAFriendsGame,
     DeclineAFriendsGame,
     CallOffAFriendsGame,
+    InviteIntoASeat,
+    OpenASeat,
     SendAFriendsGame,
 )
 from app.modules.proposals.application.friends_card import (
@@ -504,3 +508,21 @@ CallOffAFriendsGameDep = Annotated[
     CallOffAFriendsGame, Depends(get_call_off_a_friends_game)
 ]
 
+
+
+def get_invite_into_a_seat(
+    db: DbSession, clock: ClockDep, booked: BookedGamesDep
+) -> InviteIntoASeat:
+    """*Invite a friend* into a friends game's empty seat (#752)."""
+    return build_invite_into_a_seat(db, clock=clock, booked=booked)
+
+
+InviteIntoASeatDep = Annotated[InviteIntoASeat, Depends(get_invite_into_a_seat)]
+
+
+def get_open_a_seat(db: DbSession, clock: ClockDep) -> OpenASeat:
+    """The sender's *Open to the group* (#752)."""
+    return build_open_a_seat(db, clock=clock)
+
+
+OpenASeatDep = Annotated[OpenASeat, Depends(get_open_a_seat)]

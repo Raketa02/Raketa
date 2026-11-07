@@ -55,6 +55,7 @@ from app.bootstrap.composition import (
     build_expire_proposals,
     build_run_out_the_time_to_pay,
     build_run_out_the_invitations,
+    build_warn_the_covers,
     build_reader_relations,
     build_make_proposal,
     build_notice_pushes,
@@ -97,7 +98,10 @@ from app.modules.payments.presentation.dependencies import PaymentProviderDep
 from app.modules.proposals.application.cut_off import TheCutOff
 from app.modules.proposals.application.holding import TheHolding
 from app.modules.proposals.application.expire_proposals import ExpireProposals
-from app.modules.proposals.application.friends_games import RunOutTheInvitations
+from app.modules.proposals.application.friends_games import (
+    RunOutTheInvitations,
+    WarnTheCovers,
+)
 from app.modules.proposals.application.time_to_pay import RunOutTheTimeToPay
 from app.modules.proposals.application.making import MakeProposal
 from app.modules.proposals.application.posting import PostAGame, ReadPosting
@@ -222,6 +226,14 @@ def get_run_out_the_invitations(db: DbSession, clock: ClockDep) -> RunOutTheInvi
 RunOutTheInvitationsDep = Annotated[
     RunOutTheInvitations, Depends(get_run_out_the_invitations)
 ]
+
+
+def get_warn_the_covers(db: DbSession, clock: ClockDep) -> WarnTheCovers:
+    """The ``cover-warning`` job's unit of work, over the real *now* (#752)."""
+    return build_warn_the_covers(db, clock=clock)
+
+
+WarnTheCoversDep = Annotated[WarnTheCovers, Depends(get_warn_the_covers)]
 
 
 def get_settle_seat_charges(

@@ -295,6 +295,11 @@ class PaymentsSeatRefunds:
             because=None if because is None else CancelledBecause(because.value),
         )
 
+    async def seat_taken(
+        self, booking_id: UUID, payer: UUID, *, cover: bool, at: Instant
+    ) -> None:
+        await self._refund.one_seat(booking_id, payer, cover=cover, at=at)
+
     async def left_after_the_cut_off(
         self, booking_id: UUID, player_id: UUID, *, at: Instant
     ) -> None:
@@ -428,11 +433,14 @@ class PaymentsLateRefunds:
 
     async def of(self, booking_id: UUID, player_id: UUID) -> LateRefund | None:
         # A booking takes its proposal's id, which every charge was made for;
-        # a player pays one share of a game at most.
+        # a player pays one share of a game at most — a friends game's sender
+        # his covers too, which are no seat of his to leave (#752).
         taken = [
             charge
             for charge in await self._charges.of_game(booking_id)
-            if charge.player_id == player_id and charge.status in PAID
+            if charge.player_id == player_id
+            and charge.status in PAID
+            and not charge.cover
         ]
         if not taken:
             return None

@@ -743,6 +743,42 @@ async def test_a_game_called_off_gives_everybody_still_in_everything_back(
 
 
 @pytest.mark.parametrize("implementation", registered(SeatRefunds))
+async def test_a_seat_taken_gives_back_one_charge_of_its_payer_less_the_fee(
+    implementation, session
+):
+    """#752: a friends game's sender pays several seats, so a seat taken gives
+    back **one** of his charges — a cover, nothing while one is still held for
+    the cut-off to let go — and a leaver's own share, never a cover."""
+
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    share = await _a_paid_share(session, game_id=game_id, player_id=OLA)
+    held = await _a_held_cover(
+        session, game_id=game_id, player_id=OLA, until=_at(3 * 24), cover=True
+    )
+
+    await refunds.seat_taken(game_id, OLA, cover=True, at=_at(1))
+    await session.commit()
+    assert (await _charges(session).load(share.charge_id)).refund_withholds_fee is None
+
+    charges = _charges(session)
+    held_now = await charges.load(held.charge_id)
+    assert held_now is not None
+    held_now.take(booking_id=game_id, at=_at(2))
+    held_now.captured(at=_at(2))
+    await charges.save(held_now)
+    await session.commit()
+    await refunds.seat_taken(game_id, OLA, cover=True, at=_at(3))
+    await refunds.seat_taken(game_id, OLA, cover=False, at=_at(3))
+    await session.commit()
+
+    cover_now = await _charges(session).load(held.charge_id)
+    share_now = await _charges(session).load(share.charge_id)
+    assert cover_now is not None and cover_now.refund_withholds_fee is True
+    assert share_now is not None and share_now.refund_withholds_fee is True
+
+
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
 async def test_a_leaver_whose_seat_was_taken_is_given_back_less_the_card_fee(
     implementation, session
 ):
@@ -1677,6 +1713,70 @@ async def test_the_sender_calls_it_off_and_its_court_is_free(implementation, ses
     # The court hour is the club's again.
     await friends_games.book(
         FriendsGame(**{**_fields(game), "booking_id": new_uuid()}), at=_at(3)
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(FriendsGameBookings))
+async def test_an_empty_seat_is_invited_into_and_opened_and_the_cut_off_opens_the_rest(
+    implementation, session
+):
+    """#752: a declined seat is empty — invited into, or opened to the group —
+    and the cut-off opens every seat still empty on a game its sender
+    covers."""
+
+    friends_games: FriendsGameBookings = implementation.build(session)
+    game = _a_friends_game(start=_at(5 * 24))
+    await friends_games.book(game, at=_at())
+    zosia = new_uuid()
+    await friends_games.accept(game.booking_id, KUBA, at=_at(1))
+    await friends_games.decline(game.booking_id, EWA, at=_at(2))
+    await friends_games.decline(game.booking_id, TOMEK, at=_at(2))
+    await session.commit()
+
+    invited = await friends_games.invite(
+        game.booking_id, zosia, by=KUBA, seat_of=EWA, at=_at(3)
+    )
+    await friends_games.open(game.booking_id, EWA, at=_at(4))
+    await session.commit()
+
+    assert invited.invitation_of(zosia) is not None
+    assert list(await friends_games.invitations_of(zosia, now=_at(5))) == [
+        game.booking_id
+    ]
+    opened = await friends_games.locked(game.booking_id)
+    assert opened is not None and [left.left_by for left in opened.open] == [EWA]
+    assert [seat.seat_of for seat in opened.empty] == [TOMEK]
+    cut_off = game.court.cut_off
+    assert await friends_games.open_at_the_cut_off(game.booking_id, at=_at(5)) == ()
+    assert await friends_games.open_at_the_cut_off(game.booking_id, at=cut_off) == (
+        TOMEK,
+    )
+    await session.commit()
+    after = await friends_games.locked(game.booking_id)
+    assert after is not None and after.open_seats == 2 and after.empty == ()
+
+
+@pytest.mark.parametrize("implementation", registered(FriendsGameBookings))
+async def test_the_cover_warning_is_a_candidate_a_day_before_and_recorded_once(
+    implementation, session
+):
+    friends_games: FriendsGameBookings = implementation.build(session)
+    game = _a_friends_game(start=_at(5 * 24))
+    await friends_games.book(game, at=_at())
+    await session.commit()
+    cut_off = game.court.cut_off
+    a_day_before = cut_off - timedelta(hours=24)
+
+    assert list(
+        await friends_games.cover_warnings_due(now=a_day_before - timedelta(hours=1))
+    ) == []
+    assert list(await friends_games.cover_warnings_due(now=a_day_before)) == [
+        game.booking_id
+    ]
+    assert await friends_games.warn(game.booking_id, at=a_day_before)
+    await session.commit()
+    assert not await friends_games.warn(
+        game.booking_id, at=a_day_before + timedelta(hours=1)
     )
 
 

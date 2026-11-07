@@ -83,6 +83,7 @@ from app.modules.bookings.domain.booking import (
     BookingState,
     CalledOff,
     CancelReason,
+    Emptied,
 )
 from app.modules.bookings.domain.ports import BookingRepository
 from app.modules.bookings.infrastructure.booking_models import BookingORM
@@ -443,8 +444,13 @@ class RowRescue(BaseModel):
 class RowFriendsSeat(BaseModel):
     person: PersonRef
     #: ``IN``, ``WAITING``, ``DECLINED`` or ``RAN_OUT`` — the last read off
-    #: the clock too.
+    #: the clock too — or, nobody's since (#752), ``LEFT`` and ``SEAT_OPEN``.
     state: str
+    #: An empty seat's name — what *Invite a friend* and *Open to the group*
+    #: press on (#752); ``None`` on a seat somebody holds or is held for.
+    seat_of: UUID | None = None
+    #: Every friend invited into this empty seat, still to answer.
+    invited: list[PersonRef] = Field(default_factory=list)
 
 
 class RowFriendsGame(BaseModel):
@@ -1221,6 +1227,13 @@ def _friends_game(
             return Answer.RAN_OUT.value
         return "IN" if answer is Answer.ACCEPTED else answer.value
 
+    def invited_into(seat_of: UUID) -> list[PersonRef]:
+        return [
+            ref(seat.player_id)
+            for seat in booking.invited
+            if seat.seat_of == seat_of and seat.waiting_at(now)
+        ]
+
     invited = booking.invitation_of(reader)
     return RowFriendsGame(
         booking_id=booking.booking_id,
@@ -1230,12 +1243,44 @@ def _friends_game(
         sender=ref(booking.sender),
         state=booking.state,
         seats=[
-            RowFriendsSeat(person=ref(booking.sender), state="IN"),
+            # Everybody In, the sender first; then each seat the card still
+            # holds for its friend; then each seat nobody holds (#752).
+            *(
+                RowFriendsSeat(person=ref(player), state="IN")
+                for player in sorted(
+                    booking.players, key=lambda one: one != booking.sender
+                )
+            ),
             *(
                 RowFriendsSeat(
-                    person=ref(seat.player_id), state=state_of(seat.answer, seat.until)
+                    person=ref(seat.player_id),
+                    state=state_of(seat.answer, seat.until),
+                    seat_of=seat.player_id if now >= seat.until else None,
                 )
                 for seat in booking.invited
+                if seat.seat_of is None and seat.answer is Answer.WAITING
+            ),
+            *(
+                RowFriendsSeat(
+                    person=ref(empty.seat_of),
+                    state={
+                        Emptied.DECLINED: Answer.DECLINED.value,
+                        Emptied.RAN_OUT: Answer.RAN_OUT.value,
+                        Emptied.LEFT: "LEFT",
+                    }[empty.how],
+                    seat_of=empty.seat_of,
+                    invited=invited_into(empty.seat_of),
+                )
+                for empty in booking.empty
+            ),
+            *(
+                RowFriendsSeat(
+                    person=ref(left.player_id),
+                    state="SEAT_OPEN",
+                    seat_of=left.player_id,
+                    invited=invited_into(left.player_id),
+                )
+                for left in booking.open_departures
             ),
         ],
         you_are_the_sender=booking.sender == reader,

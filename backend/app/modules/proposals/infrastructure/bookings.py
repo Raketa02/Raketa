@@ -57,6 +57,7 @@ from app.modules.bookings.application.friends_games import (
     FriendsGameToBook,
 )
 from app.modules.bookings.domain.booking import (
+    COVER_WARNING_BEFORE,
     BookedCourt,
     Booking,
     BookingState,
@@ -79,9 +80,11 @@ from app.modules.proposals.domain.home import (
     BookedGame,
     BookingStage,
     CalledOffReason,
+    EmptySeat,
     InvitationAnswer,
     InvitedSeat,
     PayMode,
+    SeatEmptied,
     RefusedHolding,
     ClubCancelReason,
     KeptSeat,
@@ -390,9 +393,21 @@ def _booked_game(booking: Booking) -> BookedGame:
                 side=seat.side,
                 until=seat.until,
                 answer=InvitationAnswer(seat.answer.value),
+                seat_of=seat.seat_of,
+                invited_by=seat.invited_by,
             )
             for seat in booking.invited
         ),
+        empty=tuple(
+            EmptySeat(
+                seat_of=seat.seat_of,
+                side=seat.side,
+                since=seat.since,
+                how=SeatEmptied(seat.how.value),
+            )
+            for seat in booking.empty
+        ),
+        covering=booking.covering,
     )
 
 
@@ -469,11 +484,45 @@ class BookingsFriendsGameBookings:
     async def waiting_of(self, sender_id: UUID, *, now: Instant) -> int:
         return await self._directory.friends_games_waiting_of(sender_id, now=now)
 
+    async def invite(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        by: UUID,
+        seat_of: UUID,
+        at: Instant,
+    ) -> BookedGame:
+        return _booked_game(
+            await self._games.invite(
+                booking_id, player_id, by=by, seat_of=seat_of, at=at
+            )
+        )
+
+    async def open(self, booking_id: UUID, seat_of: UUID, *, at: Instant) -> None:
+        await self._games.open(booking_id, seat_of, at=at)
+
+    async def open_at_the_cut_off(
+        self, booking_id: UUID, *, at: Instant
+    ) -> tuple[UUID, ...]:
+        return await self._games.open_at_the_cut_off(booking_id, at=at)
+
+    async def warn(self, booking_id: UUID, *, at: Instant) -> bool:
+        return await self._games.warn(booking_id, at=at)
+
+    async def cover_warnings_due(self, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.cover_warnings_due(
+            now=now, before=COVER_WARNING_BEFORE
+        )
+
 
 def _open_seat(left: Departure) -> OpenSeat:
-    """A leaver's seat, in this context's words."""
+    """A leaver's seat — or a friends game's seat put to the group — in this
+    context's words."""
 
-    return OpenSeat(side=left.side, left_by=left.player_id, left_at=left.at)
+    return OpenSeat(
+        side=left.side, left_by=left.player_id, left_at=left.at, covered=left.covered
+    )
 
 
 @final

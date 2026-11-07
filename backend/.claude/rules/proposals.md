@@ -269,10 +269,27 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (*FRIENDS GAME · n*, the invitations still waiting on the reader, soonest to end first, not
   in `needing_you`), and every card and `GET /bookings/{id}` a `friends_game` block (the
   sender, the pay mode, each seat's state — `IN`, `WAITING` with its end, `CANT_MAKE_IT`,
-  `DIDNT_ANSWER` off the clock, `EMPTY` for #752 — `your_invitation_until`, `can_call_off`);
+  `DIDNT_ANSWER` off the clock, `EMPTY` and `SEAT_OPEN` since #752 — `your_invitation_until`, `can_call_off`);
   a friend invited and not In reads the details too (`_as_invited`), every seat the card drew
   among `sides` (`BookedGame.planned_sides`). **A friends game is no proposal**, so
   `the_game`, `load_for_update` and the payments-to-confirm rows find none for it.
+  **Its empty seats** (#752; see `bookings.md`): `POST /bookings/{id}/seats/{seat_of}/
+  invitations` (`InviteIntoASeat`, `{friend_id}`: anybody In, one of their own friends;
+  refused naming nobody — `not_a_friend`, `no_level`, `cannot_play_together` against
+  everybody In and every friend invited into another seat, `friend_plays_then`,
+  `friends_week_is_full`, `already_on_the_game`, `seat_just_taken`) and `…/opening`
+  (`OpenASeat`: the sender, In, before the cut-off — `cut_off_has_passed` after); both
+  run out a card invitation whose time is up first, as the job would. The accept into a
+  seat open to the group pays its payer back (`the_seat_paid_back`) and, the last open
+  seat taken, lets go of every rescue payment still pending. `POST /bookings/{id}/departure`
+  leaves a friends game too, and the `cover-warning` job is `WarnTheCovers`. The
+  details' `friends_game.seats` are **one row per seat** (`BookedGame.seat_states`): every
+  player In, the sender first, each card seat still waiting, then each empty seat and each
+  seat open to the group — `seat_of`, `invitations` (each with its nickname, from
+  `people_on`, which reads every invitee), `can_invite`, `can_open` — the face of a seat
+  nobody holds whose it was, or the reader's own on a seat they are invited into
+  (`planned_sides_for`, `seen_by(…, now=)`); `leaving` is the ordinary `LeaveTerms`; and
+  `can_call_off` needs the sender In.
 - **A game still filling has its details, for anybody dealt it** (#542; the mechanics §14.2):
   `GET /proposals/{id}` (`application/proposal_details.py`, rules in `domain/details.py`) is the
   deck's card as a screen for the readers the deck does not serve — a card's *i*, a You're In row,

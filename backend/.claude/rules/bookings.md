@@ -561,10 +561,8 @@ unregistered and the local store reset, so the last yes books the game at every 
   has come and no invitation waits). **Call it off** is the sender's before the cut-off
   (`cut_off_has_passed` after): every hold and cover let go (`RefundReason.
   CALLED_OFF_BY_THE_SENDER`), the Game called off whole, the court free (the partial index);
-  the club reads it `BY_THE_SENDER`. A club's cancel calls it off as any booked game's
-  (nothing records a card owed for it: no proposal — #752's). **Calls made without a
-  ruling**: *Leave* is refused on a friends game (`booking_not_found`, no proposal) and the
-  details send `leaving: null` until #752; a send made after the cut-off takes the sender's
+  the club reads it `BY_THE_SENDER`. **Calls made without a
+  ruling**: a send made after the cut-off takes the sender's
   share at once and holds the covers until the invitations end, when they are decided;
   `payments-to-confirm` lists no friends game's payment (no proposal to name); a sender's
   holding refused far ahead is one card to fix for all his charges (`cards_to_fix` is one
@@ -572,6 +570,57 @@ unregistered and the local store reset, so the last yes books the game at every 
   not fixed in time, his seat opens as a leaver's and the game turns ordinary — owed to a
   later ticket. **Seeded by
   `app/seeds/friends_games.py`** (`seeds.md`).
+- **A friends game's empty seats, its cover warning and its leaving** (#752; the friends
+  mechanics §10–§11; `Booking.empty`, `vacancies`, `covering`, `ordinary`;
+  `proposals/application/friends_games.py`, `leave_the_game.py`, `cut_off.py`,
+  `rescues.py`). **A seat nobody holds is either empty or open.** *Empty*
+  (`EmptySeat`, named by whose it was — the friend who declined, didn't answer or left) is
+  the sender's to fill before the cut-off and **no rescue**: the booking stays `BOOKED`,
+  `open_seats` nought. *Open* is a `Departure` like a leaver's — the rescue machinery's one
+  input — and on a friends game it may be **covered** (`Departure.covered`): paid by the
+  sender's card, so a taker after the cut-off refunds **him**, never the friend it is named
+  after, and it never calls the game off. **The fold decides** (`_emptied`,
+  `_the_sender_left`): on a game the sender **covers** (*Split* with him not left before the
+  cut-off, or *Whole court* whatever he did), a card invitation declined or run out — a
+  run-out dated by its `until` — or an accepted friend's leave **before** the cut-off is
+  empty; **at or after** it a rescue at once, covered unless the leaver paid it themselves
+  (a *Split* friend's own share). **The sender's own leave**: *Split* before the cut-off
+  turns the game **ordinary** (`sender_left_at`) — every open seat uncovered, his seat and
+  every empty seat open at once, short at the cut-off like any game (and short too of a card
+  invitation still unanswered, which ends by it; one run out afterwards opens as of his
+  leave, so the projection's `open_since` finds it); *Whole court* before it his seat opens
+  **covered** by his own share; after the cut-off his leave is a late leave. `state` is
+  `_restate`'s: `SEAT_OPEN` exactly while a departure is open. **An invitation into a seat**
+  (`bookings.seat_invited`, `InvitedSeat.seat_of`/`invited_by`, a `booking_invitations` row
+  like the card's): by anybody In, of an empty or open seat, the invitee never on the game
+  before, `invited_until`'s clock; **the first accept or the first rescue takes the seat**
+  and every other invitation into it ends `bookings.invited_seat_taken` (`Answer.TAKEN`),
+  recorded by the same act. A seat invitation declined or run out leaves the seat as it was.
+  **Open to the group** (`bookings.seat_opened`) is the sender's, In, before the cut-off;
+  **the cut-off opens every seat still empty** on a covered game (`open_at_the_cut_off`,
+  `at_the_cut_off`), in `TheCutOff._take` after the covers are settled and the shares
+  taken — an invitation whose time is up run out first. The read of a rescue is unchanged:
+  `rescues_in` (`state = SEAT_OPEN`), the board, the deck's `SEAT_OPEN` card, the alerts.
+  **No proposal stands for it**, so `JoinARescue`, `SayNoToARescue`, `LeaveTheGame` and the
+  cut-off's call-off lock its booking row (`rescues.py`'s `lock_the_game`), and the
+  `Rescuer` reads its pool off the booking (`Pool(id=pool_id, GROUP)`) — a guest, in no
+  such group, is never offered it. **Who a taken seat pays back** is
+  `the_seat_paid_back`: covered → one of the sender's covers (`SeatRefunds.seat_taken(…,
+  cover=True)`, nothing while a cover is still held — the cut-off's `SettleTheCovers` lets one
+  go for the taker's own share); a leaver's after the cut-off → their own share; a *Whole
+  court* invitee taking a seat pays nothing and refunds nobody. **The cover warning**
+  (`bookings.cover_warned`, once, `COVER_WARNING_BEFORE` = 24 h before the cut-off, *Split*,
+  covered, the sender In, a seat in `unpaid_seats` — every seat but his without its own
+  player's payment, a waiting invitation included, each named by its last invitee) is the
+  `cover-warning` job's (`jobs.md`). **A club's cancel** moves a friends game as any booked
+  game's (a move by cancel changes nothing else: every hold, cover and invitation stays) and
+  calls it off with the same refunds — the sender's whole court in full after the cut-off.
+  **Calls made without a ruling**: a declined or run-out seat invitation tells whoever
+  invited, not the sender; re-inviting anybody ever on the game is `already_on_the_game`; the
+  warning is the first run inside the window, so a seat emptying in that first tick may be
+  told twice; a seat taken by a *Whole court* invitee leaves the cover paid; **the cancel
+  that calls a friends game off still owes nobody a card** — no proposal records
+  `ClubCancelled`, and the proposer's owed card is built on one (a gap for a later ticket).
 - **The club's money, and its day of new bookings** (#548; the mechanics §16.11, §16.12;
   the screens B7, B9). **The Money page** is Proposals', beside the Bookings page
   (`application/club_money.py`): `GET /api/v1/club/money?month=YYYY-MM` reads every booking

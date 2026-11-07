@@ -8070,6 +8070,160 @@
         }
       }
     },
+    "/api/v1/bookings/{booking_id}/seats/{seat_of}/invitations": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Invite a friend into an empty seat",
+        "description": "*Invite a friend* (#752; the friends mechanics \u00a710.1, \u00a710.3): anybody In invites one of **their own** friends into the seat named `seat_of` \u2014 `friends_game.seats[].seat_of`, whose it was \u2014 before the cut-off or after it, while it is empty or open to the group. The friend gets the same invitation as the card's \u2014 a FRIENDS GAME card on Home, a push, `friends_game.your_invitation_until` \u2014 for 24 hours, never past the cut-off (made before it) or the start (made after it). **The first to accept, or the first rescue, takes the seat**: every other invitation into it ends, and its friend is told *Someone took that seat first*. After the cut-off an accept takes the share at once.",
+        "operationId": "invite_into_a_seat_api_v1_bookings__booking_id__seats__seat_of__invitations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "seat_of",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Seat Of"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeatInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such friends game **this player is In on**, or one no longer to be played. One code for all.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Each **naming nobody**, nothing recorded: `seat_just_taken` \u2014 the seat is no longer empty; `already_on_the_game` \u2014 the friend is In, was invited to it once, or left it; `not_a_friend`; `no_level` \u2014 no level in the game's sport; `cannot_play_together` \u2014 a block between them and somebody on it; `friend_plays_then` \u2014 a game of theirs at that hour; `friends_week_is_full`; `booking_is_called_off`; `game_has_started`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{booking_id}/seats/{seat_of}/opening": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Open an empty seat to the group",
+        "description": "*Open to Ogrody* (#752; the friends mechanics \u00a710.1): the sender puts the empty seat named `seat_of` to the group before the cut-off. From then on it is a **rescue**, offered as any rescue is \u2014 a *Seat open* card in the decks of members who fit, a row in Fill in's *Seats to fill*, Fill in alerts \u2014 never to a guest: `POST /bookings/{id}/seats` takes it. A rescuer's held share lets the seat's cover go at the cut-off. Opened already, nothing more is recorded.",
+        "operationId": "open_a_seat_api_v1_bookings__booking_id__seats__seat_of__opening_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "seat_of",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Seat Of"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such friends game **sent by this player and still theirs to cover** (he left it, or it is no friends game). One code for all.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`seat_just_taken` \u2014 the seat is no longer empty; `cut_off_has_passed` \u2014 every seat still empty opened on its own at the cut-off; `booking_is_called_off`; `game_has_started`. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/administrator/clubs/{club_id}/handovers/seen": {
       "post": {
         "tags": [
@@ -11419,11 +11573,11 @@
             "type": "string",
             "format": "uuid",
             "title": "Player Id",
-            "description": "Whose seat it is \u2014 the sender, or the friend it was held for. Their face is among `sides`."
+            "description": "Whose face it draws \u2014 the player In, the friend it is held for, or on a seat nobody holds whose it was: the friend who said no, didn't answer or left, or the sender. The reader's own, on a seat they are invited into. Their face is among `sides`."
           },
           "state": {
             "$ref": "#/components/schemas/SeatState",
-            "description": "`IN` \u2014 the sender, or a friend who accepted. `WAITING` \u2014 held for its friend until `waiting_until`. `CANT_MAKE_IT` \u2014 they said *Not this time*. `DIDNT_ANSWER` \u2014 their 24 hours ended, read off the clock whether or not the job has recorded it. `EMPTY` \u2014 the friend who accepted it left (#752)."
+            "description": "`IN` \u2014 somebody holds it: the sender, a friend who accepted, a rescuer. `WAITING` \u2014 held for its friend until `waiting_until`. `CANT_MAKE_IT` \u2014 they said *Not this time*. `DIDNT_ANSWER` \u2014 their 24 hours ended, read off the clock whether or not the job has recorded it. `EMPTY` \u2014 the friend who accepted it left (#752). `SEAT_OPEN` \u2014 open to the group: a rescue anybody who fits may take (#752). The last four are **empty seats**, `seat_of` named."
           },
           "waiting_until": {
             "anyOf": [
@@ -11436,7 +11590,40 @@
               }
             ],
             "title": "Waiting Until",
-            "description": "With `WAITING`: when the friend's time to answer ends \u2014 24 hours from the send, never past the cut-off. Count it down from `read_at`."
+            "description": "With `WAITING`: when the friend's time to answer ends \u2014 24 hours from the invitation, never past the cut-off. Count it down from `read_at`."
+          },
+          "seat_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Of",
+            "description": "On an empty seat: its name \u2014 `POST /bookings/{id}/seats/{seat_of}/invitations` invites a friend into it, `\u2026/opening` opens it to the group. `null` on a seat somebody holds or is still held for."
+          },
+          "invitations": {
+            "items": {
+              "$ref": "#/components/schemas/SeatInvitationSchema"
+            },
+            "type": "array",
+            "title": "Invitations",
+            "description": "Every friend invited into this empty seat and still to answer \u2014 *Piotr invited \u00b7 20 h left*. The first to accept, or the first rescue, takes the seat (#752)."
+          },
+          "can_invite": {
+            "type": "boolean",
+            "title": "Can Invite",
+            "description": "*Invite a friend* on this seat is the reader's: In, the seat empty or open, the game still to be played \u2014 before or after the cut-off.",
+            "default": false
+          },
+          "can_open": {
+            "type": "boolean",
+            "title": "Can Open",
+            "description": "*Open to {group}* on this seat is the reader's: the sender, In, before the cut-off, on an empty seat not yet open \u2014 behind a confirmation that a stranger can then take it.",
+            "default": false
           }
         },
         "type": "object",
@@ -11446,7 +11633,7 @@
           "waiting_until"
         ],
         "title": "FriendsSeatSchema",
-        "description": "One seat of a friends game, as everybody on it reads it (#751; the words\n\u00a729.8): *In*, *waiting \u00b7 3 h left*, *can't make it*, *didn't answer*,\n*empty*."
+        "description": "One seat of a friends game, as everybody on it reads it (#751; the words\n\u00a729.8): *In*, *waiting \u00b7 3 h left*, *can't make it*, *didn't answer*,\n*empty*, *Seat open* \u2014 and what the reader may do with it (#752)."
       },
       "GameKind": {
         "type": "string",
@@ -13979,7 +14166,9 @@
           "LEVEL_GOT",
           "FRIENDS_GAME_INVITATION",
           "CANT_MAKE_IT",
-          "DIDNT_ANSWER"
+          "DIDNT_ANSWER",
+          "INVITED_SEAT_TAKEN",
+          "COVER_WARNING"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -16336,6 +16525,62 @@
         "title": "SeatChargeStatus",
         "description": "Where a charge stands, as its stream leaves it."
       },
+      "SeatInvitationRequest": {
+        "properties": {
+          "friend_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Friend Id",
+            "description": "One of the reader's own friends, picked on the picker."
+          }
+        },
+        "type": "object",
+        "required": [
+          "friend_id"
+        ],
+        "title": "SeatInvitationRequest",
+        "description": "*Invite a friend* into an empty seat (#752): which friend. The seat is\nthe path's."
+      },
+      "SeatInvitationSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname",
+            "description": "*Piotr invited* \u2014 `null` for an account no longer named."
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Until",
+            "description": "When their 24 hours end, never past the cut-off or the start."
+          },
+          "invited_by_you": {
+            "type": "boolean",
+            "title": "Invited By You"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "until",
+          "invited_by_you"
+        ],
+        "title": "SeatInvitationSchema",
+        "description": "A friend invited into an empty seat, still to answer (#752)."
+      },
       "SeatState": {
         "type": "string",
         "enum": [
@@ -16343,7 +16588,8 @@
           "WAITING",
           "CANT_MAKE_IT",
           "DIDNT_ANSWER",
-          "EMPTY"
+          "EMPTY",
+          "SEAT_OPEN"
         ],
         "title": "SeatState",
         "description": "Where one seat of a friends game stands for everybody on it (#751; the\nwords \u00a729.8) \u2014 *In*, *waiting \u00b7 3 h left*, *can't make it*, *didn't\nanswer*, *empty*."

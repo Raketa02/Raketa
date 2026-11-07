@@ -119,6 +119,7 @@ def build_lifespan(settings: Settings):
             or settings.PROPOSER_ENABLED
             or settings.TIME_TO_PAY_ENABLED
             or settings.INVITATIONS_ENABLED
+            or settings.COVER_WARNING_ENABLED
             or settings.CUT_OFF_ENABLED
             or settings.HOLDING_ENABLED
             or settings.HOW_DID_IT_GO_ENABLED

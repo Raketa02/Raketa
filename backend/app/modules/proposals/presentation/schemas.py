@@ -1134,31 +1134,80 @@ def _money(money: BookedMoney) -> BookedMoneySchema:
     )
 
 
+class SeatInvitationSchema(BaseModel):
+    """A friend invited into an empty seat, still to answer (#752)."""
+
+    player_id: UUID
+    nickname: str | None = Field(
+        description="*Piotr invited* — `null` for an account no longer named."
+    )
+    until: datetime = Field(
+        description="When their 24 hours end, never past the cut-off or the start."
+    )
+    invited_by_you: bool
+
+
 class FriendsSeatSchema(BaseModel):
     """One seat of a friends game, as everybody on it reads it (#751; the words
     §29.8): *In*, *waiting · 3 h left*, *can't make it*, *didn't answer*,
-    *empty*."""
+    *empty*, *Seat open* — and what the reader may do with it (#752)."""
 
     player_id: UUID = Field(
         description=(
-            "Whose seat it is — the sender, or the friend it was held for. Their "
-            "face is among `sides`."
+            "Whose face it draws — the player In, the friend it is held for, or "
+            "on a seat nobody holds whose it was: the friend who said no, didn't "
+            "answer or left, or the sender. The reader's own, on a seat they are "
+            "invited into. Their face is among `sides`."
         )
     )
     state: SeatState = Field(
         description=(
-            "`IN` — the sender, or a friend who accepted. `WAITING` — held for "
-            "its friend until `waiting_until`. `CANT_MAKE_IT` — they said *Not "
-            "this time*. `DIDNT_ANSWER` — their 24 hours ended, read off the "
-            "clock whether or not the job has recorded it. `EMPTY` — the friend "
-            "who accepted it left (#752)."
+            "`IN` — somebody holds it: the sender, a friend who accepted, a "
+            "rescuer. `WAITING` — held for its friend until `waiting_until`. "
+            "`CANT_MAKE_IT` — they said *Not this time*. `DIDNT_ANSWER` — their "
+            "24 hours ended, read off the clock whether or not the job has "
+            "recorded it. `EMPTY` — the friend who accepted it left (#752). "
+            "`SEAT_OPEN` — open to the group: a rescue anybody who fits may take "
+            "(#752). The last four are **empty seats**, `seat_of` named."
         )
     )
     waiting_until: datetime | None = Field(
         description=(
             "With `WAITING`: when the friend's time to answer ends — 24 hours "
-            "from the send, never past the cut-off. Count it down from `read_at`."
+            "from the invitation, never past the cut-off. Count it down from "
+            "`read_at`."
         )
+    )
+    seat_of: UUID | None = Field(
+        default=None,
+        description=(
+            "On an empty seat: its name — `POST /bookings/{id}/seats/{seat_of}/"
+            "invitations` invites a friend into it, `…/opening` opens it to the "
+            "group. `null` on a seat somebody holds or is still held for."
+        ),
+    )
+    invitations: list[SeatInvitationSchema] = Field(
+        default_factory=list,
+        description=(
+            "Every friend invited into this empty seat and still to answer — "
+            "*Piotr invited · 20 h left*. The first to accept, or the first "
+            "rescue, takes the seat (#752)."
+        ),
+    )
+    can_invite: bool = Field(
+        default=False,
+        description=(
+            "*Invite a friend* on this seat is the reader's: In, the seat empty "
+            "or open, the game still to be played — before or after the cut-off."
+        ),
+    )
+    can_open: bool = Field(
+        default=False,
+        description=(
+            "*Open to {group}* on this seat is the reader's: the sender, In, "
+            "before the cut-off, on an empty seat not yet open — behind a "
+            "confirmation that a stranger can then take it."
+        ),
     )
 
 
@@ -1220,9 +1269,15 @@ class FriendsGameSchema(BaseModel):
         if game.sender is None or game.pay_mode is None:
             return None
         now = instant(read_at)
-        seats = game.seat_states(now=now)
+        seats = game.seat_states(now=now, reader=reader)
         invited = game.invited_now(reader, now=now)
         sender = people.get((game.sport, game.sender))
+        may_invite = game.may_invite(reader, now=now)
+
+        def named(player: UUID) -> str | None:
+            person = people.get((game.sport, player))
+            return None if person is None else person.nickname
+
         return cls(
             sender_id=game.sender,
             sender_nickname=None if sender is None else sender.nickname,
@@ -1233,6 +1288,18 @@ class FriendsGameSchema(BaseModel):
                     player_id=seat.player_id,
                     state=seat.state,
                     waiting_until=seat.until,
+                    seat_of=seat.seat_of,
+                    invitations=[
+                        SeatInvitationSchema(
+                            player_id=one.player_id,
+                            nickname=named(one.player_id),
+                            until=one.until,
+                            invited_by_you=one.invited_by == reader,
+                        )
+                        for one in seat.invitations
+                    ],
+                    can_invite=may_invite and seat.seat_of is not None,
+                    can_open=game.may_open(reader, seat, now=now),
                 )
                 for seat in seats
             ],
@@ -1299,7 +1366,8 @@ class HomeFriendsGameSchema(BaseModel):
             indoor=game.indoor,
             share_grosze=game.share_grosze,
             sides=_booked_sides(
-                game.seen_by(reader),
+                # A friend invited into an empty seat is drawn in it (#752).
+                game.seen_by(reader, now=instant(read_at)),
                 game=game,
                 reader=reader,
                 people=people,
@@ -2727,6 +2795,15 @@ class SendFriendsGameRequest(BaseModel):
             "the `booking_id` that send answered, so the payments confirmed are "
             "the ones taken. Left out on a first send."
         ),
+    )
+
+
+class SeatInvitationRequest(BaseModel):
+    """*Invite a friend* into an empty seat (#752): which friend. The seat is
+    the path's."""
+
+    friend_id: UUID = Field(
+        description="One of the reader's own friends, picked on the picker."
     )
 
 

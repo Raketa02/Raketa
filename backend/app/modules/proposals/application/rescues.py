@@ -32,6 +32,15 @@ A booked game that lost a player offers the seat. Three things here:
 - **a no to it** (``SayNoToARescue``) — the Seat open card leaves that reader's
   deck for good. The board still lists the seat: it is every rescue they fit.
 
+**A friends game's seat open to the group is a rescue too** (#752): opened by
+its sender, by the cut-off, or a leaver's on a game no longer covered. No
+proposal stands for it, so its own row is locked, and its pool is the
+booking's. **Who is paid back when it is taken is the seat's payer**: a seat
+the sender's card covers gives one of his covers back, less the fee kept,
+once the cut-off took it — before that the cut-off lets one go for the
+taker's own share — and a leaver's after the cut-off gives the leaver's own
+share back (``the_seat_paid_back``).
+
 **Nothing is told to anybody here**: *Fill in alerts* and *You've been
 refunded* as a push are #549's; the leaver's refund is emailed, as every notice
 about money is.
@@ -73,13 +82,19 @@ from app.modules.proposals.domain.errors import (
     RescueNotOffered,
     SeatJustTaken,
 )
-from app.modules.proposals.domain.home import BookedGame, BookedMoney, money_of
+from app.modules.proposals.domain.home import (
+    BookedGame,
+    BookedMoney,
+    OpenSeat,
+    money_of,
+)
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGameChanges,
     BookedGames,
     ClubNames,
     DeckPeople,
+    FriendsGameBookings,
     ReaderRelations,
     DeckPerson,
     GamesAndMoneyRepository,
@@ -97,7 +112,7 @@ from app.modules.proposals.domain.ports import (
     UndecidedCharges,
     WantedKinds,
 )
-from app.modules.proposals.domain.pool import Pool
+from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.domain.proposal import Proposal, TimeTo
 from app.modules.proposals.domain.rescues import (
     Candidate,
@@ -422,10 +437,11 @@ class Rescuer:
         them (#640)."""
 
         game = await self._bookings.find(booking_id)
+        pool = _the_pool(proposal, game)
         if (
-            proposal is None
+            pool is None
             or game is None
-            or not await self._guards.in_the_pool(proposal.pool, [player])
+            or not await self._guards.in_the_pool(pool, [player])
         ):
             # A stranger learns nothing about a group's games.
             raise BookingNotFound()
@@ -517,7 +533,10 @@ class Rescuer:
             )
 
         taken = await self._changes.rescue(booking_id, player, at=now)
-        if taken.left_at >= game.cut_off:
+        if game.is_friends_game:
+            # The seat's payer — the sender's cover, or the leaver (#752).
+            await the_seat_paid_back(self._refunds, game, taken, now=now)
+        elif taken.left_at >= game.cut_off:
             # Left after the cut-off: refunded only now somebody took the seat.
             await self._refunds.refund(
                 booking_id, [taken.left_by], reason=RefundReason.SEAT_TAKEN, at=now
@@ -554,6 +573,50 @@ class Rescuer:
         )
 
 
+def _the_pool(proposal: Proposal | None, game: BookedGame | None) -> Pool | None:
+    """The pool a rescue is offered in: its proposal's — or, a friends game
+    with no proposal (#752), the group its booking was sent in."""
+
+    if proposal is not None:
+        return proposal.pool
+    if game is not None and game.is_friends_game:
+        return Pool(id=game.pool_id, kind=PoolKind.GROUP)
+    return None
+
+
+async def the_seat_paid_back(
+    refunds: SeatRefunds, game: BookedGame, seat: OpenSeat, *, now: Instant
+) -> None:
+    """**Whoever paid a friends game's seat, given one charge back now that
+    somebody took it** (#752; the friends mechanics §10.3, §11.2–§11.3): a
+    seat its sender's card covers gives one of his covers back — less the
+    fee kept, once the cut-off took it; before, the cut-off lets one go for the
+    taker's own share — and a leaver's after the cut-off gives the leaver's
+    own share back, less the fee, his own too when it was the sender's. A seat
+    left before the cut-off had nothing taken."""
+
+    if seat.covered:
+        assert game.sender is not None
+        await refunds.seat_taken(game.booking_id, game.sender, cover=True, at=now)
+    elif seat.left_at >= game.cut_off:
+        await refunds.seat_taken(game.booking_id, seat.left_by, cover=False, at=now)
+
+
+async def lock_the_game(
+    booking_id: UUID,
+    *,
+    proposals: ProposalRepository,
+    friends_games: FriendsGameBookings,
+) -> Proposal | None:
+    """Lock the game, as every act on it does first: its proposal's row, the
+    booking's own id — or, a friends game with none (#752), its booking's."""
+
+    proposal = await proposals.load_for_update(booking_id)
+    if proposal is None:
+        await friends_games.locked(booking_id)
+    return proposal
+
+
 @final
 class JoinARescue:
     """*I'm in · 27 zł* on a Seat open card, a Seats to fill row, or a
@@ -563,20 +626,24 @@ class JoinARescue:
         self,
         *,
         proposals: ProposalRepository,
+        friends_games: FriendsGameBookings,
         rescuer: Rescuer,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._proposals = proposals
+        self._friends_games = friends_games
         self._rescuer = rescuer
         self._uow = uow
         self._clock = clock
 
     async def execute(self, command: RescueCommand) -> YesAnswer:
         now = instant(self._clock.now())
-        # The booking's id is its proposal's, whose row every act on the game
-        # locks first.
-        proposal = await self._proposals.load_for_update(command.booking_id)
+        proposal = await lock_the_game(
+            command.booking_id,
+            proposals=self._proposals,
+            friends_games=self._friends_games,
+        )
         answer = await self._rescuer.join(
             proposal, command.booking_id, command.player_id, now=now
         )
@@ -592,6 +659,7 @@ class SayNoToARescue:
         self,
         *,
         proposals: ProposalRepository,
+        friends_games: FriendsGameBookings,
         bookings: PlayerBookings,
         offers: RescueOffers,
         changes: BookedGameChanges,
@@ -599,6 +667,7 @@ class SayNoToARescue:
         clock: Clock,
     ) -> None:
         self._proposals = proposals
+        self._friends_games = friends_games
         self._bookings = bookings
         self._offers = offers
         self._changes = changes
@@ -607,10 +676,14 @@ class SayNoToARescue:
 
     async def execute(self, command: RescueCommand) -> None:
         now = instant(self._clock.now())
-        proposal = await self._proposals.load_for_update(command.booking_id)
+        proposal = await lock_the_game(
+            command.booking_id,
+            proposals=self._proposals,
+            friends_games=self._friends_games,
+        )
         game = await self._bookings.find(command.booking_id)
         if (
-            proposal is None
+            _the_pool(proposal, game) is None
             or game is None
             or not await self._offers.is_offered(game, command.player_id, now=now)
         ):

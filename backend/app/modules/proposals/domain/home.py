@@ -137,6 +137,16 @@ class InvitationAnswer(StrEnum):
     ACCEPTED = "ACCEPTED"
     DECLINED = "DECLINED"
     RAN_OUT = "RAN_OUT"
+    #: Somebody else took the seat first (#752).
+    TAKEN = "TAKEN"
+
+
+class SeatEmptied(StrEnum):
+    """How a friends game's seat came to be empty (#752)."""
+
+    DECLINED = "DECLINED"
+    RAN_OUT = "RAN_OUT"
+    LEFT = "LEFT"
 
 
 class SeatState(StrEnum):
@@ -154,18 +164,34 @@ class SeatState(StrEnum):
     DIDNT_ANSWER = "DIDNT_ANSWER"
     #: Nobody's: its friend left it (#752).
     EMPTY = "EMPTY"
+    #: Open to the group — a rescue anybody who fits may take (#752): opened by
+    #: its sender, by the cut-off, or a leaver's seat on a game no longer
+    #: covered.
+    SEAT_OPEN = "SEAT_OPEN"
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class InvitedSeat:
     """A seat of a friends game held for one friend (#751): the side the card
-    drew them on, until when they may answer, and how they did."""
+    drew them on, until when they may answer, and how they did — or, invited
+    later into an empty seat (#752), which seat and by whom."""
 
     player_id: UUID
     side: str
     until: Instant
     answer: InvitationAnswer = InvitationAnswer.WAITING
+    #: The empty seat it is into, named by whose it was (#752) — ``None`` for
+    #: the card's own seat for them.
+    seat_of: UUID | None = None
+    #: Who invited them: ``None`` for the card's — the sender's.
+    invited_by: UUID | None = None
+
+    @property
+    def seat(self) -> UUID:
+        """The seat it is for, by whose it is."""
+
+        return self.player_id if self.seat_of is None else self.seat_of
 
     def waiting_at(self, now: Instant) -> bool:
         return self.answer is InvitationAnswer.WAITING and now < self.until
@@ -173,14 +199,46 @@ class InvitedSeat:
 
 @final
 @dataclass(frozen=True, slots=True)
+class EmptySeat:
+    """A friends game's seat nobody holds and nobody opened to the group
+    (#752): the sender's to fill — invite a friend, or open it — until the
+    cut-off, named by whose it was."""
+
+    seat_of: UUID
+    side: str
+    since: Instant
+    how: SeatEmptied
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SeatInvitation:
+    """A friend invited into an empty seat, still to answer (#752)."""
+
+    player_id: UUID
+    until: Instant
+    #: Who invited them — anybody In.
+    invited_by: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class FriendsSeat:
-    """One seat of a friends game as everybody on it reads it (#751): who it
-    is for, on which side, how it stands, and — while it waits — until when."""
+    """One seat of a friends game as everybody on it reads it (#751): whose
+    face it draws, on which side, how it stands, and — while it waits — until
+    when. **An empty seat** (#752) is named by whose it was — ``seat_of``, what
+    an invitation or *Open to the group* names — with every invitation into it
+    still waiting."""
 
     player_id: UUID
     side: str
     state: SeatState
     until: Instant | None = None
+    #: The seat's name for an invitation into it or its opening (#752) — the
+    #: friend it was for, or the leaver — ``None`` on a seat somebody holds,
+    #: or still invited to its friend.
+    seat_of: UUID | None = None
+    invitations: tuple[SeatInvitation, ...] = ()
 
 
 class ClubCancelReason(StrEnum):
@@ -250,12 +308,15 @@ class GameResult:
 class OpenSeat:
     """A seat a leaver left open on a booked game (#544, #545): the side it
     is on, and who left it when — which against the cut-off says whether the
-    leaver is refunded when somebody takes it."""
+    leaver is refunded when somebody takes it. On a friends game (#752) it may
+    be an empty seat opened to the group, named by whose it was, and
+    **covered** by its sender's card: a taker after the cut-off refunds him."""
 
     #: ``A`` — the first side — or ``B``.
     side: str
     left_by: UUID
     left_at: Instant
+    covered: bool = False
 
 
 @final
@@ -348,8 +409,13 @@ class BookedGame:
     #: How a friends game's court is paid — ``None`` on a fill's.
     pay_mode: PayMode | None = None
     #: A friends game's invited seats, in the card's order, each with its
-    #: answer.
+    #: answer — then every invitation into an empty seat (#752).
     invited: tuple[InvitedSeat, ...] = ()
+    #: A friends game's seats nobody holds and nobody opened (#752).
+    empty: tuple[EmptySeat, ...] = ()
+    #: A friends game its sender's card covers (#751, #752): never called off
+    #: at its cut-off for an empty seat, which opens to the group then.
+    covering: bool = False
 
     @property
     def is_friends_game(self) -> bool:
@@ -370,43 +436,118 @@ class BookedGame:
         if (
             seat is None
             or not seat.waiting_at(now)
-            or self.stage is not BookingStage.BOOKED
+            or self.stage not in (BookingStage.BOOKED, BookingStage.SEAT_OPEN)
             or self.called_off_reason(now) is not None
         ):
             return None
         return seat
 
-    def seat_states(self, *, now: Instant) -> tuple[FriendsSeat, ...]:
-        """Every seat of a friends game as it stands at ``now`` — the sender's
-        first, then each invited seat in the card's order (the words §29.8);
-        empty on a game a fill booked."""
+    def seat_states(
+        self, *, now: Instant, reader: UUID | None = None
+    ) -> tuple[FriendsSeat, ...]:
+        """Every seat of a friends game as it stands at ``now`` (the words
+        §29.8; #752): each player In — the sender first — then each seat the
+        card still holds for its friend, then each empty seat, then each seat
+        open to the group, every one of them once. An empty or open seat is
+        drawn with the face of whose it was — or, for a ``reader`` invited into
+        it, with theirs, still waiting. Empty on a game a fill booked."""
 
         if self.sender is None:
             return ()
-        sender_side = "A" if self.sender in self.first_side else "B"
+        on = (*self.first_side, *self.second_side)
+        holding = sorted(on, key=lambda player: player != self.sender)
         seats = [
-            FriendsSeat(player_id=self.sender, side=sender_side, state=SeatState.IN)
+            FriendsSeat(
+                player_id=player,
+                side="A" if player in self.first_side else "B",
+                state=SeatState.IN,
+            )
+            for player in holding
         ]
         for seat in self.invited:
-            if seat.answer is InvitationAnswer.ACCEPTED:
-                state = (
-                    SeatState.IN if seat.player_id in self.players else SeatState.EMPTY
-                )
-            elif seat.answer is InvitationAnswer.DECLINED:
-                state = SeatState.CANT_MAKE_IT
-            elif seat.answer is InvitationAnswer.RAN_OUT or now >= seat.until:
-                state = SeatState.DIDNT_ANSWER
-            else:
-                state = SeatState.WAITING
+            if seat.seat_of is not None or seat.answer is not InvitationAnswer.WAITING:
+                continue
+            # The card's own seat for its friend, waiting — or, its time up,
+            # *didn't answer* whether or not the job has recorded it.
+            ended = now >= seat.until
             seats.append(
                 FriendsSeat(
                     player_id=seat.player_id,
                     side=seat.side,
-                    state=state,
-                    until=seat.until if state is SeatState.WAITING else None,
+                    state=SeatState.DIDNT_ANSWER if ended else SeatState.WAITING,
+                    until=None if ended else seat.until,
+                    seat_of=seat.player_id if ended else None,
+                )
+            )
+        vacancies = [
+            (empty.seat_of, empty.side, _EMPTIED_READS[empty.how])
+            for empty in self.empty
+        ] + [(left.left_by, left.side, SeatState.SEAT_OPEN) for left in self.open]
+        for seat_of, side, state in vacancies:
+            waiting = tuple(
+                SeatInvitation(
+                    player_id=one.player_id,
+                    until=one.until,
+                    invited_by=one.invited_by or seat_of,
+                )
+                for one in self.invited
+                if one.seat_of == seat_of and one.waiting_at(now)
+            )
+            yours = next((one for one in waiting if one.player_id == reader), None)
+            seats.append(
+                FriendsSeat(
+                    player_id=seat_of if yours is None else yours.player_id,
+                    side=side,
+                    state=state if yours is None else SeatState.WAITING,
+                    until=None if yours is None else yours.until,
+                    seat_of=seat_of,
+                    invitations=waiting,
                 )
             )
         return tuple(seats)
+
+    def vacancy(self, seat_of: UUID, *, now: Instant) -> FriendsSeat | None:
+        """The seat named ``seat_of`` while nobody holds it at ``now`` (#752) —
+        empty, open to the group, or a card seat whose friend's time is up."""
+
+        return next(
+            (
+                seat
+                for seat in self.seat_states(now=now)
+                if seat.seat_of == seat_of and seat.state is not SeatState.WAITING
+            ),
+            None,
+        )
+
+    def may_invite(self, player_id: UUID, *, now: Instant) -> bool:
+        """*Invite a friend* (#752; the friends mechanics §10.1, §10.3): anybody
+        In, on a friends game still to be played, while a seat is empty —
+        before the cut-off or after it."""
+
+        return (
+            self.is_friends_game
+            and player_id in self.players
+            and self.called_off_reason(now) is None
+            and self.stage in (BookingStage.BOOKED, BookingStage.SEAT_OPEN)
+            and now < self.start
+        )
+
+    def may_open(self, player_id: UUID, seat: FriendsSeat, *, now: Instant) -> bool:
+        """*Open to the group* (#752): the sender's, while he is In and his card
+        covers the game, before the cut-off, on a seat nobody holds and nobody
+        opened yet."""
+
+        return (
+            self.covering
+            and self.sender == player_id
+            and player_id in self.players
+            and seat.seat_of is not None
+            and seat.state
+            in (SeatState.CANT_MAKE_IT, SeatState.DIDNT_ANSWER, SeatState.EMPTY)
+            and self.called_off_reason(now) is None
+            and now < self.cut_off
+            and now < self.start
+        )
 
     @property
     def whole(self) -> bool:
@@ -422,15 +563,20 @@ class BookedGame:
         return (
             self.is_friends_game
             and now >= self.cut_off
-            and not any(seat.waiting_at(now) for seat in self.invited)
+            # The card's own invitations: one into an empty seat waits on a
+            # seat the cover already pays (#752).
+            and not any(
+                seat.waiting_at(now) for seat in self.invited if seat.seat_of is None
+            )
         )
 
     def may_be_called_off_by(self, player_id: UUID, *, now: Instant) -> bool:
-        """*Call it off* (#751): the sender's, on a friends game still on,
-        before the club's cut-off and the hour."""
+        """*Call it off* (#751): the sender's, while he is In, on a friends game
+        still on, before the club's cut-off and the hour."""
 
         return (
             self.sender == player_id
+            and player_id in self.players
             and self.stage in (BookingStage.BOOKED, BookingStage.SEAT_OPEN)
             and self.called_off_reason(now) is None
             and now < self.cut_off
@@ -467,7 +613,8 @@ class BookedGame:
             return SPORT_SPECS[self.sport].players - len(self.players)
         if self.stage is not BookingStage.SEAT_OPEN:
             return 0
-        return SPORT_SPECS[self.sport].players - len(self.players)
+        # A friends game's seat still empty, or still invited, is none (#752).
+        return len(self.open)
 
     @property
     def filling_again(self) -> bool:
@@ -525,27 +672,44 @@ class BookedGame:
     @property
     def planned_sides(self) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
         """The sides as the game is drawn: everybody In — and, on a friends
-        game, every friend its seats are still for, In or not, on the side the
-        card drew them (#751), so the court has its four faces."""
+        game, a face for every seat nobody holds, on its own side (#751,
+        #752), so the court has its four faces."""
 
-        if not self.invited:
+        return self.planned_sides_for(None, now=None)
+
+    def planned_sides_for(
+        self, reader: UUID | None, *, now: Instant | None
+    ) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
+        """The sides drawn for ``reader``: every seat's face from
+        ``seat_states`` — a seat they were invited into drawn with theirs."""
+
+        if not self.is_friends_game:
             return self.first_side, self.second_side
-        absent = [seat for seat in self.invited if seat.player_id not in self.players]
+        seats = self.seat_states(now=self.start if now is None else now, reader=reader)
+        absent = [seat for seat in seats if seat.player_id not in self.players]
         return (
             (*self.first_side, *(s.player_id for s in absent if s.side == "A")),
             (*self.second_side, *(s.player_id for s in absent if s.side == "B")),
         )
 
-    def seen_by(self, player_id: UUID) -> Sides:
+    def seen_by(self, player_id: UUID, *, now: Instant | None = None) -> Sides:
         """The sides as this player reads them: theirs first, with them first
-        on it — *You + Piotr vs Inés + Bartek*. A friends game draws its
-        invited seats too (``planned_sides``)."""
+        on it — *You + Piotr vs Inés + Bartek*. A friends game draws a face for
+        each seat nobody holds (``planned_sides_for``)."""
 
-        first, second = self.planned_sides
+        first, second = self.planned_sides_for(player_id, now=now)
         yours, theirs = (second, first) if player_id in second else (first, second)
         if player_id in yours:
             yours = (player_id, *(other for other in yours if other != player_id))
         return Sides(yours=yours, theirs=theirs)
+
+
+#: How an empty seat reads, by how it emptied (the words §29.8).
+_EMPTIED_READS: Final = {
+    SeatEmptied.DECLINED: SeatState.CANT_MAKE_IT,
+    SeatEmptied.RAN_OUT: SeatState.DIDNT_ANSWER,
+    SeatEmptied.LEFT: SeatState.EMPTY,
+}
 
 
 class ShareState(StrEnum):

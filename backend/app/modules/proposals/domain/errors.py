@@ -513,10 +513,43 @@ class InvitationNotWaiting(ConflictError):
         super().__init__("this invitation is no longer waiting for your answer")
 
 
+class AlreadyOnTheGame(ConflictError):
+    """*Invite a friend* names somebody already on the friends game — In,
+    invited to it once, or a leaver of it (#752). Who is not said. Nothing was
+    recorded."""
+
+    code = "already_on_the_game"
+
+    def __init__(self) -> None:
+        super().__init__("they are on this game already, or were invited to it")
+
+
+class FriendPlaysThen(ConflictError):
+    """*Invite a friend* names a friend who already has a game at that hour
+    (#752; one game per hour). Who is not said. Nothing was recorded."""
+
+    code = "friend_plays_then"
+
+    def __init__(self) -> None:
+        super().__init__("they already have a game at that hour")
+
+
+class FriendsWeekIsFull(ConflictError):
+    """*Invite a friend* names a friend whose games that week are already
+    booked — the most they set in Games & money (#752). Who is not said.
+    Nothing was recorded."""
+
+    code = "friends_week_is_full"
+
+    def __init__(self) -> None:
+        super().__init__("their games that week are booked")
+
+
 class CutOffHasPassed(ConflictError):
-    """*Call it off* after the club's cut-off (#751; the friends mechanics
-    §11.2): the game is no longer the sender's to call off for free, so the
-    button is gone. Nothing was recorded."""
+    """*Call it off* — or *Open to the group* (#752) — after the club's cut-off
+    (#751; the friends mechanics §11.2): the game is no longer the sender's to
+    call off for free, and its empty seats opened at the cut-off on their own,
+    so the button is gone. Nothing was recorded."""
 
     code = "cut_off_has_passed"
 

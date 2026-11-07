@@ -218,6 +218,18 @@ class FriendsGameCommand:
 
 
 @dataclass(frozen=True)
+class SeatActCommand:
+    """An act on one empty seat of a friends game by its reader (#752): the
+    seat named by whose it was (``seat_of``) — and, for *Invite a friend*, the
+    friend (``friend_id``); ``None`` for *Open to the group*."""
+
+    player_id: UUID
+    booking_id: UUID
+    seat_of: UUID
+    friend_id: UUID | None = None
+
+
+@dataclass(frozen=True)
 class ReadFriendsCardCommand:
     """The friends card for a line-up, in the kind the tab's switch holds — with
     the reader's partner after a swap (``None``, the evenest sides) and the row

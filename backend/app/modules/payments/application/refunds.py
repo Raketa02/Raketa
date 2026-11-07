@@ -151,6 +151,51 @@ class GiveTheSharesBack:
             )
         return {**let_go, **refunded}
 
+    async def one_seat(
+        self, game_id: UUID, payer: UUID, *, cover: bool, at: Instant
+    ) -> SeatCharge | None:
+        """**Somebody took a seat this payer paid** (#545, #752): give back
+        **one** of their charges on the game, less exactly the fee kept on it —
+        never everything they paid, since a friends game's sender pays several
+        seats. Their own share, for a leaver's seat; with ``cover``, one of
+        the sender's covers — or, every cover given back already, his own
+        share, which is what pays his own seat with *Whole court* — and
+        **nothing while a cover of his is still held**: the cut-off lets one
+        go for the taker's own payment then (``SettleTheCovers``). A share only
+        held is let go, as ``execute`` does. Answers the charge given back."""
+
+        charges = [
+            charge
+            for charge in await self._charges.of_game(game_id)
+            if charge.player_id == payer
+        ]
+        if cover:
+            if any(
+                charge.cover
+                and (
+                    charge.status in (SeatChargeStatus.HELD, SeatChargeStatus.CHECKED)
+                    or charge.to_fix
+                )
+                for charge in charges
+            ):
+                return None
+            order = sorted(charges, key=lambda charge: not charge.cover)
+        else:
+            order = [charge for charge in charges if not charge.cover]
+        reason = RefundReason.SEAT_TAKEN
+        for charge in order:
+            if charge.let_go(at=at, reason=reason):
+                await self._charges.save(charge)
+                await self._email(
+                    {payer: charge}, held=True, reason=reason, because=None, at=at
+                )
+                return charge
+            if charge.refund(withhold_fee=True, at=at, reason=reason):
+                # Emailed when it is made, to the grosz.
+                await self._charges.save(charge)
+                return charge
+        return None
+
     async def _email(
         self,
         given_back: Mapping[UUID, SeatCharge],
@@ -325,6 +370,9 @@ class TellTheLateLeaver:
             charge
             for charge in await self._charges.of_game(game_id)
             if charge.player_id == player_id
+            # Their own share: a friends game's sender's covers are no seat of
+            # his to leave (#752).
+            and not charge.cover
             and (charge.status in PAID or charge.status is SeatChargeStatus.HELD)
         ]
         payer = (await self._payers.of([player_id])).get(player_id)

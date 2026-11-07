@@ -259,8 +259,12 @@ async def test_the_senders_game_is_in_your_games_with_each_seat_waiting(client, 
     game = card["friends_game"]
     assert game["you_are_the_sender"] is True
     assert game["can_call_off"] is True
-    # Leaving a friends game is #752's: no *Leave* meanwhile.
-    assert (await details_of(client, world.tomek, booking))["leaving"] is None
+    # *Leave · the others play on* beside *Call it off* (#752): free.
+    assert (await details_of(client, world.tomek, booking))["leaving"] == {
+        "kind": "BEFORE_THE_CUT_OFF",
+        "refund_grosze": None,
+        "card_fee_grosze": None,
+    }
     assert (game["friends_in"], game["friends_seated"]) == (0, 3)
     assert set(seat_states(game).values()) == {"IN", "WAITING"}
 

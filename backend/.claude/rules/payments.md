@@ -184,6 +184,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   sender** lets every hold go (`RefundReason.CALLED_OFF_BY_THE_SENDER`, in full, told
   nobody by the money — the booking's event tells). **Known gap**: a payment confirmed for a
   send that is never pressed again stays held until it lapses.
+  **A seat taken gives back one charge** (#752; `GiveTheSharesBack.one_seat`, the
+  `SeatRefunds.seat_taken` demand): the sender pays several seats, so a seat somebody takes
+  refunds **one** of its payer's charges less the fee kept (`SEAT_TAKEN`) — with `cover`,
+  one of his covers (his own share once every cover is given back, which is what pays his
+  own seat with *Whole court*) and **nothing while a cover of his is still held**, since
+  `SettleTheCovers` lets one go at the cut-off for the taker's own share; otherwise the
+  payer's own share, never a cover. **The *Split* sender's leave before the cut-off** is the
+  ordinary `LEFT_BEFORE_THE_CUT_OFF` refund over every charge of his — his share and every
+  cover let go; *Whole court*'s lets nothing go. A late leaver's quote and email
+  (`PaymentsLateRefunds`, `TellTheLateLeaver`) read their own share, never a cover.
 - **A club connects payments through the provider's pages, and the arrow runs
   `payments → clubs`** (#537). The club's account at the provider is recorded on its **Club
   courts** stream (`clubs/domain/payments_account.py`) — `PaymentsAccountOpened`, once, and

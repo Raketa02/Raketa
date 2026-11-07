@@ -45,6 +45,7 @@ from app.bootstrap.composition import (
     build_payment_provider,
     build_run_out_the_time_to_pay,
     build_run_out_the_invitations,
+    build_warn_the_covers,
     build_the_cut_off,
     build_the_holding,
     build_decide_club_payouts,
@@ -118,6 +119,12 @@ TIME_TO_PAY_JOB = "time-to-pay"
 #: Correctness does not depend on it: every read says *didn't answer* off the
 #: clock already, and nothing asks it before the cut-off decides the covers.
 INVITATIONS_JOB = "invitations"
+
+#: The cover warning (#752). It warns a *Split* friends game's sender, once and
+#: a day before the cut-off, what the cut-off will take for the seats still
+#: without their own payment. Correctness does not depend on it: the cut-off
+#: takes the covers whether or not it ran.
+COVER_WARNING_JOB = "cover-warning"
 
 #: The cut-off (#544). It calls off every booked game whose cut-off came with
 #: a seat open since before it — **a game plays full or not at all** — and
@@ -202,6 +209,7 @@ def build_scheduled_jobs(
         or settings.PROPOSER_ENABLED
         or settings.TIME_TO_PAY_ENABLED
         or settings.INVITATIONS_ENABLED
+        or settings.COVER_WARNING_ENABLED
         or settings.CUT_OFF_ENABLED
         or settings.HOLDING_ENABLED
         or settings.HOW_DID_IT_GO_ENABLED
@@ -259,6 +267,12 @@ def build_scheduled_jobs(
         if settings.INVITATIONS_ENABLED:
             jobs.append(
                 build_invitations_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.COVER_WARNING_ENABLED:
+            jobs.append(
+                build_cover_warning_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -481,6 +495,43 @@ def build_invitations_job(
     return PeriodicJob(
         name=INVITATIONS_JOB,
         interval_seconds=settings.INVITATIONS_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_cover_warning_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Warn a *Split* friends game's sender a day before the cut-off what it
+    will take (#752).
+
+    **Idempotent and safe beside itself with no lock**: each game is one
+    transaction that locks its booking first, the booking warns once, and a
+    genuine race is caught by the stream version and stepped over. Its read
+    names candidates — every friends game whose cut-off is less than a day
+    ahead — and the booking says whether the warning is due.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_warn_the_covers(session, clock=clock).execute()
+        if done.warned or done.conflicts:
+            logger.info(
+                "cover warning finished",
+                extra={
+                    "job": COVER_WARNING_JOB,
+                    "warned": done.warned,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=COVER_WARNING_JOB,
+        interval_seconds=settings.COVER_WARNING_INTERVAL_SECONDS,
         run=run,
     )
 

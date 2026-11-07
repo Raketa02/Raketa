@@ -31,6 +31,7 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.proposals.application.commands import (
     FriendsGameCommand,
+    SeatActCommand,
     SendAFriendsGameCommand,
     AnswerProposalCommand,
     ConfirmPaymentCommand,
@@ -54,6 +55,8 @@ from app.modules.proposals.presentation.dependencies import (
     AcceptAFriendsGameDep,
     DeclineAFriendsGameDep,
     CallOffAFriendsGameDep,
+    InviteIntoASeatDep,
+    OpenASeatDep,
     SendAFriendsGameDep,
     ConfirmPaymentDep,
     DealThePoolNowDep,
@@ -82,6 +85,7 @@ from app.modules.proposals.presentation.dependencies import (
 from app.modules.proposals.presentation.schemas import (
     FriendsGameAnswerResponse,
     FriendsGameSentResponse,
+    SeatInvitationRequest,
     SendFriendsGameRequest,
     BookingDetailsResponse,
     DeckCountsResponse,
@@ -1424,6 +1428,108 @@ async def call_off_a_friends_game(
 ) -> Response:
     await call_off.execute(
         FriendsGameCommand(player_id=user.id, booking_id=booking_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@bookings_router.post(
+    "/{booking_id}/seats/{seat_of}/invitations",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such friends game **this player is In "
+                "on**, or one no longer to be played. One code for all."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "Each **naming nobody**, nothing recorded: `seat_just_taken` — "
+                "the seat is no longer empty; `already_on_the_game` — the friend "
+                "is In, was invited to it once, or left it; `not_a_friend`; "
+                "`no_level` — no level in the game's sport; "
+                "`cannot_play_together` — a block between them and somebody on "
+                "it; `friend_plays_then` — a game of theirs at that hour; "
+                "`friends_week_is_full`; `booking_is_called_off`; "
+                "`game_has_started`."
+            ),
+        },
+    },
+    summary="Invite a friend into an empty seat",
+    description=(
+        "*Invite a friend* (#752; the friends mechanics §10.1, §10.3): anybody "
+        "In invites one of **their own** friends into the seat named "
+        "`seat_of` — `friends_game.seats[].seat_of`, whose it was — before the "
+        "cut-off or after it, while it is empty or open to the group. The "
+        "friend gets the same invitation as the card's — a FRIENDS GAME card "
+        "on Home, a push, `friends_game.your_invitation_until` — for 24 hours, "
+        "never past the cut-off (made before it) or the start (made after "
+        "it). **The first to accept, or the first rescue, takes the seat**: "
+        "every other invitation into it ends, and its friend is told "
+        "*Someone took that seat first*. After the cut-off an accept takes "
+        "the share at once."
+    ),
+)
+async def invite_into_a_seat(
+    booking_id: UUID,
+    seat_of: UUID,
+    body: SeatInvitationRequest,
+    user: CurrentUserDep,
+    invite: InviteIntoASeatDep,
+) -> Response:
+    await invite.execute(
+        SeatActCommand(
+            player_id=user.id,
+            booking_id=booking_id,
+            seat_of=seat_of,
+            friend_id=body.friend_id,
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@bookings_router.post(
+    "/{booking_id}/seats/{seat_of}/opening",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such friends game **sent by this "
+                "player and still theirs to cover** (he left it, or it is no "
+                "friends game). One code for all."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`seat_just_taken` — the seat is no longer empty; "
+                "`cut_off_has_passed` — every seat still empty opened on its "
+                "own at the cut-off; `booking_is_called_off`; "
+                "`game_has_started`. Nothing was recorded."
+            ),
+        },
+    },
+    summary="Open an empty seat to the group",
+    description=(
+        "*Open to Ogrody* (#752; the friends mechanics §10.1): the sender puts "
+        "the empty seat named `seat_of` to the group before the cut-off. From "
+        "then on it is a **rescue**, offered as any rescue is — a *Seat open* "
+        "card in the decks of members who fit, a row in Fill in's *Seats to "
+        "fill*, Fill in alerts — never to a guest: `POST /bookings/{id}/seats` "
+        "takes it. A rescuer's held share lets the seat's cover go at the "
+        "cut-off. Opened already, nothing more is recorded."
+    ),
+)
+async def open_a_seat(
+    booking_id: UUID, seat_of: UUID, user: CurrentUserDep, open_: OpenASeatDep
+) -> Response:
+    await open_.execute(
+        SeatActCommand(player_id=user.id, booking_id=booking_id, seat_of=seat_of)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

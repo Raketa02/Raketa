@@ -28,8 +28,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   posting sheet and the post, a score, an agreement, #593; *isn't here yet*, *I'm here*,
   *they're here* — each **at the club or away**, the press building the fix on the club's
   point (`GameClubs.of`) or 2 km north of it — *I was there* and *yes, they were here*,
-  #657 — a friends game's card read, sent, accepted, declined and called off, #751, the
-  board's row listing its `friends` and its `friends_games` — a
+  #657 — a friends game's card read, sent, accepted, declined and called off, #751, a
+  friend invited into its empty seat and the seat opened to the group, #752, the board's
+  row listing its `friends` and its `friends_games`, each seat with its `seat_of` and who
+  is invited into it — a
   *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591; the move press
   lists each free court with its kind, *→ Court 3 · indoor*, and the pane names the booked
   court's, #671; *Cancel* says whether it moved the game and where, beside *Cancel

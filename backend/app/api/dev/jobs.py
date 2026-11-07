@@ -40,11 +40,13 @@ from app.api.dev.dependencies import (
     RunOutTheTimeToPayDep,
     RunOutTheInvitationsDep,
     SettleRatingsOnResultsDep,
+    WarnTheCoversDep,
     SummariseNewBookingsDep,
 )
 from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     CONVERSATION_SWEEP_JOB,
+    COVER_WARNING_JOB,
     CUT_OFF_JOB,
     GET_YOUR_LEVEL_JOB,
     HOLDING_JOB,
@@ -75,6 +77,7 @@ RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
         TIME_TO_PAY_JOB: "time to pay",
         INVITATIONS_JOB: "a friend's 24 hours run out",
         HOLDING_JOB: "hold the shares",
+        COVER_WARNING_JOB: "a day before the cut-off · the cover warning",
         CUT_OFF_JOB: "the cut-off",
         HOW_DID_IT_GO_JOB: "the hour ends · How did it go?",
         CLUB_PAYOUTS_JOB: "the day close · club payouts",
@@ -260,6 +263,32 @@ async def run_the_invitations(run_out: RunOutTheInvitationsDep) -> RanResponse:
             f"{ran.ran_out} invitation(s) ran out: the sender is told."
             if ran.ran_out
             else "No invitation's 24 hours are up: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{COVER_WARNING_JOB}",
+    response_model=RanResponse,
+    summary=_summary(COVER_WARNING_JOB),
+    description=(
+        "Warns each *Split* friends game's sender whose cut-off is less than "
+        "a day ahead, once, what the cut-off will take for the seats still "
+        "without their own payment (#752): *Saturday 10:00 · 1 seat still "
+        "empty · At Fri 10:00 you pay 50 zł*. A game further off, warned "
+        "already, or with every seat paid is left as it is."
+    ),
+)
+async def run_the_cover_warning(warn: WarnTheCoversDep) -> RanResponse:
+    ran = await warn.execute()
+    return RanResponse(
+        job=COVER_WARNING_JOB,
+        done=ran.warned,
+        conflicts=ran.conflicts,
+        says=(
+            f"{ran.warned} sender(s) warned what the cut-off will take."
+            if ran.warned
+            else "No friends game is due its cover warning: nothing was done."
         ),
     )
 

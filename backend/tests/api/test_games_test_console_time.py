@@ -65,6 +65,7 @@ GAMES_JOBS = (
     "time-to-pay",
     "invitations",
     "holding",
+    "cover-warning",
     "cut-off",
     "how-did-it-go",
     "club-payouts",

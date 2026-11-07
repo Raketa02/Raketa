@@ -197,6 +197,20 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   booking row first, a conflict counted and stepped over. The 24 hours are domain
   (`TIME_TO_ANSWER`); only the cadence (thirty seconds) is a setting. It has a *Run it now*
   (*a friend's 24 hours run out*).
+  The twenty-sixth — beside it — is **a friends game's cover warning** (`cover-warning`,
+  #752; `WarnTheCovers` in `proposals/application/friends_games.py`), and it **buys the
+  telling, not correctness**: the cut-off takes the covers whether or not it ran. A *Split*
+  game its sender covers from inside it, inside the day before its cut-off
+  (`COVER_WARNING_BEFORE`, domain), with a seat lacking its own payment, is warned once
+  (`bookings.cover_warned`, the booking's own *once*). Its read names **candidates**
+  (`FriendsGameBookings.cover_warnings_due`, over `bookings`: a sender, not called off, the
+  cut-off within the next day), each one transaction that locks its booking row first, a
+  conflict counted and stepped over; a candidate warned already, or with nothing unpaid, is
+  rolled back. Only the cadence (thirty seconds) is a setting. It has a *Run it now* (*a day
+  before the cut-off · the cover warning*). **The cut-off's own step for a friends game**
+  is no job of its own: `TheCutOff._take` opens every seat still empty on a covered game
+  after settling its covers (`bookings.md`), and a friends game turned ordinary is called
+  off short as any game, its booking row locked when no proposal is found.
   The twenty-fourth is **Get your level** (`get-your-level`, #727; `TellGetYourLevel` in
   `notifications/application/get_your_level.py`), and it **buys the nudge, not
   correctness**: nothing waits on it. A day after an account's first group join, while it

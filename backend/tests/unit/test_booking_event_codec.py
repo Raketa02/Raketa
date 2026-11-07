@@ -27,9 +27,13 @@ from app.modules.bookings.domain.events import (
     BookingConfirmed,
     CalledOffBySender,
     CourtMoved,
+    CoverWarned,
     InvitedSeatAccepted,
     InvitedSeatDeclined,
     InvitedSeatRanOut,
+    InvitedSeatTaken,
+    SeatInvited,
+    SeatOpened,
 )
 
 NOW = datetime(2026, 10, 5, 6, tzinfo=timezone.utc)
@@ -221,6 +225,24 @@ def _friends_game_events() -> list[object]:
             invited=(uuid4(), uuid4()),
             occurred_at=NOW,
         ),
+        SeatInvited(
+            booking_id=booking,
+            player_id=uuid4(),
+            invited_by=uuid4(),
+            seat_of=uuid4(),
+            side="B",
+            until=START,
+            occurred_at=NOW,
+        ),
+        InvitedSeatTaken(
+            booking_id=booking, player_id=uuid4(), taken_by=uuid4(), occurred_at=NOW
+        ),
+        SeatOpened(
+            booking_id=booking, seat_of=uuid4(), occurred_at=NOW, at_the_cut_off=True
+        ),
+        CoverWarned(
+            booking_id=booking, sender_id=uuid4(), seats=(uuid4(),), occurred_at=NOW
+        ),
     ]
 
 
@@ -234,12 +256,17 @@ def _friends_game_events() -> list[object]:
             "bookings.invited_seat_declined",
             "bookings.invited_seat_ran_out",
             "bookings.called_off_by_the_sender",
+            "bookings.seat_invited",
+            "bookings.invited_seat_taken",
+            "bookings.seat_opened",
+            "bookings.cover_warned",
         ),
         strict=True,
     ),
 )
 def test_a_friends_game_s_events_encode_and_decode_at_version_1(event, name):
-    """#751: the Booking's second birth and its invited seats' answers."""
+    """#751: the Booking's second birth and its invited seats' answers — and
+    #752's empty seats: invited into, taken first, opened, and warned of."""
 
     codec = JsonEventCodec(_catalog())
 

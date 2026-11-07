@@ -485,6 +485,16 @@ class Settings(BaseSettings):
     INVITATIONS_ENABLED: bool = True
     INVITATIONS_INTERVAL_SECONDS: float = 30
 
+    # --- a friends game's cover warning (#752; the friends mechanics §10.2)
+    #
+    # Warns a *Split* sender once, a day before the cut-off, what it will take
+    # for the seats still without their own payment. Correctness does not
+    # depend on it: the cut-off takes the covers whether or not it ran. **The
+    # day is not here**: it is domain, `bookings/domain/booking.py`'s
+    # `COVER_WARNING_BEFORE`. Every thirty seconds, like the other seat jobs.
+    COVER_WARNING_ENABLED: bool = True
+    COVER_WARNING_INTERVAL_SECONDS: float = 30
+
     # --- the cut-off (#544, the mechanics §12.3, §16.12)
     #
     # **Correctness depends on it**, as on time to pay: a booked game with a

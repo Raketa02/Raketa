@@ -294,6 +294,20 @@ class GameBrief:
     invited: tuple[UUID, ...] = ()
     #: Every seat is held by somebody In.
     whole: bool = False
+    #: Who invited each friend a friends game ever invited (#752) — the sender
+    #: for the card's own, anybody In for an empty seat's.
+    invited_by: Mapping[UUID, UUID] = field(default_factory=dict)
+    #: A friends game's cut-off (#752) — what the cover line names.
+    cut_off: Instant | None = None
+    #: **The cover line's seats** (#752; the friends mechanics §10.2): inside
+    #: the day before the cut-off of a *Split* friends game its sender still
+    #: covers from inside it, every seat but his without its own payment at
+    #: the instant asked about, each named by its last invitee. Empty anywhere
+    #: else — and with nothing the cover would pay.
+    unpaid: tuple[UUID, ...] = ()
+    #: A friends game's seats nobody holds and nobody opened, by whose they
+    #: were (#752): the sender's to fill, no rescue.
+    empty: tuple[UUID, ...] = ()
 
     @property
     def is_friends_game(self) -> bool:

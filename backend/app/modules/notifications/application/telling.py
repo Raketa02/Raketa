@@ -133,6 +133,10 @@ from app.application.events import DeliveryContext
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.events import (
     BookedByAFriend,
+    CoverWarned,
+    InvitedSeatTaken,
+    SeatInvited,
+    SeatOpened,
     CalledOffAtCutOff,
     CalledOffBySender,
     CourtMoved,
@@ -356,8 +360,11 @@ class TellThePlayers:
         game = await self._games.about(event.booking_id, at=at)
         if game is None or not game.booked:
             return
+        # The card's own friends: one invited into an empty seat since is told
+        # by that invitation (#752).
+        drawn = {*event.first_side, *event.second_side}
         await self._tell(
-            game.invited,
+            [player for player in game.invited if player in drawn],
             notice_about(
                 NoticeKind.FRIENDS_GAME_INVITATION,
                 game,
@@ -376,8 +383,10 @@ class TellThePlayers:
         key: str,
         at: Instant,
     ) -> None:
-        """*Ania can't make it* / *Ania didn't answer*, to the sender, while
-        the game is still on."""
+        """*Ania can't make it* / *Ania didn't answer*, to whoever invited them
+        — the sender for the card's own seat, anybody In for an empty seat's
+        (#752) — while the game is still on. Inside the day before the cut-off
+        the sender's carries the cover line."""
 
         game = await self._games.about(event.booking_id, at=at)
         if game is None or not game.booked or game.sender is None:
@@ -387,14 +396,108 @@ class TellThePlayers:
             if isinstance(event, InvitedSeatDeclined)
             else NoticeKind.DIDNT_ANSWER
         )
+        told = game.invited_by.get(event.player_id, game.sender)
         await self._give.execute(
-            game.sender,
-            notice_about(
-                kind,
+            told,
+            self._with_the_cover_line(
+                notice_about(
+                    kind,
+                    game,
+                    key=f"{kind}:{key}",
+                    opens=Opens.BOOKING,
+                    people=(event.player_id,),
+                ),
                 game,
-                key=f"{kind}:{key}",
+                to=told,
+            ),
+            at=at,
+        )
+
+    @staticmethod
+    def _with_the_cover_line(notice: Notice, game: GameBrief, *, to: UUID) -> Notice:
+        """**The cover line** (#752; the friends mechanics §10.2): a seat that
+        empties inside the day before the cut-off tells its *Split* sender what
+        the cut-off will take — his share and every seat still unpaid — in the
+        notice that tells him. Anybody else's notice is as it was."""
+
+        if to != game.sender or not game.unpaid or game.cut_off is None:
+            return notice
+        return replace(
+            notice,
+            people=(*notice.people, *game.unpaid),
+            amount_grosze=game.share_grosze * (1 + len(game.unpaid)),
+            until=game.cut_off,
+        )
+
+    async def _seat_invited(self, event: SeatInvited, *, key: str, at: Instant) -> None:
+        """*Piotr invited you to a game* — a friend invited into an empty seat
+        (#752), whoever invited them named, while it still waits at the
+        delivery: opening Home, on the card."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked or event.player_id not in game.invited:
+            return
+        await self._give.execute(
+            event.player_id,
+            notice_about(
+                NoticeKind.FRIENDS_GAME_INVITATION,
+                game,
+                key=f"{NoticeKind.FRIENDS_GAME_INVITATION}:{key}",
+                opens=Opens.HOME,
+                people=(event.invited_by,),
+                until=instant(event.until),
+            ),
+            at=at,
+        )
+
+    async def _invited_seat_taken(
+        self, event: InvitedSeatTaken, *, key: str, at: Instant
+    ) -> None:
+        """*Someone took that seat first.* (#752) — to the friend whose
+        invitation into an empty seat ended so, naming nobody."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked:
+            return
+        await self._give.execute(
+            event.player_id,
+            notice_about(
+                NoticeKind.INVITED_SEAT_TAKEN,
+                game,
+                key=f"{NoticeKind.INVITED_SEAT_TAKEN}:{key}",
                 opens=Opens.BOOKING,
-                people=(event.player_id,),
+            ),
+            at=at,
+        )
+
+    async def _seat_opened(self, event: SeatOpened, *, key: str, at: Instant) -> None:
+        """A friends game's seat put to the group (#752) is a rescue: *Fill in
+        alerts* to everybody in the pool it is offered to, who switched them
+        on — as a leaver's seat."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked:
+            return
+        await self._alert_the_pool(game, left=event.seat_of, at=at)
+
+    async def _cover_warned(self, event: CoverWarned, *, key: str, at: Instant) -> None:
+        """**The cover warning** (#752): *Saturday 10:00 · 1 seat still empty*
+        / *At Fri 10:00 you pay 50 zł: your 25 zł and Ania's seat.* — to the
+        sender, while the game is on, opening it with its three actions."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked or game.cut_off is None:
+            return
+        await self._give.execute(
+            event.sender_id,
+            notice_about(
+                NoticeKind.COVER_WARNING,
+                game,
+                key=f"{NoticeKind.COVER_WARNING}:{key}",
+                opens=Opens.BOOKING,
+                people=event.seats,
+                amount_grosze=game.share_grosze * (1 + len(event.seats)),
+                until=game.cut_off,
             ),
             at=at,
         )
@@ -868,18 +971,23 @@ class TellThePlayers:
         # Whoever took the leaver's seat before this was delivered is not told
         # the seat they took was left.
         taken_by = game.seats_taken.get(event.player_id)
-        await self._tell(
-            [p for p in game.seated if p not in (event.player_id, taken_by)],
-            notice_about(
-                NoticeKind.SOMEONE_LEFT,
-                game,
-                key=f"{NoticeKind.SOMEONE_LEFT}:{key}",
-                opens=Opens.BOOKING,
-                people=(event.player_id,),
-                reason=NoticeReason.SEAT_OPEN,
-            ),
-            at=at,
+        # A friends game its sender covers keeps a seat left before the
+        # cut-off empty, the sender's to fill — no rescue (#752).
+        empty = event.player_id in game.empty
+        notice = notice_about(
+            NoticeKind.SOMEONE_LEFT,
+            game,
+            key=f"{NoticeKind.SOMEONE_LEFT}:{key}",
+            opens=Opens.BOOKING,
+            people=(event.player_id,),
+            reason=NoticeReason.SEAT_EMPTY if empty else NoticeReason.SEAT_OPEN,
         )
+        for player in sorted(
+            {p for p in game.seated if p not in (event.player_id, taken_by)}, key=str
+        ):
+            await self._give.execute(
+                player, self._with_the_cover_line(notice, game, to=player), at=at
+            )
         await self._alert_the_pool(game, left=event.player_id, at=at)
 
     async def _alert_the_pool(
@@ -1337,6 +1445,10 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     LevelAsked: TellThePlayers._level_asked,
     LevelGot: TellThePlayers._level_got,
     BookedByAFriend: TellThePlayers._invited,
+    SeatInvited: TellThePlayers._seat_invited,
+    InvitedSeatTaken: TellThePlayers._invited_seat_taken,
+    SeatOpened: TellThePlayers._seat_opened,
+    CoverWarned: TellThePlayers._cover_warned,
     InvitedSeatDeclined: TellThePlayers._seat_answered,
     InvitedSeatRanOut: TellThePlayers._seat_answered,
     InvitedSeatAccepted: TellThePlayers._accepted,

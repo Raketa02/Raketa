@@ -486,18 +486,37 @@ function friendsGamesOf(row) {
     const at = `data-friends-booking="${f.booking_id}" data-player="${row.player_id}" ` +
       `data-who="${esc(row.nickname ?? row.email)}"`;
     const seats = f.seats.map((s) =>
-      `${nameOf(s.person)} ${esc(s.state.toLowerCase().replace(/_/g, " "))}`).join(" · ");
+      `${nameOf(s.person)} ${esc(s.state.toLowerCase().replace(/_/g, " "))}` +
+      (s.invited.length ? ` (${s.invited.map(nameOf).join(", ")} invited)` : "")).join(" · ");
     const answer = f.invited_until
       ? `<button class="expected" data-friends="accept" ${at}>Accept</button>` +
         `<button data-friends="decline" ${at}>Not this time</button>` : "";
-    const callOff = f.you_are_the_sender && f.state !== "CALLED_OFF"
+    const isIn = f.seats.some((s) => s.state === "IN" && s.person.player_id === row.player_id);
+    const callOff = f.you_are_the_sender && isIn && f.state !== "CALLED_OFF"
       ? `<button data-friends="call-off" ${at}>Call it off</button>` : "";
+    // An empty seat (#752): anybody In invites one of their own friends not on
+    // the game; the sender opens it to the group before the cut-off.
+    const onIt = new Set(f.seats.flatMap((s) => [s.person.player_id, ...s.invited.map((p) => p.player_id)]));
+    const friend = (row.friends ?? []).find((p) => !onIt.has(p.player_id));
+    const live = f.state !== "CALLED_OFF" && Date.now() < Date.parse(f.starts_at);
+    const empties = f.seats.filter((s) => s.seat_of && live).map((s) => {
+      const seat = `${at} data-seat-of="${s.seat_of}"`;
+      const invite = isIn && friend
+        ? `<button data-friends="invite" ${seat} data-friend="${friend.player_id}">` +
+          `Invite ${nameOf(friend)} into ${nameOf(s.person)}'s seat</button>` : "";
+      const open = f.you_are_the_sender && isIn && s.state !== "SEAT_OPEN" &&
+        Date.now() < Date.parse(f.cut_off)
+        ? `<button data-friends="open" ${seat}>Open ${nameOf(s.person)}'s seat to the group</button>` : "";
+      return invite + open;
+    }).join("");
+    const leave = isIn && live
+      ? `<button data-friends="leave" ${at}>Leave${f.you_are_the_sender ? " · the others play on" : ""}</button>` : "";
     return `<div class="rowcard">
       <span class="when">${when(f.starts_at)}</span>
       ${pill(f.kind, "kind")}${pill(f.state)}
       <span>${nameOf(f.sender)}'s · ${f.pay_mode === "WHOLE_COURT" ? "whole court" : "split"} · ${seats}` +
       `${f.invited_until ? ` · answer by ${when(f.invited_until)}` : ""} · cut-off ${when(f.cut_off)}</span>
-      <span class="row">${answer}${callOff}</span>
+      <span class="row">${answer}${empties}${leave}${callOff}</span>
       <span class="mono">${esc(f.booking_id.slice(0, 8))}</span>
     </div>`;
   }).join("");
@@ -536,6 +555,16 @@ async function friendsAct(button) {
   } else if (verb === "decline") {
     done = await call("POST", at(`bookings/${booking}/invitation/decline`));
     say(done, done.ok ? `${words} → the sender is told they can't make it` : words);
+  } else if (verb === "invite") {
+    const { seatOf, friend } = button.dataset;
+    done = await call("POST", at(`bookings/${booking}/seats/${seatOf}/invitations`), { friend_id: friend });
+    say(done, done.ok ? `${words} → invited for 24 hours, unless somebody takes it first` : words);
+  } else if (verb === "open") {
+    done = await call("POST", at(`bookings/${booking}/seats/${button.dataset.seatOf}/opening`));
+    say(done, done.ok ? `${words} → a rescue: Seat open, Seats to fill, alerts` : words);
+  } else if (verb === "leave") {
+    done = await call("POST", at(`bookings/${booking}/departure`));
+    say(done, done.ok ? `${words} → left · ${esc(done.json.left.toLowerCase().replace(/_/g, " "))}` : words);
   } else {
     done = await call("POST", at(`bookings/${booking}/call-off`));
     say(done, done.ok ? `${words} → called off · nobody paid` : words);

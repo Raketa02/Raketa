@@ -204,6 +204,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         PROPOSER_ENABLED=False,
         TIME_TO_PAY_ENABLED=False,
         INVITATIONS_ENABLED=False,
+        COVER_WARNING_ENABLED=False,
         CUT_OFF_ENABLED=False,
         HOLDING_ENABLED=False,
         CLUB_PAYOUTS_ENABLED=False,

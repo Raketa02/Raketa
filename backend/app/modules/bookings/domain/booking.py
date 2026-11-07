@@ -45,8 +45,25 @@ never past the cut-off (or, sent after it, the start), and answered *accepted*,
 rescue**, so the game is ``BOOKED`` with fewer players than seats, and never
 called off at its cut-off for it — the sender's **cover** pays a seat its own
 player hasn't (the money's, ``payments``). The sender may call it off before the
-cut-off (``CalledOff.BY_THE_SENDER``). What becomes of an empty seat — another
-invitation, a rescue — is #752's.
+cut-off (``CalledOff.BY_THE_SENDER``).
+
+**Its empty seats are the sender's until the cut-off** (#752; the friends
+mechanics §10–§11). A seat nobody holds — its friend said *Not this time*,
+didn't answer, or accepted and left — is **empty**: no rescue, nothing
+automatic. Anybody In may **invite** one of their own friends into it, and
+the sender may **open** it to the group, when it becomes a rescue (a
+``Departure`` like a leaver's, **covered** by the sender's card: whoever takes
+it after the cut-off refunds him, not the friend it was named after). **The
+first accept, or the first rescue, takes the seat**, and every other
+invitation into it ends *seat taken*. **While the sender covers the game** —
+*Split* with him in it, or *Whole court* — it is never called off at its
+cut-off: every seat still empty then **opens to the group** instead, and a
+seat that empties after the cut-off is a rescue at once. **The sender's
+leave**: with *Split* before the cut-off his card stops covering and the game
+turns **ordinary** — his seat and every empty seat a rescue at once, and a
+seat still open at the cut-off calls it off, as any game short at it; with
+*Whole court* he still pays, his seat a covered rescue. After the cut-off
+anybody's leave, his too, is a late leave.
 
 **The club runs it** (#547; the mechanics §16.7–§16.10): it may **move** the
 game to another court of its sport at the same hour, or **cancel** it with its
@@ -76,14 +93,18 @@ from app.modules.bookings.domain.events import (
     CardFixed,
     CardToFix,
     CourtMoved,
+    CoverWarned,
     InvitedSeatAccepted,
     InvitedSeatDeclined,
     InvitedSeatRanOut,
+    InvitedSeatTaken,
     PlayerCheckedIn,
     KeptSeatRanOut,
     NoSaidToTheSeat,
+    SeatInvited,
     SeatKept,
     SeatLeft,
+    SeatOpened,
     SeatRescued,
 )
 from app.shared.domain import DomainEvent
@@ -93,6 +114,11 @@ from app.shared.domain.events import EventRecorder
 #: a day, never past the cut-off — or the start, for an invitation made after
 #: it. Domain, never configuration.
 TIME_TO_ANSWER: Final = timedelta(hours=24)
+
+#: How long before the cut-off a *Split* game's sender is warned what the
+#: cut-off will take for the seats still without their own payment (the
+#: friends mechanics §10.2, Q42). Domain, never configuration.
+COVER_WARNING_BEFORE: Final = timedelta(hours=24)
 
 
 def invited_until(at: Instant, *, cut_off: Instant, start: Instant) -> Instant:
@@ -177,12 +203,16 @@ class Answer(StrEnum):
     DECLINED = "DECLINED"
     #: Silence until the clock ended: the friend didn't answer.
     RAN_OUT = "RAN_OUT"
+    #: Somebody else took the seat first (#752): an invitation into an empty
+    #: seat, ended by another friend's accept or a rescue.
+    TAKEN = "TAKEN"
 
 
 @dataclass(frozen=True, slots=True)
 class InvitedSeat:
     """A seat of a friends game held for one friend (#751): on which side the
-    card drew them, until when they may answer, and how they did."""
+    card drew them, until when they may answer, and how they did — or, invited
+    later into an empty seat (#752), which seat and by whom."""
 
     player_id: UUID
     #: ``A`` — the first side — or ``B``.
@@ -190,12 +220,48 @@ class InvitedSeat:
     until: Instant
     answer: Answer = Answer.WAITING
     answered_at: Instant | None = None
+    #: The empty seat an invitation is into, named by whose it was (#752) —
+    #: ``None`` for a seat the card drew for this friend.
+    seat_of: UUID | None = None
+    #: Who invited them — anybody In; ``None`` for the card's, the sender's.
+    invited_by: UUID | None = None
+
+    @property
+    def seat(self) -> UUID:
+        """The seat it is for, by whose it is: their own on the card, or the
+        empty seat they were invited into."""
+
+        return self.player_id if self.seat_of is None else self.seat_of
 
     def waiting_at(self, now: Instant) -> bool:
         """Still theirs to answer at ``now`` — read off the clock, so a seat
         whose time is up is not, whether or not its running out is recorded."""
 
         return self.answer is Answer.WAITING and now < self.until
+
+
+class Emptied(StrEnum):
+    """How a friends game's seat came to be empty (#752; the words §29.8)."""
+
+    #: Its friend said *Not this time* — *can't make it*.
+    DECLINED = "DECLINED"
+    #: Its friend's 24 hours ended — *didn't answer*.
+    RAN_OUT = "RAN_OUT"
+    #: Its friend accepted, and left — *empty*.
+    LEFT = "LEFT"
+
+
+@dataclass(frozen=True, slots=True)
+class EmptySeat:
+    """**A friends game's seat nobody holds, and nobody opened to the group**
+    (#752; the friends mechanics §10.1, §11.1): the sender's to fill before the
+    cut-off — another invitation, or *Open to the group* — and no rescue.
+    Named by whose it was, on its side, since when, and how it emptied."""
+
+    seat_of: UUID
+    side: str
+    since: Instant
+    how: Emptied
 
 
 class CancelReason(StrEnum):
@@ -246,6 +312,11 @@ class Departure:
     at: Instant
     #: Who took the seat, once somebody did (#545) — ``None`` while it is open.
     rescued_by: UUID | None = None
+    #: On a friends game, **paid by its sender's card** — a cover, or with
+    #: *Whole court* his own share (#752): whoever takes it after the cut-off
+    #: refunds him, not the friend it is named after, and it never calls the
+    #: game off at its cut-off.
+    covered: bool = False
 
     @property
     def is_open(self) -> bool:
@@ -297,8 +368,16 @@ class Booking:
     pay_mode: PayMode | None = None
     #: A friends game's invited seats, in the order the card drew them, each
     #: with its answer — those accepted are In, on ``first_side`` or
-    #: ``second_side`` too.
+    #: ``second_side`` too — then every invitation into an empty seat (#752),
+    #: in the order made.
     invited: tuple[InvitedSeat, ...] = ()
+    #: A friends game's seats nobody holds and nobody opened (#752), in the
+    #: order they emptied.
+    empty: tuple[EmptySeat, ...] = ()
+    #: When a friends game's sender left it (#752) — ``None`` while he is In.
+    sender_left_at: Instant | None = None
+    #: When its sender was warned what the cut-off would take (#752).
+    cover_warned_at: Instant | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -551,12 +630,88 @@ class Booking:
 
     @property
     def open_seats(self) -> int:
-        """Seats nobody holds on a booked game — the leavers' (#544). Nought on
-        a game called off."""
+        """Seats open to be taken on a booked game — the leavers' (#544), and
+        on a friends game every seat opened to the group (#752); never one
+        still empty, nor one still invited. Nought on a game called off."""
 
-        if self.state is not BookingState.SEAT_OPEN:
-            return 0
-        return self.seats - len(self.players)
+        return len(self.open_departures)
+
+    @property
+    def ordinary(self) -> bool:
+        """A friends game its card no longer covers (#752; the friends
+        mechanics §11.2): its *Split* sender left before the cut-off, his share
+        and every cover let go — from then on it is any booked game's."""
+
+        return (
+            self.pay_mode is PayMode.SPLIT_THE_COST
+            and self.sender_left_at is not None
+            and self.sender_left_at < self.cut_off
+        )
+
+    @property
+    def covering(self) -> bool:
+        """**A friends game its sender's card covers** (#751, #752): *Split*
+        while he has not left it before the cut-off, *Whole court* whatever he
+        did. Never called off at its cut-off for an empty seat."""
+
+        return self.is_friends_game and not self.ordinary
+
+    @property
+    def vacancies(self) -> tuple[tuple[UUID, str], ...]:
+        """Every seat a friend may be invited into (#752), by whose it was and
+        its side: each empty seat, then each seat open to the group, in the
+        order they emptied — none on a game no longer booked."""
+
+        if not self.is_booked:
+            return ()
+        return (
+            *((seat.seat_of, seat.side) for seat in self.empty),
+            *((left.player_id, left.side) for left in self.open_departures),
+        )
+
+    def vacancy(self, seat_of: UUID) -> tuple[UUID, str] | None:
+        return next((one for one in self.vacancies if one[0] == seat_of), None)
+
+    def unpaid_seats(self, *, now: Instant) -> tuple[UUID, ...]:
+        """**The seats a *Split* sender's cover would pay if the cut-off came
+        now** (#752; the friends mechanics §10.2): every seat but his own with
+        nobody In to pay for it — an invitation still waiting, an empty seat, a
+        seat open to the group — each named by whose it is: the friend last
+        invited into it."""
+
+        if not self.is_friends_game or not self.is_booked:
+            return ()
+        waiting = tuple(
+            seat.player_id
+            for seat in self.invited
+            if seat.seat_of is None and seat.answer is Answer.WAITING
+        )
+        return (
+            *waiting,
+            *(self._named(seat_of) for seat_of, _ in self.vacancies),
+        )
+
+    def _named(self, seat_of: UUID) -> UUID:
+        """An empty seat by the friend last invited into it, else by whose it
+        was."""
+
+        invited = [seat for seat in self.invited if seat.seat_of == seat_of]
+        return invited[-1].player_id if invited else seat_of
+
+    def cover_warning_due(self, now: Instant) -> bool:
+        """**The cover warning** (#752; the friends mechanics §10.2): once, from
+        24 hours before the cut-off until it, on a *Split* game its sender still
+        covers from inside it, while a seat lacks its own payment."""
+
+        return (
+            self.pay_mode is PayMode.SPLIT_THE_COST
+            and self.covering
+            and self.sender in self.players
+            and self.cover_warned_at is None
+            and not self.short_at_the_cut_off(now=now)
+            and self.cut_off - COVER_WARNING_BEFORE <= now < self.cut_off
+            and bool(self.unpaid_seats(now=now))
+        )
 
     @property
     def is_booked(self) -> bool:
@@ -582,19 +737,24 @@ class Booking:
 
     @property
     def open_since(self) -> Instant | None:
-        """When the first seat still open opened — ``None`` while every seat is
-        held."""
+        """When the first seat still open that could call the game off opened
+        — ``None`` while every seat is held, and on a friends game its sender's
+        card covers, which no open seat calls off (#752)."""
 
-        still_open = self.open_departures
-        return still_open[0].at if still_open else None
+        uncovered = [left for left in self.open_departures if not left.covered]
+        return uncovered[0].at if uncovered else None
 
     @property
     def open_before_the_cut_off(self) -> tuple[Departure, ...]:
         """The seats still open that opened while leaving was free — a game that
         filled after its cut-off never had any, and a seat a rescue took is no
-        longer one."""
+        longer one; nor is a seat its sender's card covers (#752)."""
 
-        return tuple(left for left in self.open_departures if left.at < self.cut_off)
+        return tuple(
+            left
+            for left in self.open_departures
+            if left.at < self.cut_off and not left.covered
+        )
 
     @property
     def short_from(self) -> Instant | None:
@@ -602,9 +762,18 @@ class Booking:
         seat that opened before its cut-off, and is open still, is off — its
         cut-off — or ``None`` for a game whole, or short only by a seat that
         opened after the cut-off, which goes ahead short. A seat taken before
-        the cut-off is one the game is not short of (#545)."""
+        the cut-off is one the game is not short of (#545). **A friends game
+        its sender's card covers never is** (#751, #752); one turned ordinary
+        is short too of an invitation still unanswered, which ends by the
+        cut-off."""
 
+        if self.covering:
+            return None
         if self.open_before_the_cut_off:
+            return self.cut_off
+        if self.ordinary and any(
+            seat.answer is Answer.WAITING for seat in self.invited
+        ):
             return self.cut_off
         return None
 
@@ -654,12 +823,15 @@ class Booking:
             SeatLeft(booking_id=self.booking_id, player_id=player_id, occurred_at=at)
         )
 
-    def accept(self, player_id: UUID, *, at: Instant) -> None:
+    def accept(self, player_id: UUID, *, at: Instant) -> Departure | None:
         """*Accept* on an invitation (#751): this friend is In, on the side the
-        card drew them on. Whether they may — their week, their hour, their
-        money — is the caller's question, asked before this; that the seat is
-        theirs and still waiting, and the game still to be played, is this
-        one's."""
+        card drew them on — or, invited into an empty seat (#752), in that
+        seat, every other invitation into it ended *seat taken*. Answers the
+        seat open to the group it took, if it was one — for the caller to
+        refund whoever paid it. Whether they may — their week, their hour,
+        their money — is the caller's question, asked before this; that the
+        seat is theirs and still waiting, and the game still to be played, is
+        this one's."""
 
         seat = self.invitation_of(player_id)
         invariant(
@@ -668,6 +840,20 @@ class Booking:
         )
         assert seat is not None
         invariant(at < self.start, f"accepting {self.booking_id} after it began")
+        taken: Departure | None = None
+        if seat.seat_of is not None:
+            invariant(
+                self.vacancy(seat.seat_of) is not None,
+                f"{player_id}'s seat on {self.booking_id} is no longer empty",
+            )
+            taken = next(
+                (
+                    left
+                    for left in self.open_departures
+                    if left.player_id == seat.seat_of
+                ),
+                None,
+            )
         self._record_that(
             InvitedSeatAccepted(
                 booking_id=self.booking_id,
@@ -677,6 +863,140 @@ class Booking:
                 last_seat=len(self.players) + 1 == self.seats,
             )
         )
+        if seat.seat_of is not None:
+            self._end_the_invitations_into(seat.seat_of, taken_by=player_id, at=at)
+        return taken
+
+    def invite(
+        self, player_id: UUID, *, by: UUID, seat_of: UUID, at: Instant
+    ) -> InvitedSeat:
+        """**Invite a friend into an empty seat** (#752; the friends mechanics
+        §10.1, §10.3): ``by`` — anybody In — invites ``player_id`` into the seat
+        named ``seat_of``, empty or open to the group, until 24 hours on, never
+        past the cut-off (made before it) or the start (made after it). Whether
+        they are ``by``'s friend and free — and fit to share the court — is the
+        caller's question; that the seat is empty, ``by`` In, and the invitee
+        neither on the game nor ever invited to it, is this one's."""
+
+        invariant(
+            self.is_friends_game,
+            f"{self.booking_id} is no friends game to invite a friend into",
+        )
+        self._refuse_unless_still_to_be_played(at)
+        invariant(by in self.players, f"{by} invites into {self.booking_id}, not In")
+        vacancy = self.vacancy(seat_of)
+        invariant(
+            vacancy is not None, f"no empty seat of {seat_of} on {self.booking_id}"
+        )
+        assert vacancy is not None
+        invariant(
+            player_id not in self.players
+            and self.invitation_of(player_id) is None
+            and player_id not in self.leavers,
+            f"{player_id} is invited into {self.booking_id}, which they are on, "
+            "were invited to or left",
+        )
+        until = invited_until(at, cut_off=self.cut_off, start=self.start)
+        self._record_that(
+            SeatInvited(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                invited_by=by,
+                seat_of=seat_of,
+                side=vacancy[1],
+                until=until,
+                occurred_at=at,
+            )
+        )
+        seat = self.invitation_of(player_id)
+        assert seat is not None
+        return seat
+
+    def open_to_the_group(self, seat_of: UUID, *, at: Instant) -> None:
+        """***Open to Ogrody*** (#752; the friends mechanics §10.1): the sender
+        puts an empty seat to the group, before the cut-off — a rescue from
+        now on, offered as any rescue is. Whose the press is, is the caller's
+        question; that the seat is empty and the cut-off ahead is this one's."""
+
+        invariant(
+            self.covering,
+            f"{self.booking_id} is no friends game its sender covers",
+        )
+        self._refuse_unless_still_to_be_played(at)
+        invariant(
+            at < self.cut_off,
+            f"{self.booking_id}'s seat opened by its sender at {at}, after its "
+            f"cut-off {self.cut_off}",
+        )
+        invariant(
+            any(seat.seat_of == seat_of for seat in self.empty),
+            f"no empty seat of {seat_of} on {self.booking_id} to open",
+        )
+        self._record_that(
+            SeatOpened(booking_id=self.booking_id, seat_of=seat_of, occurred_at=at)
+        )
+
+    def open_at_the_cut_off(self, *, at: Instant) -> tuple[UUID, ...]:
+        """**At the cut-off, every seat still empty opens to the group** (#752;
+        the friends mechanics §10.3), on a game its sender's card covers: an
+        invitation whose time is up runs out first, then each empty seat is a
+        rescue — its cover taken, a taker after refunding the sender. Answers
+        the seats opened, by whose they were — none before the cut-off, on a
+        game no longer booked or no longer covered, or once done."""
+
+        if not self.covering or not self.is_booked or at < self.cut_off:
+            return ()
+        for seat in self.to_run_out(at):
+            self.invited_seat_ran_out(seat.player_id, at=at)
+        opened = tuple(seat.seat_of for seat in self.empty)
+        for seat_of in opened:
+            self._record_that(
+                SeatOpened(
+                    booking_id=self.booking_id,
+                    seat_of=seat_of,
+                    occurred_at=at,
+                    at_the_cut_off=True,
+                )
+            )
+        return opened
+
+    def warn_the_cover(self, *, at: Instant) -> bool:
+        """**The cover warning** (#752; the friends mechanics §10.2), once.
+        Answers whether anything was recorded — nothing while it is not due."""
+
+        if not self.cover_warning_due(at):
+            return False
+        assert self.sender is not None
+        self._record_that(
+            CoverWarned(
+                booking_id=self.booking_id,
+                sender_id=self.sender,
+                seats=self.unpaid_seats(now=at),
+                occurred_at=at,
+            )
+        )
+        return True
+
+    def _end_the_invitations_into(
+        self, seat_of: UUID, *, taken_by: UUID, at: Instant
+    ) -> None:
+        """Every invitation still waiting into the seat ``taken_by`` took ends
+        *seat taken* (#752)."""
+
+        for seat in self.invited:
+            if (
+                seat.seat_of == seat_of
+                and seat.player_id != taken_by
+                and seat.answer is Answer.WAITING
+            ):
+                self._record_that(
+                    InvitedSeatTaken(
+                        booking_id=self.booking_id,
+                        player_id=seat.player_id,
+                        taken_by=taken_by,
+                        occurred_at=at,
+                    )
+                )
 
     def decline(self, player_id: UUID, *, at: Instant) -> bool:
         """*Not this time* on an invitation (#751). Answers whether anything
@@ -714,8 +1034,8 @@ class Booking:
         still waiting named, to be told, every hold let go."""
 
         invariant(
-            self.is_friends_game,
-            f"{self.booking_id} is no friends game to be called off by its sender",
+            self.is_friends_game and self.sender in self.players,
+            f"{self.booking_id} is no friends game its sender is in to call off",
         )
         self._refuse_unless_still_to_be_played(at)
         invariant(
@@ -826,6 +1146,8 @@ class Booking:
                 occurred_at=at,
             )
         )
+        # A friend invited into it reads *seat taken* (#752).
+        self._end_the_invitations_into(taken.player_id, taken_by=player_id, at=at)
         return taken
 
     def keep_the_seat(
@@ -1029,6 +1351,99 @@ class Booking:
             for seat in self.invited
         )
 
+    def _restate(self) -> None:
+        """Booked, or with a seat open to be taken — a seat still empty on a
+        friends game is no open seat (#752). A game called off stays off."""
+
+        if self.state is BookingState.CALLED_OFF:
+            return
+        self.state = (
+            BookingState.SEAT_OPEN
+            if any(left.is_open for left in self.departures)
+            else BookingState.BOOKED
+        )
+
+    def _opened(
+        self, player_id: UUID, side: str, *, at: Instant, covered: bool = False
+    ) -> None:
+        """A seat open to be taken: a leaver's, or a friends game's seat put to
+        the group."""
+
+        self.departures = (
+            *self.departures,
+            Departure(player_id=player_id, side=side, at=at, covered=covered),
+        )
+
+    def _taken(self, seat_of: UUID, *, by: UUID) -> None:
+        """The open seat named ``seat_of`` is ``by``'s now — a rescue, or a
+        friend invited into it (#752)."""
+
+        self.departures = tuple(
+            replace(left, rescued_by=by)
+            if left.player_id == seat_of and left.is_open
+            else left
+            for left in self.departures
+        )
+
+    def _emptied(
+        self, player_id: UUID, side: str, *, at: Instant, how: Emptied
+    ) -> None:
+        """**A friends game's seat nobody holds now** (#752): its friend said no,
+        didn't answer, or left. While the sender's card covers the game it is
+        **empty**, the sender's to fill, until the cut-off — and from it on, a
+        rescue at once, **covered** unless its leaver paid it themselves (a
+        *Split* friend's own share). Turned ordinary, it is a rescue at once,
+        as any leaver's: and an invitation that ended there is open since the
+        sender's card stopped covering it."""
+
+        if self.ordinary:
+            assert self.sender_left_at is not None
+            self._opened(
+                player_id,
+                side,
+                at=self.sender_left_at if how is Emptied.RAN_OUT else at,
+            )
+        elif at < self.cut_off:
+            self.empty = (
+                *self.empty,
+                EmptySeat(seat_of=player_id, side=side, since=at, how=how),
+            )
+        else:
+            self._opened(
+                player_id,
+                side,
+                at=at,
+                covered=how is not Emptied.LEFT or self.pay_mode is PayMode.WHOLE_COURT,
+            )
+
+    def _the_sender_left(self, side: str, *, at: Instant) -> None:
+        """**The sender's own leave** (#752; the friends mechanics §11.2–§11.3).
+        Before the cut-off, with *Split*, his card stops covering: the game is
+        ordinary, his seat and every empty seat a rescue at once, and a seat
+        opened to the group no longer covered. With *Whole court* he still pays:
+        his seat is a rescue his own share covers. After the cut-off he is a
+        late leaver, his seat his own share's."""
+
+        sender = self.sender
+        assert sender is not None
+        self.sender_left_at = at
+        if self.ordinary:
+            self.departures = tuple(
+                replace(left, covered=False) if left.is_open else left
+                for left in self.departures
+            )
+            self._opened(sender, side, at=at)
+            for seat in self.empty:
+                self._opened(seat.seat_of, seat.side, at=at)
+            self.empty = ()
+        else:
+            self._opened(
+                sender,
+                side,
+                at=at,
+                covered=at < self.cut_off and self.pay_mode is PayMode.WHOLE_COURT,
+            )
+
     def _no_card_to_fix(self, player_id: UUID) -> None:
         self.cards_to_fix = {
             player: refused
@@ -1055,13 +1470,14 @@ class Booking:
             self.second_side = tuple(
                 p for p in self.second_side if p != event.player_id
             )
-            self.departures = (
-                *self.departures,
-                Departure(
-                    player_id=event.player_id, side=side, at=instant(event.occurred_at)
-                ),
-            )
-            self.state = BookingState.SEAT_OPEN
+            at = instant(event.occurred_at)
+            if not self.is_friends_game:
+                self._opened(event.player_id, side, at=at)
+            elif event.player_id == self.sender:
+                self._the_sender_left(side, at=at)
+            else:
+                self._emptied(event.player_id, side, at=at, how=Emptied.LEFT)
+            self._restate()
         elif isinstance(event, SeatRescued):
             self.kept = {
                 player: kept
@@ -1072,22 +1488,8 @@ class Booking:
                 self.first_side = (*self.first_side, event.player_id)
             else:
                 self.second_side = (*self.second_side, event.player_id)
-            self.departures = tuple(
-                Departure(
-                    player_id=left.player_id,
-                    side=left.side,
-                    at=left.at,
-                    rescued_by=event.player_id,
-                )
-                if left.player_id == event.replacing and left.is_open
-                else left
-                for left in self.departures
-            )
-            self.state = (
-                BookingState.BOOKED
-                if len(self.players) == self.seats
-                else BookingState.SEAT_OPEN
-            )
+            self._taken(event.replacing, by=event.player_id)
+            self._restate()
         elif isinstance(event, NoSaidToTheSeat):
             self.said_no = self.said_no | {event.player_id}
         elif isinstance(event, SeatKept):
@@ -1126,11 +1528,59 @@ class Booking:
                 self.first_side = (*self.first_side, event.player_id)
             else:
                 self.second_side = (*self.second_side, event.player_id)
+            accepted = self.invitation_of(event.player_id)
+            if accepted is not None and accepted.seat_of is not None:
+                # Into an empty seat: it is theirs now (#752).
+                self.empty = tuple(
+                    seat for seat in self.empty if seat.seat_of != accepted.seat_of
+                )
+                self._taken(accepted.seat_of, by=event.player_id)
             self._answered(event.player_id, Answer.ACCEPTED, event.occurred_at)
-        elif isinstance(event, InvitedSeatDeclined):
-            self._answered(event.player_id, Answer.DECLINED, event.occurred_at)
-        elif isinstance(event, InvitedSeatRanOut):
-            self._answered(event.player_id, Answer.RAN_OUT, event.occurred_at)
+            self._restate()
+        elif isinstance(event, (InvitedSeatDeclined, InvitedSeatRanOut)):
+            declined = isinstance(event, InvitedSeatDeclined)
+            answered = self.invitation_of(event.player_id)
+            self._answered(
+                event.player_id,
+                Answer.DECLINED if declined else Answer.RAN_OUT,
+                event.occurred_at,
+            )
+            if answered is not None and answered.seat_of is None:
+                # The card's own seat for them is empty now (#752); one they
+                # were invited into later stays as it was.
+                at = instant(event.occurred_at)
+                self._emptied(
+                    event.player_id,
+                    answered.side,
+                    at=at if declined else instant(min(at, answered.until)),
+                    how=Emptied.DECLINED if declined else Emptied.RAN_OUT,
+                )
+                self._restate()
+        elif isinstance(event, SeatInvited):
+            self.invited = (
+                *self.invited,
+                InvitedSeat(
+                    player_id=event.player_id,
+                    side=event.side,
+                    until=instant(event.until),
+                    seat_of=event.seat_of,
+                    invited_by=event.invited_by,
+                ),
+            )
+        elif isinstance(event, InvitedSeatTaken):
+            self._answered(event.player_id, Answer.TAKEN, event.occurred_at)
+        elif isinstance(event, SeatOpened):
+            [emptied] = [seat for seat in self.empty if seat.seat_of == event.seat_of]
+            self.empty = tuple(seat for seat in self.empty if seat is not emptied)
+            self._opened(
+                emptied.seat_of,
+                emptied.side,
+                at=instant(event.occurred_at),
+                covered=True,
+            )
+            self._restate()
+        elif isinstance(event, CoverWarned):
+            self.cover_warned_at = instant(event.occurred_at)
         elif isinstance(event, CalledOffBySender):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.BY_THE_SENDER
@@ -1157,4 +1607,3 @@ def _sides_of_a_game(
         not set(first_side) & set(second_side),
         f"somebody on both sides: {first_side} {second_side}",
     )
-

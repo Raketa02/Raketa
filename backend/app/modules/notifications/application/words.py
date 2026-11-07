@@ -134,6 +134,9 @@ class Said:
     #: The game's group, where a notice names it — a friends game's empty seat
     #: may be opened to it (#751).
     group: str | None = None
+    #: How many people the notice names, whether or not each can still be
+    #: named — the cover line counts its seats by it (#752).
+    people_count: int = 0
 
 
 #: A game's kind, as an invitation names it (#751; the words §29.8).
@@ -408,8 +411,24 @@ def words_for(said: Said) -> Words:
                 title=f"Your {_hour(said.starts_at)} at {said.club} is filling again",
                 body="A seat opened — nobody paid.",
             )
+        if said.reason == NoticeReason.SEAT_EMPTY:
+            # A friends game its sender covers (#752): the seat is empty, no
+            # rescue — and to its *Split* sender inside the day before the
+            # cut-off, the cover line.
+            left = said.names[0] if said.names else "Somebody"
+            return Words(
+                title=f"{left} left your game",
+                body=with_the_cover_line(said, f"{game} — the seat is empty."),
+            )
         if said.reason == NoticeReason.FILLING_AGAIN:
             after = "it's filling again"
+        elif said.until is not None and said.amount_grosze is not None:
+            # A friends game's seat open at once, with the cover line (#752).
+            left = said.names[0] if said.names else "Somebody"
+            return Words(
+                title=f"{left} left your game",
+                body=with_the_cover_line(said, f"{game} — the seat is open."),
+            )
         else:
             after = "the seat is open" if len(said.names) <= 1 else "the seats are open"
         return Words(
@@ -653,14 +672,46 @@ _NOBODY_PAID: Final[dict[str, str]] = {
 }
 
 
-#: A friends game's own notices (#751; the words §29.8–§29.9).
+#: A friends game's own notices (#751, #752; the words §29.8–§29.9).
 _A_FRIENDS_GAME: Final = frozenset(
     {
         NoticeKind.FRIENDS_GAME_INVITATION,
         NoticeKind.CANT_MAKE_IT,
         NoticeKind.DIDNT_ANSWER,
+        NoticeKind.INVITED_SEAT_TAKEN,
+        NoticeKind.COVER_WARNING,
     }
 )
+
+
+def _you_pay(said: Said, *, seats: int, named: str | None) -> str:
+    """*At Fri 10:00 you pay 50 zł: your 25 zł and Ania's seat.* — or *… and 2
+    empty seats.* (the words §29.9): what a *Split* sender's cover takes at
+    the cut-off, his own share and each seat still unpaid."""
+
+    assert said.until is not None and said.amount_grosze is not None
+    share = said.amount_grosze // (seats + 1)
+    seat = (
+        f"{named}'s seat"
+        if seats == 1 and named
+        else ("1 empty seat" if seats == 1 else f"{seats} empty seats")
+    )
+    return (
+        f"At {_hour(said.until)} you pay {zloty(said.amount_grosze)}: "
+        f"your {zloty(share)} and {seat}."
+    )
+
+
+def with_the_cover_line(said: Said, body: str) -> str:
+    """A friends game's notice to its *Split* sender inside the day before the
+    cut-off carries the cover line after its own body (#752): the one it is
+    about named first, then each seat unpaid."""
+
+    if said.until is None or said.amount_grosze is None or said.people_count < 2:
+        return body
+    seats = said.people_count - 1
+    named = said.names[1] if len(said.names) > 1 else None
+    return f"{body} {_you_pay(said, seats=seats, named=named)}"
 
 
 def _a_friends_game(said: Said, *, sport: str) -> Words:
@@ -676,14 +727,33 @@ def _a_friends_game(said: Said, *, sport: str) -> Words:
         kind = _GAME_KIND_WORDS.get(said.game_kind or "", "")
         line = " · ".join(part for part in (when, said.club, sport, kind) if part)
         return Words(title=f"{who} invited you to a game", body=line)
+    if said.kind is NoticeKind.INVITED_SEAT_TAKEN:
+        # Naming nobody: *seat_just_taken*'s sense (#752).
+        return Words(
+            title="Someone took that seat first.", body=f"{when} · {said.club}"
+        )
+    if said.kind is NoticeKind.COVER_WARNING:
+        seats = max(said.people_count, 1)
+        empty = "1 seat still empty" if seats == 1 else f"{seats} seats still empty"
+        return Words(
+            title=f"{when} · {empty}",
+            body=_you_pay(
+                said, seats=seats, named=said.names[0] if said.names else None
+            ),
+        )
     group = said.group or "the group"
+    # With the cover line, the one it is about is named first (#752).
+    who = said.names[0] if said.names else "Somebody"
     title = (
         f"{who} can't make it"
         if said.kind is NoticeKind.CANT_MAKE_IT
         else f"{who} didn't answer"
     )
     return Words(
-        title=title, body=f"{when} · Invite a friend, or open the seat to {group}."
+        title=title,
+        body=with_the_cover_line(
+            said, f"{when} · Invite a friend, or open the seat to {group}."
+        ),
     )
 
 

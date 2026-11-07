@@ -131,3 +131,84 @@ async def test_a_press_is_refused_as_the_players_own_route_refuses_it(client, wo
 
     assert refused.status_code == 404
     assert refused.json()["code"] == "booking_not_found"
+
+
+# --------------------------------------------------------------------------- #
+# An empty seat (#752)
+# --------------------------------------------------------------------------- #
+
+
+async def _sent_by_tomek(client, world: dict) -> str:
+    tomek = str(world["tomek"]["id"])
+    friend_ids = [str(world[name]["id"]) for name in ("ewa", "magda", "kuba")]
+    card = await client.get(
+        f"/dev/as/{tomek}/pools/{world['group']}/friends-card",
+        params={"sport": "PADEL", "kind": "COMPETITIVE", "friend_ids": friend_ids},
+    )
+    assert card.status_code == 200, card.text
+    sent = await client.post(
+        f"/dev/as/{tomek}/pools/{world['group']}/friends-games",
+        json={
+            "sport": "PADEL",
+            "kind": "COMPETITIVE",
+            "friend_ids": friend_ids,
+            "court_id": card.json()["court"]["court_id"],
+            "starts_at": card.json()["court"]["starts_at"],
+            "pay_mode": "SPLIT_THE_COST",
+        },
+    )
+    assert sent.status_code == 200, sent.text
+    return sent.json()["booking_id"]
+
+
+async def test_the_console_opens_an_empty_seat_and_invites_into_another(
+    client, world, session_factory, payments
+):
+    """Magda says no and Tomek opens her seat to the group; Kuba says no too,
+    and Ewa invites Ola, her own friend, into his."""
+
+    ola = await a_member(
+        client, session_factory, payments, "ola", week=SATURDAY_MORNINGS, domain=SEED
+    )
+    from tests.api.test_friends_card import joins
+
+    await joins(client, world["group"], ola)
+    await befriend(client, world["group"], world["ewa"], ola)
+    booking = await _sent_by_tomek(client, world)
+    for name, act in (("ewa", "acceptance"), ("magda", "decline"), ("kuba", "decline")):
+        done = await client.post(
+            f"/dev/as/{world[name]['id']}/bookings/{booking}/invitation/{act}"
+        )
+        assert done.status_code in (200, 204), done.text
+    [game] = (await board_row(client, world, "tomek"))["friends_games"]
+    empty = {seat["person"]["nickname"]: seat for seat in game["seats"]}
+    assert empty["magda"]["seat_of"] == str(world["magda"]["id"])
+
+    opened = await client.post(
+        f"/dev/as/{world['tomek']['id']}/bookings/{booking}/seats/"
+        f"{world['magda']['id']}/opening"
+    )
+    invited = await client.post(
+        f"/dev/as/{world['ewa']['id']}/bookings/{booking}/seats/"
+        f"{world['kuba']['id']}/invitations",
+        json={"friend_id": str(ola["id"])},
+    )
+
+    assert (opened.status_code, invited.status_code) == (204, 204), invited.text
+    [game] = (await board_row(client, world, "tomek"))["friends_games"]
+    seats = {seat["person"]["nickname"]: seat for seat in game["seats"]}
+    assert seats["magda"]["state"] == "SEAT_OPEN"
+    assert [one["nickname"] for one in seats["kuba"]["invited"]] == ["ola"]
+    # The press is the player's own: Ewa, not the sender, opens nothing.
+    refused = await client.post(
+        f"/dev/as/{world['ewa']['id']}/bookings/{booking}/seats/"
+        f"{world['kuba']['id']}/opening"
+    )
+    assert refused.json()["code"] == "booking_not_found"
+
+
+async def test_the_console_runs_the_cover_warning(client, world):
+    ran = await client.post("/dev/jobs/cover-warning")
+
+    assert ran.status_code == 200, ran.text
+    assert (ran.json()["job"], ran.json()["done"]) == ("cover-warning", 0)

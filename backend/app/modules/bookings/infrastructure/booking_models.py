@@ -148,7 +148,8 @@ class BookingKeepORM(Base):
 
 class BookingInvitationORM(Base):
     """One invited seat of a friends game (#751): the friend, the side the card
-    drew them on, until when they may answer, and how they did."""
+    drew them on, until when they may answer, and how they did — or an
+    invitation into an empty seat, on that seat's side (#752)."""
 
     __tablename__ = "booking_invitations"
     __table_args__ = (
@@ -166,7 +167,8 @@ class BookingInvitationORM(Base):
     #: ``A`` — the first side — or ``B``.
     side: Mapped[str] = mapped_column(String(1), nullable=False)
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    #: ``WAITING``, ``ACCEPTED``, ``DECLINED`` or ``RAN_OUT``.
+    #: ``WAITING``, ``ACCEPTED``, ``DECLINED``, ``RAN_OUT`` — or ``TAKEN``,
+    #: somebody else took the seat first (#752).
     answer: Mapped[str] = mapped_column(String(16), nullable=False)
     answered_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True

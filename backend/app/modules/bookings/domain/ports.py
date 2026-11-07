@@ -20,6 +20,8 @@ exceptions, #673).
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol, final, runtime_checkable
@@ -78,6 +80,14 @@ class BookingDirectory(Protocol):
     async def friends_games_waiting_of(self, sender_id: UUID, *, now: Instant) -> int:
         """How many friends games this sender has with an invitation still
         waiting at ``now`` (#751)."""
+        ...
+
+    async def cover_warnings_due(
+        self, *, now: Instant, before: timedelta
+    ) -> Sequence[UUID]:
+        """Every friends game still on whose cut-off is ahead of ``now`` by at
+        most ``before`` — **candidates** for the cover warning (#752), the
+        soonest cut-off first: the booking says whether it is due."""
         ...
 
     async def held_at(

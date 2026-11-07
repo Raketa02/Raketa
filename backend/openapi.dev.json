@@ -1887,6 +1887,196 @@
         }
       }
     },
+    "/dev/as/{player_id}/bookings/{booking_id}/seats/{seat_of}/invitations": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Invite a friend into an empty seat, as this person",
+        "description": "`POST /api/v1/bookings/{id}/seats/{seat_of}/invitations` as the acting account (#752): one of their own friends invited into the empty seat named `seat_of`, theirs to accept for 24 hours unless somebody takes it first.",
+        "operationId": "invite_into_a_seat_dev_as__player_id__bookings__booking_id__seats__seat_of__invitations_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "seat_of",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Seat Of"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeatInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/bookings/{booking_id}/seats/{seat_of}/opening": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Open an empty seat to the group, as its sender",
+        "description": "`POST /api/v1/bookings/{id}/seats/{seat_of}/opening` as the acting account (#752): the empty seat a rescue from now on \u2014 a *Seat open* card, a Seats to fill row, Fill in alerts.",
+        "operationId": "open_a_seat_dev_as__player_id__bookings__booking_id__seats__seat_of__opening_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "seat_of",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Seat Of"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/as/{player_id}/sent": {
       "get": {
         "tags": [
@@ -3594,6 +3784,29 @@
         "summary": "Run it now \u00b7 a friend's 24 hours run out",
         "description": "Runs out every friends game invitation whose 24 hours ended with no answer (#751): silence is *Not this time*, and the sender is told *Ania didn't answer*. An invitation whose time still runs is left as it is.",
         "operationId": "run_the_invitations_dev_jobs_invitations_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/cover-warning": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 a day before the cut-off \u00b7 the cover warning",
+        "description": "Warns each *Split* friends game's sender whose cut-off is less than a day ahead, once, what the cut-off will take for the seats still without their own payment (#752): *Saturday 10:00 \u00b7 1 seat still empty \u00b7 At Fri 10:00 you pay 50 z\u0142*. A game further off, warned already, or with every seat paid is left as it is.",
+        "operationId": "run_the_cover_warning_dev_jobs_cover_warning_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -6598,7 +6811,9 @@
           "LEVEL_GOT",
           "FRIENDS_GAME_INVITATION",
           "CANT_MAKE_IT",
-          "DIDNT_ANSWER"
+          "DIDNT_ANSWER",
+          "INVITED_SEAT_TAKEN",
+          "COVER_WARNING"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -8051,6 +8266,25 @@
           "state": {
             "type": "string",
             "title": "State"
+          },
+          "seat_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Of"
+          },
+          "invited": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Invited"
           }
         },
         "type": "object",
@@ -8216,6 +8450,22 @@
         ],
         "title": "SeatChargeStatus",
         "description": "Where a charge stands, as its stream leaves it."
+      },
+      "SeatInvitationRequest": {
+        "properties": {
+          "friend_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Friend Id",
+            "description": "One of the reader's own friends, picked on the picker."
+          }
+        },
+        "type": "object",
+        "required": [
+          "friend_id"
+        ],
+        "title": "SeatInvitationRequest",
+        "description": "*Invite a friend* into an empty seat (#752): which friend. The seat is\nthe path's."
       },
       "SeatToFillSchema": {
         "properties": {
