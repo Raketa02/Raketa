@@ -29,6 +29,11 @@
  * server's (#542, #544); what is decided here is how they are drawn, and the clock the money row's
  * *held from*, *taken* and *until* run on is the read's (`useReadClock`).
  *
+ * **A friends game** (#759; the friends screens §9) adds its seats under the facts — *In*, *waiting ·
+ * 21 h 00 left*, *can't make it*, *didn't answer*, *empty* (`FriendsSeats`) — its pay mode under the
+ * price (*Split* or *tomek.k paid the court*, `moneyRow`), and, for its sender until the club's
+ * cut-off, ***Call it off*** behind a confirmation (`CallItOff`).
+ *
  * ## Three readers, one screen (A4)
  *
  * - **A player in the game** — the card, the result, the forecast, and ***Leave the game***
@@ -102,9 +107,11 @@ import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/sh
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
 import { confirmationOf, paymentToConfirmOn, yesOnRescue } from '../domain/fill';
+import { seatsShown } from '../domain/friendsGame';
 import {
   chatIsOpen,
   completesTheRescue,
+  cutOffAhead,
   isFillingAgain,
   leavingAt,
   lineCanRunOut,
@@ -119,12 +126,14 @@ import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../h
 import { useLeaveBooking, useWithdrawFillingAgain } from '../hooks/useLeaveBooking';
 import { usePaymentsToConfirm } from '../hooks/useLiveYeses';
 
+import { CallItOff } from './CallItOff';
 import { CardTag } from './CardTag';
 import { BookingAbsent } from './BookingAbsent';
 import { clubName, detailsDay, othersTitle, refusalMessage } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { GameFacts, type FactWords } from './GameFacts';
 import { GameGround } from './GameGround';
+import { FriendsSeats } from './FriendsSeats';
 import { GameTiles } from './GameTiles';
 import { HOME_GAME_COPY } from './homeCopy';
 import { LeaveTheGame } from './LeaveTheGame';
@@ -236,6 +245,11 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const leaveHere = () => {
     if (here.current) router.back();
   };
+  // A friends game's seats (#759), and the sender's *Call it off* until the cut-off — gone at that
+  // instant on the read's clock, as the server would refuse it.
+  const seatsNow = seatsShown(game, now);
+  const callsOff =
+    game.friendsGame?.canCallOff === true && cutOffAhead(game.money, now) !== undefined;
 
   return (
     <>
@@ -280,6 +294,8 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
             />
 
             <GameFacts facts={facts} accent={ink} />
+
+            <FriendsSeats seats={seatsNow} now={now} />
           </View>
 
           {act === undefined ? null : (
@@ -325,6 +341,8 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           {rescue !== undefined || leaving === undefined ? null : (
             <LeaveTheGame leaving={leaving} act={leave} afterLeaving={() => router.back()} />
           )}
+
+          {callsOff ? <CallItOff bookingId={game.bookingId} club={game.where.name} /> : null}
 
           {rescue !== undefined || !isFillingAgain(game) ? null : (
             <Button

@@ -1311,3 +1311,60 @@ press closes the sheet and asks the card for that court, keeping the sides the c
 **Not seen on a device**: the card at a narrow width — the _vs_ line's stems, the bar's two labels;
 the sheet scrolling several hundred rows (the seeded group lists about 800); the four tints side by
 side.
+
+## A friends game: sent, answered, called off (#759)
+
+[#759](https://github.com/Raketa02/Raketa/issues/759) (the friends screens §6.1, §6.3, §8, §9; the
+mechanics §8–§9, §11.2; the words §29.7–§29.10; over #751's routes) builds the game the friends card
+sends. The rules are `domain/friendsGame.ts`; the wire is `friends_game` on every Home card and booked
+game's details, and `friends_games` on Home.
+
+**The send sheet is `SendGame`**, under the card's court panel and above _Pick a different court_ (mock
+8): the volt **Send game and pay 25 zł** opens a bottom sheet, _How to pay_ (a call), with two choice
+cards — `PressableCard`s with the selected border, **Split the cost** first and chosen, **Pay the whole
+court** beside it, each naming what its button charges on its right (a call). With Split the maximum
+stands right above the order: _We hold 100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł
+for any seat still empty then._ (singles: _… if the other seat is still empty then._). The order names
+the payment: _Send game and pay 25 zł_ or _… 100 zł_. **Every answer has its place**: booked — the sheet
+closes, the toast _Game sent — the court is booked. It's in Your games on Home._ (a call) and the court
+empties (`onSent` → `groups`' `sent`); nothing saved — the fill's payment setup first, then the send;
+refused payments — `your_payments` confirmed one after another on the deck's own
+`ConfirmPaymentSheet`, then the send again under the same `booking_id` (`sendPaymentsOf`);
+`court_just_taken` and the card's own refusals close the sheet and read the card again, the court's
+sentence above it until the line-up asks anew; `court_hour_not_for_sale` lets a picked court go;
+_two games waiting_, the sender's hour and week are said in the sheet (a toast once it is closed).
+
+**FRIENDS GAME · n is `FriendsGamesRow`**, at the very top of Home — above _TO CONFIRM_ too, since an
+invitation runs out in hours — the friend requests row's geometry, one card full width, two or more
+peeking. A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, coral under an hour), the four
+faces as the yes screen's tiles (✓ — a `mintInk` disc and the drawn tick — on those In, faded at 0.4
+on those still to answer, the reader last as _You_), _Saturday 10:00 · Ogrody 33 · Court 3 · Padel ·
+Competitive_, and **Not this time** / **Accept and pay 25 zł** — or, Whole court, _tomek.k paid the
+court_ and **Accept**. **The border is `ink`, not mock 12's coral**: §1.2's coral list is closed, and
+it is the request card's border. A card whose time runs out on screen leaves at that instant
+(`invitationWaits`, on the read's clock). **Accept**: Split with nothing saved opens the setup first;
+a refused share opens the confirmation, which is the accept again — and the accept asked once more
+(a second accept answers `whole`) says whether the last seat was taken; **the last seat taken is
+_It's a game!_** through the fill's new `celebrate`; otherwise the toast _You're in — it's in Your
+games._ (a call). A full week or an hour taken is said on the card; an invitation that ended
+(_That invitation has ended._, a call), a game off or under way are a toast and Home read again.
+Either answer re-reads the bell (`onAnswered`, the shell's).
+
+**The sender's game in Your games** draws a line under the money — _2 of 3 friends in · waiting for
+ania.k_, _Waiting for ania.k_ at nought In, _… · 1 seat empty_, and both when both are true (a call) —
+**for the sender only** (§29.8: _the sender's game_), and none once every seat is In. A friend on a
+Whole-court game reads _tomek.k paid the court_ in place of a share that is not theirs (`senderPaid`).
+**A seat still _waiting_ past its time reads _didn't answer_** on the read's clock, which ticks while
+one waits (`lineCanRunOut`).
+
+**The details** draw the seats under the facts (`FriendsSeats`: _SEATS_, one row each, _You_ for the
+reader — _In_, _waiting · 21 h 00 left_, _can't make it_, _didn't answer_, _empty_), the pay mode under
+the price (_Split_, _tomek.k paid the court_, the sender's own _You paid the court_ — a call), and the
+sender's **Call it off** until the cut-off, gone at that instant on the read's clock (`CallItOff`): a
+sheet, _Call it off?_, §29.10's line, **Call it off for everyone** and **Keep the game** (a call);
+done, _Called off — nobody paid._ A game called off reads _tomek.k called it off · Nobody paid_
+(`BY_THE_SENDER`, said of the sender as the club's cancel is said of the club).
+
+**Not seen on a device**: the send sheet's two cards; the four faces and the ✓ disc at a narrow width
+and with long nicknames; two invitations peeking; a bank confirmation on the Stripe sandbox — four in
+a row on a card that asks for every one.

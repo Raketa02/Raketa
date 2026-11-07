@@ -73,7 +73,7 @@ export const HOME_GAME_COPY = {
     nothingWasTaken: 'Nothing was taken',
     /**
      * Why a game is off (§14.1, #544, #624, #625) — the club's cancel read with its name before it
-     * (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. A payment not in time is
+     * (`homePresentation`'s `SAID_OF`), and a friends game's sender with theirs; the rest said of the game. A payment not in time is
      * the notice's and the email's words. Keyed by the wire's reason, so a reason with no words
      * fails here.
      */
@@ -83,6 +83,8 @@ export const HOME_GAME_COPY = {
       BOOK_BY_PASSED: 'A seat was open past its last moment to book',
       COURT_HOUR_LOST: 'Its court went to another game before it filled again',
       PAYMENT_NOT_IN_TIME: 'A payment didn’t go through in time',
+      /** A friends game its sender called off (#759) — said of the sender, named before it. */
+      BY_THE_SENDER: 'called it off',
     } satisfies Readonly<Record<CalledOffReason, string>>,
     /**
      * Why the club cancelled (#547; the mechanics §16.9) — the clause after *cancelled it*. *Other*
@@ -96,6 +98,8 @@ export const HOME_GAME_COPY = {
     } satisfies Readonly<Record<ClubCancelReason, string | undefined>>,
     /** *The club* at the head of a sentence, for a club the read no longer names. */
     theClubLead: 'The club',
+    /** *The sender* at the head of a sentence, for a sender the read can no longer name (#759). */
+    theSenderLead: 'The sender',
     /** *Uncounted · a seat was empty* (§14.1): no Level moved, and nobody who stayed is marked. */
     seatEmpty: 'A seat was empty',
     noLevelMoved: 'no Level moved',
@@ -117,6 +121,8 @@ export const HOME_GAME_COPY = {
     paid: 'Paid',
     yourShare: 'Your share',
     refunded: 'Refunded',
+    /** The sender reading their own Whole-court game's pay mode (#759): *You paid the court*. */
+    you: 'You',
     /**
      * When the share is held and when it is taken (Q113; the screens A4.1): *28 zł* over *Held on
      * your card · taken Sat 10:00 · free to leave until then*, or for a share only checked, *Held

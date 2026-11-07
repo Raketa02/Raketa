@@ -395,3 +395,13 @@ from before it would still grey them; a push arriving re-reads them too, so a pi
 turns the row pickable. **Calls made here**: _You have a padel level already._ (§29.5 gives no
 refusal); the page under the picker. **Not seen on a device**: the two screens pushed at once, and
 the questionnaire replacing the list.
+
+**A friends game's three new notices land where every notice of their kind does**
+([#759](https://github.com/Raketa02/Raketa/issues/759), on #751's; the friends mechanics §12):
+`FRIENDS_GAME_INVITATION` opens Home, where its card is at the very top (_FRIENDS GAME · n_, and
+Home's read is marked stale first, as a friend request's is); `CANT_MAKE_IT` and `DIDNT_ANSWER` open
+the game, where the seat reads _can't make it_ or _didn't answer_; and _called off · nobody paid_ is
+the existing `GAME_CALLED_OFF`, its reason `BY_THE_SENDER`, opening the game. Nothing here needed
+more than the kinds spelled: Home and the booking are targets the mapping already reads off `opens`.
+**Answering an invitation on Home re-reads the bell** (the shell hands `FriendsGamesRow` the re-read,
+as it does the friend requests row); whether the server takes its row off is #751's gap.

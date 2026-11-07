@@ -14,6 +14,7 @@
  *   so the seat empties or the picker greys them.
  * - **Every act takes what the court shows as its base**, so a swap, a ×, a kind or a court never
  *   moves a face the player is looking at.
+ * - **Sent** (#759), the court is empty again: the game is in Your games, and the tab starts over.
  */
 
 import { useCallback, useEffect, useMemo } from 'react';
@@ -92,5 +93,7 @@ export function useFriendsGameOn(groupId: string, sport: Sport, seats: number) {
     takeOff: (playerId: string) => set(takeOff(lineUp, shown, playerId)),
     pickCourt: (court: FriendsCourtPick) => set(withCourt(lineUp, shown, court)),
     courtGone,
+    /** The game was sent (#759): an empty court, as the page opens on. */
+    sent: () => set(emptyLineUp(seats)),
   };
 }

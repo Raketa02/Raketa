@@ -28,6 +28,10 @@
  * | `postPost` | `POST /pools/{id}/posts` — *Post — you're In*: the poster's yes (#546, #558) |
  * | `getFriendsCard` | `GET /pools/{id}/friends-card?sport&kind&friend_ids…[&partner_id][&court_id&starts_at]` — a line-up's card (#750, #757) |
  * | `getFriendsCourts` | `GET /pools/{id}/friends-card/courts?sport&friend_ids…` — *Find a court* (#750, #757) |
+ * | `postFriendsGame` | `POST /pools/{id}/friends-games` — *Send game and pay*: the court booked at once (#751, #759) |
+ * | `postInvitationAcceptance` | `POST /bookings/{id}/invitation/acceptance` — *Accept* a friends game (#751, #759) |
+ * | `postInvitationDecline` | `POST /bookings/{id}/invitation/decline` — *Not this time* on a friends game (#751, #759) |
+ * | `postCallOff` | `POST /bookings/{id}/call-off` — the sender's *Call it off*, before the cut-off (#751, #759) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -303,6 +307,67 @@ export function getFriendsCourts(
     path: `/api/v1/pools/${encodeURIComponent(poolId)}/friends-card/courts?${query}`,
     authenticated: true,
     signal,
+  });
+}
+
+/**
+ * ***Send game and pay*** (#751, #759) — the friends card as it was read, and how to pay: **the court
+ * is booked at once**, the sender's share and a cover for every other seat held on their card, all
+ * or nothing. Nothing booked when a payment was refused: `your_payments` names each to confirm, and
+ * the send again carries the `booking_id` it answered. The guards, in the sheet's order (409):
+ * `payment_method_required`, `friends_games_waiting`, `you_play_then`, `games_per_week_booked`,
+ * `court_just_taken`, `court_hour_not_for_sale`; and the card's own, `not_a_friend`, `no_level`,
+ * `cannot_play_together`. **Not retried**: it books a court and holds money. **No
+ * `Idempotency-Key`**: the button is busy while one is in flight, and a send again under a
+ * `booking_id` that booked answers what it booked.
+ */
+export function postFriendsGame(
+  poolId: string,
+  body: Schemas['SendFriendsGameRequest'],
+): Promise<Schemas['FriendsGameSentResponse']> {
+  return httpRequest({
+    method: 'POST',
+    path: `${poolPath(poolId)}/friends-games`,
+    authenticated: true,
+    body,
+  });
+}
+
+/**
+ * ***Accept and pay 25 zł*** — or, with *Whole court*, *Accept* (#751, #759): the reader In, their
+ * share held with *Split*, or `your_payment` to confirm in the app. `invitation_not_waiting`,
+ * `booking_is_called_off`, `game_has_started`, `you_play_then`, `games_per_week_booked` and
+ * `payment_method_required` (409). A second accept answers the same; not retried all the same.
+ */
+export function postInvitationAcceptance(
+  bookingId: string,
+): Promise<Schemas['FriendsGameAnswerResponse']> {
+  return httpRequest({
+    method: 'POST',
+    path: `${bookingPath(bookingId)}/invitation/acceptance`,
+    authenticated: true,
+  });
+}
+
+/** ***Not this time*** on a friends game (#751, #759) — the seat empty; a second records nothing. */
+export function postInvitationDecline(bookingId: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${bookingPath(bookingId)}/invitation/decline`,
+    authenticated: true,
+  });
+}
+
+/**
+ * ***Call it off*** — the sender's, before the club's cut-off (#751, #759): every hold and cover let
+ * go, the court the club's again, everybody told. `cut_off_has_passed`, `booking_is_called_off`,
+ * `game_has_started` (409); `booking_not_found` (404) for a game the reader did not send.
+ */
+export function postCallOff(bookingId: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${bookingPath(bookingId)}/call-off`,
+    authenticated: true,
   });
 }
 

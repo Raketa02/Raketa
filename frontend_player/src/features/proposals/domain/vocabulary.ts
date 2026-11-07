@@ -93,7 +93,9 @@ export type CalledOffReason =
   | 'CANCELLED_BY_THE_CLUB'
   | 'BOOK_BY_PASSED'
   | 'COURT_HOUR_LOST'
-  | 'PAYMENT_NOT_IN_TIME';
+  | 'PAYMENT_NOT_IN_TIME'
+  /** A friends game its sender called off before the cut-off (#751, #759): nobody paid. */
+  | 'BY_THE_SENDER';
 
 /**
  * **Why the club cancelled a booked game** (#547; the mechanics §16.9) — the players are told it with
@@ -158,3 +160,18 @@ export type ReaderAction = 'YES' | 'NO' | 'WITHDRAW' | 'LEAVE' | 'CONFIRM_PAYMEN
  * a type, is a cycle (architecture Part 1 §6). The route hands the card both sides agree on.
  */
 export type PlayedWithRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
+
+/**
+ * **How a friends game's court is paid** (#751, #759; ADR-0202 §6; the friends mechanics §8.1) —
+ * *Split the cost*: each friend their own share on accepting, the sender covering every seat still
+ * without its own payment at the cut-off; or *Pay the whole court*: the sender every seat, the
+ * friends accepting free. The wire's own spelling.
+ */
+export type PayMode = 'SPLIT_THE_COST' | 'WHOLE_COURT';
+
+/**
+ * **Where one seat of a friends game stands, for everybody on it** (#751, #759; the words §29.8) —
+ * *In*, *waiting · 21 h left*, *can't make it*, *didn't answer*, *empty* (a friend who accepted and
+ * left, #752). The wire's own spelling.
+ */
+export type SeatState = 'IN' | 'WAITING' | 'CANT_MAKE_IT' | 'DIDNT_ANSWER' | 'EMPTY';

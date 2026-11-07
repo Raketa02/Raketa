@@ -28,6 +28,8 @@
  *   scroller with it (friends 8). **The court draws the card's sides**: Done asks the card for the
  *   evenest ones and the court follows its answer; a swap asks again with the sides the player
  *   stood (`friendsLineUp`). **A seat open**: *Seat 1 more friend*, *+ Friends*, and no card.
+ * - **Sent** (#759): the card's *Send game and pay* books the court, and the court is empty again —
+ *   the game is in Your games on Home.
  *
  * **Side labels are drawn where the mocks draw them — padel and badminton.** Squash has no halves:
  * both players stand on one. On tennis the far seat stands at the top centre (28 of 132), which is
@@ -223,6 +225,7 @@ export function FriendsTab({ group, sport }: { readonly group: Group; readonly s
           yourLevel={level}
           onPickCourt={game.pickCourt}
           onCourtGone={game.courtGone}
+          onSent={game.sent}
         />
       )}
     </View>

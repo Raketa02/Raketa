@@ -14,6 +14,7 @@
  * │ ┌ Court available          25 zł each ┐  │  CourtBlock, *Book it now*'s bed: sending books it
  * │ │ Saturday 10:00 · Wisła Park · Court 3 │  │
  * │ └ Ogrody 33 is full at 10:00           ┘  │  another club's court only
+ * │ [       Send game and pay 25 zł        ]  │  → the send sheet (#759)
  * │ [        Pick a different court        ]  │  → Find a court
  * └───────────────────────────────────────────┘
  * ```
@@ -22,7 +23,8 @@
  * figure and bar, the overlap grid and the court block — laid out as friends 9 draws them: the
  * figure over its word, the bar the card's width. No ribbon (nothing counts down), no tiles (the
  * court above draws the faces), and **no shadow**: the deck card floats on its stage, this one sits
- * in the page's column, and cards never cast one (4.3). *Send game and pay 25 zł* is #759's.
+ * in the page's column, and cards never cast one (4.3). **Send game and pay 25 zł** (volt, friends 8)
+ * opens the send sheet (`SendGame`, #759); sent, the court goes back to empty (`onSent`).
  *
  * ## Every state has its drawing
  *
@@ -34,12 +36,14 @@
  *   §7.5). **A court picked that is no longer for sale** (`court_hour_not_for_sale`) is handed back
  *   (`onCourtGone`) and the card asks again for one it proposes.
  * - **Failed otherwise, or offline** — why, with *Try again*, never an empty frame.
+ * - **A send refused for its court** (#759) — `court_just_taken` reads the card again, and the
+ *   court's sentence stands above it until the next court, kind or send.
  *
  * **The people are the composer's**: the card is read by id, and every face on it is a friend the
  * picker drew (`CardPerson`) — so this feature imports nothing of `friends`.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { offlineMessage } from '@/shared/errors';
@@ -71,6 +75,7 @@ import { FORECAST_FIGURE } from './GameCard';
 import { GameGround } from './GameGround';
 import { OverlapGrid } from './OverlapGrid';
 import { ReadFailed } from './ReadFailed';
+import { SendGame } from './SendGame';
 
 const COPY = FRIENDS_CARD_COPY;
 
@@ -88,6 +93,8 @@ export interface FriendsCardProps {
   readonly onPickCourt: (court: FriendsCourtPick) => void;
   /** The court picked is no longer for sale: the composer lets it go, and the card proposes one. */
   readonly onCourtGone: () => void;
+  /** **Sent** (#759): the court booked, the game in Your games — the composer empties the court. */
+  readonly onSent: () => void;
 }
 
 export function FriendsCard({
@@ -99,9 +106,15 @@ export function FriendsCard({
   yourLevel,
   onPickCourt,
   onCourtGone,
+  onSent,
 }: FriendsCardProps) {
   const read = useFriendsCard(groupId, sport, ask);
   const [finding, setFinding] = useState(false);
+  // A send refused for its court says so above the card read again — for as long as the line-up
+  // asks what it asked then: a swap, a kind or a court is a new question, and the line goes.
+  const asking = askKey(ask);
+  const [said, setSaid] = useState<{ readonly line: string; readonly for: string }>();
+  const courtLine = said?.for === asking ? said.line : undefined;
   const code = read.error?.code;
   const gone = isCourtGone(code) && ask.court !== undefined;
 
@@ -136,6 +149,11 @@ export function FriendsCard({
 
   return (
     <>
+      {courtLine === undefined ? null : (
+        <Note variant="amber" accessibilityRole="alert">
+          {courtLine}
+        </Note>
+      )}
       <ReadCard
         card={card}
         court={card.court}
@@ -145,6 +163,30 @@ export function FriendsCard({
         seatsPerSide={seats / 2}
         readAt={read.dataUpdatedAt}
         onFind={() => setFinding(true)}
+        send={
+          <SendGame
+            groupId={groupId}
+            sport={sport}
+            ask={ask}
+            court={card.court}
+            cutOff={card.cutOff}
+            onSent={onSent}
+            onReread={(line) => {
+              setSaid(line === undefined ? undefined : { line, for: asking });
+              void read.refetch();
+            }}
+            onCourtGone={(line) => {
+              if (ask.court === undefined) {
+                setSaid({ line, for: asking });
+                void read.refetch();
+                return;
+              }
+              // The court picked is let go, and the card asks for one it proposes.
+              setSaid({ line, for: askKey({ ...ask, court: undefined }) });
+              onCourtGone();
+            }}
+          />
+        }
       />
       <FindACourtSheet
         visible={finding}
@@ -162,6 +204,11 @@ export function FriendsCard({
       />
     </>
   );
+}
+
+/** A line-up's question as one value — what the court's line is said for. */
+function askKey(ask: FriendsCardAsk): string {
+  return JSON.stringify([ask.kind, ask.friendIds, ask.partnerId, ask.court]);
 }
 
 /** The card's frame while it is read — a quiet line, nothing to press. */
@@ -186,6 +233,7 @@ function ReadCard({
   seatsPerSide,
   readAt,
   onFind,
+  send,
 }: {
   readonly card: Card;
   readonly court: FriendsCourt;
@@ -195,6 +243,8 @@ function ReadCard({
   readonly seatsPerSide: number;
   readonly readAt: number;
   readonly onFind: () => void;
+  /** *Send game and pay 25 zł* and its sheet (#759). */
+  readonly send: ReactNode;
 }) {
   const sides = { sides: sidesOn(card, people, yourLevel) };
   const { top, bottom } = rowsOf(sides, seatsPerSide);
@@ -232,6 +282,8 @@ function ReadCard({
           share={courtShare(court)}
           {...(marker === undefined ? {} : { marker })}
         />
+
+        {send}
 
         <Button
           label={COPY.pickACourt}

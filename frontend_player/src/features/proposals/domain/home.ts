@@ -19,6 +19,7 @@ import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard } from './deck';
+import { seatsCanRunOut, type FriendsGame, type FriendsGameInvitation } from './friendsGame';
 import type {
   CalledOffReason,
   ClubCancelReason,
@@ -126,6 +127,12 @@ export interface HomeGame {
    * change by it. Absent while no time runs, and from an older server.
    */
   readonly timeTo?: TimeTo;
+  /**
+   * **A friends game's own facts** (#751, #759) — the sender, the pay mode, each seat's state: the
+   * sender's game in Your games (*2 of 3 friends in · waiting for Ania*), and a friend's once they
+   * accepted. Absent on a game a fill booked.
+   */
+  readonly friendsGame?: FriendsGame;
 }
 
 /** **Home** — the reader's booked games, soonest first, and how many need them. */
@@ -141,6 +148,11 @@ export interface Home {
    * answers them.
    */
   readonly friendRequests: readonly HomeFriendRequest[];
+  /**
+   * **FRIENDS GAME · n** — the friends games whose invitation waits on the reader, the soonest to
+   * end first (#759; friends 12). Not counted in `needingYou`. A card leaves once answered.
+   */
+  readonly friendsGames: readonly FriendsGameInvitation[];
 }
 
 /**
@@ -314,6 +326,8 @@ export function playedWithOf(
  * - `didntCome` — *Uncounted* because somebody didn't come (#658): while a late *I was there* waits
  *   on the reader — theirs to say, or somebody else's to confirm (`needsYou`) — that they should say
  *   who was there; to everybody else, that no Level moved.
+ * - `senderPaid` — a friends game whose sender pays the whole court, read by a friend on it (#759;
+ *   §29.8): *tomek.k paid the court*, in place of a share that is not theirs to pay.
  */
 export type MoneyLine =
   | {
@@ -334,8 +348,11 @@ export type MoneyLine =
       /** The club's own reason, with `CANCELLED_BY_THE_CLUB` (#547). */
       readonly clubCancelReason?: ClubCancelReason;
       readonly club?: string;
+      /** A friends game's sender, named for `BY_THE_SENDER` (#759): *tomek.k called it off*. */
+      readonly sender?: string;
       readonly refundedGrosze?: number;
     }
+  | { readonly kind: 'senderPaid'; readonly sender?: string }
   | { readonly kind: 'seatEmpty' }
   | { readonly kind: 'didntCome'; readonly needsYou: boolean };
 
@@ -448,17 +465,19 @@ export function deadlineAhead(at: string | undefined, now: number): Deadline | u
 /**
  * **Whether the game's line carries a clause that runs out by itself** — *free to leave until* and
  * *fills by* at the cut-off, *held from* at a checked share's holding time, *until* and *Confirm your
- * payment by* at a time to pay. While one is there the read's clock ticks (`useReadClock`), so the
+ * payment by* at a time to pay, and a friends game's seat still *waiting*. While one is there the read's clock ticks (`useReadClock`), so the
  * clause leaves the screen at that instant rather than at the next read.
  */
 export function lineCanRunOut(
-  game: Pick<HomeGame, 'money' | 'paymentDueBy' | 'yourPaymentDueBy'>,
+  game: Pick<HomeGame, 'money' | 'paymentDueBy' | 'yourPaymentDueBy' | 'friendsGame'>,
 ): boolean {
   return (
     game.money.freeToLeaveUntil !== undefined ||
     game.money.heldFrom !== undefined ||
     game.paymentDueBy !== undefined ||
-    game.yourPaymentDueBy !== undefined
+    game.yourPaymentDueBy !== undefined ||
+    // A friends game's seat *waiting · 3 h left* turns *didn't answer* at its end (#759).
+    (game.friendsGame !== undefined && seatsCanRunOut(game.friendsGame))
   );
 }
 
@@ -488,11 +507,14 @@ export function moneyLineOf(
     | 'paymentDueBy'
     | 'yourPaymentDueBy'
     | 'timeTo'
+    | 'friendsGame'
   >,
   now: number,
 ): MoneyLine | undefined {
-  const { money } = game;
+  const { money, friendsGame } = game;
   const club = game.club.name === undefined ? {} : { club: game.club.name };
+  const sender =
+    friendsGame?.senderNickname === undefined ? {} : { sender: friendsGame.senderNickname };
   const yours = deadlineAhead(game.yourPaymentDueBy, now);
   if (yours !== undefined) {
     return {
@@ -500,6 +522,14 @@ export function moneyLineOf(
       by: yours,
       window: paymentWindowAt(game.yourPaymentDueBy, game.timeTo, now),
     };
+  }
+  // A friend on a game its sender pays whole pays nothing (§29.8): the line says who did.
+  const senderPays =
+    friendsGame !== undefined &&
+    friendsGame.payMode === 'WHOLE_COURT' &&
+    !friendsGame.youAreTheSender;
+  if (senderPays && (game.status === 'BOOKED' || game.status === 'SEAT_OPEN')) {
+    return { kind: 'senderPaid', ...sender };
   }
   switch (game.status) {
     case 'BOOKED': {
@@ -534,6 +564,7 @@ export function moneyLineOf(
         ...(game.calledOffReason === undefined ? {} : { reason: game.calledOffReason }),
         ...(game.clubCancelReason === undefined ? {} : { clubCancelReason: game.clubCancelReason }),
         ...club,
+        ...sender,
         ...(money.refundedGrosze === undefined ? {} : { refundedGrosze: money.refundedGrosze }),
       };
     case 'UNCOUNTED':

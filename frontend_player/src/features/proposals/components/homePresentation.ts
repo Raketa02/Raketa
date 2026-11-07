@@ -51,6 +51,7 @@ import {
   yourPaymentWords,
 } from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
+import { paidTheCourt, payModeWords } from './friendsGamePresentation';
 import { seatKeptBy } from './fillPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
@@ -171,6 +172,8 @@ function moneyParts(line: MoneyLine): readonly string[] {
           ? nothingCameBack(line.reason, money)
           : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
       ];
+    case 'senderPaid':
+      return [paidTheCourt(line.sender)];
     case 'seatEmpty':
       return [money.seatEmpty, money.noLevelMoved];
     case 'didntCome':
@@ -179,15 +182,17 @@ function moneyParts(line: MoneyLine): readonly string[] {
 }
 
 /**
- * **Whether a reason a game is off is said of the club** — with the club's name before it; the rest
- * are said of the game. A `Record`, so a reason the wire adds is placed here before it can be drawn.
+ * **Who a reason a game is off is said of** — the club, with its name before it, or a friends game's
+ * sender, with theirs (#759: *tomek.k called it off*); the rest are said of the game. A `Record`, so
+ * a reason the wire adds is placed here before it can be drawn.
  */
-const SAID_OF_THE_CLUB: Readonly<Record<CalledOffReason, boolean>> = {
-  CANCELLED_BY_THE_CLUB: true,
-  SHORT_AT_THE_CUT_OFF: false,
-  BOOK_BY_PASSED: false,
-  COURT_HOUR_LOST: false,
-  PAYMENT_NOT_IN_TIME: false,
+const SAID_OF: Readonly<Record<CalledOffReason, 'club' | 'sender' | undefined>> = {
+  CANCELLED_BY_THE_CLUB: 'club',
+  BY_THE_SENDER: 'sender',
+  SHORT_AT_THE_CUT_OFF: undefined,
+  BOOK_BY_PASSED: undefined,
+  COURT_HOUR_LOST: undefined,
+  PAYMENT_NOT_IN_TIME: undefined,
 };
 
 /**
@@ -202,6 +207,8 @@ const HOLDS_LET_GO: Readonly<Record<CalledOffReason, boolean>> = {
   BOOK_BY_PASSED: false,
   COURT_HOUR_LOST: false,
   PAYMENT_NOT_IN_TIME: false,
+  // Every hold and cover let go — and the notice says *Nobody paid.* (§29.10), so the line does.
+  BY_THE_SENDER: false,
 };
 
 /**
@@ -223,13 +230,17 @@ function calledOffWhy({
   reason,
   club,
   clubCancelReason,
+  sender,
 }: {
   readonly reason: CalledOffReason;
   readonly club?: string;
   readonly clubCancelReason?: ClubCancelReason;
+  readonly sender?: string;
 }): string {
   const why = COPY.money.calledOff[reason];
-  if (!SAID_OF_THE_CLUB[reason]) return why;
+  const of = SAID_OF[reason];
+  if (of === undefined) return why;
+  if (of === 'sender') return [sender ?? COPY.money.theSenderLead, why].join(' ');
   const clause =
     reason === 'CANCELLED_BY_THE_CLUB' && clubCancelReason !== undefined
       ? COPY.money.clubCancelled[clubCancelReason]
@@ -317,25 +328,41 @@ export function bookedTime(
  * *Seats to fill* row's own words — or, while a refused rescuer's seat is kept for them, their time:
  * *Fix your card by 14:40 to take the seat* (#640).
  */
-export function moneyRow(
-  game: Pick<
-    BookedGame,
-    | 'status'
-    | 'money'
-    | 'where'
-    | 'openSeats'
-    | 'calledOffReason'
-    | 'clubCancelReason'
-    | 'uncountedReason'
-    | 'needsYou'
-    | 'rescue'
-    | 'fillingAgain'
-    | 'paymentDueBy'
-    | 'yourPaymentDueBy'
-    | 'timeTo'
-  >,
-  now: number,
-): FactWords {
+export function moneyRow(game: MoneyRowGame, now: number): FactWords {
+  const row = shareRow(game, now);
+  const friends = game.friendsGame;
+  // A friends game's pay mode reads under the price (§29.8) — unless the line already says it.
+  if (
+    friends === undefined ||
+    moneyLineOf({ ...game, club: game.where }, now)?.kind === 'senderPaid'
+  ) {
+    return row;
+  }
+  const mode = payModeWords(
+    friends.youAreTheSender ? { ...friends, senderNickname: COPY.details.you } : friends,
+  );
+  return { ...row, below: row.below === undefined ? mode : `${row.below}${LINE_JOIN}${mode}` };
+}
+
+type MoneyRowGame = Pick<
+  BookedGame,
+  | 'status'
+  | 'money'
+  | 'where'
+  | 'openSeats'
+  | 'calledOffReason'
+  | 'clubCancelReason'
+  | 'uncountedReason'
+  | 'needsYou'
+  | 'rescue'
+  | 'fillingAgain'
+  | 'paymentDueBy'
+  | 'yourPaymentDueBy'
+  | 'timeTo'
+  | 'friendsGame'
+>;
+
+function shareRow(game: MoneyRowGame, now: number): FactWords {
   const { money } = game;
   const words = COPY.details;
   const value = formatZloty(money.shareGrosze);
@@ -370,6 +397,7 @@ export function moneyRow(
     case 'fillingAgain':
     case 'seatEmpty':
     case 'didntCome':
+    case 'senderPaid':
       return { label: share, value, below: moneyWords(line) };
     case 'booked':
     case undefined: {
@@ -414,6 +442,7 @@ export function homeCardLabel({
   fresh,
   day,
   money,
+  seats,
 }: {
   readonly game: Pick<
     HomeGame,
@@ -425,6 +454,8 @@ export function homeCardLabel({
   readonly day: GameDay | undefined;
   /** The money line, or nothing. */
   readonly money: MoneyLine | undefined;
+  /** A friends game's seats, for its sender (#759) — *2 of 3 friends in · waiting for Ania*. */
+  readonly seats?: string;
 }): string {
   const time = timeWords(game.startsAt);
   const status = statusWord(shownStatus(game));
@@ -437,6 +468,7 @@ export function homeCardLabel({
       SPOKEN_JOIN,
     ),
     ...(money === undefined ? [] : [moneySpoken(money)]),
+    ...(seats === undefined ? [] : [seats.split(LINE_JOIN).join(SPOKEN_JOIN)]),
   ]
     .map((sentence) => `${sentence}.`)
     .join(' ');

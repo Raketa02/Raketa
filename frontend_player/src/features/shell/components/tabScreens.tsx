@@ -15,7 +15,12 @@ import { FriendRequestsRow } from '@/features/friends/types';
 import { HomeLevelCard } from '@/features/groups/types';
 import { NoticeBell, rereadNotices } from '@/features/notifications/types';
 import { PlayerRecordSheet, PlayerScoreTag } from '@/features/player_record/types';
-import { HomeRail, PaymentsToConfirm, rereadHome } from '@/features/proposals/types';
+import {
+  FriendsGamesRow,
+  HomeRail,
+  PaymentsToConfirm,
+  rereadHome,
+} from '@/features/proposals/types';
 
 import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
@@ -42,6 +47,11 @@ import { HOME_COPY } from './shellCopy';
  * groups can't deal you games until you have one.*, at the top, since until she has one nothing
  * under it can happen. It draws nothing for anybody else.
  *
+ * **FRIENDS GAME sits at the very top** (`proposals`' row, [#759](https://github.com/Raketa02/Raketa/issues/759);
+ * the friends screens §6; Q13: *Friends game → Friend requests → Your games*), drawn only while an
+ * invitation waits on the reader — above *TO CONFIRM* too: an invitation runs out in hours, and the
+ * mechanics put it at the very top. Answering one re-reads the bell, handed in as for requests.
+ *
  * **FRIEND REQUESTS sits above Your games** (`friends`' row, [#753](https://github.com/Raketa02/Raketa/issues/753);
  * the friends screens §6; Q13), drawn only while a request waits. The shell hands it the two things
  * that are `player_record`'s — the reliability chip, and the record a face opens — so `friends` does
@@ -57,6 +67,7 @@ export function HomeScreen() {
       onRefresh={() => rereadHome(client)}
     >
       <HomeLevelCard />
+      <FriendsGamesRow onAnswered={() => rereadNotices(client)} />
       <PaymentsToConfirm />
       <HomeFriendRequests />
       <HomeRail empty={HOME_COPY.empty} />

@@ -8,6 +8,7 @@ import { createContext, useContext } from 'react';
 
 import type { AppError } from '@/shared/errors';
 
+import type { DeckCard } from '../domain/deck';
 import type { Confirmation, DealtIn, YesAnswer, YesOn } from '../domain/fill';
 
 /**
@@ -48,6 +49,12 @@ export interface Fill {
    * and a payment to confirm. `true` when it took the refusal, so the screen says nothing.
    */
   readonly refused: (error: AppError, ask: FillAsk, retry?: () => void) => boolean;
+  /**
+   * ***It's a game!*** for a booking made whole by something other than a yes — a friend's *Accept*
+   * that took a friends game's last seat (#759) — with the sides the card held, or read off the
+   * booking when it held none. Every read a booking changes is read again.
+   */
+  readonly celebrate: (bookingId: string, sides?: DeckCard['sides']) => void;
 }
 
 export const FillContext = createContext<Fill | undefined>(undefined);

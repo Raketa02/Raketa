@@ -77,9 +77,20 @@ export interface ConfirmPaymentSheetProps {
   readonly onClose: () => void;
   /** The yes again, once the provider says the payment is confirmed. Rejects with the refusal. */
   readonly yesAgain: () => Promise<unknown>;
+  /**
+   * **The words for a refusal of what the confirmation carries**, where it is not a yes — a friends
+   * game's send or *Accept* (#759): a full week, a game at that hour. Nothing, and the sheet's own.
+   */
+  readonly refusal?: (error: AppError) => string | undefined;
+  /** What the close says aloud — *the seat stays open* unless what is confirmed is no seat yet. */
+  readonly closeLabel?: string;
 }
 
-export function ConfirmPaymentSheet({ onClose, ...confirmation }: ConfirmPaymentSheetProps) {
+export function ConfirmPaymentSheet({
+  onClose,
+  closeLabel = WORDS.close,
+  ...confirmation
+}: ConfirmPaymentSheetProps) {
   // One instant for the title and the note: the time, and its window, as of the opening.
   const [openedAt] = useState(Date.now);
   const paymentWindow = paymentWindowAt(confirmation.confirmBy, confirmation.timeTo, openedAt);
@@ -89,7 +100,7 @@ export function ConfirmPaymentSheet({ onClose, ...confirmation }: ConfirmPayment
       visible
       onClose={onClose}
       title={WORDS.title[paymentWindow]}
-      closeLabel={WORDS.close}
+      closeLabel={closeLabel}
       keepsKeyboardOnTap
     >
       <Confirmation {...confirmation} openedAt={openedAt} />
@@ -104,7 +115,8 @@ function Confirmation({
   seat,
   openedAt,
   yesAgain,
-}: Omit<ConfirmPaymentSheetProps, 'onClose'> & { readonly openedAt: number }) {
+  refusal,
+}: Omit<ConfirmPaymentSheetProps, 'onClose' | 'closeLabel'> & { readonly openedAt: number }) {
   const read = useSeatCharge(seatChargeId);
   const confirmOnPhone = useConfirmOnPhone();
   const { CardFields } = usePayments();
@@ -161,7 +173,8 @@ function Confirmation({
       // Confirmed — or no longer waiting for the player, which only the server can settle.
       await yesAgain();
     } catch (error) {
-      setFailure(codeMessage(WORDS.refused, error as AppError));
+      const refused = error as AppError;
+      setFailure(refusal?.(refused) ?? codeMessage(WORDS.refused, refused));
     } finally {
       setBusy(false);
     }

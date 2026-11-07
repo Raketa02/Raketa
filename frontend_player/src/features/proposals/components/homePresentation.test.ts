@@ -1,6 +1,6 @@
 import { setDeviceZone } from '@/test-support/deviceZone';
 
-import type { BookedGame, HomeGame } from '../domain/home';
+import { moneyLineOf, type BookedGame, type HomeGame } from '../domain/home';
 
 import {
   homeCardLabel,
@@ -641,5 +641,70 @@ describe('the booked court’s kind (#677)', () => {
         money: undefined,
       }),
     ).toBe('Booked. Padel. Bonarka Arena, Court 3, indoor. Saturday, 16:00 until 17:00.');
+  });
+});
+
+/** #759: a friends game's own words on Home's line and the details' money row. */
+describe('a friends game’s money words', () => {
+  const friendsGame = (
+    extra: Partial<NonNullable<BookedGame['friendsGame']>> = {},
+  ): NonNullable<BookedGame['friendsGame']> => ({
+    senderId: 'tomek',
+    senderNickname: 'tomek.k',
+    youAreTheSender: false,
+    payMode: 'SPLIT_THE_COST',
+    seats: [],
+    friendsIn: 3,
+    friendsSeated: 3,
+    canCallOff: false,
+    ...extra,
+  });
+
+  it('says its sender called it off, and that nobody paid', () => {
+    expect(moneyWords({ kind: 'calledOff', reason: 'BY_THE_SENDER', sender: 'tomek.k' })).toBe(
+      'tomek.k called it off · Nobody paid',
+    );
+    expect(moneyWords({ kind: 'calledOff', reason: 'BY_THE_SENDER' })).toBe(
+      'The sender called it off · Nobody paid',
+    );
+  });
+
+  it('names the sender on Home’s line for a game called off by them', () => {
+    expect(
+      moneyLineOf(
+        {
+          ...booked({ status: 'CALLED_OFF', calledOffReason: 'BY_THE_SENDER' }),
+          club: { id: 'club-1', name: 'Bonarka Arena' },
+          friendsGame: friendsGame(),
+        },
+        BEFORE,
+      ),
+    ).toEqual(expect.objectContaining({ kind: 'calledOff', sender: 'tomek.k' }));
+  });
+
+  it('says who paid the court to a friend on a Whole-court game, and never their own share', () => {
+    const line = moneyLineOf(
+      {
+        ...booked(),
+        club: { id: 'club-1', name: 'Bonarka Arena' },
+        friendsGame: friendsGame({ payMode: 'WHOLE_COURT' }),
+      },
+      BEFORE,
+    );
+    expect(line).toEqual({ kind: 'senderPaid', sender: 'tomek.k' });
+    expect(moneyWords(line!)).toBe('tomek.k paid the court');
+  });
+
+  it('reads the pay mode under the details’ price — Split, or who paid the court', () => {
+    expect(moneyRow(booked({ friendsGame: friendsGame() }), BEFORE).below).toMatch(/ · Split$/);
+    expect(
+      moneyRow(
+        booked({ friendsGame: friendsGame({ payMode: 'WHOLE_COURT', youAreTheSender: true }) }),
+        BEFORE,
+      ).below,
+    ).toMatch(/ · You paid the court$/);
+    expect(
+      moneyRow(booked({ friendsGame: friendsGame({ payMode: 'WHOLE_COURT' }) }), BEFORE),
+    ).toEqual({ label: 'Your share', value: '28 zł', below: 'tomek.k paid the court' });
   });
 });

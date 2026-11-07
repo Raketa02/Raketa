@@ -49,7 +49,16 @@ export type NoticeKind =
    * *kuba.w has a padel level — you can seat kuba.w now.* (#749) — opens the Friends tab picker of
    * the group the ask was made from (#758).
    */
-  | 'LEVEL_GOT';
+  | 'LEVEL_GOT'
+  /**
+   * *tomek.k invited you to a game* (#751, #759) — opens Home, where the invitation's card is, in
+   * FRIENDS GAME · n. A seat invitation into an empty seat says the same.
+   */
+  | 'FRIENDS_GAME_INVITATION'
+  /** *ania.k can't make it* (#751, #759) — to the sender, opening the game, where the seat reads empty. */
+  | 'CANT_MAKE_IT'
+  /** *ania.k didn't answer* (#751, #759) — to the sender, opening the game, as *can't make it* does. */
+  | 'DIDNT_ANSWER';
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
@@ -77,6 +86,9 @@ export const NOTICE_KINDS = [
   'FRIENDS_MADE',
   'LEVEL_ASKED',
   'LEVEL_GOT',
+  'FRIENDS_GAME_INVITATION',
+  'CANT_MAKE_IT',
+  'DIDNT_ANSWER',
 ] as const satisfies readonly NoticeKind[];
 
 /**

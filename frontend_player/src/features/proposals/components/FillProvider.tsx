@@ -64,6 +64,9 @@
  * taken, and draws its sides once it lands (`ItsAGameFor`); a read that fails says *It's a game!* in
  * a toast, as a confirmation does.
  *
+ * **A friends game's last seat taken by an *Accept*** (#759) is *It's a game!* too, raised through
+ * `celebrate` — the accept is no yes, and the fill only draws the moment.
+ *
  * A delayed yes refused for a game that is gone — full, over, no longer the player's — leaves the
  * details it was said on, as the details' own refusal does.
  */
@@ -286,6 +289,14 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
     return () => clearTimeout(timer);
   }, [counting, client, sendYes]);
 
+  const celebrate = useCallback<Fill['celebrate']>(
+    (bookingId, sides) => {
+      void rereadAfterFill(client);
+      setCelebrating({ bookingId, ...(sides === undefined ? {} : { sides }) });
+    },
+    [client],
+  );
+
   const fill = useMemo<Fill>(
     () => ({
       counting: counting?.card.proposalId ?? null,
@@ -294,8 +305,9 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
       confirm: setConfirming,
       answered,
       refused,
+      celebrate,
     }),
-    [counting, book, answered, refused],
+    [counting, book, answered, refused, celebrate],
   );
 
   return (

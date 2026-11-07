@@ -10,6 +10,7 @@
  * │ ▎DAY    Saturday  3 Oct                   │
  * │ ▎TIME   16:00  until 17:00                │
  * │ 30 zł · free to leave until Fri 16:00     │   the money line — none on a result state
+ * │ 2 of 3 friends in · waiting for ania.k    │   a friends game's seats, for its sender (#759)
  * │ [ Open game                        ] [◯]  │   the two doors: the details, and the chat
  * └───────────────────────────────────────────┘
  * ```
@@ -35,12 +36,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DarkCard, Button, theme } from '@/shared/ui';
 
 import { peopleOn } from '../domain/deck';
+import { seatsLineOf } from '../domain/friendsGame';
 import { moneyLineOf, shownStatus, type HomeGame } from '../domain/home';
 import { gameDayOf } from '../domain/when';
 
 import { CardTag } from './CardTag';
 import { ChatDoor } from './ChatDoor';
 import { clubName, detailsDay, timeWords } from './deckPresentation';
+import { seatsLineWords } from './friendsGamePresentation';
 import { GameFacts, type FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
 import {
@@ -89,6 +92,9 @@ export function HomeGameCard({
   const status = shownStatus(game);
   const ink = STATUS_INK[status];
   const line = moneyLineOf(game, now);
+  // The sender's own friends game, while a seat is not In (#759; the screens §6.3).
+  const seatsLine = seatsLineOf(game, now);
+  const seats = seatsLine === undefined ? undefined : seatsLineWords(seatsLine);
 
   const day = gameDayOf(game.startsAt, now);
   const when = day === undefined ? undefined : detailsDay(day, game.startsAt);
@@ -108,7 +114,13 @@ export function HomeGameCard({
     <DarkCard style={[s.card, { width }]}>
       <View
         accessible
-        accessibilityLabel={homeCardLabel({ game, fresh, day, money: line })}
+        accessibilityLabel={homeCardLabel({
+          game,
+          fresh,
+          day,
+          money: line,
+          ...(seats === undefined ? {} : { seats }),
+        })}
         style={s.body}
         testID={`home-game-${game.bookingId}`}
       >
@@ -128,6 +140,7 @@ export function HomeGameCard({
         </View>
 
         {line === undefined ? null : <Text style={s.line}>{moneyWords(line)}</Text>}
+        {seats === undefined ? null : <Text style={s.seats}>{seats}</Text>}
       </View>
 
       <View style={s.footer}>
@@ -164,6 +177,8 @@ const s = StyleSheet.create({
   court: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.md },
   facts: { flex: 1 },
   line: { ...theme.type.tiny, color: theme.color.onDarkTiny },
+  // The seats are the state to watch, so they read in the card's own white, under the money.
+  seats: { ...theme.type.tiny, color: theme.color.surface },
   // 7.7: the footer takes `marginTop: auto`, so footers align across cards of differing height.
   footer: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm, marginTop: 'auto' },
   door: { flex: 1 },

@@ -13,6 +13,7 @@ import { toReliabilityBand } from '@/features/player_record/types';
 import type { components } from '@/generated/schema';
 
 import type { DeckPerson } from '../domain/deck';
+import type { FriendsGame, FriendsGameInvitation } from '../domain/friendsGame';
 import type {
   BookedGame,
   BookedMoney,
@@ -127,6 +128,63 @@ function toBooking(
     ...toPaymentDueBy(wire),
     ...toYourPaymentDueBy(wire),
     ...toTimeTo(wire),
+    ...toFriendsGameOn(wire),
+  };
+}
+
+/**
+ * **A friends game's own facts** (#751, #759) — the sender, the pay mode, every seat's state, the
+ * reader's own invitation and *Call it off*. A `null` reads as an absent field; so does a server
+ * older than it, which sends no field.
+ */
+export function toFriendsGame(wire: Schemas['FriendsGameSchema']): FriendsGame {
+  return {
+    senderId: wire.sender_id,
+    ...(wire.sender_nickname === null ? {} : { senderNickname: wire.sender_nickname }),
+    youAreTheSender: wire.you_are_the_sender,
+    payMode: wire.pay_mode,
+    seats: wire.seats.map((seat) => ({
+      playerId: seat.player_id,
+      state: seat.state,
+      ...(seat.waiting_until === null ? {} : { waitingUntil: seat.waiting_until }),
+    })),
+    friendsIn: wire.friends_in,
+    friendsSeated: wire.friends_seated,
+    ...(wire.your_invitation_until === null
+      ? {}
+      : { yourInvitationUntil: wire.your_invitation_until }),
+    canCallOff: wire.can_call_off,
+  };
+}
+
+function toFriendsGameOn(wire: {
+  readonly friends_game?: Schemas['FriendsGameSchema'] | null;
+}): Pick<HomeGame, 'friendsGame'> {
+  const friends = wire.friends_game;
+  return friends === null || friends === undefined ? {} : { friendsGame: toFriendsGame(friends) };
+}
+
+/**
+ * **One card of FRIENDS GAME · n** (#759; friends 12). One in a sport this build cannot name is
+ * dropped, as a Home card is.
+ */
+function toFriendsGameInvitation(
+  wire: Schemas['HomeFriendsGameSchema'],
+): FriendsGameInvitation | undefined {
+  const sport = toSport(wire.sport);
+  if (sport === undefined) return undefined;
+  return {
+    bookingId: wire.booking_id,
+    groupId: wire.pool_id,
+    sport,
+    kind: toKind(wire.kind),
+    startsAt: wire.starts_at,
+    club: toClub(wire.club),
+    courtName: wire.court_name,
+    indoor: wire.indoor,
+    shareGrosze: wire.share_grosze,
+    sides: toSides(wire.sides),
+    friendsGame: toFriendsGame(wire.friends_game),
   };
 }
 
@@ -152,11 +210,16 @@ export function toHomeGame(wire: Schemas['HomeGameSchema']): HomeGame | undefine
 }
 
 export function toHome(wire: Schemas['HomeResponse']): Home {
+  // A server older than #751 sends none: no row.
+  const friendsGames: Schemas['HomeResponse']['friends_games'] | undefined = wire.friends_games;
   return {
     readAt: wire.read_at,
     needingYou: wire.needing_you,
     games: wire.games.map(toHomeGame).filter((game): game is HomeGame => game !== undefined),
     friendRequests: wire.friend_requests.map(toHomeFriendRequest),
+    friendsGames: (friendsGames ?? [])
+      .map(toFriendsGameInvitation)
+      .filter((one): one is FriendsGameInvitation => one !== undefined),
   };
 }
 

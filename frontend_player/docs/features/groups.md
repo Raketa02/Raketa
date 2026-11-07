@@ -267,6 +267,11 @@ to `[groupId]/index` to make room for it.
 and whether Android delivers a press to the half of it outside the seat; the court and the card
 scrolling together (friends 8); the swap's volt ring; the picker's greyed rows.
 
+**Sent, the court is empty again** ([#759](https://github.com/Raketa02/Raketa/issues/759); the
+friends screens §8): the card's _Send game and pay_ is `proposals`' (`SendGame`), and its `onSent`
+is `useFriendsGameOn`'s `sent` — the line-up put back to an empty court, as the page opens on. The
+kind stays where it stood. The game itself is on Home, in Your games.
+
 **Three things the group page's mocks draw that this record departs from**
 ([#513](https://github.com/Raketa02/Raketa/issues/513), design-system Part 16). The Games card's
 faces are **the face box, not circles** — this app has no round face (#338) — and **no face carries

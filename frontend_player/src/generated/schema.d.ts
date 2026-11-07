@@ -2407,6 +2407,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pools/{pool_id}/friends-games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a friends game, and book its court
+         * @description *Send game and pay* on the send sheet: **the court is booked at once** (`docs/adr/0202` §5). The line-up is read exactly as the friends card reads it; then the sender's own share and **a cover for every other seat** — the whole court — are held on their card **all or nothing, with them present**, and the most they agreed to is recorded with their terms. Held until the club's cut-off (or, far ahead, checked and held four days before it). **Every hold in**, the booking is born with the sender In and every friend's seat held for them for 24 hours, never past the cut-off; the chat opens; the sender's other yeses at that hour are withdrawn; each friend is told. **A refused card books nothing**: `your_payments` names each payment to confirm in the app, then send again with `booking_id`. A retried send that booked answers what it booked. At the cut-off each seat's own held share is taken, and a cover only for a seat without its own payment.
+         */
+        post: operations["send_a_friends_game_api_v1_pools__pool_id__friends_games_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/seat-charges/{seat_charge_id}": {
         parameters: {
             query?: never;
@@ -2565,6 +2585,66 @@ export interface paths {
          * @description A swipe left on a **Seat open** card: **silent, and never on the player's record.** The card does not come back to their deck; the seat stays on their *Seats to fill*, which lists every rescue they fit. A second no records nothing.
          */
         post: operations["say_no_to_a_rescue_api_v1_bookings__booking_id__no_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{booking_id}/invitation/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a friends game
+         * @description *Accept and pay 25 zł* — or, with *Whole court*, *Accept* — on a FRIENDS GAME card. **With *Split the cost*** the reader's own share is held on their card until the cut-off, with them present: a bank confirmation is completed in the app (`your_payment`, then `POST /seat-charges/{id}/confirmation`, which accepts), and a refused card leaves the seat theirs to retry until their invitation ends. **With *Whole court*** nothing is held. Accepted, they are In and in the chat, and their other yeses at that hour are withdrawn; the card moves to Your games. When the last seat is taken, all four are told *It's a game!*. A second accept answers the same.
+         */
+        post: operations["accept_a_friends_game_api_v1_bookings__booking_id__invitation_acceptance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{booking_id}/invitation/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline a friends game
+         * @description *Not this time* on a FRIENDS GAME card: the card leaves Home, the seat is empty, and the sender is told *Ania can't make it*. A second tap records nothing.
+         */
+        post: operations["decline_a_friends_game_api_v1_bookings__booking_id__invitation_decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{booking_id}/call-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Call a friends game off
+         * @description The sender's *Call it off for everyone*, before the club's cut-off: every hold and cover is let go — nobody pays — the court is the club's again, the chat closes, and everybody In and every friend still invited is told *Tomek called off Saturday 10:00 · Nobody paid*.
+         */
+        post: operations["call_off_a_friends_game_api_v1_bookings__booking_id__call_off_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3222,6 +3302,8 @@ export interface components {
              * @description *PLAYED WITH* on the result screen (`docs/adr/0202` §1): everybody else on the game with **your** relation to them — Members' pills, **+ Add**, *request sent*, **Accept**, *friend*. Hide the card when every one is `FRIEND`. Empty for a reader not on the game. Only your own relations: nothing says who else is friends with whom.
              */
             played_with: components["schemas"]["PlayedWithSchema"][];
+            /** @description A friends game's own facts (#751): the sender, the pay mode — *Split* or *Tomek paid the court* under the price — whether the reader sent it and may call it off, each seat's state, and the reader's own invitation while it waits. A friend invited and not In reads the game too, every seat drawn. `null` on a game a fill booked. */
+            friends_game: components["schemas"]["FriendsGameSchema"] | null;
         };
         /**
          * CalledOffBySchema
@@ -3254,7 +3336,7 @@ export interface components {
          * @description Why a game will not be played (the mechanics §14.1).
          * @enum {string}
          */
-        CalledOffReason: "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "BOOK_BY_PASSED" | "COURT_HOUR_LOST" | "PAYMENT_NOT_IN_TIME";
+        CalledOffReason: "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "BOOK_BY_PASSED" | "COURT_HOUR_LOST" | "PAYMENT_NOT_IN_TIME" | "BY_THE_SENDER";
         /**
          * CappedWeekSchema
          * @description A week the player has as many games booked in as they allow: nothing is
@@ -4416,6 +4498,96 @@ export interface components {
              */
             courts: components["schemas"]["FriendsCourtSchema"][];
         };
+        /**
+         * FriendsGameAnswerResponse
+         * @description What *Accept* did: the reader In, or their share refused.
+         */
+        FriendsGameAnswerResponse: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Accepted
+             * @description The reader is In: the card moves to Your games.
+             */
+            accepted: boolean;
+            /**
+             * Whole
+             * @description Every seat is taken now — *It's a game!*, to all four.
+             */
+            whole: boolean;
+            /** @description With *Split the cost*, the reader's share could not be held: the seat is still theirs until `confirm_by`, their invitation's end. Confirm it in the app (`POST /seat-charges/{id}/confirmation`), or fix the card and accept again. `null` otherwise. */
+            your_payment: components["schemas"]["YourPaymentSchema"] | null;
+        };
+        /**
+         * FriendsGameSchema
+         * @description **A friends game**'s own facts (#751; ``docs/adr/0202`` §5–§6): who sent
+         *     it, how its court is paid, and where each seat stands.
+         */
+        FriendsGameSchema: {
+            /**
+             * Sender Id
+             * Format: uuid
+             * @description The friend who sent it and booked the court.
+             */
+            sender_id: string;
+            /**
+             * Sender Nickname
+             * @description Their nickname — *Tomek's game*, *Tomek paid the court*. `null` for an account that can no longer be named.
+             */
+            sender_nickname: string | null;
+            /** You Are The Sender */
+            you_are_the_sender: boolean;
+            /** @description `SPLIT_THE_COST` — each friend pays their own share on accepting, and the sender's card covers every seat still without its own payment at the cut-off (*Split*). `WHOLE_COURT` — the sender pays every seat; friends accept free (*Tomek paid the court*). */
+            pay_mode: components["schemas"]["PayMode"];
+            /**
+             * Seats
+             * @description Every seat: the sender's first, then each friend's in the card's order.
+             */
+            seats: components["schemas"]["FriendsSeatSchema"][];
+            /**
+             * Friends In
+             * @description The friends In beside the sender — *2 of 3 friends in*.
+             */
+            friends_in: number;
+            /**
+             * Friends Seated
+             * @description The friends the sport seats beside the sender: 3 in doubles, 1 in singles.
+             */
+            friends_seated: number;
+            /**
+             * Your Invitation Until
+             * @description **The reader's own invitation**, while it waits on them: when it ends. `POST /bookings/{id}/invitation/acceptance` accepts it, `…/invitation/decline` is *Not this time*. `null` for the sender, for a friend In, and once it was answered or ran out.
+             */
+            your_invitation_until: string | null;
+            /**
+             * Can Call Off
+             * @description *Call it off* is the reader's — the sender, before the club's cut-off and the hour: `POST /bookings/{id}/call-off`.
+             */
+            can_call_off: boolean;
+        };
+        /**
+         * FriendsGameSentResponse
+         * @description What a send did: the court booked, or nothing booked and the sender's
+         *     payments to confirm.
+         */
+        FriendsGameSentResponse: {
+            /**
+             * Booking Id
+             * Format: uuid
+             * @description The friends game — booked, or, with `your_payments`, the id to send again under once they are confirmed.
+             */
+            booking_id: string;
+            /** @description Present when the court is booked: the sender's share and a cover for every other seat held on their card, the invitations sent, the chat open. `null` when a payment was refused. */
+            booked: components["schemas"]["BookedSchema"] | null;
+            /**
+             * Your Payments
+             * @description **Nothing was booked**: each payment the sender's bank refused or wants confirmed — `GET /seat-charges/{id}`, confirm in the app, `POST /seat-charges/{id}/confirmation` — then send again with `booking_id`. Empty once booked.
+             */
+            your_payments: components["schemas"]["YourPaymentSchema"][];
+        };
         /** FriendsResponse */
         FriendsResponse: {
             /** @description The sport asked for, if one was. */
@@ -4425,6 +4597,27 @@ export interface components {
              * @description **Your** friends, from every group. Without `sport`, by nickname (You › Friends); with it, highest Level in it first and anybody with no Level in it last (the picker). Empty when you have none: *No friends yet. Add them from your groups, or send your link.*
              */
             friends: components["schemas"]["FriendSchema"][];
+        };
+        /**
+         * FriendsSeatSchema
+         * @description One seat of a friends game, as everybody on it reads it (#751; the words
+         *     §29.8): *In*, *waiting · 3 h left*, *can't make it*, *didn't answer*,
+         *     *empty*.
+         */
+        FriendsSeatSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Whose seat it is — the sender, or the friend it was held for. Their face is among `sides`.
+             */
+            player_id: string;
+            /** @description `IN` — the sender, or a friend who accepted. `WAITING` — held for its friend until `waiting_until`. `CANT_MAKE_IT` — they said *Not this time*. `DIDNT_ANSWER` — their 24 hours ended, read off the clock whether or not the job has recorded it. `EMPTY` — the friend who accepted it left (#752). */
+            state: components["schemas"]["SeatState"];
+            /**
+             * Waiting Until
+             * @description With `WAITING`: when the friend's time to answer ends — 24 hours from the send, never past the cut-off. Count it down from `read_at`.
+             */
+            waiting_until: string | null;
         };
         /**
          * GameKind
@@ -5231,6 +5424,48 @@ export interface components {
             reliability_band: components["schemas"]["ReliabilityBand"];
         };
         /**
+         * HomeFriendsGameSchema
+         * @description One card in **FRIENDS GAME · n** (#751; mock 12): *Tomek's game*, the
+         *     clock, the four faces — ✓ on those In — *Saturday 10:00 · Ogrody 33 ·
+         *     Court 3 · Padel · Competitive*, and **Not this time** / **Accept and pay 25
+         *     zł** (*Whole court*: **Accept**, *Tomek paid the court*).
+         */
+        HomeFriendsGameSchema: {
+            /**
+             * Booking Id
+             * Format: uuid
+             * @description The friends game. `GET /bookings/{id}` for its details.
+             */
+            booking_id: string;
+            /**
+             * Pool Id
+             * Format: uuid
+             * @description The group it belongs to — a group's id.
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description The sender's choice for this game. */
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            club: components["schemas"]["BookedClubSchema"];
+            /** Court Name */
+            court_name: string;
+            /** Indoor */
+            indoor: boolean;
+            /**
+             * Share Grosze
+             * @description Each seat's share — *Accept and pay 25 zł* with *Split*.
+             */
+            share_grosze: number;
+            /** @description Every seat the card drew, the reader's side first and the reader first on it. `friends_game.seats` says who is In. */
+            sides: components["schemas"]["BookedSidesSchema"];
+            friends_game: components["schemas"]["FriendsGameSchema"];
+        };
+        /**
          * HomeGameSchema
          * @description One card on Home: a game the reader booked.
          */
@@ -5309,6 +5544,8 @@ export interface components {
             your_payment_due_by: string | null;
             /** @description What the time to `payment_due_by` and `your_payment_due_by` is for (#638; Q113). `FIX_THE_CARD` — the hold was refused **before the club's cut-off**, where nothing is taken, only held: the payer reads *Fix your card by 14:40 to keep your seat* — nothing is paid now — and the time never runs past the cut-off. `PAY` — refused from the cut-off on, where the money is taken at once: *Confirm your payment by 14:40*. The others read *Waiting for one payment* either way. `null` while neither is set. */
             time_to: components["schemas"]["TimeTo"] | null;
+            /** @description A friends game's own facts (#751) — the sender's game in Your games, *2 of 3 friends in · waiting for Ania*, and a friend's once they accepted. `null` on a game a fill booked. */
+            friends_game: components["schemas"]["FriendsGameSchema"] | null;
         };
         /**
          * HomeResponse
@@ -5337,6 +5574,11 @@ export interface components {
              * @description *FRIEND REQUESTS · n* — the requests waiting on you, **newest first** (`docs/adr/0202` §1). A card leaves once you accept it, say **Not now**, or they cancel; the row and its title are gone when this is empty. They are not counted in `needing_you`.
              */
             friend_requests: components["schemas"]["HomeFriendRequestSchema"][];
+            /**
+             * Friends Games
+             * @description *FRIENDS GAME · n*, at the very top of Home (#751; `docs/adr/0202` §5): every friends game whose invitation waits on you, **the soonest to end first**. A card leaves once you accept — the game is then among `games` — say **Not this time**, or your 24 hours end; the row and its title are gone when this is empty. Not counted in `needing_you`.
+             */
+            friends_games: components["schemas"]["HomeFriendsGameSchema"][];
         };
         /**
          * HomeStatus
@@ -5947,7 +6189,7 @@ export interface components {
          * @description Every notice a player can be told (the mechanics §17.2).
          * @enum {string}
          */
-        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "NEW_GAME" | "GAME_MOVED" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE" | "GET_YOUR_LEVEL" | "FRIEND_REQUEST" | "FRIENDS_MADE" | "LEVEL_ASKED" | "LEVEL_GOT";
+        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "NEW_GAME" | "GAME_MOVED" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE" | "GET_YOUR_LEVEL" | "FRIEND_REQUEST" | "FRIENDS_MADE" | "LEVEL_ASKED" | "LEVEL_GOT" | "FRIENDS_GAME_INVITATION" | "CANT_MAKE_IT" | "DIDNT_ANSWER";
         /**
          * NoticeSchema
          * @description One notice, in the words the phone was pushed — and where a tap opens.
@@ -6231,6 +6473,14 @@ export interface components {
          * @enum {string}
          */
         OverlapShade: "BRIGHT" | "DIM" | "DARK";
+        /**
+         * PayMode
+         * @description How a friends game's court is paid (``docs/adr/0202`` §6): each friend
+         *     their own share on accepting, the sender covering what is unpaid at the
+         *     cut-off — or the sender the whole court.
+         * @enum {string}
+         */
+        PayMode: "SPLIT_THE_COST" | "WHOLE_COURT";
         /**
          * PaymentMethodResponse
          * @description The player's payment method, as You › Payments draws it.
@@ -7681,6 +7931,14 @@ export interface components {
          */
         SeatChargeStatus: "AUTHORISED" | "FAILED" | "CHECKED" | "HELD" | "TAKING" | "CAPTURED" | "RELEASING" | "CANCELLED";
         /**
+         * SeatState
+         * @description Where one seat of a friends game stands for everybody on it (#751; the
+         *     words §29.8) — *In*, *waiting · 3 h left*, *can't make it*, *didn't
+         *     answer*, *empty*.
+         * @enum {string}
+         */
+        SeatState: "IN" | "WAITING" | "CANT_MAKE_IT" | "DIDNT_ANSWER" | "EMPTY";
+        /**
          * SeatToFillSchema
          * @description One *Seats to fill* row: a booked game that lost a player, and the
          *     reader fits and is free for it.
@@ -7786,6 +8044,45 @@ export interface components {
              * @description The club's name; `null` for a club that no longer exists.
              */
             name: string | null;
+        };
+        /**
+         * SendFriendsGameRequest
+         * @description *Send game and pay* on the send sheet (#751): the friends card as it was
+         *     read, and how to pay.
+         */
+        SendFriendsGameRequest: {
+            sport: components["schemas"]["Sport"];
+            /** @description The Friends tab's switch: this game only. */
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Friend Ids
+             * @description The friends seated beside the sender, in the order seated — as the card was read: three in doubles, one in singles.
+             */
+            friend_ids: string[];
+            /**
+             * Partner Id
+             * @description The friend beside the sender after a swap, as the card was read; `null` for the evenest sides.
+             */
+            partner_id?: string | null;
+            /**
+             * Court Id
+             * Format: uuid
+             * @description The court the card names.
+             */
+            court_id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             * @description Its hour, as the card names it.
+             */
+            starts_at: string;
+            /** @description `SPLIT_THE_COST` — *We hold 100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł for any seat still empty then.* `WHOLE_COURT` — *Send game and pay 100 zł*. The hold is the same: the whole court. */
+            pay_mode: components["schemas"]["PayMode"];
+            /**
+             * Booking Id
+             * @description Sending again after confirming a payment the last send was refused: the `booking_id` that send answered, so the payments confirmed are the ones taken. Left out on a first send.
+             */
+            booking_id?: string | null;
         };
         /**
          * SendMessageRequest
@@ -13809,6 +14106,77 @@ export interface operations {
             };
         };
     };
+    send_a_friends_game_api_v1_pools__pool_id__friends_games_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendFriendsGameRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsGameSentResponse"];
+                };
+            };
+            /** @description `wrong_line_up_size` — not the friends the sport seats beside the reader, each once and never the reader: `details.friends`, three in doubles, one in singles. `sides_not_of_the_line_up` — `partner_id` is not one of the friends seated, or the sport is singles. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `pool_not_found` — no such group, or the reader is not in it. One code for both. The friends need not be in it: a friend who is not a member plays as a guest. `booking_not_found` — `booking_id` is a game somebody else sent. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Each names nobody. `not_a_friend` — somebody seated is not the reader's friend now: the seat is emptied. `no_level` — somebody seated, or the reader, holds no level in the sport. `cannot_play_together` — two of them blocked each other, either way round: *These four can't all play together. Swap someone.* — never which two. In the send sheet's order: `payment_method_required` — save a method first; `friends_games_waiting` — 2 friends games already wait for answers (`details.cap`); `you_play_then` — the sender has a game at that hour; `games_per_week_booked` — the sender's week is full (`details.games_per_week`, `details.week`); `court_just_taken` — another game took the court a moment ago: nothing was charged, read the card again; `court_hour_not_for_sale` — the club no longer sells it. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether two of them blocked each other could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     read_seat_charge_api_v1_seat_charges__seat_charge_id__get: {
         parameters: {
             query?: never;
@@ -14155,6 +14523,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_a_friends_game_api_v1_bookings__booking_id__invitation_acceptance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsGameAnswerResponse"];
+                };
+            };
+            /** @description `booking_not_found` — no such friends game **for this player**: it does not exist, or they were never invited to it. One code for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `invitation_not_waiting` — they answered it already, or their 24 hours ended. `booking_is_called_off` — the game is off (`details.reason`). `game_has_started`. Nothing was recorded. `you_play_then` — *You already have a game at 10:00.* `games_per_week_booked` — *Your week is full: 3 games, the most you set in Games & money.* (`details.games_per_week`). `payment_method_required` — with *Split the cost*, save a method first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_a_friends_game_api_v1_bookings__booking_id__invitation_decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `booking_not_found` — no such friends game **for this player**: it does not exist, or they were never invited to it. One code for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `invitation_not_waiting` — they answered it already, or their 24 hours ended. `booking_is_called_off` — the game is off (`details.reason`). `game_has_started`. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    call_off_a_friends_game_api_v1_bookings__booking_id__call_off_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `booking_not_found` — no such friends game **sent by this player**. One code for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `cut_off_has_passed` — the club's cut-off came: it can no longer be called off for free. `booking_is_called_off` — it is off already. `game_has_started`. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

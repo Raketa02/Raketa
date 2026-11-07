@@ -250,6 +250,7 @@ function friendServer(
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       games: [],
+      friends_games: [],
       friend_requests: waiting().map((who) => ({
         player_id: who.id,
         nickname: who.name,
@@ -698,6 +699,7 @@ describe('FRIEND REQUESTS on Home', () => {
         read_at: '2026-10-01T08:00:00Z',
         needing_you: 0,
         games: [],
+        friends_games: [],
         friend_requests: [
           {
             player_id: ZOFIA.id,

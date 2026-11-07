@@ -38,7 +38,7 @@ function card(overrides: Partial<Wire['FriendsCardResponse']> = {}): Wire['Frien
 }
 
 describe('toFriendsCard', () => {
-  it('reads the sides, the forecast, the court with its marker and the overlap', () => {
+  it('reads the sides, the forecast, the court with its marker, the overlap and the cut-off', () => {
     expect(toFriendsCard(card())).toEqual({
       homeClub: { id: 'ogrody', name: 'Ogrody 33' },
       sides: { yours: ['me', 'ewa'], theirs: ['magda', 'ania'] },
@@ -58,6 +58,7 @@ describe('toFriendsCard', () => {
         cells: [{ day: 6, range: 'MORNING', shade: 'BRIGHT' }],
         game: { day: 6, range: 'MORNING' },
       },
+      cutOff: '2026-11-06T09:00:00Z',
     });
   });
 

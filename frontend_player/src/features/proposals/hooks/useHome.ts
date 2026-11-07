@@ -16,6 +16,7 @@ import { currentUserQuery } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
+import type { FriendsGameInvitation } from '../domain/friendsGame';
 import { openedToKeep, type BookedGame, type Home, type HomeFriendRequest } from '../domain/home';
 import {
   keepDismissedGames,
@@ -43,6 +44,24 @@ export function useHome() {
  */
 export function useHomeFriendRequests(): readonly HomeFriendRequest[] | undefined {
   return useHome().data?.friendRequests;
+}
+
+/**
+ * **FRIENDS GAME · n** (#759) — the invitations waiting on the reader, off Home's one read, with the
+ * read's instant and when it landed, so the cards' clocks run on the read's clock. `undefined`
+ * while it is in flight or refused, which draws no row, as an empty list does.
+ */
+export function useHomeFriendsGames(): {
+  readonly invitations: readonly FriendsGameInvitation[] | undefined;
+  readonly readAt: string | undefined;
+  readonly receivedAt: number;
+} {
+  const home = useHome();
+  return {
+    invitations: home.data?.friendsGames,
+    readAt: home.data?.readAt,
+    receivedAt: home.dataUpdatedAt,
+  };
 }
 
 /**

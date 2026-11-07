@@ -124,6 +124,7 @@ export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['Hom
     payment_due_by: null,
     your_payment_due_by: null,
     time_to: null,
+    friends_game: null,
     ...extra,
   };
 }
@@ -169,6 +170,7 @@ export function bookingDetails(
     your_payment_due_by: null,
     time_to: null,
     played_with: [],
+    friends_game: null,
     ...extra,
   };
 }

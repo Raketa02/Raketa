@@ -46,6 +46,7 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
   payment_due_by: null,
   your_payment_due_by: null,
   time_to: null,
+  friends_game: null,
   ...extra,
 });
 
@@ -62,6 +63,7 @@ describe('toHome', () => {
     const home = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 2,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -77,6 +79,7 @@ describe('toHome', () => {
       readAt: '2026-10-01T08:00:00Z',
       needingYou: 2,
       friendRequests: [],
+      friendsGames: [],
       games: [
         {
           bookingId: 'b-1',
@@ -129,6 +132,7 @@ describe('toHome', () => {
     const [game] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -164,6 +168,7 @@ describe('toHome', () => {
     const [game] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -183,6 +188,7 @@ describe('toHome', () => {
     const [everybody, payer, unset, older] = toHome({
       read_at: '2026-10-06T12:10:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({ status: 'WAITING_FOR_A_PAYMENT', payment_due_by: '2026-10-06T12:40:00Z' }),
@@ -209,6 +215,7 @@ describe('toHome', () => {
     const [fixing, paying, unset, older] = toHome({
       read_at: '2026-10-06T12:10:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({ your_payment_due_by: '2026-10-06T12:40:00Z', time_to: 'FIX_THE_CARD' }),
@@ -241,6 +248,7 @@ describe('toHome', () => {
     const [held, check, older] = toHome({
       read_at: '2026-09-27T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [homeGame(), homeGame({ money: checked }), homeGame({ money: OLDER_MONEY })],
     }).games;
@@ -263,6 +271,7 @@ describe('toHome', () => {
     const [off, short, open] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 1,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -301,6 +310,7 @@ describe('toHome', () => {
     const [filling, booked, older] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true }),
@@ -318,6 +328,7 @@ describe('toHome', () => {
     const [passed, lost] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -341,6 +352,7 @@ describe('toHome', () => {
     const home = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [homeGame({ sport: 'CURLING' as Wire['Sport'] }), homeGame({ booking_id: 'b-2' })],
     });
@@ -371,6 +383,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       games: [],
+      friends_games: [],
       friend_requests: requests,
     });
 
@@ -414,12 +427,14 @@ describe('toSeat — the friend tag (#753)', () => {
     const [friend, other] = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
+      friends_games: [],
       friend_requests: [],
       games: [homeGame({ sides: { yours: [tile({ friend: true })], theirs: [tile()] } })],
     }).games[0]!.sides.yours.concat(
       toHome({
         read_at: '2026-10-01T08:00:00Z',
         needing_you: 0,
+        friends_games: [],
         friend_requests: [],
         games: [homeGame({ sides: { yours: [tile()], theirs: [] } })],
       }).games[0]!.sides.yours,
@@ -468,6 +483,7 @@ describe('toBookedGame', () => {
     your_payment_due_by: null,
     time_to: null,
     played_with: [],
+    friends_game: null,
     ...extra,
   });
 
@@ -608,5 +624,117 @@ describe('toBookedGame', () => {
 
   it('is nothing for a sport this build cannot name', () => {
     expect(toBookedGame(details({ sport: 'CURLING' as Wire['Sport'] }))).toBeUndefined();
+  });
+});
+
+describe('a friends game (#759)', () => {
+  const friendsGame = (
+    extra: Partial<Wire['FriendsGameSchema']> = {},
+  ): Wire['FriendsGameSchema'] => ({
+    sender_id: 'tomek',
+    sender_nickname: 'tomek.k',
+    you_are_the_sender: false,
+    pay_mode: 'SPLIT_THE_COST',
+    seats: [
+      { player_id: 'tomek', state: 'IN', waiting_until: null },
+      { player_id: 'me', state: 'WAITING', waiting_until: '2026-10-02T08:00:00Z' },
+    ],
+    friends_in: 0,
+    friends_seated: 1,
+    your_invitation_until: '2026-10-02T08:00:00Z',
+    can_call_off: false,
+    ...extra,
+  });
+
+  const invitation = (
+    extra: Partial<Wire['HomeFriendsGameSchema']> = {},
+  ): Wire['HomeFriendsGameSchema'] => ({
+    booking_id: 'b-9',
+    pool_id: 'group-1',
+    sport: 'TENNIS',
+    kind: 'FOR_FUN',
+    starts_at: '2026-10-03T08:00:00Z',
+    club: { id: 'club-1', name: 'Ogrody 33' },
+    court_name: 'Court 3',
+    indoor: false,
+    share_grosze: 2500,
+    sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
+    friends_game: friendsGame(),
+    ...extra,
+  });
+
+  const home = (extra: Partial<Wire['HomeResponse']> = {}): Wire['HomeResponse'] => ({
+    read_at: '2026-10-01T08:00:00Z',
+    needing_you: 0,
+    games: [],
+    friend_requests: [],
+    friends_games: [],
+    ...extra,
+  });
+
+  it('reads each invitation on Home with its game’s facts, the soonest to end as served', () => {
+    expect(toHome(home({ friends_games: [invitation()] })).friendsGames).toEqual([
+      {
+        bookingId: 'b-9',
+        groupId: 'group-1',
+        sport: 'tennis',
+        kind: 'forFun',
+        startsAt: '2026-10-03T08:00:00Z',
+        club: { id: 'club-1', name: 'Ogrody 33' },
+        courtName: 'Court 3',
+        indoor: false,
+        shareGrosze: 2500,
+        sides: expect.objectContaining({ yours: [expect.objectContaining({ playerId: 'me' })] }),
+        friendsGame: {
+          senderId: 'tomek',
+          senderNickname: 'tomek.k',
+          youAreTheSender: false,
+          payMode: 'SPLIT_THE_COST',
+          seats: [
+            { playerId: 'tomek', state: 'IN' },
+            { playerId: 'me', state: 'WAITING', waitingUntil: '2026-10-02T08:00:00Z' },
+          ],
+          friendsIn: 0,
+          friendsSeated: 1,
+          yourInvitationUntil: '2026-10-02T08:00:00Z',
+          canCallOff: false,
+        },
+      },
+    ]);
+  });
+
+  it('drops an invitation in a sport this build cannot name, and reads none from an older server', () => {
+    expect(
+      toHome(home({ friends_games: [invitation({ sport: 'CURLING' as Wire['Sport'] })] }))
+        .friendsGames,
+    ).toEqual([]);
+    const older = home();
+    delete (older as Partial<Wire['HomeResponse']>).friends_games;
+    expect(toHome(older).friendsGames).toEqual([]);
+  });
+
+  it('reads the facts on a Home card, an unnamed sender left off, and none on a game a fill booked', () => {
+    const read = toHome(
+      home({
+        games: [
+          homeGame({
+            friends_game: friendsGame({
+              sender_nickname: null,
+              you_are_the_sender: true,
+              pay_mode: 'WHOLE_COURT',
+              your_invitation_until: null,
+              can_call_off: true,
+            }),
+          }),
+          homeGame({ booking_id: 'b-2' }),
+        ],
+      }),
+    );
+    expect(read.games[0]?.friendsGame).toEqual(
+      expect.objectContaining({ youAreTheSender: true, payMode: 'WHOLE_COURT', canCallOff: true }),
+    );
+    expect(read.games[0]?.friendsGame).not.toHaveProperty('senderNickname');
+    expect(read.games[0]?.friendsGame).not.toHaveProperty('yourInvitationUntil');
+    expect(read.games[1]).not.toHaveProperty('friendsGame');
   });
 });

@@ -62,6 +62,11 @@ export interface FriendsCard {
   /** Absent: no court is free in the next 14 days — and then no overlap either. */
   readonly court?: FriendsCourt;
   readonly overlap?: Overlap;
+  /**
+   * **The club's cut-off for the court's hour** (#759) — *We hold 100 zł on your card until Fri
+   * 10:00*, on the send sheet. Absent with no court.
+   */
+  readonly cutOff?: string;
 }
 
 /** *Find a court* for a line-up: every court it could take, soonest first. */

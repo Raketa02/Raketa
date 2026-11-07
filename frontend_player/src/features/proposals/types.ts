@@ -115,6 +115,14 @@ export { useHomeFriendRequests } from './hooks/useHome';
 export type { HomeFriendRequest } from './domain/home';
 
 /**
+ * **FRIENDS GAME · n** (#759; friends 12) — Home's row of friends game invitations, at the very top:
+ * the shell composes it, handing in the bell's re-read, since answering takes the invitation's row
+ * off the bell. The words cross for the suites that walk it.
+ */
+export { FriendsGamesRow, type FriendsGamesRowProps } from './components/FriendsGamesRow';
+export { FRIENDS_GAME_COPY } from './components/friendsGameCopy';
+
+/**
  * **The friends card and *Find a court*** (#757; the friends screens §7.2–§7.3) — the card a
  * group's Friends tab draws under its court once every seat is filled, over #750's two reads. The
  * group page composes it: it holds the line-up (`FriendsCardAsk`, structurally its own), hands in

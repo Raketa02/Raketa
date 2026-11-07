@@ -1,7 +1,7 @@
 /**
  * **A game with friends, built on a group's Friends tab** — the picker, the court, the card and
  * *Find a court* ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends screens §4.2,
- * §7; friends 3, 6–11). Sending is #759's.
+ * §7; friends 3, 6–11), and sending it ([#759](https://github.com/Raketa02/Raketa/issues/759)).
  *
  * The real route tree, with the socket faked: the friends read answers per sport, highest Level
  * first, as `GET /friends?sport=` does; the card answers the evenest sides — *You + ewa.m* against
@@ -9,26 +9,36 @@
  * tint and a court at another club where the home club is full. **Every read happens at
  * `DECK_READ_AT`**, Wednesday 30 September 10:00 in Warsaw, so Saturday is *Saturday* and the
  * Saturday after it *Sat 10 Oct*.
+ *
+ * **Sending** (#759; the screens §8) closes the suite: the card's *Send game and pay 25 zł* opens
+ * the send sheet, and what each answer does — booked, a method to save, payments to confirm with
+ * the bank, the court gone, and each refusal's sentence.
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { StyleSheet } from 'react-native';
 
 import { FRIENDS_COPY } from '@/features/friends/types';
-import { FRIENDS_CARD_COPY } from '@/features/proposals/types';
+import { PAYMENTS_COPY } from '@/features/payments/types';
+import { FILL_COPY, FRIENDS_CARD_COPY, FRIENDS_GAME_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
 import { DECK_READ_AT, deckPath, stubGroupDeck } from '@/test-support/groupDeck';
 import {
   FRIENDS_PATH,
   GATE_USER,
   launchSignedIn,
+  resetPayments,
   stubGate,
   stubMyGroups,
+  stubPaymentMethod,
+  stubPayments,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { fakePayments } from '@/test-support/platform';
 import {
   errorResponse,
   installTransport,
@@ -248,6 +258,8 @@ beforeEach(() => {
 
 afterEach(async () => {
   transport.restore();
+  resetPayments();
+  useToastQueue.setState({ queue: [] });
   queryClient.clear();
   resetSessionStatus();
   await clearStoredTokens();
@@ -775,5 +787,241 @@ describe('Find a court', () => {
     expect(lastCardAsked().get('starts_at')).toBe(ROWS[3]!.starts_at);
     expect(lastCardAsked().get('partner_id')).toBe(EWA);
     expect(await screen.findByText('Sunday 15:00 · Ogrody 33 · Court 5 · indoor')).toBeTruthy();
+  });
+});
+
+/**
+ * **Sending** (#759; the friends screens §8; the mechanics §8; the words §29.7): *Send game and pay
+ * 25 zł* under the card opens the send sheet — *Split the cost* first and chosen, *Pay the whole
+ * court* beside it — and its order books the court at once. The card's court is Saturday 10:00 at
+ * Ogrody 33, 25 zł a seat, the club's cut-off Friday 10:00.
+ */
+describe('sending', () => {
+  const sendPath = `/api/v1/pools/${GROUP.id}/friends-games`;
+  const BOOKING = 'b0000000-0000-4000-8000-000000000759';
+  const VISA: Wire['SavedMethodSchema'] = { brand: 'visa', last_four: '4312', wallet: null };
+  const SEND = FRIENDS_GAME_COPY.send;
+  const COVER =
+    'We hold 100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł for any seat still empty then.';
+
+  const booked = (): Wire['FriendsGameSentResponse'] => ({
+    booking_id: BOOKING,
+    booked: { booking_id: BOOKING, game_id: 'g0000000-0000-4000-8000-000000000759' },
+    your_payments: [],
+  });
+  const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
+  const sends = () => transport.requestsTo('POST', sendPath).map((one) => one.body);
+
+  beforeEach(() => {
+    stubPaymentMethod(transport, VISA);
+  });
+
+  /** The card for magda.p, ewa.m and ania.k, and its send sheet open. */
+  async function openTheSheet() {
+    await openFriendsTab();
+    await seat(MAGDA, EWA, ANIA);
+    const card = await screen.findByTestId('friends-card');
+    fireEvent.press(within(card).getByRole('button', { name: 'Send game and pay 25 zł' }));
+    return screen.findByTestId('send-sheet');
+  }
+
+  const order = (label: string) =>
+    fireEvent.press(within(screen.getByTestId('send-sheet')).getByRole('button', { name: label }));
+
+  it('opens the sheet with Split first and chosen, its maximum right above the order', async () => {
+    const sheet = await openTheSheet();
+
+    expect(screen.getByText(SEND.title)).toBeTruthy();
+    expect(
+      within(sheet)
+        .getAllByRole('button', { name: /^(Split the cost|Pay the whole court),/ })
+        .map((one) => [one.props.accessibilityLabel, one.props.accessibilityState?.selected]),
+    ).toEqual([
+      ['Split the cost, 25 zł', true],
+      ['Pay the whole court, 100 zł', false],
+    ]);
+    expect(within(sheet).getByText(COVER)).toBeTruthy();
+    expect(within(sheet).getByRole('button', { name: 'Send game and pay 25 zł' })).toBeTruthy();
+  });
+
+  it('turns the order to the whole court, with no cover line, once Whole court is chosen', async () => {
+    const sheet = await openTheSheet();
+
+    fireEvent.press(within(sheet).getByRole('button', { name: 'Pay the whole court, 100 zł' }));
+
+    expect(
+      within(sheet).getByRole('button', { name: 'Pay the whole court, 100 zł', selected: true }),
+    ).toBeTruthy();
+    expect(within(sheet).queryByText(COVER)).toBeNull();
+    expect(within(sheet).getByRole('button', { name: 'Send game and pay 100 zł' })).toBeTruthy();
+  });
+
+  it('sends the card as it was read with Split, then empties the court and says where the game is', async () => {
+    transport.on('POST', sendPath, () => json(booked()));
+    await openTheSheet();
+
+    order('Send game and pay 25 zł');
+
+    expect(await screen.findByText('Seat 3 more friends')).toBeTruthy();
+    expect(screen.queryByTestId('friends-card')).toBeNull();
+    expect(screen.queryByTestId('send-sheet')).toBeNull();
+    expect(sends()).toEqual([
+      {
+        sport: 'PADEL',
+        kind: 'COMPETITIVE',
+        friend_ids: [MAGDA, EWA, ANIA],
+        partner_id: null,
+        court_id: PROPOSED.court_id,
+        starts_at: PROPOSED.starts_at,
+        pay_mode: 'SPLIT_THE_COST',
+        booking_id: null,
+      },
+    ]);
+    expect(toasts()).toEqual([[SEND.sent, 'ok']]);
+  });
+
+  it('sends Whole court as the sheet chose it', async () => {
+    transport.on('POST', sendPath, () => json(booked()));
+    const sheet = await openTheSheet();
+
+    fireEvent.press(within(sheet).getByRole('button', { name: 'Pay the whole court, 100 zł' }));
+    order('Send game and pay 100 zł');
+
+    await screen.findByText('Seat 3 more friends');
+    expect(sends()).toEqual([expect.objectContaining({ pay_mode: 'WHOLE_COURT' })]);
+  });
+
+  it('opens the payment setup first with nothing saved, and sends nothing until a method is', async () => {
+    stubPaymentMethod(transport, null);
+    await openTheSheet();
+
+    order('Send game and pay 25 zł');
+
+    expect(await screen.findByText(PAYMENTS_COPY.setupSheet.title)).toBeTruthy();
+    expect(sends()).toEqual([]);
+  });
+
+  it('opens the setup when the server says a method is needed', async () => {
+    transport.on('POST', sendPath, () => errorResponse(409, 'payment_method_required'));
+    await openTheSheet();
+
+    order('Send game and pay 25 zł');
+
+    expect(await screen.findByText(PAYMENTS_COPY.setupSheet.title)).toBeTruthy();
+    expect(screen.queryByTestId('send-sheet')).toBeNull();
+  });
+
+  it('confirms each payment the bank wants confirmed in the app, then sends again under the same booking', async () => {
+    const payments = fakePayments();
+    stubPayments(payments);
+    const charges = ['sc-share', 'sc-cover'];
+    for (const id of charges) {
+      transport.on('GET', `/api/v1/seat-charges/${id}`, () =>
+        json<Wire['SeatChargeResponse']>({
+          seat_charge_id: id,
+          proposal_id: BOOKING,
+          status: 'FAILED',
+          refusal: 'AUTHENTICATION_REQUIRED',
+          amount_grosze: 2500,
+          sport: 'PADEL',
+          starts_at: PROPOSED.starts_at,
+          club: HOME,
+          to_confirm: {
+            client_secret: `${id}_secret`,
+            connected_account_id: 'acct_ogrody',
+            publishable_key: 'pk_test_raketa',
+          },
+        }),
+      );
+      transport.on('POST', `/api/v1/seat-charges/${id}/confirmation`, () =>
+        json<Wire['YesAnswerResponse']>({
+          proposal_id: BOOKING,
+          open_seats: 0,
+          booked: null,
+          your_payment: null,
+        }),
+      );
+    }
+    let sent = 0;
+    transport.on('POST', sendPath, () => {
+      sent += 1;
+      if (sent > 1) return json(booked());
+      return json<Wire['FriendsGameSentResponse']>({
+        booking_id: BOOKING,
+        booked: null,
+        your_payments: charges.map((id) => ({
+          seat_charge_id: id,
+          refusal: 'AUTHENTICATION_REQUIRED',
+          confirm_by: null,
+          time_to: null,
+        })),
+      });
+    });
+    await openTheSheet();
+
+    order('Send game and pay 25 zł');
+    fireEvent.press(await screen.findByRole('button', { name: FILL_COPY.confirm.check }));
+    await waitFor(() =>
+      expect(
+        transport.requestsTo('POST', '/api/v1/seat-charges/sc-share/confirmation'),
+      ).toHaveLength(1),
+    );
+    fireEvent.press(await screen.findByRole('button', { name: FILL_COPY.confirm.check }));
+
+    expect(await screen.findByText('Seat 3 more friends')).toBeTruthy();
+    expect(transport.requestsTo('POST', '/api/v1/seat-charges/sc-cover/confirmation')).toHaveLength(
+      1,
+    );
+    expect(payments.payments.map((one) => one.clientSecret)).toEqual([
+      'sc-share_secret',
+      'sc-cover_secret',
+    ]);
+    expect(sends().map((one) => (one as { booking_id: string | null }).booking_id)).toEqual([
+      null,
+      BOOKING,
+    ]);
+    expect(toasts()).toEqual([[SEND.sent, 'ok']]);
+  });
+
+  it('reads the card again with the court’s sentence when another game took it first', async () => {
+    transport.on('POST', sendPath, () => errorResponse(409, 'court_just_taken'));
+    await openTheSheet();
+    const asked = cardRequests().length;
+
+    order('Send game and pay 25 zł');
+
+    expect(
+      await screen.findByText(
+        'That court was just booked by another game. Nothing was charged — try again.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('send-sheet')).toBeNull();
+    await waitFor(() => expect(cardRequests().length).toBeGreaterThan(asked));
+    expect(await screen.findByTestId('friends-card')).toBeTruthy();
+  });
+
+  it.each([
+    [
+      'friends_games_waiting',
+      { cap: 2 },
+      'You have 2 friends games waiting for answers. Send this one once one of them is settled.',
+    ],
+    ['you_play_then', {}, 'You already have a game at 10:00.'],
+    [
+      'games_per_week_booked',
+      { games_per_week: 3, week: '2026-09-28' },
+      'Your week is full: 3 games, the most you set in Games & money.',
+    ],
+  ])('says %s in the sheet, the order still there', async (code, details, sentence) => {
+    transport.on('POST', sendPath, () =>
+      json<Wire['ErrorResponse']>({ code, message: 'refused', trace_id: 't', details }, 409),
+    );
+    const sheet = await openTheSheet();
+
+    order('Send game and pay 25 zł');
+
+    expect(await within(sheet).findByText(sentence)).toBeTruthy();
+    expect(within(sheet).getByRole('button', { name: 'Send game and pay 25 zł' })).toBeTruthy();
+    expect(screen.getByTestId('friends-card')).toBeTruthy();
   });
 });

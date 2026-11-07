@@ -47,6 +47,7 @@ export function toFriendsCard(wire: Schemas['FriendsCardResponse']): FriendsCard
     ...toForecast(wire.forecast),
     ...(wire.court === null ? {} : { court: toFriendsCourt(wire.court) }),
     ...(overlap === undefined ? {} : { overlap }),
+    ...(wire.cut_off === null ? {} : { cutOff: wire.cut_off }),
   };
 }
 
