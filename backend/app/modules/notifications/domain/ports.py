@@ -490,21 +490,39 @@ class WaitingRequest:
     asked_at: Instant
 
 
+@dataclass(frozen=True, slots=True)
+class WaitingLevelAsk:
+    """An ask for a level whose card is on its reader's Home (#764): who asked,
+    and in which sport — which is unique, since an ask is once per friend per
+    sport, ever, so a *level asked* notice is matched to its card on it."""
+
+    asker_id: UUID
+    sport: Sport
+
+
 @runtime_checkable
 class Friendships(Protocol):
     """What Notifications reads of Friends (#745), in its own words — a request
-    is told, and listed, **only while its card is on the reader's Home**; *friends
-    made* only while they still are."""
+    is told, and listed, **only while its card is on the reader's Home**; a
+    *level asked* listed only while its card is (#764); *friends made* only
+    while they still are."""
 
     async def waiting_on(self, reader: UUID) -> frozenset[WaitingRequest]:
         """The requests on the reader's Home now: open, not set aside, and not
         from somebody the reader blocked."""
         ...
 
+    async def level_asks_on(self, reader: UUID) -> frozenset[WaitingLevelAsk]:
+        """The asks for a level on the reader's Home now: not answered, not set
+        aside, from a friend the reader has not blocked, in a sport the reader
+        holds no level in."""
+        ...
+
     async def are_friends(self, one: UUID, other: UUID) -> bool: ...
 
 
 __all__ = [
+    "WaitingLevelAsk",
     "WaitingRequest",
     "BellRepository",
     "CourtBrief",

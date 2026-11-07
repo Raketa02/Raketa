@@ -494,6 +494,41 @@ class FriendRequestsOnHome(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class HomeLevelAsker:
+    """One friend on a *ASKED FOR A LEVEL* card: their face, which opens their
+    record."""
+
+    player_id: UUID
+    nickname: str
+    photo_id: UUID | None
+    photo_url: str | None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class HomeLevelAsk:
+    """One card in Home's *ASKED FOR A LEVEL* (#764; ``docs/adr/0202`` §4's
+    2026-11-07 amendment): a sport the reader holds no level in, and every
+    friend whose ask in it waits on them — *kuba.w and tomek.k want to play
+    padel with you*. It names no group."""
+
+    sport: Sport
+    #: Newest ask first.
+    askers: tuple[HomeLevelAsker, ...]
+
+
+@runtime_checkable
+class LevelAsksOnHome(Protocol):
+    async def of(self, reader: UUID) -> tuple[HomeLevelAsk, ...]:
+        """The asks for a level waiting on the reader, **one card per sport,
+        the sport with the newest ask first**: not answered, not set aside, from
+        a friend now whom the reader has not blocked, in a sport the reader
+        holds no level in now — each read live."""
+        ...
+
+
 @runtime_checkable
 class DeckPeople(Protocol):
     async def people(

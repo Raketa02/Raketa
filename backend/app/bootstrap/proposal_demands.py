@@ -2,7 +2,7 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Seventeen rows,
+consumer gets a new register, not a row in somebody else's. **Twenty-three rows,
 and the tuple is what is asserted over**: a player's booked games (``bookings``),
 where each booked game's result stands (``games``), how far a club is from a
 player (the Player profile and ``clubs``), what each player is called on a
@@ -21,7 +21,10 @@ free courts named in the club's order (``clubs``, ``CourtHours`` — the first o
 the proposer's ports to get its row) — and, for a friends game (#751), the game
 booked at send, its invited seats answered and called off by its sender
 (``bookings``, ``FriendsGameBookings``) and each cover taken or let go at the
-cut-off (``payments``, ``CoversAtTheCutOff``) — each a fact another context
+cut-off (``payments``, ``CoversAtTheCutOff``) — and, for the friends on every
+face and on Home (#745, #764), the reader's relations, the friend requests and
+the asks for a level waiting on the reader (``friends``, ``ReaderRelations``,
+``FriendRequestsOnHome``, ``LevelAsksOnHome``) — each a fact another context
 owns, read through a port declared in this context's words. The sender's court
 held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
 with the fake.
@@ -60,6 +63,7 @@ from app.bootstrap.composition import (
     build_court_kinds,
     build_clock,
     build_friend_requests_on_home,
+    build_level_asks_on_home,
     build_reader_relations,
     build_friends_game_bookings,
     build_covers_at_the_cut_off,
@@ -89,6 +93,7 @@ from app.modules.proposals.domain.ports import (
     SeatRefunds,
     ReaderRelations,
     FriendRequestsOnHome,
+    LevelAsksOnHome,
 )
 
 P = TypeVar("P")
@@ -117,6 +122,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     CourtHours,
     ReaderRelations,
     FriendRequestsOnHome,
+    LevelAsksOnHome,
     FriendsGameBookings,
     CoversAtTheCutOff,
 )
@@ -239,6 +245,13 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         name="FriendsRequestsOnHome",
         build=lambda session: build_friend_requests_on_home(
             session, settings=get_settings(), clock=build_clock()
+        ),
+    ),
+    RegisteredImplementation(
+        port=LevelAsksOnHome,
+        name="FriendsLevelAsksOnHome",
+        build=lambda session: build_level_asks_on_home(
+            session, settings=get_settings()
         ),
     ),
 )

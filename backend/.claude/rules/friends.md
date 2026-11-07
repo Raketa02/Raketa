@@ -10,10 +10,10 @@ paths:
 
 # Friends
 
-Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
+Decisions that are load-bearing and not obvious from the code (#745, #748, #749, #764;
 [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
-§1–§2, §4, §8; [`docs/specs/friends/`](../../../docs/specs/friends/README.md), the mechanics §3,
-§5, §12; the words §29.1–§29.3, §29.5).
+§1–§2, §4 and its 2026-11-07 amendment, §8; [`docs/specs/friends/`](../../../docs/specs/friends/README.md),
+the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5).
 
 - **A Friendship per pair, event-sourced, and two projections beside it.** `app/modules/friends/`
   holds two aggregates — the Friendship, and the Friend link (below). The Friendship is **one
@@ -23,12 +23,12 @@ Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
   exclusive). **At most one thing stands between two players**: a friendship, or one open
   request — a second request **crosses** the first and they are friends at once — so the state
   is `are_friends` and at most one `OpenRequest` — and every ask for a level either made of the
-  other (below), which nothing ends. Nine events, all v1, the asks' two among them:
+  other (below), which nothing ends. Ten events, all v1, the asks' three among them:
   `friends.friend_requested`, `…friend_request_set_aside`, `…friend_request_cancelled`,
   `…friend_request_crossed` (followed in the same act by `…friends_made`), `…friends_made`
   (`how` `ACCEPTED` or `CROSSED`; `requester_id` asked first), `…friendship_ended` (`how`
   `REMOVED` or `BLOCKED`, `ended_by`), the link's `…friend_request_brought_back` (below), and
-  `…level_asked` and `…level_got` (*Ask for a level*, below).
+  `…level_asked`, `…level_got` and `…level_ask_set_aside` (*Ask for a level*, below).
   **Every rule is the aggregate's**: no self-request (`cannot_befriend_yourself`), none to a
   friend (`already_friends`), none while your own is open, set aside or not
   (`friend_request_already_sent`); only the person asked accepts or sets
@@ -93,6 +93,8 @@ Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
     the group it was asked from **while both are in it now** (read live, so a leaver's card
     names none), the sport, their Level in it and their reliability — open, not set aside, not
     hidden. Not counted in `needing_you`;
+  - **Home's asks for a level** — `LevelAsksOnHome` (`ReadLevelAsksOnHome`, #764, below):
+    `GET /home`'s `level_asks`, one card per sport;
   - **the bell** — Notifications' `Friendships` (`FriendsOfTheReader`, below).
 - **Where a request was made** is the request's: `RequestOrigin` `MEMBERS · RECORD · RESULT ·
   LINK`, and the screen's `group_id` and `sport` when it showed them (`Where`; a link's names
@@ -109,7 +111,9 @@ Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
   11), `GET /friends/requests?direction=ASKED_YOU|YOU_ASKED` (newest first; `set_aside` on
   *Asked you* only — whether yours was set aside is never said), `GET /friends/groups` (each of
   the reader's groups with `member_count` and `to_add`: not the reader, no friend, no open
-  request either way, nobody the reader blocked).
+  request either way, nobody the reader blocked), and since #764
+  `POST /friends/level-asks/{sport}/set-aside` (*Not now* on an ask's Home card, `204` always,
+  below).
 - **Two notices about a friendship, both always on, pushed and in the bell**
   (`notifications.md`; the asks for a level have two more, below):
   `FRIEND_REQUEST` — *{nickname} wants to be your friend* / *With you in {group} · {Sport}*
@@ -135,14 +139,18 @@ Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
   block case off her screens — the `blank-week-player` and `rated-in-every-sport`, friends in
   *Błonia po pracy* until the first blocked the second; the layer drains the outbox
   (`deliver_everything_told`) so the block ends the friendship before the request made since,
-  which reads `SENT` and is hidden from the blocker. Each pair is read first, so a second run
-  asks nobody twice; `_refuse_a_seed_that_lies` fails the run by name.
+  which reads `SENT` and is hidden from the blocker. **And her Home's ASKED FOR A LEVEL** (#764):
+  `rating-well-established` asks her for a **squash** level — she is rated in padel and tennis
+  — from *Czwartkowy padel*, through `AskForALevel`, read back off `ReadLevelAsksOnHome`. Each
+  pair is read first (an ask through `LevelsAskedByTheReader`), so a second run asks nobody
+  twice; `_refuse_a_seed_that_lies` fails the run by name.
 - **Tested** over HTTP in `tests/api/test_friends.py` (every scene, the notices, the bell),
   `tests/api/test_friend_link.py` (the code, New link, every opening case, the public read),
   `tests/api/test_friends_on_every_face.py` (each surface's tag, *PLAYED WITH*, Home's
-  requests), `tests/api/test_level_asks.py` (the ask, every refusal, both notices, two askers)
-  and `tests/api/test_seed_friends.py`; the aggregate's asks in `tests/unit/test_level_asks.py`
-  and the answerer's two paths in `tests/unit/test_answer_the_asks_for_a_level.py`; the four
+  requests), `tests/api/test_level_asks.py` (the ask, every refusal, both notices, two askers),
+  `tests/api/test_level_asks_on_home.py` (the card, Not now, the bell, every way it ends) and
+  `tests/api/test_seed_friends.py`; the aggregate's asks in `tests/unit/test_level_asks.py`
+  and the answerer's two paths in `tests/unit/test_answer_the_asks_for_a_level.py`; the five
   lent ports in the record's,
   proposals' and notifications' demand registers (`tests/demands/friends_world.py` arranges
   them through the aggregates).
@@ -239,8 +247,38 @@ Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
   client sends its picker's group and sport together); and an ask told nobody — the two no
   longer friends at its delivery — still uses up the one ask, ever. **The friends read**
   carries `level_asked_in` per friend: the sports **the reader** asked them for, in the
-  registry's order, or with `sport` that one or nothing. Notices: `LEVEL_ASKED` / `LEVEL_GOT`
-  (`notifications.md`).
+  registry's order, or with `sport` that one or nothing — **a set-aside ask included**: the
+  asker never learns it, so *Asked* cannot tell it from one unseen. Notices: `LEVEL_ASKED` /
+  `LEVEL_GOT` (`notifications.md`).
+- **An ask waits on the friend's Home until they have the level or say Not now** (#764;
+  ADR-0202 §4's 2026-11-07 amendment, Q129; the mechanics §5.1). **The read is
+  `ReadLevelAsksWaiting`** (`application/reads.py`), over a third port onto the asks'
+  projection, `LevelAsksOfTheReader.asks_of(reader)` — the asks made **of** the reader, not
+  answered and not set aside, from the reader's side (who asked them) — and lists an ask while,
+  **each read live and recorded nowhere**, its asker is **the reader's friend now**
+  (`FriendshipDirectory`), **not blocked by the reader** (`ReadersBlocks`, so the reader's own
+  block takes them off before its delivery ends the friendship; an asker's block of the reader
+  once its delivery has), and the reader holds **no level in the sport** (`FriendLevels`, so a
+  level got by any route takes the card off before *level got* is delivered). Newest first, a
+  tie by asker id, then sport. `ReadLevelAsksOnHome` groups it **one card per sport, the sport with the
+  newest ask first**, its askers newest first with their faces (a nameless one left off, as a
+  request's is) — `GET /home`'s `level_asks` through Proposals' `LevelAsksOnHome`, signed in
+  `proposals/infrastructure/friends.py` (`FriendsLevelAsksOnHome`). Not in `needing_you`; no
+  group is named. **Not now** is `POST /friends/level-asks/{sport}/set-aside`
+  (`SetAsideTheAsksForALevel`, `level_asks.py`): it sets aside **every ask in the sport that
+  `ReadLevelAsksWaiting` lists at that instant** — `Friendship.set_aside_the_ask(by=, sport=)`,
+  `friends.level_ask_set_aside` v1 (`asker_id`, `friend_id`, `sport`), one per pair, one
+  transaction — and `204` with nothing listed. **Only the friend asked**: the press addresses the
+  ask made *of* `by`, so an asker's own press touches nothing of theirs; an answered or
+  set-aside ask is a no-op. A set-aside ask **is still waiting**: `got_at` and the answerer
+  ignore it, so the first level answers it and every asker is told *level got*. **Nobody is
+  told** — the event is heard by the audit line alone. Projected as
+  `friend_level_asks.set_aside_at` (migration 0067), written by the repository's `save` with the
+  ask's other columns. **Calls this ticket kept**: a friend removed and made again whose ask
+  was never set aside is back on the card (the friendship is read live) and one set aside stays
+  aside; and *Not now* while an asker is no friend (or blocked) sets aside nothing of theirs,
+  since Home did not list it — so their ask is back with them. The bell's half is
+  `notifications.md`'s.
 - **The friends card is Proposals'** (#750; `proposals.md`): it asks this context only
   `ReaderRelations.friends_among` — the reader's friends now, `not_a_friend` otherwise.
 - **Not built here**: the friends game (#751–#752).

@@ -20,7 +20,9 @@ them:
 - a block ends whatever stands, and is a no-op when nothing does;
 - **only a friend is asked for a level, once per sport, ever** (#749) — the
   asks outlive the friendship, so one removed and made again asks nobody
-  twice — and the friend's first level in that sport answers the ask once.
+  twice — and the friend's first level in that sport answers the ask once;
+- **only the friend asked sets an ask aside**, once, and it stays waiting for
+  the level (#764).
 
 **A request the addressee never sees** — asked while they had blocked the
 requester, which the use case reads — is recorded ``unseen``: the requester
@@ -53,6 +55,7 @@ from app.modules.friends.domain.events import (
     FriendshipEnded,
     FriendsMade,
     LevelAsked,
+    LevelAskSetAside,
     LevelGot,
 )
 from app.modules.friends.domain.ids import friendship_id, ordered_pair
@@ -105,14 +108,16 @@ class OpenRequest:
 @dataclass(frozen=True, slots=True)
 class LevelAsk:
     """One **Ask for a level** (#749): ``asker_id`` asked the other side of the
-    pair to get a level in ``sport``, from ``group_id``'s picker — and when the
-    other's first level in it answered the ask."""
+    pair to get a level in ``sport``, from ``group_id``'s picker — when the
+    other set it aside (*Not now*, #764), and when the other's first level in
+    it answered the ask, set aside or not."""
 
     asker_id: UUID
     sport: Sport
     group_id: UUID
     asked_at: Instant
     got_at: Instant | None = None
+    set_aside_at: Instant | None = None
 
 
 @dataclass
@@ -365,6 +370,25 @@ class Friendship:
             )
         )
 
+    def set_aside_the_ask(self, *, by: UUID, sport: Sport, at: Instant) -> None:
+        """**Not now** (#764): ``by`` sets aside the other's ask of them in
+        ``sport`` — off their Home, and still waiting for the level, which
+        answers it as it answers any ask. **Only the friend asked**: the press
+        is about an ask made *of* ``by``, so the asker's own is never touched.
+        **A no-op** with nothing asked of them in the sport, the ask answered,
+        or set aside already — so a press on a card just gone records
+        nothing."""
+
+        asker = self._other_than(by)
+        ask = self._level_asks.get((asker, sport))
+        if ask is None or ask.got_at is not None or ask.set_aside_at is not None:
+            return
+        self._record_that(
+            LevelAskSetAside(
+                asker_id=asker, friend_id=by, sport=sport.value, occurred_at=at
+            )
+        )
+
     # -- folding ----------------------------------------------------------
 
     def _asked_of(self, reader: UUID) -> OpenRequest:
@@ -430,6 +454,12 @@ class Friendship:
             key = (event.asker_id, Sport(event.sport))
             ask = invariant(self._level_asks.get(key), "a level got, nothing asked")
             self._level_asks[key] = replace(ask, got_at=instant(event.occurred_at))
+        elif isinstance(event, LevelAskSetAside):
+            key = (event.asker_id, Sport(event.sport))
+            ask = invariant(self._level_asks.get(key), "set aside, nothing asked")
+            self._level_asks[key] = replace(
+                ask, set_aside_at=instant(event.occurred_at)
+            )
         else:
             raise TypeError(f"Unsupported friendship event {event!r}")
         self.version += 1

@@ -1,6 +1,8 @@
 """**Ask for a level**, at the Friendship's own seam (``docs/adr/0202`` §4; the
 mechanics §5; #749): only a friend is asked, once per sport, ever — and the
-friend's first level in that sport answers it, once.
+friend's first level in that sport answers it, once. **Not now** sets it aside
+(#764; the mechanics §5.1): only the friend asked, once, and it still waits for
+the level.
 
 Tomek asks Zofia, his friend, to get a padel level from Ogrody's picker.
 """
@@ -13,7 +15,7 @@ import pytest
 
 from app.kernel import Sport, instant
 from app.modules.friends.domain.errors import FriendNotFound, LevelAlreadyAsked
-from app.modules.friends.domain.events import LevelAsked, LevelGot
+from app.modules.friends.domain.events import LevelAsked, LevelAskSetAside, LevelGot
 from app.modules.friends.domain.friendship import Friendship, LevelAsk, Where
 from app.modules.friends.domain.relation import RequestOrigin
 from app.shared.domain import DomainEvent
@@ -163,5 +165,80 @@ def test_an_answered_ask_replays_answered():
 
     [ask] = again.level_asks
     assert ask.got_at == LATER
+    with pytest.raises(LevelAlreadyAsked):
+        again.ask_for_a_level(asker=TOMEK, sport=Sport.PADEL, group_id=OGRODY, at=LATER)
+
+
+# --------------------------------------------------------------------------- #
+# Not now (#764)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_friend_asked_sets_the_ask_aside():
+    friendship = asked()
+    friendship.pull_events()
+
+    friendship.set_aside_the_ask(by=ZOFIA, sport=Sport.PADEL, at=LATER)
+
+    assert friendship.pull_events() == [
+        LevelAskSetAside(
+            asker_id=TOMEK, friend_id=ZOFIA, sport="PADEL", occurred_at=LATER
+        )
+    ]
+    [ask] = friendship.level_asks
+    assert (ask.set_aside_at, ask.got_at) == (LATER, None)
+
+
+def test_only_the_friend_asked_sets_an_ask_aside():
+    friendship = asked()
+    friendship.pull_events()
+
+    # Tomek's press is about an ask of him, and Zofia made none; nor did
+    # anybody ask Zofia for tennis.
+    friendship.set_aside_the_ask(by=TOMEK, sport=Sport.PADEL, at=LATER)
+    friendship.set_aside_the_ask(by=ZOFIA, sport=Sport.TENNIS, at=LATER)
+
+    assert friendship.pull_events() == []
+    [ask] = friendship.level_asks
+    assert ask.set_aside_at is None
+
+
+def test_an_ask_set_aside_or_answered_is_set_aside_no_more():
+    aside = asked()
+    aside.set_aside_the_ask(by=ZOFIA, sport=Sport.PADEL, at=AT)
+    aside.pull_events()
+    answered = asked()
+    answered.answer_the_ask(friend=ZOFIA, sport=Sport.PADEL, at=AT)
+    answered.pull_events()
+
+    for friendship in (aside, answered):
+        friendship.set_aside_the_ask(by=ZOFIA, sport=Sport.PADEL, at=LATER)
+        assert friendship.pull_events() == []
+    [ask] = aside.level_asks
+    assert ask.set_aside_at == AT
+
+
+def test_a_set_aside_ask_is_still_answered_by_the_level():
+    friendship = asked()
+    friendship.set_aside_the_ask(by=ZOFIA, sport=Sport.PADEL, at=AT)
+    friendship.pull_events()
+
+    friendship.answer_the_ask(friend=ZOFIA, sport=Sport.PADEL, at=LATER)
+
+    assert [type(event) for event in friendship.pull_events()] == [LevelGot]
+    [ask] = friendship.level_asks
+    assert (ask.set_aside_at, ask.got_at) == (AT, LATER)
+
+
+def test_a_set_aside_ask_replays_set_aside_and_still_asked():
+    friendship = asked()
+    friendship.set_aside_the_ask(by=ZOFIA, sport=Sport.PADEL, at=LATER)
+
+    again = Friendship.from_history(
+        TOMEK, ZOFIA, [*made_friends(), *friendship.pull_events()]
+    )
+
+    [ask] = again.level_asks
+    assert ask.set_aside_at == LATER
     with pytest.raises(LevelAlreadyAsked):
         again.ask_for_a_level(asker=TOMEK, sport=Sport.PADEL, group_id=OGRODY, at=LATER)

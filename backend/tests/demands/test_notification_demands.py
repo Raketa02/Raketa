@@ -39,6 +39,7 @@ from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score
 from app.modules.notifications.domain.ports import (
     Friendships,
+    WaitingLevelAsk,
     WaitingRequest,
     GameCourts,
     Decks,
@@ -903,6 +904,33 @@ async def test_a_request_from_somebody_the_reader_blocked_never_waits(
     friendships: Friendships = implementation.build(session)
 
     assert await friendships.waiting_on(OLA) == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(Friendships))
+async def test_an_ask_for_a_level_waits_while_its_card_is_on_home(
+    implementation, session
+):
+    """#764: not answered, not set aside, from a friend the reader has not
+    blocked, in a sport the reader holds no level in."""
+
+    from tests.demands.friends_world import asks_for_a_level, befriends, blocks
+
+    for friend in (KUBA, EWA, TOMEK, ZOSIA):
+        await befriends(session, friend, OLA)
+    await asks_for_a_level(session, KUBA, OLA)
+    await asks_for_a_level(session, KUBA, OLA, sport=Sport.SQUASH, set_aside=True)
+    await asks_for_a_level(session, EWA, OLA, sport=Sport.SQUASH, answered=True)
+    await asks_for_a_level(session, TOMEK, OLA, sport=Sport.TENNIS)
+    await blocks(session, OLA, TOMEK)
+    await asks_for_a_level(session, ZOSIA, OLA, sport=Sport.BADMINTON)
+    await _a_rating(session, OLA, sport=Sport.BADMINTON, mu=3.0)
+    await session.commit()
+    friendships: Friendships = implementation.build(session)
+
+    assert await friendships.level_asks_on(OLA) == frozenset(
+        {WaitingLevelAsk(asker_id=KUBA, sport=Sport.PADEL)}
+    )
+    assert await friendships.level_asks_on(KUBA) == frozenset()
 
 
 @pytest.mark.parametrize("implementation", registered(Friendships))

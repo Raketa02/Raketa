@@ -1,4 +1,4 @@
-"""The Friends context's durable events — eleven, and what each carries.
+"""The Friends context's durable events — twelve, and what each carries.
 
 Primitive fields only, so the wire format survives a refactor of the Python
 types: the two players as their uuids, the enums as their values. **Every event
@@ -8,13 +8,14 @@ question the log itself can answer, as a Block's is.
 **A Friend link's two events name its owner alone** (#748): the code it carries
 is an address posted to chats, no secret (``domain/link.py``).
 
-**An ask for a level and its answer name the two friends too** (#749): who
-asked, and the friend asked to get a level.
+**An ask for a level, its answer and its setting aside name the two friends
+too** (#749, #764): who asked, and the friend asked to get a level.
 
 **None of them is a notification by itself.** They ride the outbox because every
 event does; Notifications tells a request to the person asked, *friends made*
 to whoever asked (both, for a crossed request), an ask for a level to the friend
-asked and its answer to the asker, and nothing else here is told to anybody.
+asked and its answer to the asker, and nothing else here is told to anybody —
+an ask set aside least of all.
 """
 
 from __future__ import annotations
@@ -154,6 +155,20 @@ class LevelAsked:
     friend_id: UUID
     sport: str
     group_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class LevelAskSetAside:
+    """``friends.level_ask_set_aside`` v1 — **Not now** on the ask's Home card
+    (#764; ``docs/adr/0202`` §4's 2026-11-07 amendment): ``friend_id`` set aside
+    ``asker_id``'s ask in ``sport``. Off the friend's Home and out of their bell,
+    and **still waiting**: the friend's first level in the sport answers it as
+    it answers any ask. Nobody is told, the asker least of all."""
+
+    asker_id: UUID
+    friend_id: UUID
+    sport: str
     occurred_at: datetime
 
 

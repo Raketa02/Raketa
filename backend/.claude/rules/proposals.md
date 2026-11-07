@@ -256,8 +256,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   slot sheet (`DeckTileSchema.friend`, `BookedTileSchema.friend`, `SlotFitSchema.friend`);
   `DeckPeople` itself knows no reader, so a read that forgets to mark them sends `false`. `GET /bookings/{id}` adds `played_with`, the reader's whole
   relation to everybody else on the game — the result's *PLAYED WITH* card — and `GET /home` adds
-  `friend_requests` (`FriendRequestsOnHome`), not counted in `needing_you`. Both ports are signed
-  in `proposals/infrastructure/friends.py`, so the arrow runs `proposals → friends`.
+  `friend_requests` (`FriendRequestsOnHome`), not counted in `needing_you`. **And `level_asks`**
+  (#764; ADR-0202 §4's 2026-11-07 amendment): *ASKED FOR A LEVEL*, between the friend requests
+  and the reader's games — one card per sport, the sport with the newest ask first, each naming
+  its askers newest first (`HomeLevelAsk`, `HomeLevelAsker`: id, nickname, photo) and no group,
+  through `LevelAsksOnHome`, Friends' `ReadLevelAsksOnHome` (`friends.md`), not counted in
+  `needing_you`. The ports are signed in `proposals/infrastructure/friends.py`, so the arrow runs
+  `proposals → friends`; `LevelAsksOnHome` has its row in `proposal_demands.py`.
 - **A friends game is sent, answered and called off here** (#751; ADR-0202 §5–§6;
   `application/friends_games.py`; see `bookings.md` and `payments.md`): `POST /pools/{id}/
   friends-games` (`SendAFriendsGame`, `FriendsGameSentResponse`: booked, or `your_payments`

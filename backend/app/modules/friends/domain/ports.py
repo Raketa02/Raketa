@@ -8,12 +8,14 @@
   reader's side**: there is no method that answers about two other people,
   which is what keeps *Kuba never learns that Tomek and Magda are friends* a
   property of the port rather than of its callers.
-- ``LevelsAskedByTheReader`` and ``AsksWaitingOnALevel`` — the
-  ``friend_level_asks`` projection (#749), **two ports for two audiences**: the
-  sports the reader asked each friend for, from the reader's side; and who is
-  waiting on a friend's level in a sport, which names who asked somebody else
-  and so is handed to the one subscriber that answers the asks, never to a
-  read.
+- ``LevelsAskedByTheReader``, ``AsksWaitingOnALevel`` and
+  ``LevelAsksOfTheReader`` — the ``friend_level_asks`` projection (#749,
+  #764), **three ports for three audiences**: the sports the reader asked each
+  friend for, from the reader's side; who is waiting on a friend's level in a
+  sport, which names who asked somebody else and so is handed to the one
+  subscriber that answers the asks, never to a read; and the asks made **of**
+  the reader, from the reader's side — who asked them — for their Home, their
+  bell and their *Not now*.
 - ``ReadersBlocks`` — whom the reader blocked, **the reader's own blocks
   only**, which is what hides a blocked player's request from them
   (``docs/adr/0202`` §2).
@@ -126,6 +128,27 @@ class AsksWaitingOnALevel(Protocol):
         answered yet. **Handed only to the subscriber that answers them**
         (``handlers/level_got.py``), never to a read: it names who asked
         somebody else."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class AskOfTheReader:
+    """An ask for a level made **of the reader**, still waiting and not set
+    aside (#764): who asked, in which sport, and when."""
+
+    asker_id: UUID
+    sport: Sport
+    asked_at: Instant
+
+
+@runtime_checkable
+class LevelAsksOfTheReader(Protocol):
+    async def asks_of(self, reader: UUID) -> tuple[AskOfTheReader, ...]:
+        """Every ask made of the reader that is **not answered and not set
+        aside**, whoever made it — friend or not now, which is the read's to
+        decide. The reader's own side alone: who asked them, never whom
+        anybody else was asked by."""
         ...
 
 

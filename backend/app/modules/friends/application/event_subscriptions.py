@@ -1,7 +1,7 @@
 """The Friends context's durable event names, and who hears them.
 
 A name here is a **published contract** and outlives every Python class it maps
-to. Eleven names, all at version 1 (``domain/events.py``).
+to. Twelve names, all at version 1 (``domain/events.py``).
 
 **Four listeners**: the audit line, which needs nothing per delivery; the
 block ender (``handlers/blocking.py``) and the answerer of the asks for a level
@@ -10,7 +10,8 @@ ask, #749),
 which write and so are subscribed per delivery run over its session
 (``app/bootstrap/events.py``); and Notifications' teller, which tells a request,
 *friends made*, *level asked* and *level got* — subscribed by Notifications,
-which this context does not know.
+which this context does not know. An ask set aside (#764) is heard by the
+audit line alone: nobody is told.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from app.modules.friends.domain.events import (
     FriendshipEnded,
     FriendsMade,
     LevelAsked,
+    LevelAskSetAside,
     LevelGot,
 )
 from app.modules.rating.domain.events import RatingInitialised
@@ -49,6 +51,7 @@ _CONTRACTS = (
     (FriendLinkReplaced, "friends.friend_link_replaced", 1),
     (LevelAsked, "friends.level_asked", 1),
     (LevelGot, "friends.level_got", 1),
+    (LevelAskSetAside, "friends.level_ask_set_aside", 1),
 )
 
 

@@ -84,6 +84,7 @@ from app.modules.proposals.domain.home import (
 from app.modules.proposals.domain.ports import (
     DeckPerson,
     HomeFriendRequest,
+    HomeLevelAsk,
     PaymentRefusal,
 )
 from app.modules.proposals.domain.proposal import TimeTo
@@ -1586,9 +1587,59 @@ class HomeFriendRequestSchema(BaseModel):
         )
 
 
+class HomeLevelAskerSchema(BaseModel):
+    """One friend on an *ASKED FOR A LEVEL* card — a face that opens their
+    record."""
+
+    player_id: UUID
+    nickname: str = Field(description="Whole, never with an @ (docs/adr/0199 §1).")
+    photo_id: UUID | None
+    photo_url: str | None = Field(
+        description="A short-lived link to their first photograph; `null` with "
+        "`photo_id` draws initials."
+    )
+
+
+class HomeLevelAskSchema(BaseModel):
+    """One card in *ASKED FOR A LEVEL* — *kuba.w and tomek.k want to play padel
+    with you* / *A few questions, and they can add you to a game.*, **Get your
+    padel level** and **Not now** (#764; `docs/adr/0202` §4's 2026-11-07
+    amendment). It names no group."""
+
+    sport: Sport = Field(
+        description=(
+            "The sport they asked you to get a level in — one you hold none in. "
+            "**Get your {sport} level** starts its questionnaire; "
+            "`POST /friends/level-asks/{sport}/set-aside` is **Not now**."
+        )
+    )
+    askers: list[HomeLevelAskerSchema] = Field(
+        description=(
+            "Every friend whose ask in this sport waits on you, **newest "
+            "first** — never empty. Name two and count the rest; draw up to "
+            "three faces."
+        )
+    )
+
+    @classmethod
+    def of(cls, ask: HomeLevelAsk) -> "HomeLevelAskSchema":
+        return cls(
+            sport=ask.sport,
+            askers=[
+                HomeLevelAskerSchema(
+                    player_id=asker.player_id,
+                    nickname=asker.nickname,
+                    photo_id=asker.photo_id,
+                    photo_url=asker.photo_url,
+                )
+                for asker in ask.askers
+            ],
+        )
+
+
 class HomeResponse(BaseModel):
     """**Home**: the reader's games from the moment they fill, and the friend
-    requests waiting on them."""
+    requests, friends game invitations and asks for a level waiting on them."""
 
     read_at: datetime = Field(
         description=(
@@ -1634,6 +1685,19 @@ class HomeResponse(BaseModel):
             "counted in `needing_you`."
         )
     )
+    level_asks: list[HomeLevelAskSchema] = Field(
+        description=(
+            "*ASKED FOR A LEVEL · n*, between `friend_requests` and `games` "
+            "(#764; `docs/adr/0202` §4's 2026-11-07 amendment): **one card per "
+            "sport**, the sport with the newest ask first — every friend's ask "
+            "for a level still waiting on you. A card leaves once you hold any "
+            "level in its sport, by any route, or say **Not now**, and an asker "
+            "leaves it once no longer your friend or blocked by you; a new "
+            "friend's ask in the sport brings it back, naming only the askers "
+            "you have not set aside. It never expires. The row and its title are "
+            "gone when this is empty. Not counted in `needing_you`."
+        )
+    )
 
     @classmethod
     def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
@@ -1652,6 +1716,7 @@ class HomeResponse(BaseModel):
                 )
                 for invitation in home.friends_games
             ],
+            level_asks=[HomeLevelAskSchema.of(ask) for ask in home.level_asks],
             games=[
                 HomeGameSchema.from_card(
                     card, reader=reader, people=home.people, read_at=home.read_at

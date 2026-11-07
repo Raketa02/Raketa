@@ -7,8 +7,8 @@ the append (``docs/adr/0018``) — plus the projection, rewritten by ``save`` fr
 the aggregate **as it stands** after the append, in the caller's transaction. A
 pair's rows are few and wholly determined by its state, so they are replaced,
 not patched event by event — and so are its ``friend_level_asks`` rows, when
-an ask or its answer is among the events appended (#749): nothing else moves
-them.
+an ask, its answer or its setting aside is among the events appended (#749,
+#764): nothing else moves them.
 
 **Constructed per unit of work**: the versions it remembers belong to one.
 """
@@ -23,7 +23,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.kernel import invariant
-from app.modules.friends.domain.events import LevelAsked, LevelGot
+from app.modules.friends.domain.events import LevelAsked, LevelAskSetAside, LevelGot
 from app.modules.friends.domain.friendship import Friendship
 from app.modules.friends.domain.ids import friendship_id
 from app.modules.friends.domain.relation import FriendRelation
@@ -71,7 +71,10 @@ class EventSourcedFriendshipRepository:
         )
         await self._events.publish_many(pending)
         await self._project(friendship)
-        if any(isinstance(event, LevelAsked | LevelGot) for event in pending):
+        if any(
+            isinstance(event, LevelAsked | LevelGot | LevelAskSetAside)
+            for event in pending
+        ):
             await self._project_the_asks(friendship)
         # Deliberately no commit: the transaction boundary is the use case's.
         self._versions[friendship.id] = friendship.version
@@ -143,6 +146,7 @@ class EventSourcedFriendshipRepository:
                     group_id=ask.group_id,
                     asked_at=ask.asked_at,
                     got_at=ask.got_at,
+                    set_aside_at=ask.set_aside_at,
                 )
             )
         await self._session.flush()

@@ -21,6 +21,13 @@ friend's first level in the sport (``handlers/level_got.py``).
 answerer, which hears the ask too and reads the level again after the commit —
 so the asker is told *level got* at once. The friend is still told *level
 asked*, for a level they already have: a cost of the window, not closed.
+
+**Not now** (#764; ``docs/adr/0202`` §4's 2026-11-07 amendment; the mechanics
+§5.1) is the friend's, from the ask's card on Home: it sets aside **every ask
+in the sport that Home lists at that instant** — one event per ask, each on its
+pair's stream, in one transaction — and nothing else. An ask Home does not
+list (its asker no friend now, or blocked by the reader) is left as it is, so a
+friend made again brings back an ask never set aside. Nobody is told.
 """
 
 from __future__ import annotations
@@ -29,7 +36,11 @@ from typing import final
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, instant
-from app.modules.friends.application.commands import AskForALevelCommand
+from app.modules.friends.application.commands import (
+    AskForALevelCommand,
+    SetAsideTheAsksCommand,
+)
+from app.modules.friends.application.reads import ReadLevelAsksWaiting
 from app.modules.friends.domain.errors import (
     AlreadyHasALevel,
     FriendNotFound,
@@ -81,4 +92,38 @@ class AskForALevel:
             at=instant(self._clock.now()),
         )
         await self._friendships.save(friendship)
+        await self._uow.commit()
+
+
+@final
+class SetAsideTheAsksForALevel:
+    """**Not now** on an ask's Home card. **A no-op** with nothing listed in the
+    sport — never asked, answered, set aside already, or a card just gone — so
+    the route answers alike in every case."""
+
+    def __init__(
+        self,
+        *,
+        friendships: FriendshipRepository,
+        waiting: ReadLevelAsksWaiting,
+        uow: UnitOfWork,
+        clock: Clock,
+    ) -> None:
+        self._friendships = friendships
+        self._waiting = waiting
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: SetAsideTheAsksCommand) -> None:
+        reader, sport = command.reader_id, command.sport
+        listed = [
+            ask for ask in await self._waiting.waiting(reader) if ask.sport is sport
+        ]
+        if not listed:
+            return
+        at = instant(self._clock.now())
+        for ask in listed:
+            friendship = await self._friendships.load(reader, ask.asker_id)
+            friendship.set_aside_the_ask(by=reader, sport=sport, at=at)
+            await self._friendships.save(friendship)
         await self._uow.commit()

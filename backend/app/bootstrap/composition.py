@@ -175,6 +175,7 @@ from app.modules.proposals.domain.ports import (
     FriendsGameBookings,
     SendersCourts,
     FriendRequestsOnHome,
+    LevelAsksOnHome,
     ReaderRelations,
     BookedGameChanges,
     BookedGames,
@@ -494,6 +495,8 @@ from app.modules.friends.application.handlers import (
 )
 from app.modules.friends.application.link import ReadYourFriendLink
 from app.modules.friends.application.reads import (
+    ReadLevelAsksOnHome,
+    ReadLevelAsksWaiting,
     ReadRelations,
     ReadRequestsOnHome,
     ReadRequestsWaiting,
@@ -512,6 +515,7 @@ from app.modules.friends.domain.ports import (
     FriendshipDirectory,
     FriendshipRepository,
     AsksWaitingOnALevel,
+    LevelAsksOfTheReader,
     LevelsAskedByTheReader,
     ReadersBlocks,
     ReadersGroups,
@@ -538,6 +542,7 @@ from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
     SqlAlchemyLevelAskDirectory,
 )
 from app.modules.proposals.infrastructure.friends import (
+    FriendsLevelAsksOnHome,
     FriendsReaderRelations,
     FriendsRequestsOnHome,
 )
@@ -3183,6 +3188,9 @@ def build_read_home(
         friend_requests=build_friend_requests_on_home(
             session, settings=settings, clock=clock, runtime=runtime
         ),
+        level_asks=build_level_asks_on_home(
+            session, settings=settings, runtime=runtime
+        ),
         friends_games=build_friends_game_bookings(session, runtime=runtime),
         clock=clock,
     )
@@ -3201,6 +3209,20 @@ def build_friend_requests_on_home(
         build_read_requests_on_home(
             session, settings=settings, clock=clock, runtime=runtime
         )
+    )
+
+
+def build_level_asks_on_home(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> LevelAsksOnHome:
+    """Home's *ASKED FOR A LEVEL* — Friends' read, signed in
+    ``proposals/infrastructure/`` (``docs/adr/0202`` §4's 2026-11-07
+    amendment, #764)."""
+    return FriendsLevelAsksOnHome(
+        build_read_level_asks_on_home(session, settings=settings, runtime=runtime)
     )
 
 
@@ -3843,6 +3865,40 @@ def build_levels_asked_by_the_reader(session: AsyncSession) -> LevelsAskedByTheR
     """The sports the reader asked each friend for, ``friend_level_asks``, from
     the reader's side — the picker's *Asked* (#749)."""
     return SqlAlchemyLevelAskDirectory(session)
+
+
+def build_level_asks_of_the_reader(session: AsyncSession) -> LevelAsksOfTheReader:
+    """The asks made **of** the reader, waiting and not set aside, from the
+    reader's side — for their Home, their bell and their *Not now* (#764)."""
+    return SqlAlchemyLevelAskDirectory(session)
+
+
+def build_read_level_asks_waiting(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadLevelAsksWaiting:
+    """Whose asks for a level wait on the reader's Home, and in which sport —
+    what the bell keeps a *level asked* row by, and what *Not now* sets aside
+    (#764)."""
+    return ReadLevelAsksWaiting(
+        asks=build_level_asks_of_the_reader(session),
+        directory=build_friendship_directory(session),
+        blocks=build_readers_blocks(session, runtime=runtime),
+        levels=build_friend_levels(session, runtime=runtime),
+    )
+
+
+def build_read_level_asks_on_home(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadLevelAsksOnHome:
+    """Home's *ASKED FOR A LEVEL*, one card per sport, each asker's face
+    (#764)."""
+    return ReadLevelAsksOnHome(
+        waiting=build_read_level_asks_waiting(session, runtime=runtime),
+        faces=build_friend_faces(session, settings=settings, runtime=runtime),
+    )
 
 
 def build_asks_waiting_on_a_level(session: AsyncSession) -> AsksWaitingOnALevel:
@@ -5028,13 +5084,14 @@ def build_notice_words(session: AsyncSession) -> NoticeWords:
 def build_notice_friendships(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> Friendships:
-    """What Notifications reads of Friends: the requests on a reader's Home and
-    whether two are friends (#745)."""
+    """What Notifications reads of Friends: the requests and the asks for a
+    level on a reader's Home (#745, #764), and whether two are friends."""
     return FriendsOfTheReader(
-        waiting=ReadRequestsWaiting(
+        requests=ReadRequestsWaiting(
             directory=build_friendship_directory(session),
             blocks=build_readers_blocks(session, runtime=runtime),
         ),
+        asks=build_read_level_asks_waiting(session, runtime=runtime),
         relations=build_read_relations(session, runtime=runtime),
     )
 
@@ -5042,8 +5099,8 @@ def build_notice_friendships(
 def build_read_recent_notices(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> ReadRecentNotices:
-    """The list behind the bell — a friend request listed only while its card
-    is on Home (#745)."""
+    """The list behind the bell — a friend request and a *level asked* each
+    listed only while its card is on Home (#745, #764)."""
     return ReadRecentNotices(
         notices=build_notice_directory(session),
         words=build_notice_words(session),

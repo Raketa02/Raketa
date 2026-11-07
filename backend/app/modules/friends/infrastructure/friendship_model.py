@@ -15,9 +15,11 @@ projection is kept rather than folding streams per read, as Blocks does.
 
 **``friend_level_asks``** holds every **Ask for a level** ever made, one row per
 asker, friend and sport — kept after the friendship ends, as the stream keeps
-it — and when the friend's first level in it answered it. Read from the asker's
-side by the picker (*Asked*), and by friend and sport by the one subscriber that
-answers the asks when that level arrives (``FriendLevelAskORM``).
+it — when the friend set it aside (*Not now*, #764), and when the friend's
+first level in it answered it. Read from the asker's side by the picker
+(*Asked*), by friend and sport by the one subscriber that answers the asks when
+that level arrives, and by friend by the friend's own Home and bell — the asks
+made of them (``FriendLevelAskORM``).
 """
 
 from __future__ import annotations
@@ -58,11 +60,13 @@ class FriendRelationORM(Base):
 class FriendLevelAskORM(Base):
     """One **Ask for a level** (#749): the asker, the friend asked, the sport —
     the primary key, since each is asked once, ever — the group whose picker it
-    was asked from, and when the friend's first level in the sport answered it.
+    was asked from, when the friend set it aside (#764), and when the friend's
+    first level in the sport answered it.
 
     **Keyed on the asker first**, so the picker's *Asked* is one question on the
     primary key's prefix; ``(friend_id, sport)`` is what the answer is looked
-    up by when the rating records a first level."""
+    up by when the rating records a first level, and its prefix what the
+    friend's Home reads."""
 
     __tablename__ = "friend_level_asks"
     __table_args__ = (
@@ -76,5 +80,10 @@ class FriendLevelAskORM(Base):
     asked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     #: When the friend's first level in the sport answered it; ``None`` until.
     got_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: When the friend said **Not now** to it (#764); ``None`` while it is on
+    #: their Home. Still waiting for the level all the same.
+    set_aside_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

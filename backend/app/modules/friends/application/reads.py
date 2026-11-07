@@ -18,6 +18,9 @@ unblocking shows a request made since as it stands.
   add.
 - ``ReadRequestsOnHome`` — the friend requests on the reader's Home, and
   ``ReadRequestsWaiting`` — only whose and when, for the bell.
+- ``ReadLevelAsksOnHome`` — the asks for a level waiting on the reader's Home,
+  one card per sport (#764), and ``ReadLevelAsksWaiting`` — only whose, in
+  which sport and when, for the bell and for *Not now*.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ from uuid import UUID
 from app.kernel import Clock, Instant, Sport, instant, invariant
 from app.modules.friends.domain.friendship import Where
 from app.modules.friends.domain.ports import (
+    AskOfTheReader,
     FriendFace,
     FriendFaces,
     FriendLevel,
@@ -38,6 +42,7 @@ from app.modules.friends.domain.ports import (
     FriendReliabilities,
     FriendReliability,
     FriendshipDirectory,
+    LevelAsksOfTheReader,
     LevelsAskedByTheReader,
     ReadersBlocks,
     ReadersGroups,
@@ -464,6 +469,136 @@ async def _rows_on_home(
         for row in await _seen_rows(directory, blocks, reader)
         if row.relation is FriendRelation.ASKED_YOU and not row.set_aside
     )
+
+
+# --------------------------------------------------------------------------- #
+# Home's asks for a level (#764)
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LevelAsker:
+    """One friend on an ask's card: a face that opens their record."""
+
+    player_id: UUID
+    nickname: str
+    photo_id: UUID | None
+    photo_url: str | None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LevelAskOnHome:
+    """One card in *ASKED FOR A LEVEL*: a sport, and every friend whose ask in
+    it waits on the reader, **newest first**. It names no group."""
+
+    sport: Sport
+    askers: tuple[LevelAsker, ...]
+
+
+@final
+class ReadLevelAsksWaiting:
+    """The asks for a level on the reader's Home, **only whose, in which sport
+    and when, newest first** — what the bell asks to keep a *level asked* row
+    while its card stands, what *Not now* sets aside, and what Home's cards are
+    drawn from (``docs/adr/0202`` §4's 2026-11-07 amendment; the mechanics
+    §5.1). An ask is waiting on the reader's Home while it is:
+
+    - **not answered** and **not set aside**;
+    - from somebody **who is the reader's friend now** — a removal or a block's
+      delivery takes them off, and a friend made again whose ask was never set
+      aside is back (a call #763 recorded);
+    - **not hidden by the reader's own block**, read live as Home's friend
+      requests are, so it goes before the block's delivery ends the friendship;
+    - in a sport **the reader holds no level in now**, read live off the
+      rating's published one, so a level got by any route takes the card off
+      before *level got* is delivered.
+
+    Nothing is recorded, and no face is read: every one of these is read at
+    every read."""
+
+    def __init__(
+        self,
+        *,
+        asks: LevelAsksOfTheReader,
+        directory: FriendshipDirectory,
+        blocks: ReadersBlocks,
+        levels: FriendLevels,
+    ) -> None:
+        self._asks = asks
+        self._directory = directory
+        self._blocks = blocks
+        self._levels = levels
+
+    async def waiting(self, reader: UUID) -> tuple[AskOfTheReader, ...]:
+        asks = await self._asks.asks_of(reader)
+        if not asks:
+            return ()
+        friends = {
+            row.other_id
+            for row in await self._directory.rows_of(
+                reader, among={ask.asker_id for ask in asks}
+            )
+            if row.relation is FriendRelation.FRIEND
+        }
+        if friends:
+            friends -= await self._blocks.blocked_by(reader)
+        rated_in = {
+            sport
+            for sport in {ask.sport for ask in asks if ask.asker_id in friends}
+            if reader in await self._levels.levels_in([reader], sport=sport)
+        }
+        return tuple(
+            sorted(
+                (
+                    ask
+                    for ask in asks
+                    if ask.asker_id in friends and ask.sport not in rated_in
+                ),
+                key=lambda ask: (
+                    -ask.asked_at.timestamp(),
+                    str(ask.asker_id),
+                    list(Sport).index(ask.sport),
+                ),
+            )
+        )
+
+
+@final
+class ReadLevelAsksOnHome:
+    """Home's *ASKED FOR A LEVEL* — **one card per sport, the sport with the
+    newest ask first**, its askers newest first, each with the face that opens
+    their record. The asks are ``ReadLevelAsksWaiting``'s; an asker nobody can
+    name is left off, as Home's friend requests leave one off."""
+
+    def __init__(self, *, waiting: ReadLevelAsksWaiting, faces: FriendFaces) -> None:
+        self._waiting = waiting
+        self._faces = faces
+
+    async def execute(self, reader: UUID) -> tuple[LevelAskOnHome, ...]:
+        waiting = await self._waiting.waiting(reader)
+        if not waiting:
+            return ()
+        faces = await self._faces.faces_of({ask.asker_id for ask in waiting})
+        # Newest first already, so each sport is met first at its newest ask.
+        by_sport: dict[Sport, list[LevelAsker]] = {}
+        for ask in waiting:
+            face = faces.get(ask.asker_id)
+            if face is None or face.nickname is None:
+                continue
+            by_sport.setdefault(ask.sport, []).append(
+                LevelAsker(
+                    player_id=ask.asker_id,
+                    nickname=face.nickname,
+                    photo_id=face.photo_id,
+                    photo_url=face.photo_url,
+                )
+            )
+        return tuple(
+            LevelAskOnHome(sport=sport, askers=tuple(askers))
+            for sport, askers in by_sport.items()
+        )
 
 
 def _newest_first(rows: Iterable[RelationRow]) -> list[RelationRow]:

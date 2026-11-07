@@ -355,7 +355,15 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   each told off their own pair's `level_got`. **A notice about no game hands its push the
   group and the sport it names** (`pool_id`, `sport`, beside `player_id`), so a tap can open
   the questionnaire or the picker — a friend request's push carries them too, unused. No
-  migration: `kind` and `opens` are strings wide enough.
+  migration: `kind` and `opens` are strings wide enough. **A `LEVEL_ASKED` row is listed only
+  while its card is on the reader's Home** (#764; ADR-0202 §4's 2026-11-07 amendment, the friends
+  mechanics §5.1, §12) — the level got by any route, *Not now*, the asker no longer a friend or
+  blocked by the reader — and leaves the list and the bell's number in the one reading, as a
+  `FRIEND_REQUEST` row does: `ReadRecentNotices` asks `NoticeDirectory.of_kind` for the reader's
+  `LEVEL_ASKED` rows and `Friendships.level_asks_on` (`WaitingLevelAsk`, over Friends'
+  `ReadLevelAsksWaiting`) for the asks on Home, and leaves out every row whose `(people[0],
+  sport)` is not an ask there — unique, since an ask is once per friend per sport, ever. **The
+  push, its words, `LEVEL_GOT` and who is told are untouched**, and *Not now* tells nobody.
 - **Five notices are a friends game's** (#751; the words §29.8–§29.10) — always on, never
   capped, never emailed, each off a Booking event, the game briefed off its booking when no
   proposal stands for it (`told_by.py`'s `_a_friends_game`, `GameBrief.sender`, `invited`,

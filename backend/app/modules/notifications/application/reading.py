@@ -179,7 +179,14 @@ class ReadRecentNotices:
     answered, set aside, cancelled, ended by a block or hidden by the reader's
     own, its row leaves the list and the bell's number in the same reading. A
     row is matched to its request by whose it is and when it was asked — the
-    instant the notice was given."""
+    instant the notice was given.
+
+    **So is a *level asked*** (#764; ``docs/adr/0202`` §4's 2026-11-07
+    amendment): a level got by any route, *Not now*, or the asker no longer a
+    friend or blocked by the reader, and its row leaves both too — matched to
+    its card by who asked and the sport, which is unique: an ask is once per
+    friend per sport, ever. The push, its words and *level got* are
+    untouched."""
 
     def __init__(
         self,
@@ -196,7 +203,10 @@ class ReadRecentNotices:
         recent = await self._notices.recent(
             player_id,
             limit=max(1, min(limit, MOST_RECENT)),
-            leaving_out=await self._requests_answered(player_id),
+            leaving_out=(
+                await self._requests_answered(player_id)
+                | await self._asks_gone(player_id)
+            ),
         )
         return RecentNotices(
             notices=[
@@ -221,4 +231,18 @@ class ReadRecentNotices:
             notice.notice_id
             for notice in requests
             if (notice.person_named, notice.given_at) not in waiting
+        )
+
+    async def _asks_gone(self, player_id: UUID) -> frozenset[UUID]:
+        asks = await self._notices.of_kind(player_id, NoticeKind.LEVEL_ASKED)
+        if not asks:
+            return frozenset()
+        on_home = {
+            (ask.asker_id, ask.sport)
+            for ask in await self._friendships.level_asks_on(player_id)
+        }
+        return frozenset(
+            notice.notice_id
+            for notice in asks
+            if (notice.person_named, notice.sport) not in on_home
         )

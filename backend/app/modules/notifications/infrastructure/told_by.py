@@ -41,11 +41,16 @@ from app.modules.games.domain.windows import (
     hour_ends_at,
     late_claim_closes_at,
 )
-from app.modules.friends.application.reads import ReadRelations, ReadRequestsWaiting
+from app.modules.friends.application.reads import (
+    ReadLevelAsksWaiting,
+    ReadRelations,
+    ReadRequestsWaiting,
+)
 from app.modules.notifications.domain.ports import (
     CourtBrief,
     GameBrief,
     PaidShare,
+    WaitingLevelAsk,
     WaitingRequest,
 )
 from app.modules.payments.domain.ports import SeatChargeRepository
@@ -403,14 +408,20 @@ class PlatformNames:
 
 @final
 class FriendsOfTheReader:
-    """``Friendships`` over Friends' own reads — the requests on the reader's
-    Home, and the reader's friends — so a request is told and listed only while
-    its card stands, and *friends made* only while they are (#745)."""
+    """``Friendships`` over Friends' own reads — the requests and the asks for a
+    level on the reader's Home, and the reader's friends — so a request is told
+    and listed only while its card stands, a *level asked* listed only while its
+    card stands (#764), and *friends made* only while they are (#745)."""
 
     def __init__(
-        self, *, waiting: ReadRequestsWaiting, relations: ReadRelations
+        self,
+        *,
+        requests: ReadRequestsWaiting,
+        asks: ReadLevelAsksWaiting,
+        relations: ReadRelations,
     ) -> None:
-        self._waiting = waiting
+        self._requests = requests
+        self._asks = asks
         self._relations = relations
 
     async def waiting_on(self, reader: UUID) -> frozenset[WaitingRequest]:
@@ -418,7 +429,13 @@ class FriendsOfTheReader:
             WaitingRequest(
                 requester_id=request.requester_id, asked_at=request.asked_at
             )
-            for request in await self._waiting.waiting(reader)
+            for request in await self._requests.waiting(reader)
+        )
+
+    async def level_asks_on(self, reader: UUID) -> frozenset[WaitingLevelAsk]:
+        return frozenset(
+            WaitingLevelAsk(asker_id=ask.asker_id, sport=ask.sport)
+            for ask in await self._asks.waiting(reader)
         )
 
     async def are_friends(self, one: UUID, other: UUID) -> bool:

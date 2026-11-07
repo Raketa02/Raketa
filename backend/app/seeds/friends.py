@@ -15,7 +15,11 @@ table.
 - **Home's FRIEND REQUESTS**: ``rating-barely-established`` asked her;
 - **Asked you**, set aside: ``assessment-completed`` asked, and she said *Not
   now* — off Home, still open, still hers to accept;
-- **You asked**: she asked ``brand-new-player``, who has not answered.
+- **You asked**: she asked ``brand-new-player``, who has not answered;
+- **Home's ASKED FOR A LEVEL** (#764): ``rating-well-established``, her
+  friend, asked her from *Czwartkowy padel* to get a squash level — a sport she
+  holds none in — through ``AskForALevel``, so the card is on her Home and its
+  *level asked* row in her bell.
 
 **The block case is two other accounts**, so nothing she is dealt moves: the
 ``blank-week-player`` and ``rated-in-every-sport`` were friends in *Błonia po
@@ -48,8 +52,11 @@ from app.bootstrap.composition import (
     build_block_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_friend_levels,
     build_friendship_repository,
     build_group_directory,
+    build_levels_asked_by_the_reader,
+    build_read_level_asks_on_home,
     build_read_relations,
     build_read_requests_on_home,
     build_read_your_friend_link,
@@ -62,7 +69,12 @@ from app.core.config import Settings
 from app.kernel import Instant, Sport
 from app.modules.blocks.application.block_player import BlockPlayer
 from app.modules.blocks.application.commands import BlockPlayerCommand
-from app.modules.friends.application.commands import AnswerCommand, AskCommand
+from app.modules.friends.application.commands import (
+    AnswerCommand,
+    AskCommand,
+    AskForALevelCommand,
+)
+from app.modules.friends.application.level_asks import AskForALevel
 from app.modules.friends.application.requests import (
     AcceptFriendRequest,
     AskToBeFriends,
@@ -92,6 +104,8 @@ from app.seeds.rooms import deliver_everything_told
 CZWARTKOWY: Final = "Czwartkowy padel"
 BONARKA: Final = "Bonarka weekend"
 BLONIA: Final = "Błonia po pracy"
+#: The sport her friend asks her to get a level in: she holds none in it.
+ASKED_FOR: Final = Sport.SQUASH
 
 
 @final
@@ -105,6 +119,9 @@ class SeededFriends:
     set_aside: tuple[str, ...]
     #: Whom she asked.
     she_asked: tuple[str, ...]
+    #: Home's asks for a level, as her cards read: each sport, and who asked
+    #: in it by slug, newest first (#764).
+    asked_her_for_a_level: tuple[tuple[Sport, tuple[str, ...]], ...]
     #: Whether the block case stands: friends ended by a block, a request since.
     block_case: bool
     #: Every named account's Friend link, by slug.
@@ -193,6 +210,42 @@ class FriendActs:
                 clock=hours_before(self._now, hours),
             ).execute(self._answer(reader, asker))
 
+    async def has_asked_for_a_level(
+        self, asker: SeedAccount, friend: SeedAccount, *, sport: Sport
+    ) -> bool:
+        async with self._sessions() as session:
+            asked = await build_levels_asked_by_the_reader(session).sports_asked_by(
+                self._ids[asker.slug], among=[self._ids[friend.slug]]
+            )
+        return sport in asked.get(self._ids[friend.slug], frozenset())
+
+    async def ask_for_a_level(
+        self,
+        asker: SeedAccount,
+        friend: SeedAccount,
+        *,
+        sport: Sport,
+        group: str,
+        hours: int,
+    ) -> None:
+        """The picker's own use case, from the group's picker."""
+
+        async with self._sessions() as session:
+            await AskForALevel(
+                friendships=_friendships(session),
+                levels=build_friend_levels(session),
+                groups=build_readers_groups(session),
+                uow=build_unit_of_work(session),
+                clock=hours_before(self._now, hours),
+            ).execute(
+                AskForALevelCommand(
+                    asker_id=self._ids[asker.slug],
+                    friend_id=self._ids[friend.slug],
+                    sport=sport,
+                    group_id=self._groups[group],
+                )
+            )
+
     async def has_blocked(self, blocker: SeedAccount, blocked: SeedAccount) -> bool:
         async with self._sessions() as session:
             own = await build_block_query(session).blocks_made_by(
@@ -260,6 +313,13 @@ async def write_the_friends(
     # She asked, and nobody answered.
     if await acts.relation(her, BRAND_NEW_PLAYER) is FriendRelation.NONE:
         await acts.ask(her, BRAND_NEW_PLAYER, group=BONARKA, hours=26)
+    # Her friend asked her for a squash level this morning (#764).
+    if not await acts.has_asked_for_a_level(
+        RATING_WELL_ESTABLISHED, her, sport=ASKED_FOR
+    ):
+        await acts.ask_for_a_level(
+            RATING_WELL_ESTABLISHED, her, sport=ASKED_FOR, group=CZWARTKOWY, hours=5
+        )
 
     block_case = await _the_block_case(session_factory, acts, money=money)
     links = await _their_links(session_factory, settings=settings, now=now)
@@ -271,6 +331,9 @@ async def write_the_friends(
         relations = await build_read_relations(session).relations_of(
             ids[her.slug], list(ids.values())
         )
+        level_asks = await build_read_level_asks_on_home(
+            session, settings=settings
+        ).execute(ids[her.slug])
     slug_of = {player_id: slug for slug, player_id in ids.items()}
     on_home = tuple(slug_of[card.requester_id] for card in home)
     seeded = SeededFriends(
@@ -282,6 +345,13 @@ async def write_the_friends(
             if slug not in on_home
         ),
         she_asked=_with(relations, FriendRelation.SENT, slug_of),
+        asked_her_for_a_level=tuple(
+            (
+                card.sport,
+                tuple(slug_of.get(asker.player_id, "?") for asker in card.askers),
+            )
+            for card in level_asks
+        ),
         block_case=block_case,
         links=links,
     )
@@ -364,6 +434,10 @@ def _refuse_a_seed_that_lies(seeded: SeededFriends) -> None:
         "on her Home": ((RATING_BARELY_ESTABLISHED.slug,), seeded.on_her_home),
         "set aside": ((ASSESSMENT_COMPLETED.slug,), seeded.set_aside),
         "she asked": ((BRAND_NEW_PLAYER.slug,), seeded.she_asked),
+        "asked her for a level": (
+            ((ASKED_FOR, (RATING_WELL_ESTABLISHED.slug,)),),
+            seeded.asked_her_for_a_level,
+        ),
     }
     wrong = {what: (want, got) for what, (want, got) in expected.items() if want != got}
     unlinked = [
@@ -432,6 +506,10 @@ def friend_lines(seeded: SeededFriends) -> list[str]:
         f"  on her Home: {', '.join(seeded.on_her_home)}",
         f"  asked her, set aside: {', '.join(seeded.set_aside)}",
         f"  she asked: {', '.join(seeded.she_asked)}",
+        *(
+            f"  asked her for a {sport.value.lower()} level: {', '.join(askers)}"
+            for sport, askers in seeded.asked_her_for_a_level
+        ),
         f"  {THE_BLANK_WEEK_PLAYER.slug} blocked {RATED_IN_EVERY_SPORT.slug}, "
         "their friendship ended, and the request made since reads sent",
         "Friend links — open one signed in as somebody else:",

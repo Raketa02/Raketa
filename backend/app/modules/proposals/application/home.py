@@ -44,6 +44,11 @@ first, each its booking as its sender booked it. Not counted in
 ``needing_you``. Once the reader accepts, the game is among their games; the
 sender's is there from the send.
 
+**A friend's ask for a level is a row of its own** (#764; ``docs/adr/0202``
+§4's 2026-11-07 amendment): *ASKED FOR A LEVEL · n*, between the friend
+requests and the reader's games — one card per sport, Friends' read through
+``LevelAsksOnHome``. Not counted in ``needing_you``.
+
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
 """
@@ -76,6 +81,8 @@ from app.modules.proposals.domain.ports import (
     FriendRequestsOnHome,
     FriendsGameBookings,
     HomeFriendRequest,
+    HomeLevelAsk,
+    LevelAsksOnHome,
     ReaderRelations,
     GameResults,
     PlayerBookings,
@@ -122,6 +129,9 @@ class Home:
     #: *FRIENDS GAME* — the friends games whose invitation waits on the
     #: reader, the soonest to end first (#751). Their people are in ``people``.
     friends_games: tuple[HomeInvitation, ...] = ()
+    #: *ASKED FOR A LEVEL* — one card per sport, the sport with the newest ask
+    #: first (#764). Empty, and the row gone, once none waits.
+    level_asks: tuple[HomeLevelAsk, ...] = ()
 
 
 @final
@@ -139,9 +149,11 @@ class ReadHome:
         holding_times: HoldingTimes,
         relations: ReaderRelations,
         friend_requests: FriendRequestsOnHome,
+        level_asks: LevelAsksOnHome,
         friends_games: FriendsGameBookings,
         clock: Clock,
     ) -> None:
+        self._level_asks = level_asks
         self._friends_games = friends_games
         self._relations = relations
         self._friend_requests = friend_requests
@@ -220,6 +232,7 @@ class ReadHome:
             ),
             friend_requests=await self._friend_requests.of(reader),
             friends_games=invitations,
+            level_asks=await self._level_asks.of(reader),
         )
 
     async def _invitations(

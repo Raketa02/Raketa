@@ -63,6 +63,9 @@ from app.modules.proposals.domain.ports import (
     FriendsGame,
     FriendsGameBookings,
     FriendRequestsOnHome,
+    HomeLevelAsk,
+    HomeLevelAsker,
+    LevelAsksOnHome,
     ReaderRelations,
     PaymentRefusal,
     RefusedPayment,
@@ -1611,6 +1614,51 @@ async def test_nobody_asked_and_nobody_nameable_draw_no_card(implementation, ses
     await asks(session, unnamed, reader)
 
     assert await requests.of(reader) == ()
+
+
+# --------------------------------------------------------------------------- #
+# LevelAsksOnHome — Home's asks for a level, one card per sport (#764). The
+# rules that keep an ask on the card are driven whole over HTTP in
+# ``tests/api/test_level_asks_on_home.py``; here, the shape of what is lent.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(LevelAsksOnHome))
+async def test_the_asks_on_home_are_one_card_per_sport_newest_first(
+    implementation, client, session
+):
+    from tests.demands.friends_world import ASKED_AT, asks_for_a_level, befriends
+
+    reader, _ = await players.register(client, "zofia")
+    tomek, _ = await players.register(client, "tomek")
+    kuba, _ = await players.register(client, "kuba")
+    unnamed, aside = new_uuid(), new_uuid()
+    for friend in (tomek, kuba, unnamed, aside):
+        await befriends(session, friend, reader)
+    await asks_for_a_level(session, tomek, reader, at=ASKED_AT)
+    await asks_for_a_level(
+        session, kuba, reader, sport=Sport.SQUASH, at=ASKED_AT + timedelta(hours=1)
+    )
+    await asks_for_a_level(session, kuba, reader, at=ASKED_AT + timedelta(hours=2))
+    await asks_for_a_level(session, unnamed, reader, at=ASKED_AT + timedelta(hours=3))
+    await asks_for_a_level(
+        session, aside, reader, at=ASKED_AT + timedelta(hours=4), set_aside=True
+    )
+    asks: LevelAsksOnHome = implementation.build(session)
+
+    def face(player_id: UUID, nickname: str) -> HomeLevelAsker:
+        return HomeLevelAsker(
+            player_id=player_id, nickname=nickname, photo_id=None, photo_url=None
+        )
+
+    assert await asks.of(reader) == (
+        HomeLevelAsk(
+            sport=Sport.PADEL, askers=(face(kuba, "kuba"), face(tomek, "tomek"))
+        ),
+        HomeLevelAsk(sport=Sport.SQUASH, askers=(face(kuba, "kuba"),)),
+    )
+    # Nothing waits on anybody who asked.
+    assert await asks.of(tomek) == ()
 
 
 # --------------------------------------------------------------------------- #

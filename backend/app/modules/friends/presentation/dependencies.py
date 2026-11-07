@@ -27,10 +27,14 @@ from app.bootstrap.composition import (
     build_friendship_directory,
     build_friendship_repository,
     build_levels_asked_by_the_reader,
+    build_read_level_asks_waiting,
     build_readers_blocks,
     build_readers_groups,
 )
-from app.modules.friends.application.level_asks import AskForALevel
+from app.modules.friends.application.level_asks import (
+    AskForALevel,
+    SetAsideTheAsksForALevel,
+)
 from app.modules.friends.application.link import (
     OpenAFriendLink,
     ReadAFriendLink,
@@ -41,6 +45,7 @@ from app.modules.friends.application.reads import (
     ReadFriendRequests,
     ReadFriends,
     ReadGroupsToAddFrom,
+    ReadLevelAsksWaiting,
 )
 from app.modules.friends.application.requests import (
     AcceptFriendRequest,
@@ -310,3 +315,33 @@ def get_ask_for_a_level(
 
 
 AskForALevelDep = Annotated[AskForALevel, Depends(get_ask_for_a_level)]
+
+
+# -- Not now on an ask's Home card (#764) -------------------------------------
+
+
+def get_read_level_asks_waiting(
+    db: DbSession, runtime: EventRuntimeDep
+) -> ReadLevelAsksWaiting:
+    return build_read_level_asks_waiting(db, runtime=runtime)
+
+
+ReadLevelAsksWaitingDep = Annotated[
+    ReadLevelAsksWaiting, Depends(get_read_level_asks_waiting)
+]
+
+
+def get_set_aside_the_asks_for_a_level(
+    friendships: FriendshipRepositoryDep,
+    waiting: ReadLevelAsksWaitingDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SetAsideTheAsksForALevel:
+    return SetAsideTheAsksForALevel(
+        friendships=friendships, waiting=waiting, uow=uow, clock=clock
+    )
+
+
+SetAsideTheAsksForALevelDep = Annotated[
+    SetAsideTheAsksForALevel, Depends(get_set_aside_the_asks_for_a_level)
+]

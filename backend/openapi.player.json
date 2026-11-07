@@ -2532,6 +2532,56 @@
         }
       }
     },
+    "/api/v1/friends/level-asks/{sport}/set-aside": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Not now, on a friend's ask for a level",
+        "description": "**Not now** on a card in Home's *ASKED FOR A LEVEL* (#764). It sets aside **every ask in `sport` that your Home lists now** \u2014 the askers the card named \u2014 and tells nobody: they keep reading **Asked** on their picker. The card leaves your Home and their *level asked* rows leave your bell. A set-aside ask still waits for your level: get one in the sport, by any route, and every friend who asked is told. **A new friend's ask in the sport brings the card back**, naming only them. With nothing on your Home in the sport, nothing is recorded.",
+        "operationId": "set_aside_the_asks_for_a_level_api_v1_friends_level_asks__sport__set_aside_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Set aside \u2014 also when nothing in that sport was on your Home."
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 an act on you and one of the askers raced: retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations": {
       "get": {
         "tags": [
@@ -13180,6 +13230,76 @@
         "title": "HomeGameSchema",
         "description": "One card on Home: a game the reader booked."
       },
+      "HomeLevelAskSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The sport they asked you to get a level in \u2014 one you hold none in. **Get your {sport} level** starts its questionnaire; `POST /friends/level-asks/{sport}/set-aside` is **Not now**."
+          },
+          "askers": {
+            "items": {
+              "$ref": "#/components/schemas/HomeLevelAskerSchema"
+            },
+            "type": "array",
+            "title": "Askers",
+            "description": "Every friend whose ask in this sport waits on you, **newest first** \u2014 never empty. Name two and count the rest; draw up to three faces."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "askers"
+        ],
+        "title": "HomeLevelAskSchema",
+        "description": "One card in *ASKED FOR A LEVEL* \u2014 *kuba.w and tomek.k want to play padel\nwith you* / *A few questions, and they can add you to a game.*, **Get your\npadel level** and **Not now** (#764; `docs/adr/0202` \u00a74's 2026-11-07\namendment). It names no group."
+      },
+      "HomeLevelAskerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws initials."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url"
+        ],
+        "title": "HomeLevelAskerSchema",
+        "description": "One friend on an *ASKED FOR A LEVEL* card \u2014 a face that opens their\nrecord."
+      },
       "HomeResponse": {
         "properties": {
           "read_at": {
@@ -13216,6 +13336,14 @@
             "type": "array",
             "title": "Friends Games",
             "description": "*FRIENDS GAME \u00b7 n*, at the very top of Home (#751; `docs/adr/0202` \u00a75): every friends game whose invitation waits on you, **the soonest to end first**. A card leaves once you accept \u2014 the game is then among `games` \u2014 say **Not this time**, or your 24 hours end; the row and its title are gone when this is empty. Not counted in `needing_you`."
+          },
+          "level_asks": {
+            "items": {
+              "$ref": "#/components/schemas/HomeLevelAskSchema"
+            },
+            "type": "array",
+            "title": "Level Asks",
+            "description": "*ASKED FOR A LEVEL \u00b7 n*, between `friend_requests` and `games` (#764; `docs/adr/0202` \u00a74's 2026-11-07 amendment): **one card per sport**, the sport with the newest ask first \u2014 every friend's ask for a level still waiting on you. A card leaves once you hold any level in its sport, by any route, or say **Not now**, and an asker leaves it once no longer your friend or blocked by you; a new friend's ask in the sport brings it back, naming only the askers you have not set aside. It never expires. The row and its title are gone when this is empty. Not counted in `needing_you`."
           }
         },
         "type": "object",
@@ -13224,10 +13352,11 @@
           "needing_you",
           "games",
           "friend_requests",
-          "friends_games"
+          "friends_games",
+          "level_asks"
         ],
         "title": "HomeResponse",
-        "description": "**Home**: the reader's games from the moment they fill, and the friend\nrequests waiting on them."
+        "description": "**Home**: the reader's games from the moment they fill, and the friend\nrequests, friends game invitations and asks for a level waiting on them."
       },
       "HomeStatus": {
         "type": "string",

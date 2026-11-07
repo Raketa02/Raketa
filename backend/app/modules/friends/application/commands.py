@@ -48,3 +48,12 @@ class AskForALevelCommand:
     friend_id: UUID
     sport: Sport
     group_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class SetAsideTheAsksCommand:
+    """**Not now** on Home's ask card (#764): the reader sets aside every ask
+    for a level in ``sport`` that their Home lists now."""
+
+    reader_id: UUID
+    sport: Sport

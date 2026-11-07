@@ -1,10 +1,12 @@
-"""The friend routes: ask, answer, take back, read your own, and ask a friend
-for a level (``docs/adr/0202`` §1–§2, §4; the mechanics §3, §5).
+"""The friend routes: ask, answer, take back, read your own, ask a friend for a
+level, and set a friend's ask aside (``docs/adr/0202`` §1–§2, §4 and its
+2026-11-07 amendment; the mechanics §3, §5, §5.1).
 
 **Silent but for three things**: a request is told to the person asked, once,
 *you're friends* to whoever asked, and an ask for a level to the friend asked —
-who, once their level arrives, has it told back to the asker. *Not now*, a
-cancel and a removal tell nobody, and **a removal touches no game**.
+who, once their level arrives, has it told back to the asker. *Not now* — on a
+request or an ask — a cancel and a removal tell nobody, and **a removal touches
+no game**.
 
 **Every response carries only your own relations** — nothing here names
 anybody's friend but yours, and nothing tells you whether somebody set your
@@ -25,6 +27,7 @@ from app.modules.friends.application.commands import (
     AnswerCommand,
     AskCommand,
     AskForALevelCommand,
+    SetAsideTheAsksCommand,
     TakeBackCommand,
 )
 from app.modules.friends.application.reads import Direction
@@ -38,6 +41,7 @@ from app.modules.friends.presentation.dependencies import (
     ReadGroupsToAddFromDep,
     RemoveFriendDep,
     SetAsideFriendRequestDep,
+    SetAsideTheAsksForALevelDep,
 )
 from app.modules.friends.presentation.schemas import (
     AskForALevelRequest,
@@ -328,3 +332,38 @@ async def ask_for_a_level(
             group_id=payload.group_id,
         )
     )
+
+
+@router.post(
+    "/level-asks/{sport}/set-aside",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Set aside — also when nothing in that sport was on your Home."
+            )
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`concurrent_modification` — an act on you and one of the askers "
+                "raced: retry."
+            ),
+        },
+    },
+    summary="Not now, on a friend's ask for a level",
+    description=(
+        "**Not now** on a card in Home's *ASKED FOR A LEVEL* (#764). It sets "
+        "aside **every ask in `sport` that your Home lists now** — the askers "
+        "the card named — and tells nobody: they keep reading **Asked** on "
+        "their picker. The card leaves your Home and their *level asked* rows "
+        "leave your bell. A set-aside ask still waits for your level: get one "
+        "in the sport, by any route, and every friend who asked is told. **A "
+        "new friend's ask in the sport brings the card back**, naming only "
+        "them. With nothing on your Home in the sport, nothing is recorded."
+    ),
+)
+async def set_aside_the_asks_for_a_level(
+    sport: Sport, user: CurrentUserDep, use_case: SetAsideTheAsksForALevelDep
+) -> None:
+    await use_case.execute(SetAsideTheAsksCommand(reader_id=user.id, sport=sport))

@@ -1,9 +1,10 @@
 """The seeded friends, read back the way the player app reads them (#745).
 
 ``app/seeds/friends.py`` makes friends, open requests both ways, a request set
-aside, a block case and every named account's Friend link (#748) **through the
-use cases a request runs**, so each is asserted by signing in as a named account
-and reading the friend routes and Home — never a table. A second run asks nobody twice.
+aside, a block case, every named account's Friend link (#748) and a friend's
+ask for a level on her Home (#764) **through the use cases a request runs**, so
+each is asserted by signing in as a named account and reading the friend routes
+and Home — never a table. A second run asks nobody twice.
 """
 
 from __future__ import annotations
@@ -12,11 +13,13 @@ import pytest
 
 from app.bootstrap.composition import build_clock
 from app.core.config import get_settings
+from app.kernel import Sport
 from app.seeds.catalog import (
     ACCOUNTS,
     ASSESSMENT_COMPLETED,
     RATED_IN_EVERY_SPORT,
     RATING_BARELY_ESTABLISHED,
+    RATING_WELL_ESTABLISHED,
     THE_BLANK_WEEK_PLAYER,
     THE_POPULATED_PLAYER,
 )
@@ -95,6 +98,21 @@ async def test_the_blocked_players_request_reads_sent_and_the_blocker_sees_nothi
         "friends"
     ] == []
     assert seeded.block_case is True
+
+
+async def test_a_friends_ask_for_a_level_is_on_her_home(client, seeded):
+    her = await signed_in(client, THE_POPULATED_PLAYER)
+
+    home = (await client.get("/api/v1/home", headers=her)).json()
+
+    [card] = home["level_asks"]
+    assert card["sport"] == "SQUASH"
+    assert [asker["nickname"] for asker in card["askers"]] == [
+        RATING_WELL_ESTABLISHED.nickname
+    ]
+    assert seeded.asked_her_for_a_level == (
+        (Sport.SQUASH, (RATING_WELL_ESTABLISHED.slug,)),
+    )
 
 
 async def test_a_second_run_asks_nobody_twice(session_factory, now, seeded):
