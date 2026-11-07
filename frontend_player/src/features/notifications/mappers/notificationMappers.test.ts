@@ -276,6 +276,58 @@ describe('where a tap goes', () => {
     ).toBeUndefined();
   });
 
+  /** **Level asked** (#749, #758) opens that sport's questionnaire, by the sport it names. */
+  it('the questionnaire of the sport Level asked names', () => {
+    expect(
+      toTarget({
+        kind: 'LEVEL_ASKED',
+        opens: 'QUESTIONNAIRE',
+        gameId: null,
+        poolId: null,
+        sport: 'PADEL',
+        gameKind: null,
+        playerId: 'p-tomek',
+      }),
+    ).toEqual({ opens: 'questionnaire', sport: 'padel' });
+  });
+
+  /** **Level got** opens the Friends tab picker of the group the ask was made from. */
+  it('the picker of the group and the sport Level got names', () => {
+    expect(
+      toTarget({
+        kind: 'LEVEL_GOT',
+        opens: 'PICKER',
+        gameId: null,
+        poolId: 'group-1',
+        sport: 'PADEL',
+        gameKind: null,
+        playerId: 'p-zofia',
+      }),
+    ).toEqual({ opens: 'picker', groupId: 'group-1', sport: 'padel' });
+  });
+
+  it('nowhere for an ask’s notice in a sport this build cannot name, or the picker’s with no group', () => {
+    const asked = {
+      kind: 'LEVEL_ASKED',
+      opens: 'QUESTIONNAIRE',
+      gameId: null,
+      poolId: null,
+      gameKind: null,
+    } as const;
+    expect(toTarget({ ...asked, sport: 'CURLING' })).toBeUndefined();
+    expect(toTarget({ ...asked, sport: null })).toBeUndefined();
+    expect(
+      toTarget({
+        kind: 'LEVEL_GOT',
+        opens: 'PICKER',
+        gameId: null,
+        poolId: null,
+        sport: 'PADEL',
+        gameKind: null,
+      }),
+    ).toBeUndefined();
+  });
+
   it('nowhere for a notice that names no game, wherever it says it opens', () => {
     expect(
       toTarget({

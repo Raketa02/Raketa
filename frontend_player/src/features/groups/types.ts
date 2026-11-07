@@ -37,6 +37,12 @@ export { joinGroupRouteFor } from './components/groupRoutes';
  */
 export { groupDeckRoute } from './components/groupRoutes';
 export type { DeckArrival } from './schemas/groupRouteParams';
+/**
+ * **A group's Friends picker, with the page on its Friends tab under it**
+ * ([#758](https://github.com/Raketa02/Raketa/issues/758)): where *Level got* opens — the group the
+ * ask was made from, in its sport — so Done and *back* land on the court.
+ */
+export { groupPickerRoutes } from './components/groupRoutes';
 
 /**
  * **A rating pass begun on a group returns to it** ([#729](https://github.com/Raketa02/Raketa/issues/729),

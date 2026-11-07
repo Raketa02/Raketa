@@ -121,6 +121,15 @@ export const NOTIFICATIONS_COPY = {
   },
 } as const;
 
+/**
+ * **_Level asked_, opened, when its questionnaire cannot start** (#758): the player got a Level in
+ * the sport since the ask — from another door, or on another phone — and there is nothing to answer
+ * (`sport_already_rated`). A call: §29.5 gives the notice and no refusal.
+ */
+export function alreadyRatedLine(sportInLine: string): string {
+  return `You have a ${sportInLine} level already.`;
+}
+
 /** *You complete it · Challenges · Fill in alerts* — the choices that are on, as the row says them. */
 export function notificationsRowLine(on: readonly ChoiceKey[]): string {
   if (on.length === 0) return NOTIFICATIONS_COPY.noneChosen;

@@ -5,7 +5,9 @@
  * **Every friends write re-reads them all** (`useFriendWrites`' `settle`): an accept on Home moves
  * *Asked you* and *Friends*, a request from Members moves *You asked* and a group's *to add*, and
  * whichever screen pressed it, the page under it or the row on You says so when the player comes
- * back. They are this feature's own, so naming them costs no other feature a dependency.
+ * back. They are this feature's own, so naming them costs no other feature a dependency. **One
+ * other feature reads them**: `notifications` marks them stale as *Level got* opens the picker
+ * (#758) — the friend's Level arrived — and this feature imports nothing of `notifications`'.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';

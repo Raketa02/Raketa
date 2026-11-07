@@ -22,10 +22,15 @@ import type { GameOpens, NoticeKind } from './vocabulary';
  * your level*, whose card is there — and names nothing to open it by; so does a friend request
  * (#753), whose card is there too. **You're friends opens the new friend's record**, by the person it
  * names — a sheet over wherever the player is, since a record is a sheet and not a screen.
+ *
+ * **An ask for a Level opens by its sport** (#758): *Level asked* the sport's questionnaire, through
+ * the level pass; *Level got* the Friends tab picker of the group the ask was made from, in it.
  */
 export type NoticeTarget =
   | { readonly opens: 'home' }
   | { readonly opens: 'record'; readonly playerId: string }
+  | { readonly opens: 'questionnaire'; readonly sport: Sport }
+  | { readonly opens: 'picker'; readonly groupId: string; readonly sport: Sport }
   | { readonly opens: 'booking' | 'result'; readonly bookingId: string }
   | { readonly opens: 'rescue'; readonly groupId: string; readonly bookingId: string }
   | {

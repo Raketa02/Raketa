@@ -49,6 +49,15 @@
  * - **The picker's reading line**, *Reading your friends…*, the register above.
  * - **A greyed row's spoken reason**: *the court is full* after a row the full court greys.
  *
+ * And these, written in by #758:
+ *
+ * - **The ask's busy word**, *Asking…* — Members' own, read from `members`.
+ * - ***Asked*, spoken whole**: *Asked zofia.b to get a padel level* — a column of *Asked* names
+ *   nobody.
+ * - **Asking from a group you have since left** (`not_one_of_your_groups`): *You're not in this
+ *   group any more.* §29 gives no refusal; the others an ask can meet are the state moving, and say
+ *   nothing.
+ *
  * ## The whole nickname, and no pronoun
  *
  * ADR-0199 §1: every sentence naming somebody uses the whole nickname, never with an @. And no
@@ -189,11 +198,15 @@ export const FRIENDS_COPY = {
     reading: 'Reading your friends…',
     /** Spoken after a row a full court greys: why it cannot be picked now. */
     full: 'the court is full',
+    /** A greyed no-Level row, once you asked (§29.3) — you ask once per sport, ever. */
+    asked: 'Asked',
   },
   /** Said where a write was pressed, when the server refused it for a reason that is not the state moving. */
   refused: {
     unblock_them_first: 'You blocked this player. Unblock them on their record first.',
     player_not_in_your_groups: 'You can only ask people from your groups.',
+    /** An ask for a Level (#758) from a group you have since left. */
+    not_one_of_your_groups: 'You’re not in this group any more.',
   } as Readonly<Record<string, string>>,
 } as const;
 
@@ -335,6 +348,16 @@ export function pickerLine(level: number, band: string): string {
 /** *No padel level yet* — a picker row for a friend unrated in the sport, greyed (§29.3). */
 export function noLevelLine(sportInLine: string): string {
   return `No ${sportInLine} level yet`;
+}
+
+/** *Ask zofia.b to get a padel level* — under a greyed no-Level row (§29.3). No pronoun (ADR-0096). */
+export function askForALevelLabel(nickname: string, sportInLine: string): string {
+  return `Ask ${nickname} to get a ${sportInLine} level`;
+}
+
+/** *Asked*, spoken whole: whom, and for which Level — a column of *Asked* names nobody. */
+export function askedForALevelLabel(nickname: string, sportInLine: string): string {
+  return `Asked ${nickname} to get a ${sportInLine} level`;
 }
 
 /** A picker row, spoken: who, their line, and why it cannot be picked while the court is full. */

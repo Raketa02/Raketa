@@ -88,6 +88,19 @@ export function groupReturnRoute(groupId: string, tab: GroupTab, sport: Sport | 
 }
 
 /**
+ * **A group's Friends picker, opened from outside the group** — where *Level got* lands (#758): the
+ * page **on its Friends tab, standing on the sport**, and the picker pushed over it, so **Done**
+ * seats the picks on that court and *back* is the court, as from *+ Friends*. The page stands on the
+ * sport as a returning pass's does — opening is not picking, and neither is saved (ADR-0188 §2).
+ */
+export function groupPickerRoutes(groupId: string, sport: Sport) {
+  return {
+    page: groupReturnRoute(groupId, 'friends', sport),
+    picker: groupFriendsRoute(groupId, sport),
+  } as const;
+}
+
+/**
  * ***+ Another sport*** (#731, ADR-0200 §4): *Which sports do you play?* over the sports the chip
  * offers, for a pass that returns to this group on this tab. Onboarding's picker, so the route is
  * onboarding's; walked into by `replace`, as every door into the questionnaire is.

@@ -87,6 +87,7 @@ export function FriendsScreen({
       action={<Button label={FRIENDS_COPY.picker.done} size="lg" onPress={done} />}
     >
       <FriendsPicker
+        groupId={groupId}
         sport={sport}
         picked={picked}
         onToggle={toggle}

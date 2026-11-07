@@ -55,9 +55,10 @@ function toNoticeKind(wire: string): NoticeKind | undefined {
 /**
  * Where a tap goes — **Home for a notice that opens Home** (#727, #731), whatever its kind, since
  * it names nothing a later release could have meant differently; **the record of the person a
- * notice names for one that opens a record** (#753), and nowhere when it names nobody; `undefined`
- * for a game's notice,
- * a sport or a kind this build cannot name, or a game's notice that names no game.
+ * notice names for one that opens a record** (#753), and nowhere when it names nobody; **the
+ * questionnaire of the sport an ask names, and the picker of the group and sport it names** (#758),
+ * nowhere without them; `undefined` for a game's notice, a sport or a kind this build cannot name,
+ * or a game's notice that names no game.
  */
 export function toTarget(facts: SentFacts): NoticeTarget | undefined {
   const { opens, gameId, poolId } = facts;
@@ -66,11 +67,17 @@ export function toTarget(facts: SentFacts): NoticeTarget | undefined {
     const playerId = facts.playerId ?? null;
     return playerId === null ? undefined : { opens: 'record', playerId };
   }
-  // #749's two — a questionnaire and a group's picker — are told and listed, and land with #758.
-  if (opens === 'QUESTIONNAIRE' || opens === 'PICKER') return undefined;
+  const sport = facts.sport === null ? undefined : toSport(facts.sport);
+  if (opens === 'QUESTIONNAIRE') {
+    return sport === undefined ? undefined : { opens: 'questionnaire', sport };
+  }
+  if (opens === 'PICKER') {
+    return sport === undefined || poolId === null
+      ? undefined
+      : { opens: 'picker', groupId: poolId, sport };
+  }
   if (gameId === null || poolId === null) return undefined;
   const notice = toNoticeKind(facts.kind);
-  const sport = facts.sport === null ? undefined : toSport(facts.sport);
   const kind = facts.gameKind === null ? undefined : toKind(facts.gameKind);
   if (notice === undefined || sport === undefined || kind === undefined) return undefined;
   return targetOf(notice, opens, { gameId, poolId, sport, kind });

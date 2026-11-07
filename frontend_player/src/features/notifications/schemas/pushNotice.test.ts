@@ -101,6 +101,56 @@ describe('a push’s payload', () => {
     ).toMatchObject({ kind: 'FRIEND_REQUEST', opens: 'HOME', gameId: null });
   });
 
+  // #749, #758: an ask for a level pushes the sport it names — and the group, for the picker.
+  it('reads Level asked, which opens the sport’s questionnaire by the sport it names', () => {
+    expect(
+      parsePushNotice({
+        notice_id: PAYLOAD.notice_id,
+        kind: 'LEVEL_ASKED',
+        opens: 'QUESTIONNAIRE',
+        player_id: '3f2b8c1e-0000-4000-8000-000000000102',
+        sport: 'PADEL',
+      }),
+    ).toEqual({
+      noticeId: PAYLOAD.notice_id,
+      kind: 'LEVEL_ASKED',
+      opens: 'QUESTIONNAIRE',
+      gameId: null,
+      poolId: null,
+      sport: 'PADEL',
+      gameKind: null,
+    });
+  });
+
+  it('reads Level got, which opens the picker of the group it names, in the sport', () => {
+    expect(
+      parsePushNotice({
+        notice_id: PAYLOAD.notice_id,
+        kind: 'LEVEL_GOT',
+        opens: 'PICKER',
+        player_id: '3f2b8c1e-0000-4000-8000-000000000102',
+        pool_id: PAYLOAD.pool_id,
+        sport: 'PADEL',
+      }),
+    ).toEqual({
+      noticeId: PAYLOAD.notice_id,
+      kind: 'LEVEL_GOT',
+      opens: 'PICKER',
+      gameId: null,
+      poolId: PAYLOAD.pool_id,
+      sport: 'PADEL',
+      gameKind: null,
+    });
+  });
+
+  it('is nothing to open when an ask’s push names no sport, or the picker’s no group', () => {
+    const asked = { notice_id: PAYLOAD.notice_id, kind: 'LEVEL_ASKED', opens: 'QUESTIONNAIRE' };
+    const got = { notice_id: PAYLOAD.notice_id, kind: 'LEVEL_GOT', opens: 'PICKER' };
+    expect(parsePushNotice(asked)).toBeUndefined();
+    expect(parsePushNotice({ ...got, sport: 'PADEL' })).toBeUndefined();
+    expect(parsePushNotice({ ...got, sport: 'PADEL', pool_id: '../../admin' })).toBeUndefined();
+  });
+
   it('is nothing to open when a game’s push names no game', () => {
     expect(
       parsePushNotice({ notice_id: PAYLOAD.notice_id, kind: 'GAME_BOOKED', opens: 'BOOKING' }),

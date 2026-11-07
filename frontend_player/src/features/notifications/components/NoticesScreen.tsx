@@ -41,6 +41,7 @@ import {
   givenLine,
   noticeRowSpoken,
 } from './notificationsCopy';
+import { OPEN_NOTICE_WORDS } from './openNoticeWords';
 import { ReadState } from './ReadState';
 import { useOpenNotice } from '../hooks/useOpenNotice';
 
@@ -50,7 +51,7 @@ export function NoticesScreen() {
   const router = useRouter();
   const client = useQueryClient();
   const { read, standOut } = useNoticesVisit();
-  const open = useOpenNotice();
+  const open = useOpenNotice(OPEN_NOTICE_WORDS);
   const notices = read.data?.notices;
   // *When* is read against the moment the list arrived, as the receipts' days are.
   const now = new Date(read.dataUpdatedAt).toISOString();

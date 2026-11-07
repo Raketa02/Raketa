@@ -1,5 +1,7 @@
 import {
   FRIENDS_COPY,
+  askForALevelLabel,
+  askedForALevelLabel,
   askedYouTab,
   friendsRowLine,
   groupCountsLine,
@@ -57,6 +59,13 @@ describe('the Friends page’s words (§29.3)', () => {
       ]),
     ).toBe('Padel 2,75 · Tennis 3,10');
     expect(sportsLine([])).toBe('');
+  });
+
+  // #758: the picker's ask, with no pronoun about another player (ADR-0096).
+  it('asks a greyed row’s friend to get a Level in the sport, and says Asked once asked', () => {
+    expect(askForALevelLabel('zofia.b', 'padel')).toBe('Ask zofia.b to get a padel level');
+    expect(FRIENDS_COPY.picker.asked).toBe('Asked');
+    expect(askedForALevelLabel('zofia.b', 'padel')).toBe('Asked zofia.b to get a padel level');
   });
 
   it('has a one-line empty state per tab', () => {

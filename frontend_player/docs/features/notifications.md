@@ -370,3 +370,28 @@ regenerated the types). `LEVEL_ASKED` and `LEVEL_GOT` join the kinds, and `QUEST
 opens nothing — `toTarget` answers `undefined`, as for a code this build cannot place — and a push
 that opens either is not read as a notice. Their landings, the sport's questionnaire and the group's
 picker, are [#758](https://github.com/Raketa02/Raketa/issues/758)'s.
+
+**An ask for a Level lands: _Level asked_ on the sport's questionnaire, _Level got_ on the asker's
+picker** ([#758](https://github.com/Raketa02/Raketa/issues/758), on #749's; the friends mechanics
+§5, §12; the words §29.5). `NoticeTarget` gained `questionnaire` (a sport) and `picker` (a group and
+a sport), and the push is read for both: `LEVEL_ASKED` by the sport it names, `LEVEL_GOT` by the
+group it names as `pool_id` and the sport — each nothing to open without them, the person each names
+left on the wire. **_Level asked_ walks in through the level pass**, as the Skill passport's chip
+does: `useOpenNotice` holds `onboarding`'s `useAddASport(FROM_HOME)`, so the sport's run is started
+— or its unfinished run handed back — a pass of that one sport begun, and the question route
+replaced to. **Its usual return is Home's**: a notice names no group to go back to, and every way out
+of the pass lands on Home ([`onboarding.md`](onboarding.md)). A start that fails says why as a toast
+where the player is — **_You have a padel level already._**, neutral and held to be read, when they
+got one since the ask (`sport_already_rated`); the failure's recovery sentence otherwise — and opens
+nothing. **The words are handed in** (`OpenNoticeWords`, from `components/openNoticeWords.ts`), since
+a hook names no copy — `administrator`'s `refusal`, the same seam — and `notificationsCopy` stays
+import-light for the shell. **_Level got_ lays the group's page under its picker** (`groups`'
+`groupPickerRoutes`): the page on its Friends tab, standing on the sport, and the picker pushed over
+it — pushed alone, **Done** would seat the picks on a court nobody was looking at and go back to the
+list, and the court's line-ups are forgotten only when the page goes. So Done and _back_ land on the
+court, as from _+ Friends_, and _back_ again is wherever the notice was opened. **Your friends'
+lists are marked stale first** — the friend's Level is what arrived, and a picker drawn from a read
+from before it would still grey them; a push arriving re-reads them too, so a picker already open
+turns the row pickable. **Calls made here**: _You have a padel level already._ (§29.5 gives no
+refusal); the page under the picker. **Not seen on a device**: the two screens pushed at once, and
+the questionnaire replacing the list.

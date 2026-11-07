@@ -13,7 +13,11 @@
  * (`mappers/`), since a code this build cannot name is a notice still told and nowhere to open.
  * **A friend's notice** (#753) pushes the person it names as `player_id`: *You're friends* opens
  * their record (`RECORD`) and is nothing to open without a well-formed id; a friend request opens
- * Home, where its card is, and is read as any notice that opens Home.
+ * Home, where its card is, and is read as any notice that opens Home. **An ask for a Level** (#749,
+ * #758) pushes the sport it names, and *Level got* the group the ask was made from as `pool_id`:
+ * *Level asked* opens the sport's questionnaire (`QUESTIONNAIRE`), *Level got* that group's picker
+ * (`PICKER`), and each is nothing to open without them. The person each names is left on the wire:
+ * nothing is opened by it.
  */
 
 import { z } from 'zod';
@@ -28,6 +32,16 @@ const AboutNoGame = Pushed.extend({ opens: z.literal('HOME') });
 /** *You're friends* (#753): the person it names, whose record a tap opens — an id, or nothing. */
 const AboutAPerson = Pushed.extend({ opens: z.literal('RECORD'), player_id: z.string().uuid() });
 
+/** *Level asked* (#758): the sport whose questionnaire a tap opens. */
+const AboutALevel = Pushed.extend({ opens: z.literal('QUESTIONNAIRE'), sport: z.string() });
+
+/** *Level got* (#758): the group whose picker a tap opens, and the sport it is in. */
+const AboutAPicker = Pushed.extend({
+  opens: z.literal('PICKER'),
+  pool_id: z.string().uuid(),
+  sport: z.string(),
+});
+
 const AboutAGame = Pushed.extend({
   opens: z.enum(GAME_OPENS),
   game_id: z.string().uuid(),
@@ -36,7 +50,7 @@ const AboutAGame = Pushed.extend({
   game_kind: z.string(),
 });
 
-const PushNoticeData = z.union([AboutNoGame, AboutAPerson, AboutAGame]);
+const PushNoticeData = z.union([AboutNoGame, AboutAPerson, AboutALevel, AboutAPicker, AboutAGame]);
 
 /**
  * A notice's facts as the backend sent them — a push's payload, or a listed row's. One about no game
@@ -66,17 +80,33 @@ export function parsePushNotice(data: unknown): PushedNotice | undefined {
   const parsed = PushNoticeData.safeParse(data);
   if (!parsed.success) return undefined;
   const pushed = parsed.data;
-  const noGame = { gameId: null, poolId: null, sport: null, gameKind: null };
-  const about =
-    pushed.opens === 'HOME'
-      ? noGame
-      : pushed.opens === 'RECORD'
-        ? { ...noGame, playerId: pushed.player_id }
-        : {
-            gameId: pushed.game_id,
-            poolId: pushed.pool_id,
-            sport: pushed.sport,
-            gameKind: pushed.game_kind,
-          };
-  return { noticeId: pushed.notice_id, kind: pushed.kind, opens: pushed.opens, ...about };
+  return {
+    noticeId: pushed.notice_id,
+    kind: pushed.kind,
+    opens: pushed.opens,
+    ...factsOf(pushed),
+  };
+}
+
+const NO_GAME = { gameId: null, poolId: null, sport: null, gameKind: null } as const;
+
+/** What each kind of push names — a game's four, a person, a sport and a group, or nothing. */
+function factsOf(pushed: z.infer<typeof PushNoticeData>): Omit<SentFacts, 'kind' | 'opens'> {
+  switch (pushed.opens) {
+    case 'HOME':
+      return NO_GAME;
+    case 'RECORD':
+      return { ...NO_GAME, playerId: pushed.player_id };
+    case 'QUESTIONNAIRE':
+      return { ...NO_GAME, sport: pushed.sport };
+    case 'PICKER':
+      return { ...NO_GAME, poolId: pushed.pool_id, sport: pushed.sport };
+    default:
+      return {
+        gameId: pushed.game_id,
+        poolId: pushed.pool_id,
+        sport: pushed.sport,
+        gameKind: pushed.game_kind,
+      };
+  }
 }

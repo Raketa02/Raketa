@@ -1,4 +1,10 @@
-import { toAskRequest, toFriend, toFriendRequest, toGroupToAddFrom } from './friendsMappers';
+import {
+  toAskRequest,
+  toFriend,
+  toFriendRequest,
+  toGroupToAddFrom,
+  toLevelAskRequest,
+} from './friendsMappers';
 
 describe('toAskRequest', () => {
   it('names the group and the sport the screen showed', () => {
@@ -41,7 +47,22 @@ describe('toFriend', () => {
         { sport: 'padel', level: 2.66, band: 'Established' },
         { sport: 'tennis', level: 3.1, band: 'Developing' },
       ],
+      askedIn: [],
     });
+  });
+
+  it('reads every sport you asked them to get a level in, leaving off one this build cannot name', () => {
+    expect(
+      toFriend({
+        player_id: 'p-5',
+        nickname: 'zofia.b',
+        photo_id: null,
+        photo_url: null,
+        friends_since: '2026-10-01T10:00:00Z',
+        level_asked_in: ['PADEL', 'CURLING' as 'PADEL'],
+        sports: [],
+      }).askedIn,
+    ).toEqual(['padel']);
   });
 
   it('draws a poster for no photograph, and leaves off a sport this build cannot name', () => {
@@ -55,7 +76,7 @@ describe('toFriend', () => {
         level_asked_in: [],
         sports: [{ sport: 'CURLING' as 'PADEL', level: 2, band: 'Established' }],
       }),
-    ).toEqual({ playerId: 'p-2', nickname: 'ewa.m', sports: [] });
+    ).toEqual({ playerId: 'p-2', nickname: 'ewa.m', sports: [], askedIn: [] });
   });
 });
 
@@ -79,5 +100,11 @@ describe('toGroupToAddFrom', () => {
     expect(
       toGroupToAddFrom({ group_id: 'g-1', name: 'Ogrody open play', member_count: 8, to_add: 2 }),
     ).toEqual({ groupId: 'g-1', name: 'Ogrody open play', memberCount: 8, toAdd: 2 });
+  });
+});
+
+describe('toLevelAskRequest', () => {
+  it('names the picker’s sport and the group whose Friends tab it is on', () => {
+    expect(toLevelAskRequest('padel', 'g-1')).toEqual({ sport: 'PADEL', group_id: 'g-1' });
   });
 });

@@ -33,6 +33,7 @@ import {
   errorResponse,
   installTransport,
   json,
+  noContent,
   type RecordedRequest,
   type Transport,
   type Wire,
@@ -105,6 +106,7 @@ function friend(
   sport: Wire['Sport'],
   level?: number,
   band = 'Established',
+  askedIn: Wire['Sport'][] = [],
 ): Wire['FriendSchema'] {
   return {
     player_id: id,
@@ -113,7 +115,7 @@ function friend(
     photo_url: null,
     friends_since: '2026-09-01T10:00:00Z',
     sports: level === undefined ? [] : [{ sport, level, band }],
-    level_asked_in: [],
+    level_asked_in: askedIn,
   };
 }
 
@@ -392,6 +394,84 @@ describe('the picker', () => {
     fireEvent.press(await screen.findByRole('button', { name: COPY.friends.addFriendsLabel }));
 
     expect(await screen.findByText(COPY.friends.nobody)).toBeTruthy();
+  });
+});
+
+/**
+ * **Ask a friend with no Level to get one** (#758; the screens §4.2; the words §29.3): a greyed
+ * no-Level row has *Ask zofia.b to get a padel level* under it, and *Asked* once asked — once per
+ * sport, ever, as the read's `level_asked_in` says.
+ */
+describe('asking a friend to get a Level, from the picker', () => {
+  const askPath = `${FRIENDS_PATH}/${ZOFIA}/level-asks`;
+  const ASK = 'Ask zofia.b to get a padel level';
+  const ASKED_ZOFIA = [
+    ...PADEL_FRIENDS.slice(0, 4),
+    friend(ZOFIA, 'PADEL', undefined, '', ['PADEL']),
+  ];
+
+  async function openPicker() {
+    await openFriendsTab();
+    fireEvent.press(await screen.findByRole('button', { name: COPY.friends.addFriendsLabel }));
+    await pickerRow(KAROL);
+  }
+
+  it('offers the ask under a greyed no-Level row, and on no other row', async () => {
+    await openPicker();
+
+    expect(await screen.findByRole('button', { name: ASK })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /^Ask .* level$/ })).toHaveLength(1);
+    expect(screen.queryByText(FRIENDS_COPY.picker.asked)).toBeNull();
+  });
+
+  it('reads Asked where the read says it was asked, with no button', async () => {
+    stubFriendsIn({ padel: ASKED_ZOFIA });
+    await openPicker();
+
+    expect(await screen.findByText(FRIENDS_COPY.picker.asked)).toBeTruthy();
+    expect(screen.getByLabelText('Asked zofia.b to get a padel level')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: ASK })).toBeNull();
+  });
+
+  it('asks in the picker’s sport from this group, and reads Asked on the server’s answer', async () => {
+    transport.on('POST', askPath, () => {
+      stubFriendsIn({ padel: ASKED_ZOFIA });
+      return noContent();
+    });
+    await openPicker();
+
+    fireEvent.press(await screen.findByRole('button', { name: ASK }));
+
+    expect(await screen.findByText(FRIENDS_COPY.picker.asked)).toBeTruthy();
+    expect(transport.requestsTo('POST', askPath).map((one) => one.body)).toEqual([
+      { sport: 'PADEL', group_id: GROUP.id },
+    ]);
+    expect(screen.queryByRole('button', { name: ASK })).toBeNull();
+    // Still greyed: asked for is not got.
+    expect(screen.getByRole('checkbox', { name: /^zofia\.b/, disabled: true })).toBeTruthy();
+  });
+
+  it('says nothing when it was asked already from another phone — the row reads Asked', async () => {
+    transport.on('POST', askPath, () => {
+      stubFriendsIn({ padel: ASKED_ZOFIA });
+      return errorResponse(409, 'level_already_asked');
+    });
+    await openPicker();
+
+    fireEvent.press(await screen.findByRole('button', { name: ASK }));
+
+    expect(await screen.findByText(FRIENDS_COPY.picker.asked)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says where it was pressed when the group is no longer the player’s', async () => {
+    transport.on('POST', askPath, () => errorResponse(404, 'not_one_of_your_groups'));
+    await openPicker();
+
+    fireEvent.press(await screen.findByRole('button', { name: ASK }));
+
+    expect(await screen.findByText(FRIENDS_COPY.refused.not_one_of_your_groups!)).toBeTruthy();
+    expect(screen.getByRole('button', { name: ASK })).toBeTruthy();
   });
 });
 

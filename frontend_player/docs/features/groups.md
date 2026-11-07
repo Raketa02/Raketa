@@ -678,3 +678,12 @@ the administrator area). The record of why the end looks as it does is [`friends
 `MyGroupMonogram` draws one of the reader's groups' tiles off their own Groups list (`useMyGroups`),
 its box held empty until the list is in: the sheet's read names no tile, and a group's letters are
 cut once, by the server (ADR-0183 §5). The shell hands it, and `groupMembersRoute`, to `friends`' page.
+
+**The Friends screen hands the picker its group, and a notice opens it with the page under it**
+([#758](https://github.com/Raketa02/Raketa/issues/758)). `FriendsPicker` takes `groupId`, the group an
+ask for a Level is made from, whose picker the friend's answer opens for the asker
+([`friends.md`](friends.md)). **`groupPickerRoutes(groupId, sport)`** is where _Level got_ lands: the
+page on its Friends tab standing on the sport — `groupReturnRoute`'s params, the way a returning pass
+stands on one, so opening is not picking — and the Friends screen over it, so Done seats the picks
+on that court and _back_ is the court, as from _+ Friends_; `notifications` pushes the two
+([`notifications.md`](notifications.md)).

@@ -25,6 +25,7 @@ import { useRecordOpened } from '../store/recordOpened.store';
 
 import { NoticeBanner } from './NoticeBanner';
 import { noticeSpoken } from './notificationsCopy';
+import { OPEN_NOTICE_WORDS } from './openNoticeWords';
 
 export function NoticesHost() {
   return (
@@ -51,7 +52,7 @@ function OpenedRecord() {
 }
 
 function Banner() {
-  const { banner, close, open } = useNotices();
+  const { banner, close, open } = useNotices(OPEN_NOTICE_WORDS);
 
   useEffect(() => {
     if (banner === undefined) return;

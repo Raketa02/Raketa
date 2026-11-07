@@ -1,8 +1,9 @@
 /**
- * **The eleven friends routes this app sends**, and the only place their paths are written down
+ * **The twelve friends routes this app sends**, and the only place their paths are written down
  * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#754](https://github.com/Raketa02/Raketa/issues/754),
- * [#756](https://github.com/Raketa02/Raketa/issues/756), on the contract
- * [#745](https://github.com/Raketa02/Raketa/issues/745) and [#748](https://github.com/Raketa02/Raketa/issues/748)
+ * [#756](https://github.com/Raketa02/Raketa/issues/756), [#758](https://github.com/Raketa02/Raketa/issues/758),
+ * on the contract [#745](https://github.com/Raketa02/Raketa/issues/745),
+ * [#748](https://github.com/Raketa02/Raketa/issues/748) and [#749](https://github.com/Raketa02/Raketa/issues/749)
  * built; ADR-0202 §1).
  *
  * One of the two layers allowed to read generated types.
@@ -20,12 +21,13 @@
  * | `GET /friends/link` | your friend link — made on its first read, the same until a New link (#756) |
  * | `POST /friends/link/replacement` | **New link** — a fresh code, the old one dead at once (#756) |
  * | `POST /friends/links/{code}/opening` | open somebody's link — their request on your Home (#756) |
+ * | `POST /friends/{id}/level-asks` | ask a friend to get a Level in the picker's sport — 204; once per sport, ever (#758) |
  *
  * **The three writes that take something back are idempotent**, which is the correctness mechanism
  * under a double tap. Asking and accepting are not: a second ask is `friend_request_already_sent`,
  * a second accept `friend_request_not_found`, and the surface re-reads rather than retrying.
  * **Opening a link is idempotent too** — opened again, it makes no second request — and a New link
- * is not: each makes a fresh code.
+ * is not: each makes a fresh code. **Nor is an ask for a Level**: a second is `level_already_asked`.
  */
 
 import type { components } from '@/generated/schema';
@@ -174,6 +176,23 @@ export function postFriendLinkOpening(code: string): Promise<Schemas['OpenedFrie
   return httpRequest<Schemas['OpenedFriendLinkResponse']>({
     method: 'POST',
     path: linkOpeningPath(code),
+    authenticated: true,
+  });
+}
+
+/**
+ * **Ask a friend to get a Level** (#758) — they are told, and the picker reads *Asked*. Refused with
+ * `friend_not_found` (no longer your friend), `not_one_of_your_groups`, `already_has_a_level`,
+ * `level_already_asked` or `concurrent_modification`.
+ */
+export function postLevelAsk(
+  playerId: string,
+  body: Schemas['AskForALevelRequest'],
+): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${FRIENDS_PATH}/${encodeURIComponent(playerId)}/level-asks`,
+    body,
     authenticated: true,
   });
 }

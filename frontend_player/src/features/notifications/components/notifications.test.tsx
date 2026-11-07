@@ -15,12 +15,18 @@ import { focusManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Linking } from 'react-native';
 
-import { FRIENDS_COPY, requestsHeading, wantsToBeYourFriend } from '@/features/friends/types';
+import {
+  FRIENDS_COPY,
+  friendKeys,
+  requestsHeading,
+  wantsToBeYourFriend,
+} from '@/features/friends/types';
 import { gameKeys } from '@/features/games/types';
 import { GROUPS_COPY } from '@/features/groups/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { useToastQueue } from '@/shared/store/toast.store';
 import { doorRowLabel, theme } from '@/shared/ui';
 import {
   deckCard,
@@ -43,6 +49,7 @@ import {
 import {
   DEVICES_PATH,
   DEVICE_REMOVAL_PATH,
+  FRIENDS_PATH,
   GATE_USER,
   launchSignedIn,
   NOTICES_PATH,
@@ -58,6 +65,7 @@ import {
   stubGames,
   stubProfileSurface,
   stubPush,
+  stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
 import { fakePush, PUSH_TOKEN, type FakePush } from '@/test-support/platform';
 import { servedReliability } from '@/test-support/playerRecord';
@@ -1722,5 +1730,220 @@ describe('a friend’s notices', () => {
       expect(transport.requestsTo('GET', `/api/v1/players/${INES}/record`)).toHaveLength(1),
     );
     expect(screen).toHavePathname('/you');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// An ask for a Level (#758, on #749's)
+// ---------------------------------------------------------------------------
+
+/**
+ * ***Level asked* opens the sport's questionnaire, and *Level got* the asker's picker** (the friends
+ * mechanics §12; the words §29.5). The backend pushes the sport each names, and *Level got* the group
+ * the ask was made from as `pool_id`. *Level asked* walks in through the level pass, begun from Home
+ * — its usual return, since a notice names no group to go back to; *Level got* lays the group's
+ * page on Friends under its picker, so Done and *back* land on the court.
+ */
+describe('an ask for a Level', () => {
+  const TOMEK = 'f0000000-0000-4000-8000-000000000011';
+  const ZOFIA = 'f0000000-0000-4000-8000-000000000012';
+  const RUN = 'e0000000-0000-4000-8000-000000000758';
+  const ASSESSMENTS_PATH = '/api/v1/assessments';
+
+  const ASKED = notice({
+    kind: 'LEVEL_ASKED',
+    title: 'tomek.k wants to play padel with you.',
+    body: 'Get your padel level so tomek.k can add you.',
+    opens: 'QUESTIONNAIRE',
+    game_id: null,
+    pool_id: null,
+    sport: 'PADEL',
+    game_kind: null,
+    player_id: TOMEK,
+    new: true,
+  });
+  const ASKED_PUSHED = {
+    notice_id: ASKED.notice_id,
+    kind: 'LEVEL_ASKED',
+    opens: 'QUESTIONNAIRE',
+    player_id: TOMEK,
+    sport: 'PADEL',
+  };
+  const GOT = notice({
+    kind: 'LEVEL_GOT',
+    title: 'zofia.b has a padel level — you can seat zofia.b now.',
+    body: 'In Kazimierz crew, on the Friends tab.',
+    opens: 'PICKER',
+    game_id: null,
+    pool_id: CREW_ID,
+    sport: 'PADEL',
+    game_kind: null,
+    player_id: ZOFIA,
+    new: true,
+  });
+  const GOT_PUSHED = {
+    notice_id: GOT.notice_id,
+    kind: 'LEVEL_GOT',
+    opens: 'PICKER',
+    player_id: ZOFIA,
+    pool_id: CREW_ID,
+    sport: 'PADEL',
+  };
+
+  const QUESTION: Wire['QuestionResponse'] = {
+    id: 'q-played',
+    category: 'Recent activity',
+    tier: null,
+    situation: 'Before anything else',
+    text: 'Have you played padel before?',
+    qualifier: 'Any level counts',
+    options: [
+      { id: 'never', text: 'Never played' },
+      { id: 'regular', text: 'I play most weeks' },
+    ],
+  };
+  const OPENING: Wire['AssessmentStepResponse'] = {
+    assessment_id: RUN,
+    status: 'in_progress',
+    questions_asked: 0,
+    transcript: [],
+    question: QUESTION,
+  };
+
+  /** zofia.b, as the picker reads her — with her new padel Level. */
+  const ZOFIA_RATED: Wire['FriendSchema'] = {
+    player_id: ZOFIA,
+    nickname: 'zofia.b',
+    photo_id: null,
+    photo_url: null,
+    friends_since: '2026-09-01T10:00:00Z',
+    sports: [{ sport: 'PADEL', level: 2.4, band: 'Developing' }],
+    level_asked_in: ['PADEL'],
+  };
+
+  describe('Level asked — Zofia, unrated at padel', () => {
+    beforeEach(() => {
+      stubGate(transport, { ratings: [{ ...RATING, sport: 'TENNIS' }], hasPlayerProfile: true });
+      transport.on('POST', ASSESSMENTS_PATH, () => {
+        stubRunsInProgress(transport, [{ assessment_id: RUN, sport: 'PADEL' }]);
+        return json(OPENING, 201);
+      });
+      transport.on('GET', `${ASSESSMENTS_PATH}/${RUN}`, () => json(OPENING));
+    });
+
+    /** On the question, she leaves for later — and the pass lands where it began, Home. */
+    async function continueLater() {
+      fireEvent.press(screen.getByLabelText('Leave this rating'));
+      fireEvent.press(await screen.findByLabelText(/^Continue later\./));
+      await waitFor(() => expect(screen).toHavePathname('/'));
+      expect(screen.queryByText(QUESTION.text)).toBeNull();
+    }
+
+    it('its row behind the bell opens the padel questionnaire, and its return is Home', async () => {
+      stubNotices(transport, [ASKED], { newCount: 1 });
+      await launchSignedIn();
+      fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+      await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+      fireEvent.press(await screen.findByRole('button', { name: /^New\. tomek\.k wants to play/ }));
+
+      await waitFor(() => expect(screen).toHavePathname(`/question/${RUN}`));
+      expect(await screen.findByText(QUESTION.text)).toBeTruthy();
+      expect(transport.requestsTo('POST', ASSESSMENTS_PATH).map((one) => one.body)).toEqual([
+        { sport: 'PADEL' },
+      ]);
+      await continueLater();
+    });
+
+    it('a push of it, tapped, opens the questionnaire from wherever she is', async () => {
+      await launchSignedIn();
+      fireEvent.press(await screen.findByLabelText('You'));
+      await waitFor(() => expect(screen).toHavePathname('/you'));
+
+      act(() => phone.tap(ASKED_PUSHED));
+
+      await waitFor(() => expect(screen).toHavePathname(`/question/${RUN}`));
+      expect(await screen.findByText(QUESTION.text)).toBeTruthy();
+      await continueLater();
+    });
+
+    it('says she has the Level already when she got one since, and opens nothing', async () => {
+      transport.on('POST', ASSESSMENTS_PATH, () => errorResponse(409, 'sport_already_rated'));
+      stubNotices(transport, [ASKED], { newCount: 1 });
+      await launchSignedIn();
+      fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+      await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+      useToastQueue.setState({ queue: [] });
+      fireEvent.press(await screen.findByRole('button', { name: /^New\. tomek\.k wants to play/ }));
+
+      await waitFor(() =>
+        expect(useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone])).toEqual([
+          ['You have a padel level already.', 'base'],
+        ]),
+      );
+      expect(screen).toHavePathname('/notices');
+      useToastQueue.setState({ queue: [] });
+    });
+  });
+
+  describe('Level got — Tomek, who asked from the crew', () => {
+    beforeEach(() => {
+      stubMyGroups(transport, [CREW]);
+      transport.on('GET', `/api/v1/groups/${CREW_ID}`, () => json(CREW_PAGE));
+      stubGroupDeck(transport, CREW_ID);
+      transport.on('GET', FRIENDS_PATH, () =>
+        json<Wire['FriendsResponse']>({ sport: 'PADEL', friends: [ZOFIA_RATED] }),
+      );
+    });
+
+    afterEach(() => queryClient.setQueryDefaults(friendKeys.all, {}));
+
+    it('its row behind the bell opens the crew’s picker, over its Friends tab, where she can be picked', async () => {
+      stubNotices(transport, [GOT], { newCount: 1 });
+      await launchSignedIn();
+      // The picker as it was read before her Level arrived: greyed, asked — and never stale nor
+      // collected on its own (the harness runs timers on a push), so only the notice marking it
+      // stale reads it again.
+      queryClient.setQueryDefaults(friendKeys.all, { staleTime: Infinity, gcTime: Infinity });
+      queryClient.setQueryData(friendKeys.listIn('padel'), [
+        { playerId: ZOFIA, nickname: 'zofia.b', sports: [], askedIn: ['padel'] },
+      ]);
+      fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+      await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+      fireEvent.press(await screen.findByRole('button', { name: /^New\. zofia\.b has a padel/ }));
+
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}/friends`));
+      // Read again: the row is hers with her Level, pickable — never the read from before it.
+      expect(
+        await screen.findByRole('checkbox', {
+          name: 'zofia.b, 2,40 · developing',
+          disabled: false,
+        }),
+      ).toBeTruthy();
+
+      // Done lands on the crew’s Friends tab, in padel — the page under the picker.
+      fireEvent.press(screen.getByRole('button', { name: FRIENDS_COPY.picker.done }));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
+      expect(await screen.findByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+      // And back from the page is the list the notice was opened from.
+      fireEvent.press(await screen.findByLabelText(GROUPS_COPY.group.back));
+      await waitFor(() => expect(screen).toHavePathname('/notices'));
+    });
+
+    it('a push of it, tapped, opens the picker over wherever he is — back is the crew’s Friends tab', async () => {
+      await launchSignedIn();
+      fireEvent.press(await screen.findByLabelText('You'));
+      await waitFor(() => expect(screen).toHavePathname('/you'));
+
+      act(() => phone.tap(GOT_PUSHED));
+
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}/friends`));
+      expect(await screen.findByRole('checkbox', { name: /^zofia\.b/ })).toBeTruthy();
+      fireEvent.press(await screen.findByLabelText('Back'));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
+      expect(await screen.findByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+    });
   });
 });

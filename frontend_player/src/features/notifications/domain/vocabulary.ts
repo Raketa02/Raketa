@@ -41,11 +41,14 @@ export type NoticeKind =
   /** *kuba.w said yes — you're friends*, or *You and kuba.w are friends now* — opens their record. */
   | 'FRIENDS_MADE'
   /**
-   * *kuba.w wants to play padel with you…* (#749) — opens that sport's questionnaire. Told, and in
-   * the list; where a tap lands is #758's, so this build opens nothing for it yet.
+   * *kuba.w wants to play padel with you. Get your padel level so kuba.w can add you.* (#749) —
+   * opens that sport's questionnaire, through the level pass and its usual return (#758).
    */
   | 'LEVEL_ASKED'
-  /** *kuba.w has a padel level — you can seat kuba.w now.* (#749) — opens the picker; #758's too. */
+  /**
+   * *kuba.w has a padel level — you can seat kuba.w now.* (#749) — opens the Friends tab picker of
+   * the group the ask was made from (#758).
+   */
   | 'LEVEL_GOT';
 
 export const NOTICE_KINDS = [
@@ -80,7 +83,8 @@ export const NOTICE_KINDS = [
  * Where a tap opens a notice (the screens A9): a booked game's details, a game still filling's — or
  * one that did not fill — a group's deck with the card on top, a booked game's result screen
  * (#663), where each step at the court is acted on, Home (#727, #731), for a notice about no
- * game, and a player's record (#753), for *You're friends*.
+ * game, a player's record (#753), for *You're friends*, and the two an ask for a Level opens
+ * (#758): a sport's questionnaire, and a group's Friends picker.
  */
 export type Opens =
   | 'BOOKING'
@@ -89,12 +93,12 @@ export type Opens =
   | 'RESULT'
   | 'HOME'
   | 'RECORD'
-  /** A sport's questionnaire (`LEVEL_ASKED`, #749) — landed by #758; nowhere in this build. */
+  /** A sport's questionnaire, through the level pass (`LEVEL_ASKED`, #749, #758). */
   | 'QUESTIONNAIRE'
-  /** A group's Friends picker (`LEVEL_GOT`, #749) — landed by #758; nowhere in this build. */
+  /** A group's Friends tab picker, in a sport (`LEVEL_GOT`, #749, #758). */
   | 'PICKER';
 
-/** The places a tap opens that are a game's — every one but Home, a record and #749's two. */
+/** The places a tap opens that are a game's — every one but Home, a record and an ask's two. */
 export type GameOpens = Exclude<Opens, 'HOME' | 'RECORD' | 'QUESTIONNAIRE' | 'PICKER'>;
 
 /** The four a game's notice opens — what a push about a game is checked against. */

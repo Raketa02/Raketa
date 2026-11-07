@@ -235,7 +235,7 @@ when picked (design-system Part 16, 2026-11-07). **Full — three in doubles, on
 rest**, which cannot be picked until one is unpicked, and says _the court is full_ after their name
 (a call). A picked row never greys: whoever is seated can be unpicked, a friend who has since lost
 their Level included. **A friend with no Level in the sport** is greyed with _No padel level yet_ (§29.3); the
-_Ask … to get a padel level_ under it is #758's, and `level_asked_in` is left on the wire for it.
+_Ask … to get a padel level_ under it is #758's (below).
 **No friends at all** draws the empty state the composer hands in — `groups`' play 55 card.
 
 **The picks are the composer's.** `picked` and `onToggle` are handed in, since Done seats them on
@@ -243,3 +243,37 @@ the group's court and the court's line-up is `groups`'; a list read again leaves
 were.
 
 **Not seen on a device**: the round box beside a long nickname; the greyed rows (friends 6).
+
+## Asking a friend to get a Level (#758)
+
+**A greyed no-Level row asks: _Ask zofia.b to get a padel level_, and _Asked_ once asked.**
+[#758](https://github.com/Raketa02/Raketa/issues/758) (the screens §4.2; the words §29.3; the
+mechanics §5) draws the ask under a picker row whose friend has no Level in the sport — the
+`secondary` button at `sm` in the friend pills' pill (design-system Part 16, 2026-11-07) — or the
+_Asked_ tag where the read's `level_asked_in` names the sport: **once per sport, ever**. `levelAskOf`
+is the rule, beside `levelIn`: nothing on a row with a Level, and nothing on a picked row, which is
+never greyed. **The words are §29.3's, with no pronoun** (ADR-0096) — _a padel level_, where the PRD
+and the ticket wrote _her_ and _their_. **It is a sibling of the row's checkbox, never inside it**,
+Members' rule for its pills: the row is shut, and the ask is not, so it is drawn at full strength
+under the greyed person, indented to the words.
+
+**The ask is the seventh write, `useAskForALevel`**: `POST /friends/{id}/level-asks` with the
+picker's sport and **the group whose Friends tab opened it** — `FriendsPicker` takes `groupId` now —
+since that group's picker is what the friend's answer opens for the asker. It settles once this
+feature's lists have re-read, so the button stays _Asking…_ until the row already says _Asked_: the
+server's answer, never a guess. It moves no face — asked for is not got. **Three refusals are the
+state moving, and say nothing** (`stateMoved`): `level_already_asked` (asked from another phone — the
+row turns _Asked_), `already_has_a_level` (they got one since — the row turns pickable) and
+`friend_not_found` (no longer friends — the row goes). **`not_one_of_your_groups` is said where it was
+pressed** — _You're not in this group any more._, a call — and any other failure in its recovery
+sentence, through `WriteNote`.
+
+**Where the two notices land is `notifications`'** ([`notifications.md`](notifications.md)): _Level
+asked_ the friend's questionnaire through the level pass, _Level got_ this group's picker with the
+page on Friends under it. `friendKeys` is exported for it — the friend's Level is what arrived, so the
+lists are marked stale as it opens.
+
+**Calls for the product owner** (in `friendsCopy.ts`): _Asking…_; _Asked_ spoken whole, _Asked
+zofia.b to get a padel level_; the refusal sentence; _Asked_ as the neutral tag. **Not seen on a
+device**: the ask under a greyed row — the indent, a long nickname cutting the pill's one line — and
+the tag beside it.

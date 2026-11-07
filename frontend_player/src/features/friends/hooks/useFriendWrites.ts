@@ -1,7 +1,7 @@
 /**
- * **The six friends writes, and what each re-reads**
- * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#756](https://github.com/Raketa02/Raketa/issues/756);
- * ADR-0202 §1–§2).
+ * **The seven friends writes, and what each re-reads**
+ * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#756](https://github.com/Raketa02/Raketa/issues/756),
+ * [#758](https://github.com/Raketa02/Raketa/issues/758); ADR-0202 §1–§2).
  *
  * | Hook | Route | Re-reads |
  * | --- | --- | --- |
@@ -11,6 +11,7 @@
  * | `useSetAsideFriendRequest` | `POST …/{id}/set-aside` | Home, where the card was, and the surface's own read |
  * | `useCancelFriendRequest` | `DELETE /friends/requests/{id}` | the surface's own read |
  * | `useRemoveFriend` | `DELETE /friends/{id}` | the surface's own read, and every face |
+ * | `useAskForALevel` | `POST /friends/{id}/level-asks` | this feature's lists — the picker's among them |
  *
  * **And every one re-reads this feature's own lists** (#754, `friendKeys`): You › Friends' three
  * tabs, the Add friends sheet's *to add*, and the You tab's row — so a request asked on Members
@@ -45,11 +46,21 @@
  * offline is not landed on Home on a reconnect the player never saw; it fails, and the links
  * feature says why.
  *
+ * ## Asking a friend to get a Level (#758)
+ *
+ * **The picker's row reads *Asked* on the server's answer**: the ask settles once this feature's
+ * lists have re-read — the picker's `GET /friends?sport=` among them, whose `level_asked_in` says it
+ * — so the button stays busy until the row under it already says so. It moves no face: a Level
+ * asked for is not a Level got.
+ *
  * ## A refusal that is the state moving is a re-read
  *
  * `already_friends`, `friend_request_already_sent` and `friend_request_not_found` say the surface
  * was drawn from a state that has since moved — accepted on another phone, cancelled by them — and
- * `concurrent_modification` that two acts on the pair raced. **None of them is retried**: asking and
+ * `concurrent_modification` that two acts on the pair raced. So do an ask's three (#758):
+ * `level_already_asked` (asked from another phone), `already_has_a_level` (they got one since the
+ * picker was read — the row turns pickable) and `friend_not_found` (no longer friends — the row
+ * goes). **None of them is retried**: asking and
  * accepting are not idempotent, and the global rule retries no mutation. The surface re-reads
  * instead, and the pill or the button it draws next is the answer. Any other refusal is said where
  * it was pressed.
@@ -60,11 +71,13 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
 import { shouldRetryQuery } from '@/shared/lib/query-client';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { movesTheFaces, type AskedWhere } from '../domain/friendship';
 import type { FriendRelation } from '../domain/vocabulary';
 import {
   acceptFriendRequest,
+  askForALevel,
   askToBeFriends,
   cancelFriendRequest,
   openFriendLink,
@@ -85,6 +98,9 @@ const MOVED: ReadonlySet<string> = new Set([
   'already_friends',
   'friend_request_already_sent',
   'friend_request_not_found',
+  'level_already_asked',
+  'already_has_a_level',
+  'friend_not_found',
   RACED,
 ]);
 
@@ -138,6 +154,19 @@ export function useRemoveFriend(playerId: string, reread: Reread) {
 }
 
 /**
+ * **Ask a friend to get a Level in the picker's sport** (#758), from this group's Friends tab — see
+ * the module note. Not retried, as no write here is: a second ask is `level_already_asked`.
+ */
+export function useAskForALevel(playerId: string, sport: Sport, groupId: string) {
+  const client = useQueryClient();
+  return useMutation<void, AppError, void>({
+    mutationFn: () => askForALevel(playerId, sport, groupId),
+    onSuccess: () => settle(client, undefined, false),
+    onError: (error) => rereadIfMoved(client, error),
+  });
+}
+
+/**
  * **Open somebody's link** — the code, checked as the link was read; answers where the opener stands
  * with its owner once it is. See the module note.
  *
@@ -160,8 +189,8 @@ export function useOpenFriendLink(rereadBell: Reread) {
   });
 }
 
-function rereadIfMoved(client: QueryClient, error: AppError, reread: Reread) {
-  return stateMoved(error) ? Promise.all([reread(), rereadTheLists(client)]) : undefined;
+function rereadIfMoved(client: QueryClient, error: AppError, reread?: Reread) {
+  return stateMoved(error) ? Promise.all([reread?.(), rereadTheLists(client)]) : undefined;
 }
 
 /** The surface's own read, this feature's lists, and every face where the friendship turned. */

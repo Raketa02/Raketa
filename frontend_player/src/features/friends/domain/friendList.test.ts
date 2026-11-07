@@ -1,4 +1,4 @@
-import { levelIn, playedWithShown, type PlayedWithPerson } from './friendList';
+import { levelAskOf, levelIn, playedWithShown, type PlayedWithPerson } from './friendList';
 
 const person = (
   playerId: string,
@@ -51,5 +51,32 @@ describe('a friend’s Level in one sport', () => {
     expect(levelIn(magda, 'tennis')).toEqual({ sport: 'tennis', level: 3.1, band: 'Developing' });
     expect(levelIn(magda, 'squash')).toBeUndefined();
     expect(levelIn(undefined, 'padel')).toBeUndefined();
+  });
+});
+
+describe('levelAskOf — what a picker row offers under its line (#758)', () => {
+  const zofia = { sports: [], askedIn: [] } as const;
+  const asked = { sports: [], askedIn: ['padel'] } as const;
+  const rated = {
+    sports: [{ sport: 'padel', level: 2.66, band: 'Established' }],
+    askedIn: ['padel'],
+  } as const;
+
+  it('offers the ask on a greyed row: a friend with no Level in the sport, not asked yet', () => {
+    expect(levelAskOf(zofia, 'padel', { picked: false })).toBe('ask');
+  });
+
+  it('says Asked once you asked for that sport — and only that sport', () => {
+    expect(levelAskOf(asked, 'padel', { picked: false })).toBe('asked');
+    expect(levelAskOf(asked, 'tennis', { picked: false })).toBe('ask');
+  });
+
+  it('offers nothing for a friend with a Level in the sport, asked or not', () => {
+    expect(levelAskOf(rated, 'padel', { picked: false })).toBeUndefined();
+  });
+
+  // A friend seated before they lost their Level can be unpicked, and the row is not greyed.
+  it('offers nothing on a picked row, which is never greyed', () => {
+    expect(levelAskOf(zofia, 'padel', { picked: true })).toBeUndefined();
   });
 });

@@ -11,6 +11,7 @@
 
 import { toSport, toWireSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Friend, FriendRequest, FriendSport, GroupToAddFrom } from '../domain/friendList';
 import type { FriendLink } from '../domain/friendLink';
@@ -41,7 +42,19 @@ export function toFriend(wire: Schemas['FriendSchema']): Friend {
       const sport = toSport(served.sport);
       return sport === undefined ? [] : [{ sport, level: served.level, band: served.band }];
     }),
+    askedIn: wire.level_asked_in.flatMap((served) => {
+      const sport = toSport(served);
+      return sport === undefined ? [] : [sport];
+    }),
   };
+}
+
+/**
+ * `POST /friends/{id}/level-asks`'s body (#758) — the picker's sport, the Level they are asked to
+ * get, and the group whose Friends tab the picker is on, whose picker their answer opens.
+ */
+export function toLevelAskRequest(sport: Sport, groupId: string): Schemas['AskForALevelRequest'] {
+  return { sport: toWireSport(sport), group_id: groupId };
 }
 
 /** One open request — *Asked you*'s or *You asked*'s. */

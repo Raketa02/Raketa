@@ -35,6 +35,11 @@ export type { GroupDoors } from './components/AddFriendsSheet';
  */
 export { FriendsPicker, type FriendsPickerProps } from './components/FriendsPicker';
 export { useFriendsIn } from './hooks/useFriendLists';
+/**
+ * **This feature's reads** — what *Level got* marks stale as it opens the picker (#758): the friend's
+ * Level arrived, so the picker's list and every other that names their sports are out of date.
+ */
+export { friendKeys } from './hooks/friendKeys';
 export { levelIn, type Friend } from './domain/friendList';
 export { PlayedWithCard, type PlayedWithCardProps } from './components/PlayedWithCard';
 export { FriendButton, type FriendButtonProps } from './components/FriendButton';

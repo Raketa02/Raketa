@@ -9,6 +9,10 @@
  * one sport, and the pass ends back on the passport — and both are the pass's, not the chip's.
  * What crosses the feature's public surface is the act, never the store.
  *
+ * **A notice is a third** ([#758](https://github.com/Raketa02/Raketa/issues/758)): *Level asked*
+ * opens its sport's questionnaire from Home's origin — a pass begun with no group to return to — and,
+ * having no chip to draw a failure beside, hands `rate` an `onError`.
+ *
  * **An official group's card is the same act from another door**
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3): a button
  * per sport the group plays, on its tabs, on Members and on *Post a game*. The caller hands in
@@ -44,9 +48,17 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { useStartAssessment } from './useStartAssessment';
 
+/** What a door does when the start fails — the passport and the card draw `error` instead. */
+export interface AddASportOptions {
+  readonly onError?: (error: AppError) => void;
+}
+
 export interface AddASport {
-  /** Begin a pass of this one sport, from the door the hook was handed. */
-  readonly rate: (sport: Sport) => void;
+  /**
+   * Begin a pass of this one sport, from the door the hook was handed. A door with nowhere to draw
+   * `error` — a notice opened (#758) — is told of a failed start through `onError`.
+   */
+  readonly rate: (sport: Sport, options?: AddASportOptions) => void;
   /** The sport whose start is in flight, so its chip alone can say so. */
   readonly starting: Sport | undefined;
   /** The failed start, if the last one failed. The passport draws it beside the chips. */
@@ -70,7 +82,7 @@ export function useAddASport(from: PassOrigin): AddASport {
   const inFlight = useRef(false);
 
   const rate = useCallback(
-    (sport: Sport) => {
+    (sport: Sport, options?: AddASportOptions) => {
       if (inFlight.current) return;
       inFlight.current = true;
       startRun(sport, {
@@ -83,8 +95,9 @@ export function useAddASport(from: PassOrigin): AddASport {
         },
         // Released on failure only: a start that landed is followed by a departure, and this
         // screen is gone. A failed one leaves the chip to be pressed again.
-        onError: () => {
+        onError: (error) => {
           inFlight.current = false;
+          options?.onError?.(error);
         },
       });
     },

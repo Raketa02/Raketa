@@ -326,3 +326,12 @@ edge level with the ⓘ, and the count over _Skip_ / _Next_ because it is narrow
 `size.guideBesideMin` (180) of room — a phone under about 355pt wide — it stands under the hole as before. The
 range and the ring keep their bubbles under them. `verdictGuide.test` holds which step asks.
 Seen working on the user's iPhone the same day.
+
+**A notice is a third door into a pass of one sport** ([#758](https://github.com/Raketa02/Raketa/issues/758)):
+_Level asked_ — a friend wants to play the sport with you — opens its questionnaire through
+`useAddASport(FROM_HOME)`, held by `notifications`' `useOpenNotice`. Home is the origin because a
+notice names no group to go back to, so every way out of the pass lands on Home, the pass's usual
+return for a run reached with no group ([`notifications.md`](notifications.md)). **`rate` takes an
+`onError`**: the passport and a group's card draw the hook's `error` beside their chips, and a notice
+has nowhere to draw it, so it is told of a failed start — `sport_already_rated` among them, for a
+player who got the Level since the ask — and says so as a toast.

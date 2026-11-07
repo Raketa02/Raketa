@@ -28,6 +28,11 @@ export interface Friend {
   readonly photoUrl?: string;
   /** Every sport they are rated in, in the sports' own order — a sport this build can't name left off. */
   readonly sports: readonly FriendSport[];
+  /**
+   * Every sport **you** asked them to get a Level in, answered or not (#758) — you ask once per
+   * sport, ever. Only your own asks: nobody else's are on the wire.
+   */
+  readonly askedIn: readonly Sport[];
 }
 
 /** **A friend's Level in one sport** — the picker's line and their caption on a court (#757). */
@@ -36,6 +41,24 @@ export function levelIn(
   sport: Sport,
 ): FriendSport | undefined {
   return friend?.sports.find((one) => one.sport === sport);
+}
+
+/**
+ * **What a picker row offers under its line** ([#758](https://github.com/Raketa02/Raketa/issues/758);
+ * the screens §4.2; the words §29.3): *Ask zofia.b to get a padel level* on a greyed row — a friend
+ * with no Level in the picker's sport — or *Asked* once you have, since you ask once per sport,
+ * ever. **Nothing on any other row**: a friend with a Level is picked, not asked, and a picked row is
+ * never greyed — one seated before they lost their Level is there to be unpicked.
+ */
+export type LevelAsk = 'ask' | 'asked';
+
+export function levelAskOf(
+  friend: Pick<Friend, 'sports' | 'askedIn'>,
+  sport: Sport,
+  { picked }: { readonly picked: boolean },
+): LevelAsk | undefined {
+  if (picked || levelIn(friend, sport) !== undefined) return undefined;
+  return friend.askedIn.includes(sport) ? 'asked' : 'ask';
 }
 
 /** **An open request** — on *Asked you* made of you, on *You asked* yours. */

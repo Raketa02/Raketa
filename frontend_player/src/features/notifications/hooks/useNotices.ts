@@ -49,7 +49,7 @@ import { arrivalsOf, type NoticeTarget } from '../domain/notice';
 import { noticeOfPush } from '../use-cases/notifications';
 
 import { notificationKeys } from './notificationKeys';
-import { rereadDestination, useOpenNotice } from './useOpenNotice';
+import { rereadDestination, useOpenNotice, type OpenNoticeWords } from './useOpenNotice';
 import { usePushRegistration } from './usePushRegistration';
 import { useRecentNotices } from './useRecentNotices';
 
@@ -67,7 +67,8 @@ export interface Banner {
 
 let arrivals = 0;
 
-export function useNotices(): {
+/** @param words what opening a notice says when it cannot — the host's, handed to `useOpenNotice`. */
+export function useNotices(words: OpenNoticeWords): {
   readonly banner: Banner | undefined;
   readonly close: () => void;
   readonly open: (target: NoticeTarget) => void;
@@ -75,7 +76,7 @@ export function useNotices(): {
   const pushed = usePushRegistration();
   const push = usePush();
   const client = useQueryClient();
-  const open = useOpenNotice();
+  const open = useOpenNotice(words);
   const [banner, setBanner] = useState<Banner | undefined>(undefined);
   /** Every notice id this session has seen — `undefined` until its first read of the list. */
   const seen = useRef<Set<string> | undefined>(undefined);
