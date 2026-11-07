@@ -1,11 +1,14 @@
-"""The Friendship repository: the pair's stream, and its two projection rows.
+"""The Friendship repository: the pair's stream, its two projection rows, and
+its asks for a level.
 
 The shape every aggregate repository here has — the aggregate type spelled once,
 state rebuilt by replay, the version remembered from the load and expected by
 the append (``docs/adr/0018``) — plus the projection, rewritten by ``save`` from
 the aggregate **as it stands** after the append, in the caller's transaction. A
 pair's rows are few and wholly determined by its state, so they are replaced,
-not patched event by event.
+not patched event by event — and so are its ``friend_level_asks`` rows, when
+an ask or its answer is among the events appended (#749): nothing else moves
+them.
 
 **Constructed per unit of work**: the versions it remembers belong to one.
 """
@@ -14,15 +17,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import and_, delete, or_
+from sqlalchemy import ColumnElement, and_, delete, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.kernel import invariant
+from app.modules.friends.domain.events import LevelAsked, LevelGot
 from app.modules.friends.domain.friendship import Friendship
 from app.modules.friends.domain.ids import friendship_id
 from app.modules.friends.domain.relation import FriendRelation
-from app.modules.friends.infrastructure.friendship_model import FriendRelationORM
+from app.modules.friends.infrastructure.friendship_model import (
+    FriendLevelAskORM,
+    FriendRelationORM,
+)
 
 FRIENDSHIP_AGGREGATE = "friendship"
 
@@ -63,6 +71,8 @@ class EventSourcedFriendshipRepository:
         )
         await self._events.publish_many(pending)
         await self._project(friendship)
+        if any(isinstance(event, LevelAsked | LevelGot) for event in pending):
+            await self._project_the_asks(friendship)
         # Deliberately no commit: the transaction boundary is the use case's.
         self._versions[friendship.id] = friendship.version
 
@@ -70,15 +80,11 @@ class EventSourcedFriendshipRepository:
         first, second = friendship.first_id, friendship.second_id
         await self._session.execute(
             delete(FriendRelationORM).where(
-                or_(
-                    and_(
-                        FriendRelationORM.player_id == first,
-                        FriendRelationORM.other_id == second,
-                    ),
-                    and_(
-                        FriendRelationORM.player_id == second,
-                        FriendRelationORM.other_id == first,
-                    ),
+                _either_way(
+                    FriendRelationORM.player_id,
+                    FriendRelationORM.other_id,
+                    first,
+                    second,
                 )
             )
         )
@@ -115,3 +121,39 @@ class EventSourcedFriendshipRepository:
                 )
             )
         await self._session.flush()
+
+    async def _project_the_asks(self, friendship: Friendship) -> None:
+        first, second = friendship.first_id, friendship.second_id
+        await self._session.execute(
+            delete(FriendLevelAskORM).where(
+                _either_way(
+                    FriendLevelAskORM.asker_id,
+                    FriendLevelAskORM.friend_id,
+                    first,
+                    second,
+                )
+            )
+        )
+        for ask in friendship.level_asks:
+            self._session.add(
+                FriendLevelAskORM(
+                    asker_id=ask.asker_id,
+                    friend_id=second if ask.asker_id == first else first,
+                    sport=ask.sport.value,
+                    group_id=ask.group_id,
+                    asked_at=ask.asked_at,
+                    got_at=ask.got_at,
+                )
+            )
+        await self._session.flush()
+
+
+def _either_way(
+    one: InstrumentedAttribute[UUID],
+    other: InstrumentedAttribute[UUID],
+    first: UUID,
+    second: UUID,
+) -> ColumnElement[bool]:
+    """The pair's rows, whichever of the two each row is keyed from."""
+
+    return or_(and_(one == first, other == second), and_(one == second, other == first))

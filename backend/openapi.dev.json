@@ -5781,7 +5781,9 @@
           "WERE_THEY_THERE",
           "GET_YOUR_LEVEL",
           "FRIEND_REQUEST",
-          "FRIENDS_MADE"
+          "FRIENDS_MADE",
+          "LEVEL_ASKED",
+          "LEVEL_GOT"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -5857,7 +5859,7 @@
           },
           "opens": {
             "$ref": "#/components/schemas/Opens",
-            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` \u2014 the record of `player_id`, a new friend."
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` \u2014 the record of `player_id`, a new friend; `QUESTIONNAIRE` \u2014 the questionnaire of `sport`, through the level pass and its usual return (`LEVEL_ASKED`, #749); `PICKER` \u2014 the Friends tab's picker of the group `pool_id` in `sport`, where `player_id` can be seated now (`LEVEL_GOT`, #749)."
           },
           "game_id": {
             "anyOf": [
@@ -5883,7 +5885,7 @@
               }
             ],
             "title": "Pool Id",
-            "description": "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`."
+            "description": "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`; on a `LEVEL_GOT`, the group the ask was made from, whose picker it opens."
           },
           "sport": {
             "anyOf": [
@@ -5893,7 +5895,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The game's sport. On a notice about no game, the sport it names \u2014 a friend request's screen, or the level a `LEVEL_ASKED` asks for and a `LEVEL_GOT` says arrived \u2014 or `null`."
           },
           "game_kind": {
             "anyOf": [
@@ -5916,7 +5919,7 @@
               }
             ],
             "title": "Player Id",
-            "description": "On a notice about no game that names somebody \u2014 `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens. `null` on every other notice."
+            "description": "On a notice about no game that names somebody \u2014 `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens; `LEVEL_ASKED`, the friend who asked; `LEVEL_GOT`, the friend who got the level. `null` on every other notice."
           },
           "gathered": {
             "type": "integer",
@@ -6064,7 +6067,9 @@
           "DECK",
           "RESULT",
           "HOME",
-          "RECORD"
+          "RECORD",
+          "QUESTIONNAIRE",
+          "PICKER"
         ],
         "title": "Opens",
         "description": "The screen a notice opens on when tapped (the screens A9)."

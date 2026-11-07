@@ -91,7 +91,9 @@ def _opening(notice: RecordedNotice) -> dict[str, str]:
     """What a tap hands the app: the notice, and where it opens — and the game
     it is about, for every notice but one about no game (*Get your level*,
     #727), which opens Home and hands nothing more — but the person it names,
-    for a friend's (#745): whose record ``RECORD`` opens."""
+    for a friend's (#745): whose record ``RECORD`` opens; and the group and the
+    sport it names, for an ask for a level's (#749): the questionnaire
+    ``QUESTIONNAIRE`` opens, and the picker ``PICKER`` does."""
 
     opening = {
         "notice_id": str(notice.notice_id),
@@ -101,6 +103,10 @@ def _opening(notice: RecordedNotice) -> dict[str, str]:
     if notice.game_id is None:
         if notice.person_named is not None:
             opening["player_id"] = str(notice.person_named)
+        if notice.pool_id is not None:
+            opening["pool_id"] = str(notice.pool_id)
+        if notice.sport is not None:
+            opening["sport"] = notice.sport.value
         return opening
     about_a_game = f"{notice.kind} is about a game"
     return {

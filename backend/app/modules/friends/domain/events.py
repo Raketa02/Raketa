@@ -1,4 +1,4 @@
-"""The Friends context's durable events — nine, and what each carries.
+"""The Friends context's durable events — eleven, and what each carries.
 
 Primitive fields only, so the wire format survives a refactor of the Python
 types: the two players as their uuids, the enums as their values. **Every event
@@ -8,10 +8,13 @@ question the log itself can answer, as a Block's is.
 **A Friend link's two events name its owner alone** (#748): the code it carries
 is an address posted to chats, no secret (``domain/link.py``).
 
+**An ask for a level and its answer name the two friends too** (#749): who
+asked, and the friend asked to get a level.
+
 **None of them is a notification by itself.** They ride the outbox because every
-event does; Notifications tells a request to the person asked and *friends made*
-to whoever asked (both, for a crossed request), and nothing else here is told
-to anybody.
+event does; Notifications tells a request to the person asked, *friends made*
+to whoever asked (both, for a crossed request), an ask for a level to the friend
+asked and its answer to the asker, and nothing else here is told to anybody.
 """
 
 from __future__ import annotations
@@ -137,4 +140,32 @@ class FriendLinkReplaced:
     owner_id: UUID
     code: str
     replaced_code: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class LevelAsked:
+    """``friends.level_asked`` v1 — **Ask for a level** (#749; ``docs/adr/0202``
+    §4): ``asker_id`` asked ``friend_id``, a friend with no level in ``sport``,
+    to get one. ``group_id`` is the group whose picker it was asked from — what
+    the answer opens. Once per asker, friend and sport, ever."""
+
+    asker_id: UUID
+    friend_id: UUID
+    sport: str
+    group_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class LevelGot:
+    """``friends.level_got`` v1 — the ask answered: the rating context recorded
+    ``friend_id``'s first level in ``sport``. Recorded once per ask, whether or
+    not they are still friends; Notifications tells ``asker_id`` only while they
+    are. ``group_id`` is the ask's."""
+
+    asker_id: UUID
+    friend_id: UUID
+    sport: str
+    group_id: UUID
     occurred_at: datetime

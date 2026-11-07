@@ -110,6 +110,16 @@ class NoticeKind(StrEnum):
     #: friends now* to both, for a crossed request (``reason`` ``CROSSED``).
     #: About no game, opening the friend's record.
     FRIENDS_MADE = "FRIENDS_MADE"
+    #: *Tomek wants to play padel with you.* — **level asked**: a friend asked
+    #: the reader to get a level in a sport (``docs/adr/0202`` §4; #749), not the
+    #: once-per-account *Get your level*. About no game; it names the asker and
+    #: the sport, and opens that sport's questionnaire.
+    LEVEL_ASKED = "LEVEL_ASKED"
+    #: *Zofia has a padel level — you can seat Zofia now.* — **level got**: the
+    #: friend the reader asked got their first level in the sport (#749). About
+    #: no game; it names the friend, the sport and the group the ask was made
+    #: from, whose picker it opens.
+    LEVEL_GOT = "LEVEL_GOT"
 
 
 class Opens(StrEnum):
@@ -128,6 +138,12 @@ class Opens(StrEnum):
     HOME = "HOME"
     #: The player record of the person the notice names — a new friend (#745).
     RECORD = "RECORD"
+    #: The questionnaire of the notice's sport, through the level pass and its
+    #: usual return — *level asked* (#749).
+    QUESTIONNAIRE = "QUESTIONNAIRE"
+    #: The Friends tab's picker of the notice's group (``pool_id``) in its
+    #: sport, where the friend it names can be seated now — *level got* (#749).
+    PICKER = "PICKER"
 
 
 class NoticeReason(StrEnum):
@@ -335,6 +351,44 @@ def friends_made_notice(*, key: str, friend: UUID, crossed: bool) -> Notice:
         opens=Opens.RECORD,
         people=(friend,),
         reason=NoticeReason.CROSSED.value if crossed else None,
+    )
+
+
+def level_asked_notice(*, key: str, asker: UUID, sport: Sport) -> Notice:
+    """*{asker} wants to play {sport} with you.* (#749) — about no game; it names
+    the asker and the sport, and opens that sport's questionnaire. It names no
+    group: the friend asked may be in none of the asker's."""
+
+    return Notice(
+        kind=NoticeKind.LEVEL_ASKED,
+        key=key,
+        game_id=None,
+        pool_id=None,
+        sport=sport,
+        game_kind=None,
+        club_id=None,
+        starts_at=None,
+        opens=Opens.QUESTIONNAIRE,
+        people=(asker,),
+    )
+
+
+def level_got_notice(*, key: str, friend: UUID, sport: Sport, group_id: UUID) -> Notice:
+    """*{friend} has a {sport} level — you can seat {friend} now.* (#749) —
+    about no game: **the group the ask was made from rides as ``pool_id``**, as
+    a friend request's does, and its picker is what a tap opens."""
+
+    return Notice(
+        kind=NoticeKind.LEVEL_GOT,
+        key=key,
+        game_id=None,
+        pool_id=group_id,
+        sport=sport,
+        game_kind=None,
+        club_id=None,
+        starts_at=None,
+        opens=Opens.PICKER,
+        people=(friend,),
     )
 
 

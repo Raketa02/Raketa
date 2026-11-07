@@ -78,3 +78,48 @@ class FriendLinkNotFound(NotFoundError):
 
     def __init__(self) -> None:
         super().__init__("Nothing at that link.")
+
+
+class FriendNotFound(NotFoundError):
+    """The player is not the reader's friend — never was, removed, ended by a
+    block, or the reader themselves. **One answer for all of them**, given before
+    anything else is read, so asking about a stranger tells nothing about them
+    (#749)."""
+
+    code = "friend_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("They are not your friend.")
+
+
+class AlreadyHasALevel(ConflictError):
+    """The friend already has a level in the sport: there is nothing to ask
+    them, and they can be seated now (#749)."""
+
+    code = "already_has_a_level"
+
+    def __init__(self) -> None:
+        super().__init__("They have a level in that sport already.")
+
+
+class LevelAlreadyAsked(ConflictError):
+    """The reader asked this friend for a level in this sport before — **once
+    per friend per sport, ever** (the mechanics §5), answered or not, and after a
+    friendship removed and made again too."""
+
+    code = "level_already_asked"
+
+    def __init__(self) -> None:
+        super().__init__("You asked them for a level in that sport already.")
+
+
+class NotOneOfYourGroups(NotFoundError):
+    """An ask for a level names the group whose picker it was asked from, and
+    that group must be the asker's now: its picker is where the answer opens
+    (#749). One answer for a group that does not exist and one the asker is not
+    in, as a group's own read gives (``groups.md``)."""
+
+    code = "not_one_of_your_groups"
+
+    def __init__(self) -> None:
+        super().__init__("Ask from the picker of one of your groups.")

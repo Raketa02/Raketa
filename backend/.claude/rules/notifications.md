@@ -301,7 +301,7 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
     tapped I was there for Padel · Wed 17:00 — confirm it by 17:30 if so.* — to
     **everybody else on the court who may confirm it** (not absent themselves), `until`
     the late claim's day ends; a claim confirmed first asks nobody.
-- **One notice is about no game: *Get your level*** (#727; ADR-0200 §7; the mechanics
+- **The first notice about no game: *Get your level*** (#727; ADR-0200 §7; the mechanics
   §17.2, Q126) — **`GET_YOUR_LEVEL`**, *Get your level so your groups can deal you games.* /
   *Pick the sports you play — a few questions each.* (the group door's own words), **once per
   account, ever**, to an account in at least one group whose first group join was a day ago
@@ -340,6 +340,22 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   asked (*… said yes — you're friends*), and to both, `reason` `CROSSED`, when the requests
   crossed (*You and … are friends now*), while they still are, opening **`Opens.RECORD`**, the
   friend's record. No migration: every column was there.
+- **Two notices are about an ask for a level** (#749; ADR-0202 §4; the words §29.5; `friends.md`)
+  — **`LEVEL_ASKED`** on `friends.level_asked`, to the friend asked: *tomek wants to play padel
+  with you.* / *Get your padel level so tomek can add you.* (§29.5's one sentence, split at its
+  full stop), `sport` set, `pool_id` `None` (the friend may be in none of the asker's groups),
+  opening **`Opens.QUESTIONNAIRE`** — that sport's questionnaire, through the level pass; and
+  **`LEVEL_GOT`** on `friends.level_got`, to the friend who asked: *zofia has a padel level —
+  you can seat zofia now.* / *In Ogrody open play, on the Friends tab.* (the body a call: §29.5
+  gives the title alone; *On your group's Friends tab.* once the group cannot be named), the
+  ask's group as `pool_id`, opening **`Opens.PICKER`** — that group's Friends tab picker in
+  `sport`. Both **always on**, never capped, never emailed, about no game, the person as
+  `people[0]`, and **told only while the two are still friends** (`Friendships.are_friends`) —
+  a removal or a block before the delivery tells nobody. Two friends who asked one player are
+  each told off their own pair's `level_got`. **A notice about no game hands its push the
+  group and the sport it names** (`pool_id`, `sport`, beside `player_id`), so a tap can open
+  the questionnaire or the picker — a friend request's push carries them too, unused. No
+  migration: `kind` and `opens` are strings wide enough.
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,
   so a push service down for an hour, raising, would hold the queue for that hour.

@@ -109,6 +109,15 @@ class FriendSchema(BaseModel):
             "it: *No padel level yet*."
         )
     )
+    level_asked_in: list[Sport] = Field(
+        description=(
+            "Every sport **you** asked them to get a level in, answered or not, "
+            "in the sports' own order — or, with `sport`, that one alone or "
+            "nothing. On a greyed row it reads **Asked** in place of *Ask … to "
+            "get a padel level*: you ask once per sport, ever. Only your own "
+            "asks: nobody else's are on the wire."
+        )
+    )
 
     @classmethod
     def of(cls, friend: Friend) -> "FriendSchema":
@@ -122,6 +131,7 @@ class FriendSchema(BaseModel):
                 FriendSportSchema(sport=level.sport, level=level.level, band=level.band)
                 for level in friend.levels
             ],
+            level_asked_in=list(friend.level_asked_in),
         )
 
 
@@ -199,6 +209,21 @@ class GroupToAddFromSchema(BaseModel):
 class GroupsToAddFromResponse(BaseModel):
     groups: list[GroupToAddFromSchema] = Field(
         description="Every group you are in, newest joined first."
+    )
+
+
+class AskForALevelRequest(BaseModel):
+    """**Ask {nickname} to get a padel level**, on a greyed row of a group's
+    picker (#749). The friend is the path's; you are never sent."""
+
+    sport: Sport = Field(
+        description="The picker's sport — the level they are asked to get."
+    )
+    group_id: UUID = Field(
+        description=(
+            "The group whose Friends tab the picker is on — one of yours. When "
+            "they get the level, your notice opens this group's picker."
+        )
     )
 
 

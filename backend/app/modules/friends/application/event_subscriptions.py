@@ -1,12 +1,15 @@
 """The Friends context's durable event names, and who hears them.
 
 A name here is a **published contract** and outlives every Python class it maps
-to. Nine names, all at version 1 (``domain/events.py``).
+to. Eleven names, all at version 1 (``domain/events.py``).
 
-**Three listeners**: the audit line, which needs nothing per delivery; the
-block ender (``handlers/blocking.py``), which writes and so is subscribed per
-delivery run over its session (``app/bootstrap/events.py``); and Notifications'
-teller, which tells a request and *friends made* — subscribed by Notifications,
+**Four listeners**: the audit line, which needs nothing per delivery; the
+block ender (``handlers/blocking.py``) and the answerer of the asks for a level
+(``handlers/level_got.py``, on the rating's first level in a sport and on an
+ask, #749),
+which write and so are subscribed per delivery run over its session
+(``app/bootstrap/events.py``); and Notifications' teller, which tells a request,
+*friends made*, *level asked* and *level got* — subscribed by Notifications,
 which this context does not know.
 """
 
@@ -15,6 +18,7 @@ from __future__ import annotations
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.blocks.domain.events import PlayerBlocked, PlayerBlockedNamingAScreen
 from app.modules.friends.application.handlers import (
+    AnswerTheAsksForALevel,
     EndFriendshipsOnABlock,
     LogFriendEvent,
 )
@@ -28,7 +32,10 @@ from app.modules.friends.domain.events import (
     FriendRequestSetAside,
     FriendshipEnded,
     FriendsMade,
+    LevelAsked,
+    LevelGot,
 )
+from app.modules.rating.domain.events import RatingInitialised
 
 _CONTRACTS = (
     (FriendRequested, "friends.friend_requested", 1),
@@ -40,6 +47,8 @@ _CONTRACTS = (
     (FriendRequestBroughtBack, "friends.friend_request_brought_back", 1),
     (FriendLinkMade, "friends.friend_link_made", 1),
     (FriendLinkReplaced, "friends.friend_link_replaced", 1),
+    (LevelAsked, "friends.level_asked", 1),
+    (LevelGot, "friends.level_got", 1),
 )
 
 
@@ -61,3 +70,14 @@ def subscribe_the_block_ender(
 
     dispatcher.subscribe(PlayerBlocked, ender)
     dispatcher.subscribe(PlayerBlockedNamingAScreen, ender)
+
+
+def subscribe_the_level_answerer(
+    dispatcher: EventDispatcher, answerer: AnswerTheAsksForALevel
+) -> None:
+    """A friend's level answers every ask for it, in the transaction that
+    delivers it (#749): the rating's first level in a sport, and an ask made of
+    somebody whose level is already there."""
+
+    dispatcher.subscribe(RatingInitialised, answerer)
+    dispatcher.subscribe(LevelAsked, answerer)

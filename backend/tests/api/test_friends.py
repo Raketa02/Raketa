@@ -536,8 +536,16 @@ async def test_a_request_is_told_to_the_person_asked_once(
     assert bell["new_count"] == 1
     [push] = pushes.to(phone)
     assert (push.title, push.body) == (notice["title"], notice["body"])
-    assert push.data["opens"] == "HOME"
-    assert push.data["player_id"] == str(ines["id"])
+    # Who asked, and the group and sport it names (#749 hands both to every
+    # notice about no game).
+    assert push.data == {
+        "notice_id": notice["notice_id"],
+        "kind": "FRIEND_REQUEST",
+        "opens": "HOME",
+        "player_id": str(ines["id"]),
+        "pool_id": group["id"],
+        "sport": "PADEL",
+    }
     # The asker is told nothing.
     assert (await bell_of(client, mailbox, ines))["notices"] == []
 

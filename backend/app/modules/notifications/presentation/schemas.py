@@ -91,7 +91,11 @@ class NoticeSchema(BaseModel):
             "game's result screen (`GET /bookings/{game_id}`): who turned up, "
             "and the score (#663); `HOME` — Home, for a notice about no game "
             "(*Get your level*, #727; a friend request, whose card is there, "
-            "#745); `RECORD` — the record of `player_id`, a new friend."
+            "#745); `RECORD` — the record of `player_id`, a new friend; "
+            "`QUESTIONNAIRE` — the questionnaire of `sport`, through the level "
+            "pass and its usual return (`LEVEL_ASKED`, #749); `PICKER` — the "
+            "Friends tab's picker of the group `pool_id` in `sport`, where "
+            "`player_id` can be seated now (`LEVEL_GOT`, #749)."
         )
     )
     game_id: UUID | None = Field(
@@ -105,16 +109,25 @@ class NoticeSchema(BaseModel):
     pool_id: UUID | None = Field(
         description=(
             "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from "
-            "(a group's pool is filed under its id), or `null`."
+            "(a group's pool is filed under its id), or `null`; on a "
+            "`LEVEL_GOT`, the group the ask was made from, whose picker it "
+            "opens."
         )
     )
-    sport: Sport | None
+    sport: Sport | None = Field(
+        description=(
+            "The game's sport. On a notice about no game, the sport it names — "
+            "a friend request's screen, or the level a `LEVEL_ASKED` asks for "
+            "and a `LEVEL_GOT` says arrived — or `null`."
+        )
+    )
     game_kind: SearchMode | None
     player_id: UUID | None = Field(
         description=(
             "On a notice about no game that names somebody — `FRIEND_REQUEST`, "
             "who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` "
-            "opens. `null` on every other notice."
+            "opens; `LEVEL_ASKED`, the friend who asked; `LEVEL_GOT`, the friend "
+            "who got the level. `null` on every other notice."
         )
     )
     gathered: int = Field(

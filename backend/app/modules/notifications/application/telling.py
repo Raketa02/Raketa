@@ -90,6 +90,11 @@ told as it is, and a card that filled meanwhile needs nobody.
   friends now* to both when the requests crossed (#745). About no game; always
   on. *Not now*, a cancel, a removal and a block are told nobody.
 
+- ``LevelAsked`` — *Tomek wants to play padel with you.*, to the friend asked;
+  ``LevelGot`` — *Zofia has a padel level — you can seat Zofia now.*, to the
+  friend who asked, naming the group the ask was made from (#749). Both about
+  no game, always on, and **only while the two are still friends**.
+
 **An alert never points at a card the reader cannot find**: *You complete it*,
 a challenge and *Your new game* go only to a reader whose deck shows the card
 now (``Decks``, the deck's own filters). **And *You complete it* is the named player's**
@@ -129,7 +134,12 @@ from app.modules.games.domain.events import (
     ResultCountered,
     ResultProposed,
 )
-from app.modules.friends.domain.events import FriendRequested, FriendsMade
+from app.modules.friends.domain.events import (
+    FriendRequested,
+    FriendsMade,
+    LevelAsked,
+    LevelGot,
+)
 from app.modules.friends.domain.relation import HowFriendsWereMade, RequestOrigin
 from app.modules.notifications.domain.notices import (
     CHOSEN,
@@ -139,6 +149,8 @@ from app.modules.notifications.domain.notices import (
     Opens,
     friend_request_notice,
     friends_made_notice,
+    level_asked_notice,
+    level_got_notice,
 )
 from app.modules.notifications.domain.ports import (
     Friendships,
@@ -364,6 +376,37 @@ class TellThePlayers:
                 friends_made_notice(key=key, friend=event.requester_id, crossed=True),
                 at=at,
             )
+
+    async def _level_asked(self, event: LevelAsked, *, key: str, at: Instant) -> None:
+        """*{asker} wants to play {sport} with you.*, to the friend asked — once
+        per ask, and only while they are still friends: a friend removed or
+        blocked before the delivery is told nothing (#749)."""
+
+        if not await self._friendships.are_friends(event.asker_id, event.friend_id):
+            return
+        await self._give.execute(
+            event.friend_id,
+            level_asked_notice(key=key, asker=event.asker_id, sport=Sport(event.sport)),
+            at=at,
+        )
+
+    async def _level_got(self, event: LevelGot, *, key: str, at: Instant) -> None:
+        """*{friend} has a {sport} level — you can seat {friend} now.*, to the
+        friend who asked, naming the group the ask was made from — only while
+        they are still friends (#749)."""
+
+        if not await self._friendships.are_friends(event.asker_id, event.friend_id):
+            return
+        await self._give.execute(
+            event.asker_id,
+            level_got_notice(
+                key=key,
+                friend=event.friend_id,
+                sport=Sport(event.sport),
+                group_id=event.group_id,
+            ),
+            at=at,
+        )
 
     # -- the money ------------------------------------------------------------
 
@@ -1171,6 +1214,8 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     ResultCountered: TellThePlayers._score_up,
     FriendRequested: TellThePlayers._friend_request,
     FriendsMade: TellThePlayers._friends_made,
+    LevelAsked: TellThePlayers._level_asked,
+    LevelGot: TellThePlayers._level_got,
 }
 
 #: What ``subscribe_the_teller`` hears.

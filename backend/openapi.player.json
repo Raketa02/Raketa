@@ -2460,6 +2460,78 @@
         ]
       }
     },
+    "/api/v1/friends/{player_id}/level-asks": {
+      "post": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Ask a friend to get a level",
+        "description": "**Ask {nickname} to get a padel level**, on a greyed row of a group's picker (#749). They are told, pushed and in the bell: *{you} wants to play padel with you. Get your padel level so {you} can add you.* \u2014 `LEVEL_ASKED`, opening that sport's questionnaire.\n\n**When their first level in the sport arrives, you are told**: *{nickname} has a padel level \u2014 you can seat {nickname} now.* \u2014 `LEVEL_GOT`, opening this group's picker. Both only while you are still friends.",
+        "operationId": "ask_for_a_level_api_v1_friends__player_id__level_asks_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskForALevelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Asked: they are told, and your picker reads **Asked** (`level_asked_in`)."
+          },
+          "404": {
+            "description": "`friend_not_found` \u2014 they are not your friend (or you named yourself); `not_one_of_your_groups` \u2014 `group_id` is no group you are in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`already_has_a_level` \u2014 they have a level in that sport: seat them; `level_already_asked` \u2014 you asked them for that sport before, and ask once per sport, ever; `concurrent_modification` \u2014 two acts on the two of you raced: retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations": {
       "get": {
         "tags": [
@@ -7789,6 +7861,27 @@
         "title": "ArrivalRequest",
         "description": "*I'm here* \u2014 your own id \u2014 or *they're here*, somebody else's."
       },
+      "AskForALevelRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The picker's sport \u2014 the level they are asked to get."
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id",
+            "description": "The group whose Friends tab the picker is on \u2014 one of yours. When they get the level, your notice opens this group's picker."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "group_id"
+        ],
+        "title": "AskForALevelRequest",
+        "description": "**Ask {nickname} to get a padel level**, on a greyed row of a group's\npicker (#749). The friend is the path's; you are never sent."
+      },
       "AskToBeFriendsRequest": {
         "properties": {
           "player_id": {
@@ -10283,6 +10376,14 @@
             "type": "array",
             "title": "Sports",
             "description": "Every sport they are rated in, in the sports' own order \u2014 or, with `sport`, that one alone, and **empty** when they have no Level in it: *No padel level yet*."
+          },
+          "level_asked_in": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Level Asked In",
+            "description": "Every sport **you** asked them to get a level in, answered or not, in the sports' own order \u2014 or, with `sport`, that one alone or nothing. On a greyed row it reads **Asked** in place of *Ask \u2026 to get a padel level*: you ask once per sport, ever. Only your own asks: nobody else's are on the wire."
           }
         },
         "type": "object",
@@ -10292,7 +10393,8 @@
           "photo_id",
           "photo_url",
           "friends_since",
-          "sports"
+          "sports",
+          "level_asked_in"
         ],
         "title": "FriendSchema"
       },
@@ -12787,7 +12889,9 @@
           "WERE_THEY_THERE",
           "GET_YOUR_LEVEL",
           "FRIEND_REQUEST",
-          "FRIENDS_MADE"
+          "FRIENDS_MADE",
+          "LEVEL_ASKED",
+          "LEVEL_GOT"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -12818,7 +12922,7 @@
           },
           "opens": {
             "$ref": "#/components/schemas/Opens",
-            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` \u2014 the record of `player_id`, a new friend."
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` \u2014 Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` \u2014 the record of `player_id`, a new friend; `QUESTIONNAIRE` \u2014 the questionnaire of `sport`, through the level pass and its usual return (`LEVEL_ASKED`, #749); `PICKER` \u2014 the Friends tab's picker of the group `pool_id` in `sport`, where `player_id` can be seated now (`LEVEL_GOT`, #749)."
           },
           "game_id": {
             "anyOf": [
@@ -12844,7 +12948,7 @@
               }
             ],
             "title": "Pool Id",
-            "description": "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`."
+            "description": "The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`; on a `LEVEL_GOT`, the group the ask was made from, whose picker it opens."
           },
           "sport": {
             "anyOf": [
@@ -12854,7 +12958,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The game's sport. On a notice about no game, the sport it names \u2014 a friend request's screen, or the level a `LEVEL_ASKED` asks for and a `LEVEL_GOT` says arrived \u2014 or `null`."
           },
           "game_kind": {
             "anyOf": [
@@ -12877,7 +12982,7 @@
               }
             ],
             "title": "Player Id",
-            "description": "On a notice about no game that names somebody \u2014 `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens. `null` on every other notice."
+            "description": "On a notice about no game that names somebody \u2014 `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens; `LEVEL_ASKED`, the friend who asked; `LEVEL_GOT`, the friend who got the level. `null` on every other notice."
           },
           "gathered": {
             "type": "integer",
@@ -13081,7 +13186,9 @@
           "DECK",
           "RESULT",
           "HOME",
-          "RECORD"
+          "RECORD",
+          "QUESTIONNAIRE",
+          "PICKER"
         ],
         "title": "Opens",
         "description": "The screen a notice opens on when tapped (the screens A9)."

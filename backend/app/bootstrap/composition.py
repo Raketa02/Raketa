@@ -463,7 +463,10 @@ from app.modules.groups.domain.ports import (
     RatedGroupMembers,
     ReaderAreas,
 )
-from app.modules.friends.application.handlers import EndFriendshipsOnABlock
+from app.modules.friends.application.handlers import (
+    AnswerTheAsksForALevel,
+    EndFriendshipsOnABlock,
+)
 from app.modules.friends.application.link import ReadYourFriendLink
 from app.modules.friends.application.reads import (
     ReadRelations,
@@ -483,6 +486,8 @@ from app.modules.friends.domain.ports import (
     FriendReliabilities,
     FriendshipDirectory,
     FriendshipRepository,
+    AsksWaitingOnALevel,
+    LevelsAskedByTheReader,
     ReadersBlocks,
     ReadersGroups,
 )
@@ -503,6 +508,9 @@ from app.modules.friends.infrastructure.random_friend_link_codes import (
 from app.modules.friends.infrastructure.rated_friend_levels import RatedFriendLevels
 from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
     SqlAlchemyFriendshipDirectory,
+)
+from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
+    SqlAlchemyLevelAskDirectory,
 )
 from app.modules.proposals.infrastructure.friends import (
     FriendsReaderRelations,
@@ -3444,6 +3452,34 @@ def build_end_friendships_on_a_block(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         )
+    )
+
+
+def build_levels_asked_by_the_reader(session: AsyncSession) -> LevelsAskedByTheReader:
+    """The sports the reader asked each friend for, ``friend_level_asks``, from
+    the reader's side — the picker's *Asked* (#749)."""
+    return SqlAlchemyLevelAskDirectory(session)
+
+
+def build_asks_waiting_on_a_level(session: AsyncSession) -> AsksWaitingOnALevel:
+    """Who is waiting on a friend's level — **handed to the answerer alone**: it
+    names who asked somebody else (#749)."""
+    return SqlAlchemyLevelAskDirectory(session)
+
+
+def build_answer_the_asks_for_a_level(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> AnswerTheAsksForALevel:
+    """A friend's level answers every ask for it — built per delivery run, over
+    the session the delivery commits in (#749)."""
+    return AnswerTheAsksForALevel(
+        asks=build_asks_waiting_on_a_level(session),
+        levels=build_friend_levels(session, runtime=runtime),
+        friendships=build_friendship_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
     )
 
 

@@ -17,7 +17,10 @@ them:
   set aside onto their Home (#748) — never one hidden from them;
 - only the requester cancels, and only a friend removes; both are silent no-ops
   when there is nothing to take back, so a route answers alike either way;
-- a block ends whatever stands, and is a no-op when nothing does.
+- a block ends whatever stands, and is a no-op when nothing does;
+- **only a friend is asked for a level, once per sport, ever** (#749) — the
+  asks outlive the friendship, so one removed and made again asks nobody
+  twice — and the friend's first level in that sport answers the ask once.
 
 **A request the addressee never sees** — asked while they had blocked the
 requester, which the use case reads — is recorded ``unseen``: the requester
@@ -36,8 +39,10 @@ from app.kernel import Instant, Sport, instant, invariant
 from app.modules.friends.domain.errors import (
     AlreadyFriends,
     CannotBefriendYourself,
+    FriendNotFound,
     FriendRequestAlreadySent,
     FriendRequestNotFound,
+    LevelAlreadyAsked,
 )
 from app.modules.friends.domain.events import (
     FriendRequestBroughtBack,
@@ -47,6 +52,8 @@ from app.modules.friends.domain.events import (
     FriendRequestSetAside,
     FriendshipEnded,
     FriendsMade,
+    LevelAsked,
+    LevelGot,
 )
 from app.modules.friends.domain.ids import friendship_id, ordered_pair
 from app.modules.friends.domain.relation import (
@@ -95,9 +102,23 @@ class OpenRequest:
     unseen: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class LevelAsk:
+    """One **Ask for a level** (#749): ``asker_id`` asked the other side of the
+    pair to get a level in ``sport``, from ``group_id``'s picker — and when the
+    other's first level in it answered the ask."""
+
+    asker_id: UUID
+    sport: Sport
+    group_id: UUID
+    asked_at: Instant
+    got_at: Instant | None = None
+
+
 @dataclass
 class Friendship:
-    """What stands between two players, as their stream leaves it."""
+    """What stands between two players, as their stream leaves it — and every
+    ask for a level either ever made of the other, which nothing ends."""
 
     first_id: UUID
     second_id: UUID
@@ -106,6 +127,9 @@ class Friendship:
     friends_since: Instant | None = None
     request: OpenRequest | None = None
     version: int = 0
+    _level_asks: dict[tuple[UUID, Sport], LevelAsk] = field(
+        default_factory=dict, init=False, repr=False
+    )
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
     )
@@ -290,6 +314,57 @@ class Friendship:
             )
         )
 
+    # -- asking for a level (#749) ----------------------------------------
+
+    @property
+    def level_asks(self) -> tuple[LevelAsk, ...]:
+        """Every ask either side ever made of the other, in the order made."""
+
+        return tuple(self._level_asks.values())
+
+    def ask_for_a_level(
+        self, *, asker: UUID, sport: Sport, group_id: UUID, at: Instant
+    ) -> None:
+        """The asker asks their friend to get a level in ``sport``. **Only a
+        friend**, and **once per sport, ever**: an ask outlives the friendship,
+        answered or not. Whether the friend has a level already is the rating's,
+        which the use case reads."""
+
+        friend = self._other_than(asker)
+        if not self.are_friends:
+            raise FriendNotFound()
+        if (asker, sport) in self._level_asks:
+            raise LevelAlreadyAsked()
+        self._record_that(
+            LevelAsked(
+                asker_id=asker,
+                friend_id=friend,
+                sport=sport.value,
+                group_id=group_id,
+                occurred_at=at,
+            )
+        )
+
+    def answer_the_ask(self, *, friend: UUID, sport: Sport, at: Instant) -> None:
+        """The friend has a level in ``sport`` now: the other's ask, if they made
+        one, is answered — ``friends.level_got``. **A no-op** with nothing
+        asked, or the ask already answered — a delivery seen twice records
+        nothing twice."""
+
+        asker = self._other_than(friend)
+        ask = self._level_asks.get((asker, sport))
+        if ask is None or ask.got_at is not None:
+            return
+        self._record_that(
+            LevelGot(
+                asker_id=asker,
+                friend_id=friend,
+                sport=sport.value,
+                group_id=ask.group_id,
+                occurred_at=at,
+            )
+        )
+
     # -- folding ----------------------------------------------------------
 
     def _asked_of(self, reader: UUID) -> OpenRequest:
@@ -339,9 +414,22 @@ class Friendship:
             self.are_friends = True
             self.friends_since = instant(event.occurred_at)
         elif isinstance(event, FriendshipEnded):
+            # The asks for a level stay: once per sport is ever.
             self.request = None
             self.are_friends = False
             self.friends_since = None
+        elif isinstance(event, LevelAsked):
+            sport = Sport(event.sport)
+            self._level_asks[(event.asker_id, sport)] = LevelAsk(
+                asker_id=event.asker_id,
+                sport=sport,
+                group_id=event.group_id,
+                asked_at=instant(event.occurred_at),
+            )
+        elif isinstance(event, LevelGot):
+            key = (event.asker_id, Sport(event.sport))
+            ask = invariant(self._level_asks.get(key), "a level got, nothing asked")
+            self._level_asks[key] = replace(ask, got_at=instant(event.occurred_at))
         else:
             raise TypeError(f"Unsupported friendship event {event!r}")
         self.version += 1

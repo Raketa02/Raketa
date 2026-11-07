@@ -667,6 +667,13 @@ there; they are not repeated here.
   keeps its row**, so the minter never hands one out twice; written from the events appended,
   since a replaced code is no longer in the aggregate's state. _Avoid_: "invite code", "link
   table".
+- **Level ask row** — one row of `friend_level_asks`, the second projection beside the
+  **Friendship** streams (#749): one **Ask for a level** — the asker, the friend asked and the
+  sport (the primary key, since each is asked once, ever), the group whose picker it was asked
+  from, and `got_at` once the friend's first level in the sport answered it. **Kept after the
+  friendship ends**, as the stream keeps the ask. Read from the asker's side for the picker's
+  *Asked*, and by friend and sport only by the subscriber that answers the asks. _Avoid_:
+  "rating request", "nudge" (the glossary's own avoids).
 - **Unseen request** and **the reader's-side filter** — the two mechanisms behind the glossary's
   *a block swallows the blocked person's later requests* (ADR-0202 §2). A request asked while
   the addressee has blocked the requester is recorded **`unseen`** (`FriendRequested.unseen`):

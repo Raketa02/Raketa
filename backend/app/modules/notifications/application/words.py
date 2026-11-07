@@ -181,7 +181,8 @@ _ABOUT_NO_GAME: Final[dict[NoticeKind, Words]] = {
 @dataclass(frozen=True, slots=True)
 class SaidOfNoGame:
     """What a notice about no game is put into words from: the person it names,
-    and for a friend request the group and sport it was asked from (#745)."""
+    and for a friend request the group and sport it was asked from (#745) — for
+    *level got*, the group the ask was made from (#749)."""
 
     kind: NoticeKind
     #: The nickname of the person it names, if it names one and they can still
@@ -195,8 +196,9 @@ class SaidOfNoGame:
 
 def words_about_no_game(said: SaidOfNoGame) -> Words:
     """The words of a notice that carries no game's facts — *Get your level*,
-    and a friend's two (the words §29.2). **No sentence says *her* or *him***
-    about another player (ADR-0096)."""
+    a friend's two (the words §29.2) and the asks for a level's two (§29.5).
+    **No sentence says *her* or *him*** about another player (ADR-0096), so the
+    nickname is said twice."""
 
     kind = said.kind
     name = said.name or "Somebody"
@@ -208,7 +210,36 @@ def words_about_no_game(said: SaidOfNoGame) -> Words:
         if said.reason == NoticeReason.CROSSED:
             return Words(title=f"You and {name} are friends now", body=body)
         return Words(title=f"{name} said yes — you're friends", body=body)
+    if kind is NoticeKind.LEVEL_ASKED:
+        # §29.5's one sentence, split at its full stop.
+        sport = _sport_in_a_sentence(said)
+        return Words(
+            title=f"{name} wants to play {sport} with you.",
+            body=f"Get your {sport} level so {name} can add you.",
+        )
+    if kind is NoticeKind.LEVEL_GOT:
+        # The body names the group the ask was made from, whose Friends tab
+        # opens (a call: §29.5 gives the title alone).
+        where = (
+            f"In {said.group}, on the Friends tab."
+            if said.group is not None
+            else "On your group's Friends tab."
+        )
+        return Words(
+            title=(
+                f"{name} has a {_sport_in_a_sentence(said)} level — you can seat "
+                f"{name} now."
+            ),
+            body=where,
+        )
     return invariant(_ABOUT_NO_GAME.get(kind), f"{kind} is about a game")
+
+
+def _sport_in_a_sentence(said: SaidOfNoGame) -> str:
+    """``{sport}`` inside a sentence — *padel*, lower case (the words §29)."""
+
+    sport = invariant(said.sport, f"{said.kind} names its sport")
+    return _SPORT_WORDS[sport].lower()
 
 
 def _asked_from(said: SaidOfNoGame) -> str:

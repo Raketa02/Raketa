@@ -47,6 +47,7 @@ from app.modules.friends.application.event_subscriptions import (
     register_friend_events,
     subscribe_friend_handlers,
     subscribe_the_block_ender,
+    subscribe_the_level_answerer,
 )
 from app.modules.clubs.application.event_subscriptions import (
     register_club_events,
@@ -217,6 +218,7 @@ class EventRuntime:
         """
 
         from app.bootstrap.composition import (
+            build_answer_the_asks_for_a_level,
             build_email_the_seat_taken_refund,
             build_push_the_notice,
             build_resume_paused_yeses,
@@ -279,6 +281,11 @@ class EventRuntime:
         # them, in the same transaction (`docs/adr/0202` §2).
         subscribe_the_block_ender(
             dispatcher, build_end_friendships_on_a_block(session, runtime=self)
+        )
+        # And the rating's first level in a sport answers every friend's ask for
+        # it, in the same transaction (#749).
+        subscribe_the_level_answerer(
+            dispatcher, build_answer_the_asks_for_a_level(session, runtime=self)
         )
         # A paused week comes back when a booked game stops being a player's —
         # and a yes that comes back as a game's last seat fills it, over this

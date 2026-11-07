@@ -19,8 +19,12 @@ player the reader blocked is never shown to the reader** — read live from the
 reader's own blocks, so the requester still reads *request sent*, exactly as a
 request set aside would show them (``docs/adr/0202`` §2).
 
-**Silent everywhere but two places.** A request is told to the person asked,
-once, and *friends made* to whoever asked; *Not now*, a cancel, a removal and a
-block tell nobody. Notifications hears the events; this context knows nothing
-about it.
+**A friend with no level in a sport can be asked to get one** (#749), once per
+sport, ever — recorded on the pair's Friendship, and answered when the rating
+context records the friend's first level in that sport.
+
+**Silent everywhere but four places.** A request is told to the person asked,
+once, *friends made* to whoever asked, an ask for a level to the friend asked,
+and its answer to the asker; *Not now*, a cancel, a removal and a block tell
+nobody. Notifications hears the events; this context knows nothing about it.
 """

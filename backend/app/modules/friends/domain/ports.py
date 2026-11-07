@@ -8,6 +8,12 @@
   reader's side**: there is no method that answers about two other people,
   which is what keeps *Kuba never learns that Tomek and Magda are friends* a
   property of the port rather than of its callers.
+- ``LevelsAskedByTheReader`` and ``AsksWaitingOnALevel`` — the
+  ``friend_level_asks`` projection (#749), **two ports for two audiences**: the
+  sports the reader asked each friend for, from the reader's side; and who is
+  waiting on a friend's level in a sport, which names who asked somebody else
+  and so is handed to the one subscriber that answers the asks, never to a
+  read.
 - ``ReadersBlocks`` — whom the reader blocked, **the reader's own blocks
   only**, which is what hides a blocked player's request from them
   (``docs/adr/0202`` §2).
@@ -99,6 +105,27 @@ class FriendshipDirectory(Protocol):
     ) -> tuple[RelationRow, ...]:
         """Every row on the reader's side — or only those about ``among``, one
         question for the whole set. Nobody's row about anybody else."""
+        ...
+
+
+@runtime_checkable
+class LevelsAskedByTheReader(Protocol):
+    async def sports_asked_by(
+        self, asker: UUID, *, among: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[Sport]]:
+        """Each of these players the asker ever asked for a level, and in which
+        sports — answered or not: the picker's *Asked*. Somebody never asked is
+        absent. The asker's own asks alone."""
+        ...
+
+
+@runtime_checkable
+class AsksWaitingOnALevel(Protocol):
+    async def askers_waiting_on(self, friend: UUID, sport: Sport) -> tuple[UUID, ...]:
+        """Everybody who asked ``friend`` for a level in ``sport`` and is not
+        answered yet. **Handed only to the subscriber that answers them**
+        (``handlers/level_got.py``), never to a read: it names who asked
+        somebody else."""
         ...
 
 

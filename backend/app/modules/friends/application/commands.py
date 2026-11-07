@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+from app.kernel import Sport
 from app.modules.friends.domain.friendship import Where
 
 
@@ -35,3 +36,15 @@ class TakeBackCommand:
 
     player_id: UUID
     other_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class AskForALevelCommand:
+    """**Ask for a level** (#749): the asker asks ``friend_id`` to get a level in
+    ``sport``, from the picker of ``group_id`` — one of the asker's groups,
+    where the answer opens."""
+
+    asker_id: UUID
+    friend_id: UUID
+    sport: Sport
+    group_id: UUID

@@ -26,9 +26,11 @@ from app.bootstrap.composition import (
     build_friend_link_repository,
     build_friendship_directory,
     build_friendship_repository,
+    build_levels_asked_by_the_reader,
     build_readers_blocks,
     build_readers_groups,
 )
+from app.modules.friends.application.level_asks import AskForALevel
 from app.modules.friends.application.link import (
     OpenAFriendLink,
     ReadAFriendLink,
@@ -51,6 +53,7 @@ from app.modules.friends.domain.ports import (
     FriendFaces,
     FriendLinkCodes,
     FriendLinkRepository,
+    FriendLevels,
     FriendshipDirectory,
     FriendshipRepository,
     ReadersBlocks,
@@ -100,6 +103,13 @@ def get_friend_faces(
 
 
 FriendFacesDep = Annotated[FriendFaces, Depends(get_friend_faces)]
+
+
+def get_friend_levels(db: DbSession, runtime: EventRuntimeDep) -> FriendLevels:
+    return build_friend_levels(db, runtime=runtime)
+
+
+FriendLevelsDep = Annotated[FriendLevels, Depends(get_friend_levels)]
 
 
 def get_ask_to_be_friends(
@@ -173,12 +183,13 @@ def get_read_friends(
     db: DbSession,
     directory: FriendshipDirectoryDep,
     faces: FriendFacesDep,
-    runtime: EventRuntimeDep,
+    levels: FriendLevelsDep,
 ) -> ReadFriends:
     return ReadFriends(
         directory=directory,
         faces=faces,
-        levels=build_friend_levels(db, runtime=runtime),
+        levels=levels,
+        asks=build_levels_asked_by_the_reader(db),
     )
 
 
@@ -281,3 +292,21 @@ def get_read_a_friend_link(
 
 
 ReadAFriendLinkDep = Annotated[ReadAFriendLink, Depends(get_read_a_friend_link)]
+
+
+# -- asking for a level (#749) ------------------------------------------------
+
+
+def get_ask_for_a_level(
+    friendships: FriendshipRepositoryDep,
+    levels: FriendLevelsDep,
+    groups: ReadersGroupsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> AskForALevel:
+    return AskForALevel(
+        friendships=friendships, levels=levels, groups=groups, uow=uow, clock=clock
+    )
+
+
+AskForALevelDep = Annotated[AskForALevel, Depends(get_ask_for_a_level)]

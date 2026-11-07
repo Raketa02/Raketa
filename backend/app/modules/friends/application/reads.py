@@ -12,7 +12,7 @@ unblocking shows a request made since as it stands.
   is never hidden (a block ends a friendship), so it reads no block.
 - ``ReadFriends`` — the reader's friends, each with every sport they are rated
   in, or one: alphabetical without a sport (call 11), highest Level first with
-  one (call 4).
+  one (call 4) — and the sports the reader asked each to get a level in (#749).
 - ``ReadFriendRequests`` — *Asked you* and *You asked*.
 - ``ReadGroupsToAddFrom`` — per group, how many members the reader could still
   add.
@@ -38,6 +38,7 @@ from app.modules.friends.domain.ports import (
     FriendReliabilities,
     FriendReliability,
     FriendshipDirectory,
+    LevelsAskedByTheReader,
     ReadersBlocks,
     ReadersGroups,
     RelationRow,
@@ -131,6 +132,10 @@ class Friend:
     #: Every sport they are rated in, in the registry's order — or only the
     #: sport asked for, empty when they are not rated in it.
     levels: tuple[FriendLevel, ...]
+    #: Every sport **the reader** asked them to get a level in, answered or
+    #: not, in the registry's order — or only the sport asked for (#749): the
+    #: picker's *Asked*.
+    level_asked_in: tuple[Sport, ...] = ()
 
 
 @final
@@ -141,10 +146,12 @@ class ReadFriends:
         directory: FriendshipDirectory,
         faces: FriendFaces,
         levels: FriendLevels,
+        asks: LevelsAskedByTheReader,
     ) -> None:
         self._directory = directory
         self._faces = faces
         self._levels = levels
+        self._asks = asks
 
     async def execute(self, reader: UUID, *, sport: Sport | None) -> tuple[Friend, ...]:
         rows = [
@@ -156,12 +163,14 @@ class ReadFriends:
             return ()
         ids = [row.other_id for row in rows]
         faces = await self._faces.faces_of(ids)
+        sports = [sport] if sport is not None else list(Sport)
         by_player: dict[UUID, list[FriendLevel]] = {}
-        for one in [sport] if sport is not None else list(Sport):
+        for one in sports:
             for player_id, level in (
                 await self._levels.levels_in(ids, sport=one)
             ).items():
                 by_player.setdefault(player_id, []).append(level)
+        asked = await self._asks.sports_asked_by(reader, among=ids)
         friends = [
             Friend(
                 player_id=row.other_id,
@@ -170,6 +179,9 @@ class ReadFriends:
                 photo_url=face.photo_url,
                 since=row.since,
                 levels=tuple(by_player.get(row.other_id, ())),
+                level_asked_in=tuple(
+                    one for one in sports if one in asked.get(row.other_id, ())
+                ),
             )
             for row in rows
             if (face := faces.get(row.other_id)) is not None

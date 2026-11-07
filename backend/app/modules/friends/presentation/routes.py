@@ -1,9 +1,10 @@
-"""The friend routes: ask, answer, take back, and read your own
-(``docs/adr/0202`` §1–§2; the mechanics §3).
+"""The friend routes: ask, answer, take back, read your own, and ask a friend
+for a level (``docs/adr/0202`` §1–§2, §4; the mechanics §3, §5).
 
-**Silent but for two things**: a request is told to the person asked, once, and
-*you're friends* to whoever asked. *Not now*, a cancel and a removal tell
-nobody, and **a removal touches no game**.
+**Silent but for three things**: a request is told to the person asked, once,
+*you're friends* to whoever asked, and an ask for a level to the friend asked —
+who, once their level arrives, has it told back to the asker. *Not now*, a
+cancel and a removal tell nobody, and **a removal touches no game**.
 
 **Every response carries only your own relations** — nothing here names
 anybody's friend but yours, and nothing tells you whether somebody set your
@@ -23,11 +24,13 @@ from app.kernel import Sport
 from app.modules.friends.application.commands import (
     AnswerCommand,
     AskCommand,
+    AskForALevelCommand,
     TakeBackCommand,
 )
 from app.modules.friends.application.reads import Direction
 from app.modules.friends.presentation.dependencies import (
     AcceptFriendRequestDep,
+    AskForALevelDep,
     AskToBeFriendsDep,
     CancelFriendRequestDep,
     ReadFriendRequestsDep,
@@ -37,6 +40,7 @@ from app.modules.friends.presentation.dependencies import (
     SetAsideFriendRequestDep,
 )
 from app.modules.friends.presentation.schemas import (
+    AskForALevelRequest,
     AskToBeFriendsRequest,
     FriendRequestSchema,
     FriendRequestsResponse,
@@ -266,4 +270,61 @@ async def read_groups_to_add_from(
     groups = await use_case.execute(user.id)
     return GroupsToAddFromResponse(
         groups=[GroupToAddFromSchema.of(group) for group in groups]
+    )
+
+
+@router.post(
+    "/{player_id}/level-asks",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Asked: they are told, and your picker reads **Asked** "
+                "(`level_asked_in`)."
+            )
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`friend_not_found` — they are not your friend (or you named "
+                "yourself); `not_one_of_your_groups` — `group_id` is no group "
+                "you are in."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`already_has_a_level` — they have a level in that sport: seat "
+                "them; `level_already_asked` — you asked them for that sport "
+                "before, and ask once per sport, ever; "
+                "`concurrent_modification` — two acts on the two of you raced: "
+                "retry."
+            ),
+        },
+    },
+    summary="Ask a friend to get a level",
+    description=(
+        "**Ask {nickname} to get a padel level**, on a greyed row of a group's "
+        "picker (#749). They are told, pushed and in the bell: *{you} wants to "
+        "play padel with you. Get your padel level so {you} can add you.* — "
+        "`LEVEL_ASKED`, opening that sport's questionnaire.\n\n"
+        "**When their first level in the sport arrives, you are told**: "
+        "*{nickname} has a padel level — you can seat {nickname} now.* — "
+        "`LEVEL_GOT`, opening this group's picker. Both only while you are "
+        "still friends."
+    ),
+)
+async def ask_for_a_level(
+    player_id: UUID,
+    payload: AskForALevelRequest,
+    user: CurrentUserDep,
+    use_case: AskForALevelDep,
+) -> None:
+    await use_case.execute(
+        AskForALevelCommand(
+            asker_id=user.id,
+            friend_id=player_id,
+            sport=payload.sport,
+            group_id=payload.group_id,
+        )
     )
