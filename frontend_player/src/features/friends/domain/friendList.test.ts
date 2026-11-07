@@ -1,4 +1,4 @@
-import { playedWithShown, type PlayedWithPerson } from './friendList';
+import { levelIn, playedWithShown, type PlayedWithPerson } from './friendList';
 
 const person = (
   playerId: string,
@@ -36,5 +36,20 @@ describe('playedWithShown — who PLAYED WITH lists, or nobody', () => {
         (one) => one.playerId,
       ),
     ).toEqual(['magda']);
+  });
+});
+
+describe('a friend’s Level in one sport', () => {
+  const magda = {
+    sports: [
+      { sport: 'padel', level: 2.66, band: 'Established' },
+      { sport: 'tennis', level: 3.1, band: 'Developing' },
+    ],
+  } as const;
+
+  it('is that sport’s, or nothing for a sport they are unrated in or nobody', () => {
+    expect(levelIn(magda, 'tennis')).toEqual({ sport: 'tennis', level: 3.1, band: 'Developing' });
+    expect(levelIn(magda, 'squash')).toBeUndefined();
+    expect(levelIn(undefined, 'padel')).toBeUndefined();
   });
 });

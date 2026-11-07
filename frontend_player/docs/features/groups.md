@@ -193,31 +193,79 @@ seen by everybody who arrives with the link. **+ Post a game** is the primary bu
 bottom corner — drawn disabled until posting shipped, and since #558 the door to _Post a game_
 (below).
 
-**Friends is a court with nobody to put on it yet** (stories 68–70; PRD #500 overrides play 49–56:
-no friends feature). **Competitive · For fun** is a process-scoped store (`gameIntent.store`) —
-it keeps its position when the player leaves the page and comes back, and ADR-0188 §5 keeps it off
-the phone; one value for the app, since it is the intent of the game being built. Like the app's
-other process stores, a sign-out does not reset it.
+**Friends is the court a game with friends is built on** (stories 68–70; since
+[#757](https://github.com/Raketa02/Raketa/issues/757), the friends screens §7.1–§7.2, friends 7–8).
+**Competitive · For fun sets this game's kind, and nothing else's** (ADR-0202; the friends README's
+defaults): it is `friendsGame.store`'s, no longer `gameIntent.store`'s, so turning it never moves the
+Games deck's switch or the Play intent. It keeps its position while the app is open, in memory only
+(ADR-0188 §5) — one value for the app, since it is the kind of the game being built — and, like the
+app's other process stores, a sign-out does not reset it.
 
 **The court is the app's court, spoken in the seat's sentences.** `Court` at `court.build` with
 `shared/ui`'s `SeatFace` and `SeatCaption` — Play's until #574, and drawn by Fill in and a booked
-game's players card too — and the reader in the first seat, captioned _You 2,71_; every other seat is a dashed ring with a
-white plus that opens **Friends**, as **+ Friends** does. Who sits on which side is the seat's rule
-(`seatPlaces`, a side is a team, so squash's other seat is _their side_) and every seat says so in
-the seat's sentences (`shared/vocabulary`'s, #574): _Padel, 1 of 4 seats filled._ first, then _Your side, you, level 2,71_, _Your
-side, your partner, empty_, _Their side, empty_. The Games card's row speaks the same summary.
-**Side labels are drawn on padel and badminton only**, as the mocks draw them: squash has no
-halves, and tennis's far seat stands where the label would be written.
+game's players card too — and the reader in the first seat, captioned _You 2,71_. **A seated friend**
+is their face, the seat's three letters over their Level, and 7.12's seat-clear badge — 6.9's remove
+square, standing half over the face's corner as friends 7 draws each ×, so the face keeps its own
+press (design-system Part 16, 2026-11-07). **An empty seat** is a dashed ring with a white plus that
+opens the picker, as **+ Friends** does. Who sits on which side is the seat's rule (`seatPlaces`, a
+side is a team, so squash's other seat is _their side_) and every seat says so in the seat's
+sentences (`shared/vocabulary`'s, #574): _Padel, 4 of 4 seats filled._ first, then _Your side, you,
+level 2,71_, _Your side, your partner, ewa.m, level 2,60_, _Their side, empty_; the × is _Remove
+ania.k from their side_. **Side labels are drawn on padel and badminton only**, as the mocks draw
+them: squash has no halves, and tennis's far seat stands where the label would be written.
+
+**The line-up is `friendsLineUp`'s rules over the page's store.** The seats beside the reader in
+court order — in doubles the partner first, then their side — and four acts on them: **Done** seats
+the picks (those still picked keep their seats, the others fill the empty ones, a court picked for
+the same friends stays), a **swap** trades two faces (tap one, its ring turns volt; tap another; tap
+the first again to let it go — the reader never moves, standing first on their side as the card
+reads it), the **×** empties a seat (and drops a court picked for the four), and a court picked in
+_Find a court_. **The sides are the card's**: right after Done the card is read with no partner and
+answers the evenest sides, and **the court draws what it answered**, so the court and the card always
+name the same sides (the friends README, note 3). The moment the player acts on the court — a swap,
+a ×, a kind or a court — what the court shows becomes the player's own arrangement (`pinned`) and the
+card is asked with that partner, so a re-read never moves a face the player is looking at. The
+friends are sent in the order the line-up holds them, which a read never changes, so the card is
+not asked again because it answered.
+
+**The line-up is one per group and sport, and goes with the page**, as _Post a game_'s draft goes:
+a store rather than the tab's state because the picker, pushed over the page, seats its picks on
+Done. The page opens on an empty court the next time. **`useFriendsGameOn` is where the rules meet
+the reads** — the store, the picker's list, the card and the re-read a refusal asks for — so
+`FriendsTab` only draws.
+
+**A seat open: _Seat 1 more friend_** (_Seat 3 more friends_ on an empty court), **+ Friends**, and no
+card (Q16). **Every seat filled: `proposals`' friends card** under the court, in the page's scroller
+with it (friends 8), handed the line-up, the friends seated (their nicknames and Levels in the
+sport, the picker's read) and two answers back — a row picked in _Find a court_, and a court picked
+that is no longer for sale (`court_hour_not_for_sale`), which the page lets go so the card proposes
+its own. The record of the card is [`proposals.md`](proposals.md#the-friends-card-and-find-a-court-757).
+
+**The faces are the picker's read** (`friends`' `useFriendsIn`) — the same list, so a face is the
+row it was picked from. **A friend who is no longer one leaves an empty seat** once that list is read
+again (`withoutStrangers`, the mechanics §7.5), and a card refused `not_a_friend` or `no_level` reads
+it again.
 
 **The reader's face is the roster's, and their own record's only when it must be.** The group's
 read carries the first rated in each sport, which is the reader in nearly every group; one who
 joined after a court's worth gets their photograph from their own record (`player_record`'s
 `useOwnFace`, a read asked only then), and the poster until it answers.
 
-**The Friends screen** is pushed at `/play/group/[groupId]/friends?sport=…` — the sport is a
-validated route param because the eyebrow counts that court: _PADEL · 0 OF 3 PICKED_ — and always
-shows _Nobody you know here yet_ with the link's doors. The page's route moved to
-`[groupId]/index` to make room for it.
+**The Friends screen is `friends`' page as a picker** (#757; the screens §4.2), pushed at
+`/play/group/[groupId]/friends?sport=…` — the sport a validated route param, because the picker
+lists Levels in it and the court it seats has its seats. This feature composes it: `FriendsPage`
+with this feature's group tiles and Members as the Add friends sheet's doors, `FriendsPicker` as its
+body, and **Done** (primary, `lg`) pinned at its foot. **The picks start as the court's seats** and
+are the screen's own until Done; _back_ leaves the court as it was. A pick is held to the list, so
+somebody seated who is no longer a friend is neither counted nor kept, and their seat is free to
+fill. No tabs and no eyebrow — friends
+3's header, as from You. **No friends yet** is this feature's empty card (play 55) — _Nobody you
+know here yet_ and the link's doors — handed in as the picker's empty state. The page's route moved
+to `[groupId]/index` to make room for it.
+
+**Not seen on a device** (#757 asks for the walk): the × half over a face at the court's corners,
+and whether Android delivers a press to the half of it outside the seat; the court and the card
+scrolling together (friends 8); the swap's volt ring; the picker's greyed rows.
 
 **Three things the group page's mocks draw that this record departs from**
 ([#513](https://github.com/Raketa02/Raketa/issues/513), design-system Part 16). The Games card's

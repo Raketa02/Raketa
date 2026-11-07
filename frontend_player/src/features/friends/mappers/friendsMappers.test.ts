@@ -27,6 +27,7 @@ describe('toFriend', () => {
         photo_id: 'f-1',
         photo_url: 'https://cdn.test/magda.jpg',
         friends_since: '2026-10-01T10:00:00Z',
+        level_asked_in: [],
         sports: [
           { sport: 'PADEL', level: 2.66, band: 'Established' },
           { sport: 'TENNIS', level: 3.1, band: 'Developing' },
@@ -51,6 +52,7 @@ describe('toFriend', () => {
         photo_id: null,
         photo_url: null,
         friends_since: '2026-10-01T10:00:00Z',
+        level_asked_in: [],
         sports: [{ sport: 'CURLING' as 'PADEL', level: 2, band: 'Established' }],
       }),
     ).toEqual({ playerId: 'p-2', nickname: 'ewa.m', sports: [] });

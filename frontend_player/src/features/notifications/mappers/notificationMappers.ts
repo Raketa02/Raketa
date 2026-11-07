@@ -66,6 +66,8 @@ export function toTarget(facts: SentFacts): NoticeTarget | undefined {
     const playerId = facts.playerId ?? null;
     return playerId === null ? undefined : { opens: 'record', playerId };
   }
+  // #749's two — a questionnaire and a group's picker — are told and listed, and land with #758.
+  if (opens === 'QUESTIONNAIRE' || opens === 'PICKER') return undefined;
   if (gameId === null || poolId === null) return undefined;
   const notice = toNoticeKind(facts.kind);
   const sport = facts.sport === null ? undefined : toSport(facts.sport);

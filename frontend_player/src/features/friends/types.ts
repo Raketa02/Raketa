@@ -28,6 +28,14 @@ export { FriendsPage, type FriendsPageProps } from './components/FriendsPage';
 export { FriendsTabs, type FriendsTabsProps } from './components/FriendsTabs';
 export { FriendsRow, type FriendsRowProps } from './components/FriendsRow';
 export type { GroupDoors } from './components/AddFriendsSheet';
+/**
+ * **The picker** (#757) — the frame's other body, from a group's Friends tab: every friend with
+ * their Level in the group's sport, the picks the composer's. `useFriendsIn` is the same read, for
+ * the faces the group's court draws once they are seated, so a face is the row it was picked from.
+ */
+export { FriendsPicker, type FriendsPickerProps } from './components/FriendsPicker';
+export { useFriendsIn } from './hooks/useFriendLists';
+export { levelIn, type Friend } from './domain/friendList';
 export { PlayedWithCard, type PlayedWithCardProps } from './components/PlayedWithCard';
 export { FriendButton, type FriendButtonProps } from './components/FriendButton';
 export { FriendRequestsRow, type FriendRequestsRowProps } from './components/FriendRequestsRow';

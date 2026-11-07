@@ -26,6 +26,8 @@
  * | `getPostingGrid` | `GET /pools/{id}/posting-grid?sport&kind&who&level_low&level_high&week` — *Post a game*'s WHEN (#546, #558) |
  * | `getPostingSlot` | `GET /pools/{id}/posting-grid/slot?…&day&range` — a cell's sheet (#546, #558) |
  * | `postPost` | `POST /pools/{id}/posts` — *Post — you're In*: the poster's yes (#546, #558) |
+ * | `getFriendsCard` | `GET /pools/{id}/friends-card?sport&kind&friend_ids…[&partner_id][&court_id&starts_at]` — a line-up's card (#750, #757) |
+ * | `getFriendsCourts` | `GET /pools/{id}/friends-card/courts?sport&friend_ids…` — *Find a court* (#750, #757) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -262,6 +264,43 @@ export function getFillIn(
   return httpRequest({
     method: 'GET',
     path: `/api/v1/pools/${encodeURIComponent(poolId)}/fill-in?sport=${sport}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * **The friends card** (#750, #757) — a fixed line-up's card on a group's Friends tab: the sides,
+ * the forecast, the overlap and a court, the query spelled by `toFriendsCardQuery`. Nothing is
+ * recorded. `pool_not_found` (404) for no such group or one the reader is not in;
+ * `not_a_friend`, `no_level`, `cannot_play_together` and `court_hour_not_for_sale` (409);
+ * `block_state_unavailable` (503).
+ */
+export function getFriendsCard(
+  poolId: string,
+  query: string,
+  { signal }: Cancellable = {},
+): Promise<Schemas['FriendsCardResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `/api/v1/pools/${encodeURIComponent(poolId)}/friends-card?${query}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * ***Find a court*** (#750, #757) — every court the line-up could take in the next 14 days, soonest
+ * first, each with who is free. The card's refusals, less the court's.
+ */
+export function getFriendsCourts(
+  poolId: string,
+  query: string,
+  { signal }: Cancellable = {},
+): Promise<Schemas['FriendsCourtsResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `/api/v1/pools/${encodeURIComponent(poolId)}/friends-card/courts?${query}`,
     authenticated: true,
     signal,
   });

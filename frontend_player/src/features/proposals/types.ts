@@ -113,3 +113,22 @@ export { rereadHome } from './hooks/useHome';
  */
 export { useHomeFriendRequests } from './hooks/useHome';
 export type { HomeFriendRequest } from './domain/home';
+
+/**
+ * **The friends card and *Find a court*** (#757; the friends screens §7.2–§7.3) — the card a
+ * group's Friends tab draws under its court once every seat is filled, over #750's two reads. The
+ * group page composes it: it holds the line-up (`FriendsCardAsk`, structurally its own), hands in
+ * the friends seated (`CardPerson`) and reads the same card (`useFriendsCard`) for the sides its
+ * court draws, so the court and the card always name the same sides. The words cross for the
+ * suites that walk it.
+ */
+export { FriendsCard, type FriendsCardProps } from './components/FriendsCard';
+export { useFriendsCard } from './hooks/useFriendsCard';
+export {
+  refusalOf,
+  type CardPerson,
+  type FriendsCardAsk,
+  type FriendsCardRefusal,
+  type FriendsCourtPick,
+} from './domain/friendsCard';
+export { FRIENDS_CARD_COPY } from './components/friendsCardCopy';

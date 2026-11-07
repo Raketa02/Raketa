@@ -101,6 +101,7 @@ import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
 import type { DeckArrival, ReturningPass } from '../schemas/groupRouteParams';
 import { useGroup, useGroupReread } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
+import { useFriendsGame } from '../store/friendsGame.store';
 import { useGameIntent } from '../store/gameIntent.store';
 import { useGroupTab } from '../store/groupTab.store';
 
@@ -214,12 +215,14 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
     if (returnTab !== undefined) show(groupId, returnTab);
   }, [returnTab, groupId, show]);
 
-  // The page's tab and *Post a game*'s draft are kept while the page is up, and go with it — so it
-  // opens on Games the next time, and the next post starts from nothing.
+  // The page's tab, *Post a game*'s draft and the Friends court's line-ups are kept while the page
+  // is up, and go with it — so it opens on Games the next time, and the next post and the next game
+  // with friends start from nothing.
   useEffect(
     () => () => {
       useGroupTab.getState().forget(groupId);
       forgetPostDraft(groupId);
+      useFriendsGame.getState().forget(groupId);
     },
     [groupId],
   );

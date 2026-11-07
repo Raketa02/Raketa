@@ -1257,3 +1257,57 @@ needs, with its own `PlayedWithRelation` held to the wire — and holds the reco
 game's group and sport. **The result route hands `friends`' card in**, since `friends` reads this
 feature's keys and Home: importing it back, even a type, would be a cycle. The screen is hidden
 behind the record while it is up. The record of the card is [`friends.md`](friends.md).
+
+## The friends card and Find a court (#757)
+
+**The deck's card without its tiles, for people who chose each other.**
+[#757](https://github.com/Raketa02/Raketa/issues/757) draws the card a group's Friends tab shows once
+every seat is filled (the friends screens §7.2; friends 8, 9), over #750's
+`GET /pools/{id}/friends-card`. **Every part is the deck card's own** — `GameGround`, the _vs_ line,
+the forecast's figure and `BalanceBar`, `OverlapGrid`, `CourtBlock` — laid out as friends 9 draws
+them: the figure over its word (_87%_ · _Very even_), the bar the card's width, your side on the
+left. No ribbon, no tiles (the court above draws the faces), and **no shadow**: it sits in the page's
+column, not on a stage (design-system Part 16, 2026-11-07). **Pick a different court** (`onDark`)
+opens _Find a court_; _Send game and pay 25 zł_ is #759's.
+
+**The card is read by id, and the people are the composer's.** The wire's sides are ids — every face
+on it is a friend the picker drew — so `groups` hands in `CardPerson`s (nickname, Level) and
+`sidesOn` builds the deck's `DeckPerson`s, the reader first on their side as the read guarantees. The
+_vs_ line, the bar's labels and its fold are then the deck's own functions. **The line-up is the
+composer's too** (`FriendsCardAsk`, this feature's own spelling of it): `useFriendsCard` is keyed by
+everything asked, and `groups` reads the same hook for the sides its court draws, so the court and
+the card are one answer. A changed line-up is a new key, and the card reads again from nothing —
+_what is sent is what was seen_ (the mechanics §7.4).
+
+**Every state has its drawing.** On its way: the card's frame with a quiet line, nothing to press (a
+call: _Finding the evenest sides and a court…_). With no court in 14 days: one line, _No court is
+free in the next 14 days._, and nothing to pick. Refused: the line-up's sentence in the card's place,
+naming nobody — _These four can't all play together. Swap someone._ (singles: _These two…_), and two
+calls, _Somebody here has no padel level yet. Swap someone._ and _Somebody here isn't your friend any
+more. Seat someone else._ **A court picked that is no longer for sale** is handed back
+(`onCourtGone`) and the card asks again for one it proposes, saying nothing (a call). Anything else:
+why, with _Try again_.
+
+**The court panel is `CourtBlock`, with three props the deck leaves off**: the tag's words (§29.6's
+_Court available_), the share as _25 zł each_, and _Ogrody 33 is full at 10:00_ under the line on
+another club's court. It wears _Book it now_'s bed and border — the court is named and sending books
+it at once — and its line names the court, _Saturday 10:00 · Ogrody 33 · Court 3 · indoor_.
+
+**_Find a court_ is a bottom sheet on `ModalStage`**, read only once it opens
+(`GET /pools/{id}/friends-card/courts`), and **virtualised** — a `SectionList`, a day a section, in
+a sheet that hands it the scrolling (`BottomSheet`'s `scrollsItself`, `SHEET_LIST`), since a busy
+group lists several hundred rows (Part 12): every row by day, headed _Tomorrow_, _Saturday_, _Sat 10
+Oct_ against the instant it was read (`courtsByDay`), each _19:00_ · _Bonarka Arena · Court 2_ ·
+who is busy · _25 zł each_, and the home club's _… is full at 10:00_. **The tint is a step per friend
+busy** (`freeStepOf`): `mintSoft` bordered in `mint` for everybody free, then `surface` with
+`mintLine`, `surface` with `line`, and `paper2` (Part 16, 2026-11-07). The busy line names the
+friends whole and the reader first as _You_ (`busyLine`: _Everybody free_, _ania.k busy_, _You and
+ania.k busy_). **Every row can be picked**; the card's own is ringed `ink` and spoken _picked_, and a
+press closes the sheet and asks the card for that court, keeping the sides the court shows.
+
+**The refusals are a union** (`FriendsCardRefusal`, `refusalOf`), their words a `Record` over it, and
+`groups` reads the same union to know when to read its friends again.
+
+**Not seen on a device**: the card at a narrow width — the _vs_ line's stems, the bar's two labels;
+the sheet scrolling several hundred rows (the seeded group lists about 800); the four tints side by
+side.

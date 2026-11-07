@@ -29,7 +29,7 @@ export {
   type BalanceBarVariant,
 } from './BalanceBar';
 export { Bar, type BarProps } from './Bar';
-export { BottomSheet, type BottomSheetProps } from './BottomSheet';
+export { BottomSheet, SHEET_LIST, type BottomSheetProps } from './BottomSheet';
 export {
   Button,
   type ButtonMark,

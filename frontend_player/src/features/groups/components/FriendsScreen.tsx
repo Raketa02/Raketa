@@ -1,29 +1,48 @@
 /**
- * **Friends** — who the player could put on the court they are building, for one sport of one
- * group (play 54–55; PRD #500 story 70).
+ * **The Friends page as a picker**, for one sport of one group — pushed over the group's page from
+ * an empty seat on its court or from *+ Friends*, so *back* is the court
+ * ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends screens §4.2; friends 3, 6).
  *
- * **There is no friends feature**, and PRD #500 overrides play 49–56 by name: this screen always
- * shows its empty card — *Nobody you know here yet*, who would show up here, and the link's two
- * doors, because the only way anybody shows up is by joining with it. No list, no tags. The
- * eyebrow counts the court the player came from, *PADEL · 0 OF 3 PICKED*: everyone but the reader.
+ * **`friends`' page, composed here** with what it may not import: the frame (`FriendsPage` — back,
+ * *Friends*, **+ Add friends** and its sheet, with this feature's group tiles and Members as its
+ * doors) holding the picker (`FriendsPicker`) and, pinned at its foot, **Done**. No tabs, and no
+ * eyebrow: friends 3's header, as from You.
  *
- * The group is the page's read, already in the cache; a failure to read it is the page's own
- * block, with the page's words.
+ * **The picks start as the court's seats** and are this screen's own until **Done**, which seats
+ * them (`seatPicks`) — those still picked keep their seats, the rest fill the empty ones, the card
+ * is asked for the evenest sides — and goes back to the court. *Back* without Done leaves the court
+ * as it was. **Somebody seated who is no longer a friend** is neither counted nor kept: the list
+ * (the picker's own read) is what a pick is held to, so their seat is free to fill.
+ *
+ * **No friends yet**: the group's empty card (play 55) — *Nobody you know here yet*, who would show
+ * up here, and the link's two doors — the picker's own empty state, handed in. The group is the
+ * page's read, already in the cache; a failure to read it is the page's own block, with the page's
+ * words.
  */
 
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMemo, useState } from 'react';
 
+import { FriendsPage, FriendsPicker, FRIENDS_COPY, useFriendsIn } from '@/features/friends/types';
 import { codeMessage } from '@/shared/errors';
-import { courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
+import { Button, courtSeatCount } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import {
+  emptyLineUp,
+  seatedOf,
+  seatPicks,
+  togglePick,
+  withoutStrangers,
+} from '../domain/friendsLineUp';
 import { useGroup } from '../hooks/useGroups';
+import { lineUpKey, useFriendsGame } from '../store/friendsGame.store';
 
+import { groupMembersRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
-import { friendsLine, friendsPicked } from './groupsPresentation';
+import { friendsLine } from './groupsPresentation';
 import { LinkCard } from './LinkCard';
+import { MyGroupMonogram } from './MyGroupMonogram';
 import { ReadFailure } from './ReadFailure';
 
 const COPY = GROUPS_COPY.friends;
@@ -37,32 +56,53 @@ export function FriendsScreen({
 }) {
   const read = useGroup(groupId);
   const group = read.data;
+  const stored = useFriendsGame((state) => state.lineUps[lineUpKey(groupId, sport)]);
+  const put = useFriendsGame((state) => state.put);
+
+  const seats = courtSeatCount(sport) - 1;
+  // Somebody seated who is no longer a friend holds no seat here — not counted, not kept on Done.
+  const friends = useFriendsIn(sport).data;
+  const stillFriends = useMemo(
+    () => (friends === undefined ? undefined : new Set(friends.map((one) => one.playerId))),
+    [friends],
+  );
+  const lineUp = withoutStrangers(stored ?? emptyLineUp(seats), stillFriends);
+  const [chosen, setChosen] = useState<readonly string[]>(() => seatedOf(lineUp.seats));
+  const picked = chosen.filter((one) => stillFriends === undefined || stillFriends.has(one));
+
+  const toggle = (playerId: string) => setChosen(togglePick(picked, playerId, seats));
+
+  const done = () => {
+    put(groupId, sport, seatPicks(lineUp, picked));
+    router.back();
+  };
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader
-        onBack={() => router.back()}
-        backLabel={COPY.back}
-        eyebrow={friendsPicked(sport, 0, courtSeatCount(sport) - 1)}
-        title={COPY.title}
+    <FriendsPage
+      onBack={() => router.back()}
+      groups={{
+        tile: (id) => <MyGroupMonogram groupId={id} size="card" />,
+        open: (id) => router.push(groupMembersRoute(id)),
+      }}
+      action={<Button label={FRIENDS_COPY.picker.done} size="lg" onPress={done} />}
+    >
+      <FriendsPicker
+        sport={sport}
+        picked={picked}
+        onToggle={toggle}
+        seats={seats}
+        empty={
+          group !== undefined ? (
+            <LinkCard group={group} headline={COPY.nobody} line={friendsLine(group.name)} />
+          ) : read.error !== null ? (
+            <ReadFailure
+              error={read.error}
+              message={codeMessage(GROUPS_COPY.group.refused, read.error)}
+              onRetry={() => void read.refetch()}
+            />
+          ) : null
+        }
       />
-
-      <View style={s.body}>
-        {group !== undefined ? (
-          <LinkCard group={group} headline={COPY.nobody} line={friendsLine(group.name)} />
-        ) : read.error !== null ? (
-          <ReadFailure
-            error={read.error}
-            message={codeMessage(GROUPS_COPY.group.refused, read.error)}
-            onRetry={() => void read.refetch()}
-          />
-        ) : null}
-      </View>
-    </SafeAreaView>
+    </FriendsPage>
   );
 }
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.color.paper },
-  body: { paddingHorizontal: theme.size.gutter, gap: theme.space.sm },
-});

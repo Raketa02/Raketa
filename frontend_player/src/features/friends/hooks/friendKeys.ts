@@ -8,12 +8,16 @@
  * back. They are this feature's own, so naming them costs no other feature a dependency.
  */
 
+import type { Sport } from '@/shared/vocabulary/sport';
+
 import type { RequestDirection } from '../domain/vocabulary';
 
 export const friendKeys = {
   all: ['friends'] as const,
   /** `GET /friends` — your friends, by nickname. */
   list: () => [...friendKeys.all, 'list'] as const,
+  /** `GET /friends?sport=` — a group's picker (#757): one sport's Level each, highest first. */
+  listIn: (sport: Sport) => [...friendKeys.all, 'list', sport] as const,
   /** `GET /friends/requests?direction=` — *Asked you* or *You asked*. */
   requests: (direction: RequestDirection) => [...friendKeys.all, 'requests', direction] as const,
   /** `GET /friends/groups` — the Add friends sheet's groups. */

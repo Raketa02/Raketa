@@ -14,7 +14,7 @@
  * | `POST /friends/requests/{id}/set-aside` | *Not now* — 204; the request stays open, untold |
  * | `DELETE /friends/requests/{id}` | cancel your own — 204 always, nobody told |
  * | `DELETE /friends/{id}` | remove a friend — 204 always, nobody told, no game touched |
- * | `GET /friends` | your friends, by nickname, each with every sport they are rated in (#754) |
+ * | `GET /friends[?sport=]` | your friends, by nickname, each with every sport they are rated in (#754); with a sport, that one alone, highest Level first — the picker (#757) |
  * | `GET /friends/requests?direction=` | *Asked you* or *You asked*, newest first (#754) |
  * | `GET /friends/groups` | the Add friends sheet's groups, *8 members · 2 to add* (#754) |
  * | `GET /friends/link` | your friend link — made on its first read, the same until a New link (#756) |
@@ -97,13 +97,17 @@ export function deleteFriend(playerId: string): Promise<void> {
 }
 
 /**
- * **Your friends** — from every group, by nickname, each with every sport they are rated in. The
- * picker's `?sport=` narrowing is #757's.
+ * **Your friends** — from every group, each with every sport they are rated in, by nickname. **With
+ * a sport** — a group's picker (#757) — each carries that sport alone, empty where they have no
+ * Level in it, and the list comes highest Level first, the unrated last.
  */
-export function getFriends({ signal }: Cancellable = {}): Promise<Schemas['FriendsResponse']> {
+export function getFriends(
+  sport: Schemas['Sport'] | undefined,
+  { signal }: Cancellable = {},
+): Promise<Schemas['FriendsResponse']> {
   return httpRequest<Schemas['FriendsResponse']>({
     method: 'GET',
-    path: FRIENDS_PATH,
+    path: sport === undefined ? FRIENDS_PATH : `${FRIENDS_PATH}?sport=${sport}`,
     authenticated: true,
     signal,
   });

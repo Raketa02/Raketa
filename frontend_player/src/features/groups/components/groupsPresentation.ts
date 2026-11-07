@@ -21,7 +21,11 @@ import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
 import { playerName } from '@/shared/formatting/playerName';
 import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
 import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
-import { courtSummaryLabel, seatLabel } from '@/shared/vocabulary/seatPlacePresentation';
+import {
+  PLACE_CLAUSE,
+  courtSummaryLabel,
+  seatLabel,
+} from '@/shared/vocabulary/seatPlacePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
@@ -244,9 +248,24 @@ export function emptySeatLabel(place: SeatPlace): string {
   return seatLabel(place, { kind: 'empty' });
 }
 
-/** *Padel · 0 of 3 picked* — the Friends screen's eyebrow (play 54), drawn upper case. */
-export function friendsPicked(sport: Sport, picked: number, toPick: number): string {
-  return `${sportLabel(sport)}${DOT}${picked} of ${toPick} picked`;
+/**
+ * *Their side, ewa.m, level 2,60* — a friend's seat on the Friends court (#757): the seat's own
+ * sentence, whole; a friend with no Level in the sport (seated before they lost it) is said without
+ * one.
+ */
+export function friendSeatLabel(place: SeatPlace, name: string, level: number | undefined): string {
+  if (level !== undefined) return seatLabel(place, { kind: 'player', name, level });
+  return `${PLACE_CLAUSE[place]}, ${name}`;
+}
+
+/** *Remove ewa.m from their side* — a seated friend's ×, named by whom and where (§20.4's rule). */
+export function takeOffLabel(place: SeatPlace, name: string): string {
+  return `Remove ${name} from ${place === 'THEIR_SIDE' ? 'their side' : 'your side'}`;
+}
+
+/** *Seat 1 more friend* · *Seat 3 more friends* — under a court with a seat still open (§29.6). */
+export function seatMoreLine(open: number): string {
+  return `Seat ${counted(open, 'more friend', 'more friends')}`;
 }
 
 /** *Friends who join my raketa group with the link show up on this page.* (play 55) */

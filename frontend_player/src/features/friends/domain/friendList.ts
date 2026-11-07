@@ -30,6 +30,14 @@ export interface Friend {
   readonly sports: readonly FriendSport[];
 }
 
+/** **A friend's Level in one sport** — the picker's line and their caption on a court (#757). */
+export function levelIn(
+  friend: Pick<Friend, 'sports'> | undefined,
+  sport: Sport,
+): FriendSport | undefined {
+  return friend?.sports.find((one) => one.sport === sport);
+}
+
 /** **An open request** — on *Asked you* made of you, on *You asked* yours. */
 export interface FriendRequest {
   readonly playerId: string;

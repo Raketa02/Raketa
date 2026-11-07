@@ -6,7 +6,7 @@
  *
  * **The deck is `proposals`'**: the read, the switch, the stage, the card and the answers
  * (`GamesDeck`). What this tab hands it is what only the group page knows — the kind its switch
- * stands on, which Friends' switch shares (`gameIntent.store`), and the card to draw when this
+ * stands on (`gameIntent.store`, the deck's own since #757), and the card to draw when this
  * segment deals nothing, which is about the group's roster rather than about any game.
  *
  * **The starting card** is `gamesCard`'s: *Just you so far*, *3 of 4* once others who play the sport

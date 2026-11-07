@@ -342,7 +342,10 @@ export function shareWords(card: Pick<DeckCard, 'shareGrosze'>): string {
   return formatZloty(card.shareGrosze);
 }
 
-/** The court block, spoken whole: the tag, the share, the day and the club, and the late line. */
+/**
+ * The court block, spoken whole: the tag, the share, the day and the club, and the late line. The
+ * friends card's block says its own tag and share (`drawn`, #757).
+ */
 export function courtSpoken(
   tag: CourtTag,
   day: GameDay | undefined,
@@ -350,10 +353,11 @@ export function courtSpoken(
     DeckCard,
     'startsAt' | 'club' | 'courtName' | 'indoor' | 'shareGrosze' | 'noFreeCancellation'
   >,
+  drawn: { readonly tag?: string; readonly share?: string } = {},
 ): string {
   return [
-    COPY.courtTag[tag],
-    shareWords(card),
+    drawn.tag ?? COPY.courtTag[tag],
+    drawn.share ?? shareWords(card),
     courtLine(day, card),
     ...(card.noFreeCancellation ? [COPY.noFreeCancellation] : []),
   ].join(', ');

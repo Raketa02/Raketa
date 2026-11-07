@@ -20,6 +20,12 @@
  * number is given at booking (the mechanics §5.2). **A rescue's court is booked**, so its number
  * joins the line — *Saturday 16:00 · Ogrody 33 · Court 6* (mock 2). **One element** to a listener,
  * the tag first — what a yes does is the first thing to know about a price.
+ *
+ * **The friends card's court panel is this block** (#757; friends 8, 9): its court is named —
+ * the club's, at the hour, sold when the game is sent — so it wears *Book it now*'s bed and border,
+ * the send booking it at once, under §29.6's own words, *Court available*; its share reads *25 zł
+ * each*; and another club's court carries *Ogrody 33 is full at 10:00* under the line. Three props,
+ * each absent on the deck.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -48,19 +54,30 @@ export interface CourtBlockProps {
     DeckCard,
     'startsAt' | 'club' | 'courtName' | 'indoor' | 'shareGrosze' | 'noFreeCancellation'
   >;
+  /** The tag's words, where they are not the tag's own — the friends card's *Court available*. */
+  readonly label?: string;
+  /** The share as the friends card draws it — *25 zł each*. */
+  readonly share?: string;
+  /** Under the line — *Ogrody 33 is full at 10:00* on another club's court (#757). */
+  readonly marker?: string;
 }
 
-export function CourtBlock({ tag, day, card }: CourtBlockProps) {
+export function CourtBlock({ tag, day, card, label, share, marker }: CourtBlockProps) {
+  const words = label ?? COPY.courtTag[tag];
+  const price = share ?? shareWords(card);
   return (
     <View
       style={[s.block, BLOCK[tag]]}
       accessible
-      accessibilityLabel={courtSpoken(tag, day, card)}
+      accessibilityLabel={[
+        courtSpoken(tag, day, card, { tag: words, share: price }),
+        ...(marker === undefined ? [] : [marker]),
+      ].join(', ')}
       testID={`court-block-${tag}`}
     >
       <View style={s.head}>
-        <CardTag label={COPY.courtTag[tag]} tone={TONE[tag]} />
-        <Text style={s.share}>{shareWords(card)}</Text>
+        <CardTag label={words} tone={TONE[tag]} />
+        <Text style={s.share}>{price}</Text>
       </View>
       <Text style={s.line}>
         {courtLine(day, card)}
@@ -71,6 +88,7 @@ export function CourtBlock({ tag, day, card }: CourtBlockProps) {
           </Text>
         ) : null}
       </Text>
+      {marker === undefined ? null : <Text style={s.marker}>{marker}</Text>}
     </View>
   );
 }
@@ -86,6 +104,7 @@ const s = StyleSheet.create({
   share: { ...theme.num.m, ...theme.tabular, color: theme.color.volt },
   line: { ...theme.type.h2, color: theme.color.surface },
   late: { ...theme.type.h2, color: theme.color.gameAmber },
+  marker: { ...theme.type.tiny, color: theme.color.onDarkTiny },
 });
 
 /** Each tag's bed and border — see the module note. */

@@ -19,7 +19,9 @@ import {
   requestLevels,
   requestTags,
   emptySeatLabel,
-  friendsPicked,
+  friendSeatLabel,
+  seatMoreLine,
+  takeOffLabel,
   gamesHeadline,
   gamesLine,
   groupHeaderLabel,
@@ -154,8 +156,15 @@ describe('the group page’s sentences', () => {
     expect(seatsFilledLabel('tennis', 1, 2)).toBe('Tennis, 1 of 2 seats filled.');
   });
 
-  it('counts the Friends screen’s picks against the seats left', () => {
-    expect(friendsPicked('padel', 0, 3)).toBe('Padel · 0 of 3 picked');
+  it('names a friend’s seat, its ×, and how many seats are still open', () => {
+    expect(friendSeatLabel('THEIR_SIDE', 'ewa.m', 2.6)).toBe('Their side, ewa.m, level 2,60');
+    expect(friendSeatLabel('YOUR_PARTNER', 'ewa.m', undefined)).toBe(
+      'Your side, your partner, ewa.m',
+    );
+    expect(takeOffLabel('THEIR_SIDE', 'ewa.m')).toBe('Remove ewa.m from their side');
+    expect(takeOffLabel('YOUR_PARTNER', 'ewa.m')).toBe('Remove ewa.m from your side');
+    expect(seatMoreLine(1)).toBe('Seat 1 more friend');
+    expect(seatMoreLine(3)).toBe('Seat 3 more friends');
   });
 
   it('shares the link inside one sentence naming the group', () => {

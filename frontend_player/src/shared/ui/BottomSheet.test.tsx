@@ -28,7 +28,7 @@ import {
 
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform/keyboard';
 
-import { BottomSheet } from './BottomSheet';
+import { BottomSheet, SHEET_LIST } from './BottomSheet';
 import { theme } from './theme';
 
 const flatten = (style: unknown) => StyleSheet.flatten(style as ViewStyle);
@@ -75,6 +75,21 @@ describe('a sheet taller than the screen', () => {
 
     expect(flatten(body().props.contentContainerStyle)?.paddingBottom).toBe(theme.space.xxl);
     expect(flatten(screen.UNSAFE_getByType(ScrollView).props.style)?.paddingBottom).toBeUndefined();
+  });
+});
+
+describe('a sheet whose body is a list that scrolls itself', () => {
+  it('draws no scroll around it, and hands it the cap’s shrink and the bottom padding', () => {
+    render(
+      <BottomSheet visible onClose={() => {}} title="Find a court" closeLabel="Close" scrollsItself>
+        <Text>A long list</Text>
+      </BottomSheet>,
+    );
+
+    expect(screen.getByText('A long list')).toBeTruthy();
+    expect(screen.UNSAFE_queryByType(ScrollView)).toBeNull();
+    expect(flatten(SHEET_LIST.style)?.flexShrink).toBe(1);
+    expect(flatten(SHEET_LIST.contentContainerStyle)?.paddingBottom).toBe(theme.space.xxl);
   });
 });
 

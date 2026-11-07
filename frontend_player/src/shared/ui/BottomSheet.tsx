@@ -58,6 +58,13 @@
  * way, and it is a bigger claim than this component can make on every caller's behalf: three
  * of the four sheets in the app end in something that is not a control, and a slot that
  * pinned the last child would move a sentence away from the paragraph it belongs to.
+ *
+ * **A body that is a long list scrolls itself** (`scrollsItself`, #757): *Find a court* lists
+ * every court hour of a fortnight, hundreds of rows, and a list that long is virtualised
+ * (`docs/architecture.md` Part 12) — which a `VirtualizedList` inside this `ScrollView` would
+ * defeat. So the sheet draws no scroll around such a body, and the list lays itself out with
+ * `SHEET_LIST`: the same shrink, so the cap still bounds it, and the same bottom padding on its
+ * content.
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -94,6 +101,11 @@ export interface BottomSheetProps {
    * out of the sheet, releases it. Off everywhere else, which keeps the default.
    */
   readonly keepsKeyboardOnTap?: boolean;
+  /**
+   * The body is a virtualised list that scrolls itself — see the module note. It takes
+   * `SHEET_LIST`'s `style` and `contentContainerStyle`.
+   */
+  readonly scrollsItself?: boolean;
   readonly children: ReactNode;
 }
 
@@ -105,6 +117,7 @@ export function BottomSheet({
   returnFocusTo,
   mark,
   keepsKeyboardOnTap = false,
+  scrollsItself = false,
   children,
 }: BottomSheetProps) {
   const reducedMotion = useReducedMotion();
@@ -183,15 +196,19 @@ export function BottomSheet({
           {/* `flexShrink` is what lets the cap apply to this rather than to the sheet's
               last child: without it the ScrollView takes its content's full height and the
               overflow happens one level up, where nothing can scroll it. */}
-          <ScrollView
-            style={s.body}
-            contentContainerStyle={s.bodyContent}
-            // A tap on a field or a button while the keyboard is up reaches it, not the keyboard —
-            // and a sheet with the card field keeps the keyboard on every tap (the prop's note).
-            keyboardShouldPersistTaps={keepsKeyboardOnTap ? 'always' : 'handled'}
-          >
-            {children}
-          </ScrollView>
+          {scrollsItself ? (
+            children
+          ) : (
+            <ScrollView
+              style={s.body}
+              contentContainerStyle={s.bodyContent}
+              // A tap on a field or a button while the keyboard is up reaches it, not the keyboard —
+              // and a sheet with the card field keeps the keyboard on every tap (the prop's note).
+              keyboardShouldPersistTaps={keepsKeyboardOnTap ? 'always' : 'handled'}
+            >
+              {children}
+            </ScrollView>
+          )}
         </View>
       </KeyboardAvoidingView>
     </ModalStage>
@@ -240,3 +257,6 @@ const s = StyleSheet.create({
   hero: { alignItems: 'center', gap: theme.space.md },
   centred: { textAlign: 'center' },
 });
+
+/** **The layout a body that scrolls itself takes** (`scrollsItself`): the cap's shrink, and the padding. */
+export const SHEET_LIST = { style: s.body, contentContainerStyle: s.bodyContent } as const;

@@ -363,3 +363,10 @@ tabs are, draws `player_record`'s sheet over wherever the player is, and forgets
 **Answering a request clears its row in the bell on the server**, and the bell reads again at
 once: `rereadNotices` crosses to the shell, which hands it to `friends`' request row — `friends`
 naming this feature's keys would loop back through the record.
+
+**#749's two notices are spelled, and land nowhere yet** ([#757](https://github.com/Raketa02/Raketa/issues/757)
+regenerated the types). `LEVEL_ASKED` and `LEVEL_GOT` join the kinds, and `QUESTIONNAIRE` and
+`PICKER` join `Opens`, held to the wire as every code here is. Both are told and listed, and a tap
+opens nothing — `toTarget` answers `undefined`, as for a code this build cannot place — and a push
+that opens either is not read as a notice. Their landings, the sport's questionnaire and the group's
+picker, are [#758](https://github.com/Raketa02/Raketa/issues/758)'s.

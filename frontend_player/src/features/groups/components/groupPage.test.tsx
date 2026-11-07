@@ -30,6 +30,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
   stubOwnRecord,
+  stubFriends,
   stubShare,
 } from '@/test-support/onboardingRouter';
 import {
@@ -41,6 +42,7 @@ import {
 import { stubGroupDeck } from '@/test-support/groupDeck';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
+import { useFriendsGame } from '../store/friendsGame.store';
 import { useGameIntent } from '../store/gameIntent.store';
 
 import { GROUPS_COPY } from './groupsPresentation';
@@ -145,7 +147,9 @@ beforeEach(() => {
   stubShare(share);
   clipboard = fakeClipboard();
   stubClipboard(clipboard);
+  stubFriends(transport);
   useGameIntent.setState({ intent: 'competitive' });
+  useFriendsGame.setState({ kind: 'competitive', lineUps: {} });
   useToastQueue.setState({ queue: [] });
 });
 
@@ -630,6 +634,7 @@ describe('Friends', () => {
   const emptySeats = () => screen.queryAllByRole('button', { name: /, empty$/ });
 
   it('switches between Competitive and For fun, and keeps the switch while the app is open', async () => {
+    // The game's own kind (#757) — `friendsGame.test.tsx` holds it apart from the deck's.
     await openGroup();
     await openTab('Friends');
     expect(await tab(COPY.friends.competitive, true)).toBeTruthy();
@@ -707,7 +712,7 @@ describe('Friends', () => {
     );
   });
 
-  it('opens Friends from an empty seat — the sport, how many are picked, and nobody yet', async () => {
+  it('opens Friends from an empty seat — nobody yet', async () => {
     await openGroup();
     await openTab('Friends');
 
@@ -715,8 +720,7 @@ describe('Friends', () => {
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}/friends`));
     expect(await screen.findByRole('header', { name: COPY.friends.title })).toBeTruthy();
-    expect(screen.getByText('Padel · 0 of 3 picked')).toBeTruthy();
-    expect(screen.getByText(COPY.friends.nobody)).toBeTruthy();
+    expect(await screen.findByText(COPY.friends.nobody)).toBeTruthy();
     expect(
       screen.getByText('Friends who join my raketa group with the link show up on this page.'),
     ).toBeTruthy();
@@ -730,7 +734,9 @@ describe('Friends', () => {
     fireEvent.press(await screen.findByRole('button', { name: COPY.friends.addFriendsLabel }));
 
     expect(await screen.findByRole('header', { name: COPY.friends.title })).toBeTruthy();
-    expect(screen.getByText('Tennis · 0 of 1 picked')).toBeTruthy();
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', '/api/v1/friends').at(-1)?.path).toContain('sport=TENNIS'),
+    );
   });
 
   it('shares and copies the link from Friends, and goes back to the court', async () => {
@@ -744,7 +750,7 @@ describe('Friends', () => {
     fireEvent.press(screen.getByRole('button', { name: COPY.link.copy }));
     await waitFor(() => expect(clipboard.text).toBe(LINK));
 
-    fireEvent.press(screen.getByRole('button', { name: COPY.friends.back }));
+    fireEvent.press(screen.getByRole('button', { name: 'Back' }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
     expect(await tab('Friends', true)).toBeTruthy();
   });

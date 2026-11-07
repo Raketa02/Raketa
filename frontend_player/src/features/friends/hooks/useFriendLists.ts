@@ -8,10 +8,16 @@
 import { useQuery } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Friend, FriendRequest, GroupToAddFrom } from '../domain/friendList';
 import type { RequestDirection } from '../domain/vocabulary';
-import { readFriendRequests, readFriends, readGroupsToAddFrom } from '../use-cases/friends';
+import {
+  readFriendRequests,
+  readFriends,
+  readFriendsIn,
+  readGroupsToAddFrom,
+} from '../use-cases/friends';
 
 import { friendKeys } from './friendKeys';
 
@@ -19,6 +25,17 @@ export function useFriends() {
   return useQuery<readonly Friend[], AppError>({
     queryKey: friendKeys.list(),
     queryFn: ({ signal }) => readFriends({ signal }),
+  });
+}
+
+/**
+ * **Your friends in one sport** — the picker's list and the faces on a group's Friends court
+ * (#757), one read for both, so a face on the court is the row it was picked from.
+ */
+export function useFriendsIn(sport: Sport) {
+  return useQuery<readonly Friend[], AppError>({
+    queryKey: friendKeys.listIn(sport),
+    queryFn: ({ signal }) => readFriendsIn(sport, { signal }),
   });
 }
 

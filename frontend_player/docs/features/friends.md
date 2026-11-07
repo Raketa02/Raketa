@@ -83,7 +83,7 @@ removing's; the busy words; the two refusal sentences; the spoken names of the p
 buttons; a Home card whose group either of them left draws its sport and Level alone, and one asked
 from a screen with no sport draws the chip alone.
 
-**Not here**: the picker, the friends card and the game (#757–#760). The link is #756's, below.
+**Not here**: the friends card and the game (#757–#760; the card is `proposals`'). The picker is #757's and the link #756's, below.
 
 **Not seen on a device**: the pill and the tags at a row's right on a narrow phone; the record's two
 buttons at the narrowest width (#753 asks for that walk); the ✓ ▾ marks beside a label; the request
@@ -213,3 +213,33 @@ eyebrow above theirs; the blocked owner's sentence; the spoken names.
 **Not seen on a device**: the field and **Copy** side by side at the narrowest width, with a long
 domain cut in the middle; the confirmation sheet over the Add friends sheet on Android
 (`ModalStage`'s layer over a layer); the mint line under the field.
+
+## The picker (#757)
+
+**The page's second body: every friend, a circle each, and Done at the foot.**
+[#757](https://github.com/Raketa02/Raketa/issues/757) opens `FriendsPage` from a group's Friends tab
+with `FriendsPicker` as its body (the screens §4.2; friends 3, 6). `groups` composes it, as the shell
+composes the page from You: the group tiles and Members as the sheet's doors, the picks, and
+**Done** pinned in the frame's `action`. No tabs.
+
+**One read for the picker and the court: `useFriendsIn(sport)`**, `GET /friends?sport=`, its own
+key under this feature's root so every friends write re-reads it too. Each friend carries that
+sport's Level alone, or none, and the list comes **highest Level first, the unrated last** — the
+server's order (call 4), never re-sorted. The group's court draws its seated faces off the same
+list, so a face is the row it was picked from, and both read a friend's Level by one rule
+(`levelIn`).
+
+**A row is one checkbox**: the face, the nickname, _2,75 · established_ (the Level and its band, lower
+case, §29.3) in mono, and 6.11's box made round — friends 3's circle — filled `ink` with a drawn tick
+when picked (design-system Part 16, 2026-11-07). **Full — three in doubles, one in singles — greys the
+rest**, which cannot be picked until one is unpicked, and says _the court is full_ after their name
+(a call). A picked row never greys: whoever is seated can be unpicked, a friend who has since lost
+their Level included. **A friend with no Level in the sport** is greyed with _No padel level yet_ (§29.3); the
+_Ask … to get a padel level_ under it is #758's, and `level_asked_in` is left on the wire for it.
+**No friends at all** draws the empty state the composer hands in — `groups`' play 55 card.
+
+**The picks are the composer's.** `picked` and `onToggle` are handed in, since Done seats them on
+the group's court and the court's line-up is `groups`'; a list read again leaves them where they
+were.
+
+**Not seen on a device**: the round box beside a long nickname; the greyed rows (friends 6).

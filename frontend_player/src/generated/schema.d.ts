@@ -992,6 +992,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/friends/{player_id}/level-asks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a friend to get a level
+         * @description **Ask {nickname} to get a padel level**, on a greyed row of a group's picker (#749). They are told, pushed and in the bell: *{you} wants to play padel with you. Get your padel level so {you} can add you.* — `LEVEL_ASKED`, opening that sport's questionnaire.
+         *
+         *     **When their first level in the sport arrives, you are told**: *{nickname} has a padel level — you can seat {nickname} now.* — `LEVEL_GOT`, opening this group's picker. Both only while you are still friends.
+         */
+        post: operations["ask_for_a_level_api_v1_friends__player_id__level_asks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/conversations": {
         parameters: {
             query?: never;
@@ -2345,6 +2367,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pools/{pool_id}/friends-card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The friends card
+         * @description The **Friends** tab, every seat filled: the deck's card without its tiles, for the reader and the friends they seated. **The sides** are the evenest way they can stand, by the engine's own forecast — or, after a swap, the way with `partner_id` beside the reader — and the court above the card draws the same. **The court** is the one picked in *Find a court* (`court_id` and `starts_at`), or the one proposed: the soonest hour, up to 14 days ahead, where the whole line-up is free, a court is free under the group's court rule and none of them has a game — failing that, the soonest where most of them are free — and `null` when there is none. Around it the overlap of their weeks and the club's cut-off. **Friends choose each other**: blocks and a level in the sport apply, and the level window, the kind's tolerance, gender preferences, a Play intent and *most I'll pay* don't. A friend who is not in the group plays as a guest. Nothing is recorded: no game is made and no court is held.
+         */
+        get: operations["read_friends_card_api_v1_pools__pool_id__friends_card_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pools/{pool_id}/friends-card/courts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find a court
+         * @description *Pick a different court* on the friends card: **every court the line-up could take**, from the soonest hour still sellable to 14 days ahead, under the group's court rule — for an official group, another club's only at an hour the home club has none free, marked `home_club_full`. Each row says how many of them are free for the whole hour and who is busy — outside their weekly hours. An hour where one of them already has a game, or whose week already holds all the games they play, is left out. **Friends choose each other**: blocks and a level in the sport apply, and the level window, the kind's tolerance, gender preferences, a Play intent and *most I'll pay* don't. A friend who is not in the group plays as a guest. Nothing is recorded: no game is made and no court is held.
+         */
+        get: operations["read_friends_courts_api_v1_pools__pool_id__friends_card_courts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/seat-charges/{seat_charge_id}": {
         parameters: {
             query?: never;
@@ -2719,6 +2781,21 @@ export interface components {
              */
             player_id: string;
             location: components["schemas"]["LocationFixSchema"];
+        };
+        /**
+         * AskForALevelRequest
+         * @description **Ask {nickname} to get a padel level**, on a greyed row of a group's
+         *     picker (#749). The friend is the path's; you are never sent.
+         */
+        AskForALevelRequest: {
+            /** @description The picker's sport — the level they are asked to get. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Group Id
+             * Format: uuid
+             * @description The group whose Friends tab the picker is on — one of yours. When they get the level, your notice opens this group's picker.
+             */
+            group_id: string;
         };
         /** AskToBeFriendsRequest */
         AskToBeFriendsRequest: {
@@ -4205,6 +4282,11 @@ export interface components {
              * @description Every sport they are rated in, in the sports' own order — or, with `sport`, that one alone, and **empty** when they have no Level in it: *No padel level yet*.
              */
             sports: components["schemas"]["FriendSportSchema"][];
+            /**
+             * Level Asked In
+             * @description Every sport **you** asked them to get a level in, answered or not, in the sports' own order — or, with `sport`, that one alone or nothing. On a greyed row it reads **Asked** in place of *Ask … to get a padel level*: you ask once per sport, ever. Only your own asks: nobody else's are on the wire.
+             */
+            level_asked_in: components["schemas"]["Sport"][];
         };
         /** FriendSportSchema */
         FriendSportSchema: {
@@ -4219,6 +4301,120 @@ export interface components {
              * @description The Level band's published name (*Established*), RacketSkill's own word — the picker's *2,75 · established*. Never derived from `level`.
              */
             band: string;
+        };
+        /**
+         * FriendsCardResponse
+         * @description The friends card: the deck's card without its tiles.
+         */
+        FriendsCardResponse: {
+            /**
+             * Pool Id
+             * Format: uuid
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description The switch's kind for this one game. */
+            kind: components["schemas"]["SearchMode"];
+            /** @description The group's home club — the name in *… is full at 10:00*. */
+            home_club: components["schemas"]["DeckClubSchema"];
+            /** @description The evenest way the line-up can stand, or the sides sent (`partner_id`). */
+            sides: components["schemas"]["FriendsCardSidesSchema"];
+            /** @description *87% · Very even* for these sides; `null` where it cannot be read. */
+            forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description The court picked (`court_id` and `starts_at`), or the one proposed: the soonest hour where the whole line-up is free, failing that the soonest where most of them are. `null` when no court is free in the next 14 days — the card's place says so, and *Pick a different court* is gone. */
+            court: components["schemas"]["FriendsCourtSchema"] | null;
+            /** @description The line-up's weeks, the court's hour ringed; `null` with no court, which draws no card. */
+            overlap: components["schemas"]["DeckOverlapSchema"] | null;
+            /**
+             * Cut Off
+             * @description When the club's free cancellation ends for the court's game — the send sheet's *We hold 100 zł on your card until Fri 10:00*. `null` with no court.
+             */
+            cut_off: string | null;
+        };
+        /**
+         * FriendsCardSidesSchema
+         * @description The sides the court and the card both draw (the friends README, note 3)
+         *     — ids only: every face on them is one of the reader's friends, whom the
+         *     picker already drew.
+         */
+        FriendsCardSidesSchema: {
+            /**
+             * Yours
+             * @description The reader first, then their partner in doubles.
+             */
+            yours: string[];
+            /** Theirs */
+            theirs: string[];
+        };
+        /**
+         * FriendsCourtSchema
+         * @description One court the line-up could take: a row of *Find a court* —
+         *     *19:00 · Bonarka Arena · Court 2 · 32 zł each · Ania busy* — and the
+         *     card's court panel.
+         */
+        FriendsCourtSchema: {
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start; games are 1 h.
+             */
+            starts_at: string;
+            club: components["schemas"]["DeckClubSchema"];
+            /**
+             * Court Id
+             * Format: uuid
+             * @description Sent back as `court_id`, with `starts_at`, to pick this row.
+             */
+            court_id: string;
+            /**
+             * Court Name
+             * @description What the club calls it — *Court 3*.
+             */
+            court_name: string;
+            /**
+             * Indoor
+             * @description *Indoor* or *Outdoor*.
+             */
+            indoor: boolean;
+            /**
+             * Share Grosze
+             * @description *25 zł each*.
+             */
+            share_grosze: number;
+            /**
+             * Home Club Full
+             * @description Another club's court, offered **because the group's home club has no free court at this hour** — *Ogrody 33 is full at 10:00*. Always `false` for the home club and for a player group.
+             */
+            home_club_full: boolean;
+            /**
+             * Free Count
+             * @description How many of the line-up, the reader among them, are free for the whole hour by their weekly hours — the row's tint: all of them *Everybody free*, then dimmer for each one fewer.
+             */
+            free_count: number;
+            /**
+             * Busy
+             * @description Those of the line-up who are not — *Ania busy*, *Magda and Ania busy* — in the line-up's order. **Busy** is outside their weekly hours and nothing else: an hour where one of them has a game is never listed.
+             */
+            busy: string[];
+        };
+        /**
+         * FriendsCourtsResponse
+         * @description *Find a court* for a line-up.
+         */
+        FriendsCourtsResponse: {
+            /**
+             * Pool Id
+             * Format: uuid
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description The group's home club — the name in *… is full at 10:00*. */
+            home_club: components["schemas"]["DeckClubSchema"];
+            /**
+             * Courts
+             * @description **Every court the line-up could take**, from the soonest hour still sellable to 14 days ahead, under the group's court rule: soonest first, the home club first within an hour, each club's courts in its own order. The client groups them by day. Every row can be picked.
+             */
+            courts: components["schemas"]["FriendsCourtSchema"][];
         };
         /** FriendsResponse */
         FriendsResponse: {
@@ -5751,7 +5947,7 @@ export interface components {
          * @description Every notice a player can be told (the mechanics §17.2).
          * @enum {string}
          */
-        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "NEW_GAME" | "GAME_MOVED" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE" | "GET_YOUR_LEVEL" | "FRIEND_REQUEST" | "FRIENDS_MADE";
+        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_A_PAYMENT" | "TIME_TO_PAY_RAN_OUT" | "TIME_TO_FIX_RAN_OUT" | "CONFIRM_PAYMENT" | "FIX_YOUR_CARD" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "NEW_GAME" | "GAME_MOVED" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT" | "NOT_HERE_YET" | "AT_THE_CLUB" | "HOW_DID_IT_GO" | "IS_THAT_RIGHT" | "WERE_THEY_THERE" | "GET_YOUR_LEVEL" | "FRIEND_REQUEST" | "FRIENDS_MADE" | "LEVEL_ASKED" | "LEVEL_GOT";
         /**
          * NoticeSchema
          * @description One notice, in the words the phone was pushed — and where a tap opens.
@@ -5773,7 +5969,7 @@ export interface components {
              * @description When it was given — or when the day last bundled a notice into it, which is what moves it up the list.
              */
             given_at: string;
-            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top; `RESULT` — the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` — Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` — the record of `player_id`, a new friend. */
+            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top; `RESULT` — the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663); `HOME` — Home, for a notice about no game (*Get your level*, #727; a friend request, whose card is there, #745); `RECORD` — the record of `player_id`, a new friend; `QUESTIONNAIRE` — the questionnaire of `sport`, through the level pass and its usual return (`LEVEL_ASKED`, #749); `PICKER` — the Friends tab's picker of the group `pool_id` in `sport`, where `player_id` can be seated now (`LEVEL_GOT`, #749). */
             opens: components["schemas"]["Opens"];
             /**
              * Game Id
@@ -5782,14 +5978,15 @@ export interface components {
             game_id: string | null;
             /**
              * Pool Id
-             * @description The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`.
+             * @description The game's pool. On a `FRIEND_REQUEST`, the group it was asked from (a group's pool is filed under its id), or `null`; on a `LEVEL_GOT`, the group the ask was made from, whose picker it opens.
              */
             pool_id: string | null;
+            /** @description The game's sport. On a notice about no game, the sport it names — a friend request's screen, or the level a `LEVEL_ASKED` asks for and a `LEVEL_GOT` says arrived — or `null`. */
             sport: components["schemas"]["Sport"] | null;
             game_kind: components["schemas"]["SearchMode"] | null;
             /**
              * Player Id
-             * @description On a notice about no game that names somebody — `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens. `null` on every other notice.
+             * @description On a notice about no game that names somebody — `FRIEND_REQUEST`, who asked; `FRIENDS_MADE`, the new friend, whose record `RECORD` opens; `LEVEL_ASKED`, the friend who asked; `LEVEL_GOT`, the friend who got the level. `null` on every other notice.
              */
             player_id: string | null;
             /**
@@ -5945,7 +6142,7 @@ export interface components {
          * @description The screen a notice opens on when tapped (the screens A9).
          * @enum {string}
          */
-        Opens: "BOOKING" | "PROPOSAL" | "DECK" | "RESULT" | "HOME" | "RECORD";
+        Opens: "BOOKING" | "PROPOSAL" | "DECK" | "RESULT" | "HOME" | "RECORD" | "QUESTIONNAIRE" | "PICKER";
         /**
          * OpponentVarietySchema
          * @description How widely this person spreads their games, over their **whole** record.
@@ -10229,6 +10426,57 @@ export interface operations {
             };
         };
     };
+    ask_for_a_level_api_v1_friends__player_id__level_asks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskForALevelRequest"];
+            };
+        };
+        responses: {
+            /** @description Asked: they are told, and your picker reads **Asked** (`level_asked_in`). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `friend_not_found` — they are not your friend (or you named yourself); `not_one_of_your_groups` — `group_id` is no group you are in. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `already_has_a_level` — they have a level in that sport: seat them; `level_already_asked` — you asked them for that sport before, and ask once per sport, ever; `concurrent_modification` — two acts on the two of you raced: retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_conversations_api_v1_conversations_get: {
         parameters: {
             query?: never;
@@ -13402,6 +13650,155 @@ export interface operations {
                 };
             };
             /** @description `block_state_unavailable` — whether the poster fits the members could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_friends_card_api_v1_pools__pool_id__friends_card_get: {
+        parameters: {
+            query: {
+                sport: components["schemas"]["Sport"];
+                kind: components["schemas"]["SearchMode"];
+                /** @description The friends seated beside the reader, in the order seated: three in doubles, one in singles. */
+                friend_ids: string[];
+                /** @description After a swap, the friend beside the reader (doubles only); left out, the evenest sides. */
+                partner_id?: string | null;
+                /** @description A court picked in *Find a court*. */
+                court_id?: string | null;
+                /** @description Its hour, as listed. */
+                starts_at?: string | null;
+            };
+            header?: never;
+            path: {
+                pool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsCardResponse"];
+                };
+            };
+            /** @description `wrong_line_up_size` — not the friends the sport seats beside the reader, each once and never the reader: `details.friends`, three in doubles, one in singles. `sides_not_of_the_line_up` — `partner_id` is not one of the friends seated, or the sport is singles. `court_hour_incomplete` — `court_id` without `starts_at`, or the other way round. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `pool_not_found` — no such group, or the reader is not in it. One code for both. The friends need not be in it: a friend who is not a member plays as a guest. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Each names nobody. `not_a_friend` — somebody seated is not the reader's friend now: the seat is emptied. `no_level` — somebody seated, or the reader, holds no level in the sport. `cannot_play_together` — two of them blocked each other, either way round: *These four can't all play together. Swap someone.* — never which two. `court_hour_not_for_sale` — the court-hour sent is not one *Find a court* lists now: taken, past its book-by, not under the group's court rule, or an hour one of them now has a game at. Read the card again without it. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether two of them blocked each other could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_friends_courts_api_v1_pools__pool_id__friends_card_courts_get: {
+        parameters: {
+            query: {
+                sport: components["schemas"]["Sport"];
+                /** @description The friends seated beside the reader, in the order seated: three in doubles, one in singles. */
+                friend_ids: string[];
+            };
+            header?: never;
+            path: {
+                pool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsCourtsResponse"];
+                };
+            };
+            /** @description `wrong_line_up_size` — not the friends the sport seats beside the reader, each once and never the reader: `details.friends`, three in doubles, one in singles. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `pool_not_found` — no such group, or the reader is not in it. One code for both. The friends need not be in it: a friend who is not a member plays as a guest. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Each names nobody. `not_a_friend` — somebody seated is not the reader's friend now: the seat is emptied. `no_level` — somebody seated, or the reader, holds no level in the sport. `cannot_play_together` — two of them blocked each other, either way round: *These four can't all play together. Swap someone.* — never which two. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether two of them blocked each other could not be read. Retry. */
             503: {
                 headers: {
                     [name: string]: unknown;

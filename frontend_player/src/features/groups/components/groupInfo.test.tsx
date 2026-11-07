@@ -34,6 +34,7 @@ import {
   resetClipboard,
   resetShare,
   stubClipboard,
+  stubFriends,
   stubGate,
   stubOwnRecord,
   stubProfileOptions,
@@ -316,6 +317,8 @@ beforeEach(() => {
   });
   stubProfileOptions(transport);
   stubProfileSurface(transport);
+  // The Friends tab reads the picker's list for its court's faces (#757).
+  stubFriends(transport);
   share = fakeShare();
   stubShare(share);
   clipboard = fakeClipboard();

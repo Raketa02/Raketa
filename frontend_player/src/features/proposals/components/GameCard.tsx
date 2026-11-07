@@ -83,8 +83,11 @@ import { GameGround } from './GameGround';
 import { GameTiles } from './GameTiles';
 import { OverlapGrid } from './OverlapGrid';
 
-/** The forecast's figure on the card's ground — `BALANCE_INK`'s three, read for the dark (Part 16). */
-const FIGURE: Readonly<Record<BalanceBarTone, string>> = {
+/**
+ * The forecast's figure on the card's ground — `BALANCE_INK`'s three, read for the dark (Part 16).
+ * The friends card's figure is the same (#757).
+ */
+export const FORECAST_FIGURE: Readonly<Record<BalanceBarTone, string>> = {
   ok: theme.color.gameGreen,
   warn: theme.color.gameAmber,
   bad: theme.color.gameRed,
@@ -208,7 +211,7 @@ function Forecast({
       accessibilityLabel={forecastSpoken(pct, labels)}
       testID="game-forecast"
     >
-      <Text style={[s.figure, { color: FIGURE[tone] }]}>{formatPercent(pct)}</Text>
+      <Text style={[s.figure, { color: FORECAST_FIGURE[tone] }]}>{formatPercent(pct)}</Text>
       {/* Hidden: the row is the one element, and it already says the word, the figure and the
           sides — the bar's own name would be the second reading of one fact. */}
       <View

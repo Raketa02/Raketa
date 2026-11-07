@@ -39,7 +39,14 @@ export type NoticeKind =
   /** *ines.d wants to be your friend* (#745, #753) — opens Home, where its card is. */
   | 'FRIEND_REQUEST'
   /** *kuba.w said yes — you're friends*, or *You and kuba.w are friends now* — opens their record. */
-  | 'FRIENDS_MADE';
+  | 'FRIENDS_MADE'
+  /**
+   * *kuba.w wants to play padel with you…* (#749) — opens that sport's questionnaire. Told, and in
+   * the list; where a tap lands is #758's, so this build opens nothing for it yet.
+   */
+  | 'LEVEL_ASKED'
+  /** *kuba.w has a padel level — you can seat kuba.w now.* (#749) — opens the picker; #758's too. */
+  | 'LEVEL_GOT';
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
@@ -65,6 +72,8 @@ export const NOTICE_KINDS = [
   'GET_YOUR_LEVEL',
   'FRIEND_REQUEST',
   'FRIENDS_MADE',
+  'LEVEL_ASKED',
+  'LEVEL_GOT',
 ] as const satisfies readonly NoticeKind[];
 
 /**
@@ -73,10 +82,20 @@ export const NOTICE_KINDS = [
  * (#663), where each step at the court is acted on, Home (#727, #731), for a notice about no
  * game, and a player's record (#753), for *You're friends*.
  */
-export type Opens = 'BOOKING' | 'PROPOSAL' | 'DECK' | 'RESULT' | 'HOME' | 'RECORD';
+export type Opens =
+  | 'BOOKING'
+  | 'PROPOSAL'
+  | 'DECK'
+  | 'RESULT'
+  | 'HOME'
+  | 'RECORD'
+  /** A sport's questionnaire (`LEVEL_ASKED`, #749) — landed by #758; nowhere in this build. */
+  | 'QUESTIONNAIRE'
+  /** A group's Friends picker (`LEVEL_GOT`, #749) — landed by #758; nowhere in this build. */
+  | 'PICKER';
 
-/** The places a tap opens that are a game's — every one but Home and a record. */
-export type GameOpens = Exclude<Opens, 'HOME' | 'RECORD'>;
+/** The places a tap opens that are a game's — every one but Home, a record and #749's two. */
+export type GameOpens = Exclude<Opens, 'HOME' | 'RECORD' | 'QUESTIONNAIRE' | 'PICKER'>;
 
 /** The four a game's notice opens — what a push about a game is checked against. */
 export const GAME_OPENS = [

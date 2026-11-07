@@ -198,6 +198,7 @@ function friendsServer(
         photo_id: null,
         photo_url: null,
         friends_since: '2026-10-01T10:00:00Z',
+        level_asked_in: [],
         sports: [...(SPORTS[who.id] ?? [])],
       })),
     }),

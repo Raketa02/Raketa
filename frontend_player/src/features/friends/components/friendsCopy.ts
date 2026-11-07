@@ -44,6 +44,11 @@
  * - **The spoken names**: *Your friend link, raketa.app/f/tk4m9q2z* for the field, *Copy your
  *   friend link* and *Make a new link* for its two buttons.
  *
+ * And these, written in by #757:
+ *
+ * - **The picker's reading line**, *Reading your friends…*, the register above.
+ * - **A greyed row's spoken reason**: *the court is full* after a row the full court greys.
+ *
  * ## The whole nickname, and no pronoun
  *
  * ADR-0199 §1: every sentence naming somebody uses the whole nickname, never with an @. And no
@@ -175,6 +180,16 @@ export const FRIENDS_COPY = {
   row: { title: 'Friends' },
   /** **The result screen's card** (§29.1) — the eyebrow over it, uppercased by its style. */
   playedWith: { heading: 'Played with' },
+  /**
+   * **The picker** (#757; the screens §4.2; friends 3, 6) — the page from a group's Friends tab, with
+   * no tabs and **Done** at its foot. A row's line is `pickerLine` or `noLevelLine`.
+   */
+  picker: {
+    done: 'Done',
+    reading: 'Reading your friends…',
+    /** Spoken after a row a full court greys: why it cannot be picked now. */
+    full: 'the court is full',
+  },
   /** Said where a write was pressed, when the server refused it for a reason that is not the state moving. */
   refused: {
     unblock_them_first: 'You blocked this player. Unblock them on their record first.',
@@ -310,4 +325,19 @@ export function linkOpeningMessage(error: AppError): string {
 /** *Your friend link, raketa.app/f/tk4m9q2z* — the card's field, spoken. */
 export function friendLinkLabel(link: string): string {
   return `Your friend link, ${linkWithoutScheme(link)}`;
+}
+
+/** *2,75 · established* — a picker row's line: the Level in the sport and its band, lower case. */
+export function pickerLine(level: number, band: string): string {
+  return `${formatLevel(level)} · ${band.toLowerCase()}`;
+}
+
+/** *No padel level yet* — a picker row for a friend unrated in the sport, greyed (§29.3). */
+export function noLevelLine(sportInLine: string): string {
+  return `No ${sportInLine} level yet`;
+}
+
+/** A picker row, spoken: who, their line, and why it cannot be picked while the court is full. */
+export function pickerRowLabel(nickname: string, line: string, full: boolean): string {
+  return [nickname, line, ...(full ? [FRIENDS_COPY.picker.full] : [])].join(', ');
 }

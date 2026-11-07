@@ -237,7 +237,7 @@ describe('the switch', () => {
     expect(screen.getByText('For fun · 1')).toBeTruthy();
   });
 
-  it('reads the other kind when pressed, and keeps it for Friends', async () => {
+  it('reads the other kind when pressed, and keeps it while the app is open', async () => {
     const funCard = deckCard({
       kind: 'FOR_FUN',
       sides: { yours: [youTile(), KUBA()], theirs: [ANIA(), EWA()] },

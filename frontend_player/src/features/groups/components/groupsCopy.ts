@@ -96,9 +96,11 @@ export const GROUPS_COPY = {
     addFriends: '+ Friends',
     addFriendsLabel: 'Pick friends',
     title: 'Friends',
-    back: 'Back to the group',
     nobody: 'Nobody you know here yet',
     emptySeatHint: 'Opens Friends',
+    /** A seated friend's face: a tap picks it for a swap, the next tap on another swaps them. */
+    swapHint: 'Tap another friend to swap them',
+    swapWithHint: 'Swaps the two of them',
   },
   /** The link's two doors, on every dark card of the page. */
   link: {

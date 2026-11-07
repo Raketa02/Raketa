@@ -14,6 +14,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { FriendsCardAsk } from '../domain/friendsCard';
 import type { PostingAsk, PostingWeek } from '../domain/posting';
 import type { DayRange, GameKind } from '../domain/vocabulary';
 
@@ -64,4 +65,15 @@ export const proposalKeys = {
   /** `GET /pools/{id}/posting-grid/slot` — a cell's sheet, for the same ask. */
   postingSlot: (groupId: string, ask: PostingAsk, day: string, range: DayRange) =>
     [...proposalKeys.posting(groupId), 'slot', ask, day, range] as const,
+  /**
+   * Every friends-card read of one group (#757) — under the group's root, so an answer in the group
+   * (a game at an hour now taken) re-reads the card and its courts with the decks.
+   */
+  friendsCards: (groupId: string) => [...proposalKeys.group(groupId), 'friends-card'] as const,
+  /** `GET /pools/{id}/friends-card` — a line-up's card, keyed by everything it is asked. */
+  friendsCard: (groupId: string, sport: Sport, ask: FriendsCardAsk) =>
+    [...proposalKeys.friendsCards(groupId), 'card', sport, ask] as const,
+  /** `GET /pools/{id}/friends-card/courts` — *Find a court* for the same friends. */
+  friendsCourts: (groupId: string, sport: Sport, friendIds: readonly string[]) =>
+    [...proposalKeys.friendsCards(groupId), 'courts', sport, friendIds] as const,
 };

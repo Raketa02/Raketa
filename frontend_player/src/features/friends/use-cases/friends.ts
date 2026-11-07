@@ -6,6 +6,9 @@
  * spells it.
  */
 
+import { toWireSport } from '@/features/onboarding/types';
+import type { Sport } from '@/shared/vocabulary/sport';
+
 import {
   type Cancellable,
   deleteFriend,
@@ -56,7 +59,15 @@ export function removeFriend(playerId: string): Promise<void> {
 
 /** Your friends, by nickname. */
 export function readFriends(options: Cancellable = {}): Promise<readonly Friend[]> {
-  return getFriends(options).then((answer) => answer.friends.map(toFriend));
+  return getFriends(undefined, options).then((answer) => answer.friends.map(toFriend));
+}
+
+/**
+ * **Your friends in one sport** — a group's picker (#757): each with that sport's Level alone, or
+ * none, highest first and the unrated last, in the server's order.
+ */
+export function readFriendsIn(sport: Sport, options: Cancellable = {}): Promise<readonly Friend[]> {
+  return getFriends(toWireSport(sport), options).then((answer) => answer.friends.map(toFriend));
 }
 
 /** The open requests one way, newest first. */
