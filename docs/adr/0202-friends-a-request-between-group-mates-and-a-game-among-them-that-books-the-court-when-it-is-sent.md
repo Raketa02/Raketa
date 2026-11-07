@@ -1,6 +1,6 @@
 # ADR-0202 — Friends: a request between group-mates, and a game among them that books the court when it is sent
 
-- **Status:** Accepted
+- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129)
 - **Date:** 2026-11-06
 - **Supersedes [ADR-0199](0199-a-player-is-known-by-their-nickname.md)'s line *"there is no
   friendship in Raketa (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
@@ -65,6 +65,12 @@
   [#754](https://github.com/Raketa02/Raketa/issues/754),
   [#756](https://github.com/Raketa02/Raketa/issues/756)–[#760](https://github.com/Raketa02/Raketa/issues/760).
   Walked by [#761](https://github.com/Raketa02/Raketa/issues/761).
+- **§4 amended 2026-11-07** by [its own amendment](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) (the mechanics Q129, PRD
+  [#762](https://github.com/Raketa02/Raketa/issues/762), written by
+  [#763](https://github.com/Raketa02/Raketa/issues/763)): an ask waiting on a friend is a card on their
+  Home, one per sport, until they have the level or say *Not now*, and its bell row lives only while
+  the card does. It also amends [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §7's Home card,
+  which the ask's card is drawn instead of while it is there.
 
 ## Context
 
@@ -231,6 +237,10 @@ her first level in that sport arrives, Tomek is told *"Zofia has a padel level �
 now."* **He can ask her once per sport**; a second ask is refused. Both notices are always on,
 pushed and kept in the bell.
 
+*(Amended 2026-11-07 — see [the amendment below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home): the ask is also a card on her
+Home, one per sport, until she has the level or says Not now, and the *level asked* row is kept in the
+bell only while that card is on Home.)*
+
 **No sentence says *her* or *him* about another player.** A gender never crosses to another player
 ([ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md); the glossary's
 **Gender**), so PRD #743's *her padel level*, *so he can add you* and *seat her now* are written
@@ -299,7 +309,8 @@ invitation is made before it, and never past the start when made after it. It en
 The invitation is a push, a bell notice and a card in a **FRIENDS GAME · n** row at the very top of
 Home: *"Tomek's game"*, the time left, the four faces (✓ on those In, faded on those still to
 answer), the hour, club, court, sport and kind, and **Not this time** / **Accept and pay 25 zł**. Home
-reads, top to bottom: friends game invitations, friend requests, Your games. Tomek's own game sits
+reads, top to bottom: friends game invitations, friend requests, Your games *(amended 2026-11-07: the
+asks for a level stand between friend requests and Your games — [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home))*. Tomek's own game sits
 under **Your games** from the moment he sends it (*2 of 3 friends in · waiting for Ania*), and the
 Friends tab goes back to an empty court. When the last seat is taken, all four get *It's a game!*.
 
@@ -394,17 +405,20 @@ serve. No threshold has either property.
 - **Friends** is a new bounded context, **event-sourced**. Its **Friendship**, one stream per pair,
   records a request and where it was made, setting it aside, cancelling it, a crossed request,
   friends made (accepted or crossed) and a friendship ended (removed or blocked). Its **Friend link**,
-  one stream per player, records a code made and a code replaced. It records **Ask for a level**, and
+  one stream per player, records a code made and a code replaced. It records **Ask for a level**
+  *(and, since [the 2026-11-07 amendment](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home), an ask set aside)*, and
   hears the rating context's first level in a sport to answer it, and the blocks to end a
   friendship. It lends the reader's relations through a demand port and tells Notifications.
 - **Bookings** gains the birth *booked by a friend*, the Invited seat with its clock, the sender's
   choices and the covered booking's cut-off.
 - **Payments** gains the Cover, a Seat charge whose payer is not its seat's player.
-- **Proposals** gains the friends card and the court list, both reads, and Home's two new rows.
+- **Proposals** gains the friends card and the court list, both reads, and Home's two new rows
+  *(three since [the 2026-11-07 amendment](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home))*.
 - **Notifications** gains, all always on, pushed and kept in the bell: the friend request, *you're
   friends*, the friends game invitation, *can't make it* and *didn't answer*, the seat invitation,
   *seat taken*, a friends game called off, the cover warning, *level asked* by a friend (not the
-  once-per-account *Get your level*), and *level got*.
+  once-per-account *Get your level*), and *level got*. *(Amended 2026-11-07, [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home):
+  a *level asked* is kept in the bell only while its card is on Home.)*
 - **Club courts**' setting defaults to on, and the club website says *"at an hour your courts are
   full"*.
 - **The public site** gains `/f/<code>`, and the app-link files gain `/f/`.
@@ -473,3 +487,84 @@ serve. No threshold has either property.
 - **A friends-first hour on rescues stays removed** (the mechanics §22.1). An opened seat is a rescue
   like any other.
 - **A Friend link is not a Group link.** One joins a group; the other asks a person.
+
+## Amendment — 2026-11-07: a friend's ask for a level waits on their Home
+
+§4 made an ask a notice and nothing else: a push, and a row in the bell. **A friend asked for a level
+had nowhere to find the ask.** Tomek asks Zofia for a padel level from Ogrody's Friends tab, and his
+picker reads *Asked*. The push arrives only on a phone that registered for push: with permission
+refused, or on a simulator, nothing arrives. The bell's row is history once she opens the list, one
+line among her last hundred notices. Home's *Get your level* card shows only to a player rated in no
+sport, names neither friend nor sport, and Zofia is rated in tennis. **A missed ask left both of them
+stuck**, because Tomek can ask once per sport, ever. And an old row misled: once she had a padel
+level by another route, tapping it only said *You have a padel level already.* Everything else a
+friend waits on you for, a friend request and a friends game invitation, already stays on Home until
+it is done (friends Q13). The level ask was the one friend notice without a Home row.
+
+The product owner ruled it on 2026-11-07, in the level-ask grilling (Q1–Q8 there), and confirmed PRD
+[#762](https://github.com/Raketa02/Raketa/issues/762) the same day. It is **Q129** in the
+[games and fill-in decision log](../specs/games-and-fill-in/the-mechanics.md#appendix-c--decision-log),
+specified in [the friends mechanics §5.1](../specs/friends/the-mechanics.md#51-the-ask-waits-on-her-home-q129),
+[the screens §6.4](../specs/friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock) and
+[the words §29.5](../specs/matchmaking/the-words.md#295-asking-for-a-level).
+
+- **An ask waiting on a friend is a Home card, one per sport**, in an **ASKED FOR A LEVEL · n** row
+  between FRIEND REQUESTS and Your games. It names every friend whose ask in that sport is waiting,
+  newest first, every one not set aside, and its button starts that sport's questionnaire from Home, as the notice does. It
+  names no group, as the notice doesn't. **Home now reads, top to bottom: friends game invitations,
+  friend requests, asks for a level, Your games.**
+- **Not now sets aside the asks the card named, and tells nobody.** The card leaves her Home on every
+  phone, and its rows leave the bell. A set-aside ask is still waiting: her first level in the sport
+  answers it, and every asker is told *level got*, set aside or not. This is a **Friend request**'s
+  *Not now* (§1) applied to an ask, and for the same reason: a *no* between two people who still meet
+  in a group is a confrontation nobody asked for, so the asker never learns it.
+- **A new friend's ask brings the card back**, naming only the askers not set aside. An ask she has
+  set aside never comes back by itself.
+- **The card ends on a level by any route** (the card, a group's card, the passport), read live, so it
+  is gone before *level got* is delivered, **or when no asker is still her friend**. A removal or a
+  block takes that friend off the card. Her own block of an asker does so at once, as §2 hides a
+  blocked person's request at once; an asker's block of her, once its delivery has ended the
+  friendship. It never expires.
+- **The *level asked* row is in the bell, and in its number, only while its card is on Home**, matched
+  by asker and sport, which is unique because an ask is once per friend per sport, ever. A friend
+  request's row already follows this rule (§1, *answering a request on Home clears it from the bell*).
+- **For a player rated in no sport, the ask card is drawn instead of Home's *Get your level*** while
+  it is there ([ADR-0200](0200-a-level-is-asked-where-play-begins.md) §7's card), and *Get your level*
+  comes back if she sets the ask aside still rated in nothing.
+
+**Unchanged:** once per friend per sport, ever, and the picker's *Asked*; the push, its words, and
+where tapping it opens; *level got* to every asker; and Home's tab badge, which counts this row no
+more than it counts friend requests or invitations. §4's *no sentence says her or him* holds for the
+card: several askers are *they*.
+
+**Where it lives.** §8's **Friends** also records setting an ask aside, as one event per ask the card
+names on the Friendship stream, and refuses it to anybody but the friend asked. **Proposals** reads
+Home's asks for a level through a port of its own, as it reads Home's friend requests. **Notifications**
+leaves a *level asked* row out of the recent notices, and out of the bell's number, while its asker is
+not on the reader's card. The backend is [#764](https://github.com/Raketa02/Raketa/issues/764), the
+player app [#765](https://github.com/Raketa02/Raketa/issues/765).
+
+**The alternatives:**
+
+- **The bell alone**, as §4 had it. It is history once opened, and a push needs a permission and a
+  token a simulator never has.
+- **A mark on the You › Skill passport chip**, naming who asked. The passport is opened by a player
+  already looking for a level, so it reaches nobody who missed the push. It stays out of scope.
+- **Home's *Get your level* card**, with the asker added. It is drawn only for a player rated in
+  nothing and opens the every-sport picker, so Zofia, rated in tennis, would still see nothing about
+  padel.
+- **Letting the asker ask again.** A second ask is a nag, and once per sport, ever, stays (Q5 there).
+- **An expiry.** An ask that ran out would be the dead end this amendment closes.
+
+**Consequences.**
+
+- **Easier:** an ask is found however it arrived, on a phone with or without push, and however far
+  down the bell its row has sunk. A bell row never asks for a level the player already has.
+- **Harder:** *Not now* on an ask is a second kind of state on the Friendship stream, beside a
+  request's. The bell's list now filters two kinds live against Home, the friend request and the
+  *level asked*, so each read of the recent notices asks Friends one more question. A set-aside ask
+  is invisible to its friend and still waiting, so the asker's *Asked* can't tell a set-aside ask from
+  an unseen one, which is the point, and a player who pressed *Not now* by mistake must find the
+  passport, which the toast names, and its *Rate Padel* chip.
+- **Neutral:** the asker's side is untouched, and the card reuses the friend request's shape rather
+  than the dark *Get your level* card.

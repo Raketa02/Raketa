@@ -2,6 +2,11 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-03
+- **§7's Home card amended 2026-11-07 by
+  [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)'s
+  amendment of that day** (the mechanics Q129): while a friend's ask for a level is a card on Home,
+  that card is drawn instead of *Get your level*, which comes back if the ask is set aside and the
+  player is still rated in nothing. A dated note marks the passage.
 - **Amends [ADR-0090](0090-onboarding-per-player-checkpoint.md)'s entry gate.** The questionnaire
   leaves onboarding, and with it two destinations: *unfinished run → resume* and *no ratings →
   welcome*. The gate reads the account's profiles (ADR-0185 §3), then *no nickname* (ADR-0199
@@ -180,7 +185,11 @@ made in the spec, not grilled.)*
 
 - **The Home card.** ***Get your level — your groups can't deal you games until you have one.*** It
   shows while she is a member of at least one group and holds no rating. With a run in progress it
-  offers to carry on. It opens the picker, and the pass returns to Home.
+  offers to carry on. It opens the picker, and the pass returns to Home. *(Amended 2026-11-07 by
+  [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)'s
+  amendment of that day, Q129: while a friend's ask for a level is a card on her Home, that card is
+  drawn instead of this one, in its own row, and this one comes back if she sets the ask aside still
+  rated in nothing.)*
 - **The *Get your level* notice.** ***Get your level so your groups can deal you games.*** It goes
   **once per account, ever**, to an account that is a member of at least one group (player or
   official), whose first group join was at least 24 hours ago, and which holds no Skill rating. It

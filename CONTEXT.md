@@ -120,7 +120,8 @@ A rating is **never only a number**.
   player and one sport. **Started where play begins, never at sign-up** ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md)):
   a player group's door (*Get your level*) for a player rated in nothing, an official group's own
   card and Post a game's (*Rate padel*), *+ Another sport* at the end of a group's sport chip, the
-  Home card, and the **Skill passport**'s *Add a sport*. Its result returns to wherever it was
+  Home card, a friend's **Ask for a level** (its notice, and since 2026-11-07 its Home card), and
+  the **Skill passport**'s *Add a sport*. Its result returns to wherever it was
   started. A run left unfinished is never forced on anybody: the door and the Home card offer to
   carry it on (not yet built — [#729](https://github.com/Raketa02/Raketa/issues/729), [#730](https://github.com/Raketa02/Raketa/issues/730), [#731](https://github.com/Raketa02/Raketa/issues/731)).
 - **Transcript** — the answers a run has given, in order, each as a question and the option
@@ -1917,7 +1918,8 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 - **Home** — the first tab of the bottom bar: your games from the moment they fill, and the games
   waiting for one payment, or full once and filling again (*Seat open*). Above them since
   [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) (not yet built — [#751](https://github.com/Raketa02/Raketa/issues/751), [#745](https://github.com/Raketa02/Raketa/issues/745)): **FRIENDS GAME**, the friends games you
-  are invited to, then **FRIEND REQUESTS**, each row gone once it is empty; a friends game you sent is
+  are invited to, then **FRIEND REQUESTS**, then **ASKED FOR A LEVEL** (ADR-0202 §4's 2026-11-07
+  amendment, not yet built — [#764](https://github.com/Raketa02/Raketa/issues/764), [#765](https://github.com/Raketa02/Raketa/issues/765)), each row gone once it is empty; a friends game you sent is
   among your games from its send. A booked game's row names
   its court's **Kind of court** (ADR-0196 §4). Its badge
   counts only the games that need you. Proposals assembles it.
@@ -2066,7 +2068,8 @@ told by the other contexts and tells none of them.
   to a sender paying by *Split the cost* while a seat lacks its own payment: *At Fri 10:00 you pay 50 zł: your 25 zł and
   Ania's seat.*), and ***level asked*** — a friend asking for a level in a sport, not the
   once-per-account **Get your level** — with its answer, ***level got***.
-  Answering a request or an invitation on Home clears it from the bell. Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  Answering a request or an invitation on Home clears it from the bell, and a *level asked* row is
+  listed only while its card is on Home (ADR-0202 §4's 2026-11-07 amendment). Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
   §1, §4–§6, not yet built ([#745](https://github.com/Raketa02/Raketa/issues/745),
   [#749](https://github.com/Raketa02/Raketa/issues/749), [#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)).
 
@@ -2112,7 +2115,19 @@ across all of them.
   which joins a group.
 - **Ask for a level** — a player asking a friend with no level in a sport to get one, so they can be
   seated: a notice that opens that sport's questionnaire, and a notice back when the friend's first
-  level in it arrives. **Once per friend per sport.** _Avoid_: rating request, nudge.
+  level in it arrives. **Once per friend per sport.** **While it waits, it is a card on the friend's
+  Home**, one per sport in an **ASKED FOR A LEVEL** row, naming every friend whose ask in it waits and
+  isn't set aside,
+  until the friend holds a level in the sport, by any route, or no asker is still their friend. **Not
+  now** **sets aside** the asks the card named, as a **Friend request** is set aside: nobody is told,
+  the card comes back only when a new friend asks in that sport and then names only the askers not set
+  aside,
+  and a set-aside ask is still answered, every asker told, when the level arrives. The *level asked*
+  row is in the bell only while its card is on Home. For a player rated in nothing, the card is drawn
+  instead of Home's *Get your level*. Decided by ADR-0202 §4's 2026-11-07 amendment (the mechanics
+  Q129), not yet built ([#764](https://github.com/Raketa02/Raketa/issues/764),
+  [#765](https://github.com/Raketa02/Raketa/issues/765)). _Avoid_: rating request, nudge; declined
+  (nothing declines an ask).
 
 ## Cross-cutting concepts
 

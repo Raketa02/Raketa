@@ -5,6 +5,9 @@
 > Logged as **Q128** in the
 > [games and fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log), and
 > recorded by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md).
+> **Refined on 2026-11-07** by the level-ask grilling, PRD [#762](https://github.com/Raketa02/Raketa/issues/762),
+> logged as **Q129** and recorded by ADR-0202 §4's amendment: an ask waits on the friend's Home
+> ([§5.1](#51-the-ask-waits-on-her-home-q129)), and its bell row with it ([§12](#12-notifications)).
 >
 > **Its companion** is [the-screens.md](the-screens.md), which says how each screen looks. Every
 > sentence a player reads is in [the words §29](../matchmaking/the-words.md#29-friends). Where this
@@ -17,7 +20,8 @@
 >
 > **Calls marked *(a call)*** were made while specifying and writing PRD #743. Calls 1–6 were agreed
 > by the product owner before it was published; calls 7–11 are open for the product owner to
-> overrule ([§14](#14-calls-made-without-a-ruling)).
+> overrule ([§14](#14-calls-made-without-a-ruling)). The marks in [§5.1](#51-the-ask-waits-on-her-home-q129)
+> are PRD #762's calls instead, listed in the decision log's Q129.
 
 ---
 
@@ -203,6 +207,51 @@ iPhone and an app link on Android, through the public site's app-link files, whi
   (ADR-0096), so PRD #743's *her padel level*, *so he can add you* and *seat her now* are written
   without one.
 - **Once per friend per sport.** After asking, the button reads *Asked*, and a second ask is refused.
+
+### 5.1 The ask waits on her Home (Q129)
+
+> Added 2026-11-07 from the level-ask grilling (Q1–Q8 there), PRD
+> [#762](https://github.com/Raketa02/Raketa/issues/762), and ADR-0202 §4's amendment of that day. The push
+> alone left an ask nowhere to be found: without push permission, or on a simulator, nothing arrives,
+> and the bell's row is history once the list is opened. Built by the backend's
+> [#764](https://github.com/Raketa02/Raketa/issues/764) and the player app's
+> [#765](https://github.com/Raketa02/Raketa/issues/765).
+
+- **An ask waiting on Zofia is a card on her Home**, in an **ASKED FOR A LEVEL · n** row after FRIEND
+  REQUESTS and before Your games, until she has the level or says **Not now**. *n* is the number of
+  sports with a card.
+- **One card per sport**, naming every friend whose ask in it is waiting and not set aside: *tomek.k wants to play padel
+  with you* / *A few questions, and tomek.k can add you to a game.* Two askers are *tomek.k and kuba.w*
+  and *they*; three or more name two and count the rest. **The sport with the newest ask comes first,
+  and its askers newest first**, with up to three faces *(a call)*. A face opens that friend's record.
+  **The card names no group**, as the notice doesn't *(a call)*.
+- **Get your padel level does what the notice does**: it starts the padel questionnaire from Home, and
+  the pass returns to Home. With a padel questionnaire left halfway, the button reads **Carry on** and
+  the line *You're on question 5.*
+- **Not now sets aside the asks the card names at that moment** *(a call)*. The card is gone on every
+  phone, its row leaves the bell, and **nobody is told**. A toast says *You can get your padel level any
+  time, from You › Skill passport.*, where the *Rate Padel* chip is. **The card comes back only when a
+  new friend asks her for padel**, and then names only the askers she hasn't set aside. A Not now on a
+  card that has just gone does nothing visible *(a call)*.
+- **A set-aside ask is still waiting.** Whenever she gets her padel level, every friend who asked is
+  told *level got*, whether she set the ask aside or not.
+- **The card ends by itself** when:
+  - **she holds any level in the sport**, by any route (this card, a group's card, the passport), read
+    live, so the card is gone before *level got* is delivered *(a call)*;
+  - **no asker is still her friend**. A removal or a block ends the friendship and takes that friend
+    off the card. **Her own block of an asker takes them off at once**, as a friend request from
+    somebody she blocked is hidden at once; an asker's block of her, once its delivery has run *(a
+    call)*. The card goes with the last asker.
+- **It never expires.**
+- **The bell follows the card.** A *level asked* row is listed in the bell, and counted in its number,
+  only while its card is on Home ([§12](#12-notifications)). The row is matched to the card by asker and
+  sport, which is unique, because an ask is once per friend per sport, ever *(a call)*.
+- **A player rated in no sport** sees the ask card **instead of** Home's *Get your level* while it is
+  drawn: the ask's row is drawn, and *Get your level* draws nothing. If she sets the ask aside and is still rated in nothing, *Get your level* comes back. Answering
+  the ask's questionnaire gives her a rating, which removes both.
+- **Unchanged:** an asker asks once per sport, ever, and the picker keeps reading *Asked*; the push, its
+  words, and where tapping it opens (the questionnaire); *level got* to every asker; and Home's tab
+  badge, which counts this row no more than it counts friend requests or invitations.
 
 ---
 
@@ -404,7 +453,8 @@ seat until the cut-off; with Whole court, it pays every seat.
 
 **The sender's game** sits under **Your games** from the moment he sends it, reading *2 of 3 friends
 in · waiting for Ania* (Q35), and the Friends tab goes back to an empty court. **Home reads, top to
-bottom**: FRIENDS GAME, FRIEND REQUESTS, Your games (Q13), each row hidden while empty.
+bottom**: FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL, Your games (Q13, Q129), each row hidden
+while empty.
 
 ---
 
@@ -516,11 +566,12 @@ The sentences are [the words §29](../matchmaking/the-words.md#29-friends)'s.
 | ***Someone left your game*** — an accepted friend leaving; inside the last 24 hours, with the cover line | the sender and those In | the game |
 | **Friends game called off** — *nobody paid* | everyone In and every invitee still waiting | the game |
 | **The cover warning** — Split, 24 hours before the cut-off | the sender | the game, with its three actions |
-| **Level asked** — a friend's ask, not the once-per-account *Get your level* | the friend asked | that sport's questionnaire, through the level pass and its usual return |
+| **Level asked** — a friend's ask, not the once-per-account *Get your level*. Listed in the bell, and counted in its number, **only while its card is on Home** ([§5.1](#51-the-ask-waits-on-her-home-q129)) | the friend asked | that sport's questionnaire, through the level pass and its usual return |
 | **Level got** | the asker | the picker of the group the ask was made from |
 
 *It's a game!* fires when the last seat is taken, to all four. **Answering a request or an invitation
-on Home clears it from the bell too.**
+on Home clears it from the bell too.** A *level asked* row leaves the bell as soon as its asker is no
+longer on the card: the level got by any route, **Not now**, or the asker no longer a friend (Q129).
 
 ---
 
@@ -536,6 +587,7 @@ on Home clears it from the bell too.**
 | The cover warning | once, 24 hours before the cut-off, Split only |
 | Held on a Split sender's card at send | the whole court: his share + a cover per other seat (100 zł for a 100 zł court) |
 | Ask for a level | once per friend per sport |
+| A level ask on Home | one card per sport, up to three faces, no expiry |
 | A friend request's push | once per request |
 | Other clubs for an official group | within the club's distance, 10 km by default; switch on by default |
 | Other clubs for a player group | within 10 km of the home club (unchanged) |
@@ -573,6 +625,10 @@ the product owner to overrule**, each marked where it stands above.
 11. **On You › Friends, friends are sorted alphabetically**, since that page has no single sport.
     Each row shows the sports they play, with their levels.
 
+**PRD #762's ten calls** (2026-11-07, [§5.1](#51-the-ask-waits-on-her-home-q129)) are listed in the
+decision log's Q129 row, and each that a rule rests on is marked *(a call)* where it stands. They are
+open for the product owner to overrule.
+
 **Defaults stated in the grilling and not objected to:** Info stays in the group header; the *friend*
 tag on every face; the Friends tab's kind switch is per game, never intent; hours from the club's
 book-by to 14 days where nobody has a game; the usual yes withdrawals; friendship survives leaving a
@@ -601,6 +657,13 @@ club's cancel moves the game; the club sees an ordinary booking.
   the owner's is already open. Whether a request the opener set aside comes back to Home when the
   link is opened is left to [#748](https://github.com/Raketa02/Raketa/issues/748) and
   [#756](https://github.com/Raketa02/Raketa/issues/756) to settle.
+- **A friend removed, then a friend again**, whose level ask was still waiting and not set aside, is
+  back on the ask's card, because the card reads friendship live ([§5.1](#51-the-ask-waits-on-her-home-q129))
+  *(a call: it follows from PRD #762's Home read, which no ruling names)*. This is no set-aside ask
+  coming back: an ask she set aside stays aside. Unblocking alone brings nothing back, since a block
+  ended the friendship.
+- **A player asked in two sports** has two cards, one per sport, and the row reads
+  *ASKED FOR A LEVEL · 2*. Getting one level takes only that sport's card.
 - **A friends game at an hour Ogrody 33 is full** is at Wisła Park, marked as offered because Ogrody 33
   is full; the club's own players still see Ogrody 33 first at every hour it has a court.
 - **A club that switches other clubs off** after a friends game was booked at another club changes

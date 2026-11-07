@@ -3,6 +3,8 @@
 > **Status:** from the friends grilling of 2026-11-05/06 and PRD
 > [#743](https://github.com/Raketa02/Raketa/issues/743), recorded by
 > [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md).
+> Home's ASKED FOR A LEVEL row ([§6.4](#64-asked-for-a-level--n-designed-no-mock)) was added on
+> 2026-11-07 by PRD [#762](https://github.com/Raketa02/Raketa/issues/762) (Q129).
 >
 > **What it is:** how each Friends screen looks and behaves. The rules are in
 > [the-mechanics.md](the-mechanics.md); where the two disagree on a rule, the mechanics win, and on a
@@ -97,10 +99,11 @@ your friend.** Shown after a For fun game too.
 - **Not on Raketa yet?**: the link in a field, **Copy** (coral), and a small **New link** under it,
   which turns the old link off and shows the new one.
 
-### 6. Home — the two new rows
+### 6. Home — the three new rows
 
-**Home reads, top to bottom: FRIENDS GAME, FRIEND REQUESTS, Your games.** A row and its title are
-there only while they hold a card.
+**Home reads, top to bottom: FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL, Your games.** A row and
+its title are there only while they hold a card. ASKED FOR A LEVEL is §6.4, after the sender's game,
+so that §6.3 keeps its number.
 
 #### 6.1 FRIENDS GAME · n (friends 12)
 
@@ -124,6 +127,32 @@ request reads *Invited you to Raketa* in place of the group line. A tap on the f
 
 The ordinary booked game's row, with a status line for its seats: *2 of 3 friends in · waiting for
 Ania*, then *1 seat empty*, *Seat open*, or the ordinary *Booked* once all are In.
+
+#### 6.4 ASKED FOR A LEVEL · n (designed, no mock)
+
+Added 2026-11-07 (Q129). The rules are [the mechanics §5.1](the-mechanics.md#51-the-ask-waits-on-her-home-q129)'s.
+**A horizontal row of cards, one per sport**, between FRIEND REQUESTS and Your games; *n* is the
+number of sports. **It is a friend-request card** (friends 5) *(a call)*: faces, two lines, **Not now**
+(outline) and the coral button. It is not the dark *Get your level* card.
+
+- **One asker**: one face, *tomek.k wants to play padel with you* / *A few questions, and tomek.k can
+  add you to a game.* · **Not now** / **Get your padel level**.
+- **Two askers**: two faces, newest first, *tomek.k and kuba.w want to play padel with you* / *A few
+  questions, and they can add you to a game.*
+- **Three or more**: three faces, *tomek.k, kuba.w and 2 more want to play padel with you*, and the
+  same line as two.
+- **Carry on**: with a padel questionnaire left halfway, the line reads *You're on question 5.* and the
+  coral button **Carry on**. The title doesn't change.
+- **A tap on a face** opens that friend's record. **No group** is named anywhere on the card.
+- **Get your padel level** and **Carry on** start the padel questionnaire from Home, as the *level
+  asked* notice does, and its pass returns to Home. Once she finishes, the card is already gone on the
+  way back, since Home and the bell are read again when a level is completed. A start that fails
+  shows the notice's own toast where she is (*You have a padel level already.*).
+- **Not now** takes the card away and shows a neutral toast, held long enough to read: *You can get
+  your padel level any time, from You › Skill passport.* Home and the bell are read again.
+- **For a player rated in no sport**, Home's dark *Get your level* card isn't drawn while this row
+  has a card, and is drawn again once the row is empty and she is still rated in nothing.
+- **Home's tab badge** doesn't count the row.
 
 ### 7. The group's Friends tab (friends 7–11)
 
@@ -193,7 +222,10 @@ The ordinary booked game's details, with:
 ### 10. Notices
 
 Each new notice's landing is [the mechanics §12](the-mechanics.md#12-notifications)'s. Every one is in
-the bell; answering on Home clears the request's or the invitation's row there.
+the bell; answering on Home clears the request's or the invitation's row there. **A *level asked* row
+is in the bell only while its card is on Home** (Q129): getting the level, by the card or any other
+route, or **Not now**, clears it from the list and from the bell's number, so a tap on it never ends
+in *You have a padel level already.*
 
 ---
 
@@ -234,13 +266,13 @@ The proposed shapes; the tickets settle them.
 
 | Where | What |
 | --- | --- |
-| **Friends** (new context, event-sourced) | **Friendship**, one stream per pair: requested (and where), set aside, cancelled, crossed, friends made (accepted or crossed), ended (removed or blocked). **Friend link**, one stream per player: code made, code replaced. **Ask for a level**, refused when already asked for that sport, answered by the rating context's first level in it. A subscription to blocks. The reader's relations lent through a demand port ([#745](https://github.com/Raketa02/Raketa/issues/745), [#748](https://github.com/Raketa02/Raketa/issues/748), [#749](https://github.com/Raketa02/Raketa/issues/749)) |
+| **Friends** (new context, event-sourced) | **Friendship**, one stream per pair: requested (and where), set aside, cancelled, crossed, friends made (accepted or crossed), ended (removed or blocked). **Friend link**, one stream per player: code made, code replaced. **Ask for a level**, refused when already asked for that sport, answered by the rating context's first level in it, and **set aside** by the friend asked (an event per ask the Home card names, [#764](https://github.com/Raketa02/Raketa/issues/764)). A subscription to blocks. The reader's relations lent through a demand port ([#745](https://github.com/Raketa02/Raketa/issues/745), [#748](https://github.com/Raketa02/Raketa/issues/748), [#749](https://github.com/Raketa02/Raketa/issues/749)) |
 | **Clubs / the court source** | Answers per hour; the setting defaults to on, existing clubs read on ([#746](https://github.com/Raketa02/Raketa/issues/746)) |
-| **Proposals** | The friends card and the court list, reads only; Home's two rows ([#750](https://github.com/Raketa02/Raketa/issues/750), [#751](https://github.com/Raketa02/Raketa/issues/751)) |
+| **Proposals** | The friends card and the court list, reads only; Home's three rows ([#750](https://github.com/Raketa02/Raketa/issues/750), [#751](https://github.com/Raketa02/Raketa/issues/751), [#764](https://github.com/Raketa02/Raketa/issues/764)) |
 | **Bookings** | The birth *booked by a friend*, invited seats and their 24-hour job, the sender's choices, the covered booking's cut-off ([#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)) |
 | **Payments** | The Cover: a seat charge whose payer is the sender; the amount agreed recorded with the terms acceptance |
-| **Notifications** | The new kinds of [the mechanics §12](the-mechanics.md#12-notifications), all always on |
-| **Player routes** | send, accept, set aside and cancel a request; remove a friend; list friends by sport; list requests by direction; read and replace the link; open a code; ask for a level; the friends card and the court list; send, accept, decline, invite, open a seat, call off, leave |
+| **Notifications** | The new kinds of [the mechanics §12](the-mechanics.md#12-notifications), all always on; a *level asked* row listed only while its card is on Home ([#764](https://github.com/Raketa02/Raketa/issues/764)) |
+| **Player routes** | send, accept, set aside and cancel a request; remove a friend; list friends by sport; list requests by direction; read and replace the link; open a code; ask for a level; set aside a sport's level asks; the friends card and the court list; send, accept, decline, invite, open a seat, call off, leave |
 | **Public route** | read a code: the owner's nickname and face, or `friend_link_not_found` |
 | **Jobs** | the 24-hour run-out; the cover warning; the cut-off's cover |
-| **Seed and the games test console** | friendships, open requests both ways, a set-aside request, a link, a Split and a Whole-court friends game, a seat waiting on an answer; console actions to send, accept, decline, invite and open a seat as seed accounts |
+| **Seed and the games test console** | friendships, open requests both ways, a set-aside request, a link, a Split and a Whole-court friends game, a seat waiting on an answer, a level ask waiting on the protagonist's Home; console actions to send, accept, decline, invite and open a seat as seed accounts |

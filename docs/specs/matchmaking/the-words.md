@@ -1108,7 +1108,8 @@ a dropped kind is `no_longer_fits`, whose words `proposalsCopy` already has
 > player app's [#753](https://github.com/Raketa02/Raketa/issues/753),
 > [#754](https://github.com/Raketa02/Raketa/issues/754) and
 > [#756](https://github.com/Raketa02/Raketa/issues/756)–[#760](https://github.com/Raketa02/Raketa/issues/760),
-> and the public site's [#755](https://github.com/Raketa02/Raketa/issues/755).
+> and the public site's [#755](https://github.com/Raketa02/Raketa/issues/755). §29.5's Home card was
+> added 2026-11-07 (the mechanics Q129, PRD [#762](https://github.com/Raketa02/Raketa/issues/762)).
 >
 > **Every sentence of PRD #743's *Solution* is here**, with its singular and zero forms. Rows marked
 > *(a call)* are words the PRD doesn't give and a screen needs, written in while recording it, for the
@@ -1186,6 +1187,27 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | --- | --- | --- |
 | Notice, to the friend | `{nickname} wants to play {sport} with you. Get your {sport} level so {nickname} can add you.` | the asker, twice; opens that sport's questionnaire |
 | Notice, back to the asker | `{nickname} has a {sport} level — you can seat {nickname} now.` | the friend, twice; opens the picker |
+
+> **The Home card**, added 2026-11-07 by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)'s
+> amendment of that day (§4), the mechanics Q129, PRD [#762](https://github.com/Raketa02/Raketa/issues/762).
+> It stands on [the screens §6.4](../friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock), and
+> the player app's [#765](https://github.com/Raketa02/Raketa/issues/765) builds it. **Every sentence of
+> PRD #762's *Solution* is here.** None says *her* or *him*: several askers are *they*. `{nickname}`
+> is an asker's, newest first. **Three or more askers name two and count the rest**, unlike §29's
+> list join, so the title stays one line.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Home, the row's title | `ASKED FOR A LEVEL · {n}` | `{n}` ≥ 1 is the number of sports with a card; at 0 the row and its title are gone |
+| The card, who — one asker | `{nickname} wants to play {sport} with you` | *tomek.k wants to play padel with you* |
+| … two askers | `{nickname} and {nickname} want to play {sport} with you` | *tomek.k and kuba.w want to play padel with you* |
+| … three or more | `{nickname}, {nickname} and {m} more want to play {sport} with you` | the two newest; `{m}` ≥ 1 counts the rest (*tomek.k, kuba.w and 2 more*); up to three faces are drawn |
+| The card, the line — one asker | `A few questions, and {nickname} can add you to a game.` | |
+| … two or more | `A few questions, and they can add you to a game.` | *they*, never a gender (ADR-0096) |
+| The card, the buttons | `Not now` · `Get your {sport} level` | outline · coral; the coral one starts the sport's questionnaire from Home, as the notice does |
+| The card, a questionnaire in that sport left halfway | `You're on question {n}.` · `Not now` · `Carry on` | the line and the coral button change; the title doesn't. `{n}` is the question the run is on |
+| Not now, the toast | `You can get your {sport} level any time, from You › Skill passport.` | neutral, held long enough to read; the passport is where §27's `Rate {sport}` chip is. Nobody else is told |
+| A start that fails | the *level asked* notice's own toasts | cited, not respelled: `You have a {sport} level already.` for `sport_already_rated` (`notificationsCopy`) |
 
 ### 29.6 The Friends tab
 

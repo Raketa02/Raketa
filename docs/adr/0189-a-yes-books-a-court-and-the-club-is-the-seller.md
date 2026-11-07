@@ -31,7 +31,7 @@
   agreed to above his button. The deck's, Post a game's and rescues' money is unchanged. The
   mechanics Q128 logs it, and a dated note marks each passage below.
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, and the decision log Q1–Q128) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the rules, and the decision log Q1–Q129) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
   (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.

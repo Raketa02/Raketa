@@ -559,7 +559,9 @@ Home shows a card: ***Get your level — your groups can't deal you games until 
 have one.*** It opens *Which sports do you play?*, and the questions return to Home. With a run
 left halfway it offers to carry on — *Carry on with your padel questions — you're on question 5* —
 and never to start again. Once she holds any rating, it is gone. The *Get your level* notice opens
-Home on this card.
+Home on this card. *(Q129, 2026-11-07: while a friend's ask for a level is on her Home, the ask's
+card is drawn instead of this one, in its own row, and this one comes back if she sets the ask aside still rated in nothing —
+[the friends screens §6.4](../friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock).)*
 
 A **Called off** card says why, as the notice and the email do: short at the cut-off, the club's
 cancel with its reason, a payment that didn't come in time. The club's answer, *Kazimierz Padel said
