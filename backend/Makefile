@@ -154,6 +154,13 @@ migrate:           ## run alembic upgrade head inside the api container
 ## Seeding straight after `make up` raced both (2026-10-05). For the same
 ## reason, a database the API has started on since its seed cannot be seeded
 ## again. `make down-v && make up && make seed` is the reset.
+##
+## Then it stops the API and seeds from a one-off container of the same image,
+## so nothing writes beside it: the outbox worker and the jobs that write
+## proposals every few seconds deadlocked the seed on the Stripe sandbox, whose
+## calls hold each transaction open for a second or more (2026-10-20). The seed
+## runs its use cases in process and never calls the API. The API starts again
+## whatever the seed answered.
 seed:              ## seed deterministic dev accounts into the running stack's database
 	@api=$$($(COMPOSE_LOCAL) ps -q api); \
 	if [ -z "$$api" ]; then echo "The API is not running. make up first." >&2; exit 1; fi; \
@@ -162,7 +169,9 @@ seed:              ## seed deterministic dev accounts into the running stack's d
 	  sleep 1; \
 	done; \
 	echo "The API did not report healthy within 120 s. See make logs." >&2; exit 1
-	$(COMPOSE_LOCAL) exec api python -m app.seeds
+	$(COMPOSE_LOCAL) stop api
+	$(COMPOSE_LOCAL) run --rm --no-deps api python -m app.seeds; \
+	status=$$?; $(COMPOSE_LOCAL) start api; exit $$status
 
 seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
 	poetry run python -m app.seeds
