@@ -677,10 +677,10 @@ async def test_a_send_books_where_the_store_enforces_its_foreign_keys(
     every statement; this suite's SQLite does not unless asked. The flush
     orders mappers that share no ``relationship()`` by class name, which put
     the invitations before their booking, and the repository read the
-    violation as a court taken — every send answered ``court_just_taken``."""
+    violation as a court taken — every send answered ``court_just_taken``.
+    ``db_engine`` turns the check on; this fails if it ever stops."""
 
     async with db_engine.connect() as conn:
-        await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
         assert (await conn.exec_driver_sql("PRAGMA foreign_keys")).scalar() == 1
 
     sent = await sends(client, world)

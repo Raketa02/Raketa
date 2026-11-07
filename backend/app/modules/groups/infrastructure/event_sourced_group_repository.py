@@ -131,6 +131,9 @@ class EventSourcedGroupRepository:
                     created_at=event.occurred_at,
                 )
             )
+            # The group's row before any member joined in the same save, as
+            # for a player group: a flush orders ``GroupMemberORM`` first.
+            await self._session.flush()
         elif isinstance(event, WhatsAppSizeSet):
             await self._change(event.group_id, whatsapp_size=event.whatsapp_size)
         elif isinstance(event, SportsDeclared):
