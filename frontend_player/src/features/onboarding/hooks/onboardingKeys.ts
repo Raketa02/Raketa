@@ -17,6 +17,12 @@ export const onboardingKeys = {
    * four and now costs one, and this key did not move.
    */
   runInProgress: () => [...onboardingKeys.all, 'run-in-progress'] as const,
+  /**
+   * **Every unfinished run**, for the door that carries one sport's on — a friend's ask for a level
+   * on Home (#765). **Under `runInProgress`**, so whatever marks that stale or removes it — a start,
+   * an answer that ends a run, a completion, an abandonment — reaches this too, by prefix.
+   */
+  runsInProgress: () => [...onboardingKeys.runInProgress(), 'every'] as const,
   /** The sports the platform serves. Reference data. */
   sports: () => [...onboardingKeys.all, 'sports'] as const,
   assessment: (assessmentId: string) =>

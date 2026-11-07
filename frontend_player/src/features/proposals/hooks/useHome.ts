@@ -15,9 +15,17 @@ import { useCallback, useState } from 'react';
 import { currentUserQuery } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { anySeatToOpen, type FriendsGameInvitation } from '../domain/friendsGame';
-import { openedToKeep, type BookedGame, type Home, type HomeFriendRequest } from '../domain/home';
+import {
+  openedToKeep,
+  withoutLevelAsksIn,
+  type BookedGame,
+  type Home,
+  type HomeFriendRequest,
+  type HomeLevelAsk,
+} from '../domain/home';
 import {
   keepDismissedGames,
   keepOpenedGames,
@@ -44,6 +52,37 @@ export function useHome() {
  */
 export function useHomeFriendRequests(): readonly HomeFriendRequest[] | undefined {
   return useHome().data?.friendRequests;
+}
+
+/** Nothing to draw, one value for every render that says so. */
+const NO_LEVEL_ASKS: readonly HomeLevelAsk[] = [];
+
+/**
+ * **ASKED FOR A LEVEL · n** (#765) — the friends' asks for a level waiting on the reader, one per
+ * sport, off Home's one read. `undefined` only **while Home has yet to answer**: the row draws
+ * nothing then, and nor does Home's *Get your level*, which this row stands in place of for a
+ * player rated in nothing (the friends screens §6.4) — so neither is drawn and then swapped for the
+ * other. A read refused, or waiting for a connection with nothing held, is **none known**: no row,
+ * and *Get your level* is free to say why nothing is happening. The cards are `friends`' to draw and
+ * answer; the read is Home's, and so this feature's.
+ */
+export function useHomeLevelAsks(): readonly HomeLevelAsk[] | undefined {
+  const home = useHome();
+  if (home.data !== undefined) return home.data.levelAsks;
+  return home.isError || home.fetchStatus === 'paused' ? NO_LEVEL_ASKS : undefined;
+}
+
+/**
+ * **Home, after a level was got** in these sports (#765): their ASKED FOR A LEVEL cards are dropped
+ * at once — the server ends a sport's card the moment the reader holds a level in it — and Home is
+ * read again, so the card is already gone on the way back from *Your rating* and the read confirms
+ * it. Handed to the entry gate through the shell, which is where a rating pass ends.
+ */
+export function rereadHomeAfterALevel(client: QueryClient, sports: readonly Sport[]) {
+  client.setQueryData<Home>(proposalKeys.home(), (home) =>
+    home === undefined ? undefined : withoutLevelAsksIn(home, sports),
+  );
+  return client.invalidateQueries({ queryKey: proposalKeys.home() });
 }
 
 /**

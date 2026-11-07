@@ -1,7 +1,8 @@
 /**
- * **The seven friends writes, and what each re-reads**
+ * **The eight friends writes, and what each re-reads**
  * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#756](https://github.com/Raketa02/Raketa/issues/756),
- * [#758](https://github.com/Raketa02/Raketa/issues/758); ADR-0202 §1–§2).
+ * [#758](https://github.com/Raketa02/Raketa/issues/758), [#765](https://github.com/Raketa02/Raketa/issues/765);
+ * ADR-0202 §1–§2, §4).
  *
  * | Hook | Route | Re-reads |
  * | --- | --- | --- |
@@ -12,6 +13,7 @@
  * | `useCancelFriendRequest` | `DELETE /friends/requests/{id}` | the surface's own read |
  * | `useRemoveFriend` | `DELETE /friends/{id}` | the surface's own read, and every face |
  * | `useAskForALevel` | `POST /friends/{id}/level-asks` | this feature's lists — the picker's among them |
+ * | `useSetAsideLevelAsks` | `POST /friends/level-asks/{sport}/set-aside` | Home, where the card was, and the bell |
  *
  * **And every one re-reads this feature's own lists** (#754, `friendKeys`): You › Friends' three
  * tabs, the Add friends sheet's *to add*, and the You tab's row — so a request asked on Members
@@ -53,6 +55,14 @@
  * — so the button stays busy until the row under it already says so. It moves no face: a Level
  * asked for is not a Level got.
  *
+ * ## Not now on a friend's ask for a level (#765)
+ *
+ * **It tells the reader where the level still is, then re-reads Home and the bell**: the card's
+ * toast (`onSetAside`, handed in with its words) and the two reads the server took the asks off. It names
+ * no friend's list — an ask set aside changes nothing any of them draws. It settles once both have
+ * re-read, so Not now stays busy until Home no longer holds the card. It is idempotent, and
+ * `concurrent_modification` is the state moving: re-read, and say nothing.
+ *
  * ## A refusal that is the state moving is a re-read
  *
  * `already_friends`, `friend_request_already_sent` and `friend_request_not_found` say the surface
@@ -83,6 +93,7 @@ import {
   openFriendLink,
   removeFriend,
   setAsideFriendRequest,
+  setAsideLevelAsks,
 } from '../use-cases/friends';
 
 import { friendKeys } from './friendKeys';
@@ -164,6 +175,34 @@ export function useAskForALevel(playerId: string, sport: Sport, groupId: string)
     onSuccess: () => settle(client, undefined, false),
     onError: (error) => rereadIfMoved(client, error),
   });
+}
+
+/**
+ * **Not now on Home's ASKED FOR A LEVEL card** (#765) — every ask in the sport set aside. See the
+ * module note.
+ *
+ * @param rereadBell the bell's re-read, handed in: the server takes the asks' rows off it.
+ * @param onSetAside what the card says once it is done — its toast, whose words are the card's.
+ */
+export function useSetAsideLevelAsks(sport: Sport, rereadBell: Reread, onSetAside: () => void) {
+  const client = useQueryClient();
+  return useMutation<void, AppError, void>({
+    mutationFn: () => setAsideLevelAsks(sport),
+    onSuccess: () => {
+      onSetAside();
+      return rereadHomeAndBell(client, rereadBell);
+    },
+    onError: (error) => (stateMoved(error) ? rereadHomeAndBell(client, rereadBell) : undefined),
+  });
+}
+
+/**
+ * **Home and the bell, read again** — after Not now on a level ask, and after its start was refused
+ * because the level is already got (`useGetAskedLevel`): either way the card has gone on the server,
+ * and the bell's *level asked* row with it (#765).
+ */
+export function rereadHomeAndBell(client: QueryClient, rereadBell: Reread) {
+  return Promise.all([rereadBell(), client.invalidateQueries({ queryKey: proposalKeys.home() })]);
 }
 
 /**

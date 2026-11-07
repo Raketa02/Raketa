@@ -1,6 +1,7 @@
 /**
  * **The five acts** (#753), **the three reads** (#754), **the link's three** (#756) — your link
- * read, a New link, and somebody's link opened — **and an ask for a Level** (#758): pass-throughs
+ * read, a New link, and somebody's link opened — **an ask for a Level** (#758), **and Not now on
+ * the asks waiting on you** (#765): pass-throughs
  * over the routes, the
  * template's uniform-strict escape hatch: every rule a request obeys is the server's aggregate's,
  * every list is in the server's order, and the relation an act answers is spelled as the wire
@@ -23,6 +24,7 @@ import {
   postFriendLinkReplacement,
   postFriendRequest,
   postLevelAsk,
+  postLevelAsksSetAside,
   postSetAside,
 } from '../api/friendsApi';
 import type { Friend, FriendRequest, GroupToAddFrom } from '../domain/friendList';
@@ -106,4 +108,9 @@ export function openFriendLink(code: string): Promise<FriendRelation> {
 /** **Ask a friend to get a Level in the picker's sport**, from this group's Friends tab (#758). */
 export function askForALevel(playerId: string, sport: Sport, groupId: string): Promise<void> {
   return postLevelAsk(playerId, toLevelAskRequest(sport, groupId));
+}
+
+/** **Not now** on Home's ASKED FOR A LEVEL card — every ask in the sport it names, set aside. */
+export function setAsideLevelAsks(sport: Sport): Promise<void> {
+  return postLevelAsksSetAside(toWireSport(sport));
 }

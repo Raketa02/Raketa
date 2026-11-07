@@ -350,3 +350,20 @@ that takes no second press. A failed attempt says so at once rather than after t
 **Offline still comes first**: a read that failed and is now paused for the connection resumes
 by itself, so it says _Waiting for a connection_, amber, with no button. A launch on a dead
 connection is now at most five seconds of splash and then this screen. **Not seen on a device.**
+
+## A friend's ask for a level on Home (#765)
+
+**A pass that rated a sport tells the gate which.** [#765](https://github.com/Raketa02/Raketa/issues/765)
+gives `useEndOnboardingPass` a third argument, `onRated`, called in the same layout effect that ends the
+pass — before the shell is drawn — with the sports the ended pass rated (`rated` on the pass, recorded
+by the result screen), whatever its origin. Every level is got inside a pass and every pass ends at
+the gate, so that is where a level got reaches reads this feature cannot name: the gate hands the
+sports to the shell, which drops Home's ask cards in them and re-reads Home and the bell.
+
+**A door about one sport asks whether that sport's run is left halfway** (`useQuestionLeftAt`): every
+unfinished run (`onboardingKeys.runsInProgress`, a key **under** `runInProgress`, so every start,
+answer that ends a run, completion and abandonment reaches it by prefix — `findRunsInProgress`, the
+same one request) and that run's own step, counted as `levelDoor` counts it. Home's ask card reads it
+for **Carry on** and _You're on question 5._ It is `undefined` until a run is known — none, in flight,
+or unreadable — because that door's start and its Carry on are one act (`useAddASport`, which hands an
+unfinished run back), so unlike the level door it draws its start at once.

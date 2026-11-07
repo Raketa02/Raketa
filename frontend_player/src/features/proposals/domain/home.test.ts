@@ -19,7 +19,9 @@ import {
   shareAt,
   shownStatus,
   stakeOnTheDetails,
+  withoutLevelAsksIn,
   type BookedMoney,
+  type Home,
   type HomeGame,
 } from './home';
 import type { HomeStatus } from './vocabulary';
@@ -767,5 +769,29 @@ describe('playedWithOf — PLAYED WITH’s people, off the seats and the relatio
         ],
       }),
     ).toEqual([{ playerId: 'gone', relation: 'NONE' }]);
+  });
+});
+
+describe('withoutLevelAsksIn — a level got ends its sport’s card (#765)', () => {
+  const home: Home = {
+    readAt: '2026-10-01T08:00:00Z',
+    needingYou: 0,
+    games: [],
+    friendRequests: [],
+    friendsGames: [],
+    levelAsks: [
+      { sport: 'padel', askers: [{ playerId: 'p-tomek', nickname: 'tomek.k' }] },
+      { sport: 'squash', askers: [{ playerId: 'p-kuba', nickname: 'kuba.w' }] },
+    ],
+  };
+
+  it('drops the cards of the sports just rated, and keeps the rest in order', () => {
+    expect(withoutLevelAsksIn(home, ['padel', 'tennis']).levelAsks).toEqual([
+      { sport: 'squash', askers: [{ playerId: 'p-kuba', nickname: 'kuba.w' }] },
+    ]);
+  });
+
+  it('is the same Home when no card stood in those sports', () => {
+    expect(withoutLevelAsksIn(home, ['tennis'])).toBe(home);
   });
 });

@@ -125,9 +125,19 @@ export function sportsToOffer(
  * have one.* (ADR-0200 §7, #731): a member of at least one group, player or official, who holds no
  * rating in any sport. For a player who never opens a group, it says why nothing is happening.
  * **Nobody in no group**: a level unlocks nothing there yet, and joining one is what Play is for.
+ *
+ * **Nor while a friend's ask for a level is on Home** (#765; the friends screens §6.4; Q129):
+ * ASKED FOR A LEVEL stands in its place — it says why too, and names who wants to play — and the
+ * card comes back once that row is empty and she is still rated in nothing.
+ *
+ * @param askedForALevel the cards Home's ASKED FOR A LEVEL holds.
  */
-export function homeAsksForALevel(groups: number, rated: readonly Sport[]): boolean {
-  return groups > 0 && rated.length === 0;
+export function homeAsksForALevel(
+  groups: number,
+  rated: readonly Sport[],
+  askedForALevel: number,
+): boolean {
+  return groups > 0 && rated.length === 0 && askedForALevel === 0;
 }
 
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */

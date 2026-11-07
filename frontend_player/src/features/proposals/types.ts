@@ -132,6 +132,15 @@ export { useHomeFriendRequests } from './hooks/useHome';
 export type { HomeFriendRequest } from './domain/home';
 
 /**
+ * **Home's asks for a level** (#765) — they ride on `GET /home` too: `friends` draws ASKED FOR A
+ * LEVEL and answers it, and `groups`' Home card reads whether the row holds one, to leave *Get
+ * your level* out. A level got drops its sport's card and re-reads Home (`rereadHomeAfterALevel`), which the
+ * entry gate runs through the shell as a rating pass ends.
+ */
+export { rereadHomeAfterALevel, useHomeLevelAsks } from './hooks/useHome';
+export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
+
+/**
  * **FRIENDS GAME · n** (#759; friends 12) — Home's row of friends game invitations, at the very top:
  * the shell composes it, handing in the bell's re-read, since answering takes the invitation's row
  * off the bell. The words cross for the suites that walk it.

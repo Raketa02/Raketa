@@ -98,7 +98,11 @@ export {
  * where it began ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
  * §5), and which route that is belongs to the route file that lands it.
  */
-export { useEndOnboardingPass, type PassLanding } from './hooks/useEndOnboardingPass';
+export {
+  useEndOnboardingPass,
+  type PassLanding,
+  type PassRated,
+} from './hooks/useEndOnboardingPass';
 /**
  * **Where a pass began** — Home, the Skill passport, or a group's tab
  * ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5) — and what
@@ -131,6 +135,11 @@ export { LevelDoor } from './components/LevelDoor';
  */
 export { useAddASport, type AddASport } from './hooks/useAddASport';
 export { STARTING_LABEL } from './components/startPresentation';
+/**
+ * **Whether that sport's questionnaire is left halfway, and on which question** — for a door about
+ * one sport that says *Carry on* in place of its start: a friend's ask for a level on Home (#765).
+ */
+export { useQuestionLeftAt } from './hooks/useQuestionLeftAt';
 
 /**
  * Whether a link may drop a player straight into a sport's questionnaire. Every door begins a

@@ -18,6 +18,12 @@ export { NoticeBell } from './components/NoticeBell';
 export { NoticesHost } from './components/NoticesHost';
 /** The bell's list, read again — for the shell, once a request it was about is answered on Home. */
 export { rereadNotices } from './hooks/notificationKeys';
+/**
+ * **What opening a notice says when it cannot** — *Level asked*'s questionnaire that did not start
+ * (*You have a padel level already.*). The shell hands it to Home's ASKED FOR A LEVEL row (#765),
+ * whose button runs the same start, so a failure there says the notice's own sentence.
+ */
+export { OPEN_NOTICE_WORDS } from './components/openNoticeWords';
 
 /** The words the suites hold the screens to. */
 export { NOTIFICATIONS_COPY, NOTIFICATIONS_TITLE } from './components/notificationsCopy';

@@ -76,6 +76,10 @@
  * over it — a blink on a device. So while a landing is due this file draws nothing, the landing is
  * made before the first frame, and it is one reset with the whole stack in it (`shell`'s
  * `useShellLanding`): the app's first frame is the group, or the passport, with its tab beneath.
+ *
+ * **A pass that rated a sport also re-reads Home and the bell** (#765), by whichever door it was
+ * begun: a friend's ask for a level in that sport has ended on the server, and its Home card is
+ * dropped before the shell is drawn (`shell`'s `useRereadAfterALevel`).
  */
 
 import { Redirect, Stack } from 'expo-router';
@@ -93,13 +97,16 @@ import {
 import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
 import { IncomingLinks } from '@/features/links/types';
 import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
-import { useShellLanding } from '@/features/shell/types';
+import { useRereadAfterALevel, useShellLanding } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
   const status = useSessionStatus();
   const entry = useEntryDecision();
   const landInTheApp = useShellLanding();
+  // What a level got changes outside the questionnaire — Home's ask card for its sport, and the
+  // bell (#765) — told here because every pass ends here, whichever door began it.
+  const afterALevel = useRereadAfterALevel();
 
   // Where a pass that has just ended lands, by where it began. A Home pass is already where
   // `/` opens, and is never handed here; a passport pass goes back to the passport,
@@ -120,7 +127,7 @@ export default function AppLayout() {
   // this is the branch that knows it — one site, and the definition rather than a line
   // someone has to remember on each of the several ways out of the flow. Called before the
   // returns below, because a hook may not be conditional.
-  const landingDue = useEndOnboardingPass(entry.kind === 'app', land);
+  const landingDue = useEndOnboardingPass(entry.kind === 'app', land, afterALevel);
   // And the location moves on a cold start, for the same branch and the same reason: this is
   // the one site that knows a player is signed in and past onboarding. The feature owns what
   // happens; this file owns the moment (ADR-0174 §6).

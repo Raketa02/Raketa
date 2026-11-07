@@ -1,10 +1,10 @@
 /**
- * **The twelve friends routes this app sends**, and the only place their paths are written down
+ * **The thirteen friends routes this app sends**, and the only place their paths are written down
  * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#754](https://github.com/Raketa02/Raketa/issues/754),
  * [#756](https://github.com/Raketa02/Raketa/issues/756), [#758](https://github.com/Raketa02/Raketa/issues/758),
- * on the contract [#745](https://github.com/Raketa02/Raketa/issues/745),
- * [#748](https://github.com/Raketa02/Raketa/issues/748) and [#749](https://github.com/Raketa02/Raketa/issues/749)
- * built; ADR-0202 §1).
+ * [#765](https://github.com/Raketa02/Raketa/issues/765), on the contract [#745](https://github.com/Raketa02/Raketa/issues/745),
+ * [#748](https://github.com/Raketa02/Raketa/issues/748), [#749](https://github.com/Raketa02/Raketa/issues/749)
+ * and [#764](https://github.com/Raketa02/Raketa/issues/764) built; ADR-0202 §1, §4).
  *
  * One of the two layers allowed to read generated types.
  *
@@ -22,12 +22,14 @@
  * | `POST /friends/link/replacement` | **New link** — a fresh code, the old one dead at once (#756) |
  * | `POST /friends/links/{code}/opening` | open somebody's link — their request on your Home (#756) |
  * | `POST /friends/{id}/level-asks` | ask a friend to get a Level in the picker's sport — 204; once per sport, ever (#758) |
+ * | `POST /friends/level-asks/{sport}/set-aside` | **Not now** on Home's ASKED FOR A LEVEL card — 204, nobody told (#765) |
  *
  * **The three writes that take something back are idempotent**, which is the correctness mechanism
  * under a double tap. Asking and accepting are not: a second ask is `friend_request_already_sent`,
  * a second accept `friend_request_not_found`, and the surface re-reads rather than retrying.
  * **Opening a link is idempotent too** — opened again, it makes no second request — and a New link
  * is not: each makes a fresh code. **Nor is an ask for a Level**: a second is `level_already_asked`.
+ * **Setting the asks aside is idempotent** — a second finds nothing on Home in the sport, and is 204.
  */
 
 import type { components } from '@/generated/schema';
@@ -193,6 +195,19 @@ export function postLevelAsk(
     method: 'POST',
     path: `${FRIENDS_PATH}/${encodeURIComponent(playerId)}/level-asks`,
     body,
+    authenticated: true,
+  });
+}
+
+/**
+ * **Not now on a friend's ask for a level** (#765) — sets aside every ask in `sport` that Home lists
+ * now, and tells nobody. 204, also when nothing in the sport was on Home; `concurrent_modification`
+ * when an act on the reader and an asker raced.
+ */
+export function postLevelAsksSetAside(sport: Schemas['Sport']): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${FRIENDS_PATH}/level-asks/${encodeURIComponent(sport)}/set-aside`,
     authenticated: true,
   });
 }

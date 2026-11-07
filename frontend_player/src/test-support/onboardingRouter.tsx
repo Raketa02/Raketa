@@ -1115,6 +1115,7 @@ export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse'
       games: [],
       friend_requests: [],
       friends_games: [],
+      level_asks: [],
       ...home,
     }),
   );

@@ -161,16 +161,21 @@ describe('the sports *+ Another sport* offers', () => {
 // #731, ADR-0200 §7: *Get your level — your groups can't deal you games until you have one.*
 describe('who Home asks for a level', () => {
   it('is a member of a group who holds no rating', () => {
-    expect(homeAsksForALevel(1, [])).toBe(true);
-    expect(homeAsksForALevel(3, [])).toBe(true);
+    expect(homeAsksForALevel(1, [], 0)).toBe(true);
+    expect(homeAsksForALevel(3, [], 0)).toBe(true);
   });
 
   it('is nobody in no group — there is nothing a level would unlock yet', () => {
-    expect(homeAsksForALevel(0, [])).toBe(false);
+    expect(homeAsksForALevel(0, [], 0)).toBe(false);
   });
 
   it('is nobody holding any rating, whatever the groups play', () => {
-    expect(homeAsksForALevel(2, ['squash'])).toBe(false);
+    expect(homeAsksForALevel(2, ['squash'], 0)).toBe(false);
+  });
+
+  it('is nobody while a friend’s ask for a level stands in its place on Home (#765, Q129)', () => {
+    expect(homeAsksForALevel(1, [], 1)).toBe(false);
+    expect(homeAsksForALevel(1, [], 2)).toBe(false);
   });
 });
 

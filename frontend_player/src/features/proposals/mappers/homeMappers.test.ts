@@ -64,6 +64,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 2,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -80,6 +81,7 @@ describe('toHome', () => {
       needingYou: 2,
       friendRequests: [],
       friendsGames: [],
+      levelAsks: [],
       games: [
         {
           bookingId: 'b-1',
@@ -133,6 +135,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -169,6 +172,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -189,6 +193,7 @@ describe('toHome', () => {
       read_at: '2026-10-06T12:10:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({ status: 'WAITING_FOR_A_PAYMENT', payment_due_by: '2026-10-06T12:40:00Z' }),
@@ -216,6 +221,7 @@ describe('toHome', () => {
       read_at: '2026-10-06T12:10:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({ your_payment_due_by: '2026-10-06T12:40:00Z', time_to: 'FIX_THE_CARD' }),
@@ -249,6 +255,7 @@ describe('toHome', () => {
       read_at: '2026-09-27T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [homeGame(), homeGame({ money: checked }), homeGame({ money: OLDER_MONEY })],
     }).games;
@@ -272,6 +279,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 1,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -311,6 +319,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true }),
@@ -329,6 +338,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [
         homeGame({
@@ -353,6 +363,7 @@ describe('toHome', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [homeGame({ sport: 'CURLING' as Wire['Sport'] }), homeGame({ booking_id: 'b-2' })],
     });
@@ -384,6 +395,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
       needing_you: 0,
       games: [],
       friends_games: [],
+      level_asks: [],
       friend_requests: requests,
     });
 
@@ -428,6 +440,7 @@ describe('toSeat — the friend tag (#753)', () => {
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 0,
       friends_games: [],
+      level_asks: [],
       friend_requests: [],
       games: [homeGame({ sides: { yours: [tile({ friend: true })], theirs: [tile()] } })],
     }).games[0]!.sides.yours.concat(
@@ -435,6 +448,7 @@ describe('toSeat — the friend tag (#753)', () => {
         read_at: '2026-10-01T08:00:00Z',
         needing_you: 0,
         friends_games: [],
+        level_asks: [],
         friend_requests: [],
         games: [homeGame({ sides: { yours: [tile()], theirs: [] } })],
       }).games[0]!.sides.yours,
@@ -675,6 +689,7 @@ describe('a friends game (#759)', () => {
     games: [],
     friend_requests: [],
     friends_games: [],
+    level_asks: [],
     ...extra,
   });
 
@@ -810,5 +825,71 @@ describe('a friends game (#759)', () => {
       },
       { playerId: 'ewa', state: 'SEAT_OPEN', seatOf: 'ewa', canInvite: true },
     ]);
+  });
+});
+
+describe('toHome — a friend’s ask for a level waiting on the reader (#765)', () => {
+  const asker = (
+    extra: Partial<Wire['HomeLevelAskerSchema']> = {},
+  ): Wire['HomeLevelAskerSchema'] => ({
+    player_id: 'p-tomek',
+    nickname: 'tomek.k',
+    photo_id: 'f-1',
+    photo_url: 'https://photos.example/tomek.jpg',
+    ...extra,
+  });
+  const home = (asks: Wire['HomeLevelAskSchema'][]): Wire['HomeResponse'] => ({
+    read_at: '2026-10-01T08:00:00Z',
+    needing_you: 0,
+    games: [],
+    friend_requests: [],
+    friends_games: [],
+    level_asks: asks,
+  });
+
+  it('reads one card per sport in the order served, its askers newest first', () => {
+    expect(
+      toHome(
+        home([
+          {
+            sport: 'PADEL',
+            askers: [asker(), asker({ player_id: 'p-kuba', nickname: 'kuba.w', photo_url: null })],
+          },
+          { sport: 'SQUASH', askers: [asker({ player_id: 'p-ania', nickname: 'ania.m' })] },
+        ]),
+      ).levelAsks,
+    ).toEqual([
+      {
+        sport: 'padel',
+        askers: [
+          {
+            playerId: 'p-tomek',
+            nickname: 'tomek.k',
+            photoUrl: 'https://photos.example/tomek.jpg',
+          },
+          { playerId: 'p-kuba', nickname: 'kuba.w' },
+        ],
+      },
+      {
+        sport: 'squash',
+        askers: [
+          { playerId: 'p-ania', nickname: 'ania.m', photoUrl: 'https://photos.example/tomek.jpg' },
+        ],
+      },
+    ]);
+  });
+
+  it('drops a card in a sport this build cannot name, one with nobody on it, and reads none from an older server', () => {
+    expect(
+      toHome(
+        home([
+          { sport: 'CURLING' as Wire['Sport'], askers: [asker()] },
+          { sport: 'TENNIS', askers: [] },
+        ]),
+      ).levelAsks,
+    ).toEqual([]);
+    const older = home([]);
+    delete (older as Partial<Wire['HomeResponse']>).level_asks;
+    expect(toHome(older).levelAsks).toEqual([]);
   });
 });

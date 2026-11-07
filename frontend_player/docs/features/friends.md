@@ -1,4 +1,4 @@
-# friends — requests, Members' pills, the record's Add friend, Home's FRIEND REQUESTS
+# friends — requests, Members' pills, the record's Add friend, Home's FRIEND REQUESTS and ASKED FOR A LEVEL
 
 The client side of the backend's **Friends** context: a player asks a group-mate to be friends from
 Members or from their record, answers a request on Home, and sees who is a friend on every face.
@@ -283,3 +283,57 @@ lists are marked stale as it opens.
 zofia.b to get a padel level_; the refusal sentence; _Asked_ as the neutral tag. **Not seen on a
 device**: the ask under a greyed row — the indent, a long nickname cutting the pill's one line — and
 the tag beside it.
+
+## A friend's ask for a level, on Home (#765)
+
+**Home: ASKED FOR A LEVEL · n after FRIEND REQUESTS and before Your games, only while an ask waits.**
+[#765](https://github.com/Raketa02/Raketa/issues/765) (PRD #762; the screens §6.4; the mechanics
+§5.1; the words §29.5; Q129) draws the asks the push alone left nowhere to find: **one card per
+sport**, the sport with the newest ask first, on `GET /home`'s `level_asks`, which `proposals` reads
+and maps (`useHomeLevelAsks`) and this feature draws and answers (`LevelAsksRow`). _n_ is the number
+of sports. **It is the request card** — bounded in `ink`, the faces, two lines, **Not now** outline
+and the coral button — never the dark _Get your level_, and it **names no group**. The title is
+`askersFormOf`'s, a rule of the count keyed in `friendsCopy` so a form with no words fails to compile:
+_tomek.k wants to play padel with you_, _tomek.k and kuba.w want…_, and for three or more the two
+newest and the rest counted, _tomek.k, kuba.w and 2 more want…_, so it stays one line; the line under
+it names the one asker, or says _they_ (ADR-0096). **Up to three faces, overlapping** a third of the
+request card's 38 and ringed in the card's white (`groups`' `FaceStack` drawing), the newest at the
+back; **each is its own press** and opens that friend's record — the shell hands the record in
+(`onFace`), as for the request cards, and one sheet serves both rows. A face behind another keeps
+the 26 it shows across, under 6.5's 44: a call, recorded in design-system Part 16.
+
+**The coral button is the _level asked_ notice's act** — `onboarding`'s `useAddASport(FROM_HOME)`:
+the sport's questionnaire started, its unfinished run handed back if there is one, a pass of that one
+sport begun from Home, so every way out lands on Home. **With a run left halfway in the sport it reads
+Carry on**, and the line _You're on question 5._ (`onboarding`'s `useQuestionLeftAt`, off every
+unfinished run — `onboardingKeys.runsInProgress`, under `runInProgress` so every start, completion and
+abandonment reaches it by prefix — and that run's step, counted as the level door counts it). **The
+card draws its start at once and turns to Carry on when the read lands**, unlike the level door,
+which waits: here both words are one act, so a press before the read opens the same run. **One
+start for the whole row** (`useGetAskedLevel`, over `useAddASport`), and another card's button is
+disabled while it is in flight. **A start that fails says the notice's own toast** (`notifications`'
+`OPEN_NOTICE_WORDS.unstarted`, handed in by the shell) — _You have a padel level already._ for
+`sport_already_rated`, which the hook also reads as the state moving and re-reads Home and the bell,
+since the card has gone on the server.
+
+**Not now is the eighth write, `useSetAsideLevelAsks`**: `POST /friends/level-asks/{sport}/set-aside`
+sets aside every ask in the sport the card names, telling nobody; then the toast — _You can get your
+padel level any time, from You › Skill passport._, neutral and held to be read, carried inside the
+write since the card unmounts once Home has re-read — then Home and the bell read again. It stays busy
+until Home no longer holds the card. It names none of this feature's lists: an ask set aside moves
+nothing they draw. `concurrent_modification` is the state moving — re-read, say nothing.
+
+**For a player rated in nothing the row stands in place of _Get your level_** — `groups`' rule
+(`homeAsksForALevel`, which now takes the cards Home's row holds): `HomeLevelCard` draws nothing while
+the row holds a card — nor while Home has yet to answer, so the two are never drawn and swapped — and
+comes back once the row is empty (`useHomeLevelAsks` is `undefined` only while Home is in flight; a
+refused or offline read is none). **A level got ends its
+sport's card on the way back**: every level is got inside a pass and every pass ends at the entry
+gate, which `useEndOnboardingPass` now tells the sports the ended pass rated; the gate hands them to
+the shell's `useRereadAfterALevel`, which drops those sports' cards from Home's cache
+(`proposals`' `rereadHomeAfterALevel`, the server's own rule) before the shell draws and re-reads Home
+and the bell. Where the push and the bell row open is unchanged.
+
+**Calls for the product owner** (in `friendsCopy.ts`): Not now spoken as _Not now, your padel level_;
+_Starting…_ as the coral button's busy word (onboarding's); the overlapping faces' reachable width.
+**Not seen on a device**: the card with a long nickname, the faces overlapping, and the toast.

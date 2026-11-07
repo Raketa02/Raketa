@@ -1014,6 +1014,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/friends/level-asks/{sport}/set-aside": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Not now, on a friend's ask for a level
+         * @description **Not now** on a card in Home's *ASKED FOR A LEVEL* (#764). It sets aside **every ask in `sport` that your Home lists now** — the askers the card named — and tells nobody: they keep reading **Asked** on their picker. The card leaves your Home and their *level asked* rows leave your bell. A set-aside ask still waits for your level: get one in the sport, by any route, and every friend who asked is told. **A new friend's ask in the sport brings the card back**, naming only them. With nothing on your Home in the sport, nothing is recorded.
+         */
+        post: operations["set_aside_the_asks_for_a_level_api_v1_friends_level_asks__sport__set_aside_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/conversations": {
         parameters: {
             query?: never;
@@ -5610,9 +5630,49 @@ export interface components {
             friends_game: components["schemas"]["FriendsGameSchema"] | null;
         };
         /**
+         * HomeLevelAskSchema
+         * @description One card in *ASKED FOR A LEVEL* — *kuba.w and tomek.k want to play padel
+         *     with you* / *A few questions, and they can add you to a game.*, **Get your
+         *     padel level** and **Not now** (#764; `docs/adr/0202` §4's 2026-11-07
+         *     amendment). It names no group.
+         */
+        HomeLevelAskSchema: {
+            /** @description The sport they asked you to get a level in — one you hold none in. **Get your {sport} level** starts its questionnaire; `POST /friends/level-asks/{sport}/set-aside` is **Not now**. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Askers
+             * @description Every friend whose ask in this sport waits on you, **newest first** — never empty. Name two and count the rest; draw up to three faces.
+             */
+            askers: components["schemas"]["HomeLevelAskerSchema"][];
+        };
+        /**
+         * HomeLevelAskerSchema
+         * @description One friend on an *ASKED FOR A LEVEL* card — a face that opens their
+         *     record.
+         */
+        HomeLevelAskerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Nickname
+             * @description Whole, never with an @ (docs/adr/0199 §1).
+             */
+            nickname: string;
+            /** Photo Id */
+            photo_id: string | null;
+            /**
+             * Photo Url
+             * @description A short-lived link to their first photograph; `null` with `photo_id` draws initials.
+             */
+            photo_url: string | null;
+        };
+        /**
          * HomeResponse
          * @description **Home**: the reader's games from the moment they fill, and the friend
-         *     requests waiting on them.
+         *     requests, friends game invitations and asks for a level waiting on them.
          */
         HomeResponse: {
             /**
@@ -5641,6 +5701,11 @@ export interface components {
              * @description *FRIENDS GAME · n*, at the very top of Home (#751; `docs/adr/0202` §5): every friends game whose invitation waits on you, **the soonest to end first**. A card leaves once you accept — the game is then among `games` — say **Not this time**, or your 24 hours end; the row and its title are gone when this is empty. Not counted in `needing_you`.
              */
             friends_games: components["schemas"]["HomeFriendsGameSchema"][];
+            /**
+             * Level Asks
+             * @description *ASKED FOR A LEVEL · n*, between `friend_requests` and `games` (#764; `docs/adr/0202` §4's 2026-11-07 amendment): **one card per sport**, the sport with the newest ask first — every friend's ask for a level still waiting on you. A card leaves once you hold any level in its sport, by any route, or say **Not now**, and an asker leaves it once no longer your friend or blocked by you; a new friend's ask in the sport brings it back, naming only the askers you have not set aside. It never expires. The row and its title are gone when this is empty. Not counted in `needing_you`.
+             */
+            level_asks: components["schemas"]["HomeLevelAskSchema"][];
         };
         /**
          * HomeStatus
@@ -10854,6 +10919,44 @@ export interface operations {
                 };
             };
             /** @description `already_has_a_level` — they have a level in that sport: seat them; `level_already_asked` — you asked them for that sport before, and ask once per sport, ever; `concurrent_modification` — two acts on the two of you raced: retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_aside_the_asks_for_a_level_api_v1_friends_level_asks__sport__set_aside_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sport: components["schemas"]["Sport"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Set aside — also when nothing in that sport was on your Home. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `concurrent_modification` — an act on you and one of the askers raced: retry. */
             409: {
                 headers: {
                     [name: string]: unknown;

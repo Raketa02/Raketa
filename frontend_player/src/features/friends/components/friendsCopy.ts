@@ -58,6 +58,13 @@
  *   group any more.* §29 gives no refusal; the others an ask can meet are the state moving, and say
  *   nothing.
  *
+ * And these, written in by #765 (Home's ASKED FOR A LEVEL; the words §29.5 gives every drawn word):
+ *
+ * - **The spoken name of a card's Not now**, *Not now, your padel level* — two cards' *Not now*,
+ *   and a friend request's beside them, would otherwise name nothing.
+ * - **The busy words** are onboarding's *Starting…* for the coral button, the start's own, and none
+ *   for Not now, which the friend request card's Not now has none of either.
+ *
  * ## The whole nickname, and no pronoun
  *
  * ADR-0199 §1: every sentence naming somebody uses the whole nickname, never with an @. And no
@@ -69,6 +76,7 @@ import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 
 import type { FriendsTab } from '../domain/friendList';
+import { askersFormOf, type AskersForm } from '../domain/levelAsk';
 
 export const FRIENDS_COPY = {
   members: {
@@ -105,6 +113,12 @@ export const FRIENDS_COPY = {
     keep: 'Keep',
     /** Either sheet's close does the same, under its own name: two controls never share one. */
     close: 'Not now',
+  },
+  /** **ASKED FOR A LEVEL** (the screens §6.4; the words §29.5). */
+  levelAsks: {
+    notNow: 'Not now',
+    /** The coral button with a questionnaire in the sport left halfway; the title doesn't change. */
+    carryOn: 'Carry on',
   },
   home: {
     notNow: 'Not now',
@@ -363,4 +377,60 @@ export function askedForALevelLabel(nickname: string, sportInLine: string): stri
 /** A picker row, spoken: who, their line, and why it cannot be picked while the court is full. */
 export function pickerRowLabel(nickname: string, line: string, full: boolean): string {
   return [nickname, line, ...(full ? [FRIENDS_COPY.picker.full] : [])].join(', ');
+}
+
+/** *ASKED FOR A LEVEL · 2* — the row's title, uppercased by its style; `count` is sports, never 0. */
+export function levelAsksHeading(count: number): string {
+  return `Asked for a level · ${count}`;
+}
+
+/**
+ * **Who wants to play** — the card's title, by how many asked (§29.5): one named, two named
+ * together, three or more the two newest and the rest counted. Keyed by the form, so a count with no
+ * sentence fails to compile.
+ */
+const WANT_TO_PLAY: Readonly<
+  Record<AskersForm, (nicknames: readonly string[], sportInLine: string) => string>
+> = {
+  one: ([first], sport) => `${first} wants to play ${sport} with you`,
+  two: ([first, second], sport) => `${first} and ${second} want to play ${sport} with you`,
+  more: ([first, second, ...rest], sport) =>
+    `${first}, ${second} and ${rest.length} more want to play ${sport} with you`,
+};
+
+/** *tomek.k and kuba.w want to play padel with you* — `nicknames` newest first, never empty. */
+export function wantToPlay(nicknames: readonly string[], sportInLine: string): string {
+  return WANT_TO_PLAY[askersFormOf(nicknames.length)](nicknames, sportInLine);
+}
+
+/** **The line under it** — the one asker by name, *they* for several (ADR-0096: never a gender). */
+const LEVEL_ASK_LINE: Readonly<Record<AskersForm, (nicknames: readonly string[]) => string>> = {
+  one: ([first]) => `A few questions, and ${first} can add you to a game.`,
+  two: () => 'A few questions, and they can add you to a game.',
+  more: () => 'A few questions, and they can add you to a game.',
+};
+
+/** *A few questions, and tomek.k can add you to a game.* — `nicknames` newest first. */
+export function levelAskLine(nicknames: readonly string[]): string {
+  return LEVEL_ASK_LINE[askersFormOf(nicknames.length)](nicknames);
+}
+
+/** *Get your padel level* — the card's coral button, which starts the sport's questionnaire. */
+export function getYourLevelLabel(sportInLine: string): string {
+  return `Get your ${sportInLine} level`;
+}
+
+/** *You're on question 5.* — the line, with a questionnaire in the sport left halfway. */
+export function youReOnQuestion(question: number): string {
+  return `You're on question ${question}.`;
+}
+
+/** The spoken name of a card's **Not now**: which ask it puts away. */
+export function notNowLevelAskLabel(sportInLine: string): string {
+  return `Not now, your ${sportInLine} level`;
+}
+
+/** **Not now's toast** — neutral, held to be read: where the level can still be got (§29.5). */
+export function setAsideToast(sportInLine: string): string {
+  return `You can get your ${sportInLine} level any time, from You › Skill passport.`;
 }

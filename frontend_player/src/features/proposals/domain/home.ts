@@ -158,6 +158,42 @@ export interface Home {
    * end first (#759; friends 12). Not counted in `needingYou`. A card leaves once answered.
    */
   readonly friendsGames: readonly FriendsGameInvitation[];
+  /**
+   * **ASKED FOR A LEVEL · n** — one card per sport a friend asked the reader to get a level in, the
+   * sport with the newest ask first (#765; the friends mechanics §5.1). Not counted in `needingYou`.
+   * This feature reads them because they ride on Home's read; `friends` draws them and answers them.
+   */
+  readonly levelAsks: readonly HomeLevelAsk[];
+}
+
+/**
+ * **One card in ASKED FOR A LEVEL** (the friends screens §6.4; the words §29.5) — *tomek.k wants to
+ * play padel with you*: the sport, and every friend whose ask in it waits on the reader, newest
+ * first and never none. It names no group.
+ */
+export interface HomeLevelAsk {
+  readonly sport: Sport;
+  readonly askers: readonly HomeLevelAsker[];
+}
+
+/** One friend on a level ask's card — a face that opens their record. */
+export interface HomeLevelAsker {
+  readonly playerId: string;
+  /** Whole, never with an @ (ADR-0199 §1). */
+  readonly nickname: string;
+  /** Omitted when they have no photograph: the face draws their poster. */
+  readonly photoUrl?: string;
+}
+
+/**
+ * **Home without the level asks in these sports** — what a level just got changes before Home is
+ * read again (#765): the server ends a sport's card the moment the reader holds any level in it (the
+ * friends mechanics §5.1), so the cache drops it on the way back to Home rather than drawing it until
+ * the re-read lands.
+ */
+export function withoutLevelAsksIn(home: Home, sports: readonly Sport[]): Home {
+  const left = home.levelAsks.filter((ask) => !sports.includes(ask.sport));
+  return left.length === home.levelAsks.length ? home : { ...home, levelAsks: left };
 }
 
 /**

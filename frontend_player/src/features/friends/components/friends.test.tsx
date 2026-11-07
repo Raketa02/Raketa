@@ -251,6 +251,7 @@ function friendServer(
       needing_you: 0,
       games: [],
       friends_games: [],
+      level_asks: [],
       friend_requests: waiting().map((who) => ({
         player_id: who.id,
         nickname: who.name,
@@ -700,6 +701,7 @@ describe('FRIEND REQUESTS on Home', () => {
         needing_you: 0,
         games: [],
         friends_games: [],
+        level_asks: [],
         friend_requests: [
           {
             player_id: ZOFIA.id,

@@ -48,6 +48,8 @@ export { YOU_COPY } from './components/youCopy';
 
 /** **Home** — the booked games and the ones waiting for a club (#576). */
 export { HomeScreen } from './components/tabScreens';
+/** **What a level got changes on Home** (#765) — the entry gate's, as a rating pass ends. */
+export { useRereadAfterALevel } from './hooks/useRereadAfterALevel';
 
 /**
  * The You tab — **a screen rather than a placeholder**

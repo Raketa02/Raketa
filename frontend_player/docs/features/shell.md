@@ -216,6 +216,15 @@ the rail — drawn only while a request waits. The shell hands it the two things
 `player_record`'s, the reliability chip (`PlayerScoreTag`) and the record a card's face opens, so
 `friends` never imports the feature that draws its record button. #757 adds FRIENDS GAME above it.
 
+**ASKED FOR A LEVEL sits under FRIEND REQUESTS** ([#765](https://github.com/Raketa02/Raketa/issues/765);
+the friends screens §6.4; Q129): `friends`' `LevelAsksRow`, drawn only while a friend's ask waits,
+handed the record a face opens — one sheet for both rows (`HomeFriendRows`) — the bell's re-read, and
+`notifications`' `OPEN_NOTICE_WORDS.unstarted` for a start that fails. **It stands in place of the
+level card** — `groups`' rule, which reads the same Home, so the shell still draws `HomeLevelCard`
+plainly. **What a level got changes on Home is the shell's** (`useRereadAfterALevel`, exported): the
+sport's ask card dropped from Home's cache and Home and the bell re-read, handed by the entry gate to
+`useEndOnboardingPass` and run as a rating pass ends — the record is [`friends.md`](friends.md).
+
 **You › Friends is composed here** ([#754](https://github.com/Raketa02/Raketa/issues/754)).
 `friends`' row closes the You tab's _Your games_ group, and `YouFriendsScreen` mounts `friends`' page
 with the three things that are other features' handed in: the record a row opens (`player_record`'s),

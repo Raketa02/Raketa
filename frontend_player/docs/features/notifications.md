@@ -396,6 +396,15 @@ turns the row pickable. **Calls made here**: _You have a padel level already._ (
 refusal); the page under the picker. **Not seen on a device**: the two screens pushed at once, and
 the questionnaire replacing the list.
 
+**The bell follows the ask's Home card** ([#765](https://github.com/Raketa02/Raketa/issues/765), on
+#764's; the friends mechanics §5.1, §12): a _level asked_ row is listed, and counted in the bell's
+number, only while its card is on Home's _ASKED FOR A LEVEL_ — the server's rule, matched by asker and
+sport. So **whatever takes the card re-reads the bell**: Not now on the card, a start refused as
+`sport_already_rated`, and a level got by any route — the entry gate, as a rating pass ends, runs the
+shell's `useRereadAfterALevel`, which re-reads Home and the bell. Where the push and the row open is
+unchanged (_Level asked_ above), and the card's coral button runs the same start, failing with the
+same toast: `OPEN_NOTICE_WORDS` crosses to the shell, which hands its `unstarted` to `friends`' row.
+
 **A friends game's three new notices land where every notice of their kind does**
 ([#759](https://github.com/Raketa02/Raketa/issues/759), on #751's; the friends mechanics §12):
 `FRIENDS_GAME_INVITATION` opens Home, where its card is at the very top (_FRIENDS GAME · n_, and

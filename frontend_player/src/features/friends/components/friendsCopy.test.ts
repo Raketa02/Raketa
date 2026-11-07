@@ -5,6 +5,13 @@ import {
   askedYouTab,
   friendsRowLine,
   groupCountsLine,
+  levelAskLine,
+  levelAsksHeading,
+  notNowLevelAskLabel,
+  getYourLevelLabel,
+  setAsideToast,
+  wantToPlay,
+  youReOnQuestion,
   requestsHeading,
   sportsLine,
   wantsToBeYourFriend,
@@ -93,5 +100,41 @@ describe('the You tab’s Friends row', () => {
     expect(friendsRowLine(3, 0)).toBe('3 friends');
     expect(friendsRowLine(3, 1)).toBe('3 friends · 1 asked you');
     expect(friendsRowLine(0, 2)).toBe('No friends yet · 2 asked you');
+  });
+});
+
+describe('ASKED FOR A LEVEL’s words (§29.5)', () => {
+  it('counts the row’s title by sports', () => {
+    expect(levelAsksHeading(2)).toBe('Asked for a level · 2');
+  });
+
+  it('names one asker, two, and two and the rest counted — never a pronoun but they', () => {
+    expect(wantToPlay(['tomek.k'], 'padel')).toBe('tomek.k wants to play padel with you');
+    expect(wantToPlay(['tomek.k', 'kuba.w'], 'padel')).toBe(
+      'tomek.k and kuba.w want to play padel with you',
+    );
+    expect(wantToPlay(['tomek.k', 'kuba.w', 'ania.m', 'ewa.s'], 'padel')).toBe(
+      'tomek.k, kuba.w and 2 more want to play padel with you',
+    );
+    expect(levelAskLine(['tomek.k'])).toBe('A few questions, and tomek.k can add you to a game.');
+    expect(levelAskLine(['tomek.k', 'kuba.w'])).toBe(
+      'A few questions, and they can add you to a game.',
+    );
+    expect(levelAskLine(['tomek.k', 'kuba.w', 'ania.m'])).toBe(
+      'A few questions, and they can add you to a game.',
+    );
+  });
+
+  it('names the button by the sport, and the question a run left halfway is on', () => {
+    expect(getYourLevelLabel('padel')).toBe('Get your padel level');
+    expect(FRIENDS_COPY.levelAsks.carryOn).toBe('Carry on');
+    expect(youReOnQuestion(5)).toBe("You're on question 5.");
+    expect(notNowLevelAskLabel('padel')).toBe('Not now, your padel level');
+  });
+
+  it('says where the level can be got after Not now', () => {
+    expect(setAsideToast('padel')).toBe(
+      'You can get your padel level any time, from You › Skill passport.',
+    );
   });
 });

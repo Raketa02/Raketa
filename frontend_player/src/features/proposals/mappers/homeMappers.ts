@@ -25,6 +25,7 @@ import type {
   Home,
   HomeFriendRequest,
   HomeGame,
+  HomeLevelAsk,
   Leaving,
   RescueOffer,
 } from '../domain/home';
@@ -235,6 +236,8 @@ export function toHomeGame(wire: Schemas['HomeGameSchema']): HomeGame | undefine
 export function toHome(wire: Schemas['HomeResponse']): Home {
   // A server older than #751 sends none: no row.
   const friendsGames: Schemas['HomeResponse']['friends_games'] | undefined = wire.friends_games;
+  // Nor does one older than #764.
+  const levelAsks: Schemas['HomeResponse']['level_asks'] | undefined = wire.level_asks;
   return {
     readAt: wire.read_at,
     needingYou: wire.needing_you,
@@ -243,6 +246,27 @@ export function toHome(wire: Schemas['HomeResponse']): Home {
     friendsGames: (friendsGames ?? [])
       .map(toFriendsGameInvitation)
       .filter((one): one is FriendsGameInvitation => one !== undefined),
+    levelAsks: (levelAsks ?? [])
+      .map(toHomeLevelAsk)
+      .filter((one): one is HomeLevelAsk => one !== undefined),
+  };
+}
+
+/**
+ * **A card in ASKED FOR A LEVEL** (#765). A sport this build cannot name is dropped — the card's
+ * whole act is that sport's questionnaire — and so is a card naming nobody, which the wire says
+ * never comes: a title with no asker has no sentence.
+ */
+function toHomeLevelAsk(wire: Schemas['HomeLevelAskSchema']): HomeLevelAsk | undefined {
+  const sport = toSport(wire.sport);
+  if (sport === undefined || wire.askers.length === 0) return undefined;
+  return {
+    sport,
+    askers: wire.askers.map((asker) => ({
+      playerId: asker.player_id,
+      nickname: asker.nickname,
+      ...(asker.photo_url === null ? {} : { photoUrl: asker.photo_url }),
+    })),
   };
 }
 

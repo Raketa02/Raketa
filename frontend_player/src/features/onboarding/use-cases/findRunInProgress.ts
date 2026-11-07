@@ -30,7 +30,17 @@ export interface FindRunInProgressOptions {
 export async function findRunInProgress({ signal }: FindRunInProgressOptions = {}): Promise<
   AssessmentRun | undefined
 > {
-  const runs = toAssessmentRuns(await listRunsInProgress({ signal }));
+  const runs = await findRunsInProgress({ signal });
 
   return runs[0];
+}
+
+/**
+ * **Every unfinished run**, in the same order — for a door about one sport, which carries on that
+ * sport's run and no other (#765). The same one request.
+ */
+export async function findRunsInProgress({ signal }: FindRunInProgressOptions = {}): Promise<
+  readonly AssessmentRun[]
+> {
+  return toAssessmentRuns(await listRunsInProgress({ signal }));
 }

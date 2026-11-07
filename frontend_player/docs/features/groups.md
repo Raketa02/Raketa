@@ -658,7 +658,10 @@ least one group, player or official, holding no rating. **`useHomeAsksForALevel`
 first and the groups only for a player rated in nothing** (`useMyGroups({ enabled })`), so a rated
 Home costs one read — `GET /ratings` on every visit, the price of the card, which every group's chip
 shares — and it draws nothing until both have answered and nothing on a failure: it is a nudge,
-never a wall. `groupKeys` is exported for the notice that opens Home on it, which marks the groups
+never a wall. **A friend's ask for a level stands in its place** ([#765](https://github.com/Raketa02/Raketa/issues/765),
+Q129): the rule is `homeAsksForALevel(groups, rated, askedForALevel)` now, over `proposals`'
+`useHomeLevelAsks` too — nothing while Home's ASKED FOR A LEVEL holds a card or Home has yet to
+answer, and the card again once the row is empty; a Home read refused or offline holds none. `groupKeys` is exported for the notice that opens Home on it, which marks the groups
 list stale with the ratings.
 **Calls made here**: _+ Another sport_ is the bar's farthest pill rather than a chip of its own
 beside the pill (no mock draws it); Members' chip carries it too; the pill's hint for an unfold onto

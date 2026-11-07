@@ -11,9 +11,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { FriendRequestsRow } from '@/features/friends/types';
+import { FriendRequestsRow, LevelAsksRow } from '@/features/friends/types';
 import { HomeLevelCard } from '@/features/groups/types';
-import { NoticeBell, rereadNotices } from '@/features/notifications/types';
+import { NoticeBell, OPEN_NOTICE_WORDS, rereadNotices } from '@/features/notifications/types';
 import { PlayerRecordSheet, PlayerScoreTag } from '@/features/player_record/types';
 import {
   FriendsGamesRow,
@@ -57,6 +57,11 @@ import { HOME_COPY } from './shellCopy';
  * that are `player_record`'s — the reliability chip, and the record a face opens — so `friends` does
  * not import the feature that draws its record button; and the bell's re-read, since answering a
  * request takes its row off the bell.
+ *
+ * **ASKED FOR A LEVEL sits under it** (`friends`' row, [#765](https://github.com/Raketa02/Raketa/issues/765);
+ * the friends screens §6.4; Q129), drawn only while a friend's ask waits, handed the same record and
+ * bell, and the *level asked* notice's toast for a start that fails. **For a player rated in nothing
+ * it stands in place of *Get your level*** — `groups`' rule, which reads the same Home.
  */
 export function HomeScreen() {
   const client = useQueryClient();
@@ -69,14 +74,14 @@ export function HomeScreen() {
       <HomeLevelCard />
       <FriendsGamesRow onAnswered={() => rereadNotices(client)} />
       <PaymentsToConfirm />
-      <HomeFriendRequests />
+      <HomeFriendRows />
       <HomeRail empty={HOME_COPY.empty} />
     </ShellScreen>
   );
 }
 
-/** *FRIEND REQUESTS · n*, and the record a card's face opens. */
-function HomeFriendRequests() {
+/** *FRIEND REQUESTS · n* and *ASKED FOR A LEVEL · n*, and the record a face on either opens. */
+function HomeFriendRows() {
   const client = useQueryClient();
   const [reading, setReading] = useState<string>();
   return (
@@ -90,6 +95,11 @@ function HomeFriendRequests() {
         )}
         onFace={setReading}
         onAnswered={() => rereadNotices(client)}
+      />
+      <LevelAsksRow
+        onFace={setReading}
+        onAnswered={() => rereadNotices(client)}
+        unstarted={OPEN_NOTICE_WORDS.unstarted}
       />
       {reading === undefined ? null : (
         <PlayerRecordSheet

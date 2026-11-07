@@ -6,8 +6,8 @@
  * **The acts are this feature's; the surfaces are their own.** Members (`groups`) draws its rows and
  * hands each to `RowWithFriendEnd`, which puts the pill or the tag on its right. The record
  * (`player_record`) reads `recordFootOf` and draws `FriendButton` beside `blocks`' Block. The shell
- * composes `FriendRequestsRow` into Home above Your games. Each surface hands its own re-read in, so
- * this feature never names another's keys.
+ * composes `FriendRequestsRow` and `LevelAsksRow` into Home above Your games. Each surface hands its
+ * own re-read in, so this feature never names another's keys.
  *
  * **You › Friends** (#754) is a frame and a body: `FriendsPage` draws the header, *+ Add friends* and
  * its sheet; `FriendsTabs` is what it holds from You, and the picker (#757) what it holds from a
@@ -44,6 +44,12 @@ export { levelIn, type Friend } from './domain/friendList';
 export { PlayedWithCard, type PlayedWithCardProps } from './components/PlayedWithCard';
 export { FriendButton, type FriendButtonProps } from './components/FriendButton';
 export { FriendRequestsRow, type FriendRequestsRowProps } from './components/FriendRequestsRow';
+/**
+ * **ASKED FOR A LEVEL** (#765) — Home's row of a friend's asks for a level, after FRIEND REQUESTS:
+ * the shell composes it, handing in the record a face opens, the bell's re-read and the *level
+ * asked* notice's toast for a start that failed.
+ */
+export { LevelAsksRow, type LevelAsksRowProps } from './components/LevelAsksRow';
 
 export {
   recordFootOf,

@@ -590,6 +590,7 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
         needing_you: 1,
         games: [],
         friends_games: [],
+        level_asks: [],
         friend_requests: [],
       }),
     );
@@ -721,6 +722,7 @@ describe('paying in time (Q110)', () => {
         read_at: HOME_READ_AT,
         needing_you: paid ? 0 : 1,
         friends_games: [],
+        level_asks: [],
         friend_requests: [],
         games: [
           paid
@@ -772,6 +774,7 @@ describe('out of time (Q109, Q111)', () => {
         read_at: HOME_READ_AT,
         needing_you: 0,
         friends_games: [],
+        level_asks: [],
         friend_requests: [],
         games: [
           ranOut
@@ -812,6 +815,7 @@ describe('out of time (Q109, Q111)', () => {
         read_at: HOME_READ_AT,
         needing_you: 1,
         friends_games: [],
+        level_asks: [],
         friend_requests: [],
         games: ranOut ? [] : [waitingForAPayment({ your_payment_due_by: DUE })],
       }),

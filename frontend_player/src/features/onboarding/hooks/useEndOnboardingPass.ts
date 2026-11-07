@@ -48,9 +48,20 @@
  * The gate is mounted afresh for every pass that comes back to it, because the questions are a
  * sibling of the app rather than inside it — so a pass begun from inside the app, as a group's
  * door begins one, is never mistaken for one arriving.
+ *
+ * ## A level got is told to the app as the pass ends
+ *
+ * A new level changes reads that are not this feature's: Home's ASKED FOR A LEVEL card for the sport
+ * ends the moment it is got, and the bell's *level asked* row with it (#765). This feature cannot
+ * name those reads, and **every level is got inside a pass, and every pass ends here** — on the way
+ * back from *Your rating*, by whichever door it was begun — so the gate is told the sports the
+ * ended pass rated (`onRated`), in the same layout effect, before the shell is drawn: what it drops
+ * from a cache is already gone from the app's first frame.
  */
 
 import { useLayoutEffect, useRef, useState } from 'react';
+
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { returnOf, type PassReturn } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
@@ -64,13 +75,24 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 export type PassLanding = (back: PassReturn) => void;
 
 /**
+ * What the app does once a pass that produced a rating has ended — told the sports it rated, in
+ * the order they were. Called once per such pass, before the shell is drawn, whatever its origin.
+ */
+export type PassRated = (sports: readonly Sport[]) => void;
+
+/**
  * @param inTheApp whether the entry gate has landed the player in the authenticated tree.
  * Passed rather than read here so the gate keeps one answer, and the caller stays a route
  * file that turns a decision into a route.
  * @param land where the app puts a player whose pass just ended, by the pass's origin.
+ * @param onRated what the app does with the sports a pass that just ended rated — see above.
  * @returns whether a landing is still due — the gate draws nothing of the app while it is.
  */
-export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): boolean {
+export function useEndOnboardingPass(
+  inTheApp: boolean,
+  land: PassLanding,
+  onRated: PassRated,
+): boolean {
   const end = useOnboardingPass((state) => state.end);
 
   // The latest landing, read at the moment of ending rather than closed over: a landing that
@@ -79,6 +101,8 @@ export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): bool
   // the effect's one job is to fire on *arriving*, and its dependencies should say so.
   const landing = useRef(land);
   landing.current = land;
+  const rating = useRef(onRated);
+  rating.current = onRated;
 
   // Read once, as the gate mounts: a pass still held then is one coming back from the questions,
   // while a pass begun with the gate up — at a group's door — is one leaving, and lands nothing.
@@ -90,6 +114,9 @@ export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): bool
   useLayoutEffect(() => {
     if (!inTheApp) return;
     const ended = end();
+    if (ended !== undefined && ended.rated.length > 0) {
+      rating.current(ended.rated.map((run) => run.sport));
+    }
     const back = ended === undefined ? undefined : returnOf(ended);
     if (back !== undefined) landing.current(back);
     setLandingDue(false);
