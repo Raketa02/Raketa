@@ -8,6 +8,12 @@
 > **Refined on 2026-11-07** by the level-ask grilling, PRD [#762](https://github.com/Raketa02/Raketa/issues/762),
 > logged as **Q129** and recorded by ADR-0202 §4's amendment: an ask waits on the friend's Home
 > ([§5.1](#51-the-ask-waits-on-her-home-q129)), and its bell row with it ([§12](#12-notifications)).
+> **Amended on 2026-11-07** by the rankings grilling, PRD [#766](https://github.com/Raketa02/Raketa/issues/766),
+> logged as **Q130** and recorded by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md): a request may also go to anybody listed on
+> General ([§3.1](#31-who-can-be-a-friend)), reads *Found you in the padel ranking*
+> ([§3.2](#32-asking)), and is capped at 10 a day to people outside your groups
+> ([§13](#13-numbers-in-one-place)); a block closes the record both ways, so the record's Unblock goes
+> ([§3.5](#35-blocks)).
 >
 > **Its companion** is [the-screens.md](the-screens.md), which says how each screen looks. Every
 > sentence a player reads is in [the words §29](../matchmaking/the-words.md#29-friends). Where this
@@ -75,6 +81,12 @@ cost*, never a forecast's **Split**.
 - **A friend is someone from your groups whom you asked and who said yes**, or who opened your link
   and said yes ([§4](#4-the-friend-link)). Nobody outside your groups can be asked except through
   the link; there is no search for any player.
+
+  > **Amended 2026-11-07** ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §9, Q130). **A request may go to anybody in your groups, or
+  > anyone listed on General** in at least one sport and not hidden from it
+  > ([the rankings mechanics §13](../rankings/the-mechanics.md#13-friend-requests)), and to anybody
+  > through the link. **At most 10 a day** may go to people you share no group with; requests to
+  > group-mates are never counted. There is still no search for a player by name.
 - **Friendships are per pair, across all your groups.** One friendship between Tomek and Ania holds
   in Ogrody, in Kazimierz crew, and in any group either joins later.
 - **A friendship survives either of them leaving a group**, and ends when either account is deleted.
@@ -87,12 +99,16 @@ A **friend request** is made from:
 - **Members**: the **+ Add** pill on anybody who isn't your friend;
 - **the player record**, which opens from any face: **Add friend**;
 - **the result screen**: the **PLAYED WITH** card's pills;
-- **a link** ([§4](#4-the-friend-link)).
+- **a link** ([§4](#4-the-friend-link));
+- **the ranking** *(since 2026-11-07, Q130)*: **Add friend** on a record opened from the Rankings
+  page.
 
 The request records **where it was made**: the group (Members, or a face on a game of that group),
 the record, the result, or the link. The card on the other person's Home names **the group** where
 the + Add was pressed, or the group of the game it was pressed from, and its sport. A request made by
-link reads *Invited you to Raketa*.
+link reads *Invited you to Raketa*. *(Since 2026-11-07, Q130:)* a request made from the ranking
+records the ranking and its sport, and reads ***Found you in the padel ranking***, even to a
+group-mate.
 
 - **You can't ask yourself.**
 - **You can't ask while a request of yours to that person is open**, set aside or not. Nobody can
@@ -127,8 +143,12 @@ reaches friendship too (Q5):
 - **A request from a player the reader blocked is never shown to the reader.** Michał, whom Tomek
   blocked, can tap Add friend again; he reads *request sent* forever, and Tomek never sees it. The
   block stays undetectable: *request sent* forever is exactly what a request set aside reads.
+  *(Since 2026-11-07 the request still is, but a refused record can be a tell between group-mates,
+  a cost ADR-0203 names.)*
 - **Somebody you blocked** shows only **Unblock** on their record; you are never offered to befriend
-  them.
+  them. *(Amended 2026-11-07, [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §8, Q130: **a block closes the record both ways**,
+  everywhere, group-mates included, so neither opens the other's record and the record has no
+  Unblock. **Unblock lives in You › Blocked players.**)*
 - **Unblocking brings nothing back**: no friendship, and no request.
 - **A third person seating a blocked pair** in a friends game is refused with *"These four can't all
   play together. Swap someone."*, which never says which pair ([§7.5](#75-what-the-card-refuses)).
@@ -145,7 +165,7 @@ reaches friendship too (Q5):
 | Where | What |
 | --- | --- |
 | **Members** | **+ Add** (black) on anybody not your friend; *request sent* (amber); *friend* (green); **Accept** (black) on somebody who asked you. The pill acts; the rest of the row opens the record. Not on the administrator's view of an official group's Members |
-| **The record** | **Add friend** and **Block** side by side at its foot. The left button: **Request sent ▾**, **Accept** (coral) or **Friend ✓ ▾**. Only **Unblock**, full width, on somebody you blocked. Neither on your own record |
+| **The record** | **Add friend** and **Block** side by side at its foot. The left button: **Request sent ▾**, **Accept** (coral) or **Friend ✓ ▾**. ~~Only **Unblock**, full width, on somebody you blocked.~~ *(Since 2026-11-07, Q130: a blocked pair's record never opens; Unblock is in You › Blocked players. **Add friend** shows only when the record says a request may be sent, and **Block** stands alone otherwise.)* Neither on your own record |
 | **The result screen** | **PLAYED WITH**, between the score and the sportsmanship card: the other players with Members' pills. Hidden once they are all your friends. Shown after a For fun game too |
 | **Home** | **FRIEND REQUESTS · n**, under the friends game invitations and above Your games. The row and its title are gone once every request is answered |
 | **You › Friends** | Tabs **Friends · Asked you · You asked**, a count on *Asked you* while requests wait, **Accept** and **Cancel** on the rows, **+ Add friends** top right |
@@ -587,6 +607,7 @@ longer on the card: the level got by any route, **Not now**, or the asker no lon
 | The cover warning | once, 24 hours before the cut-off, Split only |
 | Held on a Split sender's card at send | the whole court: his share + a cover per other seat (100 zł for a 100 zł court) |
 | Ask for a level | once per friend per sport |
+| Requests to people outside your groups | at most 10 a Warsaw day; group-mates never counted (Q130, `daily_request_limit`) |
 | A level ask on Home | one card per sport, up to three faces, no expiry |
 | A friend request's push | once per request |
 | Other clubs for an official group | within the club's distance, 10 km by default; switch on by default |
@@ -674,7 +695,8 @@ club's cancel moves the game; the club sees an ordinary booking.
 ## 16. Out of scope
 
 - Finding players outside your groups (a search for any player), friend suggestions, mutual friends,
-  and a friends feed.
+  and a friends feed. *(Since 2026-11-07, Q130: the ranking finds players outside your groups, and
+  any of them listed on General may be asked. A search for a player by name stays out.)*
 - Chatting with a friend outside a game.
 - **A friends-first head start on rescues.** It was removed before
   ([games and fill-in §22.1](../games-and-fill-in/the-mechanics.md#221-from-the-pdfs-removed-on-purpose))

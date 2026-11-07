@@ -688,7 +688,7 @@ Three suites, run headlessly against a minimal DOM stub:
 
 - **Not a booking engine with a social feature bolted on.** The seat is the unit of sale.
 - **Not a social network.** No feed, no followers, no content to farm.
-- **Not a ranking ladder.** A rating exists to make matches balanced, not to be climbed.
+- ~~**Not a ranking ladder.** A rating exists to make matches balanced, not to be climbed.~~ **Retired 2026-11-07**: Raketa ranks players, one ranking per sport sorted by the level itself — see [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md).
 - **Not a place a level can be typed.** By anybody.
 - **Not a chat app.** Match chat exists; there is no general messaging between strangers.
 - **Not a system that hides its reasoning.** Every state explains itself.

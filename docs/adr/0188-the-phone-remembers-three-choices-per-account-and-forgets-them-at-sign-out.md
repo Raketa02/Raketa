@@ -4,7 +4,10 @@
   [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §8**, the new record §5 asks for, with a fourth value: *the guide on Your
   rating was shown*, **per phone rather than per account, and kept at sign-out**. §2's *every value
   is keyed by the account* and §3's *signing out empties the store* hold for the other three. The
-  fence still admits this one module.
+  fence still admits this one module. — **A fourth per-account value added 2026-11-07 by
+  [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §5: *the Rankings view last looked
+  at*, General or Friends, which Home's trophy reads too. It is keyed by the account and emptied at
+  sign-out, as the three are, in the same store.
 - **Date:** 2026-09-25
 - **Reverses the player app's practice that nothing but credentials and the flag datafile is kept on
   the device**, for **exactly three values**. Nothing else is reversed.

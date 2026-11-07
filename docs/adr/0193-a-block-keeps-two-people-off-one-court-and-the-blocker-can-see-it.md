@@ -1,6 +1,7 @@
 # ADR-0193 — A block keeps two people off one court, and the blocker can see it
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2 superseded for the record, and §3's record read retired, on 2026-11-07
+  by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130)
 - **Date:** 2026-10-06
 - **§1 extended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)**
   §6: the pair rule gains one more clause, the **reliability filter**, asked exactly where a block
@@ -17,6 +18,23 @@
   same* now holds against a removal: what the blocked person reads is exactly what a silent removal,
   or a request set aside, would show them. A friends game's line-up with a blocked pair in it is
   refused naming nobody, as a yes is.
+- **§2 superseded for the record, §3's record read retired, and the *Consequences*' *now false*
+  corrected, 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §8 (the mechanics Q130):
+  - **a block closes the record in both directions, everywhere, group-mates included.** It is again
+    a gate the record is admitted under, refused with the record's one refusal. §2's *the blocker
+    opens the record to unblock* and its *byte for byte the same* read no longer hold for the
+    record;
+  - **Unblock lives in You › Blocked players**, and the record's Unblock button goes. §3's second read,
+    *the player record says whether the reader has blocked the subject*, leaves the contract:
+    **Blocked players is the one read that carries the reader's own blocks**, and the contract walk
+    allows that one place;
+  - **a block also hides the pair's rows from each other in the ranking**, in both views;
+  - the prototype's *"you disappear from each other's … rankings"*, called false below, **holds of
+    the ranking**, as [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md) §7
+    said it would.
+
+  §1, §4–§6, and §2 for groups, Members lists, booked games and chats, stand. Dated notes mark §2,
+  §3 and the *Consequences*.
 - **Amends [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md)** in five
   places:
   - **§3's** *"from any surface where that player is visible"* becomes **no surface is recorded**
@@ -138,6 +156,13 @@ record, as any co-member can.
 > request the blocked person sends later is never shown to the blocker, who reads nothing. The
 > blocked person keeps reading *request sent*, as after a request set aside.
 
+> **Superseded for the record 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** A block closes the record in both
+> directions, everywhere, group-mates included, with the record's one refusal. Ania no longer opens
+> Kuba's record to unblock: Unblock is in You › Blocked players. Kuba's read of Ania's record is no
+> longer the same byte for byte as an unblocked read: it is refused, as a hold or an account that may
+> not be shown is. A block also hides the pair's rows from each other in the ranking. **Groups, Members
+> lists, booked games and chats already shared stay as above.**
+
 ### 3. Nobody is shown that they were blocked, and you can see your own blocks
 
 **A response may carry the reader's own blocks, never anyone's block of the reader.** Two reads carry
@@ -154,6 +179,10 @@ an unblock, in either direction.
 
 The record stays directed, so this is per person. If both have blocked, each sees only their own.
 Unblocking lifts only the caller's block, never 404s, and says nothing about the other one.
+
+> **Amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** The record no longer opens for a blocked pair, so it
+> no longer says whether the reader has blocked the subject. **Blocked players is the one read that
+> carries the reader's own blocks**, and the contract walk allows that one place.
 
 ### 4. A block takes back the blocker's yeses until the club confirms, and never touches a confirmed booking
 
@@ -229,6 +258,12 @@ From ADR-0095, unchanged:
   from each other's view everywhere"*), which #586 rewrites. That is deliberate: everyone in the
   group can see who is in it, so hiding a member could never be silent. A player who needs more
   than this needs a Report and moderation, and neither exists.
+
+  > **Corrected 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** In the ranking the promise is true again: a
+  > blocked pair never sees each other's row, and neither opens the other's record, anywhere. Kuba
+  > still sees Ania in Members and on the faces of booked games they share, and Ania's record now
+  > refuses Kuba, which in a group is a tell this record avoided. The product owner chose the clean break (Q12
+  > there).
 - **The blocker sees the direction.** *Neither party can discover which way it went* is now true of
   the blocked party only. A Blocked players list is a stored, readable list of whom somebody chose to
   avoid. It is shown only to its author, and it becomes one more thing a future data export has to
@@ -260,3 +295,6 @@ From ADR-0095, unchanged:
 - **Members lists, records and chats now have a block-free contract.** The day somebody proposes
   hiding a blocked person from a card or a list, it is a new decision against §2, not a gap in this
   one. PRD #571 lists it as out of scope.
+
+  > **2026-11-07:** [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) is that decision for the ranking's lists and for the record. Members
+  > lists and chats keep a block-free contract.

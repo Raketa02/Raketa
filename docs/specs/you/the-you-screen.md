@@ -10,6 +10,11 @@ draws both. Open it in a browser (a `#passport`, `#record`, … hash opens a scr
 tap every row, and read the notes panel beside the phone: it names the read, the write and the consequence for whichever
 screen is open, and logs every request the screen would send.
 
+> **Amended 2026-11-07** by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7
+> (the games and fill-in mechanics Q130, PRD [#766](https://github.com/Raketa02/Raketa/issues/766)):
+> **ON YOUR CARD** gains ***Show me in General***, a switch, [§3.14](#314-show-me-in-general). §4's
+> *Rankings* line is retired: Raketa ranks players, by the level.
+
 ## 0. The one sentence
 
 **You is where a player reads what the platform holds about them and changes the facts they
@@ -96,7 +101,7 @@ ScreenHeader      eyebrow PLAYER PROFILE · h1 You
 
   PLAYING         Skill passport · Player reliability · What kind of game
   YOUR GAMES      Your week · Where you play · Who you play with
-  ON YOUR CARD    How others see you · Photos · Tags · Intro · Nickname
+  ON YOUR CARD    How others see you · Photos · Tags · Intro · Nickname · Show me in General
 
   Sign out        AccountPanel's button, at the foot — as today
 ```
@@ -127,6 +132,7 @@ were on the first draft and are out — §4 says why and what each would need.
 | Tags | `4 of 6 · Stays for a drink, Plays to win, +2` | the tags step as it is, with *Save* | `PUT /players/me/social-tags` | needs a route and the read |
 | Intro | `“Will travel for a hard game.”` | the intro step's box with its counter and fence, *Save* / *Remove intro* | `PUT /players/me/intro` | needs an aggregate change + route, ADR-0170 §5 |
 | Nickname | `tomek.k` | the naming screen's one field, pre-filled | `PUT /users/me/name`, a nickname alone | route exists, screen exists (`NamingScreen`), needs a door; was *Name* until ADR-0199 |
+| Show me in General | *the switch, and its sentence under the title* | nothing: the switch is in the row | `PUT /players/me/ranking-visibility` at once | added 2026-11-07 by ADR-0203 §7, §3.14; the route is [#772](https://github.com/Raketa02/Raketa/issues/772)'s, the row [#778](https://github.com/Raketa02/Raketa/issues/778)'s |
 
 ## 3. Each row
 
@@ -514,16 +520,39 @@ client-side lookup while typing. The client re-reads `GET /users/me` before retu
 **What changes.** Every sentence, row, card, sheet, toast, notice, seat label and email that names
 this player, from the next read, and the two initials over a generated poster.
 
+### 3.14 Show me in General
+
+> Added 2026-11-07 by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7. The
+> rules are [the rankings mechanics §10](../rankings/the-mechanics.md#10-show-me-in-general)'s, and its
+> words are [the words §30.8](../matchmaking/the-words.md#308-strangers-requests-and-the-switch)'s.
+
+**What it is.** Whether strangers find this player in the ranking. **On by default.** It is the one
+fact on the tab that says who may read the rest of *On your card*, which is why it is the group's last
+row.
+
+**What opens.** Nothing. The row is the switch, ***Show me in General***, with *Players who don't know
+you can see your place, open your record and send you a request.* under the title, the design
+system's switch (6.12) on the right.
+
+**How the update happens.** `PUT /players/me/ranking-visibility`, at once, with no *Save*. A new event
+goes on the Player profile's stream, and `GET /players/me/profile` returns the switch. A failed write
+puts the switch back and says so.
+
+**What changes.** Turned off, the player's row leaves everybody else's General list, and strangers can
+no longer open the player's record or send a request through the ranking. Friends still see the player
+in Friends, and the places never renumber: the others see #6, then #8, and *of 13* still counts the
+player. The player still sees their own place, on Rankings and on Home's trophy.
+
 ## 4. Considered and left out
 
 | Candidate | Why it is not a row |
 | --- | --- |
-| **Blocked players** | Out of this build. Its read now exists (`GET /blocks`, the caller's own list with names and faces, #586) — but **no client surface makes a block today**; a screen that only lifts blocks nobody can place is a screen for a control that is not there. Comes back with the block control on the record sheet, as one ticket (#587). `DELETE /blocks/{player_id}` exists for it. |
+| **Blocked players** | Out of this build. Its read now exists (`GET /blocks`, the caller's own list with names and faces, #586) — but **no client surface makes a block today**; a screen that only lifts blocks nobody can place is a screen for a control that is not there. Comes back with the block control on the record sheet, as one ticket (#587). `DELETE /blocks/{player_id}` exists for it. **Since #587 it is a row**, in the tab's Account group, and **since 2026-11-07 the only place to unblock**: a block closes the record both ways, so the record has no Unblock ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §8). |
 | **Account** — email, password, deletion | Out of this build. None has a route; erasure is a domain concept (*erasure reaches both sides*) with no act behind it. *Sign out* is not affected: it stays at the foot of the tab as `AccountPanel` draws it today, the only way out of a session. |
 | Alerts and notification preferences | No push channel exists in the app (no `expo-notifications`, no token route). A row of switches that switch nothing is a lie the design system already forbids (*no coming soon*). |
 | A games history | *A history surface, on You* is on the loop's fog map; `GET /games` exists but what a finished game's tail should be is undecided. Not a preference. |
 | Default sport, default mode, language, city | No such facts exist. Play remembers its segment and the sport last picked, per account on the phone (ADR-0188); language was struck as a nationality proxy; there is no city — only a cell (ADR-0174 §1). |
-| Rankings | Nothing on this platform ranks players against each other; the prototype's ladder was cut with the reset. |
+| Rankings | **Retired 2026-11-07.** Raketa ranks players, one ranking per sport sorted by the level itself, in its own spec set ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), [`docs/specs/rankings/`](../rankings/README.md)). It is a page opened from Home, never a row on You; You gains only its switch (§3.14). |
 | Explanatory cards on the read-only screens | *Nobody types a level in*, *what it changes*, *what clears it* were on the first draft and are gone: the passport is the result card and the reliability screen is the record card, and each already says what it is. |
 | Confirms results, Answers challenges, Settles up | Struck or standing down; a row drawn for one would be a nought under a name. |
 

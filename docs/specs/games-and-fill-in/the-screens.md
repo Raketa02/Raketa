@@ -567,6 +567,12 @@ A **Called off** card says why, as the notice and the email do: short at the cut
 cancel with its reason, a payment that didn't come in time. The club's answer, *Kazimierz Padel said
 no* or *… didn't answer in time* (Q105), went with *On request* (Q121).
 
+**The trophy** (Q130, 2026-11-07). Home's header carries a dark pill, ***🏆 #7***, **just left of the
+bell**, which keeps the corner. It reads the reader's place in the sport of their latest result, in
+the Rankings view they last looked at, and has no number when they have no place there. A tap opens
+Rankings ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
+[the rankings screens §1](../rankings/the-screens.md#1-home--the-trophy-rankings-1)).
+
 ## A9. Notifications delivery
 
 | Notice | Push | In-app banner + recent list | Email |

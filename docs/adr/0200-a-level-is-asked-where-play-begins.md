@@ -7,6 +7,10 @@
   amendment of that day** (the mechanics Q129): while a friend's ask for a level is a card on Home,
   that card is drawn instead of *Get your level*, which comes back if the ask is set aside and the
   player is still rated in nothing. A dated note marks the passage.
+- **One more door, 2026-11-07, from [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)**
+  §5 (the mechanics Q130): the Rankings page offers ***Get your {sport} level*** in a sport the reader
+  has no level in. It starts that sport's questionnaire, and the pass returns to Rankings, as every
+  pass ends where it began. Nothing else here moves.
 - **Amends [ADR-0090](0090-onboarding-per-player-checkpoint.md)'s entry gate.** The questionnaire
   leaves onboarding, and with it two destinations: *unfinished run → resume* and *no ratings →
   welcome*. The gate reads the account's profiles (ADR-0185 §3), then *no nickname* (ADR-0199

@@ -11,6 +11,17 @@
   longer a gate a record is admitted under, in either direction. The blocker opens the record to
   unblock, and the blocked person's read is the same byte for byte whether or not they were
   blocked. The other gates and their one refusal stand.
+- **§3's admission and §4–§5's gates amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §8–§9 (the mechanics Q130):
+  - **a new strand**: *the subject is listed on General in at least one sport and not hidden from
+    it* admits **any reader**, with or without a level. It is read through a port this context
+    declares in its own words, beside the three standing strands;
+  - **a block made by either side is a gate again**, on every strand and everywhere, group-mates
+    included, refused with §5's one refusal. ADR-0193 §2's narrowing no longer holds for the record,
+    and the record's own-block fact leaves the contract;
+  - **the record says whether *Add friend* may be offered**, under ADR-0203 §9's request rule.
+
+  The refusal is still one refusal, and the gates about accounts and the reader's own hold are
+  unchanged. Dated notes mark §3, §4 and §5.
 - **The 2026-09-08 sportsmanship amendment's split amended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5** — the
   figure and its count cross to the subject too, `SubjectSportsmanship` has one method,
   `sportsmanship_band` retires from the record and the invariant beside `is_self` with it.
@@ -127,6 +138,12 @@ This is expressed as one port, `PriorDisclosure`, with **three implementations**
 surface that introduces one player to another satisfies the same demand with a fourth row in
 the register, and this context never learns what it is.
 
+> **Amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §9.** The ranking is such a surface. A record is also
+> admitted when **the subject is listed on General in at least one sport and not hidden from it**,
+> for any reader, with or without a level: the ranking already shows that player to everybody, so the
+> record discloses nothing the list hadn't. A player who turns *Show me in General* off, or drops off
+> the list after 90 days, leaves this strand at once; their other strands stand.
+
 ### 4. The gates are re-run live, in the partition of the disclosure
 
 The disclosure entitles a reader to **ask**; the four fail-closed gates decide, on every
@@ -147,6 +164,10 @@ person asking may be shown anybody at all is the surface's own entry rule, and a
 both ways (ADR-0095). A hold that did not reach this route would be a hold ending at the one
 route that remembers what a search already showed.
 
+> **Amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** A block made by either side is among the gates again,
+> on every strand, group-mates included. The ranking's strand (§3's note) reads no partition, as the
+> runner's doesn't, so it runs the gates about accounts, the reader's own hold and the block.
+
 ### 5. One refusal, and it names nothing
 
 Never disclosed, blocked either way, held, and no such player return **the same status and
@@ -158,6 +179,11 @@ invisible to. A payload separating *never disclosed* from *no such player* answe
 id real* about a stranger. A `403` would say *there is somebody here you may not see*, which
 is already more than this refusal is allowed to say — so it is a `404`, and the client draws
 one line: *This record isn't available.*
+
+> **Amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** *Blocked either way* is among the refusals again, on
+> every strand, group-mates included, which supersedes ADR-0193 §2 for the record. A blocked pair's
+> record never opens, so the record carries no *blocked by you* and no Unblock; Unblock lives in You ›
+> Blocked players.
 
 The indistinguishability is asserted **as a sameness** rather than as four statuses
 (`tests/api/test_player_record.py`), because four assertions about four codes all pass on

@@ -18,7 +18,10 @@ ADRs that record what was adopted. These are kept so those citations resolve.
 | [`react_native_expo_production_architecture.md`](react_native_expo_production_architecture.md) | [ADR-0013](../../adr/0013-player-app-runtime-architecture.md) and `frontend_player/docs/architecture.md`, as the 147-section reference the runtime architecture was distilled from |
 | [`rakieta-player-app-documentation-v37.md`](rakieta-player-app-documentation-v37.md) | [ADR-0012](../../adr/0012-player-app-design-system.md) and `frontend_player/docs/design-system.md`, as the prototype the visual contract was read off. Its other citing documents were the removed Now specification set. |
 
-Both are byte-identical to their sources and carry the old `rakieta` brand in their filenames.
+Both are byte-identical to their sources, but for one line, and carry the old `rakieta` brand in
+their filenames. The line is Part 16's *Not a ranking ladder* in
+`rakieta-player-app-documentation-v37.md`, struck through on 2026-11-07 with a pointer to
+[ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), so nobody reads it as a rule.
 The names are load-bearing: the documents that cite them do so by bare filename, so renaming
 breaks the citation with no path left to repair it.
 

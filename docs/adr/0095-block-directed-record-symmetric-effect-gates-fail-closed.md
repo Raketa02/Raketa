@@ -8,6 +8,11 @@
   touches a confirmed booking. A response may carry the reader's own blocks, never anyone's block
   of the reader. No surface is recorded (`blocks.player_blocked` v2). §2's *neither party can ever
   discover which way it went* now holds of the blocked party only.
+- **§7's *rankings … inherit this rule when they arrive* honoured 2026-11-07 by
+  [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §8. Rankings arrive, and a blocked pair, either way round, never sees each other's
+  row in either view; neither opens the other's record, anywhere. The prototype's *"you disappear
+  from each other's … rankings"*, which ADR-0193 called false, holds of the ranking. A dated note
+  marks §7.
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the deck and the candidate index are gone (#579, #580), so §4's two enforcement points — the block set carried in the `SearchContext`, and the re-verify before a search response leaves — and §5's and §6's refusals at the search entry no longer exist. A block is now asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`, over `blocked_pairs_among`). *A gate that cannot be evaluated excludes* holds there, and in the account gates the player record runs, where `NoHoldsExist` still answers the hold. §1–§3 and §8 stand as ADR-0193 amended them.
 
@@ -160,6 +165,10 @@ the single place that question is asked, and every people-listing surface consul
 and rankings do not exist in this repository and are out of scope, but they inherit this rule
 when they arrive rather than each re-deciding it — the prototype has already promised players
 they will.
+
+> **Note — 2026-11-07, [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** Rankings
+> arrived and inherited it: a blocked pair never sees each other's row, in General or Friends, and
+> places don't renumber.
 
 **Backwards — not at all.** A block is forward-looking. It does not reach into a game already
 agreed or a chat already open, because `matches` does not exist to define what cancelling one

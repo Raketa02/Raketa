@@ -1,6 +1,6 @@
 # ADR-0202 — Friends: a request between group-mates, and a game among them that books the court when it is sent
 
-- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129)
+- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130)
 - **Date:** 2026-11-06
 - **Supersedes [ADR-0199](0199-a-player-is-known-by-their-nickname.md)'s line *"there is no
   friendship in Raketa (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
@@ -71,6 +71,19 @@
   Home, one per sport, until they have the level or say *Not now*, and its bell row lives only while
   the card does. It also amends [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §7's Home card,
   which the ask's card is drawn instead of while it is there.
+- **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §8–§9 (the mechanics Q130, PRD
+  [#766](https://github.com/Raketa02/Raketa/issues/766)):
+  - **requests are no longer only between group-mates.** A request is also admitted to anybody
+    listed on General in at least one sport and not hidden from it. One made from the ranking records
+    the ranking and its sport, and reads *Found you in the padel ranking*;
+  - **at most 10 a Warsaw day to people the requester shares no group with**, refused with
+    `daily_request_limit`. Requests to group-mates are never counted;
+  - **the record's Unblock goes.** A block closes the record both ways, so *somebody you blocked
+    shows only Unblock* has no record to stand on. Unblock lives in You › Blocked players;
+  - the header's *Does not decide finding players outside your groups* is decided for the ranking
+    alone. A search by name, suggestions, mutual friends and a feed stay undecided.
+
+  Dated notes mark §1's definition, its record bullet and its Home bullet.
 
 ## Context
 
@@ -140,6 +153,12 @@ A **Friend** is someone from your groups whom you asked and who said yes, or som
 your link and said yes (§3). **Friendships are per pair of players, across all their groups.** A
 friendship survives either of them leaving a group, and ends when either account is deleted.
 
+> **Amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §9.** A Friend may also be somebody found in the ranking: a
+> request is admitted to anybody listed on General in at least one sport and not hidden from it, at
+> most 10 a Warsaw day to people the requester shares no group with. Such a request records **the
+> ranking** and its sport as where it was made, and its Home card reads *Found you in the padel
+> ranking* in place of the group.
+
 **A Friend request** is a request and an answer:
 
 - **Asking.** Nobody asks themselves, and nobody asks while a request of theirs to that person is
@@ -166,7 +185,10 @@ friendship survives either of them leaving a group, and ends when either account
 - **The player record**, which opens from any face: **Add friend** and **Block** side by side at its
   foot. The left button follows the relation: **Request sent ▾** (Cancel request), **Accept**
   (coral), **Friend ✓ ▾** (Remove friend). Somebody you blocked shows only **Unblock**, full width.
-  Your own record has neither.
+  Your own record has neither. *(Amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8–§9: a blocked pair's
+  record never opens, so the record has no Unblock, which lives in You › Blocked players; and
+  **Add friend** shows only when the record says a request may be sent: to a group-mate, or to
+  anybody listed on General and not hidden.)*
 - **The result screen**: a **PLAYED WITH** card between the score and the sportsmanship card, with
   Members' pills, hidden once everybody on it is your friend.
 - **You › Friends**: three tabs, **Friends · Asked you · You asked**, a count on *Asked you* while
@@ -174,7 +196,8 @@ friendship survives either of them leaving a group, and ends when either account
   each with *"8 members · 2 to add"*, opening its Members; and your link (§3).
 - **Home**: a **FRIEND REQUESTS · n** row under the friends game invitations and above Your games,
   each card naming the group the request was made in and its sport, with **Not now** and **Accept**.
-  The row and its title are gone once every request is answered.
+  The row and its title are gone once every request is answered. *(Since 2026-11-07, a request from
+  the ranking names the ranking and its sport in place of the group — ADR-0203 §9.)*
 
 **Notices**: a friend request (pushed once per request, never again for it) and *you're friends*,
 both always on, pushed and kept in the bell. Answering a request on Home clears it from the bell.

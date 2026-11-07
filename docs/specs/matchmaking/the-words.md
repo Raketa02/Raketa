@@ -1007,6 +1007,10 @@ anything else.
 > say what a change costs, counted across the player's groups. The rows marked *(ADR-0201)* say the
 > new words. The lines that drop a kind are §28's panel lines with *in your groups* added; the line
 > under *Either suits me* carries no count.
+>
+> **Amended 2026-11-07** by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7:
+> *On your card* gains *Show me in General*, a switch. Its words are §30.8's, cited in the row marked
+> *(ADR-0203)*.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -1015,6 +1019,7 @@ anything else.
 | The rows, Playing | `Skill passport` · `Player reliability` · `What kind of game` | |
 | The rows, Your games | `Your week` · `Where you play` · `Who you play with` | *(ADR-0200)* the group was `Finding players`; it also titles its screens' eyebrow |
 | The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Nickname` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
+| The switch, On your card | `Show me in General` · `Players who don't know you can see your place, open your record and send you a request.` | *(ADR-0203)* §30.8's, cited; a switch in the row, on by default, after *Nickname* |
 | Live line, passport | `{sport} {level}` joined by ` · ` | one per rating, the registry's order |
 | Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Raketa02/Raketa/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
 | Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
@@ -1110,6 +1115,10 @@ a dropped kind is `no_longer_fits`, whose words `proposalsCopy` already has
 > [#756](https://github.com/Raketa02/Raketa/issues/756)–[#760](https://github.com/Raketa02/Raketa/issues/760),
 > and the public site's [#755](https://github.com/Raketa02/Raketa/issues/755). §29.5's Home card was
 > added 2026-11-07 (the mechanics Q129, PRD [#762](https://github.com/Raketa02/Raketa/issues/762)).
+> §29.1's *Unblock* and §29.2's ranking rows were changed the same day by
+> [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) (the mechanics Q130, PRD
+> [#766](https://github.com/Raketa02/Raketa/issues/766)): a block closes the record both ways, and a
+> request may come from the ranking (§30).
 >
 > **Every sentence of PRD #743's *Solution* is here**, with its singular and zero forms. Rows marked
 > *(a call)* are words the PRD doesn't give and a screen needs, written in while recording it, for the
@@ -1136,7 +1145,8 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | The record, the left button | `Add friend` · `Request sent` ▾ · `Accept` · `Friend` ✓ ▾ | ✓ and ▾ are drawn, never characters (Archivo has no ✓) |
 | The record, the menus | `Cancel request` · `Remove friend` | |
 | The record, removing's confirmation | `Remove {nickname} as a friend?` · `Nobody is told, and your games together stay as they are.` · `Remove friend` · `Keep` | *(a call)* |
-| The record, someone you blocked | `Unblock` | the existing button, full width |
+| The record, someone you blocked | ~~`Unblock`~~ | **retired 2026-11-07** (ADR-0203 §8): a blocked pair's record never opens, so the record has no Unblock. Unblock is in You › Blocked players |
+| The record, a stranger nobody may ask | *no Add friend* | **Block** alone, when the record says no request may be sent (§30, *a call*) |
 | The result screen | `PLAYED WITH` | the eyebrow over the card; its rows are Members' |
 
 ### 29.2 Friend requests
@@ -1147,8 +1157,10 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | The card, who | `{nickname} wants to be your friend` | |
 | The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*) |
 | The card, where (a link) | `Invited you to Raketa` | in place of the group line |
+| The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too |
 | The card, buttons | `Not now` · `Accept` | |
 | Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request |
+| Refused, the daily limit | §30.8's limit sentence, cited | `daily_request_limit`: the 11th request in a Warsaw day to people the requester shares no group with (ADR-0203 §9) |
 | Notice, accepted | `{nickname} said yes — you're friends` | to the requester |
 | Notice, crossed | `You and {nickname} are friends now` | to both, each naming the other *(a call: nobody said yes)* |
 
@@ -1279,3 +1291,112 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | … under *Leave*, Whole court | `You still pay the court. Whoever takes your seat pays you {share} back.` | *(a call)* |
 | Notice, called off | `{nickname} called off {when}` · body: `Nobody paid.` | the games and fill-in mechanics §17.2's *Game called off*, its reason the sender |
 | Notice, a friend left | `{nickname} left your game` | the existing *Someone left your game*, cited; inside the last 24 hours with Split, the cover line |
+
+## 30. Rankings
+
+> Added 2026-11-07 by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), the
+> mechanics Q130, PRD [#766](https://github.com/Raketa02/Raketa/issues/766). The surfaces are
+> [the Rankings spec set](../rankings/README.md): [the mechanics](../rankings/the-mechanics.md) say
+> what happens and [the screens](../rankings/the-screens.md) where each sentence stands. Built by the
+> player app's [#775](https://github.com/Raketa02/Raketa/issues/775)–[#779](https://github.com/Raketa02/Raketa/issues/779).
+>
+> **Every sentence of PRD #766's *Solution* is here.** Rows marked *(a call)* are words written in
+> while recording it, for the product owner to overrule. **No sentence says *her*, *his*, *she* or
+> *he* about another player** (ADR-0096, the glossary's **Gender**). The marks ▲, ▼, — and the trophy
+> are drawn, never characters.
+
+**Placeholders.** `{nickname}` is a player's whole nickname (§15). `{sport}` is the sport's name
+inside a sentence (*padel*). `{place}` is an ordinal: **1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st,
+22nd, 23rd … 101st, 111th, 112th**, so *-st*, *-nd* and *-rd* follow a last digit of 1, 2 and 3 except
+after a ten (11–13, 111–113). `{n}` is a plain number. `{gap}` is a difference of levels with the
+decimal comma and two decimals (*0,04*), and `{level}` a level (*2,71*).
+
+### 30.1 Home
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The trophy, with a place | `#{n}` | *🏆 #7*: the place as a number, beside the drawn trophy |
+| The trophy, no place | *no words* | the drawn trophy alone, still a button |
+
+### 30.2 The header and the switch
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The title | `Rankings` | |
+| Under it | `Competitive games only` | small and grey |
+| The switch | `General` · `Friends` | |
+| The sport pill | the sports' names | the deck's control, cited |
+
+### 30.3 Your place card
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The eyebrow | `YOUR PLACE` | |
+| The place | `{place}` | *7th*, volt |
+| Beside it | `of {n}` | *of 13* |
+| The chip, up | `▲ {n}` · `up this week` | |
+| The chip, down | `▼ {n}` · `down this week` | |
+| The chip, the same | `—` · `no change this week` | |
+| The chip, new | `New` · `this week` | |
+
+### 30.4 The gap line
+
+The line is up to two parts joined by ` · `: the player above, then the player below. Each `{gap}` is
+bold.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Above, one win | `{gap} behind {nickname} · one win closes it` | *0,04 behind Karol · one win closes it* |
+| Above, 2–5 wins | `{gap} behind {nickname} · about {n} wins close it` | *… · about 3 wins close it* |
+| Above, more than 5 | `{gap} behind {nickname}` | the count left out: *0,31 behind Karol* |
+| Above, level | `Level with {nickname} · one win puts you ahead` | *Level with Ewa · one win puts you ahead* |
+| Below | `{nickname} is {gap} behind you` | *Zofia is 0,02 behind you*; left out in last place |
+| Below, level | `{nickname} is level with you` | *(a call)* |
+| First place | `Top of the list` | the whole line |
+| Hidden from General | `Hidden from General` | the whole line, with the switch beside it |
+
+**Whole lines:** *0,04 behind Karol · one win closes it · Zofia is 0,02 behind you* · *0,04 behind Karol
+· about 3 wins close it · Zofia is 0,02 behind you* · *0,31 behind Karol · Zofia is 0,02 behind you* ·
+*Level with Ewa · one win puts you ahead*, then the part about the player below *(a call)* · *Top of the
+list*.
+
+### 30.5 Not listed
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| General, fewer than 5 results | `{n} of 5 games — {m} more competitive {sport} games put you on the list` | *2 of 5 games — 3 more competitive padel games put you on the list*; `{n}` 0–3, `{m}` = 5 − `{n}` |
+| … with 4 | `4 of 5 games — 1 more competitive {sport} game puts you on the list` | the singular; PRD #766 gives the part after the dash, and the count before it stays *(a call)* |
+| General, no level | `No {sport} level yet — get one, then 5 competitive games put you on the list` | with the button below |
+| Friends, a level but no result | `Not ranked in {sport} yet — your first confirmed competitive game puts you on the list` | the brief's line, a call made while ticketing |
+| Friends, no level | `No {sport} level yet — get one, then one competitive game puts you on the list` | with the button below |
+| Both, the button | `Get your {sport} level` | coral; starts that sport's questionnaire, and returns to Rankings |
+| Both, off the list | `Off the list — no competitive {sport} game in 90 days. Your next one puts you back.` | |
+
+### 30.6 Friends
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Listed, no friend listed | `Just you so far` | with **Add friends** |
+| Nobody listed | `None of your friends is ranked in {sport} yet` | with **Add friends**, in the card's place |
+| The button | `Add friends` | opens the Add friends sheet, §29.3's, cited |
+
+### 30.7 The podium and the list
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The podium, a step | `{n}` | the true place |
+| The podium, a player | `{nickname}` · `{level}` | |
+| A row | `{n}` · `{nickname}` · `{level}` | the reader's own row reads `You` |
+| A row's chip | `▲ {n}` · `▼ {n}` · `—` · `New` | no *this week* in a row |
+| A sport nobody is listed in | `Nobody ranked in {sport} yet` | *Nobody ranked in badminton yet* |
+| The jump button | `You · {place}` | *You · 212th* |
+
+### 30.8 Strangers, requests and the switch
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| A request's card and notice, from the ranking | `Found you in the {sport} ranking` | in place of the group line (§29.2) |
+| The record, the limit reached | `You've sent 10 requests to new people today. Try again tomorrow.` | `daily_request_limit` |
+| The record, Block's confirmation | the existing confirmation, with `You can unblock from You › Blocked players.` | *(a call)*: the record's Unblock is gone |
+| You, the switch | `Show me in General` | on by default |
+| You, under it | `Players who don't know you can see your place, open your record and send you a request.` | |
