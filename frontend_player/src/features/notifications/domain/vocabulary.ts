@@ -67,7 +67,7 @@ export type NoticeKind =
   /**
    * *Saturday 10:00 · 1 seat still empty* (#752, #760) — the Split sender's warning a day before the
    * cut-off, opening the game, where the seat's *Invite a friend* and *Open to {group}* are, and
-   * *Call it off*.
+   * *Leave or call it off*, whose sheet calls it off for everyone.
    */
   | 'COVER_WARNING';
 

@@ -504,8 +504,6 @@ describe('the sender’s game in Your games (the screens §6.3)', () => {
 });
 
 describe('a friends game’s details (the screens §9)', () => {
-  const callOffPath = `${bookingPath(BOOKING)}/call-off`;
-
   async function openDetails(friendsGame: Wire['FriendsGameSchema']) {
     stubHomeGames(transport, [homeGame({ friends_game: friendsGame })]);
     stubBooking(
@@ -537,56 +535,6 @@ describe('a friends game’s details (the screens §9)', () => {
     );
 
     expect(await screen.findByLabelText('piotr.s, didn’t answer')).toBeTruthy();
-  });
-
-  it('offers the sender Call it off behind a confirmation, and everyone is told nobody paid', async () => {
-    transport.on('POST', callOffPath, () => noContent());
-    await openDetails(sentGame());
-
-    fireEvent.press(await screen.findByRole('button', { name: COPY.callOff.action }));
-    const sheet = await screen.findByTestId('call-off-sheet');
-    expect(
-      within(sheet).getByText(
-        'Everyone is told, nobody pays, and the court goes back to Bonarka Arena.',
-      ),
-    ).toBeTruthy();
-    expect(transport.requestsTo('POST', callOffPath)).toHaveLength(0);
-
-    fireEvent.press(within(sheet).getByRole('button', { name: COPY.callOff.confirm }));
-
-    await waitFor(() => expect(transport.requestsTo('POST', callOffPath)).toHaveLength(1));
-    await waitFor(() => expect(toasts()).toEqual([[COPY.callOff.done, 'ok']]));
-  });
-
-  it('keeps the game on Keep the game', async () => {
-    await openDetails(sentGame());
-
-    fireEvent.press(await screen.findByRole('button', { name: COPY.callOff.action }));
-    fireEvent.press(
-      within(await screen.findByTestId('call-off-sheet')).getByRole('button', {
-        name: COPY.callOff.keep,
-      }),
-    );
-
-    expect(transport.requestsTo('POST', callOffPath)).toHaveLength(0);
-  });
-
-  it('says the cut-off passed when the server refuses it', async () => {
-    transport.on('POST', callOffPath, () => errorResponse(409, 'cut_off_has_passed'));
-    await openDetails(sentGame());
-
-    fireEvent.press(await screen.findByRole('button', { name: COPY.callOff.action }));
-    const sheet = await screen.findByTestId('call-off-sheet');
-    fireEvent.press(within(sheet).getByRole('button', { name: COPY.callOff.confirm }));
-
-    expect(await within(sheet).findByText(COPY.callOff.refused.cut_off_has_passed)).toBeTruthy();
-  });
-
-  it('offers no Call it off to a friend on the game', async () => {
-    await openDetails(sentGame({ you_are_the_sender: false, can_call_off: false }));
-    await screen.findByTestId('friends-seats');
-
-    expect(screen.queryByRole('button', { name: COPY.callOff.action })).toBeNull();
   });
 
   it('reads You paid the court under the price on the sender’s Whole-court game', async () => {

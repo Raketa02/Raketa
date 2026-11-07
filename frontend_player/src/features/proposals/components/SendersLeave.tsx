@@ -1,9 +1,12 @@
 /**
- * ***Leave the game***, for a friends game's sender before the cut-off — the same door, and a sheet
- * with **two ways** ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's; the friends
- * mechanics §11.2; the screens §9; the words §29.10):
+ * ***Leave or call it off***, a friends game's sender's one way out before the cut-off — the
+ * place of *Leave the game*, and a sheet with **two ways**
+ * ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's; the friends mechanics §11.2;
+ * the screens §9; the words §29.10):
  *
  * ```
+ * [ Leave or call it off ]                                the door, on the details
+ *
  * Before you leave                                       ✕
  * [ Call it off for everyone                          ]
  * [ Everyone is told, nobody pays, and the court goes  ]
@@ -21,12 +24,20 @@
  *   and whoever takes their seat pays them their share back. Done, the player goes back to Home,
  *   as from any booked game they left.
  *
+ * **This is the only door to calling it off** (the product owner, 2026-11-07): #759's separate
+ * *Call it off* beside it went, since both pressed the same call-off, and the door's label names
+ * both ways so a sender looking to call it off — the cover warning's third action — finds it. The
+ * server reads *Call it off* (`can_call_off`) only where it also reads a leave before the cut-off,
+ * so the sender always has this door wherever that button was. **Neither choice asks again**: the
+ * sheet is the deliberate step, as any leave's is.
+ *
  * **Each choice carries its line as the button's gloss** — a column of two answers whose labels
  * alone don't say what choosing one means, `Button`'s own case — and is named aloud with it. Both
  * are `secondary`: neither is the sheet's one primary act, and the sheet is what makes either
  * deliberate. **The sheet is the surface while either is in flight** (`LeaveTheGame`'s shape): the
  * act busy, a refusal said on it with both still there, the door hidden from a listener while it is
- * up. After the cut-off the sender is any late leaver, and the door is `LeaveTheGame`'s.
+ * up. After the cut-off the sender is any late leaver, and the door is `LeaveTheGame`'s — *Leave
+ * the game* again.
  */
 
 import type { UseMutationResult } from '@tanstack/react-query';
@@ -50,7 +61,7 @@ import {
   senderLeftToast,
 } from './friendsGamePresentation';
 import { leaveRefusal } from './homePresentation';
-import { LEAVE_SHEET_CLOSE_LABEL, LEAVE_SHEET_TITLE, LEAVE_THE_GAME } from './leaveSheetCopy';
+import { LEAVE_SHEET_CLOSE_LABEL, LEAVE_SHEET_TITLE } from './leaveSheetCopy';
 
 const COPY = FRIENDS_GAME_COPY.sendersLeave;
 
@@ -103,12 +114,7 @@ export function SendersLeave({
   return (
     <>
       <View ref={door} {...behindOverlay(open)}>
-        <Button
-          label={LEAVE_THE_GAME}
-          variant="secondary"
-          size="lg"
-          onPress={() => setOpen(true)}
-        />
+        <Button label={COPY.door} variant="secondary" size="lg" onPress={() => setOpen(true)} />
       </View>
 
       <BottomSheet
@@ -139,7 +145,7 @@ export function SendersLeave({
               callOff.mutate(undefined, {
                 onSuccess: () => {
                   setOpen(false);
-                  showToast({ message: FRIENDS_GAME_COPY.callOff.done, tone: 'ok' });
+                  showToast({ message: COPY.calledOff, tone: 'ok' });
                 },
               });
             }}

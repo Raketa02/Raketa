@@ -409,7 +409,8 @@ as it does the friend requests row); whether the server takes its row off is #75
 **An empty seat's two new notices open the game** ([#760](https://github.com/Raketa02/Raketa/issues/760),
 on #752's; the friends mechanics §12): `COVER_WARNING` — the Split sender's warning a day before the
 cut-off — lands on the details, where the empty seat's **Invite a friend** and **Open to {group}** and
-the sender's **Call it off** are its three actions; `INVITED_SEAT_TAKEN` — _Someone took that seat
+the sender's **Leave or call it off**, whose sheet holds **Call it off for everyone**, are its three
+actions (2026-11-07: `docs/features/proposals.md`); `INVITED_SEAT_TAKEN` — _Someone took that seat
 first._ — lands on the game too, which a friend no longer invited reads as _This game isn't one of
 yours any more._ unless the server lets them see it. _X left_ is the existing `SOMEONE_LEFT`, opening
 the game, where the seat reads _empty_. A seat invitation is the existing `FRIENDS_GAME_INVITATION`,

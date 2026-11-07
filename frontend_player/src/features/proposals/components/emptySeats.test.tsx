@@ -178,6 +178,12 @@ const departurePath = `${bookingPath(BOOKING)}/departure`;
 
 const INVITE = 'Invite a friend, bartek.l’s seat';
 const OPEN = 'Open to Ogrody, bartek.l’s seat';
+/** The sender's one way out before the cut-off — leaving and calling it off both behind it. */
+const DOOR = 'Leave or call it off';
+
+const beforeTheCutOff: Partial<Wire['BookingDetailsResponse']> = {
+  leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
+};
 
 function stubTheGame(
   friendsGame: Wire['FriendsGameSchema'],
@@ -390,15 +396,19 @@ describe('Invite a friend', () => {
 // ---------------------------------------------------------------------------
 
 describe('the sender leaving (the mechanics §11.2)', () => {
-  const beforeTheCutOff: Partial<Wire['BookingDetailsResponse']> = {
-    leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
-  };
-
   async function openTheSheet(friendsGame: Wire['FriendsGameSchema']) {
     await openDetails(friendsGame, beforeTheCutOff);
-    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
+    fireEvent.press(await screen.findByRole('button', { name: DOOR }));
     return screen.findByTestId('senders-leave-sheet');
   }
+
+  it('gives the sender one door, Leave or call it off, and no Call it off beside it', async () => {
+    await openDetails(withAnEmptySeat(), beforeTheCutOff);
+
+    expect(await screen.findByRole('button', { name: DOOR })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Call it off' })).toBeNull();
+  });
 
   it('offers two ways with Split, each saying what it means for the money', async () => {
     const sheet = await openTheSheet(withAnEmptySeat());
@@ -458,8 +468,21 @@ describe('the sender leaving (the mechanics §11.2)', () => {
     fireEvent.press(within(sheet).getByRole('button', { name: /^Call it off for everyone/ }));
 
     await waitFor(() => expect(transport.requestsTo('POST', callOffPath)).toHaveLength(1));
-    await waitFor(() => expect(toasts()).toEqual([[COPY.callOff.done, 'ok']]));
+    await waitFor(() => expect(toasts()).toEqual([['Called off — nobody paid.', 'ok']]));
     expect(transport.requestsTo('POST', departurePath)).toHaveLength(0);
+  });
+
+  it('says on the sheet when the cut-off came before the call-off reached the server', async () => {
+    transport.on('POST', callOffPath, () => errorResponse(409, 'cut_off_has_passed'));
+    const sheet = await openTheSheet(withAnEmptySeat());
+
+    fireEvent.press(within(sheet).getByRole('button', { name: /^Call it off for everyone/ }));
+
+    expect(
+      await within(sheet).findByText(
+        'The club’s cut-off has passed, so it can’t be called off for free.',
+      ),
+    ).toBeTruthy();
   });
 
   it('says a refused leave on the sheet, the two ways still there', async () => {
@@ -485,17 +508,18 @@ describe('the sender leaving (the mechanics §11.2)', () => {
     expect(screen.getAllByRole('button', { name: LEAVE_THE_GAME }).length).toBeGreaterThan(0);
   });
 
-  it('turns ordinary at the cut-off on the read’s clock, Open and Call it off going with it', async () => {
+  it('turns ordinary at the cut-off on the read’s clock, Open and calling it off going with it', async () => {
     const lastMinute = '2026-10-02T13:59:00Z';
     jest.setSystemTime(Date.parse(lastMinute));
     const seats = await openDetails(withAnEmptySeat(), { ...beforeTheCutOff, read_at: lastMinute });
     expect(await within(seats).findByRole('button', { name: OPEN })).toBeTruthy();
+    expect(screen.getByRole('button', { name: DOOR })).toBeTruthy();
 
     act(() => jest.advanceTimersByTime(2 * 60 * 1000));
 
     await waitFor(() => expect(screen.queryByRole('button', { name: OPEN })).toBeNull());
     expect(screen.getByRole('button', { name: INVITE })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: COPY.callOff.action })).toBeNull();
+    expect(screen.queryByRole('button', { name: DOOR })).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
     expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
     expect(screen.queryByTestId('senders-leave-sheet')).toBeNull();
@@ -508,6 +532,7 @@ describe('the sender leaving (the mechanics §11.2)', () => {
 
     expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
     expect(screen.queryByTestId('senders-leave-sheet')).toBeNull();
+    expect(screen.queryByRole('button', { name: DOOR })).toBeNull();
   });
 });
 
@@ -570,8 +595,8 @@ describe('the notices that open the game (the mechanics §12)', () => {
     game_kind: 'COMPETITIVE',
   });
 
-  it('opens the cover warning on the game, with its three actions', async () => {
-    stubTheGame(withAnEmptySeat());
+  it('opens the cover warning on the game, with its three actions — calling it off behind the door', async () => {
+    stubTheGame(withAnEmptySeat(), beforeTheCutOff);
     await launchSignedIn();
 
     act(() => phone.tap(push('COVER_WARNING')));
@@ -579,7 +604,9 @@ describe('the notices that open the game (the mechanics §12)', () => {
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
     expect(await screen.findByRole('button', { name: INVITE })).toBeTruthy();
     expect(await screen.findByRole('button', { name: OPEN })).toBeTruthy();
-    expect(screen.getByRole('button', { name: COPY.callOff.action })).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: DOOR }));
+    const sheet = await screen.findByTestId('senders-leave-sheet');
+    expect(within(sheet).getByRole('button', { name: /^Call it off for everyone/ })).toBeTruthy();
   });
 
   it('opens the game for somebody who left', async () => {

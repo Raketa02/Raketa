@@ -303,9 +303,9 @@ export function callOffLine(club: string | undefined): string {
   return `Everyone is told, nobody pays, and the court goes back to ${club ?? 'the club'}.`;
 }
 
-/** Why *Call it off* was refused — its own two, else the deck's sentence for the code. */
+/** Why *Call it off for everyone* was refused — its own two, else the deck's sentence for the code. */
 export function callOffRefusal(error: AppError): string {
-  return codeMessage({ ...PROPOSALS_COPY.refused, ...COPY.callOff.refused }, error);
+  return codeMessage({ ...PROPOSALS_COPY.refused, ...COPY.sendersLeave.refused }, error);
 }
 
 // ---------------------------------------------------------------------------

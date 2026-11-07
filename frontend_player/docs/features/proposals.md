@@ -1366,11 +1366,11 @@ one waits (`lineCanRunOut`).
 
 **The details** draw the seats under the facts (`FriendsSeats`: _SEATS_, one row each, _You_ for the
 reader — _In_, _waiting · 21 h 00 left_, _can't make it_, _didn't answer_, _empty_), the pay mode under
-the price (_Split_, _tomek.k paid the court_, the sender's own _You paid the court_ — a call), and the
-sender's **Call it off** until the cut-off, gone at that instant on the read's clock (`CallItOff`): a
-sheet, _Call it off?_, §29.10's line, **Call it off for everyone** and **Keep the game** (a call);
-done, _Called off — nobody paid._ A game called off reads _tomek.k called it off · Nobody paid_
-(`BY_THE_SENDER`, said of the sender as the club's cancel is said of the club).
+the price (_Split_, _tomek.k paid the court_, the sender's own _You paid the court_ — a call). #759
+drew the sender's **Call it off** as a button of its own, behind _Call it off?_ and **Keep the game**;
+since 2026-11-07 calling it off is the sender's leave sheet's alone (#760's, below). Done, _Called off
+— nobody paid._ A game called off reads _tomek.k called it off · Nobody paid_ (`BY_THE_SENDER`, said
+of the sender as the club's cancel is said of the club).
 
 **Not seen on a device**: the send sheet's two cards; the four faces and the ✓ disc at a narrow width
 and with long nicknames; two invitations peeking; a bank confirmation on the Stripe sandbox — four in
@@ -1423,8 +1423,20 @@ pays._; Whole court, _You still pay the court. Whoever takes your seat pays you 
 ticket's Split line, where §29.10 says _Your card stops covering the game. …_**; done, _You left — the
 others play on, and you pay nothing._ or _… You still pay the court._ (calls) and back to Home. The
 sheet is the surface while either is in flight. **After the cut-off the sender is any late leaver**
-(`LeaveTheGame`), and a friend's leave is the ordinary sheet throughout. The standalone **Call it
-off** stays beside it: the cover warning lands here naming it.
+(`LeaveTheGame`), and a friend's leave is the ordinary sheet throughout.
+
+**The sender's one door before the cut-off reads _Leave or call it off_** (the product owner,
+2026-11-07, after #760). #760 had kept #759's separate **Call it off** beside _Leave the game_,
+because the cover warning names calling it off as one of its three actions — but both pressed the
+same `POST /bookings/{id}/call-off`, so the details carried two destructive doors to one act, and the
+screens §9 draws only the leave sheet. **The button went, and the door's label names both ways**:
+a sender the warning brings here looking to call it off finds the word on the screen, and the sheet
+sets the two outcomes side by side, which a separate button would hide. _Leave the game_ comes back
+at the cut-off, with the ordinary late leave. **Neither choice asks again** — the sheet is the
+deliberate step, as for any leave, and the one that costs more (Whole court, play on) never asked.
+Nothing is stranded: the server reads `can_call_off` only on a booked or seat-open game before its
+cut-off and hour, exactly where it reads a leave `BEFORE_THE_CUT_OFF`, so the door is drawn wherever
+the button was.
 
 **Not seen on a device**: two `onDark` buttons side by side under a long nickname, wrapping at a
 narrow width; the glossed answers' two-line lines in the sheet; the picker with one seat pushed over

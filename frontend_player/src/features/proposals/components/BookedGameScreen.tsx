@@ -31,13 +31,13 @@
  *
  * **A friends game** (#759; the friends screens §9) adds its seats under the facts — *In*, *waiting ·
  * 21 h 00 left*, *can't make it*, *didn't answer*, *empty*, *Seat open* (`FriendsSeats`) — its pay
- * mode under the price (*Split* or *tomek.k paid the court*, `moneyRow`), and, for its sender until
- * the club's cut-off, ***Call it off*** behind a confirmation (`CallItOff`). **An empty seat**
- * (#760) offers ***Invite a friend*** to anyone In — the picker with one seat, pushed over these
- * details — and ***Open to {group}*** to the sender before the cut-off, behind its confirmation;
- * the group's name is the composer's (`groupName`), since `groups` reads this feature. **The
- * sender's *Leave the game*** before the cut-off is two ways (`SendersLeave`): *Call it off for
- * everyone* and *Leave · the others play on*; after it, the ordinary late leave.
+ * mode under the price (*Split* or *tomek.k paid the court*, `moneyRow`). **An empty seat** (#760)
+ * offers ***Invite a friend*** to anyone In — the picker with one seat, pushed over these details —
+ * and ***Open to {group}*** to the sender before the cut-off, behind its confirmation; the group's
+ * name is the composer's (`groupName`), since `groups` reads this feature. **The sender's way out
+ * before the cut-off is one door, *Leave or call it off*** (`SendersLeave`), whose sheet is two
+ * ways: *Call it off for everyone* and *Leave · the others play on* — the only place a sender calls
+ * it off (2026-11-07); after the cut-off, the ordinary late leave.
  *
  * ## Three readers, one screen (A4)
  *
@@ -131,7 +131,6 @@ import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../h
 import { useLeaveBooking, useWithdrawFillingAgain } from '../hooks/useLeaveBooking';
 import { usePaymentsToConfirm } from '../hooks/useLiveYeses';
 
-import { CallItOff } from './CallItOff';
 import { CardTag } from './CardTag';
 import { BookingAbsent } from './BookingAbsent';
 import { clubName, detailsDay, othersTitle, refusalMessage } from './deckPresentation';
@@ -264,13 +263,13 @@ function Booked({
   const leaveHere = () => {
     if (here.current) router.back();
   };
-  // A friends game's seats (#759), and the sender's *Call it off* until the cut-off — gone at that
-  // instant on the read's clock, as the server would refuse it.
+  // A friends game's seats (#759), and whether its sender may still call it off — until the
+  // cut-off, gone at that instant on the read's clock, as the server would refuse it.
   const seatsNow = seatsShown(game, now);
   const cutOff = cutOffAhead(game.money, now);
   const callsOff = game.friendsGame?.canCallOff === true && cutOff !== undefined;
-  // The sender's leave before the cut-off is two ways (#760), worded in the pay mode — gone with
-  // *Call it off* at the cut-off on the read's clock.
+  // The sender's leave before the cut-off is two ways (#760), worded in the pay mode, and the one
+  // door to calling it off — the ordinary leave again at the cut-off on the read's clock.
   const twoWayLeave = callsOff ? twoWayLeaveIn(game, leaving?.kind) : undefined;
 
   return (
@@ -389,8 +388,6 @@ function Booked({
           ) : (
             <LeaveTheGame leaving={leaving} act={leave} afterLeaving={() => router.back()} />
           )}
-
-          {callsOff ? <CallItOff bookingId={game.bookingId} club={game.where.name} /> : null}
 
           {rescue !== undefined || !isFillingAgain(game) ? null : (
             <Button
