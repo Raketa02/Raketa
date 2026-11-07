@@ -62,6 +62,12 @@ export { YouScreen } from './components/YouScreen';
 export { YouFriendsScreen } from './components/YouFriendsScreen';
 
 /**
+ * ***Invite a friend*** **into an empty seat** (#760) — `friends`' picker with one seat over a booked
+ * friends game, composed with `proposals`' game and order and `groups`' doors.
+ */
+export { InviteAFriendScreen } from './components/InviteAFriendScreen';
+
+/**
  * Open a tab from a screen inside another one — the tab bar's own move rather than a second one,
  * so a player sent here lands where pressing the column would have put them.
  *

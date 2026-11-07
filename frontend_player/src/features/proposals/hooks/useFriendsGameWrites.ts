@@ -1,5 +1,6 @@
 /**
- * **A friends game's four writes** ([#759](https://github.com/Raketa02/Raketa/issues/759)) — each
+ * **A friends game's writes** ([#759](https://github.com/Raketa02/Raketa/issues/759),
+ * [#760](https://github.com/Raketa02/Raketa/issues/760)) — each
  * a mutation the player waits on, made now or not at all (`networkMode: 'always'`): a send that
  * books a court, or an answer that holds money, landing minutes later would be the wrong game.
  * **None is retried** — the app's rule for a write that moves money.
@@ -10,6 +11,8 @@
  * | `useAcceptFriendsGame` | *Accept* — the card moves to Your games, and the reader's other yeses at the hour go |
  * | `useDeclineFriendsGame` | *Not this time* — the card leaves Home |
  * | `useCallOffFriendsGame` | *Call it off* — the game off, the court the club's again |
+ * | `useInviteIntoASeat` | *Invite a friend* — the seat's invitations, and the friend's Home |
+ * | `useOpenASeat` | *Open to {group}* — the seat a rescue: the details, and every deck and Fill in |
  * | `useConfirmFriendsPayment` | a refused payment confirmed in the app — a send's, held for the send again; an accept's, the accept |
  */
 
@@ -29,6 +32,8 @@ import {
   acceptFriendsGame,
   callOffFriendsGame,
   declineFriendsGame,
+  inviteIntoASeat,
+  openASeat,
   sendFriendsGame,
 } from '../use-cases/friendsGames';
 
@@ -85,6 +90,33 @@ export function useCallOffFriendsGame(bookingId: string) {
     mutationFn: () => callOffFriendsGame(bookingId),
     // The court is the club's again: every deck may deal it, and the game reads *Called off*.
     onSuccess: () => rereadAfterFill(client),
+  });
+}
+
+/**
+ * ***Invite a friend*** into the empty seat `seatOf` — the friend picked is the variable. Done or
+ * refused, the game is read again: the seat's invitations, or the seat no longer empty.
+ */
+export function useInviteIntoASeat(bookingId: string, seatOf: string) {
+  const client = useQueryClient();
+  return useMutation<void, AppError, string>({
+    ...NOW_OR_NOT,
+    mutationFn: (friendId) => inviteIntoASeat(bookingId, seatOf, friendId),
+    onSettled: () => client.invalidateQueries({ queryKey: proposalKeys.booking(bookingId) }),
+  });
+}
+
+/**
+ * ***Open to {group}*** — the seat `seatOf` a rescue: offered in the group's decks and on Fill in, so
+ * every read a rescue changes is read again (`rereadAfterFill`); refused, the game is.
+ */
+export function useOpenASeat(bookingId: string, seatOf: string) {
+  const client = useQueryClient();
+  return useMutation<void, AppError, void>({
+    ...NOW_OR_NOT,
+    mutationFn: () => openASeat(bookingId, seatOf),
+    onSuccess: () => rereadAfterFill(client),
+    onError: () => client.invalidateQueries({ queryKey: proposalKeys.booking(bookingId) }),
   });
 }
 

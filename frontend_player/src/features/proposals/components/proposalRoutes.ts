@@ -71,3 +71,12 @@ export function bookedChatRoute(bookingId: string) {
 export function bookedResultRoute(bookingId: string) {
   return { pathname: '/booking/[bookingId]/result', params: { bookingId } } as const;
 }
+
+/**
+ * ***Invite a friend*** into an empty seat (#760) — the Friends page as a picker with one seat,
+ * pushed over the details, so *back* is the game. The seat rides with the booking: it is what the
+ * invitation is sent under.
+ */
+export function seatInviteRoute(bookingId: string, seatOf: string) {
+  return { pathname: '/booking/[bookingId]/invite', params: { bookingId, seatOf } } as const;
+}

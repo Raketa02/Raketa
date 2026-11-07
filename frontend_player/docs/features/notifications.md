@@ -405,3 +405,12 @@ the existing `GAME_CALLED_OFF`, its reason `BY_THE_SENDER`, opening the game. No
 more than the kinds spelled: Home and the booking are targets the mapping already reads off `opens`.
 **Answering an invitation on Home re-reads the bell** (the shell hands `FriendsGamesRow` the re-read,
 as it does the friend requests row); whether the server takes its row off is #751's gap.
+
+**An empty seat's two new notices open the game** ([#760](https://github.com/Raketa02/Raketa/issues/760),
+on #752's; the friends mechanics §12): `COVER_WARNING` — the Split sender's warning a day before the
+cut-off — lands on the details, where the empty seat's **Invite a friend** and **Open to {group}** and
+the sender's **Call it off** are its three actions; `INVITED_SEAT_TAKEN` — _Someone took that seat
+first._ — lands on the game too, which a friend no longer invited reads as _This game isn't one of
+yours any more._ unless the server lets them see it. _X left_ is the existing `SOMEONE_LEFT`, opening
+the game, where the seat reads _empty_. A seat invitation is the existing `FRIENDS_GAME_INVITATION`,
+opening Home on its card. Again only the kinds were spelled: every one opens `BOOKING` or `HOME`.

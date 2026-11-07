@@ -1,8 +1,10 @@
 /**
  * **A friends game's sentences built from a value** — the send sheet's order and cover line, an
  * invitation's title, clock, line and answers, the sender's seats line and the details' seats
- * ([#759](https://github.com/Raketa02/Raketa/issues/759); the words §29.7–§29.10). The fixed words
- * are `friendsGameCopy.ts`'s.
+ * ([#759](https://github.com/Raketa02/Raketa/issues/759); the words §29.7–§29.10); an empty seat's
+ * invitations, its two actions and their outcomes, and the sender's two ways to leave
+ * ([#760](https://github.com/Raketa02/Raketa/issues/760); §29.9, §29.10). The fixed words are
+ * `friendsGameCopy.ts`'s.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
@@ -19,6 +21,7 @@ import {
   type FriendsGame,
   type FriendsGameInvitation,
   type InvitationFace,
+  type SeatInvitation,
   type SeatShown,
   type SeatsLine,
 } from '../domain/friendsGame';
@@ -303,4 +306,130 @@ export function callOffLine(club: string | undefined): string {
 /** Why *Call it off* was refused — its own two, else the deck's sentence for the code. */
 export function callOffRefusal(error: AppError): string {
   return codeMessage({ ...PROPOSALS_COPY.refused, ...COPY.callOff.refused }, error);
+}
+
+// ---------------------------------------------------------------------------
+// An empty seat (#760)
+// ---------------------------------------------------------------------------
+
+/** ***piotr.s invited · 20 h 00 left*** — a friend invited into an empty seat, under it. */
+export function seatInvitationWords(invitation: SeatInvitation, now: number): string {
+  const who = `${invitation.nickname ?? COPY.seats.aFriend} invited`;
+  const left = countdownWords(countdownOf(invitation.until, now));
+  return left === undefined ? who : `${who}${LINE_JOIN}${left} left`;
+}
+
+/**
+ * *Invite a friend, bartek.l's seat* — an action on an empty seat, aloud, naming whose it was:
+ * *Somebody's* for one the court cannot name. The reader's own seat is never one they act on.
+ */
+export function seatActionSpoken(label: string, person: DeckPerson): string {
+  return `${label}, ${person.name ?? COPY.somebody}’s seat`;
+}
+
+function groupOr(group: string | undefined): string {
+  return group ?? COPY.open.theGroup;
+}
+
+/** ***Open to Ogrody*** (§29.9) — the action, and its confirmation's order. */
+export function openToGroup(group: string | undefined): string {
+  return `Open to ${groupOr(group)}`;
+}
+
+/** ***Open this seat to Ogrody?*** (§29.9) — the confirmation's title. */
+export function openTheSeatTitle(group: string | undefined): string {
+  return `Open this seat to ${groupOr(group)}?`;
+}
+
+/** ***Anyone in Ogrody who fits can take it and pay 25 zł.*** (§29.9) — a stranger can take it. */
+export function openTheSeatLine(group: string | undefined, shareGrosze: number): string {
+  return `Anyone in ${groupOr(group)} who fits can take it and pay ${formatZloty(shareGrosze)}.`;
+}
+
+/** The toast once the seat is open (a call). */
+export function seatOpenedToast(group: string | undefined): string {
+  return `Seat open — anyone in ${groupOr(group)} who fits can take it.`;
+}
+
+/** Why *Open to {group}* was refused — its own two, else the deck's sentence for the code. */
+export function openRefusal(error: AppError): string {
+  return codeMessage({ ...PROPOSALS_COPY.refused, ...COPY.open.refused }, error);
+}
+
+/** ***Invite piotr.s*** — the one-seat picker's order, once a friend is picked; before, greyed. */
+export function inviteLabel(nickname: string | undefined): string {
+  return nickname === undefined ? COPY.seats.invite : `Invite ${nickname}`;
+}
+
+/** The toast once the friend is invited (a call). */
+export function invitedToast(nickname: string): string {
+  return `Invitation sent to ${nickname}.`;
+}
+
+/**
+ * **Why *Invite a friend* was refused** (#752's 409s) — naming the friend picked, never who on the
+ * game a block is with; the seat gone, the game off or under way in the feature's own words;
+ * otherwise the deck's sentence for the code.
+ */
+export function inviteRefusal(
+  error: AppError,
+  invited: { readonly nickname: string; readonly sport: string; readonly startsAt: string },
+): string {
+  const name = invited.nickname;
+  switch (error.code) {
+    case 'already_on_the_game':
+      return `${name} has been asked to this game already. Pick someone else.`;
+    case 'not_a_friend':
+      return `${name} isn’t your friend any more.`;
+    case 'no_level':
+      return `${name} has no ${invited.sport} level yet.`;
+    case 'cannot_play_together':
+      return `${name} can’t play with everyone on this game. Pick someone else.`;
+    case 'friend_plays_then':
+      return `${name} already has a game at ${platformClock(invited.startsAt) ?? ''}.`;
+    case 'friends_week_is_full':
+      return `${name}’s week is full.`;
+    default:
+      return codeMessage({ ...PROPOSALS_COPY.refused, ...COPY.invite.refused }, error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The sender's leave sheet (#760)
+// ---------------------------------------------------------------------------
+
+/**
+ * **Under *Leave · the others play on*** (#760's criteria; §29.10) — what it means for the sender's
+ * money in their pay mode: with Split they stop covering, and a seat still empty at the cut-off
+ * calls the game off; with Whole court they still pay the court, and a taker pays them back.
+ */
+const PLAY_ON: Readonly<
+  Record<PayMode, (at: { cutOff: string | undefined; shareGrosze: number }) => string>
+> = {
+  SPLIT_THE_COST: ({ cutOff }) =>
+    `You pay nothing. Your friends keep the court; a seat still empty ${
+      cutOff === undefined ? `at ${COPY.send.theClubsCutOff}` : `on ${shortMoment(cutOff)}`
+    } calls the game off and nobody pays.`,
+  WHOLE_COURT: ({ shareGrosze }) =>
+    `You still pay the court. Whoever takes your seat pays you ${formatZloty(shareGrosze)} back.`,
+};
+
+export function playOnLine(
+  payMode: PayMode,
+  at: { readonly cutOff: string | undefined; readonly shareGrosze: number },
+): string {
+  return PLAY_ON[payMode](at);
+}
+
+/** The toast once the sender has left and the others play on (a call), by the pay mode. */
+export function senderLeftToast(payMode: PayMode): string {
+  return COPY.sendersLeave.left[payMode];
+}
+
+/**
+ * ***Leave · the others play on. You pay nothing. …*** — one of the sheet's two answers aloud: its
+ * label and the line its gloss draws, which `Button` leaves out of the name.
+ */
+export function glossedAnswerSpoken(label: string, gloss: string): string {
+  return `${label}. ${gloss}`;
 }

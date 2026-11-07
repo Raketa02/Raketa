@@ -18,6 +18,22 @@ import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import {
+  ANIA,
+  ANSWER_BY,
+  GROUP,
+  INVITED,
+  MAGDA,
+  ME,
+  PADEL_RATING,
+  SATURDAY_10,
+  TOMEK,
+  VISA,
+  invitation,
+  invitedGame,
+  seat,
+  sentGame,
+} from '@/test-support/friendsGame';
+import {
   BARTEK,
   BOOKING,
   HOME_READ_AT,
@@ -31,7 +47,6 @@ import {
 } from '@/test-support/home';
 import {
   DEVICES_PATH,
-  GATE_USER,
   HOME_PATH,
   bookingPath,
   launchSignedIn,
@@ -56,114 +71,6 @@ import { FILL_COPY } from './fillCopy';
 import { FRIENDS_GAME_COPY } from './friendsGameCopy';
 
 const COPY = FRIENDS_GAME_COPY;
-
-const PADEL_RATING: Wire['RatingResponse'] = {
-  sport: 'PADEL',
-  mu: 2.71,
-  sigma: 0.62,
-  confidence: 28,
-  range: { low: 2.09, high: 3.33 },
-  band: { name: 'Established', lower: 2.7, upper: 3.8 },
-  status: 'initial_estimate',
-  engine_version: 'racketskill-v3',
-  updated_at: '2026-08-14T09:00:00Z',
-};
-
-const VISA: Wire['SavedMethodSchema'] = { brand: 'visa', last_four: '4312', wallet: null };
-
-const ME = GATE_USER.id;
-const TOMEK = 'f0000000-0000-4000-8000-000000000001';
-const MAGDA = 'f0000000-0000-4000-8000-000000000003';
-const ANIA = 'f0000000-0000-4000-8000-000000000002';
-const INVITED = 'b0000000-0000-4000-8000-000000000012';
-const GROUP = '3f2b8c1e-0000-4000-8000-0000000000d1';
-
-/** Saturday 3 October, 10:00 in Warsaw. */
-const SATURDAY_10 = '2026-10-03T08:00:00Z';
-/** The reader's 24 hours end 1 h 35 after the read. */
-const ANSWER_BY = '2026-10-01T09:35:00Z';
-
-function tile(
-  playerId: string,
-  nickname: string,
-  extra: Partial<Wire['BookedTileSchema']> = {},
-): Wire['BookedTileSchema'] {
-  return {
-    player_id: playerId,
-    is_you: false,
-    nickname,
-    photo_id: null,
-    photo_url: null,
-    level: 2.7,
-    paid: false,
-    friend: true,
-    ...extra,
-  };
-}
-
-/** tomek.k's game, as it reads to the reader still invited: magda.p In, ania.k still to answer. */
-function invitedGame(extra: Partial<Wire['FriendsGameSchema']> = {}): Wire['FriendsGameSchema'] {
-  return {
-    sender_id: TOMEK,
-    sender_nickname: 'tomek.k',
-    you_are_the_sender: false,
-    pay_mode: 'SPLIT_THE_COST',
-    seats: [
-      { player_id: TOMEK, state: 'IN', waiting_until: null },
-      { player_id: ME, state: 'WAITING', waiting_until: ANSWER_BY },
-      { player_id: MAGDA, state: 'IN', waiting_until: null },
-      { player_id: ANIA, state: 'WAITING', waiting_until: '2026-10-01T20:00:00Z' },
-    ],
-    friends_in: 1,
-    friends_seated: 3,
-    your_invitation_until: ANSWER_BY,
-    can_call_off: false,
-    ...extra,
-  };
-}
-
-function invitation(
-  extra: Partial<Wire['HomeFriendsGameSchema']> = {},
-): Wire['HomeFriendsGameSchema'] {
-  return {
-    booking_id: INVITED,
-    pool_id: GROUP,
-    sport: 'PADEL',
-    kind: 'COMPETITIVE',
-    starts_at: SATURDAY_10,
-    club: { id: 'c0000000-0000-4000-8000-000000000033', name: 'Ogrody 33' },
-    court_name: 'Court 3',
-    indoor: true,
-    share_grosze: 2500,
-    sides: {
-      yours: [tile(ME, 'ada', { is_you: true, friend: false }), tile(TOMEK, 'tomek.k')],
-      theirs: [tile(MAGDA, 'magda.p'), tile(ANIA, 'ania.k')],
-    },
-    friends_game: invitedGame(),
-    ...extra,
-  };
-}
-
-/** The reader's own game, sent: piotr.s In, ines.d still to answer, bartek.l can't make it. */
-function sentGame(extra: Partial<Wire['FriendsGameSchema']> = {}): Wire['FriendsGameSchema'] {
-  return {
-    sender_id: ME,
-    sender_nickname: GATE_USER.nickname ?? 'ada',
-    you_are_the_sender: true,
-    pay_mode: 'SPLIT_THE_COST',
-    seats: [
-      { player_id: ME, state: 'IN', waiting_until: null },
-      { player_id: PIOTR, state: 'IN', waiting_until: null },
-      { player_id: INES, state: 'WAITING', waiting_until: '2026-10-01T20:00:00Z' },
-      { player_id: BARTEK, state: 'CANT_MAKE_IT', waiting_until: null },
-    ],
-    friends_in: 1,
-    friends_seated: 3,
-    your_invitation_until: null,
-    can_call_off: true,
-    ...extra,
-  };
-}
 
 let transport: Transport;
 
@@ -546,10 +453,10 @@ describe('the sender’s game in Your games (the screens §6.3)', () => {
       homeGame({
         friends_game: sentGame({
           seats: [
-            { player_id: ME, state: 'IN', waiting_until: null },
-            { player_id: PIOTR, state: 'WAITING', waiting_until: '2026-10-01T20:00:00Z' },
-            { player_id: INES, state: 'WAITING', waiting_until: '2026-10-01T20:00:00Z' },
-            { player_id: BARTEK, state: 'WAITING', waiting_until: '2026-10-01T20:00:00Z' },
+            seat(ME, 'IN'),
+            seat(PIOTR, 'WAITING', { waiting_until: '2026-10-01T20:00:00Z' }),
+            seat(INES, 'WAITING', { waiting_until: '2026-10-01T20:00:00Z' }),
+            seat(BARTEK, 'WAITING', { waiting_until: '2026-10-01T20:00:00Z' }),
           ],
           friends_in: 0,
         }),
@@ -562,11 +469,7 @@ describe('the sender’s game in Your games (the screens §6.3)', () => {
 
   it('draws the ordinary row once every seat is In, and nothing for a friend’s own card', async () => {
     const allIn = sentGame({
-      seats: [ME, PIOTR, INES, BARTEK].map((id) => ({
-        player_id: id,
-        state: 'IN' as const,
-        waiting_until: null,
-      })),
+      seats: [ME, PIOTR, INES, BARTEK].map((id) => seat(id, 'IN')),
       friends_in: 3,
     });
     stubHomeGames(transport, [
@@ -586,10 +489,7 @@ describe('the sender’s game in Your games (the screens §6.3)', () => {
         friends_game: invitedGame({
           pay_mode: 'WHOLE_COURT',
           your_invitation_until: null,
-          seats: [
-            { player_id: TOMEK, state: 'IN', waiting_until: null },
-            { player_id: ME, state: 'IN', waiting_until: null },
-          ],
+          seats: [seat(TOMEK, 'IN'), seat(ME, 'IN')],
         }),
       }),
     ]);
@@ -631,10 +531,7 @@ describe('a friends game’s details (the screens §9)', () => {
   it('reads didn’t answer for a seat whose time ran out', async () => {
     await openDetails(
       sentGame({
-        seats: [
-          { player_id: ME, state: 'IN', waiting_until: null },
-          { player_id: PIOTR, state: 'DIDNT_ANSWER', waiting_until: null },
-        ],
+        seats: [seat(ME, 'IN'), seat(PIOTR, 'DIDNT_ANSWER')],
         friends_seated: 1,
       }),
     );
@@ -702,10 +599,7 @@ describe('a friends game’s details (the screens §9)', () => {
       invitedGame({
         pay_mode: 'WHOLE_COURT',
         your_invitation_until: null,
-        seats: [
-          { player_id: TOMEK, state: 'IN', waiting_until: null },
-          { player_id: ME, state: 'IN', waiting_until: null },
-        ],
+        seats: [seat(TOMEK, 'IN'), seat(ME, 'IN')],
         friends_seated: 1,
       }),
     );

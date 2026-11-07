@@ -26,9 +26,34 @@
  * - **Call it off's confirmation**: *Call it off?*, §29.10's line, **Call it off for everyone** and
  *   **Keep the game**; done, the toast *Called off — nobody paid.*; refused after the cut-off, *The
  *   club's cut-off has passed, so it can't be called off for free.*
+ *
+ * And these, written in by [#760](https://github.com/Raketa02/Raketa/issues/760):
+ *
+ * - **A friend invited into an empty seat**, under it: *piotr.s invited · 20 h 00 left* — the
+ *   read's own example; *A friend invited · …* for one it cannot name.
+ * - **Each action aloud names its seat**: *Invite a friend, bartek.l's seat* — the details may hold
+ *   two empty seats.
+ * - **Opening's close and its outcomes**: *Close — the seat stays as it is*; done, *Seat open —
+ *   anyone in Ogrody who fits can take it.*; refused at the cut-off, *The cut-off has passed, so
+ *   the seat opened to the group on its own.*; *Open to the group* for a group the app cannot name.
+ * - **The one-seat picker's order**: *Invite piotr.s* once a friend is picked, *Invite a friend*
+ *   greyed before; done, *Invitation sent to piotr.s.*; each refusal names the friend picked and
+ *   never who blocked whom (*piotr.s can't play with everyone on this game. Pick someone else.*).
+ *   **Everybody already on the game is left out of it** — the server would refuse each
+ *   `already_on_the_game` — and with nobody left, *Nobody else to invite. Add friends from your
+ *   groups, or send your link.*
+ * - **The sender's leave sheet**: its two choices are the sheet's answers with their lines as
+ *   glosses, its close *Stay in*, as the ordinary sheet's; done, *You left — the others play on,
+ *   and you pay nothing.* (Split) or *You left — the others play on. You still pay the court.*
+ *   (Whole court). **The Split line is #760's acceptance criterion**, *You pay nothing. Your
+ *   friends keep the court; a seat still empty on Fri 10:00 calls the game off and nobody pays.*,
+ *   where §29.10 says *Your card stops covering the game. …* — the ticket's, the later of the two.
  */
 
 import type { PayMode } from '../domain/vocabulary';
+
+/** *Someone took that seat first.* — §29.8's *seat taken*, said where an invitation or opening finds it gone. */
+const SEAT_TAKEN = 'Someone took that seat first.';
 
 export const FRIENDS_GAME_COPY = {
   /** A seat the court can no longer name, in a sentence — never drawn blank. */
@@ -72,7 +97,44 @@ export const FRIENDS_GAME_COPY = {
       CANT_MAKE_IT: 'can’t make it',
       DIDNT_ANSWER: 'didn’t answer',
       EMPTY: 'empty',
+      SEAT_OPEN: 'Seat open',
     },
+    /** A friend invited into an empty seat the read cannot name. */
+    aFriend: 'A friend',
+    invite: 'Invite a friend',
+  },
+  /** *Open to {group}* and its confirmation (§29.9); the sentences with the group are built. */
+  open: {
+    theGroup: 'the group',
+    notYet: 'Not yet',
+    close: 'Close — the seat stays as it is',
+    opening: 'Opening…',
+    refused: {
+      cut_off_has_passed: 'The cut-off has passed, so the seat opened to the group on its own.',
+      seat_just_taken: SEAT_TAKEN,
+    },
+  },
+  /** The one-seat picker's order — *Invite piotr.s*, built — and the refusals it says. */
+  invite: {
+    inviting: 'Inviting…',
+    nobody: 'Nobody else to invite. Add friends from your groups, or send your link.',
+    refused: {
+      seat_just_taken: SEAT_TAKEN,
+      booking_is_called_off: 'This game is called off.',
+      game_has_started: 'This game has started.',
+    },
+  },
+  /** The sender's leave sheet before the cut-off (§29.10), on the ordinary sheet's title and close. */
+  sendersLeave: {
+    callOff: 'Call it off for everyone',
+    playOn: 'Leave · the others play on',
+    calling: 'Calling it off…',
+    leaving: 'Leaving…',
+    /** The toast once the sender has left and the others play on, by the pay mode (a call). */
+    left: {
+      SPLIT_THE_COST: 'You left — the others play on, and you pay nothing.',
+      WHOLE_COURT: 'You left — the others play on. You still pay the court.',
+    } satisfies Readonly<Record<PayMode, string>>,
   },
   callOff: {
     action: 'Call it off',

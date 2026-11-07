@@ -32,6 +32,7 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import BookedGameRoute from '@/app/(app)/(tabs)/booking/[bookingId]/index';
 import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
+import SeatInviteRoute from '@/app/(app)/(tabs)/booking/[bookingId]/invite';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
@@ -157,6 +158,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/booking/[bookingId]/index': BookedGameRoute,
   '(app)/(tabs)/booking/[bookingId]/chat': BookedGameChatRoute,
   '(app)/(tabs)/booking/[bookingId]/result': BookedGameResultRoute,
+  '(app)/(tabs)/booking/[bookingId]/invite': SeatInviteRoute,
   // The recent notices behind Home's bell (#559), under a `notices` segment the shell counts as Home's.
   '(app)/(tabs)/notices': NoticesRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row

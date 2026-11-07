@@ -13,7 +13,12 @@ import { toReliabilityBand } from '@/features/player_record/types';
 import type { components } from '@/generated/schema';
 
 import type { DeckPerson } from '../domain/deck';
-import type { FriendsGame, FriendsGameInvitation } from '../domain/friendsGame';
+import type {
+  FriendsGame,
+  FriendsGameInvitation,
+  FriendsSeat,
+  SeatInvitation,
+} from '../domain/friendsGame';
 import type {
   BookedGame,
   BookedMoney,
@@ -134,8 +139,9 @@ function toBooking(
 
 /**
  * **A friends game's own facts** (#751, #759) — the sender, the pay mode, every seat's state, the
- * reader's own invitation and *Call it off*. A `null` reads as an absent field; so does a server
- * older than it, which sends no field.
+ * reader's own invitation and *Call it off*; and on an empty seat (#752, #760) its name, the friends
+ * invited into it and what the reader may do. A `null`, an empty list or a `false` reads as an
+ * absent field; so does a server older than it, which sends no field.
  */
 export function toFriendsGame(wire: Schemas['FriendsGameSchema']): FriendsGame {
   return {
@@ -143,17 +149,34 @@ export function toFriendsGame(wire: Schemas['FriendsGameSchema']): FriendsGame {
     ...(wire.sender_nickname === null ? {} : { senderNickname: wire.sender_nickname }),
     youAreTheSender: wire.you_are_the_sender,
     payMode: wire.pay_mode,
-    seats: wire.seats.map((seat) => ({
-      playerId: seat.player_id,
-      state: seat.state,
-      ...(seat.waiting_until === null ? {} : { waitingUntil: seat.waiting_until }),
-    })),
+    seats: wire.seats.map(toFriendsSeat),
     friendsIn: wire.friends_in,
     friendsSeated: wire.friends_seated,
     ...(wire.your_invitation_until === null
       ? {}
       : { yourInvitationUntil: wire.your_invitation_until }),
     canCallOff: wire.can_call_off,
+  };
+}
+
+function toFriendsSeat(wire: Schemas['FriendsSeatSchema']): FriendsSeat {
+  const invitations = (wire.invitations ?? []).map(toSeatInvitation);
+  return {
+    playerId: wire.player_id,
+    state: wire.state,
+    ...(wire.waiting_until === null ? {} : { waitingUntil: wire.waiting_until }),
+    ...(wire.seat_of === null || wire.seat_of === undefined ? {} : { seatOf: wire.seat_of }),
+    ...(invitations.length === 0 ? {} : { invitations }),
+    ...(wire.can_invite ? { canInvite: true } : {}),
+    ...(wire.can_open ? { canOpen: true } : {}),
+  };
+}
+
+function toSeatInvitation(wire: Schemas['SeatInvitationSchema']): SeatInvitation {
+  return {
+    playerId: wire.player_id,
+    ...(wire.nickname === null ? {} : { nickname: wire.nickname }),
+    until: wire.until,
   };
 }
 

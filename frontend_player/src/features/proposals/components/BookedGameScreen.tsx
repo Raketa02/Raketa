@@ -30,9 +30,14 @@
  * *held from*, *taken* and *until* run on is the read's (`useReadClock`).
  *
  * **A friends game** (#759; the friends screens §9) adds its seats under the facts — *In*, *waiting ·
- * 21 h 00 left*, *can't make it*, *didn't answer*, *empty* (`FriendsSeats`) — its pay mode under the
- * price (*Split* or *tomek.k paid the court*, `moneyRow`), and, for its sender until the club's
- * cut-off, ***Call it off*** behind a confirmation (`CallItOff`).
+ * 21 h 00 left*, *can't make it*, *didn't answer*, *empty*, *Seat open* (`FriendsSeats`) — its pay
+ * mode under the price (*Split* or *tomek.k paid the court*, `moneyRow`), and, for its sender until
+ * the club's cut-off, ***Call it off*** behind a confirmation (`CallItOff`). **An empty seat**
+ * (#760) offers ***Invite a friend*** to anyone In — the picker with one seat, pushed over these
+ * details — and ***Open to {group}*** to the sender before the cut-off, behind its confirmation;
+ * the group's name is the composer's (`groupName`), since `groups` reads this feature. **The
+ * sender's *Leave the game*** before the cut-off is two ways (`SendersLeave`): *Call it off for
+ * everyone* and *Leave · the others play on*; after it, the ordinary late leave.
  *
  * ## Three readers, one screen (A4)
  *
@@ -107,7 +112,7 @@ import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/sh
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
 import { confirmationOf, paymentToConfirmOn, yesOnRescue } from '../domain/fill';
-import { seatsShown } from '../domain/friendsGame';
+import { seatsShown, twoWayLeaveIn } from '../domain/friendsGame';
 import {
   chatIsOpen,
   completesTheRescue,
@@ -146,8 +151,9 @@ import {
   whereAside,
 } from './homePresentation';
 import { OthersFaces } from './OthersFaces';
-import { bookedChatRoute, bookedResultRoute } from './proposalRoutes';
+import { bookedChatRoute, bookedResultRoute, seatInviteRoute } from './proposalRoutes';
 import { PROPOSALS_COPY } from './proposalsCopy';
+import { SendersLeave } from './SendersLeave';
 import { TakeTheSeat } from './TakeTheSeat';
 
 const COPY = HOME_GAME_COPY.details;
@@ -160,9 +166,14 @@ export interface BookedGameScreenProps {
    * (#557). A booking the read no longer gives this reader is then a seat gone, said so.
    */
   readonly offer?: boolean;
+  /**
+   * The game's group, by name — *Open to Ogrody* on an empty seat (#760). `groups'` read, handed
+   * in by the route; absent while it reads, or for a game with no seat to open (*the group*).
+   */
+  readonly groupName?: string;
 }
 
-export function BookedGameScreen({ bookingId, offer = false }: BookedGameScreenProps) {
+export function BookedGameScreen({ bookingId, offer = false, groupName }: BookedGameScreenProps) {
   const read = useBooking(bookingId);
   const game = read.data ?? undefined;
   const { open } = useOpenedGames();
@@ -186,10 +197,18 @@ export function BookedGameScreen({ bookingId, offer = false }: BookedGameScreenP
     );
   }
 
-  return <Booked game={game} receivedAt={read.dataUpdatedAt} />;
+  return <Booked game={game} receivedAt={read.dataUpdatedAt} groupName={groupName} />;
 }
 
-function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly receivedAt: number }) {
+function Booked({
+  game,
+  receivedAt,
+  groupName,
+}: {
+  readonly game: BookedGame;
+  readonly receivedAt: number;
+  readonly groupName: string | undefined;
+}) {
   const me = useCurrentUser().data?.id;
   const room = useBookingRoom(game.bookingId);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
@@ -248,8 +267,11 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   // A friends game's seats (#759), and the sender's *Call it off* until the cut-off — gone at that
   // instant on the read's clock, as the server would refuse it.
   const seatsNow = seatsShown(game, now);
-  const callsOff =
-    game.friendsGame?.canCallOff === true && cutOffAhead(game.money, now) !== undefined;
+  const cutOff = cutOffAhead(game.money, now);
+  const callsOff = game.friendsGame?.canCallOff === true && cutOff !== undefined;
+  // The sender's leave before the cut-off is two ways (#760), worded in the pay mode — gone with
+  // *Call it off* at the cut-off on the read's clock.
+  const twoWayLeave = callsOff ? twoWayLeaveIn(game, leaving?.kind) : undefined;
 
   return (
     <>
@@ -295,7 +317,23 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
 
             <GameFacts facts={facts} accent={ink} />
 
-            <FriendsSeats seats={seatsNow} now={now} />
+            <FriendsSeats
+              seats={seatsNow}
+              now={now}
+              {...(rescue === undefined
+                ? {
+                    filling: {
+                      bookingId: game.bookingId,
+                      cutOff,
+                      startsAt: game.startsAt,
+                      group: groupName,
+                      shareGrosze: game.money.shareGrosze,
+                      onInvite: (seatOf: string) =>
+                        router.push(seatInviteRoute(game.bookingId, seatOf)),
+                    },
+                  }
+                : {})}
+            />
           </View>
 
           {act === undefined ? null : (
@@ -338,7 +376,17 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
             />
           )}
 
-          {rescue !== undefined || leaving === undefined ? null : (
+          {rescue !== undefined || leaving === undefined ? null : twoWayLeave !== undefined ? (
+            <SendersLeave
+              bookingId={game.bookingId}
+              payMode={twoWayLeave}
+              club={game.where.name}
+              cutOff={cutOff}
+              shareGrosze={game.money.shareGrosze}
+              leave={leave}
+              afterLeaving={() => router.back()}
+            />
+          ) : (
             <LeaveTheGame leaving={leaving} act={leave} afterLeaving={() => router.back()} />
           )}
 

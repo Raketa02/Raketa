@@ -32,3 +32,20 @@ export function parseRescueParams(params: unknown): RescueRoute | undefined {
   const parsed = RescueParams.safeParse(params);
   return parsed.success ? parsed.data : undefined;
 }
+
+const SeatInviteParams = z.object({ bookingId: z.string().uuid(), seatOf: z.string().uuid() });
+
+export interface SeatInviteRoute {
+  readonly bookingId: string;
+  /** The empty seat's name, `friends_game.seats[].seat_of` — whose seat it was. */
+  readonly seatOf: string;
+}
+
+/**
+ * **The one-seat picker's route params** (#760) — the booking, and the empty seat *Invite a friend*
+ * was pressed on. The game itself is read from the booking.
+ */
+export function parseSeatInviteParams(params: unknown): SeatInviteRoute | undefined {
+  const parsed = SeatInviteParams.safeParse(params);
+  return parsed.success ? parsed.data : undefined;
+}

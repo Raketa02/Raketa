@@ -2,7 +2,9 @@
  * **A friends game, sent and answered** — the send sheet's two ways to pay, an invitation on Home,
  * the sender's game in Your games and every seat's state on the details
  * ([#759](https://github.com/Raketa02/Raketa/issues/759), over #751's routes; ADR-0202 §5–§6; the
- * friends mechanics §8–§9, §11.2; the screens §6.1, §6.3, §8, §9).
+ * friends mechanics §8–§9, §11.2; the screens §6.1, §6.3, §8, §9) — and an empty seat's two
+ * actions and the sender's two ways to leave
+ * ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's; the mechanics §10–§11).
  *
  * Pure, and the server's folds are never re-derived: who is In, whose invitation waits and until
  * when, who may call it off, whether the game is whole — all the read's (`friends_game`, #751).
@@ -17,14 +19,50 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import { peopleOn, type DeckCard, type DeckPerson } from './deck';
 import type { YourPayment } from './fill';
 import type { FriendsCardAsk, FriendsCourtPick } from './friendsCard';
-import type { GameKind, PayMode, SeatState } from './vocabulary';
+import type { GameKind, LeavingKind, PayMode, SeatState } from './vocabulary';
 
-/** **One seat of a friends game** — whose it is, where it stands, and while it waits, until when. */
+/**
+ * **A friend invited into an empty seat, still to answer** (#752, #760) — *piotr.s invited · 20 h
+ * left*. The first to accept, or the first rescue, takes the seat.
+ */
+export interface SeatInvitation {
+  readonly playerId: string;
+  /** Absent for an account that can no longer be named. */
+  readonly nickname?: string;
+  /** When their 24 hours end — never past the cut-off, or the start for one made after it. */
+  readonly until: string;
+}
+
+/**
+ * **One seat of a friends game** — whose face it draws, where it stands, and while it waits, until
+ * when; and on an **empty seat** (#752, #760), its name and what the reader may do with it. A field
+ * the read leaves out reads as none: no name, nobody invited, neither action.
+ */
 export interface FriendsSeat {
+  /**
+   * Whose face it draws — the player In, the friend it is held for, or on an empty seat whose it
+   * was; the reader's own, on a seat they are invited into.
+   */
   readonly playerId: string;
   readonly state: SeatState;
   /** With `WAITING`: when the friend's 24 hours end — never past the cut-off. */
   readonly waitingUntil?: string;
+  /** On an empty seat: the name *Invite a friend* and *Open to {group}* are sent under. */
+  readonly seatOf?: string;
+  /** Every friend invited into this empty seat and still to answer, as read. */
+  readonly invitations?: readonly SeatInvitation[];
+  /** *Invite a friend* is the reader's on this seat — the server's word (#752). */
+  readonly canInvite?: boolean;
+  /** *Open to {group}* is the reader's on this seat — the sender's, before the cut-off. */
+  readonly canOpen?: boolean;
+}
+
+/**
+ * **The empty seats** (the words §29.8): a no, a silence, a friend who left, and a seat open to the
+ * group — every state but *In* and *waiting*.
+ */
+export function isEmptySeat(state: SeatState): boolean {
+  return state !== 'IN' && state !== 'WAITING';
 }
 
 /**
@@ -164,18 +202,24 @@ export function seatsLineOf(game: FriendsGameOnCourt, now: number): SeatsLine | 
     friendsIn: friends.friendsIn,
     friendsSeated: friends.friendsSeated,
     waitingFor: shown.filter(({ state }) => state === 'WAITING').map(({ person }) => person),
-    empty: shown.filter(({ state }) => state !== 'IN' && state !== 'WAITING').length,
+    empty: shown.filter(({ state }) => isEmptySeat(state)).length,
   };
 }
 
 /**
  * **One seat on the details** (the screens §9): the person, from the court, and their state at
- * `now` — the sender's first, then each friend's in the card's order.
+ * `now` — the sender's first, then each friend's in the card's order — and on an empty seat its
+ * name, the invitations still waiting at `now`, and the two the server lets the reader press.
  */
 export interface SeatShown {
   readonly person: DeckPerson;
   readonly state: SeatState;
   readonly waitingUntil?: string;
+  readonly seatOf?: string;
+  /** Still to answer at `now` — one whose 24 hours ended on the read's clock is gone. */
+  readonly invitations: readonly SeatInvitation[];
+  readonly canInvite: boolean;
+  readonly canOpen: boolean;
 }
 
 export function seatsShown(game: FriendsGameOnCourt, now: number): readonly SeatShown[] {
@@ -195,8 +239,112 @@ export function seatsShown(game: FriendsGameOnCourt, now: number): readonly Seat
       ...(state === 'WAITING' && seat.waitingUntil !== undefined
         ? { waitingUntil: seat.waitingUntil }
         : {}),
+      ...(seat.seatOf === undefined ? {} : { seatOf: seat.seatOf }),
+      invitations: (seat.invitations ?? []).filter(({ until }) => Date.parse(until) > now),
+      canInvite: seat.canInvite === true,
+      canOpen: seat.canOpen === true,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// An empty seat, and the sender leaving
+// ---------------------------------------------------------------------------
+
+/**
+ * **What the reader may do with a seat at `now`** (the screens §9; the mechanics §10.1, §10.3, §11.3):
+ *
+ * - `invite` — ***Invite a friend***, anyone In, on an empty seat, before the cut-off or after it,
+ *   **until the hour** — read off the clock, as the server would refuse it then;
+ * - `open` — ***Open to {group}***, the sender's, on an empty seat not yet open, **before the
+ *   cut-off**: at that instant every seat still empty opens on its own.
+ *
+ * Whose each is stays the server's (`canInvite`, `canOpen`); this only takes them away at the
+ * instants the read's clock passes. A seat the read does not name (`seatOf`) offers neither — one
+ * whose *waiting* ran out on the clock, until the next read names it.
+ */
+export interface SeatActions {
+  readonly invite: boolean;
+  readonly open: boolean;
+}
+
+export function seatActionsAt(
+  seat: Pick<SeatShown, 'state' | 'seatOf' | 'canInvite' | 'canOpen'>,
+  at: { readonly now: number; readonly cutOff: string | undefined; readonly startsAt: string },
+): SeatActions {
+  if (!isEmptySeat(seat.state) || seat.seatOf === undefined) {
+    return { invite: false, open: false };
+  }
+  const beforeTheCutOff = at.cutOff !== undefined && Date.parse(at.cutOff) > at.now;
+  return {
+    invite: seat.canInvite && Date.parse(at.startsAt) > at.now,
+    open: seat.canOpen && seat.state !== 'SEAT_OPEN' && beforeTheCutOff,
+  };
+}
+
+/**
+ * **Whether the reader may open some seat of the game to its group** — the server's word on any
+ * seat. Only then is the group's name read, for *Open to {group}*.
+ */
+export function anySeatToOpen(game: Pick<FriendsGameOnCourt, 'friendsGame'>): boolean {
+  return game.friendsGame?.seats.some((seat) => seat.canOpen === true) ?? false;
+}
+
+/**
+ * **What the picker with one seat needs** (#760): the game's group and sport, whose friends it
+ * lists; the hour, which a refusal may name; and **everybody already on the game**, whom it leaves
+ * out — the faces the court draws, whoever each seat was held for (a no, a silence, a friend who
+ * left), and every friend invited into a seat. The server refuses each of them
+ * `already_on_the_game`; leaving them out spares the refusal.
+ */
+export interface SeatToInvite {
+  readonly bookingId: string;
+  readonly seatOf: string;
+  readonly groupId: string;
+  readonly sport: Sport;
+  readonly startsAt: string;
+  readonly onTheGame: readonly string[];
+}
+
+export function seatToInviteOf(
+  game: FriendsGameOnCourt & {
+    readonly bookingId: string;
+    readonly groupId: string;
+    readonly sport: Sport;
+    readonly startsAt: string;
+  },
+  seatOf: string,
+): SeatToInvite {
+  const seats = game.friendsGame?.seats ?? [];
+  const everybody = [
+    ...peopleOn(game).map((person) => person.playerId),
+    ...seats.map((seat) => seat.playerId),
+    ...seats.flatMap((seat) => (seat.invitations ?? []).map((one) => one.playerId)),
+  ];
+  return {
+    bookingId: game.bookingId,
+    seatOf,
+    groupId: game.groupId,
+    sport: game.sport,
+    startsAt: game.startsAt,
+    onTheGame: [...new Set(everybody)],
+  };
+}
+
+/**
+ * **The pay mode the sender's two-way leave is worded in** — before the cut-off (the mechanics
+ * §11.2; the screens §9) their sheet offers two ways, *Call it off for everyone* and *Leave · the
+ * others play on*, the second's line by the pay mode. Nothing after the cut-off, where the sender is any late leaver (§11.3), for a
+ * friend (the ordinary sheet, §11.1), and while *Call it off* is not the reader's — the server's
+ * word for both.
+ */
+export function twoWayLeaveIn(
+  game: Pick<FriendsGameOnCourt, 'friendsGame'>,
+  leaving: LeavingKind | undefined,
+): PayMode | undefined {
+  const friends = game.friendsGame;
+  if (friends === undefined || !friends.youAreTheSender || !friends.canCallOff) return undefined;
+  return leaving === 'BEFORE_THE_CUT_OFF' ? friends.payMode : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -345,6 +493,31 @@ export function answerRefusalOf(code: string | undefined): AnswerRefusal {
     case 'booking_is_called_off':
     case 'game_has_started':
     case 'booking_not_found':
+      return 'gone';
+    default:
+      return 'say';
+  }
+}
+
+/**
+ * **What a refused *Invite a friend* or *Open to {group}* does** (#752's 409s):
+ *
+ * - `gone` — the seat is no longer there to fill: taken, the game off or under way, no longer the
+ *   reader's, or — opening — the cut-off came and opened it already. The game is read again, and
+ *   the sentence said;
+ * - `say` — the sentence where the act was pressed, the act still there: the friend picked is on the
+ *   game already, no friend any more, has no Level, can't play with somebody on it, plays then, or
+ *   has a full week.
+ */
+export type SeatWriteRefusal = 'gone' | 'say';
+
+export function seatWriteRefusalOf(code: string | undefined): SeatWriteRefusal {
+  switch (code) {
+    case 'seat_just_taken':
+    case 'booking_is_called_off':
+    case 'game_has_started':
+    case 'booking_not_found':
+    case 'cut_off_has_passed':
       return 'gone';
     default:
       return 'say';

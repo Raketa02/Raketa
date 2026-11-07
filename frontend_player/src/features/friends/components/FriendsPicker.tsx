@@ -32,6 +32,9 @@
  *   the group the picker was opened from, whose picker their answer opens.
  *   It stays busy until the list has re-read, so *Asked* is the server's answer, never a guess.
  * - **No friends at all**: the group's empty card (play 55), handed in, since it is `groups'`.
+ * - **With one seat** ([#760](https://github.com/Raketa02/Raketa/issues/760)) — *Invite a friend*
+ *   on a booked friends game's empty seat — `seats` is 1, and **everybody already on the game is
+ *   left out** (`leaveOut`), whom the server would refuse; with nobody left, the composer's empty.
  *
  * **The picks are the composer's** (`picked`, `onToggle`): they become the court's seats on Done,
  * which is the group page's, and a list read again leaves them where they were.
@@ -73,6 +76,8 @@ export interface FriendsPickerProps {
   readonly seats: number;
   /** No friends yet: the group's empty card (play 55), the composer's. */
   readonly empty: ReactNode;
+  /** Friends not drawn at all — those already on the game a seat is filled for (#760). */
+  readonly leaveOut?: readonly string[];
 }
 
 export function FriendsPicker({
@@ -82,13 +87,14 @@ export function FriendsPicker({
   onToggle,
   seats,
   empty,
+  leaveOut = [],
 }: FriendsPickerProps) {
   const read = useFriendsIn(sport);
-  const friends = read.data;
 
-  if (friends === undefined) {
+  if (read.data === undefined) {
     return <ListReading read={read} reading={COPY.reading} />;
   }
+  const friends = read.data.filter((friend) => !leaveOut.includes(friend.playerId));
   if (friends.length === 0) return <>{empty}</>;
 
   const full = picked.length >= seats;

@@ -1375,3 +1375,57 @@ done, _Called off — nobody paid._ A game called off reads _tomek.k called it o
 **Not seen on a device**: the send sheet's two cards; the four faces and the ✓ disc at a narrow width
 and with long nicknames; two invitations peeking; a bank confirmation on the Stripe sandbox — four in
 a row on a card that asks for every one.
+
+## A friends game's empty seats, and leaving it (#760)
+
+[#760](https://github.com/Raketa02/Raketa/issues/760) (the friends screens §9; the mechanics §10–§12;
+the words §29.8–§29.10; over #752's routes and its re-emitted document) gives an empty seat its two
+acts and the sender two ways to leave. The rules are `domain/friendsGame.ts`: **who may do what is
+the read's** (`friends_game.seats[]`: `seat_of`, `invitations`, `can_invite`, `can_open`), and the
+phone only takes an act away at the instant its read's clock passes (`seatActionsAt`) — _Open_ at
+the cut-off, _Invite_ at the hour — as the server would refuse it then.
+
+**An empty seat** — _can't make it_, _didn't answer_, _empty_, and the new _Seat open_ — draws under
+its row on the details' dark ground (`FriendsSeats`) every friend still invited into it, _karol.t
+invited · 20 h 00 left_ (the read's own example), and the acts as the dark card's `onDark` buttons at
+`sm`, each named aloud with its seat (_Invite a friend, bartek.l's seat_), since the details may hold
+two. **Invite a friend** is anyone In's, before the cut-off and after it; it pushes the picker with one
+seat (below). **Open to {group}** is the sender's before the cut-off, behind `OpenTheSeat`'s
+confirmation: _Open this seat to Ogrody?_ · _Anyone in Ogrody who fits can take it and pay 28 zł._ ·
+**Open to Ogrody** · **Not yet** (§29.9). Done, the toast _Seat open — anyone in Ogrody who fits can
+take it._ and the details read _Seat open_; a refusal that leaves nothing to open — taken first, the
+game off or under way, the cut-off come — is the toast and the game read again (`seatWriteRefusalOf`).
+**The group's name is the route's to read** (`groups`' `useGroupName`, which imports this feature),
+and only while the read lets the reader open a seat (`useSeatOpeningGroup`), so no other reader's
+details cost a group read; until it answers, _Open to the group_.
+
+**The picker with one seat** is the route `booking/[bookingId]/invite` (`seatInviteRoute`, its params
+checked by `parseSeatInviteParams`), under Home's `booking` segment so _back_ is the game. The shell
+composes it (`InviteAFriendScreen`): `friends`' page and picker with `seats` 1, around this feature's
+`SeatInvite` — the game read off the details' own cache, `BookingAbsent`'s four states while it is
+absent — and `InviteOrder` at the page's foot. **Everybody already on the game is left out** of the
+list (`seatToInviteOf`: the court's faces, whose each seat was, every friend invited into one), whom
+the server would refuse `already_on_the_game`; with nobody left, _Nobody else to invite. Add friends
+from your groups, or send your link._ (a call). The order names the pick, **Invite karol.t**, greyed
+_Invite a friend_ before (a call). Done, back to the game with _Invitation sent to karol.t._; a refusal
+about the friend is said above the order, naming the friend and never who on the game a block is
+with, the pick still there to change; a seat taken first, or the game off or under way, is the toast
+and back to the game. The invitation itself is the friend's FRIENDS GAME card on Home, as any (#759).
+
+**The sender's Leave the game, before the cut-off, is two ways** (`SendersLeave`; `sendersLeave` reads
+it off the pay mode, the leaving's kind and the server's _Call it off_): the ordinary sheet's title and
+_Stay in_, and two `secondary` answers whose lines are their glosses (`Button`'s case for a column of
+answers the labels alone don't explain), named aloud with them. **Call it off for everyone** —
+§29.10's _Everyone is told, nobody pays, and the court goes back to Ogrody 33._ — is the call-off, the
+details then reading _Called off_. **Leave · the others play on** is the departure: Split, _You pay
+nothing. Your friends keep the court; a seat still empty on Fri 10:00 calls the game off and nobody
+pays._; Whole court, _You still pay the court. Whoever takes your seat pays you 25 zł back._ — **the
+ticket's Split line, where §29.10 says _Your card stops covering the game. …_**; done, _You left — the
+others play on, and you pay nothing._ or _… You still pay the court._ (calls) and back to Home. The
+sheet is the surface while either is in flight. **After the cut-off the sender is any late leaver**
+(`LeaveTheGame`), and a friend's leave is the ordinary sheet throughout. The standalone **Call it
+off** stays beside it: the cover warning lands here naming it.
+
+**Not seen on a device**: two `onDark` buttons side by side under a long nickname, wrapping at a
+narrow width; the glossed answers' two-line lines in the sheet; the picker with one seat pushed over
+the details.

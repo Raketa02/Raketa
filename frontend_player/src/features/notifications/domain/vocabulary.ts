@@ -58,7 +58,18 @@ export type NoticeKind =
   /** *ania.k can't make it* (#751, #759) — to the sender, opening the game, where the seat reads empty. */
   | 'CANT_MAKE_IT'
   /** *ania.k didn't answer* (#751, #759) — to the sender, opening the game, as *can't make it* does. */
-  | 'DIDNT_ANSWER';
+  | 'DIDNT_ANSWER'
+  /**
+   * *Someone took that seat first.* (#752, #760) — to a friend whose invitation into an empty seat
+   * ended because somebody else took it, opening the game.
+   */
+  | 'INVITED_SEAT_TAKEN'
+  /**
+   * *Saturday 10:00 · 1 seat still empty* (#752, #760) — the Split sender's warning a day before the
+   * cut-off, opening the game, where the seat's *Invite a friend* and *Open to {group}* are, and
+   * *Call it off*.
+   */
+  | 'COVER_WARNING';
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
@@ -89,6 +100,8 @@ export const NOTICE_KINDS = [
   'FRIENDS_GAME_INVITATION',
   'CANT_MAKE_IT',
   'DIDNT_ANSWER',
+  'INVITED_SEAT_TAKEN',
+  'COVER_WARNING',
 ] as const satisfies readonly NoticeKind[];
 
 /**

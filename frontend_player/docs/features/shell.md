@@ -223,3 +223,10 @@ and the Add friends sheet's group tiles and door into Members (`groups`' `MyGrou
 `groupMembersRoute`) — each of those features draws a `friends` control, so `friends` importing them
 back would be a dependency both ways. `you/friends` is a pushed screen. The record of the page is
 [`friends.md`](friends.md).
+
+**_Invite a friend_ into an empty seat is composed here** ([#760](https://github.com/Raketa02/Raketa/issues/760)):
+`InviteAFriendScreen`, at `booking/[bookingId]/invite`, mounts `friends`' page and its picker with one
+seat around `proposals`' `SeatInvite` (the game, and who is on it) and `InviteOrder` (the order at the
+foot), with `groups`' doors in the Add friends sheet — three features, each read by another, so
+neither can draw the rest. The pick is the screen's own; the record of it is
+[`proposals.md`](proposals.md).

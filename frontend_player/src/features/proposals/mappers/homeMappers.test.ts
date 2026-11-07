@@ -636,8 +636,14 @@ describe('a friends game (#759)', () => {
     you_are_the_sender: false,
     pay_mode: 'SPLIT_THE_COST',
     seats: [
-      { player_id: 'tomek', state: 'IN', waiting_until: null },
-      { player_id: 'me', state: 'WAITING', waiting_until: '2026-10-02T08:00:00Z' },
+      { player_id: 'tomek', state: 'IN', waiting_until: null, can_invite: false, can_open: false },
+      {
+        player_id: 'me',
+        state: 'WAITING',
+        waiting_until: '2026-10-02T08:00:00Z',
+        can_invite: false,
+        can_open: false,
+      },
     ],
     friends_in: 0,
     friends_seated: 1,
@@ -736,5 +742,73 @@ describe('a friends game (#759)', () => {
     expect(read.games[0]?.friendsGame).not.toHaveProperty('senderNickname');
     expect(read.games[0]?.friendsGame).not.toHaveProperty('yourInvitationUntil');
     expect(read.games[1]).not.toHaveProperty('friendsGame');
+  });
+
+  it('reads an empty seat’s name, its invitations and what the reader may do (#760)', () => {
+    const read = toHome(
+      home({
+        games: [
+          homeGame({
+            friends_game: friendsGame({
+              seats: [
+                {
+                  player_id: 'tomek',
+                  state: 'IN',
+                  waiting_until: null,
+                  can_invite: false,
+                  can_open: false,
+                },
+                {
+                  player_id: 'ania',
+                  state: 'CANT_MAKE_IT',
+                  waiting_until: null,
+                  seat_of: 'ania',
+                  invitations: [
+                    {
+                      player_id: 'piotr',
+                      nickname: 'piotr.s',
+                      until: '2026-10-02T06:00:00Z',
+                      invited_by_you: true,
+                    },
+                    {
+                      player_id: 'kuba',
+                      nickname: null,
+                      until: '2026-10-02T07:00:00Z',
+                      invited_by_you: false,
+                    },
+                  ],
+                  can_invite: true,
+                  can_open: true,
+                },
+                {
+                  player_id: 'ewa',
+                  state: 'SEAT_OPEN',
+                  waiting_until: null,
+                  seat_of: 'ewa',
+                  can_invite: true,
+                  can_open: false,
+                },
+              ],
+            }),
+          }),
+        ],
+      }),
+    );
+
+    expect(read.games[0]?.friendsGame?.seats).toEqual([
+      { playerId: 'tomek', state: 'IN' },
+      {
+        playerId: 'ania',
+        state: 'CANT_MAKE_IT',
+        seatOf: 'ania',
+        invitations: [
+          { playerId: 'piotr', nickname: 'piotr.s', until: '2026-10-02T06:00:00Z' },
+          { playerId: 'kuba', until: '2026-10-02T07:00:00Z' },
+        ],
+        canInvite: true,
+        canOpen: true,
+      },
+      { playerId: 'ewa', state: 'SEAT_OPEN', seatOf: 'ewa', canInvite: true },
+    ]);
   });
 });

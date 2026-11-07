@@ -32,6 +32,8 @@
  * | `postInvitationAcceptance` | `POST /bookings/{id}/invitation/acceptance` — *Accept* a friends game (#751, #759) |
  * | `postInvitationDecline` | `POST /bookings/{id}/invitation/decline` — *Not this time* on a friends game (#751, #759) |
  * | `postCallOff` | `POST /bookings/{id}/call-off` — the sender's *Call it off*, before the cut-off (#751, #759) |
+ * | `postSeatInvitation` | `POST /bookings/{id}/seats/{seat_of}/invitations` — *Invite a friend* into an empty seat (#752, #760) |
+ * | `postSeatOpening` | `POST /bookings/{id}/seats/{seat_of}/opening` — the sender's *Open to {group}*, before the cut-off (#752, #760) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -368,6 +370,45 @@ export function postCallOff(bookingId: string): Promise<void> {
   return httpRequest<void>({
     method: 'POST',
     path: `${bookingPath(bookingId)}/call-off`,
+    authenticated: true,
+  });
+}
+
+function seatPath(bookingId: string, seatOf: string): string {
+  return `${bookingPath(bookingId)}/seats/${encodeURIComponent(seatOf)}`;
+}
+
+/**
+ * ***Invite a friend*** into an empty seat (#752, #760) — anybody In, one of their own friends, before
+ * the cut-off or after it: the friend's invitation is a FRIENDS GAME card on Home for 24 hours. The
+ * first to accept, or the first rescue, takes the seat. `seat_just_taken`, `already_on_the_game`,
+ * `not_a_friend`, `no_level`, `cannot_play_together`, `friend_plays_then`, `friends_week_is_full`,
+ * `booking_is_called_off`, `game_has_started` (409); `booking_not_found` (404). Not retried, as
+ * every write is; a second invitation of the same friend is refused `already_on_the_game`.
+ */
+export function postSeatInvitation(
+  bookingId: string,
+  seatOf: string,
+  body: Schemas['SeatInvitationRequest'],
+): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${seatPath(bookingId, seatOf)}/invitations`,
+    authenticated: true,
+    body,
+  });
+}
+
+/**
+ * ***Open to {group}*** (#752, #760) — the sender puts an empty seat to the group before the cut-off:
+ * a rescue from then on. Opened already, nothing more is recorded. `seat_just_taken`,
+ * `cut_off_has_passed`, `booking_is_called_off`, `game_has_started` (409); `booking_not_found` (404)
+ * for a game the reader did not send or no longer covers.
+ */
+export function postSeatOpening(bookingId: string, seatOf: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${seatPath(bookingId, seatOf)}/opening`,
     authenticated: true,
   });
 }

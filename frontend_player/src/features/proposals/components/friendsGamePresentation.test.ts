@@ -11,8 +11,20 @@ import {
   gameOf,
   invitationClock,
   invitationLine,
+  inviteLabel,
+  inviteRefusal,
+  invitedToast,
+  openRefusal,
+  openTheSeatLine,
+  openTheSeatTitle,
+  openToGroup,
   payModeWords,
+  playOnLine,
+  seatActionSpoken,
+  seatInvitationWords,
+  seatOpenedToast,
   seatStateWords,
+  senderLeftToast,
   seatsLineSpoken,
   seatsLineWords,
   sendLabel,
@@ -169,6 +181,17 @@ describe('the sender’s game and the details', () => {
     expect(seatStateWords({ state: 'CANT_MAKE_IT' }, NOW)).toBe('can’t make it');
     expect(seatStateWords({ state: 'DIDNT_ANSWER' }, NOW)).toBe('didn’t answer');
     expect(seatStateWords({ state: 'EMPTY' }, NOW)).toBe('empty');
+    expect(seatStateWords({ state: 'SEAT_OPEN' }, NOW)).toBe('Seat open');
+  });
+
+  it('words a friend invited into an empty seat, counting down, and one unnamed', () => {
+    const until = '2026-10-02T04:00:00Z';
+    expect(seatInvitationWords({ playerId: 'p', nickname: 'piotr.s', until }, NOW)).toBe(
+      'piotr.s invited · 20 h 00 left',
+    );
+    expect(seatInvitationWords({ playerId: 'p', until }, NOW)).toBe(
+      'A friend invited · 20 h 00 left',
+    );
   });
 
   it('reads the pay mode', () => {
@@ -178,5 +201,86 @@ describe('the sender’s game and the details', () => {
     expect(
       payModeWords({ senderNickname: 'tomek.k', youAreTheSender: true, payMode: 'WHOLE_COURT' }),
     ).toBe('You paid the court');
+  });
+});
+
+describe('an empty seat (the words §29.9)', () => {
+  const bartek: DeckPerson = { playerId: 'b', name: 'bartek.l', isYou: false, isIn: false };
+
+  it('names the group it opens to, or the group for one the read cannot name', () => {
+    expect(openToGroup('Ogrody')).toBe('Open to Ogrody');
+    expect(openToGroup(undefined)).toBe('Open to the group');
+  });
+
+  it('says what opening means, behind its confirmation', () => {
+    expect(openTheSeatTitle('Ogrody')).toBe('Open this seat to Ogrody?');
+    expect(openTheSeatLine('Ogrody', 2500)).toBe(
+      'Anyone in Ogrody who fits can take it and pay 25 zł.',
+    );
+    expect(openTheSeatLine(undefined, 2500)).toBe(
+      'Anyone in the group who fits can take it and pay 25 zł.',
+    );
+    expect(seatOpenedToast('Ogrody')).toBe('Seat open — anyone in Ogrody who fits can take it.');
+  });
+
+  it('names whose seat each action is for, aloud', () => {
+    expect(seatActionSpoken('Invite a friend', bartek)).toBe('Invite a friend, bartek.l’s seat');
+    expect(seatActionSpoken('Open to Ogrody', { ...bartek, name: undefined })).toBe(
+      'Open to Ogrody, Somebody’s seat',
+    );
+  });
+
+  it('says why opening was refused', () => {
+    expect(openRefusal(refused('cut_off_has_passed'))).toBe(
+      'The cut-off has passed, so the seat opened to the group on its own.',
+    );
+    expect(openRefusal(refused('seat_just_taken'))).toBe('Someone took that seat first.');
+  });
+});
+
+describe('inviting a friend into an empty seat', () => {
+  it('names the friend picked on the order, and in the toast', () => {
+    expect(inviteLabel(undefined)).toBe('Invite a friend');
+    expect(inviteLabel('piotr.s')).toBe('Invite piotr.s');
+    expect(invitedToast('piotr.s')).toBe('Invitation sent to piotr.s.');
+  });
+
+  it.each([
+    ['seat_just_taken', 'Someone took that seat first.'],
+    ['already_on_the_game', 'piotr.s has been asked to this game already. Pick someone else.'],
+    ['not_a_friend', 'piotr.s isn’t your friend any more.'],
+    ['no_level', 'piotr.s has no padel level yet.'],
+    ['cannot_play_together', 'piotr.s can’t play with everyone on this game. Pick someone else.'],
+    ['friend_plays_then', 'piotr.s already has a game at 10:00.'],
+    ['friends_week_is_full', 'piotr.s’s week is full.'],
+    ['booking_is_called_off', 'This game is called off.'],
+    ['game_has_started', 'This game has started.'],
+  ])('says %s in a sentence', (code, sentence) => {
+    expect(
+      inviteRefusal(refused(code), { nickname: 'piotr.s', sport: 'padel', startsAt: SATURDAY_10 }),
+    ).toBe(sentence);
+  });
+});
+
+describe('the sender’s leave sheet (the mechanics §11.2)', () => {
+  it('says what leaving and letting the others play on means for the sender’s money', () => {
+    expect(playOnLine('SPLIT_THE_COST', { cutOff: CUT_OFF, shareGrosze: 2500 })).toBe(
+      'You pay nothing. Your friends keep the court; a seat still empty on Fri 10:00 calls the game off and nobody pays.',
+    );
+    expect(playOnLine('WHOLE_COURT', { cutOff: CUT_OFF, shareGrosze: 2500 })).toBe(
+      'You still pay the court. Whoever takes your seat pays you 25 zł back.',
+    );
+    expect(playOnLine('SPLIT_THE_COST', { cutOff: undefined, shareGrosze: 2500 })).toBe(
+      'You pay nothing. Your friends keep the court; a seat still empty at the club’s cut-off calls the game off and nobody pays.',
+    );
+  });
+
+  it('says it once done, by the pay mode', () => {
+    expect(senderLeftToast('SPLIT_THE_COST')).toBe(
+      'You left — the others play on, and you pay nothing.',
+    );
+    expect(senderLeftToast('WHOLE_COURT')).toBe(
+      'You left — the others play on. You still pay the court.',
+    );
   });
 });

@@ -172,6 +172,7 @@ export type PayMode = 'SPLIT_THE_COST' | 'WHOLE_COURT';
 /**
  * **Where one seat of a friends game stands, for everybody on it** (#751, #759; the words §29.8) —
  * *In*, *waiting · 21 h left*, *can't make it*, *didn't answer*, *empty* (a friend who accepted and
- * left, #752). The wire's own spelling.
+ * left, #752), *Seat open* (open to the group: a rescue anybody who fits may take, #752, #760). The
+ * last four are the **empty seats**. The wire's own spelling.
  */
-export type SeatState = 'IN' | 'WAITING' | 'CANT_MAKE_IT' | 'DIDNT_ANSWER' | 'EMPTY';
+export type SeatState = 'IN' | 'WAITING' | 'CANT_MAKE_IT' | 'DIDNT_ANSWER' | 'EMPTY' | 'SEAT_OPEN';

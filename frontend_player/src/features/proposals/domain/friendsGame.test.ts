@@ -13,8 +13,14 @@ import {
   sendCharge,
   sendPaymentsOf,
   sendRefusalOf,
+  anySeatToOpen,
+  seatActionsAt,
+  seatToInviteOf,
+  seatWriteRefusalOf,
+  twoWayLeaveIn,
   waitingCapOf,
   type FriendsGame,
+  type SeatShown,
 } from './friendsGame';
 
 const NOW = Date.parse('2026-10-01T08:00:00Z');
@@ -155,6 +161,173 @@ describe('seatsShown', () => {
   it('is empty for a game a fill booked', () => {
     expect(seatsShown({ sides: SIDES }, NOW)).toEqual([]);
   });
+
+  it('carries an empty seat’s name, what the reader may do, and the invitations still waiting now', () => {
+    const shown = seatsShown(
+      {
+        friendsGame: game({
+          seats: [
+            { playerId: 'tomek', state: 'IN' },
+            {
+              playerId: 'ania',
+              state: 'CANT_MAKE_IT',
+              seatOf: 'ania',
+              canInvite: true,
+              canOpen: true,
+              invitations: [
+                { playerId: 'piotr', nickname: 'piotr.s', until: LATER },
+                { playerId: 'kuba', nickname: 'kuba.w', until: EARLIER },
+              ],
+            },
+          ],
+        }),
+        sides: SIDES,
+      },
+      NOW,
+    );
+
+    expect(shown[1]).toMatchObject({
+      seatOf: 'ania',
+      canInvite: true,
+      canOpen: true,
+      invitations: [{ playerId: 'piotr', nickname: 'piotr.s', until: LATER }],
+    });
+    expect(shown[0]).toMatchObject({ canInvite: false, canOpen: false, invitations: [] });
+    expect(shown[0]?.seatOf).toBeUndefined();
+  });
+});
+
+describe('seatActionsAt', () => {
+  const CUT_OFF = '2026-10-02T08:00:00Z';
+  const STARTS = '2026-10-03T08:00:00Z';
+  const seat = (extra: Partial<SeatShown> = {}): SeatShown => ({
+    person: person('ania', 'ania.k'),
+    state: 'CANT_MAKE_IT',
+    seatOf: 'ania',
+    invitations: [],
+    canInvite: true,
+    canOpen: true,
+    ...extra,
+  });
+
+  it('offers the sender both on an empty seat before the cut-off', () => {
+    expect(seatActionsAt(seat(), { now: NOW, cutOff: CUT_OFF, startsAt: STARTS })).toEqual({
+      invite: true,
+      open: true,
+    });
+  });
+
+  it('offers a friend In only Invite a friend — Open is the sender’s', () => {
+    expect(
+      seatActionsAt(seat({ canOpen: false }), { now: NOW, cutOff: CUT_OFF, startsAt: STARTS }),
+    ).toEqual({ invite: true, open: false });
+  });
+
+  it('takes Open away at the cut-off on the read’s clock, and Invite at the start', () => {
+    const afterCutOff = Date.parse(CUT_OFF);
+    expect(seatActionsAt(seat(), { now: afterCutOff, cutOff: CUT_OFF, startsAt: STARTS })).toEqual({
+      invite: true,
+      open: false,
+    });
+    expect(
+      seatActionsAt(seat(), { now: Date.parse(STARTS), cutOff: CUT_OFF, startsAt: STARTS }),
+    ).toEqual({ invite: false, open: false });
+    expect(seatActionsAt(seat(), { now: NOW, cutOff: undefined, startsAt: STARTS }).open).toBe(
+      false,
+    );
+  });
+
+  it('opens no seat already open, and offers nothing on a seat the read does not name', () => {
+    expect(
+      seatActionsAt(seat({ state: 'SEAT_OPEN' }), {
+        now: NOW,
+        cutOff: CUT_OFF,
+        startsAt: STARTS,
+      }),
+    ).toEqual({ invite: true, open: false });
+    const unnamed: SeatShown = { ...seat(), seatOf: undefined };
+    expect(seatActionsAt(unnamed, { now: NOW, cutOff: CUT_OFF, startsAt: STARTS })).toEqual({
+      invite: false,
+      open: false,
+    });
+  });
+
+  it('offers nothing on a seat somebody holds or is still held for', () => {
+    for (const state of ['IN', 'WAITING'] as const) {
+      expect(
+        seatActionsAt(seat({ state }), { now: NOW, cutOff: CUT_OFF, startsAt: STARTS }),
+      ).toEqual({ invite: false, open: false });
+    }
+  });
+});
+
+describe('anySeatToOpen', () => {
+  it('is true while the read lets the reader open some seat — the group’s name is then read', () => {
+    const empty = { playerId: 'ania', state: 'CANT_MAKE_IT', seatOf: 'ania' } as const;
+    expect(anySeatToOpen({ friendsGame: game({ seats: [{ ...empty, canOpen: true }] }) })).toBe(
+      true,
+    );
+    expect(anySeatToOpen({ friendsGame: game({ seats: [empty] }) })).toBe(false);
+    expect(anySeatToOpen({})).toBe(false);
+  });
+});
+
+describe('seatToInviteOf', () => {
+  it('names the game’s group, sport and hour, and everybody the picker leaves out', () => {
+    const seat = seatToInviteOf(
+      {
+        bookingId: 'b-1',
+        groupId: 'g-1',
+        sport: 'padel',
+        startsAt: '2026-10-03T08:00:00Z',
+        sides: SIDES,
+        friendsGame: game({
+          seats: [
+            { playerId: 'tomek', state: 'IN' },
+            { playerId: 'ewa', state: 'IN' },
+            { playerId: 'magda', state: 'IN' },
+            {
+              playerId: 'bartek',
+              state: 'CANT_MAKE_IT',
+              seatOf: 'bartek',
+              invitations: [{ playerId: 'piotr', until: LATER }],
+            },
+          ],
+        }),
+      },
+      'bartek',
+    );
+
+    expect(seat).toEqual({
+      bookingId: 'b-1',
+      seatOf: 'bartek',
+      groupId: 'g-1',
+      sport: 'padel',
+      startsAt: '2026-10-03T08:00:00Z',
+      onTheGame: ['tomek', 'ewa', 'magda', 'ania', 'bartek', 'piotr'],
+    });
+  });
+});
+
+describe('twoWayLeaveIn', () => {
+  it('is the pay mode — two ways to leave — for the sender before the cut-off', () => {
+    expect(twoWayLeaveIn({ friendsGame: game() }, 'BEFORE_THE_CUT_OFF')).toBe('SPLIT_THE_COST');
+    expect(
+      twoWayLeaveIn({ friendsGame: game({ payMode: 'WHOLE_COURT' }) }, 'BEFORE_THE_CUT_OFF'),
+    ).toBe('WHOLE_COURT');
+  });
+
+  it('is nothing after the cut-off, for a friend, for a game a fill booked, and without Call it off', () => {
+    expect(twoWayLeaveIn({ friendsGame: game() }, 'AFTER_THE_CUT_OFF')).toBeUndefined();
+    expect(twoWayLeaveIn({ friendsGame: game() }, undefined)).toBeUndefined();
+    expect(
+      twoWayLeaveIn({ friendsGame: game({ youAreTheSender: false }) }, 'BEFORE_THE_CUT_OFF'),
+    ).toBeUndefined();
+    expect(twoWayLeaveIn({}, 'BEFORE_THE_CUT_OFF')).toBeUndefined();
+    expect(
+      twoWayLeaveIn({ friendsGame: game({ canCallOff: false }) }, 'BEFORE_THE_CUT_OFF'),
+    ).toBeUndefined();
+  });
 });
 
 describe('invitationFaces', () => {
@@ -257,6 +430,25 @@ describe('answerRefusalOf', () => {
     ['games_per_week_booked', 'say'],
   ] as const)('%s → %s', (code, refusal) => {
     expect(answerRefusalOf(code)).toBe(refusal);
+  });
+});
+
+describe('seatWriteRefusalOf', () => {
+  it.each([
+    ['seat_just_taken', 'gone'],
+    ['booking_is_called_off', 'gone'],
+    ['game_has_started', 'gone'],
+    ['booking_not_found', 'gone'],
+    ['cut_off_has_passed', 'gone'],
+    ['already_on_the_game', 'say'],
+    ['not_a_friend', 'say'],
+    ['no_level', 'say'],
+    ['cannot_play_together', 'say'],
+    ['friend_plays_then', 'say'],
+    ['friends_week_is_full', 'say'],
+    [undefined, 'say'],
+  ] as const)('%s → %s', (code, refusal) => {
+    expect(seatWriteRefusalOf(code)).toBe(refusal);
   });
 });
 

@@ -85,6 +85,23 @@ export {
 } from './components/BookedGameResult';
 export { parseBookingParams, parseRescueParams } from './schemas/bookingParams';
 export { bookedGameRoute } from './components/proposalRoutes';
+/**
+ * **A friends game's empty seat** (#760): the group a seat may be opened to, whose name the details'
+ * route reads from `groups` and hands in (`groupName`); and *Invite a friend*'s picker with one
+ * seat, which the shell composes from `friends`' page and picker around the game (`SeatInvite`) and
+ * the order (`InviteOrder`), at the route `parseSeatInviteParams` checks.
+ */
+export { useSeatOpeningGroup } from './hooks/useHome';
+export { parseSeatInviteParams } from './schemas/bookingParams';
+export {
+  InviteOrder,
+  NobodyToInvite,
+  SeatInvite,
+  type FriendPicked,
+  type InviteOrderProps,
+  type SeatInviteProps,
+} from './components/SeatInvite';
+export type { SeatToInvite } from './domain/friendsGame';
 /** The words the Home and details suites hold the screens to. */
 export { HOME_GAME_COPY } from './components/homeCopy';
 /**

@@ -244,6 +244,12 @@ were.
 
 **Not seen on a device**: the round box beside a long nickname; the greyed rows (friends 6).
 
+**With one seat, over a booked game** ([#760](https://github.com/Raketa02/Raketa/issues/760)):
+_Invite a friend_ on a friends game's empty seat opens the same page and picker with `seats` 1, so a
+pick greys the rest; the shell composes it around `proposals`' game and order. **`leaveOut` drops the
+friends already on the game** before the list is drawn or found empty — the server would refuse each
+— and the composer's empty state is drawn when nobody is left.
+
 ## Asking a friend to get a Level (#758)
 
 **A greyed no-Level row asks: _Ask zofia.b to get a padel level_, and _Asked_ once asked.**

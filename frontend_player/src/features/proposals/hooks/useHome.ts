@@ -16,7 +16,7 @@ import { currentUserQuery } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
-import type { FriendsGameInvitation } from '../domain/friendsGame';
+import { anySeatToOpen, type FriendsGameInvitation } from '../domain/friendsGame';
 import { openedToKeep, type BookedGame, type Home, type HomeFriendRequest } from '../domain/home';
 import {
   keepDismissedGames,
@@ -89,11 +89,27 @@ export function useBooking(
   bookingId: string,
   { enabled = true }: { readonly enabled?: boolean } = {},
 ) {
-  return useQuery<BookedGame | null, AppError>({
+  return useQuery<BookedGame | null, AppError>({ ...bookingRead(bookingId), enabled });
+}
+
+function bookingRead(bookingId: string) {
+  return {
     queryKey: proposalKeys.booking(bookingId),
-    queryFn: ({ signal }) => readBooking(bookingId, { signal }),
-    enabled,
-  });
+    queryFn: ({ signal }: { readonly signal: AbortSignal }) => readBooking(bookingId, { signal }),
+  };
+}
+
+/**
+ * **The group a seat of this booking may be opened to** (#760) — the details' read, shared, and its
+ * group only while the reader may open some seat (`anySeatToOpen`): the route reads that group's
+ * name for *Open to {group}*, and no other reader's details cost a group read.
+ */
+export function useSeatOpeningGroup(bookingId: string | undefined): string | undefined {
+  return useQuery<BookedGame | null, AppError, string | undefined>({
+    ...bookingRead(bookingId ?? ''),
+    enabled: bookingId !== undefined,
+    select: (game) => (game !== null && anySeatToOpen(game) ? game.groupId : undefined),
+  }).data;
 }
 
 /** The booking's read, as `BookingAbsent` asks about it. */

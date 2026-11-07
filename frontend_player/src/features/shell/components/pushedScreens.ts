@@ -33,10 +33,12 @@ export const PUSHED_SCREENS = [
   'play/group/[groupId]/members',
   'play/group/[groupId]/edit',
   // A booked game (#556): its details pushed over Home, its chat and its result pushed over the
-  // details. The chat is the one screen the bar stands down on (`shellTabs`).
+  // details. The chat is the one screen the bar stands down on (`shellTabs`). *Invite a friend*'s
+  // picker with one seat is pushed over the details too (#760).
   'booking/[bookingId]/index',
   'booking/[bookingId]/chat',
   'booking/[bookingId]/result',
+  'booking/[bookingId]/invite',
   // The recent notices behind Home's bell (#559): pushed over Home, and back is Home — a row opens
   // its game over the list, so back from the game is the list.
   'notices',
