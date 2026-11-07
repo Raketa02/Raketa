@@ -59,6 +59,7 @@ from app.modules.bookings.domain.events import (
 )
 from app.modules.bookings.domain.ports import HeldCourtHour
 from app.modules.bookings.infrastructure.booking_models import (
+    COURT_HOUR_INDEX,
     BookingInvitationORM,
     BookingKeepORM,
     BookingORM,
@@ -66,6 +67,16 @@ from app.modules.bookings.infrastructure.booking_models import (
 )
 
 BOOKING_AGGREGATE = "booking"
+
+
+def _the_court_hour(refused: IntegrityError) -> bool:
+    """Whether the store refused the court hour's unique index — another game
+    holding the court then — rather than anything else. Postgres names the
+    index; SQLite names its columns."""
+
+    said = str(refused.orig)
+    return COURT_HOUR_INDEX in said or "bookings.court_id, bookings.start" in said
+
 
 #: The states a booked game is in while it will be played: whole, or with a
 #: seat open (#544).
@@ -123,10 +134,13 @@ class EventSourcedBookingRepository:
             for event in pending:
                 await self._project(event, booking)
             await self._session.flush()
-        except IntegrityError as taken:
+        except IntegrityError as refused:
             # Two games at one hour that read one court free: the second claim
             # meets the court hour's unique index. The transaction is spent.
-            raise CourtTaken() from taken
+            # Any other refusal is a fault, never a court to try again for.
+            if not _the_court_hour(refused):
+                raise
+            raise CourtTaken() from refused
         # Deliberately no commit: the transaction boundary is the use case's.
         self._versions[booking.booking_id] = booking.version
 

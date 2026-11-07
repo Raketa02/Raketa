@@ -43,12 +43,16 @@ from sqlalchemy_utils.types.uuid import UUIDType
 
 from app.infrastructure.database.base import Base
 
+#: One court hour is held by one booking that is not called off. The one
+#: refusal the repository reads as another game claiming the court.
+COURT_HOUR_INDEX = "ux_bookings_court_id_start"
+
 
 class BookingORM(Base):
     __tablename__ = "bookings"
     __table_args__ = (
         Index(
-            "ux_bookings_court_id_start",
+            COURT_HOUR_INDEX,
             "court_id",
             "start",
             unique=True,
