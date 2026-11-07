@@ -220,6 +220,7 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.friends import SeededFriends, friend_lines, write_the_friends
+from app.seeds.rankings import RANKING_GAMES, assert_the_ranking
 from app.seeds.friends_games import (
     SeededFriendsGames,
     friends_game_lines,
@@ -1330,7 +1331,9 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             session_factory,
             settings=settings,
             now=now,
-            games=PLAYED_GAMES,
+            # The ranking's padel games beside the cohort's own (#768): her
+            # list is results, and a result is a past booked game.
+            games=(*PLAYED_GAMES, *RANKING_GAMES),
             named=ACCOUNTS,
             money=money,
         )
@@ -1424,6 +1427,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             await assert_the_full_hour(
                 session_factory, settings=settings, now=now, full=full_hour
             ),
+            await assert_the_ranking(session_factory, settings=settings, now=now),
         )
         return SeedReport(
             accounts=accounts,

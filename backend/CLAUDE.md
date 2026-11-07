@@ -83,7 +83,11 @@ Rules to preserve:
 - **Derived, never stored.** A standing, a room's membership and end, what a club can sell,
   who runs a group, a Player Score — each is folded from the record and the clock on every
   read. A stored copy is a second place for a fact to be true, and it is the one that gets
-  believed.
+  believed. **One stated exception: the ranking projection**
+  ([ADR-0203](../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §10) — a page of
+  General is a slice of an order over every listed player, so `ranking_rows` stores a fold
+  of each rating stream, written only from the rating's own events and held equal to a
+  rebuild by a test (`rankings.md`).
 - **Contexts meet through ports the consumer declares in its own words.** The adapter
   lives wherever the import arrow allows, `.importlinter` holds each arrow, and every
   outward port is contracted in a `tests/demands/` register.
@@ -136,6 +140,7 @@ changing code that calls into another context, read its rule.**
 | `games.md` | the booked game: opening, a seat left and taken, call-offs, results, the pairing |
 | `conversations.md` | rooms, their end and the live channel |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |
+| `rankings.md` | the ranking: one row per player per sport folded from the rating stream on every `rating.moved_on_result`, the rebuild, who is listed on General (5 results, 90 days), the order, the place card, the podium, Home's trophy |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
 | `friends.md` | friendships: a request, *Not now*, crossing, cancel and remove; a block ends one and hides a blocked player's request, live; the reader's relation lent to every face; Home's friend requests and the two notices; the link; asking a friend for a level, once per sport, answered by the rating's first level, and waiting on their Home until they have it or say *Not now* |
 | `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; the Cover a friends game's sender holds; proposals and the group deck; sending, answering and calling off a friends game; its empty seats — invited into, opened to the group, opened at the cut-off — the cover warning and leaving it |

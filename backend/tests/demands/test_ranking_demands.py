@@ -1,0 +1,246 @@
+"""What Rankings demands of other contexts (#768), run against every registered
+implementation.
+
+**A demand nobody executes is a demand satisfied by accident**
+(``docs/adr/0098``). Every implementation registered in
+``app/bootstrap/ranking_demands.py`` is enrolled here automatically. **Every
+rating is arranged through the rating's own aggregate**, saved by its own
+repository, and every account through the player routes — never an ``INSERT``.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+
+import pytest
+import pytest_asyncio
+
+from app.bootstrap.composition import (
+    build_domain_event_store,
+    build_event_publisher,
+    build_skill_rating_repository,
+)
+from app.bootstrap.ranking_demands import (
+    RANKING_DEMANDS,
+    RANKING_IMPLEMENTATIONS,
+    implementations_of,
+)
+from app.engines.assessment import AssessmentResult, BandView
+from app.engines.racketskill.core import STATUS_INITIAL_ESTIMATE
+from app.kernel import Sport, instant
+from app.modules.rankings.domain.ports import (
+    RankedFace,
+    RankedFaces,
+    RatingHistories,
+    SportLevels,
+)
+from app.modules.rankings.domain.ranking import LevelMove
+from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.domain.skill_rating import SkillRating
+from app.shared.ids import new_uuid
+from tests.api import players_world as players
+from tests.api.rankings_world import move_on
+from tests.unit import image_fixtures
+
+OPENED = instant(datetime(2026, 9, 1, 18, 0, tzinfo=timezone.utc))
+BAND = BandView(name="Improver", lower=2.5, upper=3.0)
+
+
+@pytest_asyncio.fixture
+async def session(session_factory):
+    async with session_factory() as open_session:
+        yield open_session
+
+
+def registered(port):
+    return [
+        pytest.param(implementation, id=implementation.name)
+        for implementation in implementations_of(port)
+    ]
+
+
+def _ratings(session):
+    return build_skill_rating_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+
+
+async def _rated(session, player_id: UUID, *, mu: float, sport: Sport) -> None:
+    await _ratings(session).save(
+        SkillRating.initialise(
+            rating_id=skill_rating_id(player_id, sport),
+            player_id=player_id,
+            sport=sport,
+            result=AssessmentResult(
+                mu=mu,
+                sigma=0.34,
+                confidence=50,
+                range_low=round(mu - 0.34, 2),
+                range_high=round(mu + 0.34, 2),
+                band=BAND,
+                status=STATUS_INITIAL_ESTIMATE,
+                questions_asked=7,
+                engine_version="racketskill-fusion-v3",
+                confidence_ceiling=50,
+            ),
+            source_assessment_id=new_uuid(),
+            occurred_at=OPENED,
+        )
+    )
+    await session.commit()
+
+
+async def _moved(
+    session, player_id: UUID, *, mu: float, won: bool, hours: int, sport: Sport
+) -> UUID:
+    return await move_on(
+        session,
+        player_id,
+        mu,
+        at=instant(OPENED + timedelta(hours=hours)),
+        won=won,
+        sport=sport,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# The register itself
+# --------------------------------------------------------------------------- #
+
+
+def test_every_demand_has_at_least_one_implementation():
+    assert [p.__name__ for p in RANKING_DEMANDS if not implementations_of(p)] == []
+
+
+def test_every_registered_implementation_is_of_a_demand():
+    assert all(one.port in RANKING_DEMANDS for one in RANKING_IMPLEMENTATIONS)
+
+
+# --------------------------------------------------------------------------- #
+# RatingHistories — the record every row is folded from
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(RatingHistories))
+async def test_a_history_is_the_opening_and_every_move_in_stream_order(
+    implementation, session
+):
+    histories: RatingHistories = implementation.build(session)
+    player = new_uuid()
+    await _rated(session, player, mu=2.5, sport=Sport.PADEL)
+    first = await _moved(session, player, mu=2.56, won=True, hours=1, sport=Sport.PADEL)
+    second = await _moved(
+        session, player, mu=2.51, won=False, hours=2, sport=Sport.PADEL
+    )
+
+    history = await histories.history_of(player, Sport.PADEL)
+
+    assert history is not None
+    assert (history.player_id, history.sport) == (player, Sport.PADEL)
+    assert (history.initial_mu, history.initialised_at) == (2.5, OPENED)
+    assert history.moves == (
+        LevelMove(
+            game_id=first,
+            won=True,
+            mu=2.56,
+            sigma=0.3,
+            at=instant(OPENED + timedelta(hours=1)),
+        ),
+        LevelMove(
+            game_id=second,
+            won=False,
+            mu=2.51,
+            sigma=0.3,
+            at=instant(OPENED + timedelta(hours=2)),
+        ),
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(RatingHistories))
+async def test_a_sport_with_no_rating_has_no_history(implementation, session):
+    histories: RatingHistories = implementation.build(session)
+    player = new_uuid()
+    await _rated(session, player, mu=2.5, sport=Sport.PADEL)
+
+    assert await histories.history_of(player, Sport.SQUASH) is None
+    unmoved = await histories.history_of(player, Sport.PADEL)
+    assert unmoved is not None and unmoved.moves == ()
+
+
+@pytest.mark.parametrize("implementation", registered(RatingHistories))
+async def test_every_history_is_every_rating_there_is(implementation, session):
+    histories: RatingHistories = implementation.build(session)
+    one, other = new_uuid(), new_uuid()
+    await _rated(session, one, mu=2.5, sport=Sport.PADEL)
+    await _rated(session, other, mu=3.0, sport=Sport.TENNIS)
+    await _rated(session, one, mu=2.0, sport=Sport.SQUASH)
+    await _moved(session, other, mu=3.04, won=True, hours=1, sport=Sport.TENNIS)
+
+    every = await histories.every_history()
+
+    assert [
+        (history.player_id, history.sport, len(history.moves)) for history in every
+    ] == [
+        (one, Sport.PADEL, 0),
+        (other, Sport.TENNIS, 1),
+        (one, Sport.SQUASH, 0),
+    ]
+
+
+# --------------------------------------------------------------------------- #
+# RankedFaces — a nickname and a photograph
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(RankedFaces))
+async def test_everybody_asked_about_is_answered(implementation, client, session):
+    faces: RankedFaces = implementation.build(session)
+    tomek, _ = await players.register(client, "tomek")
+    nobody = new_uuid()
+
+    found = await faces.faces_of([tomek, nobody])
+
+    assert found == {
+        tomek: RankedFace(player_id=tomek, nickname="tomek"),
+        nobody: RankedFace(player_id=nobody),
+    }
+    assert await faces.faces_of([]) == {}
+
+
+# --------------------------------------------------------------------------- #
+# SportLevels — a level held, read live
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(SportLevels))
+async def test_a_level_is_held_in_a_rated_sport_and_no_other(implementation, session):
+    levels: SportLevels = implementation.build(session)
+    player = new_uuid()
+    await _rated(session, player, mu=2.5, sport=Sport.PADEL)
+
+    assert await levels.holds_a_level(player, Sport.PADEL) is True
+    assert await levels.holds_a_level(player, Sport.BADMINTON) is False
+    assert await levels.holds_a_level(new_uuid(), Sport.PADEL) is False
+
+
+@pytest.mark.parametrize("implementation", registered(RankedFaces))
+async def test_a_face_is_the_first_photograph_with_a_link_to_it(
+    implementation, client, session
+):
+    faces: RankedFaces = implementation.build(session)
+    ewa, token = await players.register(client, "ewa")
+    uploaded = await client.post(
+        "/api/v1/photos",
+        content=image_fixtures.plain_jpeg(),
+        headers={**players.auth(token), "Content-Type": "image/jpeg"},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    photo_id = UUID(uploaded.json()["photo_id"])
+    await players.commit_profile(client, token, photo_ids=[str(photo_id)])
+
+    face = (await faces.faces_of([ewa]))[ewa]
+
+    assert (face.nickname, face.photo_id) == ("ewa", photo_id)
+    assert face.photo_url is not None and str(photo_id) in face.photo_url

@@ -529,6 +529,26 @@ class LevelAsksOnHome(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class HomeRanking:
+    """Home's trophy, *🏆 #7*, left of the bell (#768; ``docs/adr/0203`` §5):
+    the sport of the reader's latest result, in any sport, and their General
+    place in it — ``None`` when they aren't listed there, and the trophy draws
+    no number."""
+
+    sport: Sport
+    general_place: int | None
+
+
+@runtime_checkable
+class RankingOnHome(Protocol):
+    async def of(self, reader: UUID) -> HomeRanking | None:
+        """The trophy's sport and place, or ``None`` when the reader has no
+        result in any sport — read live off the ranking."""
+        ...
+
+
 @runtime_checkable
 class DeckPeople(Protocol):
     async def people(

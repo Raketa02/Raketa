@@ -66,6 +66,8 @@ from app.modules.proposals.domain.ports import (
     HomeLevelAsk,
     HomeLevelAsker,
     LevelAsksOnHome,
+    HomeRanking,
+    RankingOnHome,
     ReaderRelations,
     PaymentRefusal,
     RefusedPayment,
@@ -1877,3 +1879,36 @@ async def test_a_cover_is_let_go_for_each_seat_its_own_player_paid(
 
     assert await covers.settle(game_id, at=cut_off) == 0
     assert await covers.settle(new_uuid(), at=cut_off) == 0
+
+
+# --------------------------------------------------------------------------- #
+# RankingOnHome — Home's trophy (#768). Its rules are driven whole over HTTP in
+# ``tests/api/test_rankings.py``; here, what is lent: the sport of the latest
+# result and the General place there, or nothing with no result anywhere.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(RankingOnHome))
+async def test_the_trophy_is_the_latest_results_sport_and_the_general_place(
+    implementation, client, session, session_factory
+):
+    from tests.api.rankings_world import moves_to
+
+    tomek = await players.a_rated_player(client, "tomek")
+    karol = await players.a_rated_player(client, "karol")
+    trophy: RankingOnHome = implementation.build(session)
+    assert await trophy.of(tomek["id"]) is None
+
+    now = datetime.now(timezone.utc)
+    for hour in range(5):
+        at = instant(now - timedelta(hours=10 - hour))
+        await moves_to(session_factory, karol, 3.0 + hour / 10, at=at)
+        await moves_to(session_factory, tomek, 2.6, at=at)
+    await session.rollback()
+
+    assert await trophy.of(tomek["id"]) == HomeRanking(
+        sport=Sport.PADEL, general_place=2
+    )
+    assert await trophy.of(karol["id"]) == HomeRanking(
+        sport=Sport.PADEL, general_place=1
+    )

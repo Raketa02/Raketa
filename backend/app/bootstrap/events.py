@@ -95,6 +95,9 @@ from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
     subscribe_player_profile_handlers,
 )
+from app.modules.rankings.application.event_subscriptions import (
+    subscribe_the_ranking_mover,
+)
 from app.modules.rating.application.event_subscriptions import (
     register_rating_events,
     subscribe_rating_handlers,
@@ -228,6 +231,7 @@ class EventRuntime:
             build_tell_the_players,
             build_tell_the_room,
             build_end_friendships_on_a_block,
+            build_move_the_ranking,
             build_withdraw_a_blockers_yeses,
             build_withdraw_a_leavers_yeses,
         )
@@ -301,6 +305,11 @@ class EventRuntime:
         subscribe_the_rating_settler(
             dispatcher,
             build_settle_ratings_on_results(session, runtime=self, clock=clock),
+        )
+        # And a Level moved on a result moves its player's ranking row, in the
+        # same transaction (#768; `docs/adr/0203` §10).
+        subscribe_the_ranking_mover(
+            dispatcher, build_move_the_ranking(session, runtime=self)
         )
         # What players are told about a game and its money, given in the
         # delivery's own transaction — and a notice given, pushed to their

@@ -476,6 +476,7 @@ source_modules =
     app.modules.player_record
     app.modules.player_score
     app.modules.proposals
+    app.modules.rankings
     app.modules.rating
     app.modules.sportsmanship
     app.modules.users
@@ -688,6 +689,7 @@ forbidden_modules =
     app.modules.player_profile
     app.modules.player_score
     app.modules.proposals
+    app.modules.rankings
     app.modules.rating
     app.modules.sportsmanship
     app.modules.users
@@ -712,5 +714,23 @@ forbidden_modules =
     app.modules.groups
     app.modules.notifications
     app.modules.player_record
+    app.modules.proposals
+allow_indirect_imports = true
+
+# Rankings lends Home its trophy, and knows none of its readers (docs/adr/0203
+# §10, #768). Home declares the port it reads the trophy through,
+# `RankingOnHome`, **signed on its own side** in `proposals/infrastructure/` —
+# so the arrow runs into `rankings`, and none out of it towards a reader. The
+# ranking's own neighbours — the rating's streams, the faces, a level held — are
+# ports in its words signed in `rankings/infrastructure/`, each with a row in
+# `app/bootstrap/ranking_demands.py`.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:rankings-knows-none-of-its-readers]
+name = The Rankings context imports none of the contexts that read it
+type = forbidden
+source_modules =
+    app.modules.rankings
+forbidden_modules =
     app.modules.proposals
 allow_indirect_imports = true

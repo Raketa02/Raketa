@@ -2,7 +2,7 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Twenty-three rows,
+consumer gets a new register, not a row in somebody else's. **Twenty-four rows,
 and the tuple is what is asserted over**: a player's booked games (``bookings``),
 where each booked game's result stands (``games``), how far a club is from a
 player (the Player profile and ``clubs``), what each player is called on a
@@ -24,7 +24,9 @@ booked at send, its invited seats answered and called off by its sender
 cut-off (``payments``, ``CoversAtTheCutOff``) — and, for the friends on every
 face and on Home (#745, #764), the reader's relations, the friend requests and
 the asks for a level waiting on the reader (``friends``, ``ReaderRelations``,
-``FriendRequestsOnHome``, ``LevelAsksOnHome``) — each a fact another context
+``FriendRequestsOnHome``, ``LevelAsksOnHome``) — and, for Home's trophy (#768),
+the sport of the reader's latest result and their General place there
+(``rankings``, ``RankingOnHome``) — each a fact another context
 owns, read through a port declared in this context's words. The sender's court
 held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
 with the fake.
@@ -64,6 +66,7 @@ from app.bootstrap.composition import (
     build_clock,
     build_friend_requests_on_home,
     build_level_asks_on_home,
+    build_ranking_on_home,
     build_reader_relations,
     build_friends_game_bookings,
     build_covers_at_the_cut_off,
@@ -94,6 +97,7 @@ from app.modules.proposals.domain.ports import (
     ReaderRelations,
     FriendRequestsOnHome,
     LevelAsksOnHome,
+    RankingOnHome,
 )
 
 P = TypeVar("P")
@@ -123,6 +127,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     ReaderRelations,
     FriendRequestsOnHome,
     LevelAsksOnHome,
+    RankingOnHome,
     FriendsGameBookings,
     CoversAtTheCutOff,
 )
@@ -253,6 +258,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         build=lambda session: build_level_asks_on_home(
             session, settings=get_settings()
         ),
+    ),
+    RegisteredImplementation(
+        port=RankingOnHome,
+        name="RankingsOnHome",
+        build=lambda session: build_ranking_on_home(session, clock=build_clock()),
     ),
 )
 

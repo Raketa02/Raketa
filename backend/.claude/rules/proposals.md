@@ -262,7 +262,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   its askers newest first (`HomeLevelAsk`, `HomeLevelAsker`: id, nickname, photo) and no group,
   through `LevelAsksOnHome`, Friends' `ReadLevelAsksOnHome` (`friends.md`), not counted in
   `needing_you`. The ports are signed in `proposals/infrastructure/friends.py`, so the arrow runs
-  `proposals → friends`; `LevelAsksOnHome` has its row in `proposal_demands.py`.
+  `proposals → friends`; `LevelAsksOnHome` has its row in `proposal_demands.py`. **And
+  `ranking`** (#768; ADR-0203 §5; `rankings.md`): the trophy left of the bell — the sport of
+  the reader's latest result in any sport and their General place there (`null` when not
+  listed), the whole field `null` with no result anywhere — through `RankingOnHome`, signed
+  in `proposals/infrastructure/rankings.py` over Rankings' `ReadHomeRanking`, with its row
+  in `proposal_demands.py`.
 - **A friends game is sent, answered and called off here** (#751; ADR-0202 §5–§6;
   `application/friends_games.py`; see `bookings.md` and `payments.md`): `POST /pools/{id}/
   friends-games` (`SendAFriendsGame`, `FriendsGameSentResponse`: booked, or `your_payments`

@@ -54,4 +54,8 @@ name, is what history is recorded under.
   webhook's inbox — the id of every provider notice already read, written in the transaction
   that acted on it, the outbox's mirror (ADR-0190 §3). What a notice *moves* is still
   event-sourced.
+- **One projection is written by a context with no events of its own**: `ranking_rows`
+  (#768; ADR-0203 §10), a fold of each rating stream written when `rating.moved_on_result`
+  is delivered and by the rebuild. It records no fact the rating stream does not, so there
+  is no event to emit; ADR-0203 §10 is where the stored copy is argued (`rankings.md`).
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Sixteen registers, and they are sixteen on purpose — one per kind of claim.**
+  **Seventeen registers, and they are seventeen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -127,6 +127,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   signed by `clubs` over its own directory (`DirectoryClubPoints`), the point as precise as
   the desk dropped it and nothing for an id that names no club. The profile's photo ports are
   the outside world's and are not demands on a context.
+  **The seventeenth, `ranking_demands.py`, is Rankings' consumer register** (#768;
+  `rankings.md`): the rating's record every row is folded from (`RatingHistories`, over the
+  rating's own streams), the faces (`RankedFaces`) and a level held, read live
+  (`SportLevels`). Home's trophy is a row in Proposals' register, `RankingOnHome` (the
+  tenth's twenty-fourth).
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings.
   `game_demands.py` builds over the session alone since the game's pairing is read side

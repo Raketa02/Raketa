@@ -3853,6 +3853,64 @@
         }
       }
     },
+    "/api/v1/rankings/{sport}": {
+      "get": {
+        "tags": [
+          "rankings"
+        ],
+        "summary": "A sport's ranking",
+        "description": "Your place card, the podium and the first page of the list, in one sport and view \u2014 sorted by the Level itself, competitive games only. An unknown sport is refused.",
+        "operationId": "read_ranking_api_v1_rankings__sport__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RankingView",
+              "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport.",
+              "default": "GENERAL"
+            },
+            "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups": {
       "get": {
         "tags": [
@@ -9557,6 +9615,17 @@
         "title": "CappedWeekSchema",
         "description": "A week the player has as many games booked in as they allow: nothing is\ndealt for it."
       },
+      "CardState": {
+        "type": "string",
+        "enum": [
+          "LISTED",
+          "NEEDS_RESULTS",
+          "NO_LEVEL",
+          "OFF_THE_LIST"
+        ],
+        "title": "CardState",
+        "description": "What the reader's place card says (the screens \u00a74.1, \u00a74.3, \u00a74.4)."
+      },
       "CardType": {
         "type": "string",
         "enum": [
@@ -12018,7 +12087,7 @@
           "outcome": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Outcome"
+                "$ref": "#/components/schemas/app__modules__games__domain__results__Outcome"
               },
               {
                 "type": "null"
@@ -13300,6 +13369,34 @@
         "title": "HomeLevelAskerSchema",
         "description": "One friend on an *ASKED FOR A LEVEL* card \u2014 a face that opens their\nrecord."
       },
+      "HomeRankingSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The sport of your latest confirmed competitive result, in any sport \u2014 after a tennis win, tennis."
+          },
+          "general_place": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "General Place",
+            "description": "Your place on General in `sport` \u2014 `null` when you aren't listed there (fewer than 5 results, or none in the last 90 days), and the trophy draws no number."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "general_place"
+        ],
+        "title": "HomeRankingSchema",
+        "description": "Home's trophy, **\ud83c\udfc6 #7**, just left of the bell (#768; `docs/adr/0203`\n\u00a75). A tap opens Rankings on `sport`."
+      },
       "HomeResponse": {
         "properties": {
           "read_at": {
@@ -13344,6 +13441,17 @@
             "type": "array",
             "title": "Level Asks",
             "description": "*ASKED FOR A LEVEL \u00b7 n*, between `friend_requests` and `games` (#764; `docs/adr/0202` \u00a74's 2026-11-07 amendment): **one card per sport**, the sport with the newest ask first \u2014 every friend's ask for a level still waiting on you. A card leaves once you hold any level in its sport, by any route, or say **Not now**, and an asker leaves it once no longer your friend or blocked by you; a new friend's ask in the sport brings it back, naming only the askers you have not set aside. It never expires. The row and its title are gone when this is empty. Not counted in `needing_you`."
+          },
+          "ranking": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeRankingSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The trophy left of the bell (#768): the sport of your latest result and your General place in it. **`null` when you have no result in any sport** \u2014 the trophy still shows, with no number, and still opens Rankings."
           }
         },
         "type": "object",
@@ -14622,15 +14730,6 @@
         "title": "OpponentVarietySchema",
         "description": "How widely this person spreads their games, over their **whole** record.\n\n**Two counts and no percentage, deliberately.** The card this sits on argues\ntwo rows above that a perfect record over nine games and one over forty are\ndifferent claims and that a bar alone hides which \u2014 so publishing a bare\nshare here would break the rule the card had just made about itself. Draw\nboth: `70 % \u00b7 14 of 20`.\n\n**The share is yours to compute and it is one division.** Nothing is rounded\non this side and there is no banding, no floor and no tone attached \u2014 unlike\na Level's band, which is a key precisely because a client deriving it would\nbe a second set of drawing constants.\n\n**This is a career statistic, not a window.** It is every counted game the\nplatform has recorded for them, which is what the number means: *how widely\ndo they spread their games*, rather than *how widely this season*. There is\nno decay behind it and no horizon.\n\n**It prices no promise.** It is no part of Player reliability, and it\nneither raises nor lowers anybody's standing. It is context for a Level \u2014 a\nlow figure is somebody playing the same few faces every week, whose rating\nmay be narrow but untested."
       },
-      "Outcome": {
-        "type": "string",
-        "enum": [
-          "WIN",
-          "LOSS"
-        ],
-        "title": "Outcome",
-        "description": "What a confirmed result says about one of the people who played.\n\nTwo values. *Unscored* is not a third: a game with no agreed result produces\n**no outcome for anybody**, which is ADR-0049's *an evening, not evidence*\nstated as a type \u2014 the absence has one spelling, and it is not being in the\nanswer."
-      },
       "OverlapCellSchema": {
         "properties": {
           "day": {
@@ -14964,6 +15063,74 @@
         ],
         "title": "PickedClubRequest",
         "description": "**A Club they pick** in place of a reading, when the phone's location\nis refused (``docs/adr/0200`` \u00a710): *Pick a club near where you play*.\n\nThe club's point on the map, rounded to the cell exactly as a reading is,\nbecomes the Location area \u2014 so the phone never needs a club's coordinates.\nAn id that names no club in Raketa is `location_club_unknown`. **Nothing\nelse rides along**: a body that also carries a reading is refused."
+      },
+      "PlaceCardSchema": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CardState",
+            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer than 5 results in the sport: *2 of 5 games \u2014 3 more competitive padel games put you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list*, with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.*"
+          },
+          "results": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Results",
+            "description": "Your confirmed competitive results with a winner in the sport \u2014 *2 of 5 games*. `0` with `NO_LEVEL`."
+          },
+          "results_to_enter": {
+            "type": "integer",
+            "title": "Results To Enter",
+            "description": "How many results put a player on General \u2014 the *5* of *2 of 5 games*."
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place",
+            "description": "With `LISTED` only: your place \u2014 *7th*."
+          },
+          "of": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Of",
+            "description": "With `LISTED` only: how many are listed \u2014 *of 13*."
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "With `LISTED` only: your Level, two decimals \u2014 *2,71*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "results",
+          "results_to_enter",
+          "place",
+          "of",
+          "level"
+        ],
+        "title": "PlaceCardSchema",
+        "description": "**Your place card**, under the switch \u2014 or the card that replaces it\nwhen there is no place to show."
       },
       "PlayIntent": {
         "type": "string",
@@ -15980,6 +16147,136 @@
           "high"
         ],
         "title": "RangeResponse"
+      },
+      "RankedRowSchema": {
+        "properties": {
+          "place": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Place",
+            "description": "Their true place \u2014 coral for 1\u20133, grey after. A row you can't see leaves a gap, so places may skip a number."
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws initials."
+          },
+          "form": {
+            "items": {
+              "$ref": "#/components/schemas/app__modules__rankings__domain__ranking__Outcome"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Form",
+            "description": "Their last results in this sport, **oldest first** \u2014 the record's *Last 5*. Fewer than five is a real answer and is never padded."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level, two decimals, right-aligned."
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You",
+            "description": "Your own row \u2014 it reads **You** and is tinted."
+          }
+        },
+        "type": "object",
+        "required": [
+          "place",
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "form",
+          "level",
+          "is_you"
+        ],
+        "title": "RankedRowSchema",
+        "description": "One listed player: place, face, form and Level. **A tap opens their\nrecord.**"
+      },
+      "RankingResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "view": {
+            "$ref": "#/components/schemas/RankingView"
+          },
+          "card": {
+            "$ref": "#/components/schemas/PlaceCardSchema"
+          },
+          "listed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Listed",
+            "description": "How many are listed in the view and sport. `0` reads *Nobody ranked in badminton yet* where the podium and list would be."
+          },
+          "podium": {
+            "items": {
+              "$ref": "#/components/schemas/RankedRowSchema"
+            },
+            "type": "array",
+            "title": "Podium",
+            "description": "The first three rows you see, each with its true place \u2014 first in the middle, second left, third right. **Empty with fewer than three rows**, and the list shows alone."
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RankedRowSchema"
+            },
+            "type": "array",
+            "title": "Rows",
+            "description": "General's first page of 50, best first: a listed player has at least 5 confirmed competitive results with a winner in the sport, the last within 90 days. Ordered by Level, then more results, then who reached that Level first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "view",
+          "card",
+          "listed",
+          "podium",
+          "rows"
+        ],
+        "title": "RankingResponse",
+        "description": "**Rankings**, for one sport and view: your card, the podium and the\nlist, best first."
+      },
+      "RankingView": {
+        "type": "string",
+        "enum": [
+          "GENERAL"
+        ],
+        "title": "RankingView",
+        "description": "Which list the page reads. **General** is everybody in Raketa listed in\nthe sport; **Friends** arrives with #771."
       },
       "RatingResponse": {
         "properties": {
@@ -18007,6 +18304,15 @@
         "title": "YourPaymentSchema",
         "description": "This player's share could not be held when the game filled: nobody paid,\nand their seat is open again until they confirm it or somebody takes it."
       },
+      "app__modules__games__domain__results__Outcome": {
+        "type": "string",
+        "enum": [
+          "WIN",
+          "LOSS"
+        ],
+        "title": "Outcome",
+        "description": "What a confirmed result says about one of the people who played.\n\nTwo values. *Unscored* is not a third: a game with no agreed result produces\n**no outcome for anybody**, which is ADR-0049's *an evening, not evidence*\nstated as a type \u2014 the absence has one spelling, and it is not being in the\nanswer."
+      },
       "app__modules__payments__presentation__schemas__PaymentToConfirmSchema": {
         "properties": {
           "client_secret": {
@@ -18121,6 +18427,15 @@
         ],
         "title": "PaymentToConfirmSchema",
         "description": "A game still filling whose last yes could not hold this player's share:\ntheir seat is open until they confirm the payment, or somebody takes it."
+      },
+      "app__modules__rankings__domain__ranking__Outcome": {
+        "type": "string",
+        "enum": [
+          "WIN",
+          "LOSS"
+        ],
+        "title": "Outcome",
+        "description": "How one result went for the row's player: a green square, or a grey\none. **Two**: a game with no winner is no result, so it is never here."
       }
     },
     "securitySchemes": {

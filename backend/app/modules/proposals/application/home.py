@@ -49,6 +49,10 @@ sender's is there from the send.
 requests and the reader's games — one card per sport, Friends' read through
 ``LevelAsksOnHome``. Not counted in ``needing_you``.
 
+**The trophy is Rankings'** (#768; ``docs/adr/0203`` §5): the sport of the
+reader's latest result, in any sport, and their General place there, through
+``RankingOnHome`` — ``None`` with no result anywhere.
+
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
 """
@@ -82,7 +86,9 @@ from app.modules.proposals.domain.ports import (
     FriendsGameBookings,
     HomeFriendRequest,
     HomeLevelAsk,
+    HomeRanking,
     LevelAsksOnHome,
+    RankingOnHome,
     ReaderRelations,
     GameResults,
     PlayerBookings,
@@ -132,6 +138,9 @@ class Home:
     #: *ASKED FOR A LEVEL* — one card per sport, the sport with the newest ask
     #: first (#764). Empty, and the row gone, once none waits.
     level_asks: tuple[HomeLevelAsk, ...] = ()
+    #: The trophy left of the bell (#768): the sport of the reader's latest
+    #: result and their General place in it. ``None`` with no result anywhere.
+    ranking: HomeRanking | None = None
 
 
 @final
@@ -150,9 +159,11 @@ class ReadHome:
         relations: ReaderRelations,
         friend_requests: FriendRequestsOnHome,
         level_asks: LevelAsksOnHome,
+        ranking: RankingOnHome,
         friends_games: FriendsGameBookings,
         clock: Clock,
     ) -> None:
+        self._ranking = ranking
         self._level_asks = level_asks
         self._friends_games = friends_games
         self._relations = relations
@@ -233,6 +244,7 @@ class ReadHome:
             friend_requests=await self._friend_requests.of(reader),
             friends_games=invitations,
             level_asks=await self._level_asks.of(reader),
+            ranking=await self._ranking.of(reader),
         )
 
     async def _invitations(

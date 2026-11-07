@@ -85,6 +85,7 @@ from app.modules.proposals.domain.ports import (
     DeckPerson,
     HomeFriendRequest,
     HomeLevelAsk,
+    HomeRanking,
     PaymentRefusal,
 )
 from app.modules.proposals.domain.proposal import TimeTo
@@ -1637,6 +1638,30 @@ class HomeLevelAskSchema(BaseModel):
         )
 
 
+class HomeRankingSchema(BaseModel):
+    """Home's trophy, **🏆 #7**, just left of the bell (#768; `docs/adr/0203`
+    §5). A tap opens Rankings on `sport`."""
+
+    sport: Sport = Field(
+        description=(
+            "The sport of your latest confirmed competitive result, in any "
+            "sport — after a tennis win, tennis."
+        )
+    )
+    general_place: int | None = Field(
+        ge=1,
+        description=(
+            "Your place on General in `sport` — `null` when you aren't listed "
+            "there (fewer than 5 results, or none in the last 90 days), and the "
+            "trophy draws no number."
+        ),
+    )
+
+    @classmethod
+    def of(cls, ranking: HomeRanking) -> "HomeRankingSchema":
+        return cls(sport=ranking.sport, general_place=ranking.general_place)
+
+
 class HomeResponse(BaseModel):
     """**Home**: the reader's games from the moment they fill, and the friend
     requests, friends game invitations and asks for a level waiting on them."""
@@ -1698,6 +1723,15 @@ class HomeResponse(BaseModel):
             "gone when this is empty. Not counted in `needing_you`."
         )
     )
+    ranking: HomeRankingSchema | None = Field(
+        default=None,
+        description=(
+            "The trophy left of the bell (#768): the sport of your latest "
+            "result and your General place in it. **`null` when you have no "
+            "result in any sport** — the trophy still shows, with no number, "
+            "and still opens Rankings."
+        ),
+    )
 
     @classmethod
     def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
@@ -1717,6 +1751,9 @@ class HomeResponse(BaseModel):
                 for invitation in home.friends_games
             ],
             level_asks=[HomeLevelAskSchema.of(ask) for ask in home.level_asks],
+            ranking=(
+                None if home.ranking is None else HomeRankingSchema.of(home.ranking)
+            ),
             games=[
                 HomeGameSchema.from_card(
                     card, reader=reader, people=home.people, read_at=home.read_at

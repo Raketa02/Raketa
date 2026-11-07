@@ -71,6 +71,7 @@ from app.modules.proposals.presentation.routes import (
     seat_charges_router as seat_charge_confirmation_router,
 )
 from app.modules.proposals.presentation.routes import router as proposals_router
+from app.modules.rankings.presentation.routes import router as rankings_router
 from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
 from app.modules.sportsmanship.presentation.routes import (
@@ -96,6 +97,7 @@ player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)
 player_api_router.include_router(sportsmanship_router)
 player_api_router.include_router(player_record_router)
+player_api_router.include_router(rankings_router)
 player_api_router.include_router(groups_router)
 player_api_router.include_router(home_clubs_router)
 player_api_router.include_router(join_search_router)

@@ -147,7 +147,11 @@ WRITTEN_CONTEXTS = frozenset(
 #: the context chose: a card is not event-sourced and there is no aggregate to
 #: write. `AnswerTheCard` writes that module's own two tables through its own
 #: unit of work, which is the same shape as a search record.
-EXERCISED_CONTEXTS = frozenset({"matchmaking", "sportsmanship"})
+#:
+#: `rankings` joined with #768, and it has no aggregate at all: its rows are
+#: folded from the rating streams by the outbox delivery, so the seed only
+#: **reads** the list, through the page's own use case, to prove it.
+EXERCISED_CONTEXTS = frozenset({"matchmaking", "rankings", "sportsmanship"})
 
 #: The repository builders the seed path may take from the composition root, and
 #: the context each of them writes an aggregate in. Written out by name, because
@@ -314,6 +318,7 @@ def test_the_walk_has_something_to_walk():
         "photos.py",
         "posts.py",
         "proposals.py",
+        "rankings.py",
         "rescues.py",
         "rooms.py",
         "runner.py",

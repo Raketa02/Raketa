@@ -1,0 +1,84 @@
+"""``RatingHistories`` over the rating's own streams — **signed here**, so the
+arrow runs ``rankings → rating`` and the rating knows nothing of the ranking.
+
+**The rating's events are the record the ranking folds**: its opening
+``rating.rating_initialised`` and every ``rating.moved_on_result``, read as the
+rating context recorded them, never re-derived. A player's history is one
+addressed stream — its id is the pair — and the rebuild walks every rating
+stream in the order they were opened.
+
+**It replays and remembers nothing**: no version is kept, so nothing read here
+can be saved back onto a rating.
+
+**The filing is the rating's own**: ``RATING_AGGREGATE`` and ``skill_rating_id``
+are imported rather than respelled, so a rename there is a rename here — the
+same stance the rating's published read takes, beside which this one sits.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable, Sequence
+from typing import final
+from uuid import UUID
+
+from app.application.ports import DomainEventStore
+from app.kernel import Sport, instant
+from app.modules.rankings.domain.ranking import LevelMove, RatingHistory
+from app.modules.rating.domain.events import RatingInitialised, RatingMovedOnResult
+from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    RATING_AGGREGATE,
+)
+from app.shared.domain import DomainEvent
+
+
+@final
+class RatingStreamHistories:
+    def __init__(self, *, event_store: DomainEventStore) -> None:
+        self._event_store = event_store
+
+    async def history_of(self, player_id: UUID, sport: Sport) -> RatingHistory | None:
+        return await self._replayed(skill_rating_id(player_id, sport))
+
+    async def every_history(self) -> Sequence[RatingHistory]:
+        histories = []
+        for rating_id in await self._event_store.find_aggregate_ids_by_first_event(
+            aggregate_type=RATING_AGGREGATE, payload_equals={}
+        ):
+            history = await self._replayed(rating_id)
+            if history is not None:
+                histories.append(history)
+        return tuple(histories)
+
+    async def _replayed(self, rating_id: UUID) -> RatingHistory | None:
+        stored = await self._event_store.load_stream(
+            aggregate_type=RATING_AGGREGATE, aggregate_id=rating_id
+        )
+        return _history(record.event for record in stored)
+
+
+def _history(events: Iterable[DomainEvent]) -> RatingHistory | None:
+    opening: RatingInitialised | None = None
+    moves: list[LevelMove] = []
+    for event in events:
+        if isinstance(event, RatingInitialised):
+            opening = event
+        elif isinstance(event, RatingMovedOnResult):
+            moves.append(
+                LevelMove(
+                    game_id=event.game_id,
+                    won=event.won,
+                    mu=event.mu,
+                    sigma=event.sigma,
+                    at=instant(event.occurred_at),
+                )
+            )
+    if opening is None:
+        return None
+    return RatingHistory(
+        player_id=opening.player_id,
+        sport=Sport(opening.sport),
+        initial_mu=opening.mu,
+        initialised_at=instant(opening.occurred_at),
+        moves=tuple(moves),
+    )

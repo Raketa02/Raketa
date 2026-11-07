@@ -139,6 +139,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   keeps room in — so nothing she is dealt moves — and the two at different hours. The run
   fails by name unless her Home's *FRIENDS GAME* reads both; a second run sends nothing
   twice.
+- **The ranking is results, so its seed is played history** (#768,
+  `app/seeds/rankings.py`; `rankings.md`): nineteen padel games, `RANKING_GAMES`, handed to
+  the played history beside `PLAYED_GAMES` and written as every declared game is — the
+  rooms layer's outbox drain moves the Levels and folds every row. Fourteen are listed in
+  padel, her mid-list on three wins and two losses; `cohort-a-12` has 3; badminton has
+  nobody. Who may play is narrow — no record fixture's count, no named claim near its
+  band's edge, nobody Advanced — and the module says why. `assert_the_ranking` reads the
+  page's own use case among the screens and fails the run by name; proven twice over on a
+  fresh Postgres, the rebuild equal to live delivery row for row.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

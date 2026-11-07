@@ -18,7 +18,7 @@ ECS_SERVICE      ?= raketa-service
 .PHONY: help install test test-affected test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
         gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
-        photo-flag-rate photo-flag-rate-host \
+        photo-flag-rate photo-flag-rate-host rankings-rebuild rankings-rebuild-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -199,6 +199,16 @@ photo-flag-rate:   ## the on-court flag rate at each candidate threshold, from s
 
 photo-flag-rate-host: ## the same reading from the host — needs .env, like seed-host
 	poetry run python -m app.modules.player_profile.infrastructure.flag_rate_cli $(THRESHOLDS)
+
+## ----- the ranking (#768)
+## Every ranking row folded from every rating stream, as the outbox delivery
+## folds one: owed once, to a store that held results before the ranking
+## shipped. Running it twice changes nothing.
+rankings-rebuild:  ## fold every ranking row from the rating history in the event store
+	$(COMPOSE_LOCAL) exec api python -m app.modules.rankings.infrastructure.rebuild_cli
+
+rankings-rebuild-host: ## the same rebuild from the host — needs .env, like seed-host
+	poetry run python -m app.modules.rankings.infrastructure.rebuild_cli
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

@@ -176,6 +176,7 @@ from app.modules.proposals.domain.ports import (
     SendersCourts,
     FriendRequestsOnHome,
     LevelAsksOnHome,
+    RankingOnHome,
     ReaderRelations,
     BookedGameChanges,
     BookedGames,
@@ -545,6 +546,28 @@ from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
     FriendsReaderRelations,
     FriendsRequestsOnHome,
+)
+from app.modules.proposals.infrastructure.rankings import RankingsOnHome
+from app.modules.rankings.application.projection import (
+    MoveTheRanking,
+    RebuildTheRankings,
+)
+from app.modules.rankings.application.reads import ReadHomeRanking, ReadRanking
+from app.modules.rankings.domain.ports import (
+    RankedFaces,
+    RankingRows,
+    RatingHistories,
+    SportLevels,
+)
+from app.modules.rankings.infrastructure.profile_ranked_faces import (
+    ProfileRankedFaces,
+)
+from app.modules.rankings.infrastructure.rated_sport_levels import RatedSportLevels
+from app.modules.rankings.infrastructure.rating_stream_histories import (
+    RatingStreamHistories,
+)
+from app.modules.rankings.infrastructure.sqlalchemy_ranking_rows import (
+    SqlAlchemyRankingRows,
 )
 from app.modules.groups.infrastructure.friends_member_relations import (
     FriendsMemberRelations,
@@ -3191,6 +3214,7 @@ def build_read_home(
         level_asks=build_level_asks_on_home(
             session, settings=settings, runtime=runtime
         ),
+        ranking=build_ranking_on_home(session, clock=clock),
         friends_games=build_friends_game_bookings(session, runtime=runtime),
         clock=clock,
     )
@@ -3921,6 +3945,97 @@ def build_answer_the_asks_for_a_level(
             events=build_event_publisher(session, runtime=runtime),
         ),
     )
+
+
+def build_ranking_rows(session: AsyncSession) -> RankingRows:
+    """The ranking projection, ``ranking_rows`` (#768; ``docs/adr/0203`` §10)."""
+    return SqlAlchemyRankingRows(session)
+
+
+def build_rating_histories(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RatingHistories:
+    """The rating's streams, which every ranking row is folded from."""
+    return RatingStreamHistories(
+        event_store=build_domain_event_store(session, runtime=runtime)
+    )
+
+
+def build_ranked_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> RankedFaces:
+    """A name from ``users``, a face from the Player profile, a link from the
+    store — ``build_friend_faces``' three providers."""
+    return ProfileRankedFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_sport_levels(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SportLevels:
+    """Whether the reader holds a level in a sport, off rating's published
+    read."""
+    return RatedSportLevels(build_rated_player_query(session, runtime=runtime))
+
+
+def build_move_the_ranking(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> MoveTheRanking:
+    """A result's row folded again — built per delivery run, over the session
+    the delivery commits in (#768)."""
+    return MoveTheRanking(
+        histories=build_rating_histories(session, runtime=runtime),
+        rows=build_ranking_rows(session),
+    )
+
+
+def build_rebuild_the_rankings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RebuildTheRankings:
+    """Every row folded from every rating stream — ``make rankings-rebuild``."""
+    return RebuildTheRankings(
+        histories=build_rating_histories(session, runtime=runtime),
+        rows=build_ranking_rows(session),
+        uow=build_unit_of_work(session),
+    )
+
+
+def build_read_ranking(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadRanking:
+    """``GET /rankings/{sport}``: the card, the podium and General's first
+    page."""
+    return ReadRanking(
+        rows=build_ranking_rows(session),
+        faces=build_ranked_faces(session, settings=settings, runtime=runtime),
+        levels=build_sport_levels(session, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_home_ranking(session: AsyncSession, *, clock: Clock) -> ReadHomeRanking:
+    """Home's trophy: the sport of the latest result and the General place."""
+    return ReadHomeRanking(rows=build_ranking_rows(session), clock=clock)
+
+
+def build_ranking_on_home(session: AsyncSession, *, clock: Clock) -> RankingOnHome:
+    """Home's trophy — Rankings' read, signed in ``proposals/infrastructure/``
+    (``docs/adr/0203`` §5)."""
+    return RankingsOnHome(build_read_home_ranking(session, clock=clock))
 
 
 def build_member_relations(
