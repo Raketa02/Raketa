@@ -150,9 +150,10 @@ export { authErrorMessage } from './components/authErrorMessage';
 export { useAcceptInvitation } from './hooks/useAuthActions';
 
 /**
- * The two launch steps. Exported because the bootstrap sequence needs them and
+ * The launch steps. Exported because the bootstrap sequence needs them and
  * `shared/lib/bootstrap` may not import a feature — so the root layout, whose job is
- * composition, wires the two together.
+ * composition, wires them together: `restoreSession` asks with `fetchCurrentUserAtLaunch`,
+ * so the answer — or the failure — is left in the cache the entry gate reads.
  *
  * `refreshTokens` is the wire call the rotation is built on, not the rotation itself:
  * that lives in `shared/lib/http` and `shared/lib/auth`, and nothing here may re-implement
@@ -160,3 +161,4 @@ export { useAcceptInvitation } from './hooks/useAuthActions';
  */
 export { refreshTokens } from './use-cases/refreshTokens';
 export { restoreSession, type RestoredSession } from './use-cases/restoreSession';
+export { fetchCurrentUserAtLaunch } from './hooks/useCurrentUser';

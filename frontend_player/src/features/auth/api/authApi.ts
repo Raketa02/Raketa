@@ -8,7 +8,7 @@
  */
 
 import type { components } from '@/generated/schema';
-import { httpRequest } from '@/shared/lib/http';
+import { httpRequest, type TimeoutClass } from '@/shared/lib/http';
 
 type TokenResponse = components['schemas']['TokenResponse'];
 type UserResponse = components['schemas']['UserResponse'];
@@ -87,14 +87,20 @@ export function refresh(
  *
  * This doubles as session validation at launch: it is the cheapest authenticated read on
  * the player surface, and the server's answer is the only thing that can tell a live
- * session from a keychain entry that outlived a reinstall.
+ * session from a keychain entry that outlived a reinstall. That validation is asked with
+ * the splash up, so it names its own `timeout` class — `launch` — and every other caller
+ * takes the ordinary one.
  */
-export function me({ signal }: AuthApiOptions = {}): Promise<MeResponse> {
+export function me({
+  signal,
+  timeout,
+}: AuthApiOptions & { readonly timeout?: TimeoutClass } = {}): Promise<MeResponse> {
   return httpRequest<MeResponse>({
     method: 'GET',
     path: '/api/v1/users/me',
     authenticated: true,
     signal,
+    timeout,
   });
 }
 

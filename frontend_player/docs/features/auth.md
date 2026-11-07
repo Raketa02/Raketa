@@ -307,3 +307,22 @@ the last player until the next sign-in on it (`notifications.md`'s call 7).
 ADR-0200 §1). The step still hands the next destination back to the gate, which now answers _the
 six steps_ for an account sign-up created; the _Continue_ hint that promised _a few questions to
 find your level_ says _Next, what kind of player you are_.
+
+**The launch stops waiting after five seconds, and leaves what it learnt where the gate reads
+it** (2026-11-07). A launch with a stored session validates it with `/users/me` behind the splash,
+and on a connection that reaches nothing — a weak signal, a captive portal, a server that is not
+there — that read waited out the whole fifteen-second request timeout, after which the entry gate
+asked the same question three more times behind an empty screen: about a minute before a word.
+The read is now `fetchCurrentUserAtLaunch`: the one `currentUserQuery` definition, asked through
+the cache with the **`launch` timeout class** (5 s), no retry, and `networkMode: 'always'` — a
+paused launch read would hold the splash until the connection came back. Giving up early costs
+nothing but the wait, because an unanswered validation keeps the session. Through the cache so
+that both answers land where the gate looks: the player, which the root layout used to seed by
+hand, and **the failure, which is now the gate's first answer** ([`onboarding.md`](onboarding.md)).
+`restoreSession` takes the read as its argument — a use-case may not know Query — and gained one
+branch: a refresh rejected under the read ends the session, and the teardown cancels the read with
+it, so what arrives is a cancellation rather than the 401. The session machine already says
+`unauthenticated`, and the launch says the same rather than opening the session again. **Not
+covered**: a launch that starts on an expired access token refreshes with the ordinary `request`
+budget — the rotation is single-flight and shared, so there is no caller to take a class from.
+**Not seen on a device.**

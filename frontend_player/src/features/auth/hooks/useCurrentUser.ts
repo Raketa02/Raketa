@@ -3,9 +3,10 @@
  * mirrors it. The session machine holds a status and deliberately not this.
  */
 
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query';
 
 import { useSessionStatus } from '@/shared/lib/auth';
+import type { TimeoutClass } from '@/shared/lib/http';
 import type { AppError } from '@/shared/errors';
 
 import { me } from '../api/authApi';
@@ -17,14 +18,41 @@ import { authKeys } from './authKeys';
 /**
  * The one read of the signed-in player — its key and its fetch, as one thing.
  *
- * Spelled once so the hook below and the naming's re-read (`useNamePlayer`) cannot disagree
- * about what `/users/me` is or how it is mapped: a second `queryFn` under the same key would
- * be two answers to one question, and the second is the one that drifts.
+ * Spelled once so the hook below, the naming's re-read (`useNamePlayer`) and the launch's
+ * validation cannot disagree about what `/users/me` is or how it is mapped: a second
+ * `queryFn` under the same key would be two answers to one question, and the second is the
+ * one that drifts. **How long it may take is the one thing a caller chooses**, and only the
+ * launch chooses.
  */
-export function currentUserQuery() {
+export function currentUserQuery(timeout: TimeoutClass = 'request') {
   return queryOptions<AuthenticatedUser, AppError>({
     queryKey: authKeys.currentUser(),
-    queryFn: ({ signal }) => me({ signal }).then(toAuthenticatedUser),
+    queryFn: ({ signal }) => me({ signal, timeout }).then(toAuthenticatedUser),
+  });
+}
+
+/**
+ * **The launch's validation of a stored session — the entry gate's first read**, asked once,
+ * with the splash up, through the cache the gate reads.
+ *
+ * Through the cache so that **either answer is left where the gate looks.** An answer seeds
+ * the player, so a warm launch's first screen asks nothing; a failure is left as the read's
+ * error, so the gate opens on it — the first frame after the splash says the server could not
+ * be reached — rather than asking again behind an empty screen, which on a connection that
+ * reaches nothing was three more fifteen-second timeouts with nothing drawn.
+ *
+ * - **`launch` timeout.** Nothing gets past the splash, and giving up costs only the wait:
+ *   `restoreSession` keeps an unanswered session.
+ * - **No retry.** The gate retries, on a screen that says what is happening.
+ * - **`networkMode: 'always'`.** The cache pauses a read while the phone says it is offline,
+ *   and a paused launch read is a splash held until the connection comes back. Offline, it
+ *   fails at once; the gate then says it is waiting, because the read the gate makes pauses.
+ */
+export function fetchCurrentUserAtLaunch(client: QueryClient): Promise<AuthenticatedUser> {
+  return client.fetchQuery({
+    ...currentUserQuery('launch'),
+    retry: false,
+    networkMode: 'always',
   });
 }
 

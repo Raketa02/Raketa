@@ -18,16 +18,18 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import {
+  beginSession,
   clearStoredTokens,
   resetSessionStatus,
   setSessionStatus,
   wireHttpCredentials,
 } from '@/shared/lib/auth';
+import { TIMEOUT_MS } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
-import { refreshTokens } from '@/features/auth/types';
+import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/features/auth/types';
 import {
   GATE_USER,
   launchSignedIn,
@@ -46,6 +48,8 @@ import {
   errorResponse,
   installTransport,
   json,
+  networkFailure,
+  neverResponds,
   transcriptOf,
   type Transport,
   type Wire,
@@ -249,6 +253,99 @@ describe('where a launch lands', () => {
 
     stubGate();
     fireEvent.press(screen.getByLabelText('Try again'));
+
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+  });
+
+  it('says so after the first unanswered read, rather than a blank screen through every retry', async () => {
+    // A connection that is up and reaches nothing — a weak signal, a captive portal, a server
+    // that is not there. Each read waits out the request timeout, and the gate drew nothing
+    // through all three: 49 seconds of an empty screen before a word.
+    stubGate();
+    transport.on('GET', ME_PATH, neverResponds());
+
+    await launchSignedIn();
+    expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(TIMEOUT_MS.request);
+    });
+
+    expect(await screen.findByText("We couldn't pick up where you left off")).toBeTruthy();
+    expect(transport.requestsTo('GET', ME_PATH).length).toBeLessThan(3);
+    // Still trying underneath, and the control says so rather than offering a second attempt
+    // on top of the one in flight.
+    expect(screen.getByRole('button', { name: 'Trying again…' })).toBeTruthy();
+
+    // Every retry spent: the screen is the same, and the control is the player's again. The
+    // async advance, because each retry starts in a microtask after its backoff.
+    await act(() => jest.advanceTimersByTimeAsync(3 * TIMEOUT_MS.request));
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy();
+    expect(screen.getByText("We couldn't pick up where you left off")).toBeTruthy();
+    expect(transport.requestsTo('GET', ME_PATH)).toHaveLength(3);
+  });
+
+  it('keeps the screen up, saying it is trying, while Try again is asked', async () => {
+    // A read with no answer yet is not *pending* once one has failed: going blank for the
+    // retry is the same empty screen, on the one press the player made to get past it.
+    stubGate();
+    transport.on('GET', ME_PATH, () => errorResponse(403, 'forbidden'));
+
+    await launchSignedIn();
+    await screen.findByText("We couldn't pick up where you left off");
+
+    let answerMe = () => {};
+    const held = new Promise<void>((resolve) => {
+      answerMe = resolve;
+    });
+    transport.on('GET', ME_PATH, async () => {
+      await held;
+      return json<Wire['MeResponse']>(GATE_USER);
+    });
+    fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByRole('button', { name: 'Trying again…' })).toBeTruthy();
+    expect(screen.getByText("We couldn't pick up where you left off")).toBeTruthy();
+
+    answerMe();
+
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+  });
+
+  it("opens on the launch's own failure, and tries again by itself", async () => {
+    // Bootstrap's validation is the gate's first read. It could not reach the server, so the
+    // first frame after the splash says so — rather than asking again behind an empty screen.
+    stubGate();
+    transport.on('GET', ME_PATH, networkFailure());
+    await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    // The root layout's step, composed as it composes it.
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+
+    stubGate();
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+
+    expect(screen.getByText("We couldn't pick up where you left off")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Trying again…' })).toBeTruthy();
+
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+    expect(transport.requestsTo('GET', ME_PATH)).toHaveLength(2);
+  });
+
+  it("says it is waiting, not that it failed, when the launch's read failed offline", async () => {
+    // The launch's read fails at once with no connection. What the gate says next is the
+    // connection's, not the failure's: it resumes by itself, so nothing coral and no button.
+    stubGate();
+    transport.on('GET', ME_PATH, networkFailure());
+    await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+    onlineManager.setOnline(false);
+
+    stubGate();
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+
+    expect(screen.getByText("You're offline. This will load as soon as you're back.")).toBeTruthy();
+    expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+
+    onlineManager.setOnline(true);
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
   });

@@ -11,6 +11,14 @@
  * declining to.
  */
 export const TIMEOUT_MS = {
+  /**
+   * Asked while the splash screen is up, which nothing on the phone gets past — the
+   * launch's validation of a stored session. **Shorter than `request` because giving up
+   * costs nothing but the wait:** an unanswered validation keeps the session, and the entry
+   * gate opens on that failure and asks again with the ordinary budget. A connection that
+   * reaches nothing held the splash for the full fifteen seconds before this existed.
+   */
+  launch: 5_000,
   /** An ordinary interactive read or write. Someone is looking at a spinner. */
   request: 15_000,
   /** Sending a file. Bounded by the phone's uplink, which is the slow half. */

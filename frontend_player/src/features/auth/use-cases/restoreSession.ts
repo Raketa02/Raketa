@@ -9,22 +9,21 @@
 
 import {
   endSession,
+  getSessionStatus,
   readStoredTokens,
   setSessionStatus,
   type SessionStatus,
 } from '@/shared/lib/auth';
 import { AppError } from '@/shared/errors';
 
-import { me } from '../api/authApi';
 import type { AuthenticatedUser } from '../domain/AuthenticatedUser';
-import { toAuthenticatedUser } from '../mappers/authMappers';
 
 export interface RestoredSession {
   readonly status: Extract<SessionStatus, 'authenticated' | 'unauthenticated'>;
   /**
-   * The validated player, when the server answered. Handed back so bootstrap can seed
-   * the Query cache with it — the profile is backend data and Query owns it, so this is
-   * a response-driven cache write, never a second copy held by the session.
+   * The validated player, when the server answered. The read handed in has already left
+   * it in the Query cache — the profile is backend data and Query owns it — so this is the
+   * answer as the caller learnt it, never a second copy held by the session.
    */
   readonly user?: AuthenticatedUser;
 }
@@ -48,8 +47,16 @@ export interface RestoredSession {
  * genuine rejection into a single clean sign-out. The failure mode of guessing wrong here
  * is one screen showing a retry; the failure mode of guessing wrong the other way is a
  * signed-in player thrown back to a login form every time a tunnel swallows a request.
+ *
+ * **The read is handed in**, and it is `/users/me` through the Query cache
+ * (`fetchCurrentUserAtLaunch`): this is pure session logic and may not know a data-fetching
+ * library, while the read's two answers both belong in the cache the entry gate reads — the
+ * player, so the first screen asks nothing, and the failure, so the gate opens on it instead
+ * of asking again behind an empty screen.
  */
-export async function restoreSession(): Promise<RestoredSession> {
+export async function restoreSession(
+  readThePlayer: () => Promise<AuthenticatedUser>,
+): Promise<RestoredSession> {
   const tokens = await readStoredTokens();
 
   if (tokens === undefined) {
@@ -58,7 +65,7 @@ export async function restoreSession(): Promise<RestoredSession> {
   }
 
   try {
-    const user = toAuthenticatedUser(await me());
+    const user = await readThePlayer();
     setSessionStatus('authenticated');
     return { status: 'authenticated', user };
   } catch (error) {
@@ -68,6 +75,13 @@ export async function restoreSession(): Promise<RestoredSession> {
       await endSession('session-invalidated');
       return { status: 'unauthenticated' };
     }
+
+    // **Ended under the read.** A rejected refresh ends the session where it is learnt, and
+    // that teardown cancels every query in flight — this read among them — so what arrives
+    // here is the cancellation rather than the 401 behind it. The session machine already
+    // holds the verdict; opening the session again would hand the gate a status with no
+    // credentials behind it.
+    if (getSessionStatus() === 'unauthenticated') return { status: 'unauthenticated' };
 
     // Unreachable, timed out, or the server itself failed. None of those say anything
     // about whether this session is valid.

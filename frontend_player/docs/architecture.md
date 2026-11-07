@@ -306,9 +306,11 @@ replacement or a logout. **No fire-and-forget fetch inside a component, ever.**
 ### Timeouts
 
 `fetch` has no default timeout — an unreachable host hangs until the OS gives up. The
-timeout policy is centralized and expressed as classes (`request`, `upload`, `download`,
-`background`), implemented with `AbortController`. **No hard-coded millisecond literal in
-a feature.**
+timeout policy is centralized and expressed as classes (`launch`, `request`, `upload`,
+`download`, `background`), implemented with `AbortController`. **No hard-coded millisecond
+literal in a feature.** `launch` is the session validation behind the splash, and it is the
+shortest because giving up costs nothing: an unanswered validation keeps the session, and
+the entry gate opens on that failure and asks again on a screen that says so.
 
 ### Uploads
 

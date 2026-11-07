@@ -20,7 +20,7 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
-import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
+import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/features/auth/types';
 import { readTheInstallReferrerOnce } from '@/features/links/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
@@ -42,15 +42,14 @@ function wireCredentialsStep(): void {
  * feature, and `shared/lib/bootstrap` may never import a feature. Composing them is a
  * route file's job, which is why this adapter is here and is this small.
  *
- * Seeding the cache with the validated player is the "prefer response-driven updates"
- * rule at launch: bootstrap already asked the server who this is, so the first screen
- * should not ask again.
+ * The validation is asked through the cache, so its answer is left where the entry gate
+ * reads it, whichever it is. The player is the "prefer response-driven updates" rule at
+ * launch: bootstrap already asked the server who this is, so the first screen should not
+ * ask again. And a failure is the gate's first answer: a launch that could not reach the
+ * server opens on a screen saying so, never on an empty one asking again.
  */
 async function restoreSessionStep(): Promise<void> {
-  const restored = await restoreSession();
-  if (restored.user !== undefined) {
-    queryClient.setQueryData(authKeys.currentUser(), restored.user);
-  }
+  await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
 }
 
 /**

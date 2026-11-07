@@ -6,7 +6,7 @@
  * validation) and demand opposite behaviour.
  */
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
@@ -20,20 +20,27 @@ import {
   wireHttpCredentials,
 } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp } from '@/shared/lib/bootstrap';
+import { TIMEOUT_MS } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
+import type { AppError } from '@/shared/errors';
 import {
   errorResponse,
   installTransport,
   json,
   networkFailure,
+  neverResponds,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
 
 import { authKeys } from '../hooks/authKeys';
+import { fetchCurrentUserAtLaunch } from '../hooks/useCurrentUser';
 
 import { refreshTokens } from './refreshTokens';
 import { restoreSession } from './restoreSession';
+
+/** The launch's read, as the root layout hands it in: through the cache the gate reads. */
+const readAtLaunch = () => fetchCurrentUserAtLaunch(queryClient);
 
 const USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
@@ -60,6 +67,8 @@ beforeEach(async () => {
 afterEach(() => {
   transport.restore();
   queryClient.clear();
+  onlineManager.setOnline(true);
+  jest.useRealTimers();
 });
 
 /** A previous run of the app that ended with a signed-in player. */
@@ -73,7 +82,7 @@ describe('relaunching', () => {
     await credentialsOnDevice();
     transport.on('GET', '/api/v1/users/me', () => json(USER));
 
-    const restored = await restoreSession();
+    const restored = await restoreSession(readAtLaunch);
 
     expect(restored.status).toBe('authenticated');
     expect(getSessionStatus()).toBe('authenticated');
@@ -90,14 +99,14 @@ describe('relaunching', () => {
     await credentialsOnDevice();
     transport.on('GET', '/api/v1/users/me', () => json(USER));
 
-    await restoreSession();
+    await restoreSession(readAtLaunch);
 
     const [validation] = transport.requestsTo('GET', '/api/v1/users/me');
     expect(validation?.headers.Authorization).toBe('Bearer access-1');
   });
 
   it('is signed out when the device holds no credentials', async () => {
-    const restored = await restoreSession();
+    const restored = await restoreSession(readAtLaunch);
 
     expect(restored.status).toBe('unauthenticated');
     expect(getSessionStatus()).toBe('unauthenticated');
@@ -117,7 +126,7 @@ describe('relaunching', () => {
       errorResponse(401, 'refresh_token_not_recognised'),
     );
 
-    const restored = await restoreSession();
+    const restored = await restoreSession(readAtLaunch);
 
     expect(restored.status).toBe('unauthenticated');
     expect(hasTokens()).toBe(false);
@@ -146,7 +155,7 @@ describe('relaunching', () => {
       return json(rotatedPair);
     });
 
-    const restored = await restoreSession();
+    const restored = await restoreSession(readAtLaunch);
 
     expect(rotated).toBe(true);
     expect(restored.status).toBe('authenticated');
@@ -161,7 +170,7 @@ describe('relaunching', () => {
     await credentialsOnDevice();
     transport.on('GET', '/api/v1/users/me', networkFailure());
 
-    const restored = await restoreSession();
+    const restored = await restoreSession(readAtLaunch);
 
     expect(restored.status).toBe('authenticated');
     expect(hasTokens()).toBe(true);
@@ -171,10 +180,59 @@ describe('relaunching', () => {
     await credentialsOnDevice();
     transport.on('GET', '/api/v1/users/me', () => errorResponse(503, 'internal_error'));
 
-    const restored = await restoreSession();
+    const restored = await restoreSession(readAtLaunch);
 
     expect(restored.status).toBe('authenticated');
     expect(hasTokens()).toBe(true);
+  });
+
+  it('stops waiting at the launch budget, not the request timeout, and keeps the session', async () => {
+    // The splash is up and nothing on the phone gets past it. A connection that reaches
+    // nothing held it for the full request timeout — fifteen seconds of a frozen launch, to
+    // learn the one thing unreachable already means: keep the session, ask again later.
+    jest.useFakeTimers();
+    await credentialsOnDevice();
+    transport.on('GET', '/api/v1/users/me', neverResponds());
+
+    let settled = false;
+    const restoring = restoreSession(readAtLaunch).finally(() => {
+      settled = true;
+    });
+
+    await jest.advanceTimersByTimeAsync(TIMEOUT_MS.launch - 1);
+    expect(settled).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+
+    const restored = await restoring;
+    expect(restored.status).toBe('authenticated');
+    expect(hasTokens()).toBe(true);
+    expect(TIMEOUT_MS.launch).toBeLessThan(TIMEOUT_MS.request);
+  });
+
+  it('asks even when the phone says it is offline, rather than waiting for a connection', async () => {
+    // The cache pauses a read while offline. A launch read that paused would hold the splash
+    // until the connection came back — for ever, in a lift.
+    await credentialsOnDevice();
+    onlineManager.setOnline(false);
+    transport.on('GET', '/api/v1/users/me', networkFailure());
+
+    const restored = await restoreSession(readAtLaunch);
+
+    expect(restored.status).toBe('authenticated');
+    expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);
+  });
+
+  it('leaves an unanswered validation where the entry gate reads it', async () => {
+    // The launch already learned the server could not be reached; the gate opens on that,
+    // rather than asking again behind an empty screen.
+    await credentialsOnDevice();
+    transport.on('GET', '/api/v1/users/me', networkFailure());
+
+    await restoreSession(readAtLaunch);
+
+    const state = queryClient.getQueryState<unknown, AppError>(authKeys.currentUser());
+    expect(state?.status).toBe('error');
+    expect(state?.error?.recovery).toBe('retryable-automatically');
   });
 });
 
@@ -197,10 +255,7 @@ function renderLaunch() {
       wirePlatformManagers: () => {},
       wireCredentials: () => wireHttpCredentials(refreshTokens),
       restoreSession: async () => {
-        const restored = await restoreSession();
-        if (restored.user !== undefined) {
-          queryClient.setQueryData(authKeys.currentUser(), restored.user);
-        }
+        await restoreSession(readAtLaunch);
       },
       readInstallReferrer: () => {},
       loadFonts: async () => {},

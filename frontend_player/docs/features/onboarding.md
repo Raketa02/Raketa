@@ -335,3 +335,18 @@ return for a run reached with no group ([`notifications.md`](notifications.md)).
 `onError`**: the passport and a group's card draw the hook's `error` beside their chips, and a notice
 has nowhere to draw it, so it is told of a failed start — `sport_already_rated` among them, for a
 player who got the Level since the ask — and says so as a toast.
+
+**Once the gate's read has failed, the gate is never blank until one is answered** (2026-11-07).
+_Pending_ draws nothing, which is right for the moment one read takes and wrong for anything
+longer — and Query reports a read with no data that starts again as _pending_ with no error, so
+the gate drew nothing through every automatic retry and through the attempt _Try again_ started.
+On the harness's clock a server that never answers left the screen empty for 49 seconds — three
+fifteen-second timeouts and the backoff between them — after a fifteen-second splash. Now
+`useEntryDecision` keeps the read's last failure until an answer arrives (adjusted while
+rendering, and seeded from the cache, so the launch's own failure — which `auth`'s
+`fetchCurrentUserAtLaunch` leaves there — is the gate's first answer), and `failed` carries
+**`trying`**, an attempt in flight, which `EntryUnavailableScreen` draws as a busy _Trying again…_
+that takes no second press. A failed attempt says so at once rather than after the retries.
+**Offline still comes first**: a read that failed and is now paused for the connection resumes
+by itself, so it says _Waiting for a connection_, amber, with no button. A launch on a dead
+connection is now at most five seconds of splash and then this screen. **Not seen on a device.**

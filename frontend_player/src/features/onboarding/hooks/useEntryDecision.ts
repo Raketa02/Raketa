@@ -24,11 +24,26 @@
  *
  * **A failure has no safe default** — routing into the app is exactly the outcome the profile
  * branch exists to prevent — so it is *unavailable* ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+ *
+ * **And once a read has failed, the gate is never blank again until one is answered.** *Pending*
+ * draws nothing, which is right for the moment a read takes and wrong for anything longer: on a
+ * connection that reaches nothing, the launch's validation held the splash for a fifteen-second
+ * timeout and the gate then drew nothing through three more — about a minute before a word. So the
+ * launch's failure is the gate's first answer (`auth`'s `fetchCurrentUserAtLaunch` leaves it in the
+ * cache), a failed attempt says so at once rather than after every retry, and the screen stays up
+ * — *trying* — through each attempt after it, automatic or pressed.
  */
 
-import { useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
 
-import { named, useCurrentUser, useLastProfile } from '@/features/auth/types';
+import {
+  authKeys,
+  named,
+  useCurrentUser,
+  useLastProfile,
+  type AuthenticatedUser,
+} from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 import type { AppError } from '@/shared/errors';
 
@@ -46,8 +61,12 @@ import { entryDestination, type EntryDestination } from '../domain/entryDecision
  * false one.
  */
 export type EntryUnavailable =
-  /** A read genuinely failed. There is something to say about it, and something to retry. */
-  | { readonly kind: 'failed'; readonly error: AppError }
+  /**
+   * A read genuinely failed. There is something to say about it, and something to retry —
+   * unless an attempt is already `trying`, which the control says instead of offering a
+   * second one on top of it.
+   */
+  | { readonly kind: 'failed'; readonly error: AppError; readonly trying: boolean }
   /** Nothing was attempted. It will run itself on reconnect, and the sentence promises that. */
   | { readonly kind: 'offline' };
 
@@ -93,24 +112,45 @@ export function useEntryDecision(): EntryDecision {
     void refetchUser();
   }, [refetchUser]);
 
+  // **The read's last failure, until it is answered.** Query does not keep it across the next
+  // attempt: a read with no data that starts again is *pending* with no error, so the gate went
+  // blank for every retry — the automatic ones, and the one the player pressed to get past it.
+  // So the gate keeps it, adjusted while rendering (React's *storing information from previous
+  // renders*): the error once the attempts are spent, the failure reason while they are not.
+  //
+  // **Seeded from the cache, not from the read's result**, for the launch's failure: the gate's
+  // read starts again the moment it mounts, so its first result already carries no error, while
+  // the cache still holds what bootstrap's validation left there until that start lands.
+  const queryClient = useQueryClient();
+  const failing = user.isSuccess ? null : (user.error ?? user.failureReason);
+  const [lastFailure, setLastFailure] = useState<AppError | null>(
+    () =>
+      queryClient.getQueryState<AuthenticatedUser, AppError>(authKeys.currentUser())?.error ?? null,
+  );
+  if (failing !== null && failing !== lastFailure) setLastFailure(failing);
+  else if (user.isSuccess && lastFailure !== null) setLastFailure(null);
+  const failure = user.isSuccess ? null : (failing ?? lastFailure);
+
   // Nothing is decided for an account with two profiles until the phone has said which it wore.
   if (lastUnread) return { kind: 'pending' };
-
-  if (user.error !== null) {
-    return {
-      kind: 'unavailable',
-      reason: { kind: 'failed', error: user.error as AppError },
-      retry,
-    };
-  }
 
   // Offline, with nothing cached to decide from. `networkMode: 'online'` *pauses* a
   // query rather than failing it, so without this branch a launch on a dead connection
   // renders nothing at all — for as long as the connection stays dead. It is stated as
   // **paused**, not converted into a `networkUnavailable()`: a synthesised error would claim
   // something was tried and failed, and offer a *Try again* for a query that resumes itself.
+  // **Ahead of a failure**, for the same reason: a read that failed and is now waiting for the
+  // connection resumes by itself, and that is the true thing to say about it.
   if (user.fetchStatus === 'paused' && !user.isSuccess) {
     return { kind: 'unavailable', reason: { kind: 'offline' }, retry };
+  }
+
+  if (failure !== null) {
+    return {
+      kind: 'unavailable',
+      reason: { kind: 'failed', error: failure, trying: user.isFetching },
+      retry,
+    };
   }
 
   // `isSuccess`, not a truthiness check on the data.

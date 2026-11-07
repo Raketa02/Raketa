@@ -13,6 +13,10 @@
  * gate's queries are *paused*, they resume themselves the moment the connection is back, and
  * the retry would be the one control on this screen that does nothing. So the offline half is
  * amber rather than coral — reversible, not yet wrong — and carries no button.
+ *
+ * **The failed half stays up while it tries again**, automatically or because the player pressed:
+ * the button says _Trying again…_ and takes no second press, so an attempt in flight is never an
+ * empty screen and never two attempts.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -29,7 +33,7 @@ export interface EntryUnavailableScreenProps {
   readonly reason: EntryUnavailable;
   /**
    * Required even though the offline half never calls it. The gate always has a retry to
-   * offer — it is three `refetch`es — and an optional prop would let a *failed* branch be
+   * offer — it is the read's `refetch` — and an optional prop would let a *failed* branch be
    * rendered with nothing to press, which is the one state on this screen with no way out.
    */
   readonly onRetry: () => void;
@@ -49,6 +53,7 @@ function saying(reason: EntryUnavailable) {
       variant: 'amber' as const,
       sentence: offlineMessage('resumes'),
       retryable: false,
+      trying: false,
     };
   }
 
@@ -57,6 +62,7 @@ function saying(reason: EntryUnavailable) {
     variant: 'coral' as const,
     sentence: onboardingErrorMessage(reason.error),
     retryable: true,
+    trying: reason.trying,
   };
 }
 
@@ -72,7 +78,15 @@ export function EntryUnavailableScreen({ reason, onRetry }: EntryUnavailableScre
         <Note variant={said.variant} accessibilityRole="alert">
           {said.sentence}
         </Note>
-        {said.retryable ? <Button label="Try again" size="lg" onPress={onRetry} /> : null}
+        {said.retryable ? (
+          <Button
+            label="Try again"
+            busy={said.trying}
+            busyLabel="Trying again…"
+            size="lg"
+            onPress={onRetry}
+          />
+        ) : null}
       </View>
     </SafeAreaView>
   );
