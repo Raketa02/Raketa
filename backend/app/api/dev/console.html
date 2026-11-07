@@ -35,36 +35,44 @@
     --soft: #eef2f7;
   }
   * { box-sizing: border-box; }
+  /* The page fills the window at any width. Every grid track and flex child
+     below may shrink below its content (`minmax(0, 1fr)`, `min-width: 0`), and
+     what cannot wrap — a table — scrolls inside its own box, so nothing spills
+     into its neighbour and the page itself never scrolls sideways. */
   body {
     margin: 0; font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif;
-    color: var(--ink); background: var(--bg);
+    color: var(--ink); background: var(--bg); overflow-wrap: break-word;
   }
   header {
     position: sticky; top: 0; z-index: 2; background: var(--card);
     border-bottom: 1px solid var(--line); padding: 10px 20px;
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
   }
   header h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
     color: var(--dim); margin: 0 8px 0 0; font-weight: 600; }
-  main { padding: 16px 20px 40px; display: grid; gap: 16px; max-width: 1400px; }
-  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  header label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+  header select { min-width: 0; }
+  main { padding: 16px 20px 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
   section > h2 {
     margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line);
     font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim);
   }
-  .body { padding: 12px 14px; display: grid; gap: 10px; }
+  .body { padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row > *, .rowcard > * { min-width: 0; max-width: 100%; }
   label { color: var(--dim); font-size: 12px; }
-  button { font: inherit; padding: 4px 11px; border: 1px solid var(--line);
+  button { font: inherit; padding: 4px 11px; border: 1px solid var(--line); max-width: 100%;
     background: var(--card); border-radius: 6px; cursor: pointer; }
   button:hover { border-color: var(--accent); color: var(--accent); }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.primary:hover { color: #fff; filter: brightness(1.08); }
   button.expected { border-color: var(--accent); }
   button:disabled { opacity: .45; cursor: default; }
-  select { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  select { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; max-width: 100%; }
   .note { color: var(--dim); }
-  .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: var(--dim); }
+  .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: var(--dim);
+    overflow-wrap: anywhere; }
   .bad { color: var(--bad); }
   .good { color: var(--good); }
   .pill { display: inline-block; padding: 0 8px; border: 1px solid var(--line);
@@ -74,45 +82,98 @@
   .pill.WITHDRAWN, .pill.COURT_HOUR_LOST, .pill.CANCELLED { color: var(--bad); border-color: var(--bad); }
   .pill.phone { background: var(--accent); border-color: var(--accent); color: #fff; }
   .pill.FILLING, .pill.SEAT_OPEN, .pill.TAKING { color: var(--warn); border-color: var(--warn); }
-  #outcome { padding: 8px 12px; border-radius: 6px; background: var(--soft); min-height: 34px; }
+  #outcome { padding: 8px 12px; border-radius: 6px; background: var(--soft); min-height: 34px;
+    overflow-wrap: anywhere; }
   #outcome.bad { background: #fef3f2; }
+  .scroll { overflow-x: auto; container-type: inline-size; }
 
-  .people { display: grid; gap: 8px; }
-  .person { display: grid; grid-template-columns: 220px 1fr; gap: 12px;
+  .people { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .person { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 12px;
     border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
   .person.phone { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
-  .who { display: flex; gap: 10px; align-items: flex-start; }
+  .who { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+  .who .about { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .face { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none;
     background: var(--soft); display: grid; place-items: center; font-weight: 700; color: var(--dim); }
   .who .name { font-weight: 700; font-size: 15px; }
-  .cards { display: grid; gap: 6px; }
+  .cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
   .rowcard { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
     padding: 6px 8px; background: var(--soft); border-radius: 6px; }
   .rowcard .when { font-weight: 600; min-width: 130px; }
 
-  .games { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
-  .game { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+  .games { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr)); }
+  .game { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid;
+    grid-template-columns: minmax(0, 1fr); align-content: start; gap: 6px; min-width: 0;
+    container-type: inline-size; }
   .game.over { opacity: .6; }
   .game h3 { margin: 0; font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 2px 10px; }
+  dl { margin: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 2px 10px; }
   dt { color: var(--dim); font-size: 12px; }
-  dd { margin: 0; }
+  dd { margin: 0; min-width: 0; }
+  /* A table's label sits above it, so the table has the pane's whole width. */
+  dt.wide, dd.wide { grid-column: 1 / -1; }
+  dt.wide { margin-top: 4px; }
   table { border-collapse: collapse; width: 100%; font-size: 12px; }
   th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); }
   input[type=number] { font: inherit; width: 64px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
   .club { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .card-on-file { margin-top: 4px; display: flex; gap: 6px; align-items: center; }
-  .notices td { white-space: nowrap; }
+  .card-on-file { margin-top: 4px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .notices td:last-child { white-space: nowrap; }
+  .notices .mono { overflow-wrap: normal; }
   .moment { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .moment .countdown { font-variant-numeric: tabular-nums; color: var(--warn); }
   .moment .countdown.due { color: var(--bad); font-weight: 600; }
-  .sent { grid-column: 1 / -1; display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .sent { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0;
+    border-top: 1px dashed var(--line); padding-top: 8px; }
   .sent h4 { margin: 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
   .cards h4 { margin: 4px 0 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
   input.score { font: inherit; width: 84px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
   input[type=date] { font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
   .posting { display: grid; gap: 6px; padding: 8px; border: 1px dashed var(--accent); border-radius: 6px; }
+
+  /* A table too narrow for its columns lays each row out as lines, every cell
+     led by its column's header (`labelCells`), so no button sits off to the
+     side. The notices table has no header: each notice wraps as one line. */
+  @container (max-width: 480px) {
+    .scroll table:not(.notices), .scroll table:not(.notices) tbody,
+    .scroll table:not(.notices) tr, .scroll table:not(.notices) td { display: block; }
+    .scroll table:not(.notices) thead { display: none; }
+    .scroll table:not(.notices) tr { padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .scroll table:not(.notices) td { position: relative; border: 0; padding: 2px 0 2px 96px; }
+    .scroll table:not(.notices) td:empty { display: none; }
+    .scroll table:not(.notices) td::before {
+      content: attr(data-label); position: absolute; left: 0; width: 88px;
+      font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim);
+    }
+  }
+  @container (max-width: 700px) {
+    .scroll table.notices, .scroll table.notices tbody { display: block; }
+    .scroll table.notices tr { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px;
+      padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .scroll table.notices td { border: 0; padding: 0; min-width: 0; overflow-wrap: anywhere; }
+  }
+  /* A narrow game pane puts each label above its value. */
+  @container (max-width: 400px) {
+    .game dl { grid-template-columns: minmax(0, 1fr); }
+    .game dt { margin-top: 4px; }
+  }
+  /* A narrow window puts a person's name above their cards… */
+  @media (max-width: 800px) {
+    .person { grid-template-columns: minmax(0, 1fr); }
+  }
+  /* …and a phone-wide one gives each picker its own line and lets the header
+     scroll away, so it does not cover a third of the screen. */
+  @media (max-width: 640px) {
+    header { position: static; padding: 10px 12px; }
+    header label { flex: 1 1 100%; }
+    header select { flex: 1; }
+    main { padding: 12px 12px 32px; gap: 12px; }
+    .body { padding: 10px; }
+    section > h2 { padding: 10px; }
+    .person { padding: 8px; }
+    .game { padding: 8px 10px; }
+  }
 </style>
 </head>
 <body>
@@ -214,6 +275,17 @@ function firesAt(iso, now) {
 const zl = (grosze) => (grosze === null || grosze === undefined ? "—" : (grosze / 100).toFixed(2) + " zł");
 // A court's kind, as a player reads it (#671).
 const kindOf = (court) => (court.indoor ? "indoor" : "outdoor");
+
+// A table in a narrow box stacks its rows (the `.scroll` container query in the
+// style); each cell carries its column's header so it still says what it is.
+function labelCells(root) {
+  root.querySelectorAll(".scroll table").forEach((table) => {
+    const heads = [...table.querySelectorAll("thead th")].map((th) => th.textContent);
+    table.querySelectorAll("tbody tr").forEach((tr) => {
+      [...tr.cells].forEach((td, i) => { td.dataset.label = heads[i] ?? ""; });
+    });
+  });
+}
 
 function esc(text) {
   return String(text ?? "").replace(/[&<>"']/g, (c) => ({
@@ -367,7 +439,7 @@ function drawPeople() {
       </div>`;
     }).join("") : `<div class="note">No card in ${esc(board.sport.toLowerCase())}.</div>`;
     return `<div class="person ${phone ? "phone" : ""}">
-      <div class="who">${face}<div>
+      <div class="who">${face}<div class="about">
         <div class="name">${nameOf(row)} ${phone ? pill("the phone", "phone") : ""}</div>
         <div class="mono">${esc(row.email)}</div>
         <div class="note">Level ${row.level === null ? "—" : row.level.toFixed(2)}</div>
@@ -378,6 +450,7 @@ function drawPeople() {
       ${sentOf(row)}
     </div>`;
   }).join("");
+  labelCells($("people"));
 }
 
 const VERBS = {
@@ -710,7 +783,7 @@ function sentOf(row) {
       "registered when it was given"
     : "no phone registered — nothing since the last one went was pushed, " +
       "and “Pushed as” is what would have been";
-  const notices = sent.notices.length ? `<table>
+  const notices = sent.notices.length ? `<div class="scroll"><table>
     <thead><tr><th>Given</th><th>In the list</th><th>Pushed as</th><th>Opens</th></tr></thead>
     <tbody>${sent.notices.map(({ listed, pushed }) => {
       const same = pushed && pushed.title === listed.title && pushed.body === listed.body;
@@ -723,8 +796,8 @@ function sentOf(row) {
           : `<strong>${esc(pushed.title)}</strong><br>${esc(pushed.body)}`}</td>
         <td>${esc(listed.opens)} <span class="mono">${esc(listed.game_id.slice(0, 8))}</span></td>
       </tr>`;
-    }).join("")}</tbody></table>` : `<div class="note">No notice.</div>`;
-  const emails = sent.emails.length ? `<table>
+    }).join("")}</tbody></table></div>` : `<div class="note">No notice.</div>`;
+  const emails = sent.emails.length ? `<div class="scroll"><table>
     <thead><tr><th>Queued</th><th>Email</th><th>Sent</th><th>Mail catcher</th></tr></thead>
     <tbody>${sent.emails.map((e) => `<tr>
       <td>${when(e.queued_at)}</td>
@@ -736,7 +809,7 @@ function sentOf(row) {
       <td>${e.in_the_mail_catcher
         ? `<a href="${esc(e.in_the_mail_catcher)}" target="_blank" rel="noopener">Open</a>`
         : `<span class="note">not there yet</span>`}</td>
-    </tr>`).join("")}</tbody></table>` : `<div class="note">No email to ${esc(sent.email)}.</div>`;
+    </tr>`).join("")}</tbody></table></div>` : `<div class="note">No email to ${esc(sent.email)}.</div>`;
   return `<div class="sent">
     <h4>Notices · in the list and pushed <span class="note">· ${phones}</span></h4>${notices}
     <h4>Emails · to ${esc(sent.email)}</h4>${emails}
@@ -789,7 +862,7 @@ function drawGames() {
       ? booking.departures.map((d) => `${nameOf(d.player)} left ${when(d.at)}` +
           (d.rescued_by ? ` · seat taken by ${nameOf(d.rescued_by)}` : " · seat open")).join("<br>")
       : "—";
-    const charges = game.charges.length ? `<table>
+    const charges = game.charges.length ? `<div class="scroll"><table>
       <thead><tr><th>Who</th><th>Share</th><th>Status</th><th>Held until</th><th>Taken</th><th>Refund</th><th>Provider</th></tr></thead>
       <tbody>${game.charges.map((c) => `<tr>
         <td>${nameOf(c.player)}</td>
@@ -801,7 +874,7 @@ function drawGames() {
           (c.refund.withholds_fee ? " less fee" : " in full") +
           (c.refund.given_at ? ` · given ${when(c.refund.given_at)}` : " · decided, on its way") : "—"}</td>
         <td>${chargeButtons(c)}</td>
-      </tr>`).join("")}</tbody></table>` : `<span class="note">no charge</span>`;
+      </tr>`).join("")}</tbody></table></div>` : `<span class="note">no charge</span>`;
     return `<div class="game ${over ? "over" : ""}">
       <h3>${when(game.starts_at)} · ${esc(game.club.name ?? "?")}
         ${pill(game.standing)} ${booking ? pill(booking.state) : ""}</h3>
@@ -822,12 +895,13 @@ function drawGames() {
         <dt>Left</dt><dd>${departures}</dd>` : ""}
         ${game.result ? `<dt>Result</dt><dd>${resultOf(game.result)}</dd>` : ""}
         <dt>Pending</dt><dd>${momentsOf(game)}</dd>
-        <dt>Money</dt><dd>${charges}</dd>
+        <dt class="${game.charges.length ? "wide" : ""}">Money</dt><dd class="${game.charges.length ? "wide" : ""}">${charges}</dd>
         <dt>${esc(game.club.name ?? "The club")}</dt><dd>${clubButtons(game)}</dd>
-        ${game.charges.length ? `<dt>Notices</dt><dd>${noticesOf(game)}</dd>` : ""}
+        ${game.charges.length ? `<dt class="wide">Notices</dt><dd class="wide">${noticesOf(game)}</dd>` : ""}
       </dl>
     </div>`;
   }).join("") : `<div class="note">Nothing to show. Try <em>Fresh deal</em>, or show every game.</div>`;
+  labelCells($("games"));
 }
 
 const MOMENT_WORDS = {
@@ -996,7 +1070,7 @@ function noticesOf(game) {
   </tr>`).join("");
   const newestFirst = listed.map((n) => n.notice_id).reverse();
   return `${load}${listed.length ? b("deliver", "All, newest first", newestFirst) : ""}
-    <table class="notices"><tbody>${rows}</tbody></table>`;
+    <div class="scroll"><table class="notices"><tbody>${rows}</tbody></table></div>`;
 }
 
 async function noticesAct(button) {
