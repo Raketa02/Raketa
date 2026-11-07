@@ -1,6 +1,8 @@
 import { AppError } from '@/shared/errors';
 import { setDeviceZone } from '@/test-support/deviceZone';
 
+import type { DeckPerson } from '../domain/deck';
+
 import {
   acceptLabel,
   answerRefusal,
@@ -11,6 +13,7 @@ import {
   invitationLine,
   payModeWords,
   seatStateWords,
+  seatsLineSpoken,
   seatsLineWords,
   sendLabel,
   sendRefusal,
@@ -124,20 +127,38 @@ describe('the invitation (the words §29.8)', () => {
   });
 });
 
+const named = (name?: string): DeckPerson => ({
+  playerId: name ?? 'ghost',
+  isYou: false,
+  isIn: false,
+  ...(name === undefined ? {} : { name }),
+});
+
 describe('the sender’s game and the details', () => {
   it('says who is in and who it waits for, each form of §29.8', () => {
     expect(
-      seatsLineWords({ friendsIn: 2, friendsSeated: 3, waitingFor: ['ania.k'], empty: 0 }),
+      seatsLineWords({ friendsIn: 2, friendsSeated: 3, waitingFor: [named('ania.k')], empty: 0 }),
     ).toBe('2 of 3 friends in · waiting for ania.k');
     expect(
-      seatsLineWords({ friendsIn: 0, friendsSeated: 3, waitingFor: ['ewa.m', 'ania.k'], empty: 1 }),
+      seatsLineWords({
+        friendsIn: 0,
+        friendsSeated: 3,
+        waitingFor: [named('ewa.m'), named('ania.k')],
+        empty: 1,
+      }),
     ).toBe('Waiting for ewa.m and ania.k · 1 seat empty');
     expect(seatsLineWords({ friendsIn: 1, friendsSeated: 3, waitingFor: [], empty: 2 })).toBe(
       '1 of 3 friends in · 2 seats empty',
     );
     expect(
-      seatsLineWords({ friendsIn: 0, friendsSeated: 1, waitingFor: ['ania.k'], empty: 0 }),
+      seatsLineWords({ friendsIn: 0, friendsSeated: 1, waitingFor: [named('ania.k')], empty: 0 }),
     ).toBe('Waiting for ania.k');
+  });
+
+  it('names a seat the court can no longer name as somebody, and speaks the line with commas', () => {
+    const line = { friendsIn: 1, friendsSeated: 3, waitingFor: [named()], empty: 1 };
+    expect(seatsLineWords(line)).toBe('1 of 3 friends in · waiting for Somebody · 1 seat empty');
+    expect(seatsLineSpoken(line)).toBe('1 of 3 friends in, waiting for Somebody, 1 seat empty');
   });
 
   it('words each seat’s state', () => {
@@ -151,9 +172,11 @@ describe('the sender’s game and the details', () => {
   });
 
   it('reads the pay mode', () => {
-    expect(payModeWords({ payMode: 'SPLIT_THE_COST', senderNickname: 'tomek.k' })).toBe('Split');
-    expect(payModeWords({ payMode: 'WHOLE_COURT', senderNickname: 'tomek.k' })).toBe(
-      'tomek.k paid the court',
-    );
+    const friend = { senderNickname: 'tomek.k', youAreTheSender: false };
+    expect(payModeWords({ ...friend, payMode: 'SPLIT_THE_COST' })).toBe('Split');
+    expect(payModeWords({ ...friend, payMode: 'WHOLE_COURT' })).toBe('tomek.k paid the court');
+    expect(
+      payModeWords({ senderNickname: 'tomek.k', youAreTheSender: true, payMode: 'WHOLE_COURT' }),
+    ).toBe('You paid the court');
   });
 });

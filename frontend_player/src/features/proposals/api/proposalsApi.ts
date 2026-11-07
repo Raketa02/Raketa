@@ -318,8 +318,9 @@ export function getFriendsCourts(
  * `payment_method_required`, `friends_games_waiting`, `you_play_then`, `games_per_week_booked`,
  * `court_just_taken`, `court_hour_not_for_sale`; and the card's own, `not_a_friend`, `no_level`,
  * `cannot_play_together`. **Not retried**: it books a court and holds money. **No
- * `Idempotency-Key`**: the button is busy while one is in flight, and a send again under a
- * `booking_id` that booked answers what it booked.
+ * `Idempotency-Key`**, because the server refuses the duplicate: a second send at an hour the sender
+ * now plays is `you_play_then`, and a send again under a `booking_id` that booked answers what it
+ * booked (#751) — the busy button is only what keeps the player from asking.
  */
 export function postFriendsGame(
   poolId: string,

@@ -12,12 +12,13 @@ import { platformClock } from '@/shared/date/platformZone';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { sentenceList } from '@/shared/formatting/sentenceList';
 
-import { countdownOf } from '../domain/deck';
+import { countdownOf, type DeckPerson } from '../domain/deck';
 import {
   gamesPerWeekOf,
   waitingCapOf,
   type FriendsGame,
   type FriendsGameInvitation,
+  type InvitationFace,
   type SeatShown,
   type SeatsLine,
 } from '../domain/friendsGame';
@@ -30,11 +31,15 @@ import {
   countdownWords,
   gameDayWords,
   shortMoment,
+  tileName,
 } from './deckPresentation';
 import { FRIENDS_GAME_COPY } from './friendsGameCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = FRIENDS_GAME_COPY;
+
+/** A line's clauses aloud — commas, where the drawn line has dots. */
+const SPOKEN_JOIN = ', ';
 
 // ---------------------------------------------------------------------------
 // The send sheet
@@ -69,7 +74,12 @@ export function coverLine({
 
 /** *Split the cost* / *Pay the whole court* — a choice card's title. */
 export function payModeTitle(mode: PayMode): string {
-  return mode === 'SPLIT_THE_COST' ? COPY.send.split : COPY.send.whole;
+  return COPY.send.payMode[mode];
+}
+
+/** *Split the cost, 25 zł* — a choice card, spoken with what its button charges. */
+export function payModeSpoken(mode: PayMode, chargeGrosze: number): string {
+  return `${payModeTitle(mode)}, ${formatZloty(chargeGrosze)}`;
 }
 
 /**
@@ -120,7 +130,7 @@ export function gameOf(sender: string | undefined): string {
 
 /** *tomek.k paid the court* — Whole court, on the invitation and under the details' price. */
 export function paidTheCourt(sender: string | undefined): string {
-  return `${sender ?? 'The sender'} paid the court`;
+  return `${sender ?? COPY.theSender} paid the court`;
 }
 
 /**
@@ -166,11 +176,15 @@ export function invitationLine(
     .join(LINE_JOIN);
 }
 
-/** **The invitation's answer**: *Accept and pay 25 zł* with *Split*; *Accept* with *Whole court*. */
+/** **The invitation's answer**, by the pay mode (§29.8). */
+const ACCEPT: Readonly<Record<PayMode, (shareGrosze: number) => string>> = {
+  SPLIT_THE_COST: (share) => `Accept and pay ${formatZloty(share)}`,
+  WHOLE_COURT: () => COPY.invitation.accept,
+};
+
+/** *Accept and pay 25 zł* with *Split*; *Accept* with *Whole court*. */
 export function acceptLabel(game: Pick<FriendsGame, 'payMode'>, shareGrosze: number): string {
-  return game.payMode === 'SPLIT_THE_COST'
-    ? `Accept and pay ${formatZloty(shareGrosze)}`
-    : COPY.invitation.accept;
+  return ACCEPT[game.payMode](shareGrosze);
 }
 
 /** The answers aloud, naming whose game — the row may hold two. */
@@ -180,6 +194,22 @@ export function acceptSpoken(label: string, sender: string | undefined): string 
 
 export function notThisTimeSpoken(sender: string | undefined): string {
   return `${COPY.invitation.notThisTime}, ${gameOf(sender)}`;
+}
+
+/** *tomek.k, in. magda.p, in. ania.k, still to answer. You* — an invitation's faces, as one sentence. */
+export function facesSpoken(faces: readonly InvitationFace[]): string {
+  return faces
+    .map(({ person, isIn, faded }) => {
+      const name = person.isYou ? COPY.you : tileName(person);
+      if (isIn) return `${name}, ${COPY.invitation.in}`;
+      return faded ? `${name}, ${COPY.invitation.stillToAnswer}` : name;
+    })
+    .join('. ');
+}
+
+/** A face's name under it — *You* for the reader. */
+export function faceName(person: DeckPerson): string {
+  return person.isYou ? COPY.you : tileName(person);
 }
 
 /**
@@ -204,20 +234,30 @@ export function answerRefusal(error: AppError, startsAt: string): string {
 
 /**
  * ***2 of 3 friends in · waiting for Ania*** (§29.8) — at nought In, *Waiting for Ania*; with seats
- * empty, *… · 1 seat empty*, *… · 2 seats empty*; both, when both are true.
+ * empty, *… · 1 seat empty*, *… · 2 seats empty*; both, when both are true. One clause a part:
+ * drawn joined by the dots, spoken joined by commas.
  */
-export function seatsLineWords(line: SeatsLine): string {
-  const waiting = line.waitingFor.length > 0;
+function seatsLineParts(line: SeatsLine): readonly string[] {
+  const names = line.waitingFor.map((person) => person.name ?? COPY.somebody);
+  const waiting = names.length > 0;
   const head =
     waiting && line.friendsIn === 0
-      ? `Waiting for ${sentenceList(line.waitingFor)}`
+      ? [`Waiting for ${sentenceList(names)}`]
       : [
           `${line.friendsIn} of ${line.friendsSeated} friends in`,
-          ...(waiting ? [`waiting for ${sentenceList(line.waitingFor)}`] : []),
-        ].join(LINE_JOIN);
+          ...(waiting ? [`waiting for ${sentenceList(names)}`] : []),
+        ];
   const empty =
     line.empty === 0 ? [] : [`${line.empty} ${line.empty === 1 ? 'seat' : 'seats'} empty`];
-  return [head, ...empty].join(LINE_JOIN);
+  return [...head, ...empty];
+}
+
+export function seatsLineWords(line: SeatsLine): string {
+  return seatsLineParts(line).join(LINE_JOIN);
+}
+
+export function seatsLineSpoken(line: SeatsLine): string {
+  return seatsLineParts(line).join(SPOKEN_JOIN);
 }
 
 /**
@@ -234,9 +274,25 @@ export function seatStateWords(seat: Pick<SeatShown, 'state' | 'waitingUntil'>, 
   return left === undefined ? 'waiting' : `waiting${LINE_JOIN}${left} left`;
 }
 
-/** *Split* · *tomek.k paid the court* — the pay mode, under the details' price (§29.8). */
-export function payModeWords(game: Pick<FriendsGame, 'payMode' | 'senderNickname'>): string {
-  return game.payMode === 'SPLIT_THE_COST' ? COPY.seats.split : paidTheCourt(game.senderNickname);
+/** *Split* · *tomek.k paid the court* — the pay mode, under the details' price, by the wire's mode. */
+const PAY_MODE_WORDS: Readonly<Record<PayMode, (sender: string | undefined) => string>> = {
+  SPLIT_THE_COST: () => COPY.seats.split,
+  WHOLE_COURT: paidTheCourt,
+};
+
+/**
+ * **The pay mode under the details' price** (§29.8) — *Split*, or *tomek.k paid the court*; the
+ * sender reads their own as *You paid the court* (a call).
+ */
+export function payModeWords(
+  game: Pick<FriendsGame, 'payMode' | 'senderNickname' | 'youAreTheSender'>,
+): string {
+  return PAY_MODE_WORDS[game.payMode](game.youAreTheSender ? COPY.you : game.senderNickname);
+}
+
+/** *ines.d, waiting · 21 h 00 left* — a seat on the details, spoken. */
+export function seatSpoken(seat: SeatShown, now: number): string {
+  return `${faceName(seat.person)}, ${seatStateWords(seat, now)}`;
 }
 
 /** ***Everyone is told, nobody pays, and the court goes back to Ogrody 33.*** (§29.10) */

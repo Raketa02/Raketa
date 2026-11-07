@@ -119,7 +119,7 @@ export function HomeGameCard({
           fresh,
           day,
           money: line,
-          ...(seats === undefined ? {} : { seats }),
+          ...(seatsLine === undefined ? {} : { seats: seatsLine }),
         })}
         style={s.body}
         testID={`home-game-${game.bookingId}`}

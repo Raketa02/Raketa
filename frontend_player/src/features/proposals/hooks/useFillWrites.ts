@@ -43,7 +43,8 @@ export interface FillHandlers<Ask> {
   readonly onRefused: (error: AppError, ask: Ask) => void;
 }
 
-const NOW_OR_NOT = { networkMode: 'always' } as const;
+/** A write the player waits on: made now, or not at all — never queued for later. */
+export const NOW_OR_NOT = { networkMode: 'always' } as const;
 
 export function useBookingYes(handlers: FillHandlers<BookAsk>) {
   const client = useQueryClient();

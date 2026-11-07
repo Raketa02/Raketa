@@ -21,6 +21,7 @@ import {
   moneyLineOf,
   paymentOf,
   shareAt,
+  yourMoneyGrosze,
   shownStatus,
   stakeOnTheDetails,
   type BookedGame,
@@ -38,6 +39,7 @@ import type {
   LeavingKind,
   ProposalStatus,
 } from '../domain/vocabulary';
+import type { SeatsLine } from '../domain/friendsGame';
 import type { GameDay } from '../domain/when';
 
 import {
@@ -51,7 +53,8 @@ import {
   yourPaymentWords,
 } from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
-import { paidTheCourt, payModeWords } from './friendsGamePresentation';
+import { FRIENDS_GAME_COPY } from './friendsGameCopy';
+import { paidTheCourt, payModeWords, seatsLineSpoken } from './friendsGamePresentation';
 import { seatKeptBy } from './fillPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
@@ -173,7 +176,12 @@ function moneyParts(line: MoneyLine): readonly string[] {
           : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
       ];
     case 'senderPaid':
-      return [paidTheCourt(line.sender)];
+      return [
+        paidTheCourt(line.sender),
+        ...(line.freeToLeaveUntil === undefined
+          ? []
+          : [`${money.freeToLeaveUntil} ${shortMoment(line.freeToLeaveUntil)}`]),
+      ];
     case 'seatEmpty':
       return [money.seatEmpty, money.noLevelMoved];
     case 'didntCome':
@@ -240,7 +248,7 @@ function calledOffWhy({
   const why = COPY.money.calledOff[reason];
   const of = SAID_OF[reason];
   if (of === undefined) return why;
-  if (of === 'sender') return [sender ?? COPY.money.theSenderLead, why].join(' ');
+  if (of === 'sender') return [sender ?? FRIENDS_GAME_COPY.theSender, why].join(' ');
   const clause =
     reason === 'CANCELLED_BY_THE_CLUB' && clubCancelReason !== undefined
       ? COPY.money.clubCancelled[clubCancelReason]
@@ -338,9 +346,7 @@ export function moneyRow(game: MoneyRowGame, now: number): FactWords {
   ) {
     return row;
   }
-  const mode = payModeWords(
-    friends.youAreTheSender ? { ...friends, senderNickname: COPY.details.you } : friends,
-  );
+  const mode = payModeWords(friends);
   return { ...row, below: row.below === undefined ? mode : `${row.below}${LINE_JOIN}${mode}` };
 }
 
@@ -365,7 +371,11 @@ type MoneyRowGame = Pick<
 function shareRow(game: MoneyRowGame, now: number): FactWords {
   const { money } = game;
   const words = COPY.details;
-  const value = formatZloty(money.shareGrosze);
+  // A Whole-court sender's money is the court (#759), and leaving they still pay it (§11.2).
+  const value = formatZloty(yourMoneyGrosze(game));
+  const leavesFree = !(
+    game.friendsGame?.payMode === 'WHOLE_COURT' && game.friendsGame.youAreTheSender
+  );
   const held = shareAt(money, now);
   const share = held?.kind === 'taken' ? words.paid : words.yourShare;
 
@@ -401,7 +411,7 @@ function shareRow(game: MoneyRowGame, now: number): FactWords {
       return { label: share, value, below: moneyWords(line) };
     case 'booked':
     case undefined: {
-      const below = held === undefined ? undefined : heldWords(held);
+      const below = held === undefined ? undefined : heldWords(held, leavesFree);
       return { label: share, value, ...(below === undefined ? {} : { below }) };
     }
   }
@@ -413,14 +423,14 @@ function shareRow(game: MoneyRowGame, now: number): FactWords {
  * the club's clock as *fills by* writes it. A 40 zł hold that appeared and vanished the day a game
  * filled far ahead is the card check this explains.
  */
-function heldWords(share: ShareAt): string {
+function heldWords(share: ShareAt, leavesFree: boolean): string {
   const words = COPY.details;
   switch (share.kind) {
     case 'held':
       return [
         words.heldOnYourCard,
         `${words.taken} ${shortMoment(share.takenAt)}`,
-        words.freeToLeaveUntilThen,
+        ...(leavesFree ? [words.freeToLeaveUntilThen] : []),
       ].join(LINE_JOIN);
     case 'checked':
       return [
@@ -455,7 +465,7 @@ export function homeCardLabel({
   /** The money line, or nothing. */
   readonly money: MoneyLine | undefined;
   /** A friends game's seats, for its sender (#759) — *2 of 3 friends in · waiting for Ania*. */
-  readonly seats?: string;
+  readonly seats?: SeatsLine;
 }): string {
   const time = timeWords(game.startsAt);
   const status = statusWord(shownStatus(game));
@@ -468,7 +478,7 @@ export function homeCardLabel({
       SPOKEN_JOIN,
     ),
     ...(money === undefined ? [] : [moneySpoken(money)]),
-    ...(seats === undefined ? [] : [seats.split(LINE_JOIN).join(SPOKEN_JOIN)]),
+    ...(seats === undefined ? [] : [seatsLineSpoken(seats)]),
   ]
     .map((sentence) => `${sentence}.`)
     .join(' ');

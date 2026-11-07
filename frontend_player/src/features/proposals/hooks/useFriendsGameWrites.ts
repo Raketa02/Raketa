@@ -13,16 +13,17 @@
  * | `useConfirmFriendsPayment` | a refused payment confirmed in the app — a send's, held for the send again; an accept's, the accept |
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
 import type { YesAnswer } from '../domain/fill';
-import type {
-  FriendsGameAccepted,
-  FriendsGameSend,
-  FriendsGameSent,
-} from '../mappers/friendsGameMappers';
+import {
+  answerRefusalOf,
+  type FriendsGameAccepted,
+  type FriendsGameSend,
+  type FriendsGameSent,
+} from '../domain/friendsGame';
 import { confirmPayment } from '../use-cases/answers';
 import {
   acceptFriendsGame,
@@ -32,9 +33,7 @@ import {
 } from '../use-cases/friendsGames';
 
 import { proposalKeys } from './proposalKeys';
-import { rereadAfterFill } from './useFillWrites';
-
-const NOW_OR_NOT = { networkMode: 'always' } as const;
+import { NOW_OR_NOT, rereadAfterFill } from './useFillWrites';
 
 export function useSendFriendsGame(groupId: string) {
   const client = useQueryClient();
@@ -55,6 +54,7 @@ export function useAcceptFriendsGame() {
     onSuccess: (accepted) => {
       if (accepted.accepted) void rereadAfterFill(client);
     },
+    onError: (error) => invitationGone(client, error),
   });
 }
 
@@ -64,7 +64,18 @@ export function useDeclineFriendsGame() {
     ...NOW_OR_NOT,
     mutationFn: (bookingId) => declineFriendsGame(bookingId),
     onSuccess: () => client.invalidateQueries({ queryKey: proposalKeys.home() }),
+    onError: (error) => invitationGone(client, error),
   });
+}
+
+/**
+ * **An answer refused because the invitation is gone** — ended, the game off or under way, or never
+ * the reader's: Home is read again, and its card leaves.
+ */
+function invitationGone(client: QueryClient, error: AppError) {
+  if (answerRefusalOf(error.code) === 'gone') {
+    void client.invalidateQueries({ queryKey: proposalKeys.home() });
+  }
 }
 
 export function useCallOffFriendsGame(bookingId: string) {

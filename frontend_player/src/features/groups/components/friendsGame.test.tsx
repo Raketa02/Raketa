@@ -1000,6 +1000,62 @@ describe('sending', () => {
     expect(await screen.findByTestId('friends-card')).toBeTruthy();
   });
 
+  it('lets a court no longer for sale go — the card proposes another, and says why', async () => {
+    transport.on('POST', sendPath, () => errorResponse(409, 'court_hour_not_for_sale'));
+    await openTheSheet();
+    const asked = cardRequests().length;
+
+    order('Send game and pay 25 zł');
+
+    expect(await screen.findByText(SEND.refused.courtGone)).toBeTruthy();
+    expect(screen.queryByTestId('send-sheet')).toBeNull();
+    await waitFor(() => expect(cardRequests().length).toBeGreaterThan(asked));
+  });
+
+  it('names You › Payments when the card’s terms must be accepted again, and books nothing', async () => {
+    transport.on('POST', sendPath, () =>
+      json<Wire['FriendsGameSentResponse']>({
+        booking_id: BOOKING,
+        booked: null,
+        your_payments: [
+          { seat_charge_id: 'sc-terms', refusal: 'TERMS_NEEDED', confirm_by: null, time_to: null },
+        ],
+      }),
+    );
+    await openTheSheet();
+
+    order('Send game and pay 25 zł');
+
+    await waitFor(() => expect(toasts()).toEqual([[FILL_COPY.termsAgain, 'bad']]));
+    expect(screen.queryByTestId('send-sheet')).toBeNull();
+    expect(screen.getByTestId('friends-card')).toBeTruthy();
+  });
+
+  it('sends again under the booking a refused send answered, at the next press', async () => {
+    let sent = 0;
+    transport.on('POST', sendPath, () => {
+      sent += 1;
+      return sent === 1
+        ? json<Wire['FriendsGameSentResponse']>({
+            booking_id: BOOKING,
+            booked: null,
+            your_payments: [],
+          })
+        : json(booked());
+    });
+    const sheet = await openTheSheet();
+
+    order('Send game and pay 25 zł');
+    await within(sheet).findByRole('alert');
+    order('Send game and pay 25 zł');
+
+    expect(await screen.findByText('Seat 3 more friends')).toBeTruthy();
+    expect(sends().map((one) => (one as { booking_id: string | null }).booking_id)).toEqual([
+      null,
+      BOOKING,
+    ]);
+  });
+
   it.each([
     [
       'friends_games_waiting',

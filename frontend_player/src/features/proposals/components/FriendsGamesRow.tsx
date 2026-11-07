@@ -42,11 +42,11 @@
  * invitation's row there is the server's to take off.
  *
  * **The border is `ink`, not mock 12's coral** — §1.2's coral list is closed, and a card waiting on
- * the reader is the friend requests row's ink (5.1's selected border).
+ * the reader is the friend requests row's ink (5.1's selected border); the clock under an hour is
+ * `coralInk`, coral text on paper (Part 16, 2026-11-07).
  */
 
 import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -57,13 +57,13 @@ import { Button, Card, Note, Tick, theme } from '@/shared/ui';
 
 import type { YourPayment } from '../domain/fill';
 import {
+  acceptPaymentOf,
   answerRefusalOf,
   invitationFaces,
   invitationWaits,
   type FriendsGameInvitation,
   type InvitationFace,
 } from '../domain/friendsGame';
-import { proposalKeys } from '../hooks/proposalKeys';
 import { useFill } from '../hooks/useFill';
 import {
   useAcceptFriendsGame,
@@ -73,13 +73,14 @@ import {
 import { useHomeFriendsGames, useReadClock } from '../hooks/useHome';
 
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
-import { tileName } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { FRIENDS_GAME_COPY } from './friendsGameCopy';
 import {
   acceptLabel,
   acceptSpoken,
   answerRefusal,
+  faceName,
+  facesSpoken,
   friendsGamesHeading,
   gameOf,
   invitationClock,
@@ -147,7 +148,6 @@ function InvitationCard({
   readonly width: number;
   readonly onAnswered: () => Promise<unknown>;
 }) {
-  const client = useQueryClient();
   const fill = useFill();
   const setUpNeeded = usePaymentSetupNeeded();
   const accept = useAcceptFriendsGame();
@@ -179,8 +179,8 @@ function InvitationCard({
         fill.setUpThen(again);
         return;
       case 'gone':
+        // Home is read again by the write itself, and the card leaves with it.
         showToast({ message: answerRefusal(error, startsAt), tone: 'bad' });
-        void client.invalidateQueries({ queryKey: proposalKeys.home() });
         return;
       case 'say':
         setFailure(answerRefusal(error, startsAt));
@@ -197,18 +197,16 @@ function InvitationCard({
           return;
         }
         const payment = answer.yourPayment;
-        switch (payment?.refusal) {
-          case 'AUTHENTICATION_REQUIRED':
-          case 'DECLINED':
+        if (payment === undefined) return;
+        switch (acceptPaymentOf(payment)) {
+          case 'confirm':
             setConfirming(payment);
             return;
-          case 'NO_METHOD':
+          case 'setUp':
             fill.setUpThen(sendAccept);
             return;
-          case 'TERMS_NEEDED':
+          case 'termsAgain':
             showToast({ message: FILL_COPY.termsAgain, tone: 'bad' });
-            return;
-          case undefined:
             return;
         }
       },
@@ -254,7 +252,7 @@ function InvitationCard({
             <Feather
               name="clock"
               size={theme.size.infoGlyph}
-              color={clock.urgent ? theme.color.coral : theme.color.muted}
+              color={clock.urgent ? theme.color.coralInk : theme.color.muted}
             />
             <Text style={[s.clockWords, clock.urgent ? s.urgent : undefined]}>{clock.words}</Text>
           </View>
@@ -322,17 +320,6 @@ function InvitationCard({
   );
 }
 
-/** *tomek.k, in. zofia.b, in. ania.k, still to answer. You* — the faces, as one sentence. */
-function facesSpoken(faces: readonly InvitationFace[]): string {
-  return faces
-    .map(({ person, isIn, faded }) => {
-      const name = person.isYou ? COPY.you : tileName(person);
-      if (isIn) return `${name}, in`;
-      return faded ? `${name}, still to answer` : name;
-    })
-    .join('. ');
-}
-
 /** One face — the yes screen's tile, ✓ when In, faded while still to answer, the name under it. */
 function Face({ face }: { readonly face: InvitationFace }) {
   const { person } = face;
@@ -356,7 +343,7 @@ function Face({ face }: { readonly face: InvitationFace }) {
         ) : null}
       </View>
       <Text style={s.name} numberOfLines={1}>
-        {person.isYou ? COPY.you : tileName(person)}
+        {faceName(person)}
       </Text>
     </View>
   );
@@ -365,8 +352,8 @@ function Face({ face }: { readonly face: InvitationFace }) {
 /** Part 8's Strip gap — the friend requests row's. */
 const STRIP_GAP = theme.space.sm;
 
-/** The ✓ disc: the tick's box with a 3pt ring, at the face's bottom-right corner. */
-const IN_MARK = theme.size.availability.tick + 2 * theme.space.xxs;
+/** The ✓ disc at the face's corner — 6.9's remove square's size, the seat-clear badge's own. */
+const IN_MARK = theme.size.photoTile.remove;
 
 const s = StyleSheet.create({
   section: { gap: theme.space.sm, marginTop: theme.space.lg },
@@ -380,20 +367,20 @@ const s = StyleSheet.create({
   title: { ...theme.type.cardTitle, color: theme.color.ink, flexShrink: 1 },
   clock: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs, marginLeft: 'auto' },
   clockWords: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
-  urgent: { color: theme.color.coral },
+  // Coral text on paper is `coralInk` (§1.2), as Today's column head is.
+  urgent: { color: theme.color.coralInk },
   faces: { flexDirection: 'row', justifyContent: 'center', gap: theme.space.md },
   face: { alignItems: 'center', gap: theme.space.xxs, maxWidth: theme.size.yesTile.doubles },
   faded: { opacity: 0.4 },
   in: {
     position: 'absolute',
-    right: -theme.space.xxs,
-    bottom: -theme.space.xxs,
+    right: -IN_MARK / 4,
+    bottom: -IN_MARK / 4,
     width: IN_MARK,
     height: IN_MARK,
     borderRadius: IN_MARK / 2,
+    // White never sits on `mint` (Rule C): the tick is drawn on `mintInk`.
     backgroundColor: theme.color.mintInk,
-    borderWidth: theme.space.xxs / 2,
-    borderColor: theme.color.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

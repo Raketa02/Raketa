@@ -1329,19 +1329,23 @@ the payment: _Send game and pay 25 zł_ or _… 100 zł_. **Every answer has its
 closes, the toast _Game sent — the court is booked. It's in Your games on Home._ (a call) and the court
 empties (`onSent` → `groups`' `sent`); nothing saved — the fill's payment setup first, then the send;
 refused payments — `your_payments` confirmed one after another on the deck's own
-`ConfirmPaymentSheet`, then the send again under the same `booking_id` (`sendPaymentsOf`);
+`ConfirmPaymentSheet`, then the send again under the same `booking_id` (`sendPaymentsOf`), and
+**every later press sends under that booking** too, so a confirmation shut halfway is not lost; a
+new line-up or court is a new `SendGame` (keyed by both);
 `court_just_taken` and the card's own refusals close the sheet and read the card again, the court's
 sentence above it until the line-up asks anew; `court_hour_not_for_sale` lets a picked court go;
-_two games waiting_, the sender's hour and week are said in the sheet (a toast once it is closed).
+_two games waiting_, the sender's hour and week are said in the sheet, above the maximum so the
+maximum stays right above the order (a toast once it is closed).
 
 **FRIENDS GAME · n is `FriendsGamesRow`**, at the very top of Home — above _TO CONFIRM_ too, since an
 invitation runs out in hours — the friend requests row's geometry, one card full width, two or more
-peeking. A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, coral under an hour), the four
-faces as the yes screen's tiles (✓ — a `mintInk` disc and the drawn tick — on those In, faded at 0.4
-on those still to answer, the reader last as _You_), _Saturday 10:00 · Ogrody 33 · Court 3 · Padel ·
+peeking. A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, `coralInk` under an hour —
+coral text on paper), the four faces as the yes screen's tiles (✓ — a `mintInk` disc at 6.9's remove
+square's size with the drawn tick — on those In, faded at 0.4 on those still to answer, the reader
+last as _You_), _Saturday 10:00 · Ogrody 33 · Court 3 · Padel ·
 Competitive_, and **Not this time** / **Accept and pay 25 zł** — or, Whole court, _tomek.k paid the
 court_ and **Accept**. **The border is `ink`, not mock 12's coral**: §1.2's coral list is closed, and
-it is the request card's border. A card whose time runs out on screen leaves at that instant
+it is the request card's border (Part 16, 2026-11-07). A card whose time runs out on screen leaves at that instant
 (`invitationWaits`, on the read's clock). **Accept**: Split with nothing saved opens the setup first;
 a refused share opens the confirmation, which is the accept again — and the accept asked once more
 (a second accept answers `whole`) says whether the last seat was taken; **the last seat taken is
@@ -1352,8 +1356,11 @@ Either answer re-reads the bell (`onAnswered`, the shell's).
 
 **The sender's game in Your games** draws a line under the money — _2 of 3 friends in · waiting for
 ania.k_, _Waiting for ania.k_ at nought In, _… · 1 seat empty_, and both when both are true (a call) —
-**for the sender only** (§29.8: _the sender's game_), and none once every seat is In. A friend on a
-Whole-court game reads _tomek.k paid the court_ in place of a share that is not theirs (`senderPaid`).
+**for the sender only** (§29.8: _the sender's game_), and none once every seat is In; the count In
+is the read's `friends_in`, never re-counted. A friend on a Whole-court game reads _tomek.k paid the
+court · free to leave until Fri 10:00_ in place of a share that is not theirs (`senderPaid`; the
+mechanics §11.1); **the Whole-court sender reads the court's price** (`yourMoneyGrosze`), held until
+the cut-off, and never _free to leave_ — leaving, they still pay it (§11.2).
 **A seat still _waiting_ past its time reads _didn't answer_** on the read's clock, which ticks while
 one waits (`lineCanRunOut`).
 

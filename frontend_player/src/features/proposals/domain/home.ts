@@ -19,7 +19,12 @@ import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard } from './deck';
-import { seatsCanRunOut, type FriendsGame, type FriendsGameInvitation } from './friendsGame';
+import {
+  courtPrice,
+  seatsCanRunOut,
+  type FriendsGame,
+  type FriendsGameInvitation,
+} from './friendsGame';
 import type {
   CalledOffReason,
   ClubCancelReason,
@@ -327,7 +332,10 @@ export function playedWithOf(
  *   on the reader — theirs to say, or somebody else's to confirm (`needsYou`) — that they should say
  *   who was there; to everybody else, that no Level moved.
  * - `senderPaid` — a friends game whose sender pays the whole court, read by a friend on it (#759;
- *   §29.8): *tomek.k paid the court*, in place of a share that is not theirs to pay.
+ *   §29.8): *tomek.k paid the court*, in place of a share that is not theirs to pay, and *free to
+ *   leave until Fri 10:00* while the cut-off is ahead (the friends mechanics §11.1). **The sender's
+ *   own** reads the court's price, held until the cut-off, and never *free to leave*: leaving, they
+ *   still pay the court (§11.2).
  */
 export type MoneyLine =
   | {
@@ -352,9 +360,26 @@ export type MoneyLine =
       readonly sender?: string;
       readonly refundedGrosze?: number;
     }
-  | { readonly kind: 'senderPaid'; readonly sender?: string }
+  | {
+      readonly kind: 'senderPaid';
+      readonly sender?: string;
+      /** The club's cut-off while it is ahead: a friend may leave free until then (§11.1). */
+      readonly freeToLeaveUntil?: string;
+    }
   | { readonly kind: 'seatEmpty' }
   | { readonly kind: 'didntCome'; readonly needsYou: boolean };
+
+/**
+ * **What the reader's money on a booked game comes to** — every seat's share, but the court's price
+ * for a friends game's sender who pays the whole court (#759; the friends mechanics §8.1): the
+ * sport's seats are the friends it seats and the sender.
+ */
+export function yourMoneyGrosze(game: Pick<HomeGame, 'money' | 'friendsGame'>): number {
+  const friends = game.friendsGame;
+  return friends?.payMode === 'WHOLE_COURT' && friends.youAreTheSender
+    ? courtPrice(game.money.shareGrosze, friends.friendsSeated + 1)
+    : game.money.shareGrosze;
+}
 
 /**
  * **The cut-off, while it is still ahead of `now`** — the instant *free to leave until …* leaves the
@@ -523,13 +548,22 @@ export function moneyLineOf(
       window: paymentWindowAt(game.yourPaymentDueBy, game.timeTo, now),
     };
   }
-  // A friend on a game its sender pays whole pays nothing (§29.8): the line says who did.
-  const senderPays =
-    friendsGame !== undefined &&
-    friendsGame.payMode === 'WHOLE_COURT' &&
-    !friendsGame.youAreTheSender;
-  if (senderPays && (game.status === 'BOOKED' || game.status === 'SEAT_OPEN')) {
-    return { kind: 'senderPaid', ...sender };
+  // Whole court (§29.8): a friend pays nothing and the line says who did; the sender pays the court.
+  const live = game.status === 'BOOKED' || game.status === 'SEAT_OPEN';
+  if (live && friendsGame?.payMode === 'WHOLE_COURT') {
+    const until = cutOffAhead(money, now);
+    if (!friendsGame.youAreTheSender) {
+      return {
+        kind: 'senderPaid',
+        ...sender,
+        ...(until === undefined ? {} : { freeToLeaveUntil: until }),
+      };
+    }
+    return {
+      kind: 'booked',
+      shareGrosze: yourMoneyGrosze({ money, friendsGame }),
+      paid: shareAt(money, now)?.kind === 'taken',
+    };
   }
   switch (game.status) {
     case 'BOOKED': {

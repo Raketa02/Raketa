@@ -98,8 +98,6 @@ export const HOME_GAME_COPY = {
     } satisfies Readonly<Record<ClubCancelReason, string | undefined>>,
     /** *The club* at the head of a sentence, for a club the read no longer names. */
     theClubLead: 'The club',
-    /** *The sender* at the head of a sentence, for a sender the read can no longer name (#759). */
-    theSenderLead: 'The sender',
     /** *Uncounted · a seat was empty* (§14.1): no Level moved, and nobody who stayed is marked. */
     seatEmpty: 'A seat was empty',
     noLevelMoved: 'no Level moved',
@@ -121,8 +119,6 @@ export const HOME_GAME_COPY = {
     paid: 'Paid',
     yourShare: 'Your share',
     refunded: 'Refunded',
-    /** The sender reading their own Whole-court game's pay mode (#759): *You paid the court*. */
-    you: 'You',
     /**
      * When the share is held and when it is taken (Q113; the screens A4.1): *28 zł* over *Held on
      * your card · taken Sat 10:00 · free to leave until then*, or for a share only checked, *Held

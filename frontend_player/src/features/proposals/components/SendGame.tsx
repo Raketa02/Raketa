@@ -31,9 +31,12 @@
  * - **The court went** (`court_just_taken`), **or somebody seated no longer may be** — the sheet
  *   closes and the card is read again (`onReread`), the court's sentence above it; **the hour no
  *   longer for sale** — the card proposes another (`onCourtGone`).
- * - **Two games already waiting, the sender's own hour or week** — the sentence in the sheet, the
- *   order still there; said in a toast when the sheet is already closed (a send again after a
- *   confirmation).
+ * - **Two games already waiting, the sender's own hour or week** — the sentence in the sheet, above
+ *   the maximum, the order still there; said in a toast when the sheet is already closed (a send
+ *   again after a confirmation).
+ * - **A send that booked nothing** answers its booking, and **every later press sends again under
+ *   it** — a payment confirmed is a hold the next send takes, whether the confirmations ran to their
+ *   end or the player shut one and pressed again. A new line-up or court is a new `SendGame`.
  */
 
 import { useState } from 'react';
@@ -56,7 +59,13 @@ import { useConfirmFriendsPayment, useSendFriendsGame } from '../hooks/useFriend
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
 import { FILL_COPY } from './fillCopy';
 import { FRIENDS_GAME_COPY } from './friendsGameCopy';
-import { coverLine, payModeTitle, sendLabel, sendRefusal } from './friendsGamePresentation';
+import {
+  coverLine,
+  payModeSpoken,
+  payModeTitle,
+  sendLabel,
+  sendRefusal,
+} from './friendsGamePresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = FRIENDS_GAME_COPY.send;
@@ -106,6 +115,9 @@ export function SendGame({
   const [mode, setMode] = useState<PayMode>('SPLIT_THE_COST');
   const [refusal, setRefusal] = useState<string>();
   const [confirming, setConfirming] = useState<Confirming | null>(null);
+  // A send that booked nothing answers the booking to send again under: every later press uses it,
+  // so a payment confirmed is the hold the next send takes (#751) — even after the sheet was shut.
+  const [pending, setPending] = useState<string>();
 
   const seats = courtSeatCount(sport);
   const share = court.shareGrosze;
@@ -135,6 +147,7 @@ export function SendGame({
             onSent();
             return;
           }
+          setPending(sent.bookingId);
           const next = sendPaymentsOf(sent.yourPayments);
           switch (next.kind) {
             case 'setUp':
@@ -150,6 +163,7 @@ export function SendGame({
               setConfirming({ bookingId: sent.bookingId, payments: next.payments, at: 0 });
               return;
             case 'sendAgain':
+              // Nothing to confirm was named: the next press sends again, under the same booking.
               say(PROPOSALS_COPY.refused.block_state_unavailable, sheetOpen);
               return;
           }
@@ -186,10 +200,10 @@ export function SendGame({
     // Nothing saved: the setup first, and the send once a method is (the screens §8).
     if (setUpNeeded === true) {
       setOpen(false);
-      fill.setUpThen(() => go(mode, undefined, false));
+      fill.setUpThen(() => go(mode, pending, false));
       return;
     }
-    go(mode, undefined, true);
+    go(mode, pending, true);
   };
 
   const payment = confirming === null ? undefined : confirming.payments[confirming.at];
@@ -225,7 +239,7 @@ export function SendGame({
                     setMode(one);
                     setRefusal(undefined);
                   }}
-                  accessibilityLabel={`${payModeTitle(one)}, ${charge}`}
+                  accessibilityLabel={payModeSpoken(one, sendCharge(one, share, seats))}
                   style={s.choice}
                 >
                   <Text style={s.choiceTitle}>{payModeTitle(one)}</Text>
@@ -235,17 +249,18 @@ export function SendGame({
             })}
           </View>
 
-          {mode === 'SPLIT_THE_COST' ? (
-            <Text style={s.cover}>
-              {coverLine({ priceGrosze: price, shareGrosze: share, cutOff, singles: seats === 2 })}
-            </Text>
-          ) : null}
-
+          {/* A refusal stands above the maximum, so the maximum stays right above the order. */}
           {refusal === undefined ? null : (
             <Note variant="coral" accessibilityRole="alert">
               {refusal}
             </Note>
           )}
+
+          {mode === 'SPLIT_THE_COST' ? (
+            <Text style={s.cover}>
+              {coverLine({ priceGrosze: price, shareGrosze: share, cutOff, singles: seats === 2 })}
+            </Text>
+          ) : null}
 
           <Button
             label={sendLabel(sendCharge(mode, share, seats))}

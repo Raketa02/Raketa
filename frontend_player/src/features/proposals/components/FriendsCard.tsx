@@ -165,6 +165,8 @@ export function FriendsCard({
         onFind={() => setFinding(true)}
         send={
           <SendGame
+            // A new line-up or court is a new send: nothing booked under the last one carries over.
+            key={`${asking}|${card.court.courtId}|${card.court.startsAt}`}
             groupId={groupId}
             sport={sport}
             ask={ask}

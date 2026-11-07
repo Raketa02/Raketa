@@ -22,9 +22,8 @@ import { theme } from '@/shared/ui';
 
 import type { SeatShown } from '../domain/friendsGame';
 
-import { tileName } from './deckPresentation';
 import { FRIENDS_GAME_COPY } from './friendsGameCopy';
-import { seatStateWords } from './friendsGamePresentation';
+import { faceName, seatSpoken, seatStateWords } from './friendsGamePresentation';
 
 const COPY = FRIENDS_GAME_COPY.seats;
 
@@ -42,18 +41,17 @@ export function FriendsSeats({ seats, now }: FriendsSeatsProps) {
         {COPY.heading}
       </Text>
       {seats.map((seat) => {
-        const name = seat.person.isYou ? COPY.you : tileName(seat.person);
         const state = seatStateWords(seat, now);
         return (
           <View
             key={seat.person.playerId}
             style={s.row}
             accessible
-            accessibilityLabel={`${name}, ${state}`}
+            accessibilityLabel={seatSpoken(seat, now)}
             testID={`seat-state-${seat.person.playerId}`}
           >
             <Text style={s.name} numberOfLines={1}>
-              {name}
+              {faceName(seat.person)}
             </Text>
             <Text style={[s.state, seat.state === 'IN' ? s.in : undefined]}>{state}</Text>
           </View>

@@ -5,45 +5,13 @@
 
 import { toWireSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
-import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { YourPayment } from '../domain/fill';
-import type { FriendsCardAsk, FriendsCourtPick } from '../domain/friendsCard';
-import type { PayMode } from '../domain/vocabulary';
+import type { FriendsGameAccepted, FriendsGameSend, FriendsGameSent } from '../domain/friendsGame';
 
 import { toWireKind } from './deckMappers';
 import { toYourPayment } from './fillMappers';
 
 type Schemas = components['schemas'];
-
-/**
- * **What a send asks** — the card as it was read (the line-up, the sides sent, the court it names)
- * and how to pay; with `bookingId`, the send again after its payments were confirmed.
- */
-export interface FriendsGameSend {
-  readonly sport: Sport;
-  readonly ask: FriendsCardAsk;
-  /** The court the card names — its own, or the one picked in *Find a court*. */
-  readonly court: FriendsCourtPick;
-  readonly payMode: PayMode;
-  readonly bookingId?: string;
-}
-
-/** **What a send did** — the court booked, or nothing booked and the payments to confirm. */
-export interface FriendsGameSent {
-  readonly bookingId: string;
-  readonly booked: boolean;
-  readonly yourPayments: readonly YourPayment[];
-}
-
-/** **What an *Accept* did** — the reader In (and the game whole), or their share refused. */
-export interface FriendsGameAccepted {
-  readonly bookingId: string;
-  readonly accepted: boolean;
-  /** Every seat is taken now — *It's a game!*. */
-  readonly whole: boolean;
-  readonly yourPayment?: YourPayment;
-}
 
 export function toSendFriendsGameRequest(send: FriendsGameSend): Schemas['SendFriendsGameRequest'] {
   return {

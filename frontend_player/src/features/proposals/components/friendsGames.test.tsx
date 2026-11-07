@@ -349,6 +349,27 @@ describe('answering an invitation', () => {
     expect(await screen.findByTestId('its-a-game')).toBeTruthy();
   });
 
+  it('is It’s a game! under Whole court too, the last seat taken with nothing held', async () => {
+    stubPaymentMethod(transport, null);
+    stubInvitation([invitation({ friends_game: invitedGame({ pay_mode: 'WHOLE_COURT' }) })]);
+    stubBooking(transport, bookingDetails({ booking_id: INVITED }));
+    transport.on('POST', acceptPath, () =>
+      json<Wire['FriendsGameAnswerResponse']>({
+        booking_id: INVITED,
+        accepted: true,
+        whole: true,
+        your_payment: null,
+      }),
+    );
+    await launchSignedIn();
+
+    fireEvent.press(
+      within(await theCard()).getByRole('button', { name: 'Accept, tomek.k’s game' }),
+    );
+
+    expect(await screen.findByTestId('its-a-game')).toBeTruthy();
+  });
+
   it('confirms a share the bank wants confirmed in the app, and the accept lands', async () => {
     const payments = fakePayments();
     stubPayments(payments);
@@ -575,8 +596,10 @@ describe('the sender’s game in Your games (the screens §6.3)', () => {
     await launchSignedIn();
 
     const card = await screen.findByTestId(`home-game-${BOOKING}`);
-    expect(within(card).getByText('tomek.k paid the court')).toBeTruthy();
-    expect(within(card).queryByText(/free to leave/)).toBeNull();
+    expect(
+      within(card).getByText('tomek.k paid the court · free to leave until Fri 16:00'),
+    ).toBeTruthy();
+    expect(within(card).queryByText(/28 zł/)).toBeNull();
   });
 });
 
@@ -687,7 +710,9 @@ describe('a friends game’s details (the screens §9)', () => {
       }),
     );
 
-    expect(await screen.findByText('tomek.k paid the court')).toBeTruthy();
+    expect(
+      await screen.findByText('tomek.k paid the court · free to leave until Fri 16:00'),
+    ).toBeTruthy();
     expect(screen.queryByText(/Held on your card/)).toBeNull();
   });
 });

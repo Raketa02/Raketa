@@ -19,17 +19,31 @@
  * - **Accepted, the game not yet whole**: the toast *You're in — it's in Your games.*
  * - **An invitation that no longer waits**: *That invitation has ended.*
  * - **The details' seats**: the eyebrow *SEATS* over one row per seat, *You* for the reader.
+ * - **The sender's own Whole-court pay mode**: *You paid the court* (§29.8 gives the nickname's).
+ * - **The seats line with both waiting and empty seats**: *1 of 3 friends in · waiting for ania.k ·
+ *   1 seat empty* — §29.8 gives each half alone.
+ * - **A friend's Whole-court Home line**: *tomek.k paid the court · free to leave until Fri 10:00*.
  * - **Call it off's confirmation**: *Call it off?*, §29.10's line, **Call it off for everyone** and
  *   **Keep the game**; done, the toast *Called off — nobody paid.*; refused after the cut-off, *The
  *   club's cut-off has passed, so it can't be called off for free.*
  */
 
+import type { PayMode } from '../domain/vocabulary';
+
 export const FRIENDS_GAME_COPY = {
+  /** A seat the court can no longer name, in a sentence — never drawn blank. */
+  somebody: 'Somebody',
+  /** A sender the read can no longer name, at a sentence's head (*The sender called it off*). */
+  theSender: 'The sender',
+  you: 'You',
   send: {
     title: 'How to pay',
     close: 'Close — nothing is sent',
-    split: 'Split the cost',
-    whole: 'Pay the whole court',
+    /** The choice cards' titles, keyed by the wire's pay mode. */
+    payMode: {
+      SPLIT_THE_COST: 'Split the cost',
+      WHOLE_COURT: 'Pay the whole court',
+    } satisfies Readonly<Record<PayMode, string>>,
     sending: 'Sending…',
     sent: 'Game sent — the court is booked. It’s in Your games on Home.',
     theClubsCutOff: 'the club’s cut-off',
@@ -42,14 +56,16 @@ export const FRIENDS_GAME_COPY = {
     accept: 'Accept',
     accepting: 'Accepting…',
     accepted: 'You’re in — it’s in Your games.',
-    you: 'You',
+    /** How a face is spoken, by where it stands: *tomek.k, in*, *ania.k, still to answer*. */
+    in: 'in',
+    stillToAnswer: 'still to answer',
     refused: {
       invitation_not_waiting: 'That invitation has ended.',
     },
   },
   seats: {
     heading: 'Seats',
-    you: 'You',
+    /** The pay mode's own word under the price, with Split (§29.8). */
     split: 'Split',
     state: {
       IN: 'In',

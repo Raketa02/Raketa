@@ -682,6 +682,19 @@ describe('a friends game’s money words', () => {
     ).toEqual(expect.objectContaining({ kind: 'calledOff', sender: 'tomek.k' }));
   });
 
+  it('reads the court’s price, never free to leave, on the sender’s own Whole-court game', () => {
+    expect(
+      moneyLineOf(
+        {
+          ...booked(),
+          club: { id: 'club-1', name: 'Bonarka Arena' },
+          friendsGame: friendsGame({ payMode: 'WHOLE_COURT', youAreTheSender: true }),
+        },
+        BEFORE,
+      ),
+    ).toEqual({ kind: 'booked', shareGrosze: 11200, paid: false });
+  });
+
   it('says who paid the court to a friend on a Whole-court game, and never their own share', () => {
     const line = moneyLineOf(
       {
@@ -691,8 +704,8 @@ describe('a friends game’s money words', () => {
       },
       BEFORE,
     );
-    expect(line).toEqual({ kind: 'senderPaid', sender: 'tomek.k' });
-    expect(moneyWords(line!)).toBe('tomek.k paid the court');
+    expect(line).toEqual({ kind: 'senderPaid', sender: 'tomek.k', freeToLeaveUntil: CUT_OFF });
+    expect(moneyWords(line!)).toBe('tomek.k paid the court · free to leave until Fri 16:00');
   });
 
   it('reads the pay mode under the details’ price — Split, or who paid the court', () => {
@@ -701,10 +714,18 @@ describe('a friends game’s money words', () => {
       moneyRow(
         booked({ friendsGame: friendsGame({ payMode: 'WHOLE_COURT', youAreTheSender: true }) }),
         BEFORE,
-      ).below,
-    ).toMatch(/ · You paid the court$/);
+      ),
+    ).toEqual({
+      label: 'Your share',
+      value: '112 zł',
+      below: 'Held on your card · taken Fri 16:00 · You paid the court',
+    });
     expect(
       moneyRow(booked({ friendsGame: friendsGame({ payMode: 'WHOLE_COURT' }) }), BEFORE),
-    ).toEqual({ label: 'Your share', value: '28 zł', below: 'tomek.k paid the court' });
+    ).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      below: 'tomek.k paid the court · free to leave until Fri 16:00',
+    });
   });
 });

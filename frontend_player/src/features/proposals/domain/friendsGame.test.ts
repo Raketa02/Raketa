@@ -1,5 +1,6 @@
 import type { DeckCard, DeckPerson } from './deck';
 import {
+  acceptPaymentOf,
   answerRefusalOf,
   courtPrice,
   gamesPerWeekOf,
@@ -86,7 +87,7 @@ describe('seatsLineOf', () => {
     expect(seatsLineOf({ friendsGame: game(), sides: SIDES }, NOW)).toEqual({
       friendsIn: 2,
       friendsSeated: 3,
-      waitingFor: ['ania.k'],
+      waitingFor: [SIDES.theirs[1]],
       empty: 0,
     });
   });
@@ -101,6 +102,7 @@ describe('seatsLineOf', () => {
             { playerId: 'magda', state: 'EMPTY' },
             { playerId: 'ania', state: 'WAITING', waitingUntil: EARLIER },
           ],
+          friendsIn: 0,
         }),
         sides: SIDES,
       },
@@ -120,7 +122,7 @@ describe('seatsLineOf', () => {
     expect(seatsLineOf({ sides: SIDES }, NOW)).toBeUndefined();
   });
 
-  it('names a seat the court cannot name as somebody', () => {
+  it('passes a seat the court does not draw on unnamed', () => {
     const line = seatsLineOf(
       {
         friendsGame: game({
@@ -134,7 +136,7 @@ describe('seatsLineOf', () => {
       },
       NOW,
     );
-    expect(line?.waitingFor).toEqual(['Somebody']);
+    expect(line?.waitingFor).toEqual([{ playerId: 'ghost', isYou: false, isIn: false }]);
   });
 });
 
@@ -255,6 +257,17 @@ describe('answerRefusalOf', () => {
     ['games_per_week_booked', 'say'],
   ] as const)('%s → %s', (code, refusal) => {
     expect(answerRefusalOf(code)).toBe(refusal);
+  });
+});
+
+describe('acceptPaymentOf', () => {
+  it.each([
+    ['AUTHENTICATION_REQUIRED', 'confirm'],
+    ['DECLINED', 'confirm'],
+    ['NO_METHOD', 'setUp'],
+    ['TERMS_NEEDED', 'termsAgain'],
+  ] as const)('%s → %s', (refusal, next) => {
+    expect(acceptPaymentOf({ refusal })).toBe(next);
   });
 });
 

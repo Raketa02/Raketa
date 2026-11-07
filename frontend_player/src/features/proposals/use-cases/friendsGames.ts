@@ -10,13 +10,11 @@ import {
   postInvitationAcceptance,
   postInvitationDecline,
 } from '../api/proposalsApi';
+import type { FriendsGameAccepted, FriendsGameSend, FriendsGameSent } from '../domain/friendsGame';
 import {
   toFriendsGameAccepted,
   toFriendsGameSent,
   toSendFriendsGameRequest,
-  type FriendsGameAccepted,
-  type FriendsGameSend,
-  type FriendsGameSent,
 } from '../mappers/friendsGameMappers';
 
 export async function sendFriendsGame(

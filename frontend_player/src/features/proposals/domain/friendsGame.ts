@@ -14,8 +14,9 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { DeckCard, DeckPerson } from './deck';
+import { peopleOn, type DeckCard, type DeckPerson } from './deck';
 import type { YourPayment } from './fill';
+import type { FriendsCardAsk, FriendsCourtPick } from './friendsCard';
 import type { GameKind, PayMode, SeatState } from './vocabulary';
 
 /** **One seat of a friends game** — whose it is, where it stands, and while it waits, until when. */
@@ -69,6 +70,48 @@ export interface FriendsGameInvitation {
   readonly friendsGame: FriendsGame;
 }
 
+/**
+ * **A friends game as a court draws it** — its facts, and the sides its faces stand on: a Home
+ * card, a booked game's details, an invitation. The seats are named off the sides.
+ */
+export interface FriendsGameOnCourt {
+  readonly friendsGame?: FriendsGame;
+  readonly sides: DeckCard['sides'];
+}
+
+// ---------------------------------------------------------------------------
+// The writes
+// ---------------------------------------------------------------------------
+
+/**
+ * **What a send asks** — the card as it was read (the line-up, the sides sent, the court it names)
+ * and how to pay; with `bookingId`, the send again after its payments were confirmed.
+ */
+export interface FriendsGameSend {
+  readonly sport: Sport;
+  readonly ask: FriendsCardAsk;
+  /** The court the card names — its own, or the one picked in *Find a court*. */
+  readonly court: FriendsCourtPick;
+  readonly payMode: PayMode;
+  readonly bookingId?: string;
+}
+
+/** **What a send did** — the court booked, or nothing booked and the payments to confirm. */
+export interface FriendsGameSent {
+  readonly bookingId: string;
+  readonly booked: boolean;
+  readonly yourPayments: readonly YourPayment[];
+}
+
+/** **What an *Accept* did** — the reader In (and the game whole), or their share refused. */
+export interface FriendsGameAccepted {
+  readonly bookingId: string;
+  readonly accepted: boolean;
+  /** Every seat is taken now — *It's a game!*. */
+  readonly whole: boolean;
+  readonly yourPayment?: YourPayment;
+}
+
 // ---------------------------------------------------------------------------
 // The seats, on the read's clock
 // ---------------------------------------------------------------------------
@@ -106,37 +149,24 @@ export function seatsCanRunOut(game: Pick<FriendsGame, 'seats' | 'yourInvitation
 export interface SeatsLine {
   readonly friendsIn: number;
   readonly friendsSeated: number;
-  /** The friends still to answer, by name, in the seats' order. */
-  readonly waitingFor: readonly string[];
+  /** The friends still to answer, off the court, in the seats' order. */
+  readonly waitingFor: readonly DeckPerson[];
   readonly empty: number;
 }
 
-export function seatsLineOf(
-  game: { readonly friendsGame?: FriendsGame; readonly sides: DeckCard['sides'] },
-  now: number,
-): SeatsLine | undefined {
+export function seatsLineOf(game: FriendsGameOnCourt, now: number): SeatsLine | undefined {
   const friends = game.friendsGame;
   if (friends === undefined || !friends.youAreTheSender) return undefined;
-  const states = friends.seats.map((seat) => ({ seat, state: seatStateAt(seat, now) }));
-  if (states.every(({ state }) => state === 'IN')) return undefined;
-  const people = [...game.sides.yours, ...game.sides.theirs];
+  const shown = seatsShown(game, now);
+  if (shown.every(({ state }) => state === 'IN')) return undefined;
   return {
-    friendsIn: states.filter(({ state }) => state === 'IN').length - 1,
+    // The read's own count: who is In moves only on the server, never on the clock.
+    friendsIn: friends.friendsIn,
     friendsSeated: friends.friendsSeated,
-    waitingFor: states
-      .filter(({ state }) => state === 'WAITING')
-      .map(({ seat }) => nameOf(people, seat.playerId)),
-    empty: states.filter(({ state }) => state !== 'IN' && state !== 'WAITING').length,
+    waitingFor: shown.filter(({ state }) => state === 'WAITING').map(({ person }) => person),
+    empty: shown.filter(({ state }) => state !== 'IN' && state !== 'WAITING').length,
   };
 }
-
-/** A seat's name off the court — *Somebody* for one the read can no longer name. */
-function nameOf(people: readonly DeckPerson[], playerId: string): string {
-  return people.find((one) => one.playerId === playerId)?.name ?? SOMEBODY;
-}
-
-/** The one word for a seat nobody can name — never drawn blank. */
-export const SOMEBODY = 'Somebody';
 
 /**
  * **One seat on the details** (the screens §9): the person, from the court, and their state at
@@ -148,13 +178,10 @@ export interface SeatShown {
   readonly waitingUntil?: string;
 }
 
-export function seatsShown(
-  game: { readonly friendsGame?: FriendsGame; readonly sides: DeckCard['sides'] },
-  now: number,
-): readonly SeatShown[] {
+export function seatsShown(game: FriendsGameOnCourt, now: number): readonly SeatShown[] {
   const friends = game.friendsGame;
   if (friends === undefined) return [];
-  const people = [...game.sides.yours, ...game.sides.theirs];
+  const people = peopleOn(game);
   return friends.seats.map((seat) => {
     const state = seatStateAt(seat, now);
     const person = people.find((one) => one.playerId === seat.playerId) ?? {
@@ -192,7 +219,7 @@ export interface InvitationFace {
  * left off (a read caught mid-move).
  */
 export function invitationFaces(
-  invitation: Pick<FriendsGameInvitation, 'friendsGame' | 'sides'>,
+  invitation: FriendsGameOnCourt,
   now: number,
 ): readonly InvitationFace[] {
   const shown = seatsShown(invitation, now).map(({ person, state }) => ({
@@ -229,7 +256,8 @@ export function sendCharge(payMode: PayMode, shareGrosze: number, seats: number)
  * - `termsAgain` — the card's brand changed: its terms are accepted again on You › Payments;
  * - `confirm` — each payment the bank refused or wants confirmed, **one after another**, then the
  *   send again under the same booking, which takes the holds confirmed;
- * - `sendAgain` — nothing named (an older server): the send again.
+ * - `sendAgain` — nothing named (an older server): nothing to confirm, so the send goes again,
+ *   under the same booking, at the player's next press.
  */
 export type SendPayments =
   | { readonly kind: 'setUp' }
@@ -244,6 +272,25 @@ export function sendPaymentsOf(payments: readonly YourPayment[]): SendPayments {
     (one) => one.refusal === 'AUTHENTICATION_REQUIRED' || one.refusal === 'DECLINED',
   );
   return toConfirm.length === 0 ? { kind: 'sendAgain' } : { kind: 'confirm', payments: toConfirm };
+}
+
+/**
+ * **What an *Accept* refused for its money needs** (#751) — the bank wants the reader present, or
+ * declined the card: the confirmation in the app, which is the accept again; no method: the setup,
+ * then *Accept* again; the card's brand changed: its terms again, on You › Payments.
+ */
+export type AcceptPayment = 'confirm' | 'setUp' | 'termsAgain';
+
+export function acceptPaymentOf(payment: Pick<YourPayment, 'refusal'>): AcceptPayment {
+  switch (payment.refusal) {
+    case 'AUTHENTICATION_REQUIRED':
+    case 'DECLINED':
+      return 'confirm';
+    case 'NO_METHOD':
+      return 'setUp';
+    case 'TERMS_NEEDED':
+      return 'termsAgain';
+  }
 }
 
 // ---------------------------------------------------------------------------
