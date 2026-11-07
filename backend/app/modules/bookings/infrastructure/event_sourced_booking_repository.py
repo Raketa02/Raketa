@@ -147,6 +147,7 @@ class EventSourcedBookingRepository:
                     booked_at=event.occurred_at,
                 )
             )
+            await self._booking_row_first()
             self._seat(event.booking_id, event.first_side, event.second_side)
         elif isinstance(event, BookedByAFriend):
             self._session.add(
@@ -165,6 +166,7 @@ class EventSourcedBookingRepository:
                     sender_id=event.sender_id,
                 )
             )
+            await self._booking_row_first()
             # The sender's seat, and each friend's invitation.
             self._seat(
                 event.booking_id,
@@ -301,6 +303,18 @@ class EventSourcedBookingRepository:
             pass
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
+
+    async def _booking_row_first(self) -> None:
+        """Write the ``bookings`` row before the rows that reference it.
+
+        ``booking_seats``, ``booking_invitations`` and ``booking_keeps`` hold a
+        foreign key to ``bookings`` but no ``relationship()``, and a flush
+        orders such mappers by class name: ``BookingInvitationORM`` before
+        ``BookingORM``. Postgres checks the key at each statement, so a friends
+        game's invitations met no booking and every send was read as a court
+        taken. SQLite in the suite checks none unless asked."""
+
+        await self._session.flush()
 
     def _seat(
         self,

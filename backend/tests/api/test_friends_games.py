@@ -670,6 +670,25 @@ async def test_a_court_somebody_took_a_second_earlier_is_court_just_taken(
     assert (await home_of(client, world.tomek))["games"] == []
 
 
+async def test_a_send_books_where_the_store_enforces_its_foreign_keys(
+    client, world, db_engine
+):
+    """Postgres enforces ``booking_invitations.booking_id → bookings.id`` at
+    every statement; this suite's SQLite does not unless asked. The flush
+    orders mappers that share no ``relationship()`` by class name, which put
+    the invitations before their booking, and the repository read the
+    violation as a court taken — every send answered ``court_just_taken``."""
+
+    async with db_engine.connect() as conn:
+        await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+        assert (await conn.exec_driver_sql("PRAGMA foreign_keys")).scalar() == 1
+
+    sent = await sends(client, world)
+
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["booked"] is not None, sent.text
+
+
 def _the_send(court: dict, friend_ids: list[str], **more) -> dict:
     return {
         "sport": "PADEL",
