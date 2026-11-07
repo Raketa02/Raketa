@@ -375,6 +375,16 @@ class PlayerFit(Protocol):
         ``unfit_pairs``'."""
         ...
 
+    async def blocked_pairs(
+        self, player_ids: Collection[UUID]
+    ) -> frozenset[frozenset[UUID]]:
+        """**The pair rule's block mask alone**: every pair among these players
+        with a block standing between them, either way round — what the
+        friends card asks (#750), since friends choose each other and nothing
+        else the rule reads applies to them. Raises as ``unfit_pairs`` does
+        when the blocks cannot be read."""
+        ...
+
     async def level_window(
         self, player_id: UUID, *, sport: Sport, kind: SearchMode, at: Instant
     ) -> LevelRange | None:

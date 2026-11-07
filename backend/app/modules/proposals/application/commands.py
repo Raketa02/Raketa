@@ -175,3 +175,29 @@ class PostAGameCommand:
     posting: PostingCommand
     club_id: UUID
     start: Instant
+
+
+@dataclass(frozen=True)
+class FriendsLineUpCommand:
+    """A fixed line-up on a group's Friends tab (#750): the reader — from the
+    session — the group, the sport, and the friends seated beside them, in the
+    order the phone sent them."""
+
+    player_id: UUID
+    pool_id: UUID
+    sport: Sport
+    friend_ids: Sequence[UUID]
+
+
+@dataclass(frozen=True)
+class ReadFriendsCardCommand:
+    """The friends card for a line-up, in the kind the tab's switch holds — with
+    the reader's partner after a swap (``None``, the evenest sides) and the row
+    of *Find a court* picked, a court and its hour (both ``None``, the court
+    proposed; one without the other is refused)."""
+
+    line_up: FriendsLineUpCommand
+    kind: SearchMode
+    partner_id: UUID | None = None
+    court_id: UUID | None = None
+    starts_at: Instant | None = None

@@ -71,6 +71,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   share is held (`HoldingTimes`), and a refused holding's time to fix the card on the booked
   game (`BookedGameChanges`' card methods) — and since #640 a seat kept for a refused rescuer,
   taken or run out once (`BookedGameChanges`' keep methods).
+  And since #750 the pair rule's block mask alone (`PlayerFit.blocked_pairs`) and
+  **`CourtHours`**, every hour a club sells with its free courts named in the club's order
+  (`ClubCourtHours`) — the first of the proposer's ports to get its row.
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first

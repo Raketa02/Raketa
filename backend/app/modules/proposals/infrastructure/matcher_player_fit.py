@@ -220,6 +220,14 @@ class MatcherPlayerFit:
             self._read.update(await self._scores.scores_for(unread, now=at))
         return {person: self._read[person] for person in people}
 
+    async def blocked_pairs(
+        self, player_ids: Collection[UUID]
+    ) -> frozenset[frozenset[UUID]]:
+        people = tuple(dict.fromkeys(player_ids))
+        if len(people) < 2:
+            return frozenset()
+        return await self._blocks.blocked_pairs_among(people)
+
     async def level_window(
         self, player_id: UUID, *, sport: Sport, kind: SearchMode, at: Instant
     ) -> LevelRange | None:

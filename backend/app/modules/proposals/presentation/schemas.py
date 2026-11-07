@@ -26,6 +26,11 @@ from app.engines.matchfit.core import ReliabilityBand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.booking_details import BookingDetails
+from app.modules.proposals.application.friends_card import (
+    FriendsCard,
+    FriendsCourts,
+    FriendsLineUpRead,
+)
 from app.modules.proposals.application.group_deck import DeckCounts, GroupDeck
 from app.modules.friends.domain.relation import FriendRelation
 from app.modules.proposals.application.home import Home, HomeGame
@@ -47,6 +52,7 @@ from app.modules.proposals.domain.deck import (
     Sides,
 )
 from app.modules.proposals.domain.details import ProposalStatus, ReaderAction
+from app.modules.proposals.domain.friends_card import CourtForFriends
 from app.modules.proposals.domain.games_and_money import (
     GAMES_PER_WEEK,
     MOST_ILL_PAY_CHOICES_GROSZE,
@@ -2291,4 +2297,169 @@ class PostedResponse(BaseModel):
             versions=posted.versions,
             dealt_to=posted.dealt_to,
             open_seats=posted.open_seats,
+        )
+
+
+# --------------------------------------------------------------------------- #
+# The friends card and Find a court (#750)
+# --------------------------------------------------------------------------- #
+
+
+class FriendsCardSidesSchema(BaseModel):
+    """The sides the court and the card both draw (the friends README, note 3)
+    — ids only: every face on them is one of the reader's friends, whom the
+    picker already drew."""
+
+    yours: list[UUID] = Field(
+        description="The reader first, then their partner in doubles."
+    )
+    theirs: list[UUID]
+
+
+class FriendsCourtSchema(BaseModel):
+    """One court the line-up could take: a row of *Find a court* —
+    *19:00 · Bonarka Arena · Court 2 · 32 zł each · Ania busy* — and the
+    card's court panel."""
+
+    starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
+    club: DeckClubSchema
+    court_id: UUID = Field(
+        description="Sent back as `court_id`, with `starts_at`, to pick this row."
+    )
+    court_name: str = Field(description="What the club calls it — *Court 3*.")
+    indoor: bool = Field(description="*Indoor* or *Outdoor*.")
+    share_grosze: int = Field(description="*25 zł each*.")
+    home_club_full: bool = Field(
+        description=(
+            "Another club's court, offered **because the group's home club has "
+            "no free court at this hour** — *Ogrody 33 is full at 10:00*. Always "
+            "`false` for the home club and for a player group."
+        )
+    )
+    free_count: int = Field(
+        description=(
+            "How many of the line-up, the reader among them, are free for the "
+            "whole hour by their weekly hours — the row's tint: all of them "
+            "*Everybody free*, then dimmer for each one fewer."
+        )
+    )
+    busy: list[UUID] = Field(
+        description=(
+            "Those of the line-up who are not — *Ania busy*, *Magda and Ania "
+            "busy* — in the line-up's order. **Busy** is outside their weekly "
+            "hours and nothing else: an hour where one of them has a game is "
+            "never listed."
+        )
+    )
+
+    @classmethod
+    def from_row(
+        cls, row: CourtForFriends, *, club_names: Mapping[UUID, str]
+    ) -> "FriendsCourtSchema":
+        return cls(
+            starts_at=row.start,
+            club=DeckClubSchema(id=row.club_id, name=club_names.get(row.club_id)),
+            court_id=row.court.court_id,
+            court_name=row.court.name,
+            indoor=row.court.indoor,
+            share_grosze=row.share_grosze,
+            home_club_full=row.home_club_full,
+            free_count=len(row.free),
+            busy=list(row.busy),
+        )
+
+
+_HOME_CLUB = "The group's home club — the name in *… is full at 10:00*."
+
+
+def _home_club_of(read: FriendsLineUpRead, names: Mapping[UUID, str]) -> DeckClubSchema:
+    return DeckClubSchema(id=read.home_club_id, name=names.get(read.home_club_id))
+
+
+class FriendsCardResponse(BaseModel):
+    """The friends card: the deck's card without its tiles."""
+
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode = Field(description="The switch's kind for this one game.")
+    home_club: DeckClubSchema = Field(description=_HOME_CLUB)
+    sides: FriendsCardSidesSchema = Field(
+        description=(
+            "The evenest way the line-up can stand, or the sides sent "
+            "(`partner_id`)."
+        )
+    )
+    forecast: DeckForecastSchema | None = Field(
+        description="*87% · Very even* for these sides; `null` where it cannot be read."
+    )
+    court: FriendsCourtSchema | None = Field(
+        description=(
+            "The court picked (`court_id` and `starts_at`), or the one proposed: "
+            "the soonest hour where the whole line-up is free, failing that the "
+            "soonest where most of them are. `null` when no court is free in the "
+            "next 14 days — the card's place says so, and *Pick a different "
+            "court* is gone."
+        )
+    )
+    overlap: DeckOverlapSchema | None = Field(
+        description=(
+            "The line-up's weeks, the court's hour ringed; `null` with no court, "
+            "which draws no card."
+        )
+    )
+    cut_off: datetime | None = Field(
+        description=(
+            "When the club's free cancellation ends for the court's game — the "
+            "send sheet's *We hold 100 zł on your card until Fri 10:00*. `null` "
+            "with no court."
+        )
+    )
+
+    @classmethod
+    def from_card(cls, card: FriendsCard) -> "FriendsCardResponse":
+        names = card.club_names
+        return cls(
+            pool_id=card.read.pool_id,
+            sport=card.read.sport,
+            kind=card.kind,
+            home_club=_home_club_of(card.read, names),
+            sides=FriendsCardSidesSchema(
+                yours=list(card.sides.yours), theirs=list(card.sides.theirs)
+            ),
+            forecast=_forecast(card.forecast),
+            court=None
+            if card.court is None
+            else FriendsCourtSchema.from_row(card.court, club_names=names),
+            overlap=None if card.overlap is None else _overlap(card.overlap),
+            cut_off=card.cut_off,
+        )
+
+
+class FriendsCourtsResponse(BaseModel):
+    """*Find a court* for a line-up."""
+
+    pool_id: UUID
+    sport: Sport
+    home_club: DeckClubSchema = Field(description=_HOME_CLUB)
+    courts: list[FriendsCourtSchema] = Field(
+        description=(
+            "**Every court the line-up could take**, from the soonest hour still "
+            "sellable to 14 days ahead, under the group's court rule: soonest "
+            "first, the home club first within an hour, each club's courts in "
+            "its own order. The client groups them by day. Every row can be "
+            "picked."
+        )
+    )
+
+    @classmethod
+    def from_courts(cls, courts: FriendsCourts) -> "FriendsCourtsResponse":
+        names = courts.club_names
+        return cls(
+            pool_id=courts.read.pool_id,
+            sport=courts.read.sport,
+            home_club=_home_club_of(courts.read, names),
+            courts=[
+                FriendsCourtSchema.from_row(row, club_names=names)
+                for row in courts.read.courts
+            ],
         )

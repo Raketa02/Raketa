@@ -141,6 +141,11 @@ from app.modules.proposals.application.blocking import WithdrawABlockersYeses
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
 from app.modules.proposals.application.members import ReadMembers
+from app.modules.proposals.application.friends_card import (
+    ReadFriendsCard,
+    ReadFriendsCourts,
+    ReadFriendsLineUp,
+)
 from app.modules.proposals.application.posting import (
     PostAGame,
     ReadPosting,
@@ -2670,6 +2675,59 @@ def build_post_a_game(
         directory=build_proposal_directory(session),
         make=build_make_proposal(session, clock=clock, runtime=runtime),
         balance=build_ruleset().balance,
+        clock=clock,
+    )
+
+
+def build_read_friends_line_up(
+    session: AsyncSession,
+    *,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadFriendsLineUp:
+    """A fixed line-up on a group's Friends tab, read once (#750): the reader's
+    friends, the line-up as the proposer reads its people, the pair rule's
+    block mask, and every court the pool's court source offers. ``booked`` as
+    the deck's."""
+    return ReadFriendsLineUp(
+        pools=build_pools(session),
+        relations=build_reader_relations(session, runtime=runtime),
+        members=build_read_members(session, booked=booked, runtime=runtime),
+        fit=build_player_fit(session, runtime=runtime),
+        where=build_where_pools_play(session, runtime=runtime),
+        court_hours=build_court_hours(session, runtime=runtime),
+    )
+
+
+def build_read_friends_card(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadFriendsCard:
+    """The friends card (#750): the line-up's sides by the engine's own
+    forecast, its weeks' overlap and a court — a read, recording nothing."""
+    return ReadFriendsCard(
+        line_up=build_read_friends_line_up(session, booked=booked, runtime=runtime),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        clubs=build_proposal_club_names(session),
+        terms=build_club_terms(session, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_friends_courts(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadFriendsCourts:
+    """*Find a court* for a line-up (#750): every court it could take."""
+    return ReadFriendsCourts(
+        line_up=build_read_friends_line_up(session, booked=booked, runtime=runtime),
+        clubs=build_proposal_club_names(session),
         clock=clock,
     )
 

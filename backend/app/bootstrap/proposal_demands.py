@@ -16,8 +16,10 @@ profile) — and, for the club running its bookings (#547), a club's bookings as
 its desk reads and runs them (``bookings``), what each took and gave back
 (``payments``) and the group each pool is (``groups``) — and, for the kind of
 court a card promises (#671), the kinds of the free courts at a club and hour
-(``clubs``) — each a fact another context owns, read through a port declared
-in this context's words.
+(``clubs``) — and, for the friends card (#750), every hour a club sells with its
+free courts named in the club's order (``clubs``, ``CourtHours`` — the first of
+the proposer's ports to get its row) — each a fact another context owns, read
+through a port declared in this context's words.
 
 **Not yet the whole of the context's demands.** The rest of the deck's, the
 proposer's and the fill's ports (#538–#541) were contracted over HTTP and never
@@ -49,6 +51,7 @@ from app.bootstrap.composition import (
     build_players_in_play,
     build_proposal_player_names,
     build_seat_refunds,
+    build_court_hours,
     build_court_kinds,
     build_clock,
     build_friend_requests_on_home,
@@ -65,6 +68,7 @@ from app.modules.proposals.domain.ports import (
     GameResults,
     CardsToFix,
     CheckedShares,
+    CourtHours,
     CourtKinds,
     HeldShares,
     HoldingTimes,
@@ -101,6 +105,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     BookingTakings,
     PoolOrigins,
     CourtKinds,
+    CourtHours,
     ReaderRelations,
     FriendRequestsOnHome,
 )
@@ -116,6 +121,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=CourtKinds,
         name="SellableCourtKinds",
         build=build_court_kinds,
+    ),
+    RegisteredImplementation(
+        port=CourtHours,
+        name="ClubCourtHours",
+        build=build_court_hours,
     ),
     RegisteredImplementation(
         port=GameResults,

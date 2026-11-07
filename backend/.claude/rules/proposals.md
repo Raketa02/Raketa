@@ -199,7 +199,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   while `other_clubs_courts` is on, **on by default** — the clubs within the club's distance
   **only at a sport and hour its club has no free court** (#746; ADR-0202 §7): **the court
   source answers per hour**, `PoolClubs.offered`, read by the proposer's `_selling` and
-  Post a game's grid — and by the friends card when it is built — so a group never has two
+  Post a game's grid, and by the friends card (#750, below) — so a group never has two
   court rules. The
   old *no shared hour at home in 14 days* refusal is gone. **No free court is read off what
   Raketa may sell now** — booked out, closed, outside the Raketa hours, past its book-by,
@@ -347,3 +347,45 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   over). No people are added for it: Monday afternoon, the one third of a day none of her
   group's clubs sells padel, is *enough · no court* and *few · no court* off the cohort's
   committed weeks.
+- **The friends card and *Find a court* are reads of a fixed line-up** (#750;
+  [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  §5; the friends mechanics §7.4–§7.6): `GET /pools/{id}/friends-card?sport&kind&friend_ids…`
+  and `GET /pools/{id}/friends-card/courts?sport&friend_ids…`, `application/friends_card.py`
+  over `domain/friends_card.py`. **Nothing is recorded**, so *no route makes a card itself*
+  stands. Five things are load-bearing. **One reading for both, and for the send**:
+  `ReadFriendsLineUp.read` is what #751's send must read the line-up through, so the card
+  and the send cannot disagree. Its checks run in the order that says least, each naming
+  nobody: the reader in the pool (`pool_not_found`; the friends need not be — a
+  non-member is a **guest**), the sport's line-up (`wrong_line_up_size`, `details.friends`:
+  three in doubles, one in singles, each once, never the reader), each friend the
+  reader's now (`not_a_friend`, through `ReaderRelations.friends_among`, before anything
+  is read about them), a level in the sport for all four, the reader too (`no_level`), and
+  **the pair rule's block mask alone** (`cannot_play_together`, `PlayerFit.blocked_pairs`)
+  — the level window, the kind's tolerance, gender preferences, the reliability filter,
+  a Play intent and *most I'll pay* don't apply (call 10). **The sides are the deck's**:
+  `arrangements` of the line-up in the order sent and `evenest` over `BalanceForecasts`,
+  the first among equals — or the sides sent, named by **`partner_id`** (the friend
+  beside the reader; doubles only, else `sides_not_of_the_line_up`), a call: the reader
+  always stands on their own side (Q70), so a partner names every way to stand. **The
+  courts are the court source's**, `PoolClubs.offered` over `CourtHours.on_sale` from now
+  to now + the deck's 14 days, **one row per free court** — `CourtHourOnSale.free`, the
+  courts named in the club's order (`CourtOnSale`, the first being the one a booking
+  then is given), so *Court 3* is printed — soonest first, the home club first within an
+  hour, each with who of the four is free for the whole hour and who is **busy** (outside
+  their weekly hours, nothing else). **Left out**: an hour where one of them has a game
+  (call 5) — **and nothing for a full week**: call 5 refuses that one's Accept with a
+  sentence instead (§8.4), and the send refuses the sender's own (#751). **The court
+  proposed** is the first row where all are free, failing that the first where the most
+  are (`max` over the free count keeps the soonest) — a call: it may be an hour only one
+  of them is free — and `null` only with no row at all, so the screen's *Pick a
+  different court* is gone exactly when the list is empty;
+  `court_id` + `starts_at` picks a row (`court_hour_incomplete` for one without the other,
+  `court_hour_not_for_sale` for one the list does not hold now, both the use case's). The
+  window is now to now + 14 days, the deck's horizon. The card adds the overlap
+  of the four weeks at the court's hour (`null` with no court, whose card the screen
+  replaces with its sentence) and **`cut_off`**, the club's cut-off for that hour off
+  `ClubTerms` (`deck.cut_off_of`) — a call, for the send sheet's *until Fri 10:00*.
+  **Measured** on the seed's busiest pool, *Padel po pracy* (20 members, a player group
+  reaching 4 clubs), in the API container: the card 54 statements, ~45 ms CPU warm;
+  *Find a court* 48 statements, ~44 ms, and **829 rows, 300 KiB** of JSON over 13 days —
+  every court, as §7.6 asks.

@@ -241,4 +241,6 @@ Decisions that are load-bearing and not obvious from the code (#745, #748, #749;
   carries `level_asked_in` per friend: the sports **the reader** asked them for, in the
   registry's order, or with `sport` that one or nothing. Notices: `LEVEL_ASKED` / `LEVEL_GOT`
   (`notifications.md`).
-- **Not built here**: the friends card and the friends game (#750–#752).
+- **The friends card is Proposals'** (#750; `proposals.md`): it asks this context only
+  `ReaderRelations.friends_among` — the reader's friends now, `not_a_friend` otherwise.
+- **Not built here**: the friends game (#751–#752).

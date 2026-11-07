@@ -62,6 +62,7 @@ from app.modules.proposals.domain.ports import (
     RefusedPayment,
     BookedGameChanges,
     BookingTakings,
+    CourtHours,
     CourtKinds,
     LateRefunds,
     ClubBookings,
@@ -93,6 +94,7 @@ from tests.api.proposals_world import (
     every_hour_of_the_week,
 )
 from tests.api.reliability_world import NEW_AT_50, SERGIO_AT_65, a_history
+from tests.demands import friends_world
 
 OLA, KUBA, EWA, TOMEK = (new_uuid() for _ in range(4))
 
@@ -1160,6 +1162,30 @@ async def test_every_kind_over_one_reading_answers_as_each_kind_alone(
 
 
 @pytest.mark.parametrize("implementation", registered(PlayerFit))
+async def test_the_block_mask_alone_is_every_blocked_pair_either_way(
+    implementation, client, session_factory, session
+):
+    """The friends card's question (#750): a block either way round keeps a
+    pair apart, and nothing else the pair rule reads does — 2,5 and 3,4 are
+    far past the competitive window, and somebody unrated is asked about too."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    far = await _rated(client, session_factory, "zosia", mu=3.4)
+    ewa = await _rated(client, session_factory, "ewa", mu=2.5)
+    unrated, token = await players.register(client, "kuba")
+    await players.commit_profile(client, token)
+    await friends_world.blocks(session, ewa, ola)
+    await friends_world.blocks(session, unrated, far)
+    fit: PlayerFit = implementation.build(session)
+
+    blocked = await fit.blocked_pairs([ola, far, ewa, unrated])
+
+    assert blocked == {frozenset((ola, ewa)), frozenset((far, unrated))}
+    assert await fit.blocked_pairs([ola, far]) == frozenset()
+    assert await fit.blocked_pairs([ola]) == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerFit))
 async def test_a_players_window_is_the_kinds_tolerance_around_their_level(
     implementation, client, session_factory, session
 ):
@@ -1371,6 +1397,54 @@ async def test_the_kind_of_court_a_card_promises_is_certain_or_nothing(
     )
     assert off.status_code == 200, off.text
     assert await kinds.of([padel]) == {padel: False}
+
+
+@pytest.mark.parametrize("implementation", registered(CourtHours))
+async def test_every_hour_a_club_sells_counts_and_names_its_free_courts_in_order(
+    implementation, client, session
+):
+    """One row per club, sport and hour, its courts counted — and, for the
+    friends card (#750), named in the club's own order, the first being the
+    one a booking then is given. A court the desk takes off Raketa is neither."""
+
+    club_id, desk = await a_club_and_its_desk(client)
+    outdoor = await adds_a_court(
+        client, desk, name="Court 3", sport="PADEL", indoor=False
+    )
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
+    hours: CourtHours = implementation.build(session)
+    asked = dict(start=SATURDAY_FIVE, end=SATURDAY_FIVE + timedelta(hours=1), now=_at())
+
+    padel, tennis = sorted(
+        await hours.on_sale([UUID(club_id), new_uuid()], **asked),
+        key=lambda hour: hour.sport.value,
+    )
+
+    assert (padel.club_id, padel.sport, padel.start) == (
+        UUID(club_id),
+        Sport.PADEL,
+        SATURDAY_FIVE,
+    )
+    assert padel.courts == 2
+    assert [(court.name, court.indoor) for court in padel.free] == [
+        ("Court 1", True),
+        ("Court 3", False),
+    ]
+    assert padel.free[1].court_id == UUID(outdoor["id"])
+    assert [court.name for court in tennis.free] == ["Court 2"]
+
+    taken_off = await client.put(
+        court_path(outdoor["id"]),
+        json={"name": "Court 3", "sport": "PADEL", "indoor": False, "offered": False},
+        headers=desk,
+    )
+    assert taken_off.status_code == 200, taken_off.text
+    [padel] = [
+        hour
+        for hour in await hours.on_sale([UUID(club_id)], **asked)
+        if hour.sport is Sport.PADEL
+    ]
+    assert (padel.courts, [court.name for court in padel.free]) == (1, ["Court 1"])
 
 
 @pytest.mark.parametrize("implementation", registered(BookingTakings))

@@ -7008,6 +7008,295 @@
         }
       }
     },
+    "/api/v1/pools/{pool_id}/friends-card": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "The friends card",
+        "description": "The **Friends** tab, every seat filled: the deck's card without its tiles, for the reader and the friends they seated. **The sides** are the evenest way they can stand, by the engine's own forecast \u2014 or, after a swap, the way with `partner_id` beside the reader \u2014 and the court above the card draws the same. **The court** is the one picked in *Find a court* (`court_id` and `starts_at`), or the one proposed: the soonest hour, up to 14 days ahead, where the whole line-up is free, a court is free under the group's court rule and none of them has a game \u2014 failing that, the soonest where most of them are free \u2014 and `null` when there is none. Around it the overlap of their weeks and the club's cut-off. **Friends choose each other**: blocks and a level in the sport apply, and the level window, the kind's tolerance, gender preferences, a Play intent and *most I'll pay* don't. A friend who is not in the group plays as a guest. Nothing is recorded: no game is made and no court is held.",
+        "operationId": "read_friends_card_api_v1_pools__pool_id__friends_card_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          },
+          {
+            "name": "friend_ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "The friends seated beside the reader, in the order seated: three in doubles, one in singles.",
+              "title": "Friend Ids"
+            },
+            "description": "The friends seated beside the reader, in the order seated: three in doubles, one in singles."
+          },
+          {
+            "name": "partner_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "After a swap, the friend beside the reader (doubles only); left out, the evenest sides.",
+              "title": "Partner Id"
+            },
+            "description": "After a swap, the friend beside the reader (doubles only); left out, the evenest sides."
+          },
+          {
+            "name": "court_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A court picked in *Find a court*.",
+              "title": "Court Id"
+            },
+            "description": "A court picked in *Find a court*."
+          },
+          {
+            "name": "starts_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Its hour, as listed.",
+              "title": "Starts At"
+            },
+            "description": "Its hour, as listed."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsCardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`wrong_line_up_size` \u2014 not the friends the sport seats beside the reader, each once and never the reader: `details.friends`, three in doubles, one in singles. `sides_not_of_the_line_up` \u2014 `partner_id` is not one of the friends seated, or the sport is singles. `court_hour_incomplete` \u2014 `court_id` without `starts_at`, or the other way round.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both. The friends need not be in it: a friend who is not a member plays as a guest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Each names nobody. `not_a_friend` \u2014 somebody seated is not the reader's friend now: the seat is emptied. `no_level` \u2014 somebody seated, or the reader, holds no level in the sport. `cannot_play_together` \u2014 two of them blocked each other, either way round: *These four can't all play together. Swap someone.* \u2014 never which two. `court_hour_not_for_sale` \u2014 the court-hour sent is not one *Find a court* lists now: taken, past its book-by, not under the group's court rule, or an hour one of them now has a game at. Read the card again without it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether two of them blocked each other could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pools/{pool_id}/friends-card/courts": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Find a court",
+        "description": "*Pick a different court* on the friends card: **every court the line-up could take**, from the soonest hour still sellable to 14 days ahead, under the group's court rule \u2014 for an official group, another club's only at an hour the home club has none free, marked `home_club_full`. Each row says how many of them are free for the whole hour and who is busy \u2014 outside their weekly hours. An hour where one of them already has a game, or whose week already holds all the games they play, is left out. **Friends choose each other**: blocks and a level in the sport apply, and the level window, the kind's tolerance, gender preferences, a Play intent and *most I'll pay* don't. A friend who is not in the group plays as a guest. Nothing is recorded: no game is made and no court is held.",
+        "operationId": "read_friends_courts_api_v1_pools__pool_id__friends_card_courts_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "friend_ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "The friends seated beside the reader, in the order seated: three in doubles, one in singles.",
+              "title": "Friend Ids"
+            },
+            "description": "The friends seated beside the reader, in the order seated: three in doubles, one in singles."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsCourtsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`wrong_line_up_size` \u2014 not the friends the sport seats beside the reader, each once and never the reader: `details.friends`, three in doubles, one in singles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both. The friends need not be in it: a friend who is not a member plays as a guest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Each names nobody. `not_a_friend` \u2014 somebody seated is not the reader's friend now: the seat is emptied. `no_level` \u2014 somebody seated, or the reader, holds no level in the sport. `cannot_play_together` \u2014 two of them blocked each other, either way round: *These four can't all play together. Swap someone.* \u2014 never which two.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether two of them blocked each other could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/seat-charges/{seat_charge_id}": {
       "get": {
         "tags": [
@@ -10421,6 +10710,218 @@
           "band"
         ],
         "title": "FriendSportSchema"
+      },
+      "FriendsCardResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "The switch's kind for this one game."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/DeckClubSchema",
+            "description": "The group's home club \u2014 the name in *\u2026 is full at 10:00*."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/FriendsCardSidesSchema",
+            "description": "The evenest way the line-up can stand, or the sides sent (`partner_id`)."
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckForecastSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "*87% \u00b7 Very even* for these sides; `null` where it cannot be read."
+          },
+          "court": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FriendsCourtSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The court picked (`court_id` and `starts_at`), or the one proposed: the soonest hour where the whole line-up is free, failing that the soonest where most of them are. `null` when no court is free in the next 14 days \u2014 the card's place says so, and *Pick a different court* is gone."
+          },
+          "overlap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckOverlapSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The line-up's weeks, the court's hour ringed; `null` with no court, which draws no card."
+          },
+          "cut_off": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cut Off",
+            "description": "When the club's free cancellation ends for the court's game \u2014 the send sheet's *We hold 100 z\u0142 on your card until Fri 10:00*. `null` with no court."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "kind",
+          "home_club",
+          "sides",
+          "forecast",
+          "court",
+          "overlap",
+          "cut_off"
+        ],
+        "title": "FriendsCardResponse",
+        "description": "The friends card: the deck's card without its tiles."
+      },
+      "FriendsCardSidesSchema": {
+        "properties": {
+          "yours": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Yours",
+            "description": "The reader first, then their partner in doubles."
+          },
+          "theirs": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Theirs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "yours",
+          "theirs"
+        ],
+        "title": "FriendsCardSidesSchema",
+        "description": "The sides the court and the card both draw (the friends README, note 3)\n\u2014 ids only: every face on them is one of the reader's friends, whom the\npicker already drew."
+      },
+      "FriendsCourtSchema": {
+        "properties": {
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "club": {
+            "$ref": "#/components/schemas/DeckClubSchema"
+          },
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id",
+            "description": "Sent back as `court_id`, with `starts_at`, to pick this row."
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "What the club calls it \u2014 *Court 3*."
+          },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "*Indoor* or *Outdoor*."
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "*25 z\u0142 each*."
+          },
+          "home_club_full": {
+            "type": "boolean",
+            "title": "Home Club Full",
+            "description": "Another club's court, offered **because the group's home club has no free court at this hour** \u2014 *Ogrody 33 is full at 10:00*. Always `false` for the home club and for a player group."
+          },
+          "free_count": {
+            "type": "integer",
+            "title": "Free Count",
+            "description": "How many of the line-up, the reader among them, are free for the whole hour by their weekly hours \u2014 the row's tint: all of them *Everybody free*, then dimmer for each one fewer."
+          },
+          "busy": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Busy",
+            "description": "Those of the line-up who are not \u2014 *Ania busy*, *Magda and Ania busy* \u2014 in the line-up's order. **Busy** is outside their weekly hours and nothing else: an hour where one of them has a game is never listed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "starts_at",
+          "club",
+          "court_id",
+          "court_name",
+          "indoor",
+          "share_grosze",
+          "home_club_full",
+          "free_count",
+          "busy"
+        ],
+        "title": "FriendsCourtSchema",
+        "description": "One court the line-up could take: a row of *Find a court* \u2014\n*19:00 \u00b7 Bonarka Arena \u00b7 Court 2 \u00b7 32 z\u0142 each \u00b7 Ania busy* \u2014 and the\ncard's court panel."
+      },
+      "FriendsCourtsResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/DeckClubSchema",
+            "description": "The group's home club \u2014 the name in *\u2026 is full at 10:00*."
+          },
+          "courts": {
+            "items": {
+              "$ref": "#/components/schemas/FriendsCourtSchema"
+            },
+            "type": "array",
+            "title": "Courts",
+            "description": "**Every court the line-up could take**, from the soonest hour still sellable to 14 days ahead, under the group's court rule: soonest first, the home club first within an hour, each club's courts in its own order. The client groups them by day. Every row can be picked."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "home_club",
+          "courts"
+        ],
+        "title": "FriendsCourtsResponse",
+        "description": "*Find a court* for a line-up."
       },
       "FriendsResponse": {
         "properties": {

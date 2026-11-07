@@ -20,7 +20,7 @@ that player's yes again, ``POST /seat-charges/{id}/confirmation``.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -32,6 +32,7 @@ from app.kernel import Sport, instant
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     ConfirmPaymentCommand,
+    FriendsLineUpCommand,
     DealThePoolNowCommand,
     LeaveTheGameCommand,
     PostAGameCommand,
@@ -40,6 +41,7 @@ from app.modules.proposals.application.commands import (
     ReadFillInCommand,
     ReadGroupDeckCommand,
     ReadPostingGridCommand,
+    ReadFriendsCardCommand,
     ReadPostingSlotCommand,
     RescueCommand,
     SetGamesAndMoneyCommand,
@@ -56,6 +58,8 @@ from app.modules.proposals.presentation.dependencies import (
     ReadBookingDetailsDep,
     ReadDeckCountsDep,
     ReadFillInDep,
+    ReadFriendsCardDep,
+    ReadFriendsCourtsDep,
     ReadHomeDep,
     ReadPaymentsToConfirmDep,
     ReadPostingGridDep,
@@ -74,6 +78,8 @@ from app.modules.proposals.presentation.schemas import (
     DeckCountsResponse,
     DepartureResponse,
     FillInResponse,
+    FriendsCardResponse,
+    FriendsCourtsResponse,
     GamesAndMoneyRequest,
     GamesAndMoneyResponse,
     GroupDeckResponse,
@@ -1040,3 +1046,168 @@ async def post_a_game(
         )
     )
     return PostedResponse.from_posted(posted)
+
+
+# --------------------------------------------------------------------------- #
+# The friends card (#750)
+# --------------------------------------------------------------------------- #
+
+_LINE_UP_REFUSED = (
+    "Each names nobody. `not_a_friend` — somebody seated is not the reader's "
+    "friend now: the seat is emptied. `no_level` — somebody seated, or the "
+    "reader, holds no level in the sport. `cannot_play_together` — two of them "
+    "blocked each other, either way round: *These four can't all play together. "
+    "Swap someone.* — never which two."
+)
+
+_FRIENDS_RESPONSES: dict[int | str, dict[str, Any]] = {
+    status.HTTP_400_BAD_REQUEST: {
+        "model": ErrorResponse,
+        "description": (
+            "`wrong_line_up_size` — not the friends the sport seats beside the "
+            "reader, each once and never the reader: `details.friends`, three in "
+            "doubles, one in singles."
+        ),
+    },
+    status.HTTP_404_NOT_FOUND: {
+        "model": ErrorResponse,
+        "description": (
+            "`pool_not_found` — no such group, or the reader is not in it. One "
+            "code for both. The friends need not be in it: a friend who is not "
+            "a member plays as a guest."
+        ),
+    },
+    status.HTTP_409_CONFLICT: {"model": ErrorResponse, "description": _LINE_UP_REFUSED},
+    status.HTTP_503_SERVICE_UNAVAILABLE: {
+        "model": ErrorResponse,
+        "description": (
+            "`block_state_unavailable` — whether two of them blocked each other "
+            "could not be read. Retry."
+        ),
+    },
+}
+
+_FriendIds = Annotated[
+    list[UUID],
+    Query(
+        description=(
+            "The friends seated beside the reader, in the order seated: three in "
+            "doubles, one in singles."
+        )
+    ),
+]
+
+_LINE_UP_RULES = (
+    " **Friends choose each other**: blocks and a level in the sport apply, and "
+    "the level window, the kind's tolerance, gender preferences, a Play intent "
+    "and *most I'll pay* don't. A friend who is not in the group plays as a "
+    "guest. Nothing is recorded: no game is made and no court is held."
+)
+
+
+@pools_router.get(
+    "/{pool_id}/friends-card",
+    response_model=FriendsCardResponse,
+    responses={
+        **_FRIENDS_RESPONSES,
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                _FRIENDS_RESPONSES[status.HTTP_400_BAD_REQUEST]["description"]
+                + " `sides_not_of_the_line_up` — `partner_id` is not one of the "
+                "friends seated, or the sport is singles. `court_hour_incomplete` "
+                "— `court_id` without `starts_at`, or the other way round."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                _LINE_UP_REFUSED
+                + " `court_hour_not_for_sale` — the court-hour sent is not one *Find "
+                "a court* lists now: taken, past its book-by, not under the group's "
+                "court rule, or an hour one of them now has a game at. Read the "
+                "card again without it."
+            ),
+        },
+    },
+    summary="The friends card",
+    description=(
+        "The **Friends** tab, every seat filled: the deck's card without its "
+        "tiles, for the reader and the friends they seated. **The sides** are "
+        "the evenest way they can stand, by the engine's own forecast — or, "
+        "after a swap, the way with `partner_id` beside the reader — and the "
+        "court above the card draws the same. **The court** is the one picked "
+        "in *Find a court* (`court_id` and `starts_at`), or the one proposed: "
+        "the soonest hour, up to 14 days ahead, where the whole line-up is free, "
+        "a court is free under the group's court rule and none of them has a "
+        "game — failing that, the soonest where most of them are free — and "
+        "`null` when there is none. Around it the overlap of their weeks and "
+        "the club's cut-off." + _LINE_UP_RULES
+    ),
+)
+async def read_friends_card(
+    pool_id: UUID,
+    sport: Sport,
+    kind: SearchMode,
+    friend_ids: _FriendIds,
+    user: CurrentUserDep,
+    read: ReadFriendsCardDep,
+    partner_id: Annotated[
+        UUID | None,
+        Query(
+            description=(
+                "After a swap, the friend beside the reader (doubles only); left "
+                "out, the evenest sides."
+            )
+        ),
+    ] = None,
+    court_id: Annotated[
+        UUID | None, Query(description="A court picked in *Find a court*.")
+    ] = None,
+    starts_at: Annotated[
+        datetime | None, Query(description="Its hour, as listed.")
+    ] = None,
+) -> FriendsCardResponse:
+    card = await read.execute(
+        ReadFriendsCardCommand(
+            line_up=FriendsLineUpCommand(
+                player_id=user.id, pool_id=pool_id, sport=sport, friend_ids=friend_ids
+            ),
+            kind=kind,
+            partner_id=partner_id,
+            court_id=court_id,
+            starts_at=None if starts_at is None else instant(starts_at),
+        )
+    )
+    return FriendsCardResponse.from_card(card)
+
+
+@pools_router.get(
+    "/{pool_id}/friends-card/courts",
+    response_model=FriendsCourtsResponse,
+    responses=_FRIENDS_RESPONSES,
+    summary="Find a court",
+    description=(
+        "*Pick a different court* on the friends card: **every court the line-up "
+        "could take**, from the soonest hour still sellable to 14 days ahead, "
+        "under the group's court rule — for an official group, another club's "
+        "only at an hour the home club has none free, marked `home_club_full`. "
+        "Each row says how many of them are free for the whole hour and who is "
+        "busy — outside their weekly hours. An hour where one of them already "
+        "has a game, or whose week already holds all the games they play, is "
+        "left out." + _LINE_UP_RULES
+    ),
+)
+async def read_friends_courts(
+    pool_id: UUID,
+    sport: Sport,
+    friend_ids: _FriendIds,
+    user: CurrentUserDep,
+    read: ReadFriendsCourtsDep,
+) -> FriendsCourtsResponse:
+    courts = await read.execute(
+        FriendsLineUpCommand(
+            player_id=user.id, pool_id=pool_id, sport=sport, friend_ids=friend_ids
+        )
+    )
+    return FriendsCourtsResponse.from_courts(courts)

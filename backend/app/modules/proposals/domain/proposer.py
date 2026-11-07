@@ -38,7 +38,7 @@ the other clubs it plays at, nearest first — at the same hour the home club's
 court wins. An official group plays at its own club, and **at another club only
 at an hour its own has no free court**, while the club lets other clubs' courts
 serve its groups — ``PoolClubs.offered``, the one court rule the deck and Post
-a game read (the friends card will too). A paused club deals no new card,
+a game and the friends card read. A paused club deals no new card,
 fourteen days is the horizon, and the clubs' order and distances are the
 caller's.
 
@@ -216,6 +216,17 @@ def admitted(posted_for: PostedFor | None, member: Member) -> bool:
 
 @final
 @dataclass(frozen=True, slots=True)
+class CourtOnSale:
+    """One free court of an hour on sale, as the club names it — what the
+    friends card and *Find a court* print (#750): *Court 3*, and its kind."""
+
+    court_id: UUID
+    name: str
+    indoor: bool
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class CourtHourOnSale:
     """An hour a club sells through Raketa in the sport: how many of its courts
     are free then, the share fixed on a card made now, and its book-by."""
@@ -229,9 +240,18 @@ class CourtHourOnSale:
     #: ``False`` while the club is paused: its cards keep their court, and no
     #: new card is built on it.
     taking_new_cards: bool = True
+    #: The free courts themselves, **in the club's order** — the first is the
+    #: one a game booked then is given (#750). A card promises a court at a
+    #: club and hour and never a number, so only the friends card reads them;
+    #: empty where whoever built the hour named none.
+    free: tuple[CourtOnSale, ...] = ()
 
     def __post_init__(self) -> None:
         invariant(self.courts >= 1, f"{self.courts} courts on sale at {self.start}")
+        invariant(
+            not self.free or len(self.free) == self.courts,
+            f"{len(self.free)} named of {self.courts} courts at {self.start}",
+        )
 
 
 @final
@@ -240,7 +260,7 @@ class PoolClubs:
     """Where a pool may play: its home club, and the other clubs it may use,
     nearest first — and, through ``offered``, **the court hours it is offered,
     hour by hour** (``docs/adr/0202`` §7): the one court rule the deck and Post
-    a game read, and the friends card will, so a group never has two."""
+    a game and the friends card read, so a group never has two."""
 
     home_club_id: UUID
     others: tuple[UUID, ...] = ()

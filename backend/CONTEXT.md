@@ -698,7 +698,7 @@ there; they are not repeated here.
   group another club's **only at a sport and hour where the home club has none**;
   `because_home_is_full(hour)` is the mark on such a row, true only of an hour `offered`
   answered. **One source for every reader**: the proposer (picks and the owed card) and
-  Post a game's grid and slot sheet today, the friends card when it is built, so a group
+  Post a game's grid and slot sheet, and the friends card with *Find a court* (#750), so a group
   never has two court rules. *No free court* is read off what Raketa may sell now: booked
   out, closed, outside the club's Raketa hours, past its book-by, or the club paused — the
   notion the old refusal's *an hour at home* used too. _Avoid_: a refusal per set of players

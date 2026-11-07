@@ -131,8 +131,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club's are offered; at an hour it has none, other clubs within the club's distance too,
   each marked as offered because the club is full — unless the club switched other clubs'
   courts off (on by default). A player group is unchanged: home first, then within 10 km,
-  at every hour. One court source serves the deck and Post a game, and will serve the
-  friends card (`proposals.md`, *Where*). Seeded by `app/seeds/official_groups.py`
+  at every hour. One court source serves the deck, Post a game and the friends card
+  (#750; `proposals.md`, *Where*). Seeded by `app/seeds/official_groups.py`
   after the administrators: Marta's *Ogrody 33 Club* (*People I approve*, 48, padel,
   three players, one waiting) and *Ogrody open play*, run by `rated-in-every-sport`,
   who plays in it; and `app/seeds/full_hour.py` closes every Ogrody 33 court on the first

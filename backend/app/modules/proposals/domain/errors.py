@@ -19,6 +19,12 @@ engine's window or upside down, *Mixed pairs* in a singles sport, a poster
 with no Level in the sport or left out by their own *Who*, and the button's
 guards — two live posts, a week already booked, a game at that hour, and
 nobody who fits free then.
+
+**The friends card** (#750; ``docs/adr/0202`` §5) adds its own, **each naming
+nobody**: a line-up the sport does not seat, sides that are not a way it can
+stand, a court-hour sent by halves; somebody seated who is not the reader's
+friend, somebody with no level in the sport, and two of them who blocked each
+other — *These four can't all play together*, never which two.
 """
 
 from __future__ import annotations
@@ -405,3 +411,72 @@ class CourtNotFree(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("that court is not free for this game")
+
+
+# --------------------------------------------------------------------------- #
+# The friends card (#750)
+# --------------------------------------------------------------------------- #
+
+
+class WrongLineUpSize(BadRequestError):
+    """The friends sent are not the line-up the sport seats beside the reader:
+    three in doubles, one in singles (``details.friends``), each once, and never
+    the reader."""
+
+    code = "wrong_line_up_size"
+
+    def __init__(self, *, friends: int) -> None:
+        super().__init__(
+            "the sport seats a different number of friends",
+            details={"friends": friends},
+        )
+
+
+class SidesNotOfTheLineUp(BadRequestError):
+    """The partner sent is not one of the friends seated — or the sport is
+    singles, where nobody stands beside the reader."""
+
+    code = "sides_not_of_the_line_up"
+
+    def __init__(self) -> None:
+        super().__init__("those sides are not a way this line-up can stand")
+
+
+class CourtHourIncomplete(BadRequestError):
+    """A court-hour is a court and an hour: one was sent without the other."""
+
+    code = "court_hour_incomplete"
+
+    def __init__(self) -> None:
+        super().__init__("send both the court and the hour, or neither")
+
+
+class NotAFriend(ConflictError):
+    """Somebody seated is not the reader's friend — now. Who is not said: the
+    phone empties the seat it holds stale."""
+
+    code = "not_a_friend"
+
+    def __init__(self) -> None:
+        super().__init__("somebody seated is not your friend")
+
+
+class NoLevel(ConflictError):
+    """Somebody seated — the reader too — holds no level in the sport. Who is
+    not said: the picker greys them first."""
+
+    code = "no_level"
+
+    def __init__(self) -> None:
+        super().__init__("somebody seated has no level in this sport")
+
+
+class CannotPlayTogether(ConflictError):
+    """Two of the people seated blocked each other, either way round — *These
+    four can't all play together. Swap someone.* **Never which two**
+    (``docs/adr/0202`` §2, Q6)."""
+
+    code = "cannot_play_together"
+
+    def __init__(self) -> None:
+        super().__init__("these players can't all play together")

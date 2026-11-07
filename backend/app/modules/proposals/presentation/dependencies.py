@@ -40,6 +40,8 @@ from app.bootstrap.composition import (
     build_proposal_repository,
     build_read_booking_details,
     build_read_fill_in,
+    build_read_friends_card,
+    build_read_friends_courts,
     build_read_group_deck_once,
     build_read_home,
     build_read_payments_to_confirm,
@@ -78,6 +80,10 @@ from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
+)
+from app.modules.proposals.application.friends_card import (
+    ReadFriendsCard,
+    ReadFriendsCourts,
 )
 from app.modules.proposals.application.posting import (
     PostAGame,
@@ -405,3 +411,26 @@ def get_post_a_game(
 
 
 PostAGameDep = Annotated[PostAGame, Depends(get_post_a_game)]
+
+
+# --------------------------------------------------------------------------- #
+# The friends card (#750)
+# --------------------------------------------------------------------------- #
+
+
+def get_read_friends_card(
+    db: DbSession, clock: ClockDep, booked: BookedGamesDep
+) -> ReadFriendsCard:
+    return build_read_friends_card(db, clock=clock, booked=booked)
+
+
+ReadFriendsCardDep = Annotated[ReadFriendsCard, Depends(get_read_friends_card)]
+
+
+def get_read_friends_courts(
+    db: DbSession, clock: ClockDep, booked: BookedGamesDep
+) -> ReadFriendsCourts:
+    return build_read_friends_courts(db, clock=clock, booked=booked)
+
+
+ReadFriendsCourtsDep = Annotated[ReadFriendsCourts, Depends(get_read_friends_courts)]

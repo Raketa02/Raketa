@@ -540,8 +540,15 @@ def hour_taken(start: Instant, booked: Iterable[Instant]) -> bool:
     return any(abs(start - game) < GAME_LENGTH for game in booked)
 
 
+def cut_off_of(start: Instant, *, cut_off_hours: int) -> Instant:
+    """When the club's free cancellation ends for a game at ``start``:
+    ``cut_off_hours`` elapsed hours before it."""
+
+    return shifted(start, hours(-cut_off_hours))
+
+
 def cut_off_passed(start: Instant, *, cut_off_hours: int, now: Instant) -> bool:
     """Whether the club's free cancellation has already ended for a game at
     ``start`` — *no free cancellation* on the card (§5.4). Elapsed hours."""
 
-    return now >= shifted(start, hours(-cut_off_hours))
+    return now >= cut_off_of(start, cut_off_hours=cut_off_hours)

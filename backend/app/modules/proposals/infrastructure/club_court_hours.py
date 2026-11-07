@@ -47,7 +47,7 @@ from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.clubs.domain.sellable import ClubOffer, SellableCourtHour
 from app.modules.proposals.domain.deck import SellingTerms
 from app.modules.proposals.domain.ports import CourtHourKey, OfferedCourtHour
-from app.modules.proposals.domain.proposer import CourtHourOnSale
+from app.modules.proposals.domain.proposer import CourtHourOnSale, CourtOnSale
 
 #: Every game is one hour, for every sport (the mechanics §2).
 _A_GAME = timedelta(hours=1)
@@ -116,6 +116,15 @@ class ClubCourtHours:
                         share_grosze=free[0].share_grosze,
                         book_by=free[0].book_by,
                         taking_new_cards=offer.taking_new_cards,
+                        # In the club's order, which the offer is in.
+                        free=tuple(
+                            CourtOnSale(
+                                court_id=hour.court_id,
+                                name=hour.court_name,
+                                indoor=hour.indoor,
+                            )
+                            for hour in free
+                        ),
                     )
                 )
         return on_sale
