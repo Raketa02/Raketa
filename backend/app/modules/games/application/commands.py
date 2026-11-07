@@ -27,7 +27,9 @@ class OpenPlannedGameCommand:
     sport: Sport
     counted: bool
     window: str | None
-    line_up: Sequence[tuple[str, UUID]]
+    #: Each seat's side and player — ``None`` for a seat still to be taken, a
+    #: friends game's invited seat (#751), which a re-seat fills on accepting.
+    line_up: Sequence[tuple[str, UUID | None]]
     starts_at: Instant | None = None
 
 

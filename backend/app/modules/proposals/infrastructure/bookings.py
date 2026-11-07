@@ -16,6 +16,9 @@ as their bookings record them, folded from each stream — and a pool's booked
 games with a seat open (#545).
 ``BookingsClubBookings`` is the club website's (#547): a day of its bookings, a
 court to move one to, the move and the cancel.
+``BookingsFriendsGameBookings`` is a friends game's (#751): booked at send,
+its invited seats answered, the sender's call-off, and where the invitations
+are.
 ``BookingsGroupBornGames`` is the club's *Games* figure, which
 ``groups`` asks in its own words: **a group's pool is filed under the group's own
 id**, which is this context's fact, so the games booked in a group are the
@@ -49,6 +52,10 @@ from app.modules.bookings.application.rescues import (
     RescueTheSeat,
     SayNoToTheSeat,
 )
+from app.modules.bookings.application.friends_games import (
+    FriendsGames,
+    FriendsGameToBook,
+)
 from app.modules.bookings.domain.booking import (
     BookedCourt,
     Booking,
@@ -57,6 +64,7 @@ from app.modules.bookings.domain.booking import (
     CancelReason,
     Departure,
 )
+from app.modules.bookings.domain.booking import PayMode as BookingPayMode
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.ports import (
     BookingDirectory,
@@ -71,6 +79,9 @@ from app.modules.proposals.domain.home import (
     BookedGame,
     BookingStage,
     CalledOffReason,
+    InvitationAnswer,
+    InvitedSeat,
+    PayMode,
     RefusedHolding,
     ClubCancelReason,
     KeptSeat,
@@ -78,6 +89,7 @@ from app.modules.proposals.domain.home import (
 )
 from app.modules.proposals.domain.ports import (
     BookableCourt,
+    FriendsGame,
     FullGame,
     RefusedPayment,
 )
@@ -304,6 +316,7 @@ _STAGES = {
 _CALLED_OFF = {
     CalledOff.SHORT_AT_THE_CUT_OFF: CalledOffReason.SHORT_AT_THE_CUT_OFF,
     CalledOff.CANCELLED_BY_THE_CLUB: CalledOffReason.CANCELLED_BY_THE_CLUB,
+    CalledOff.BY_THE_SENDER: CalledOffReason.BY_THE_SENDER,
 }
 
 _CANCEL_REASONS = {
@@ -369,7 +382,92 @@ def _booked_game(booking: Booking) -> BookedGame:
             for player, kept in booking.kept.items()
         },
         keeps_ran_out=booking.keeps_ran_out,
+        sender=booking.sender,
+        pay_mode=None if booking.pay_mode is None else PayMode(booking.pay_mode.value),
+        invited=tuple(
+            InvitedSeat(
+                player_id=seat.player_id,
+                side=seat.side,
+                until=seat.until,
+                answer=InvitationAnswer(seat.answer.value),
+            )
+            for seat in booking.invited
+        ),
     )
+
+
+@final
+class BookingsFriendsGameBookings:
+    """``FriendsGameBookings`` over the Bookings context's own use cases and
+    projections (#751): the friends game booked at send, its invited seats
+    answered, the sender's call-off — every act after the booking's row is
+    locked — and the reads that find invitations."""
+
+    def __init__(
+        self,
+        *,
+        games: FriendsGames,
+        bookings: BookingRepository,
+        directory: BookingDirectory,
+    ) -> None:
+        self._games = games
+        self._bookings = bookings
+        self._directory = directory
+
+    async def book(self, game: FriendsGame, *, at: Instant) -> UUID:
+        try:
+            booking = await self._games.book(
+                FriendsGameToBook(
+                    booking_id=game.booking_id,
+                    pool_id=game.pool_id,
+                    club_id=game.club_id,
+                    sport=game.sport,
+                    kind=game.kind,
+                    start=game.start,
+                    share_grosze=game.share_grosze,
+                    sender=game.sender,
+                    first_side=game.first_side,
+                    second_side=game.second_side,
+                    pay_mode=BookingPayMode(game.pay_mode.value),
+                    court=BookedCourt(
+                        court_id=game.court.court_id,
+                        name=game.court.name,
+                        indoor=game.court.indoor,
+                    ),
+                    cut_off=game.court.cut_off,
+                ),
+                at=at,
+            )
+        except CourtTaken as taken:
+            raise CourtJustTaken() from taken
+        return booking.game_id
+
+    async def locked(self, booking_id: UUID) -> BookedGame | None:
+        booking = await self._bookings.load_for_update(booking_id)
+        return None if booking is None else _booked_game(booking)
+
+    async def accept(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> BookedGame:
+        return _booked_game(await self._games.accept(booking_id, player_id, at=at))
+
+    async def decline(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> bool:
+        return await self._games.decline(booking_id, player_id, at=at)
+
+    async def run_out(self, booking_id: UUID, *, at: Instant) -> tuple[UUID, ...]:
+        return await self._games.run_out(booking_id, at=at)
+
+    async def call_off(self, booking_id: UUID, *, at: Instant) -> BookedGame:
+        return _booked_game(await self._games.call_off(booking_id, at=at))
+
+    async def invitations_of(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.invitations_of(player_id, now=now)
+
+    async def invitations_past(self, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.invitations_past(now=now)
+
+    async def waiting_of(self, sender_id: UUID, *, now: Instant) -> int:
+        return await self._directory.friends_games_waiting_of(sender_id, now=now)
 
 
 def _open_seat(left: Departure) -> OpenSeat:

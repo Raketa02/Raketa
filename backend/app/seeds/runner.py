@@ -220,6 +220,11 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.friends import SeededFriends, friend_lines, write_the_friends
+from app.seeds.friends_games import (
+    SeededFriendsGames,
+    friends_game_lines,
+    write_the_friends_games,
+)
 from app.seeds.full_hour import (
     SeededFullHour,
     assert_the_full_hour,
@@ -1197,6 +1202,8 @@ class SeedReport:
     #: Her friends and requests, and the block case (#745). ``None`` on the
     #: same callers.
     friends: SeededFriends | None = None
+    #: The two friends games sent to her (#751). ``None`` on the same callers.
+    friends_games: SeededFriendsGames | None = None
     #: The hour Ogrody 33 is full, which its official groups play elsewhere at
     #: (#746). ``None`` on the same callers.
     full_hour: SeededFullHour | None = None
@@ -1391,6 +1398,12 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         friends = await write_the_friends(
             session_factory, settings=settings, now=now, money=money
         )
+        # **Her friends games after her friends** (#751): their line-ups need
+        # friendships, and each is sent at an hour none of them has a live yes
+        # at, so nothing dealt above moves. Drained by the layer itself.
+        friends_games = await write_the_friends_games(
+            session_factory, settings=settings, now=now, money=money
+        )
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1431,6 +1444,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             post=post,
             history=history,
             friends=friends,
+            friends_games=friends_games,
             full_hour=full_hour,
             photographs=photographs,
         )
@@ -1539,6 +1553,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *history_lines(run_report.history)])
     if run_report.friends is not None:
         lines.extend(["", *friend_lines(run_report.friends)])
+    if run_report.friends_games is not None:
+        lines.extend(["", *friends_game_lines(run_report.friends_games)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])

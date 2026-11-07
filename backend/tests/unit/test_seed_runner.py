@@ -304,6 +304,7 @@ def test_the_walk_has_something_to_walk():
         "clubs.py",
         "cohort.py",
         "friends.py",
+        "friends_games.py",
         "full_hour.py",
         "groups.py",
         "guard.py",

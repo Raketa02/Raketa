@@ -41,6 +41,7 @@ from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     CardsToFix,
     CheckedShares,
+    FriendsGameBookings,
     PlayerBookings,
     ProposalRepository,
 )
@@ -74,9 +75,11 @@ class TheHolding:
         games: BookedGameChanges,
         checked: CheckedShares,
         cards: CardsToFix,
+        friends_games: FriendsGameBookings,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
+        self._friends_games = friends_games
         self._proposals = proposals
         self._bookings = bookings
         self._games = games
@@ -108,8 +111,9 @@ class TheHolding:
         of each, or ``None`` when nothing was recorded."""
 
         # The booking's id is its proposal's, whose row every act on the game
-        # locks first.
-        await self._proposals.load_for_update(booking_id)
+        # locks first — a friends game, which has no proposal, its own (#751).
+        if await self._proposals.load_for_update(booking_id) is None:
+            await self._friends_games.locked(booking_id)
         game = await self._bookings.find(booking_id)
         if (
             game is None

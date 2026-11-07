@@ -185,6 +185,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   hour — the price of holding no cursor. Only the cadence (thirty seconds, like the other
   seat jobs) is a setting. It has a *Run it now* (*the hour ends · How did it go?*), and a
   counted game's pane carries its `HOUR_ENDS` moment while nobody has put a score up.
+  The twenty-fifth — out of order, beside the seat jobs — is **a friends game's
+  invitations** (`invitations`, #751; `RunOutTheInvitations` in
+  `proposals/application/friends_games.py`), and it **buys the telling, not correctness**:
+  every read says *didn't answer* off the clock (`InvitedSeat.waiting_at`), the accept is
+  refused past it, and the cut-off decides the covers whether or not it ran. Each invitation
+  whose 24 hours ended is run out (`bookings.invited_seat_ran_out`) and the sender told *Ania
+  didn't answer*; a payment the friend was refused for the seat is let go. Its read names
+  **candidates** (`FriendsGameBookings.invitations_past`, over `booking_invitations`,
+  `answer = 'WAITING'` and `until <= now`, indexed), each game one transaction that locks its
+  booking row first, a conflict counted and stepped over. The 24 hours are domain
+  (`TIME_TO_ANSWER`); only the cadence (thirty seconds) is a setting. It has a *Run it now*
+  (*a friend's 24 hours run out*).
   The twenty-fourth is **Get your level** (`get-your-level`, #727; `TellGetYourLevel` in
   `notifications/application/get_your_level.py`), and it **buys the nudge, not
   correctness**: nothing waits on it. A day after an account's first group join, while it

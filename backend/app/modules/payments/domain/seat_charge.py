@@ -171,6 +171,13 @@ class RefundReason(StrEnum):
     #: their seat still open and paid (#623, Q108): in full, as everybody's —
     #: told in a leaver's words, and owed no new game.
     CANCELLED_AFTER_YOU_LEFT = "CANCELLED_AFTER_YOU_LEFT"
+    #: A friends game its sender called off before the cut-off (#751): every
+    #: hold and cover let go — nothing was taken.
+    CALLED_OFF_BY_THE_SENDER = "CALLED_OFF_BY_THE_SENDER"
+    #: **A cover whose seat its own player paid** (#751; ``docs/adr/0202`` §6):
+    #: let go at the cut-off, never before — told nobody, since the sender
+    #: agreed to it only as the most they would pay.
+    SEAT_PAID_BY_ITS_PLAYER = "SEAT_PAID_BY_ITS_PLAYER"
 
 
 class FailureReason(StrEnum):
@@ -247,6 +254,13 @@ class SeatCharge:
     #: *held · released* (#641). ``None`` for every other charge: one taken,
     #: or a hold released because the game did not book on it.
     released_at: Instant | None = None
+    #: **A Cover** (#751; ``docs/adr/0202`` §6): a friends game's sender's hold
+    #: for a seat that isn't theirs — the payer is ``player_id``. Held, taken
+    #: and let go by the steps every share uses.
+    cover: bool = False
+    #: Why a share held for the booked game was let go, once it was — ``None``
+    #: on every other charge, and on a let-go recorded without a reason.
+    let_go_because: RefundReason | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -267,6 +281,7 @@ class SeatCharge:
         sport: Sport,
         starts_at: Instant,
         at: Instant,
+        cover: bool = False,
     ) -> "SeatCharge":
         invariant(
             payment.status is PaymentStatus.AUTHORISED,
@@ -284,6 +299,7 @@ class SeatCharge:
             starts_at=starts_at,
             occurred_at=at,
             last_moment=payment.last_moment,
+            cover=cover,
         )
         charge = cls._born(authorised)
         charge._events.record(authorised)
@@ -304,6 +320,7 @@ class SeatCharge:
         reason: FailureReason,
         payment: Payment | None,
         at: Instant,
+        cover: bool = False,
     ) -> "SeatCharge":
         """A share that could not be held: ``payment`` is the provider's answer,
         or ``None`` where it was never asked."""
@@ -329,6 +346,7 @@ class SeatCharge:
             reason=reason.value,
             decline_code=None if payment is None else payment.decline_code,
             occurred_at=at,
+            cover=cover,
         )
         charge = cls._born(failed)
         charge._events.record(failed)
@@ -374,6 +392,7 @@ class SeatCharge:
                 and opening.last_moment is not None
                 else None
             ),
+            cover=opening.cover,
             version=1,
         )
 
@@ -870,6 +889,8 @@ class SeatCharge:
         elif isinstance(event, SeatChargeReleased):
             if self.status is SeatChargeStatus.HELD:
                 self.released_at = instant(event.occurred_at)
+            if event.reason is not None:
+                self.let_go_because = RefundReason(event.reason)
             # A checked share holds nothing to let go: it is closed at once.
             self.status = (
                 SeatChargeStatus.CANCELLED

@@ -11,8 +11,13 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.bookings.domain.events import (
+    BookedByAFriend,
     BookingConfirmed,
     CalledOffAtCutOff,
+    CalledOffBySender,
+    InvitedSeatAccepted,
+    InvitedSeatDeclined,
+    InvitedSeatRanOut,
     CancelledByClub,
     CardFixed,
     CardToFix,
@@ -41,6 +46,11 @@ BookingEvent = (
     | CardFixed
     | SeatKept
     | KeptSeatRanOut
+    | BookedByAFriend
+    | InvitedSeatAccepted
+    | InvitedSeatDeclined
+    | InvitedSeatRanOut
+    | CalledOffBySender
 )
 
 _NAMES = {
@@ -56,6 +66,11 @@ _NAMES = {
     CardFixed: "bookings.booking.card_fixed",
     SeatKept: "bookings.booking.seat_kept",
     KeptSeatRanOut: "bookings.booking.kept_seat_ran_out",
+    BookedByAFriend: "bookings.booking.booked_by_a_friend",
+    InvitedSeatAccepted: "bookings.booking.invited_seat_accepted",
+    InvitedSeatDeclined: "bookings.booking.invited_seat_declined",
+    InvitedSeatRanOut: "bookings.booking.invited_seat_ran_out",
+    CalledOffBySender: "bookings.booking.called_off_by_the_sender",
 }
 
 
@@ -67,7 +82,7 @@ class LogBookingEvent:
             "event_id": str(context.event_id),
             "attempt": context.attempt,
         }
-        if isinstance(event, BookingConfirmed):
+        if isinstance(event, (BookingConfirmed, BookedByAFriend)):
             extra["club_id"] = str(event.club_id)
             extra["game_id"] = str(event.game_id)
         logger.info(_NAMES[type(event)], extra=extra)

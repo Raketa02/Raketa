@@ -14,6 +14,7 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport
+from app.modules.proposals.domain.home import PayMode
 from app.modules.proposals.domain.overlap import DayRange
 from app.modules.proposals.domain.post import PostedFor, Who
 from app.modules.proposals.domain.proposal import Origin
@@ -187,6 +188,33 @@ class FriendsLineUpCommand:
     pool_id: UUID
     sport: Sport
     friend_ids: Sequence[UUID]
+
+
+@dataclass(frozen=True)
+class SendAFriendsGameCommand:
+    """*Send game and pay* on the send sheet (#751): the line-up, the kind,
+    the sides the card drew (``partner_id``, ``None`` for the evenest), the
+    court and hour the card names, and how to pay. ``booking_id`` is the id a
+    send refused for a payment to confirm answered — sent again after the
+    confirmation, it takes the holds confirmed; ``None`` on a first send."""
+
+    line_up: FriendsLineUpCommand
+    kind: SearchMode
+    court_id: UUID
+    starts_at: Instant
+    pay_mode: PayMode
+    partner_id: UUID | None = None
+    booking_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class FriendsGameCommand:
+    """An act on one friends game by its reader (#751) — an invited friend's
+    accept or decline, its sender's call-off: the reader, from the session, and
+    the booking."""
+
+    player_id: UUID
+    booking_id: UUID
 
 
 @dataclass(frozen=True)

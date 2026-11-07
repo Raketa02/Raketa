@@ -25,6 +25,7 @@ from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     GET_YOUR_LEVEL_JOB,
     HOW_DID_IT_GO_JOB,
+    INVITATIONS_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
@@ -117,6 +118,7 @@ def _nothing_but(**overrides):
             "PROPOSAL_EXPIRY_ENABLED": False,
             "PROPOSER_ENABLED": False,
             "TIME_TO_PAY_ENABLED": False,
+            "INVITATIONS_ENABLED": False,
             "CUT_OFF_ENABLED": False,
             "HOLDING_ENABLED": False,
             "CLUB_PAYOUTS_ENABLED": False,
@@ -693,4 +695,44 @@ async def test_get_your_level_runs_end_to_end_through_the_real_wiring(
 
     assert not any(
         record.message == "get your level finished" for record in caplog.records
+    )
+
+
+def test_the_invitations_job_is_registered_at_the_seat_jobs_cadence():
+    """How often an invitation whose 24 hours ended is looked for is a setting
+    — every thirty seconds, like the other seat jobs; the 24 hours are domain
+    (#751)."""
+
+    assert get_settings().INVITATIONS_INTERVAL_SECONDS == 30
+    settings = _nothing_but(INVITATIONS_ENABLED=True, INVITATIONS_INTERVAL_SECONDS=45.0)
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [(job.name, job.interval_seconds) for job in jobs] == [
+        (INVITATIONS_JOB, 45.0)
+    ]
+
+
+def test_the_invitations_job_without_a_session_factory_refuses_to_be_registered():
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(
+            session_factory=None, settings=_nothing_but(INVITATIONS_ENABLED=True)
+        )
+
+
+async def test_the_invitations_job_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """With no invitation waiting, a run runs nothing out and says nothing."""
+
+    [job] = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(INVITATIONS_ENABLED=True),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await job.run_once()
+
+    assert not any(
+        record.message == "invitations finished" for record in caplog.records
     )

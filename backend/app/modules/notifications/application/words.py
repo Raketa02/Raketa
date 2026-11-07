@@ -128,6 +128,27 @@ class Said:
     indoor: bool | None = None
     #: The court a club's cancel moved the game from (#672).
     moved_from: str | None = None
+    #: ``COMPETITIVE`` or ``FOR_FUN`` — a friends game's invitation names it
+    #: (#751).
+    game_kind: str | None = None
+    #: The game's group, where a notice names it — a friends game's empty seat
+    #: may be opened to it (#751).
+    group: str | None = None
+
+
+#: A game's kind, as an invitation names it (#751; the words §29.8).
+_GAME_KIND_WORDS: Final = {"COMPETITIVE": "Competitive", "FOR_FUN": "For fun"}
+
+
+def _court_block_when(at: Instant, *, given_at: Instant | None) -> str:
+    """*Saturday 10:00* within the week it was given in, *Sat 26 Sep 20:00*
+    beyond it — as the deck's court block writes a game's day (the words
+    §29)."""
+
+    wall = at.astimezone(CLUB_ZONE)
+    if given_at is not None and (at - given_at).days < 6:
+        return f"{wall:%A} {wall:%H:%M}"
+    return f"{wall:%a} {wall.day} {wall:%b} {wall:%H:%M}"
 
 
 def _when(at: Instant) -> str:
@@ -263,6 +284,12 @@ def words_for(said: Said) -> Words:
     money = zloty(said.amount_grosze or 0)
     kind = said.kind
 
+    if kind in _A_FRIENDS_GAME:
+        return _a_friends_game(said, sport=sport)
+    if kind is NoticeKind.GAME_BOOKED and said.reason == NoticeReason.LAST_SEAT_TAKEN:
+        # A friends game's last seat taken (#751): its money was told when it
+        # was held, on the sender's card and each friend's.
+        return Words(title="It's a game!", body=f"{game} — every seat is taken.")
     if kind is NoticeKind.GAME_BOOKED:
         # Held until the cut-off it keeps as ``until``, or taken at once after
         # it (#637, Q113).
@@ -626,9 +653,53 @@ _NOBODY_PAID: Final[dict[str, str]] = {
 }
 
 
+#: A friends game's own notices (#751; the words §29.8–§29.9).
+_A_FRIENDS_GAME: Final = frozenset(
+    {
+        NoticeKind.FRIENDS_GAME_INVITATION,
+        NoticeKind.CANT_MAKE_IT,
+        NoticeKind.DIDNT_ANSWER,
+    }
+)
+
+
+def _a_friends_game(said: Said, *, sport: str) -> Words:
+    """*Tomek invited you to a game* · *Saturday 10:00 · Ogrody 33 · Padel ·
+    Competitive*; *Ania can't make it* and *Ania didn't answer* · *Saturday
+    10:00 · Invite a friend, or open the seat to Ogrody open play.* — the
+    friend named, the sender told. **No sentence says *her* or *him***
+    (ADR-0096)."""
+
+    who = _people(said.names)
+    when = _court_block_when(said.starts_at, given_at=said.given_at)
+    if said.kind is NoticeKind.FRIENDS_GAME_INVITATION:
+        kind = _GAME_KIND_WORDS.get(said.game_kind or "", "")
+        line = " · ".join(part for part in (when, said.club, sport, kind) if part)
+        return Words(title=f"{who} invited you to a game", body=line)
+    group = said.group or "the group"
+    title = (
+        f"{who} can't make it"
+        if said.kind is NoticeKind.CANT_MAKE_IT
+        else f"{who} didn't answer"
+    )
+    return Words(
+        title=title, body=f"{when} · Invite a friend, or open the seat to {group}."
+    )
+
+
 def _game_called_off(
     said: Said, *, sport: str, when: str, game: str, money: str
 ) -> Words:
+    if said.reason == NoticeReason.BY_THE_SENDER:
+        # The sender called a friends game off before the cut-off (#751): every
+        # hold let go.
+        return Words(
+            title=(
+                f"{_people(said.names)} called off "
+                f"{_court_block_when(said.starts_at, given_at=said.given_at)}"
+            ),
+            body="Nobody paid.",
+        )
     why = _NOBODY_PAID.get(said.reason or "")
     if why is not None:
         return Words(

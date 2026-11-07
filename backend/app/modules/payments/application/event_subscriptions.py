@@ -13,6 +13,7 @@ from app.modules.payments.application.handlers import (
 from app.modules.payments.domain.events import (
     ClubPayoutDecided,
     ClubPayoutSent,
+    MaximumAgreed,
     PaymentMethodChanged,
     PaymentMethodRemoved,
     PaymentMethodSaved,
@@ -44,6 +45,7 @@ _EVENTS = (
     (PaymentMethodChanged, "payments.method_changed"),
     (PaymentMethodRemoved, "payments.method_removed"),
     (PaymentMethodUpdated, "payments.method_updated"),
+    (MaximumAgreed, "payments.maximum_agreed"),
     (SeatChargeAuthorised, "payments.seat_charge_authorised"),
     (SeatChargeFailed, "payments.seat_charge_failed"),
     (SeatChargeConfirmed, "payments.seat_charge_confirmed"),
@@ -75,6 +77,7 @@ def subscribe_payment_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(PaymentMethodChanged, LogPaymentEvent())
     dispatcher.subscribe(PaymentMethodRemoved, LogPaymentEvent())
     dispatcher.subscribe(PaymentMethodUpdated, LogPaymentEvent())
+    dispatcher.subscribe(MaximumAgreed, LogPaymentEvent())
     dispatcher.subscribe(SeatChargeAuthorised, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeFailed, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeConfirmed, LogSeatChargeEvent())

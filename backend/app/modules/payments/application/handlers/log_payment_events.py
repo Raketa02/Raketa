@@ -15,6 +15,7 @@ from app.application.events import DeliveryContext
 from app.modules.payments.domain.events import (
     ClubPayoutDecided,
     ClubPayoutSent,
+    MaximumAgreed,
     PaymentMethodChanged,
     PaymentMethodRemoved,
     PaymentMethodSaved,
@@ -46,6 +47,7 @@ PaymentEvent = (
     | PaymentMethodChanged
     | PaymentMethodRemoved
     | PaymentMethodUpdated
+    | MaximumAgreed
 )
 
 _LINES: dict[type, str] = {
@@ -55,6 +57,7 @@ _LINES: dict[type, str] = {
     PaymentMethodChanged: "payments.method.changed",
     PaymentMethodRemoved: "payments.method.removed",
     PaymentMethodUpdated: "payments.method.updated",
+    MaximumAgreed: "payments.maximum.agreed",
 }
 
 

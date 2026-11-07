@@ -120,6 +120,16 @@ class NoticeKind(StrEnum):
     #: no game; it names the friend, the sport and the group the ask was made
     #: from, whose picker it opens.
     LEVEL_GOT = "LEVEL_GOT"
+    #: *Tomek invited you to a game* — a friends game's invitation, to each
+    #: friend invited (#751; the words §29.8). Always on, opening Home on the
+    #: card; ``until`` is when their 24 hours end.
+    FRIENDS_GAME_INVITATION = "FRIENDS_GAME_INVITATION"
+    #: *Ania can't make it* — to a friends game's sender, the friend named: they
+    #: said *Not this time* (#751; the words §29.9).
+    CANT_MAKE_IT = "CANT_MAKE_IT"
+    #: *Ania didn't answer* — to a friends game's sender: the friend's 24 hours
+    #: ran out (#751).
+    DIDNT_ANSWER = "DIDNT_ANSWER"
 
 
 class Opens(StrEnum):
@@ -182,6 +192,11 @@ class NoticeReason(StrEnum):
     #: A friend request made by the requester's link: *Invited you to Raketa*
     #: (#745, #748).
     BY_LINK = "BY_LINK"
+    #: A friends game its sender called off: *Tomek called off Saturday 10:00
+    #: · Nobody paid.* (#751; the words §29.10).
+    BY_THE_SENDER = "BY_THE_SENDER"
+    #: A friends game's last seat taken: *It's a game!*, to all four (#751).
+    LAST_SEAT_TAKEN = "LAST_SEAT_TAKEN"
 
 
 @dataclass(frozen=True, slots=True)

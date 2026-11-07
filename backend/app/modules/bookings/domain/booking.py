@@ -37,6 +37,17 @@ else until their time to fix the card — or, after the cut-off, to pay — runs
 out, never past the start. It is a seat, not a particular one: the seats are
 still taken in the order they opened.
 
+**A friends game is born booked the moment it is sent** (#751;
+``docs/adr/0202`` §5–§6): its own id, no proposal before it, the sender **In**
+and every other seat an **invited seat** — held for its friend for 24 hours,
+never past the cut-off (or, sent after it, the start), and answered *accepted*,
+*declined* or *run out*. An invited seat is neither held nor open: **it is no
+rescue**, so the game is ``BOOKED`` with fewer players than seats, and never
+called off at its cut-off for it — the sender's **cover** pays a seat its own
+player hasn't (the money's, ``payments``). The sender may call it off before the
+cut-off (``CalledOff.BY_THE_SENDER``). What becomes of an empty seat — another
+invitation, a rescue — is #752's.
+
 **The club runs it** (#547; the mechanics §16.7–§16.10): it may **move** the
 game to another court of its sport at the same hour, or **cancel** it with its
 reason — everybody still in refunded in full, on nobody's record — until the
@@ -48,20 +59,26 @@ gap until something wrote it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta
 from enum import StrEnum
-from typing import Iterable
+from typing import Final, Iterable
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import SPORT_SPECS, Instant, Sport, instant, invariant
 from app.modules.bookings.domain.events import (
+    BookedByAFriend,
     BookingConfirmed,
     CalledOffAtCutOff,
+    CalledOffBySender,
     CancelledByClub,
     CardFixed,
     CardToFix,
     CourtMoved,
+    InvitedSeatAccepted,
+    InvitedSeatDeclined,
+    InvitedSeatRanOut,
     PlayerCheckedIn,
     KeptSeatRanOut,
     NoSaidToTheSeat,
@@ -71,6 +88,20 @@ from app.modules.bookings.domain.events import (
 )
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
+
+#: How long an invited friend has to answer (the friends mechanics §9, Q30):
+#: a day, never past the cut-off — or the start, for an invitation made after
+#: it. Domain, never configuration.
+TIME_TO_ANSWER: Final = timedelta(hours=24)
+
+
+def invited_until(at: Instant, *, cut_off: Instant, start: Instant) -> Instant:
+    """When an invitation made at ``at`` ends: 24 hours on, **never past the
+    cut-off** when it is made before it, and never past the start when made
+    after it (call 9)."""
+
+    last = cut_off if at < cut_off else start
+    return instant(min(at + TIME_TO_ANSWER, last))
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +151,51 @@ class CalledOff(StrEnum):
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
     #: The club cancelled it, with its reason (#547).
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+    #: A friends game its sender called off before the cut-off (#751): nobody
+    #: paid.
+    BY_THE_SENDER = "BY_THE_SENDER"
+
+
+class PayMode(StrEnum):
+    """How a friends game's court is paid (``docs/adr/0202`` §6) — the glossary's
+    **Pay mode**; *Split* here is never a forecast's."""
+
+    #: Each friend pays their own share on accepting; the sender's cover pays
+    #: a seat still without its own payment at the cut-off.
+    SPLIT_THE_COST = "SPLIT_THE_COST"
+    #: The sender pays every seat; friends accept without paying.
+    WHOLE_COURT = "WHOLE_COURT"
+
+
+class Answer(StrEnum):
+    """Where an invited seat stands (#751; the friends mechanics §9)."""
+
+    #: Held for its friend, their clock running.
+    WAITING = "WAITING"
+    ACCEPTED = "ACCEPTED"
+    #: *Not this time* — the friend can't make it.
+    DECLINED = "DECLINED"
+    #: Silence until the clock ended: the friend didn't answer.
+    RAN_OUT = "RAN_OUT"
+
+
+@dataclass(frozen=True, slots=True)
+class InvitedSeat:
+    """A seat of a friends game held for one friend (#751): on which side the
+    card drew them, until when they may answer, and how they did."""
+
+    player_id: UUID
+    #: ``A`` — the first side — or ``B``.
+    side: str
+    until: Instant
+    answer: Answer = Answer.WAITING
+    answered_at: Instant | None = None
+
+    def waiting_at(self, now: Instant) -> bool:
+        """Still theirs to answer at ``now`` — read off the clock, so a seat
+        whose time is up is not, whether or not its running out is recorded."""
+
+        return self.answer is Answer.WAITING and now < self.until
 
 
 class CancelReason(StrEnum):
@@ -215,6 +291,14 @@ class Booking:
     kept: dict[UUID, KeptSeat] = field(default_factory=dict)
     #: Every rescuer whose kept seat ran out: none is kept for them again here.
     keeps_ran_out: frozenset[UUID] = frozenset()
+    #: A friends game's sender (#751) — ``None`` on a game a fill booked.
+    sender: UUID | None = None
+    #: How a friends game's court is paid — ``None`` on a fill's.
+    pay_mode: PayMode | None = None
+    #: A friends game's invited seats, in the order the card drew them, each
+    #: with its answer — those accepted are In, on ``first_side`` or
+    #: ``second_side`` too.
+    invited: tuple[InvitedSeat, ...] = ()
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -264,15 +348,111 @@ class Booking:
         return booking
 
     @classmethod
+    def booked_by_a_friend(
+        cls,
+        *,
+        booking_id: UUID,
+        pool_id: UUID,
+        club_id: UUID,
+        court: BookedCourt,
+        sport: Sport,
+        kind: SearchMode,
+        start: Instant,
+        share_grosze: int,
+        sender: UUID,
+        first_side: tuple[UUID, ...],
+        second_side: tuple[UUID, ...],
+        pay_mode: PayMode,
+        cut_off: Instant,
+        game_id: UUID,
+        at: Instant,
+    ) -> "Booking":
+        """**A friends game, sent** (#751): the court booked at once, the
+        sender In, and every other player on the card's sides an invited seat
+        until ``invited_until`` — every seat on a side, the sender on one."""
+
+        _sides_of_a_game(sport, first_side, second_side)
+        invariant(
+            sender in (*first_side, *second_side),
+            f"the sender {sender} is on neither side of {booking_id}",
+        )
+        invariant(cut_off <= start, f"a cut-off {cut_off} after the game {start}")
+        invariant(at < start, f"{booking_id} sent at {at}, after it began at {start}")
+        booked = BookedByAFriend(
+            booking_id=booking_id,
+            pool_id=pool_id,
+            club_id=club_id,
+            court_id=court.court_id,
+            court_name=court.name,
+            indoor=court.indoor,
+            sport=sport.value,
+            kind=kind.value,
+            start=start,
+            share_grosze=share_grosze,
+            sender_id=sender,
+            first_side=first_side,
+            second_side=second_side,
+            pay_mode=pay_mode.value,
+            invited_until=invited_until(at, cut_off=cut_off, start=start),
+            cut_off=cut_off,
+            game_id=game_id,
+            occurred_at=at,
+        )
+        booking = cls._sent(booked)
+        booking._events.record(booked)
+        return booking
+
+    @classmethod
     def from_history(cls, events: Iterable[DomainEvent]) -> "Booking":
         history = iter(events)
         opening = next(history)
-        if not isinstance(opening, BookingConfirmed):
+        if isinstance(opening, BookingConfirmed):
+            booking = cls._booked(opening)
+        elif isinstance(opening, BookedByAFriend):
+            booking = cls._sent(opening)
+        else:
             raise TypeError(f"A booking stream opens {opening!r}")
-        booking = cls._booked(opening)
         for event in history:
             booking._apply(event)
         return booking
+
+    @classmethod
+    def _sent(cls, booked: BookedByAFriend) -> "Booking":
+        sender = booked.sender_id
+        until = instant(booked.invited_until)
+        return cls(
+            booking_id=booked.booking_id,
+            pool_id=booked.pool_id,
+            club_id=booked.club_id,
+            court=BookedCourt(
+                court_id=booked.court_id,
+                name=booked.court_name,
+                indoor=booked.indoor,
+            ),
+            sport=Sport(booked.sport),
+            kind=SearchMode(booked.kind),
+            start=instant(booked.start),
+            share_grosze=booked.share_grosze,
+            # Only the sender is In: every other seat is invited.
+            first_side=tuple(p for p in booked.first_side if p == sender),
+            second_side=tuple(p for p in booked.second_side if p == sender),
+            cut_off=instant(booked.cut_off),
+            state=BookingState.BOOKED,
+            game_id=booked.game_id,
+            booked_at=instant(booked.occurred_at),
+            sender=sender,
+            pay_mode=PayMode(booked.pay_mode),
+            invited=tuple(
+                InvitedSeat(player_id=player, side=side, until=until)
+                for side, players in (
+                    ("A", booked.first_side),
+                    ("B", booked.second_side),
+                )
+                for player in players
+                if player != sender
+            ),
+            version=1,
+        )
 
     @classmethod
     def _booked(cls, confirmed: BookingConfirmed) -> "Booking":
@@ -308,6 +488,46 @@ class Booking:
         """Everybody with a seat on it, the first side first."""
 
         return (*self.first_side, *self.second_side)
+
+    @property
+    def is_friends_game(self) -> bool:
+        """Booked by a friend at send (#751), not by a fill."""
+
+        return self.sender is not None
+
+    @property
+    def is_whole(self) -> bool:
+        """Every seat held by somebody In."""
+
+        return len(self.players) == self.seats
+
+    def invitation_of(self, player_id: UUID) -> InvitedSeat | None:
+        """This player's invited seat on a friends game, however it was
+        answered — ``None`` for somebody never invited."""
+
+        return next(
+            (seat for seat in self.invited if seat.player_id == player_id), None
+        )
+
+    def waiting_at(self, now: Instant) -> tuple[InvitedSeat, ...]:
+        """The invited seats still theirs to answer at ``now`` — none on a game
+        called off."""
+
+        if not self.is_booked:
+            return ()
+        return tuple(seat for seat in self.invited if seat.waiting_at(now))
+
+    def to_run_out(self, now: Instant) -> tuple[InvitedSeat, ...]:
+        """The invited seats whose time is up at ``now``, their running out not
+        yet recorded — on a game still booked."""
+
+        if not self.is_booked:
+            return ()
+        return tuple(
+            seat
+            for seat in self.invited
+            if seat.answer is Answer.WAITING and now >= seat.until
+        )
 
     @property
     def fixing_until(self) -> dict[UUID, Instant]:
@@ -432,6 +652,84 @@ class Booking:
         invariant(at < self.start, f"leaving {self.booking_id} at {at}, after it began")
         self._record_that(
             SeatLeft(booking_id=self.booking_id, player_id=player_id, occurred_at=at)
+        )
+
+    def accept(self, player_id: UUID, *, at: Instant) -> None:
+        """*Accept* on an invitation (#751): this friend is In, on the side the
+        card drew them on. Whether they may — their week, their hour, their
+        money — is the caller's question, asked before this; that the seat is
+        theirs and still waiting, and the game still to be played, is this
+        one's."""
+
+        seat = self.invitation_of(player_id)
+        invariant(
+            seat is not None and seat in self.waiting_at(at),
+            f"{player_id} has no invitation waiting on {self.booking_id} at {at}",
+        )
+        assert seat is not None
+        invariant(at < self.start, f"accepting {self.booking_id} after it began")
+        self._record_that(
+            InvitedSeatAccepted(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                side=seat.side,
+                occurred_at=at,
+                last_seat=len(self.players) + 1 == self.seats,
+            )
+        )
+
+    def decline(self, player_id: UUID, *, at: Instant) -> bool:
+        """*Not this time* on an invitation (#751). Answers whether anything
+        was recorded — nothing for a seat no longer waiting: answered, run
+        out, or on a game called off."""
+
+        seat = self.invitation_of(player_id)
+        if seat is None or seat not in self.waiting_at(at):
+            return False
+        self._record_that(
+            InvitedSeatDeclined(
+                booking_id=self.booking_id, player_id=player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def invited_seat_ran_out(self, player_id: UUID, *, at: Instant) -> bool:
+        """This friend's time to answer ended (#751): silence is *Not this
+        time*. Answers whether anything was recorded — nothing while it still
+        runs, for a seat answered, or once its running out is recorded."""
+
+        seat = self.invitation_of(player_id)
+        if seat is None or seat not in self.to_run_out(at):
+            return False
+        self._record_that(
+            InvitedSeatRanOut(
+                booking_id=self.booking_id, player_id=player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def call_off_by_the_sender(self, *, at: Instant) -> None:
+        """*Call it off* (#751; ``docs/adr/0202`` §6): the sender calls the
+        friends game off before the cut-off — everybody In and every invitee
+        still waiting named, to be told, every hold let go."""
+
+        invariant(
+            self.is_friends_game,
+            f"{self.booking_id} is no friends game to be called off by its sender",
+        )
+        self._refuse_unless_still_to_be_played(at)
+        invariant(
+            at < self.cut_off,
+            f"{self.booking_id} called off by its sender at {at}, "
+            f"after its cut-off {self.cut_off}",
+        )
+        self._record_that(
+            CalledOffBySender(
+                booking_id=self.booking_id,
+                player_ids=self.players,
+                invited=tuple(seat.player_id for seat in self.waiting_at(at)),
+                occurred_at=at,
+            )
         )
 
     def card_to_fix(
@@ -723,6 +1021,14 @@ class Booking:
         self._apply(event)
         self._events.record(event)
 
+    def _answered(self, player_id: UUID, answer: Answer, at: datetime) -> None:
+        self.invited = tuple(
+            replace(seat, answer=answer, answered_at=instant(at))
+            if seat.player_id == player_id
+            else seat
+            for seat in self.invited
+        )
+
     def _no_card_to_fix(self, player_id: UUID) -> None:
         self.cards_to_fix = {
             player: refused
@@ -813,6 +1119,21 @@ class Booking:
             self.called_off = CalledOff.CANCELLED_BY_THE_CLUB
             self.cancel_reason = CancelReason(event.reason)
             self.cancelled_at = instant(event.occurred_at)
+            self.cards_to_fix = {}
+            self.kept = {}
+        elif isinstance(event, InvitedSeatAccepted):
+            if event.side == "A":
+                self.first_side = (*self.first_side, event.player_id)
+            else:
+                self.second_side = (*self.second_side, event.player_id)
+            self._answered(event.player_id, Answer.ACCEPTED, event.occurred_at)
+        elif isinstance(event, InvitedSeatDeclined):
+            self._answered(event.player_id, Answer.DECLINED, event.occurred_at)
+        elif isinstance(event, InvitedSeatRanOut):
+            self._answered(event.player_id, Answer.RAN_OUT, event.occurred_at)
+        elif isinstance(event, CalledOffBySender):
+            self.state = BookingState.CALLED_OFF
+            self.called_off = CalledOff.BY_THE_SENDER
             self.cards_to_fix = {}
             self.kept = {}
         elif isinstance(event, PlayerCheckedIn):

@@ -33,7 +33,11 @@ from app.modules.proposals.application.friends_card import (
 )
 from app.modules.proposals.application.group_deck import DeckCounts, GroupDeck
 from app.modules.friends.domain.relation import FriendRelation
-from app.modules.proposals.application.home import Home, HomeGame
+from app.modules.proposals.application.friends_games import (
+    FriendsGameAnswer,
+    FriendsGameSent,
+)
+from app.modules.proposals.application.home import Home, HomeGame, HomeInvitation
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
 from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
 from app.modules.proposals.application.proposal_details import ProposalDetails
@@ -72,6 +76,8 @@ from app.modules.proposals.domain.home import (
     HomeStatus,
     LeaveTerms,
     Leaving,
+    PayMode,
+    SeatState,
     ShareState,
     UncountedReason,
 )
@@ -1128,6 +1134,181 @@ def _money(money: BookedMoney) -> BookedMoneySchema:
     )
 
 
+class FriendsSeatSchema(BaseModel):
+    """One seat of a friends game, as everybody on it reads it (#751; the words
+    §29.8): *In*, *waiting · 3 h left*, *can't make it*, *didn't answer*,
+    *empty*."""
+
+    player_id: UUID = Field(
+        description=(
+            "Whose seat it is — the sender, or the friend it was held for. Their "
+            "face is among `sides`."
+        )
+    )
+    state: SeatState = Field(
+        description=(
+            "`IN` — the sender, or a friend who accepted. `WAITING` — held for "
+            "its friend until `waiting_until`. `CANT_MAKE_IT` — they said *Not "
+            "this time*. `DIDNT_ANSWER` — their 24 hours ended, read off the "
+            "clock whether or not the job has recorded it. `EMPTY` — the friend "
+            "who accepted it left (#752)."
+        )
+    )
+    waiting_until: datetime | None = Field(
+        description=(
+            "With `WAITING`: when the friend's time to answer ends — 24 hours "
+            "from the send, never past the cut-off. Count it down from `read_at`."
+        )
+    )
+
+
+class FriendsGameSchema(BaseModel):
+    """**A friends game**'s own facts (#751; ``docs/adr/0202`` §5–§6): who sent
+    it, how its court is paid, and where each seat stands."""
+
+    sender_id: UUID = Field(description="The friend who sent it and booked the court.")
+    sender_nickname: str | None = Field(
+        description=(
+            "Their nickname — *Tomek's game*, *Tomek paid the court*. `null` for "
+            "an account that can no longer be named."
+        )
+    )
+    you_are_the_sender: bool
+    pay_mode: PayMode = Field(
+        description=(
+            "`SPLIT_THE_COST` — each friend pays their own share on accepting, "
+            "and the sender's card covers every seat still without its own "
+            "payment at the cut-off (*Split*). `WHOLE_COURT` — the sender pays "
+            "every seat; friends accept free (*Tomek paid the court*)."
+        )
+    )
+    seats: list[FriendsSeatSchema] = Field(
+        description="Every seat: the sender's first, then each friend's in the "
+        "card's order."
+    )
+    friends_in: int = Field(
+        description="The friends In beside the sender — *2 of 3 friends in*."
+    )
+    friends_seated: int = Field(
+        description="The friends the sport seats beside the sender: 3 in doubles, "
+        "1 in singles."
+    )
+    your_invitation_until: datetime | None = Field(
+        description=(
+            "**The reader's own invitation**, while it waits on them: when it "
+            "ends. `POST /bookings/{id}/invitation/acceptance` accepts it, "
+            "`…/invitation/decline` is *Not this time*. `null` for the sender, "
+            "for a friend In, and once it was answered or ran out."
+        )
+    )
+    can_call_off: bool = Field(
+        description=(
+            "*Call it off* is the reader's — the sender, before the club's "
+            "cut-off and the hour: `POST /bookings/{id}/call-off`."
+        )
+    )
+
+    @classmethod
+    def of(
+        cls,
+        game: BookedGame,
+        *,
+        reader: UUID,
+        people: Mapping[tuple[Sport, UUID], DeckPerson],
+        read_at: datetime,
+    ) -> "FriendsGameSchema | None":
+        if game.sender is None or game.pay_mode is None:
+            return None
+        now = instant(read_at)
+        seats = game.seat_states(now=now)
+        invited = game.invited_now(reader, now=now)
+        sender = people.get((game.sport, game.sender))
+        return cls(
+            sender_id=game.sender,
+            sender_nickname=None if sender is None else sender.nickname,
+            you_are_the_sender=game.sender == reader,
+            pay_mode=game.pay_mode,
+            seats=[
+                FriendsSeatSchema(
+                    player_id=seat.player_id,
+                    state=seat.state,
+                    waiting_until=seat.until,
+                )
+                for seat in seats
+            ],
+            friends_in=sum(
+                1
+                for seat in seats
+                if seat.state is SeatState.IN and seat.player_id != game.sender
+            ),
+            friends_seated=len(seats) - 1,
+            your_invitation_until=None if invited is None else invited.until,
+            can_call_off=game.may_be_called_off_by(reader, now=now),
+        )
+
+
+class HomeFriendsGameSchema(BaseModel):
+    """One card in **FRIENDS GAME · n** (#751; mock 12): *Tomek's game*, the
+    clock, the four faces — ✓ on those In — *Saturday 10:00 · Ogrody 33 ·
+    Court 3 · Padel · Competitive*, and **Not this time** / **Accept and pay 25
+    zł** (*Whole court*: **Accept**, *Tomek paid the court*)."""
+
+    booking_id: UUID = Field(
+        description="The friends game. `GET /bookings/{id}` for its details."
+    )
+    pool_id: UUID = Field(description="The group it belongs to — a group's id.")
+    sport: Sport
+    kind: SearchMode = Field(description="The sender's choice for this game.")
+    starts_at: datetime
+    club: BookedClubSchema
+    court_name: str
+    indoor: bool
+    share_grosze: int = Field(
+        description="Each seat's share — *Accept and pay 25 zł* with *Split*."
+    )
+    sides: BookedSidesSchema = Field(
+        description=(
+            "Every seat the card drew, the reader's side first and the reader "
+            "first on it. `friends_game.seats` says who is In."
+        )
+    )
+    friends_game: FriendsGameSchema
+
+    @classmethod
+    def from_invitation(
+        cls,
+        invitation: HomeInvitation,
+        *,
+        reader: UUID,
+        people: Mapping[tuple[Sport, UUID], DeckPerson],
+        read_at: datetime,
+    ) -> "HomeFriendsGameSchema":
+        game = invitation.game
+        friends_game = FriendsGameSchema.of(
+            game, reader=reader, people=people, read_at=read_at
+        )
+        assert friends_game is not None
+        return cls(
+            booking_id=game.booking_id,
+            pool_id=game.pool_id,
+            sport=game.sport,
+            kind=game.kind,
+            starts_at=game.start,
+            club=BookedClubSchema(id=game.club_id, name=invitation.club_name),
+            court_name=game.court_name,
+            indoor=game.indoor,
+            share_grosze=game.share_grosze,
+            sides=_booked_sides(
+                game.seen_by(reader),
+                game=game,
+                reader=reader,
+                people=people,
+                paid=False,
+            ),
+            friends_game=friends_game,
+        )
+
+
 class HomeGameSchema(BaseModel):
     """One card on Home: a game the reader booked."""
 
@@ -1183,6 +1364,13 @@ class HomeGameSchema(BaseModel):
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
     your_payment_due_by: datetime | None = Field(description=_YOUR_PAYMENT_DUE_BY)
     time_to: TimeTo | None = Field(description=_TIME_TO)
+    friends_game: FriendsGameSchema | None = Field(
+        description=(
+            "A friends game's own facts (#751) — the sender's game in Your "
+            "games, *2 of 3 friends in · waiting for Ania*, and a friend's once "
+            "they accepted. `null` on a game a fill booked."
+        )
+    )
 
     @classmethod
     def from_card(
@@ -1224,6 +1412,9 @@ class HomeGameSchema(BaseModel):
             your_payment_due_by=yours,
             time_to=_time_to(
                 game, card.state.pay_by, yours, reader=reader, read_at=read_at
+            ),
+            friends_game=FriendsGameSchema.of(
+                game, reader=reader, people=people, read_at=read_at
             ),
         )
 
@@ -1365,6 +1556,16 @@ class HomeResponse(BaseModel):
             "this is empty. They are not counted in `needing_you`."
         )
     )
+    friends_games: list[HomeFriendsGameSchema] = Field(
+        description=(
+            "*FRIENDS GAME · n*, at the very top of Home (#751; "
+            "`docs/adr/0202` §5): every friends game whose invitation waits on "
+            "you, **the soonest to end first**. A card leaves once you accept — "
+            "the game is then among `games` — say **Not this time**, or your 24 "
+            "hours end; the row and its title are gone when this is empty. Not "
+            "counted in `needing_you`."
+        )
+    )
 
     @classmethod
     def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
@@ -1373,6 +1574,15 @@ class HomeResponse(BaseModel):
             needing_you=home.needing_you,
             friend_requests=[
                 HomeFriendRequestSchema.of(request) for request in home.friend_requests
+            ],
+            friends_games=[
+                HomeFriendsGameSchema.from_invitation(
+                    invitation,
+                    reader=reader,
+                    people=home.people,
+                    read_at=home.read_at,
+                )
+                for invitation in home.friends_games
             ],
             games=[
                 HomeGameSchema.from_card(
@@ -1573,6 +1783,16 @@ class BookingDetailsResponse(BaseModel):
             "your own relations: nothing says who else is friends with whom."
         )
     )
+    friends_game: FriendsGameSchema | None = Field(
+        description=(
+            "A friends game's own facts (#751): the sender, the pay mode — "
+            "*Split* or *Tomek paid the court* under the price — whether the "
+            "reader sent it and may call it off, each seat's state, and the "
+            "reader's own invitation while it waits. A friend invited and not "
+            "In reads the game too, every seat drawn. `null` on a game a fill "
+            "booked."
+        )
+    )
 
     @classmethod
     def from_details(
@@ -1645,6 +1865,9 @@ class BookingDetailsResponse(BaseModel):
                 for player in game.players
                 if (relation := details.played_with.get(player)) is not None
             ],
+            friends_game=FriendsGameSchema.of(
+                game, reader=reader, people=details.people, read_at=details.read_at
+            ),
         )
 
 
@@ -2463,3 +2686,125 @@ class FriendsCourtsResponse(BaseModel):
                 for row in courts.read.courts
             ],
         )
+
+
+# --------------------------------------------------------------------------- #
+# A friends game: sending and answering (#751)
+# --------------------------------------------------------------------------- #
+
+
+class SendFriendsGameRequest(BaseModel):
+    """*Send game and pay* on the send sheet (#751): the friends card as it was
+    read, and how to pay."""
+
+    sport: Sport
+    kind: SearchMode = Field(description="The Friends tab's switch: this game only.")
+    friend_ids: list[UUID] = Field(
+        description=(
+            "The friends seated beside the sender, in the order seated — as the "
+            "card was read: three in doubles, one in singles."
+        )
+    )
+    partner_id: UUID | None = Field(
+        default=None,
+        description="The friend beside the sender after a swap, as the card was "
+        "read; `null` for the evenest sides.",
+    )
+    court_id: UUID = Field(description="The court the card names.")
+    starts_at: datetime = Field(description="Its hour, as the card names it.")
+    pay_mode: PayMode = Field(
+        description=(
+            "`SPLIT_THE_COST` — *We hold 100 zł on your card until Fri 10:00. You "
+            "pay 25 zł, plus 25 zł for any seat still empty then.* "
+            "`WHOLE_COURT` — *Send game and pay 100 zł*. The hold is the same: "
+            "the whole court."
+        )
+    )
+    booking_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Sending again after confirming a payment the last send was refused: "
+            "the `booking_id` that send answered, so the payments confirmed are "
+            "the ones taken. Left out on a first send."
+        ),
+    )
+
+
+class FriendsGameSentResponse(BaseModel):
+    """What a send did: the court booked, or nothing booked and the sender's
+    payments to confirm."""
+
+    booking_id: UUID = Field(
+        description=(
+            "The friends game — booked, or, with `your_payments`, the id to send "
+            "again under once they are confirmed."
+        )
+    )
+    booked: BookedSchema | None = Field(
+        description=(
+            "Present when the court is booked: the sender's share and a cover "
+            "for every other seat held on their card, the invitations sent, the "
+            "chat open. `null` when a payment was refused."
+        )
+    )
+    your_payments: list[YourPaymentSchema] = Field(
+        description=(
+            "**Nothing was booked**: each payment the sender's bank refused or "
+            "wants confirmed — `GET /seat-charges/{id}`, confirm in the app, "
+            "`POST /seat-charges/{id}/confirmation` — then send again with "
+            "`booking_id`. Empty once booked."
+        )
+    )
+
+    @classmethod
+    def of(cls, sent: FriendsGameSent) -> "FriendsGameSentResponse":
+        return cls(
+            booking_id=sent.booking_id,
+            booked=None
+            if sent.booked is None
+            else BookedSchema(
+                booking_id=sent.booked.booking_id, game_id=sent.booked.game_id
+            ),
+            your_payments=[
+                YourPaymentSchema(
+                    seat_charge_id=refused.seat_charge_id, refusal=refused.refusal
+                )
+                for refused in sent.your_payments
+            ],
+        )
+
+
+class FriendsGameAnswerResponse(BaseModel):
+    """What *Accept* did: the reader In, or their share refused."""
+
+    booking_id: UUID
+    accepted: bool = Field(
+        description="The reader is In: the card moves to Your games."
+    )
+    whole: bool = Field(
+        description="Every seat is taken now — *It's a game!*, to all four."
+    )
+    your_payment: YourPaymentSchema | None = Field(
+        description=(
+            "With *Split the cost*, the reader's share could not be held: the "
+            "seat is still theirs until `confirm_by`, their invitation's end. "
+            "Confirm it in the app (`POST /seat-charges/{id}/confirmation`), or "
+            "fix the card and accept again. `null` otherwise."
+        )
+    )
+
+    @classmethod
+    def of(cls, answer: FriendsGameAnswer) -> "FriendsGameAnswerResponse":
+        return cls(
+            booking_id=answer.booking_id,
+            accepted=answer.accepted,
+            whole=answer.whole,
+            your_payment=None
+            if answer.your_payment is None
+            else YourPaymentSchema(
+                seat_charge_id=answer.your_payment.seat_charge_id,
+                refusal=answer.your_payment.refusal,
+                confirm_by=answer.confirm_by,
+            ),
+        )
+

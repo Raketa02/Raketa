@@ -1407,6 +1407,486 @@
         }
       }
     },
+    "/dev/as/{player_id}/pools/{pool_id}/friends-card": {
+      "get": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "The friends card, as this person",
+        "description": "`GET /api/v1/pools/{id}/friends-card` as the acting account, the evenest sides and the court proposed \u2014 what *Send a friends game* sends (#751).",
+        "operationId": "read_the_friends_card_dev_as__player_id__pools__pool_id__friends_card_get",
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          },
+          {
+            "name": "friend_ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": "Friend Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsCardResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/pools/{pool_id}/friends-games": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Send a friends game, as this person",
+        "description": "`POST /api/v1/pools/{id}/friends-games` as the acting account: the same use case, refusals included \u2014 the whole court held on their card over the provider this process moves money through, then booked.",
+        "operationId": "send_a_friends_game_dev_as__player_id__pools__pool_id__friends_games_post",
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendFriendsGameRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsGameSentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/bookings/{booking_id}/invitation/acceptance": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Accept a friends game, as this person",
+        "description": "`POST /api/v1/bookings/{id}/invitation/acceptance` as the acting account \u2014 with *Split the cost*, their own share held over the provider this process moves money through.",
+        "operationId": "accept_a_friends_game_dev_as__player_id__bookings__booking_id__invitation_acceptance_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsGameAnswerResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/bookings/{booking_id}/invitation/decline": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Decline a friends game, as this person",
+        "description": "`POST /api/v1/bookings/{id}/invitation/decline` as the acting account: *Not this time*, the sender told they can't make it.",
+        "operationId": "decline_a_friends_game_dev_as__player_id__bookings__booking_id__invitation_decline_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/bookings/{booking_id}/call-off": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Call a friends game off, as its sender",
+        "description": "`POST /api/v1/bookings/{id}/call-off` as the acting account: every hold and cover let go, everybody told.",
+        "operationId": "call_off_a_friends_game_dev_as__player_id__bookings__booking_id__call_off_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/as/{player_id}/sent": {
       "get": {
         "tags": [
@@ -3105,6 +3585,29 @@
         }
       }
     },
+    "/dev/jobs/invitations": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 a friend's 24 hours run out",
+        "description": "Runs out every friends game invitation whose 24 hours ended with no answer (#751): silence is *Not this time*, and the sender is told *Ania didn't answer*. An invitation whose time still runs is left as it is.",
+        "operationId": "run_the_invitations_dev_jobs_invitations_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/jobs/holding": {
       "post": {
         "tags": [
@@ -3955,7 +4458,8 @@
         "type": "string",
         "enum": [
           "SHORT_AT_THE_CUT_OFF",
-          "CANCELLED_BY_THE_CLUB"
+          "CANCELLED_BY_THE_CLUB",
+          "BY_THE_SENDER"
         ],
         "title": "CalledOff",
         "description": "Why a booking will not be played."
@@ -4507,6 +5011,33 @@
         "title": "DeckChallengerSchema",
         "description": "Who a challenge names \u2014 *kuba challenged you*."
       },
+      "DeckClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DeckClubSchema"
+      },
       "DeckForecastSchema": {
         "properties": {
           "pct": {
@@ -4526,6 +5057,32 @@
         ],
         "title": "DeckForecastSchema",
         "description": "How even the game on **this** card is forecast to be, with these sides."
+      },
+      "DeckOverlapSchema": {
+        "properties": {
+          "grade": {
+            "$ref": "#/components/schemas/OverlapGrade",
+            "description": "*High / Good / Slim overlap*: the hours everybody on the card shares, over the week of whoever has least to give."
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/OverlapCellSchema"
+            },
+            "type": "array",
+            "title": "Cells",
+            "description": "Twenty-one: day by day from Monday, morning first."
+          },
+          "game": {
+            "$ref": "#/components/schemas/OverlapGameCellSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grade",
+          "cells",
+          "game"
+        ],
+        "title": "DeckOverlapSchema"
       },
       "DeckTileSchema": {
         "properties": {
@@ -4970,6 +5527,261 @@
           "says"
         ],
         "title": "FreshDealResponse"
+      },
+      "FriendsCardResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "The switch's kind for this one game."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/DeckClubSchema",
+            "description": "The group's home club \u2014 the name in *\u2026 is full at 10:00*."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/FriendsCardSidesSchema",
+            "description": "The evenest way the line-up can stand, or the sides sent (`partner_id`)."
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckForecastSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "*87% \u00b7 Very even* for these sides; `null` where it cannot be read."
+          },
+          "court": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FriendsCourtSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The court picked (`court_id` and `starts_at`), or the one proposed: the soonest hour where the whole line-up is free, failing that the soonest where most of them are. `null` when no court is free in the next 14 days \u2014 the card's place says so, and *Pick a different court* is gone."
+          },
+          "overlap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckOverlapSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The line-up's weeks, the court's hour ringed; `null` with no court, which draws no card."
+          },
+          "cut_off": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cut Off",
+            "description": "When the club's free cancellation ends for the court's game \u2014 the send sheet's *We hold 100 z\u0142 on your card until Fri 10:00*. `null` with no court."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "kind",
+          "home_club",
+          "sides",
+          "forecast",
+          "court",
+          "overlap",
+          "cut_off"
+        ],
+        "title": "FriendsCardResponse",
+        "description": "The friends card: the deck's card without its tiles."
+      },
+      "FriendsCardSidesSchema": {
+        "properties": {
+          "yours": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Yours",
+            "description": "The reader first, then their partner in doubles."
+          },
+          "theirs": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Theirs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "yours",
+          "theirs"
+        ],
+        "title": "FriendsCardSidesSchema",
+        "description": "The sides the court and the card both draw (the friends README, note 3)\n\u2014 ids only: every face on them is one of the reader's friends, whom the\npicker already drew."
+      },
+      "FriendsCourtSchema": {
+        "properties": {
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "club": {
+            "$ref": "#/components/schemas/DeckClubSchema"
+          },
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id",
+            "description": "Sent back as `court_id`, with `starts_at`, to pick this row."
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "What the club calls it \u2014 *Court 3*."
+          },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "*Indoor* or *Outdoor*."
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "*25 z\u0142 each*."
+          },
+          "home_club_full": {
+            "type": "boolean",
+            "title": "Home Club Full",
+            "description": "Another club's court, offered **because the group's home club has no free court at this hour** \u2014 *Ogrody 33 is full at 10:00*. Always `false` for the home club and for a player group."
+          },
+          "free_count": {
+            "type": "integer",
+            "title": "Free Count",
+            "description": "How many of the line-up, the reader among them, are free for the whole hour by their weekly hours \u2014 the row's tint: all of them *Everybody free*, then dimmer for each one fewer."
+          },
+          "busy": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Busy",
+            "description": "Those of the line-up who are not \u2014 *Ania busy*, *Magda and Ania busy* \u2014 in the line-up's order. **Busy** is outside their weekly hours and nothing else: an hour where one of them has a game is never listed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "starts_at",
+          "club",
+          "court_id",
+          "court_name",
+          "indoor",
+          "share_grosze",
+          "home_club_full",
+          "free_count",
+          "busy"
+        ],
+        "title": "FriendsCourtSchema",
+        "description": "One court the line-up could take: a row of *Find a court* \u2014\n*19:00 \u00b7 Bonarka Arena \u00b7 Court 2 \u00b7 32 z\u0142 each \u00b7 Ania busy* \u2014 and the\ncard's court panel."
+      },
+      "FriendsGameAnswerResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted",
+            "description": "The reader is In: the card moves to Your games."
+          },
+          "whole": {
+            "type": "boolean",
+            "title": "Whole",
+            "description": "Every seat is taken now \u2014 *It's a game!*, to all four."
+          },
+          "your_payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YourPaymentSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With *Split the cost*, the reader's share could not be held: the seat is still theirs until `confirm_by`, their invitation's end. Confirm it in the app (`POST /seat-charges/{id}/confirmation`), or fix the card and accept again. `null` otherwise."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "accepted",
+          "whole",
+          "your_payment"
+        ],
+        "title": "FriendsGameAnswerResponse",
+        "description": "What *Accept* did: the reader In, or their share refused."
+      },
+      "FriendsGameSentResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The friends game \u2014 booked, or, with `your_payments`, the id to send again under once they are confirmed."
+          },
+          "booked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookedSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when the court is booked: the sender's share and a cover for every other seat held on their card, the invitations sent, the chat open. `null` when a payment was refused."
+          },
+          "your_payments": {
+            "items": {
+              "$ref": "#/components/schemas/YourPaymentSchema"
+            },
+            "type": "array",
+            "title": "Your Payments",
+            "description": "**Nothing was booked**: each payment the sender's bank refused or wants confirmed \u2014 `GET /seat-charges/{id}`, confirm in the app, `POST /seat-charges/{id}/confirmation` \u2014 then send again with `booking_id`. Empty once booked."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "booked",
+          "your_payments"
+        ],
+        "title": "FriendsGameSentResponse",
+        "description": "What a send did: the court booked, or nothing booked and the sender's\npayments to confirm."
       },
       "GameKind": {
         "type": "string",
@@ -5783,7 +6595,10 @@
           "FRIEND_REQUEST",
           "FRIENDS_MADE",
           "LEVEL_ASKED",
-          "LEVEL_GOT"
+          "LEVEL_GOT",
+          "FRIENDS_GAME_INVITATION",
+          "CANT_MAKE_IT",
+          "DIDNT_ANSWER"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -6092,6 +6907,76 @@
         "title": "Outcome",
         "description": "What a confirmed result says about one of the people who played.\n\nTwo values. *Unscored* is not a third: a game with no agreed result produces\n**no outcome for anybody**, which is ADR-0049's *an evening, not evidence*\nstated as a type \u2014 the absence has one spelling, and it is not being in the\nanswer."
       },
+      "OverlapCellSchema": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day",
+            "description": "ISO weekday, Monday 1."
+          },
+          "range": {
+            "$ref": "#/components/schemas/DayRange",
+            "description": "Morning 07\u201312, Afternoon 12\u201317, Evening 17\u201323."
+          },
+          "shade": {
+            "$ref": "#/components/schemas/OverlapShade",
+            "description": "`BRIGHT` \u2014 everybody on the card is free together for a whole hour of it; `DIM` \u2014 all but one (never on a two-person card); `DARK` \u2014 fewer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "range",
+          "shade"
+        ],
+        "title": "OverlapCellSchema"
+      },
+      "OverlapGameCellSchema": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DayRange"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "range"
+        ],
+        "title": "OverlapGameCellSchema",
+        "description": "The game's own cell, ringed."
+      },
+      "OverlapGrade": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "GOOD",
+          "SLIM"
+        ],
+        "title": "OverlapGrade"
+      },
+      "OverlapShade": {
+        "type": "string",
+        "enum": [
+          "BRIGHT",
+          "DIM",
+          "DARK"
+        ],
+        "title": "OverlapShade",
+        "description": "How many of the card's people are free together in a cell."
+      },
+      "PayMode": {
+        "type": "string",
+        "enum": [
+          "SPLIT_THE_COST",
+          "WHOLE_COURT"
+        ],
+        "title": "PayMode",
+        "description": "How a friends game's court is paid (``docs/adr/0202`` \u00a76): each friend\ntheir own share on accepting, the sender covering what is unpaid at the\ncut-off \u2014 or the sender the whole court."
+      },
       "PaymentRefusal": {
         "type": "string",
         "enum": [
@@ -6251,6 +7136,22 @@
             "type": "array",
             "title": "Rescues",
             "description": "Every rescue in the group and sport with a seat to take now that they hold no seat on, soonest first."
+          },
+          "friends_games": {
+            "items": {
+              "$ref": "#/components/schemas/RowFriendsGame"
+            },
+            "type": "array",
+            "title": "Friends Games",
+            "description": "Every friends game in the group and sport they sent, are In on or are invited to, soonest first (#751)."
+          },
+          "friends": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Friends",
+            "description": "Their friends among the board's rows \u2014 whom *Send a friends game* seats beside them, in the board's order (#751)."
           }
         },
         "type": "object",
@@ -7069,6 +7970,96 @@
         ],
         "title": "RowCard"
       },
+      "RowFriendsGame": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "pay_mode": {
+            "type": "string",
+            "title": "Pay Mode",
+            "description": "`SPLIT_THE_COST` or `WHOLE_COURT`."
+          },
+          "sender": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BookingState"
+          },
+          "seats": {
+            "items": {
+              "$ref": "#/components/schemas/RowFriendsSeat"
+            },
+            "type": "array",
+            "title": "Seats",
+            "description": "The sender's first."
+          },
+          "you_are_the_sender": {
+            "type": "boolean",
+            "title": "You Are The Sender"
+          },
+          "invited_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited Until",
+            "description": "Their own invitation's end, while it waits on them."
+          },
+          "cut_off": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cut Off"
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "starts_at",
+          "kind",
+          "pay_mode",
+          "sender",
+          "state",
+          "seats",
+          "you_are_the_sender",
+          "invited_until",
+          "cut_off"
+        ],
+        "title": "RowFriendsGame",
+        "description": "A friends game in the group they sent, are In on or are invited to \u2014\nwhat *Accept*, *Not this time* and *Call it off* act on (#751)."
+      },
+      "RowFriendsSeat": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "state"
+        ],
+        "title": "RowFriendsSeat"
+      },
       "RowRescue": {
         "properties": {
           "booking_id": {
@@ -7346,6 +8337,79 @@
         ],
         "title": "SeatingSchema",
         "description": "One position on one side: a person, or a seat somebody has left.\n\n**The court is frozen until somebody leaves it** (``docs/adr/0162``). An\nopen seat is drawn, never dropped \u2014 `player_id` is `null` and the seat keeps\nits place \u2014 so a four with one seat open is still a four and the client\nfolds *Needs a player* from it. Nothing on the wire names that rung.\n\n**A nickname, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
+      },
+      "SendFriendsGameRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "The Friends tab's switch: this game only."
+          },
+          "friend_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Friend Ids",
+            "description": "The friends seated beside the sender, in the order seated \u2014 as the card was read: three in doubles, one in singles."
+          },
+          "partner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner Id",
+            "description": "The friend beside the sender after a swap, as the card was read; `null` for the evenest sides."
+          },
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id",
+            "description": "The court the card names."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "Its hour, as the card names it."
+          },
+          "pay_mode": {
+            "$ref": "#/components/schemas/PayMode",
+            "description": "`SPLIT_THE_COST` \u2014 *We hold 100 z\u0142 on your card until Fri 10:00. You pay 25 z\u0142, plus 25 z\u0142 for any seat still empty then.* `WHOLE_COURT` \u2014 *Send game and pay 100 z\u0142*. The hold is the same: the whole court."
+          },
+          "booking_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Id",
+            "description": "Sending again after confirming a payment the last send was refused: the `booking_id` that send answered, so the payments confirmed are the ones taken. Left out on a first send."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "kind",
+          "friend_ids",
+          "court_id",
+          "starts_at",
+          "pay_mode"
+        ],
+        "title": "SendFriendsGameRequest",
+        "description": "*Send game and pay* on the send sheet (#751): the friends card as it was\nread, and how to pay."
       },
       "SentEmail": {
         "properties": {

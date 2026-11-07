@@ -160,6 +160,30 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   protagonist the mock's Visa •••• 4312, two through the wallets — and `brand-new-player` has
   none. **On the Stripe sandbox** (#712) the same three save Stripe's test card for what each
   declared card does, and every seeded share moves on its club's own account (`seeds.md`).
+- **The Cover: a friends game's sender's hold for a seat that isn't theirs** (#751;
+  ADR-0202 §6; `application/covers.py`). A Seat charge like any other, the sender its
+  payer, marked `cover` (`SeatChargeAuthorised.cover`, `SeatChargeFailed.cover`, defaulted
+  `False`, no version change). **At send, `HoldTheCourt`** authorises the sender's share and
+  one cover per other seat **all or nothing, with the sender present** — keyed
+  `raketa-send-<game>-<payer>-<seat>-<attempt>-<hour>`, the attempt the number of charges
+  already on the game — then keeps each until the cut-off (checked far ahead and held at its
+  Holding time, as any share), records **`payments.maximum_agreed`** on the sender's Payment
+  method stream (the whole court, under the terms version in force — art. 49b's consent), and
+  emails *Your game is booked · 100 zł held* (`court_held_email`). **Refused**, the caller
+  undoes its claim on the court and asks again with `books=False` — the same keys, answered
+  the same — so every hold just made is released and each refusal recorded for the sender to
+  confirm in the app (one only, when it asked the provider nothing); a hold confirmed since is
+  taken by the next send under the same booking id, never asked again. Another sender's
+  booking id is `seat_charge_not_found`, `booking_not_found` to the send. The take, keep or
+  check of each hold is the fill's own `held_for_the_game`. **At the cut-off, `SettleTheCovers` lets go
+  one cover for each seat whose own player's share is held or taken**
+  (`RefundReason.SEAT_PAID_BY_ITS_PLAYER`, told nobody, `SeatCharge.let_go_because` so a
+  second run lets nothing more go), a refused one first; the take that follows takes the
+  rest. Covers are interchangeable, so none is bound to a seat. Sent after the cut-off, the
+  share is taken at once and the covers held until the invitations end. **A call-off by the
+  sender** lets every hold go (`RefundReason.CALLED_OFF_BY_THE_SENDER`, in full, told
+  nobody by the money — the booking's event tells). **Known gap**: a payment confirmed for a
+  send that is never pressed again stays held until it lapses.
 - **A club connects payments through the provider's pages, and the arrow runs
   `payments → clubs`** (#537). The club's account at the provider is recorded on its **Club
   courts** stream (`clubs/domain/payments_account.py`) — `PaymentsAccountOpened`, once, and

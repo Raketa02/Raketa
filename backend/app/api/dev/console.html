@@ -372,9 +372,9 @@ function drawPeople() {
         <div class="mono">${esc(row.email)}</div>
         <div class="note">Level ${row.level === null ? "—" : row.level.toFixed(2)}</div>
         ${cardOnFile(row)}
-        <div class="row">${sentButtons(row)}${postButton(row)}</div>
+        <div class="row">${sentButtons(row)}${postButton(row)}${friendsButton(row)}</div>
       </div></div>
-      <div class="cards">${cards}${bookedOf(row)}${rescuesOf(row)}${postingOf(row)}</div>
+      <div class="cards">${cards}${bookedOf(row)}${rescuesOf(row)}${friendsGamesOf(row)}${postingOf(row)}</div>
       ${sentOf(row)}
     </div>`;
   }).join("");
@@ -461,6 +461,86 @@ function rescuesOf(row) {
       <span class="mono">${esc(r.booking_id.slice(0, 8))}</span>
     </div>`;
   }).join("");
+}
+
+// --------------------------------------------------------------------------
+// A row's friends games (#751): send one to the row's friends, accept or
+// decline an invitation, call one off
+// --------------------------------------------------------------------------
+
+const FRIENDS_SEATED = { PADEL: 3, BADMINTON: 3, TENNIS: 1, SQUASH: 1 };
+const friendsSeated = () => FRIENDS_SEATED[state.board.sport] ?? 3;
+
+function friendsButton(row) {
+  const seats = friendsSeated();
+  if (!row.friends || row.friends.length < seats) return "";
+  const at = `data-player="${row.player_id}" data-who="${esc(row.nickname ?? row.email)}"`;
+  return `<select data-friends-pay="${row.player_id}">` +
+    `<option>SPLIT_THE_COST</option><option>WHOLE_COURT</option></select>` +
+    `<button data-friends="send" ${at}>Send a friends game · ${names(row.friends.slice(0, seats))}</button>`;
+}
+
+function friendsGamesOf(row) {
+  if (!row.friends_games || !row.friends_games.length) return "";
+  return `<h4>Friends games</h4>` + row.friends_games.map((f) => {
+    const at = `data-friends-booking="${f.booking_id}" data-player="${row.player_id}" ` +
+      `data-who="${esc(row.nickname ?? row.email)}"`;
+    const seats = f.seats.map((s) =>
+      `${nameOf(s.person)} ${esc(s.state.toLowerCase().replace(/_/g, " "))}`).join(" · ");
+    const answer = f.invited_until
+      ? `<button class="expected" data-friends="accept" ${at}>Accept</button>` +
+        `<button data-friends="decline" ${at}>Not this time</button>` : "";
+    const callOff = f.you_are_the_sender && f.state !== "CALLED_OFF"
+      ? `<button data-friends="call-off" ${at}>Call it off</button>` : "";
+    return `<div class="rowcard">
+      <span class="when">${when(f.starts_at)}</span>
+      ${pill(f.kind, "kind")}${pill(f.state)}
+      <span>${nameOf(f.sender)}'s · ${f.pay_mode === "WHOLE_COURT" ? "whole court" : "split"} · ${seats}` +
+      `${f.invited_until ? ` · answer by ${when(f.invited_until)}` : ""} · cut-off ${when(f.cut_off)}</span>
+      <span class="row">${answer}${callOff}</span>
+      <span class="mono">${esc(f.booking_id.slice(0, 8))}</span>
+    </div>`;
+  }).join("");
+}
+
+async function friendsAct(button) {
+  const { friends: verb, player, who, friendsBooking: booking } = button.dataset;
+  const at = (tail) => `/dev/as/${player}/${tail}`;
+  const words = `${esc(who)} · ${esc(button.textContent)}`;
+  let done;
+  if (verb === "send") {
+    const row = state.board.people.find((r) => r.player_id === player);
+    const friends = row.friends.slice(0, friendsSeated()).map((f) => f.player_id);
+    const group = $("group").value;
+    const sport = state.board.sport;
+    const query = new URLSearchParams({ sport, kind: "COMPETITIVE" });
+    friends.forEach((id) => query.append("friend_ids", id));
+    const card = await call("GET", at(`pools/${group}/friends-card?${query}`));
+    if (!card.ok || !card.json.court) {
+      say(card, card.ok ? `${words} → no court in the next 14 days` : words);
+      return;
+    }
+    const pay = document.querySelector(`select[data-friends-pay="${player}"]`)?.value ?? "SPLIT_THE_COST";
+    done = await call("POST", at(`pools/${group}/friends-games`), {
+      sport, kind: "COMPETITIVE", friend_ids: friends, court_id: card.json.court.court_id,
+      starts_at: card.json.court.starts_at, pay_mode: pay,
+    });
+    say(done, done.ok ? `${words} → ${done.json.booked
+      ? `booked ${when(card.json.court.starts_at)}`
+      : `payment refused (${done.json.your_payments.map((p) => esc(p.refusal)).join(", ")})`}` : words);
+  } else if (verb === "accept") {
+    done = await call("POST", at(`bookings/${booking}/invitation/acceptance`));
+    say(done, done.ok ? `${words} → ${done.json.accepted
+      ? (done.json.whole ? "In — It's a game!" : "In")
+      : `payment refused (${esc(done.json.your_payment?.refusal ?? "")})`}` : words);
+  } else if (verb === "decline") {
+    done = await call("POST", at(`bookings/${booking}/invitation/decline`));
+    say(done, done.ok ? `${words} → the sender is told they can't make it` : words);
+  } else {
+    done = await call("POST", at(`bookings/${booking}/call-off`));
+    say(done, done.ok ? `${words} → called off · nobody paid` : words);
+  }
+  await loadBoard();
 }
 
 // Sets typed as "6-4 6-3": side A's games first in each set.
@@ -1033,6 +1113,8 @@ $("people").addEventListener("click", (event) => {
   if (rowButtonPressed) return rowAct(rowButtonPressed);
   const post = event.target.closest("button[data-post]");
   if (post) return postAct(post);
+  const friends = event.target.closest("button[data-friends]");
+  if (friends) return friendsAct(friends);
   const sent = event.target.closest("button[data-sent]");
   if (sent?.dataset.sent === "read") return readSent(sent.dataset.player, sent.dataset.who);
   if (sent) { delete state.sent[sent.dataset.player]; drawPeople(); }

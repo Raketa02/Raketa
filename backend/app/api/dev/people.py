@@ -3,7 +3,8 @@ them (``docs/adr/0194`` §2, §3; #590) — and *Leave the game*, *Take the seat
 and *No* on a rescue, *Post a game* at a court hour its sheet lists, and after
 the game a score entered, agreed with or countered (#593) — and, at the court,
 *isn't here yet*, *I'm here*, *they're here*, *I was there* and *yes, they were
-here*, the first three **at the club or away** (#657). *Join* on a post they
+here*, the first three **at the club or away** (#657) — and a friends game sent,
+accepted, declined and called off (#751). *Join* on a post they
 were never dealt is the *Yes* here, as it is the phone's.
 
 **Each route is the player's own route with the acting account in place of the
@@ -61,6 +62,10 @@ from app.modules.games.presentation.schemas import (
     StateResultRequest,
 )
 from app.modules.proposals.application.commands import (
+    FriendsGameCommand,
+    FriendsLineUpCommand,
+    ReadFriendsCardCommand,
+    SendAFriendsGameCommand,
     AnswerProposalCommand,
     LeaveTheGameCommand,
     PostAGameCommand,
@@ -71,6 +76,11 @@ from app.modules.proposals.application.commands import (
 from app.modules.proposals.domain.overlap import DayRange
 from app.modules.proposals.domain.post import Who
 from app.modules.proposals.presentation.dependencies import (
+    AcceptAFriendsGameDep,
+    DeclineAFriendsGameDep,
+    CallOffAFriendsGameDep,
+    ReadFriendsCardDep,
+    SendAFriendsGameDep,
     JoinARescueDep,
     LeaveTheGameDep,
     PostAGameDep,
@@ -81,6 +91,10 @@ from app.modules.proposals.presentation.dependencies import (
     WithdrawYesDep,
 )
 from app.modules.proposals.presentation.schemas import (
+    FriendsCardResponse,
+    FriendsGameAnswerResponse,
+    FriendsGameSentResponse,
+    SendFriendsGameRequest,
     DepartureResponse,
     PostedResponse,
     PostingSlotResponse,
@@ -600,3 +614,150 @@ async def confirm_presence(
         ),
         reader_id=acting,
     )
+
+
+# --------------------------------------------------------------------------- #
+# A friends game (#751)
+# --------------------------------------------------------------------------- #
+
+
+@router.get(
+    "/pools/{pool_id}/friends-card",
+    response_model=FriendsCardResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        **_REFUSED,
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": "As the player's own route answers it.",
+        },
+    },
+    summary="The friends card, as this person",
+    description=(
+        "`GET /api/v1/pools/{id}/friends-card` as the acting account, the "
+        "evenest sides and the court proposed — what *Send a friends game* "
+        "sends (#751)."
+    ),
+)
+async def read_the_friends_card(
+    pool_id: UUID,
+    sport: Sport,
+    kind: SearchMode,
+    acting: ActingDep,
+    read: ReadFriendsCardDep,
+    friend_ids: Annotated[list[UUID], Query()],
+) -> FriendsCardResponse:
+    card = await read.execute(
+        ReadFriendsCardCommand(
+            line_up=FriendsLineUpCommand(
+                player_id=acting, pool_id=pool_id, sport=sport, friend_ids=friend_ids
+            ),
+            kind=kind,
+        )
+    )
+    return FriendsCardResponse.from_card(card)
+
+
+@router.post(
+    "/pools/{pool_id}/friends-games",
+    response_model=FriendsGameSentResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        **_REFUSED,
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": "As the player's own route answers it.",
+        },
+    },
+    summary="Send a friends game, as this person",
+    description=(
+        "`POST /api/v1/pools/{id}/friends-games` as the acting account: the "
+        "same use case, refusals included — the whole court held on their card "
+        "over the provider this process moves money through, then booked."
+    ),
+)
+async def send_a_friends_game(
+    pool_id: UUID,
+    body: SendFriendsGameRequest,
+    acting: ActingDep,
+    send: SendAFriendsGameDep,
+) -> FriendsGameSentResponse:
+    sent = await send.execute(
+        SendAFriendsGameCommand(
+            line_up=FriendsLineUpCommand(
+                player_id=acting,
+                pool_id=pool_id,
+                sport=body.sport,
+                friend_ids=body.friend_ids,
+            ),
+            kind=body.kind,
+            court_id=body.court_id,
+            starts_at=instant(body.starts_at),
+            pay_mode=body.pay_mode,
+            partner_id=body.partner_id,
+            booking_id=body.booking_id,
+        )
+    )
+    return FriendsGameSentResponse.of(sent)
+
+
+@router.post(
+    "/bookings/{booking_id}/invitation/acceptance",
+    response_model=FriendsGameAnswerResponse,
+    status_code=status.HTTP_200_OK,
+    responses=_REFUSED,
+    summary="Accept a friends game, as this person",
+    description=(
+        "`POST /api/v1/bookings/{id}/invitation/acceptance` as the acting "
+        "account — with *Split the cost*, their own share held over the "
+        "provider this process moves money through."
+    ),
+)
+async def accept_a_friends_game(
+    booking_id: UUID, acting: ActingDep, accept: AcceptAFriendsGameDep
+) -> FriendsGameAnswerResponse:
+    accepted = await accept.execute(
+        FriendsGameCommand(player_id=acting, booking_id=booking_id)
+    )
+    return FriendsGameAnswerResponse.of(accepted)
+
+
+@router.post(
+    "/bookings/{booking_id}/invitation/decline",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses=_REFUSED,
+    summary="Decline a friends game, as this person",
+    description=(
+        "`POST /api/v1/bookings/{id}/invitation/decline` as the acting account: "
+        "*Not this time*, the sender told they can't make it."
+    ),
+)
+async def decline_a_friends_game(
+    booking_id: UUID, acting: ActingDep, decline: DeclineAFriendsGameDep
+) -> Response:
+    await decline.execute(
+        FriendsGameCommand(player_id=acting, booking_id=booking_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/bookings/{booking_id}/call-off",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses=_REFUSED,
+    summary="Call a friends game off, as its sender",
+    description=(
+        "`POST /api/v1/bookings/{id}/call-off` as the acting account: every "
+        "hold and cover let go, everybody told."
+    ),
+)
+async def call_off_a_friends_game(
+    booking_id: UUID, acting: ActingDep, call_off: CallOffAFriendsGameDep
+) -> Response:
+    await call_off.execute(
+        FriendsGameCommand(player_id=acting, booking_id=booking_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

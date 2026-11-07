@@ -57,7 +57,7 @@ router = APIRouter(prefix="/bookings", tags=["club"])
 money_router = APIRouter(prefix="/money", tags=["club"])
 
 
-# The two reasons a booking of the club's can come to, as its desk reads them.
+# The three reasons a booking of the club's can come to, as its desk reads them.
 # The players' reasons for a game that never booked (``BOOK_BY_PASSED``,
 # ``COURT_HOUR_LOST``, ``PAYMENT_NOT_IN_TIME``, #625) are never the club's — such
 # a game is on no page of its — so the club's document keeps the players'
@@ -67,6 +67,9 @@ class CalledOffReason(StrEnum):
 
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+    #: A friends game its sender called off before the club's cut-off (#751):
+    #: nothing was taken.
+    BY_THE_SENDER = "BY_THE_SENDER"
 
 
 def _reason_for_the_club(game: BookedGame, *, read_at: Instant) -> CalledOffReason:
@@ -173,7 +176,10 @@ class ClubBookingSchema(BaseModel):
         description=(
             "Why a `CALLED_OFF` game will not be played — `null` otherwise. "
             "`SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. "
-            "`CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`)."
+            "`CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). "
+            "`BY_THE_SENDER` — the player who booked it for their friends called "
+            "it off before your cut-off: nothing was taken, and the court is "
+            "yours to sell again (#751)."
         )
     )
     cancel_reason: ClubCancelReason | None = Field(

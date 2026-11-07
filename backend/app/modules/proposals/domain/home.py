@@ -116,6 +116,71 @@ class CalledOffReason(StrEnum):
     #: A payment it waited for did not come in time and it could no longer
     #: fill — the book-by had come (#625; Q112): nobody paid.
     PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
+    #: A friends game its sender called off before the cut-off (#751): every
+    #: hold let go, nobody paid.
+    BY_THE_SENDER = "BY_THE_SENDER"
+
+
+class PayMode(StrEnum):
+    """How a friends game's court is paid (``docs/adr/0202`` §6): each friend
+    their own share on accepting, the sender covering what is unpaid at the
+    cut-off — or the sender the whole court."""
+
+    SPLIT_THE_COST = "SPLIT_THE_COST"
+    WHOLE_COURT = "WHOLE_COURT"
+
+
+class InvitationAnswer(StrEnum):
+    """How an invited seat of a friends game was answered (#751)."""
+
+    WAITING = "WAITING"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"
+    RAN_OUT = "RAN_OUT"
+
+
+class SeatState(StrEnum):
+    """Where one seat of a friends game stands for everybody on it (#751; the
+    words §29.8) — *In*, *waiting · 3 h left*, *can't make it*, *didn't
+    answer*, *empty*."""
+
+    IN = "IN"
+    #: Held for its invited friend, their clock running.
+    WAITING = "WAITING"
+    #: Its friend said *Not this time*.
+    CANT_MAKE_IT = "CANT_MAKE_IT"
+    #: Its friend's clock ended without an answer — whether or not the job has
+    #: recorded it.
+    DIDNT_ANSWER = "DIDNT_ANSWER"
+    #: Nobody's: its friend left it (#752).
+    EMPTY = "EMPTY"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class InvitedSeat:
+    """A seat of a friends game held for one friend (#751): the side the card
+    drew them on, until when they may answer, and how they did."""
+
+    player_id: UUID
+    side: str
+    until: Instant
+    answer: InvitationAnswer = InvitationAnswer.WAITING
+
+    def waiting_at(self, now: Instant) -> bool:
+        return self.answer is InvitationAnswer.WAITING and now < self.until
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class FriendsSeat:
+    """One seat of a friends game as everybody on it reads it (#751): who it
+    is for, on which side, how it stands, and — while it waits — until when."""
+
+    player_id: UUID
+    side: str
+    state: SeatState
+    until: Instant | None = None
 
 
 class ClubCancelReason(StrEnum):
@@ -278,6 +343,99 @@ class BookedGame:
     kept: Mapping[UUID, KeptSeat] = field(default_factory=dict)
     #: Every rescuer whose kept seat ran out: none is kept for them again.
     keeps_ran_out: frozenset[UUID] = frozenset()
+    #: A friends game's sender (#751) — ``None`` on a game a fill booked.
+    sender: UUID | None = None
+    #: How a friends game's court is paid — ``None`` on a fill's.
+    pay_mode: PayMode | None = None
+    #: A friends game's invited seats, in the card's order, each with its
+    #: answer.
+    invited: tuple[InvitedSeat, ...] = ()
+
+    @property
+    def is_friends_game(self) -> bool:
+        """Booked by its sender at send (#751), not by a fill."""
+
+        return self.sender is not None
+
+    def invitation_of(self, player_id: UUID) -> InvitedSeat | None:
+        return next(
+            (seat for seat in self.invited if seat.player_id == player_id), None
+        )
+
+    def invited_now(self, player_id: UUID, *, now: Instant) -> InvitedSeat | None:
+        """This player's invitation while it still waits on them at ``now`` —
+        on a game still booked."""
+
+        seat = self.invitation_of(player_id)
+        if (
+            seat is None
+            or not seat.waiting_at(now)
+            or self.stage is not BookingStage.BOOKED
+            or self.called_off_reason(now) is not None
+        ):
+            return None
+        return seat
+
+    def seat_states(self, *, now: Instant) -> tuple[FriendsSeat, ...]:
+        """Every seat of a friends game as it stands at ``now`` — the sender's
+        first, then each invited seat in the card's order (the words §29.8);
+        empty on a game a fill booked."""
+
+        if self.sender is None:
+            return ()
+        sender_side = "A" if self.sender in self.first_side else "B"
+        seats = [
+            FriendsSeat(player_id=self.sender, side=sender_side, state=SeatState.IN)
+        ]
+        for seat in self.invited:
+            if seat.answer is InvitationAnswer.ACCEPTED:
+                state = (
+                    SeatState.IN if seat.player_id in self.players else SeatState.EMPTY
+                )
+            elif seat.answer is InvitationAnswer.DECLINED:
+                state = SeatState.CANT_MAKE_IT
+            elif seat.answer is InvitationAnswer.RAN_OUT or now >= seat.until:
+                state = SeatState.DIDNT_ANSWER
+            else:
+                state = SeatState.WAITING
+            seats.append(
+                FriendsSeat(
+                    player_id=seat.player_id,
+                    side=seat.side,
+                    state=state,
+                    until=seat.until if state is SeatState.WAITING else None,
+                )
+            )
+        return tuple(seats)
+
+    @property
+    def whole(self) -> bool:
+        """Every seat held by somebody In."""
+
+        return len(self.players) == SPORT_SPECS[self.sport].players
+
+    def covers_due_at(self, now: Instant) -> bool:
+        """A friends game whose covers are decided at ``now`` (#751): its
+        cut-off has come, and no invitation still waits — one sent after the
+        cut-off decides them when its invitations end."""
+
+        return (
+            self.is_friends_game
+            and now >= self.cut_off
+            and not any(seat.waiting_at(now) for seat in self.invited)
+        )
+
+    def may_be_called_off_by(self, player_id: UUID, *, now: Instant) -> bool:
+        """*Call it off* (#751): the sender's, on a friends game still on,
+        before the club's cut-off and the hour."""
+
+        return (
+            self.sender == player_id
+            and self.stage in (BookingStage.BOOKED, BookingStage.SEAT_OPEN)
+            and self.called_off_reason(now) is None
+            and now < self.cut_off
+            and now < self.start
+        )
 
     @property
     def taken_at(self) -> Instant:
@@ -364,15 +522,27 @@ class BookedGame:
             if player != but and self.kept_for(player, now=now)
         )
 
+    @property
+    def planned_sides(self) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
+        """The sides as the game is drawn: everybody In — and, on a friends
+        game, every friend its seats are still for, In or not, on the side the
+        card drew them (#751), so the court has its four faces."""
+
+        if not self.invited:
+            return self.first_side, self.second_side
+        absent = [seat for seat in self.invited if seat.player_id not in self.players]
+        return (
+            (*self.first_side, *(s.player_id for s in absent if s.side == "A")),
+            (*self.second_side, *(s.player_id for s in absent if s.side == "B")),
+        )
+
     def seen_by(self, player_id: UUID) -> Sides:
         """The sides as this player reads them: theirs first, with them first
-        on it — *You + Piotr vs Inés + Bartek*."""
+        on it — *You + Piotr vs Inés + Bartek*. A friends game draws its
+        invited seats too (``planned_sides``)."""
 
-        yours, theirs = (
-            (self.second_side, self.first_side)
-            if player_id in self.second_side
-            else (self.first_side, self.second_side)
-        )
+        first, second = self.planned_sides
+        yours, theirs = (second, first) if player_id in second else (first, second)
         if player_id in yours:
             yours = (player_id, *(other for other in yours if other != player_id))
         return Sides(yours=yours, theirs=theirs)

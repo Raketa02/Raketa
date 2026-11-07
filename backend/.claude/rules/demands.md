@@ -74,6 +74,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   And since #750 the pair rule's block mask alone (`PlayerFit.blocked_pairs`) and
   **`CourtHours`**, every hour a club sells with its free courts named in the club's order
   (`ClubCourtHours`) — the first of the proposer's ports to get its row.
+  And since #751 a friends game booked at send, its invited seats answered and called off
+  by its sender (`FriendsGameBookings`) and each cover taken or let go at the cut-off
+  (`CoversAtTheCutOff`); the sender's court held at send (`SendersCourts`) asks the
+  provider and is contracted over HTTP with the fake.
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first

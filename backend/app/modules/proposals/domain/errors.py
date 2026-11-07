@@ -480,3 +480,47 @@ class CannotPlayTogether(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("these players can't all play together")
+
+
+# --------------------------------------------------------------------------- #
+# A friends game (#751)
+# --------------------------------------------------------------------------- #
+
+
+class FriendsGamesWaiting(ConflictError):
+    """The sender already has ``details.cap`` friends games waiting for answers
+    (the friends mechanics §8.4, Q34): *You have 2 friends games waiting for
+    answers. Send this one once one of them is settled.* Nothing was sent, and
+    nothing was held."""
+
+    code = "friends_games_waiting"
+
+    def __init__(self, *, cap: int) -> None:
+        super().__init__(
+            f"{cap} friends games are waiting for answers already",
+            details={"cap": cap},
+        )
+
+
+class InvitationNotWaiting(ConflictError):
+    """The invitation is no longer the reader's to answer: they answered it,
+    its 24 hours ended, or the game is no longer on (#751). Nothing was
+    recorded."""
+
+    code = "invitation_not_waiting"
+
+    def __init__(self) -> None:
+        super().__init__("this invitation is no longer waiting for your answer")
+
+
+class CutOffHasPassed(ConflictError):
+    """*Call it off* after the club's cut-off (#751; the friends mechanics
+    §11.2): the game is no longer the sender's to call off for free, so the
+    button is gone. Nothing was recorded."""
+
+    code = "cut_off_has_passed"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "the club's cut-off has passed; it can no longer be called off"
+        )

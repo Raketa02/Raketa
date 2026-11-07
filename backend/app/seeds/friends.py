@@ -123,9 +123,11 @@ def _friendships(session: AsyncSession) -> FriendshipRepository:
 
 
 @final
-class _Acts:
-    """The acts this layer takes, each in a session of its own and on a clock
-    stopped some hours before the run, so Home's newest-first has an order."""
+class FriendActs:
+    """The acts this layer takes — and the friends games layer's, which makes
+    the friendships its line-ups need (#751) — each in a session of its own
+    and on a clock stopped some hours before the run, so Home's newest-first
+    has an order."""
 
     def __init__(
         self,
@@ -235,7 +237,7 @@ async def write_the_friends(
     async with session_factory() as session:
         ids = await _ids(session)
         groups = await _groups(session, ids)
-    acts = _Acts(session_factory, ids=ids, groups=groups, now=now)
+    acts = FriendActs(session_factory, ids=ids, groups=groups, now=now)
 
     # Friends, accepted: she asked, a week ago, and was answered the next day.
     if await acts.relation(her, RATING_WELL_ESTABLISHED) is FriendRelation.NONE:
@@ -289,7 +291,7 @@ async def write_the_friends(
 
 async def _the_block_case(
     session_factory: async_sessionmaker[AsyncSession],
-    acts: _Acts,
+    acts: FriendActs,
     *,
     money: SeedMoney,
 ) -> bool:

@@ -43,6 +43,13 @@ the desk's scan of a player's code on the day, is **retired** with desk
 check-in (#651): nothing writes it, and it stays registered so a stored row
 still decodes.
 
+**A friends game is the stream's second birth** (#751; ``docs/adr/0202``
+§5): ``BookedByAFriend`` books the court the moment its sender sends it, the
+sender In and every other seat **invited** — held for its friend until a
+moment — then ``InvitedSeatAccepted``, ``InvitedSeatDeclined`` or
+``InvitedSeatRanOut`` answers each, and ``CalledOffBySender`` is the sender
+calling it off before the cut-off.
+
 Every event carries ``booking_id``, the stream's own key. Sport and kind travel
 as their codes, as a proposal's do.
 """
@@ -274,6 +281,101 @@ class PlayerCheckedIn:
     booking_id: UUID
     player_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class BookedByAFriend:
+    """**A friends game, booked the moment its sender sent it** (#751;
+    ``docs/adr/0202`` §5–§6): the Booking's second birth, under an id of its
+    own — no proposal precedes it. The court is held, the sender's share and a
+    **cover** for every other seat are held or taken on the sender's card, and
+    the Game is open with only the sender on it.
+
+    ``first_side`` and ``second_side`` are the sides **as the card drew them**,
+    the sender among them: every other player on them holds an **invited
+    seat**, theirs alone **until ``invited_until``** — 24 hours from the send,
+    never past the cut-off (made before it) or the start (made after it).
+    ``pay_mode`` is ``SPLIT_THE_COST`` — each friend pays their own share on
+    accepting — or ``WHOLE_COURT``, the sender paying every seat."""
+
+    booking_id: UUID
+    pool_id: UUID
+    club_id: UUID
+    court_id: UUID
+    court_name: str
+    indoor: bool
+    sport: str
+    #: ``COMPETITIVE`` or ``FOR_FUN`` — the sender's choice for this game.
+    kind: str
+    start: datetime
+    share_grosze: int
+    sender_id: UUID
+    first_side: tuple[UUID, ...]
+    second_side: tuple[UUID, ...]
+    pay_mode: str
+    invited_until: datetime
+    cut_off: datetime
+    game_id: UUID
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "first_side", _uuids(self.first_side))
+        object.__setattr__(self, "second_side", _uuids(self.second_side))
+
+
+@dataclass(frozen=True)
+class InvitedSeatAccepted:
+    """An invited friend said yes in time (#751): they are In, on ``side`` —
+    the side the card drew them on — and, with *Split the cost*, their own
+    share is held or taken on their card, recorded on their Seat charge."""
+
+    booking_id: UUID
+    player_id: UUID
+    side: str
+    occurred_at: datetime
+    #: This accept took the last seat: every seat is held now — *It's a
+    #: game!*, to all four.
+    last_seat: bool = False
+
+
+@dataclass(frozen=True)
+class InvitedSeatDeclined:
+    """An invited friend said *Not this time* (#751): their seat is empty, and
+    the sender is told they can't make it. What becomes of the seat is #752's
+    to say."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class InvitedSeatRanOut:
+    """An invited friend's 24 hours ended without an answer (#751): silence is
+    *Not this time*, and the sender is told they didn't answer. Recorded by the
+    invitations job, at or after the invitation's end."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class CalledOffBySender:
+    """**The sender called the friends game off before the cut-off** (#751;
+    ``docs/adr/0202`` §6): every hold and cover is let go, nobody pays, the
+    court is the club's again, and everybody is told — ``player_ids``
+    everybody In, the sender among them, ``invited`` every invitee still
+    waiting."""
+
+    booking_id: UUID
+    player_ids: tuple[UUID, ...]
+    invited: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "player_ids", _uuids(self.player_ids))
+        object.__setattr__(self, "invited", _uuids(self.invited))
 
 
 @dataclass(frozen=True)

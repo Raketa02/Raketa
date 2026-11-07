@@ -38,6 +38,7 @@ from app.api.dev.dependencies import (
     ExpireProposalsDep,
     ProposeGamesDep,
     RunOutTheTimeToPayDep,
+    RunOutTheInvitationsDep,
     SettleRatingsOnResultsDep,
     SummariseNewBookingsDep,
 )
@@ -48,6 +49,7 @@ from app.bootstrap.jobs import (
     GET_YOUR_LEVEL_JOB,
     HOLDING_JOB,
     HOW_DID_IT_GO_JOB,
+    INVITATIONS_JOB,
     MAIL_DELIVERY_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     PHOTO_REVIEW_BACKFILL_JOB,
@@ -71,6 +73,7 @@ RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
         PROPOSER_JOB: "the proposer",
         PROPOSAL_EXPIRY_JOB: "the book-by sweep",
         TIME_TO_PAY_JOB: "time to pay",
+        INVITATIONS_JOB: "a friend's 24 hours run out",
         HOLDING_JOB: "hold the shares",
         CUT_OFF_JOB: "the cut-off",
         HOW_DID_IT_GO_JOB: "the hour ends · How did it go?",
@@ -232,6 +235,31 @@ async def run_the_time_to_pay(run_out: RunOutTheTimeToPayDep) -> RanResponse:
             f"{ran_out.games} game(s) whose time to pay was up: the seat reopened."
             if ran_out.games
             else "No time to pay is up: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{INVITATIONS_JOB}",
+    response_model=RanResponse,
+    summary=_summary(INVITATIONS_JOB),
+    description=(
+        "Runs out every friends game invitation whose 24 hours ended with no "
+        "answer (#751): silence is *Not this time*, and the sender is told "
+        "*Ania didn't answer*. An invitation whose time still runs is left as "
+        "it is."
+    ),
+)
+async def run_the_invitations(run_out: RunOutTheInvitationsDep) -> RanResponse:
+    ran = await run_out.execute()
+    return RanResponse(
+        job=INVITATIONS_JOB,
+        done=ran.ran_out,
+        conflicts=ran.conflicts,
+        says=(
+            f"{ran.ran_out} invitation(s) ran out: the sender is told."
+            if ran.ran_out
+            else "No invitation's 24 hours are up: nothing was done."
         ),
     )
 

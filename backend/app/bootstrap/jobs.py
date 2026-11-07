@@ -44,6 +44,7 @@ from app.bootstrap.composition import (
     build_expire_proposals,
     build_payment_provider,
     build_run_out_the_time_to_pay,
+    build_run_out_the_invitations,
     build_the_cut_off,
     build_the_holding,
     build_decide_club_payouts,
@@ -111,6 +112,12 @@ PROPOSAL_EXPIRY_JOB = "proposal-expiry"
 #: **correctness depends on it**: a payer's own act past the time already runs
 #: it out first, but nothing else does it for the others.
 TIME_TO_PAY_JOB = "time-to-pay"
+
+#: A friends game's invitations (#751). It runs out every invitation whose 24
+#: hours ended with no answer, so its sender is told *Ania didn't answer*.
+#: Correctness does not depend on it: every read says *didn't answer* off the
+#: clock already, and nothing asks it before the cut-off decides the covers.
+INVITATIONS_JOB = "invitations"
 
 #: The cut-off (#544). It calls off every booked game whose cut-off came with
 #: a seat open since before it — **a game plays full or not at all** — and
@@ -194,6 +201,7 @@ def build_scheduled_jobs(
         or settings.PROPOSAL_EXPIRY_ENABLED
         or settings.PROPOSER_ENABLED
         or settings.TIME_TO_PAY_ENABLED
+        or settings.INVITATIONS_ENABLED
         or settings.CUT_OFF_ENABLED
         or settings.HOLDING_ENABLED
         or settings.HOW_DID_IT_GO_ENABLED
@@ -245,6 +253,12 @@ def build_scheduled_jobs(
         if settings.TIME_TO_PAY_ENABLED:
             jobs.append(
                 build_time_to_pay_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.INVITATIONS_ENABLED:
+            jobs.append(
+                build_invitations_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -428,6 +442,45 @@ def build_time_to_pay_job(
     return PeriodicJob(
         name=TIME_TO_PAY_JOB,
         interval_seconds=settings.TIME_TO_PAY_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_invitations_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Run out every friends game invitation whose 24 hours ended (#751).
+
+    **Idempotent and safe beside itself with no lock**: each game is one
+    transaction that locks its booking first, the aggregate records nothing on
+    an invitation answered or run out already, and a genuine race is caught by
+    the stream version and stepped over. Correctness does not depend on it —
+    every read says *didn't answer* off the clock — but its sender is told only
+    once it runs.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_run_out_the_invitations(
+                session, clock=clock
+            ).execute()
+        if done.ran_out or done.conflicts:
+            logger.info(
+                "invitations finished",
+                extra={
+                    "job": INVITATIONS_JOB,
+                    "ran_out": done.ran_out,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=INVITATIONS_JOB,
+        interval_seconds=settings.INVITATIONS_INTERVAL_SECONDS,
         run=run,
     )
 

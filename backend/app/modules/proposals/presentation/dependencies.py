@@ -19,6 +19,10 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_accept_a_friends_game,
+    build_decline_a_friends_game,
+    build_call_off_a_friends_game,
+    build_send_a_friends_game,
     build_booked_games,
     build_cancel_the_game,
     build_move_the_game,
@@ -80,6 +84,12 @@ from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
+)
+from app.modules.proposals.application.friends_games import (
+    AcceptAFriendsGame,
+    DeclineAFriendsGame,
+    CallOffAFriendsGame,
+    SendAFriendsGame,
 )
 from app.modules.proposals.application.friends_card import (
     ReadFriendsCard,
@@ -434,3 +444,63 @@ def get_read_friends_courts(
 
 
 ReadFriendsCourtsDep = Annotated[ReadFriendsCourts, Depends(get_read_friends_courts)]
+
+
+def get_send_a_friends_game(
+    db: DbSession,
+    clock: ClockDep,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
+    booked: BookedGamesDep,
+) -> SendAFriendsGame:
+    """*Send game and pay* (#751): the whole court held on the sender's card
+    over the provider this process moves money through."""
+    return build_send_a_friends_game(
+        db, clock=clock, provider=provider, settings=settings, booked=booked
+    )
+
+
+SendAFriendsGameDep = Annotated[SendAFriendsGame, Depends(get_send_a_friends_game)]
+
+
+def get_accept_a_friends_game(
+    db: DbSession,
+    clock: ClockDep,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
+    booked: BookedGamesDep,
+) -> AcceptAFriendsGame:
+    """An invited friend's *Accept* (#751): their own share held over the
+    provider with *Split the cost*."""
+    return build_accept_a_friends_game(
+        db, clock=clock, provider=provider, settings=settings, booked=booked
+    )
+
+
+AcceptAFriendsGameDep = Annotated[
+    AcceptAFriendsGame, Depends(get_accept_a_friends_game)
+]
+
+
+def get_decline_a_friends_game(db: DbSession, clock: ClockDep) -> DeclineAFriendsGame:
+    """An invited friend's *Not this time* (#751)."""
+    return build_decline_a_friends_game(db, clock=clock)
+
+
+DeclineAFriendsGameDep = Annotated[
+    DeclineAFriendsGame, Depends(get_decline_a_friends_game)
+]
+
+
+def get_call_off_a_friends_game(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> CallOffAFriendsGame:
+    """The sender's *Call it off* (#751). Asks nothing of the provider: every
+    hold is let go from the outbox."""
+    return build_call_off_a_friends_game(db, clock=clock, settings=settings)
+
+
+CallOffAFriendsGameDep = Annotated[
+    CallOffAFriendsGame, Depends(get_call_off_a_friends_game)
+]
+

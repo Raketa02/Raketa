@@ -25,6 +25,11 @@ and no row of version 2 ever named a court without its kind.
 club's cancel a move took the place of (``reason``) and the court it left
 (``moved_from``). Defaulted, so the version stays and a move recorded before
 reads as the club's own — the way ``notifications.notice_given`` grows.
+
+**A friends game's five names are version 1** (#751; ``docs/adr/0202`` §5):
+``bookings.booked_by_a_friend`` — the Booking's second birth, court kind and
+all — and its invited seats' ``…invited_seat_accepted``, ``…invited_seat_declined``
+and ``…invited_seat_ran_out``, and ``bookings.called_off_by_the_sender``.
 """
 
 from __future__ import annotations
@@ -35,12 +40,17 @@ from app.modules.bookings.application.handlers import (
     LogNewBookingsSummary,
 )
 from app.modules.bookings.domain.events import (
+    BookedByAFriend,
     BookingConfirmed,
     CalledOffAtCutOff,
+    CalledOffBySender,
     CancelledByClub,
     CardFixed,
     CardToFix,
     CourtMoved,
+    InvitedSeatAccepted,
+    InvitedSeatDeclined,
+    InvitedSeatRanOut,
     KeptSeatRanOut,
     NewBookingsSummarised,
     PlayerCheckedIn,
@@ -64,6 +74,11 @@ _EVENTS = (
     (CardFixed, "bookings.card_fixed"),
     (SeatKept, "bookings.seat_kept"),
     (KeptSeatRanOut, "bookings.kept_seat_ran_out"),
+    (BookedByAFriend, "bookings.booked_by_a_friend"),
+    (InvitedSeatAccepted, "bookings.invited_seat_accepted"),
+    (InvitedSeatDeclined, "bookings.invited_seat_declined"),
+    (InvitedSeatRanOut, "bookings.invited_seat_ran_out"),
+    (CalledOffBySender, "bookings.called_off_by_the_sender"),
 )
 
 
@@ -95,4 +110,9 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(CardFixed, LogBookingEvent())
     dispatcher.subscribe(SeatKept, LogBookingEvent())
     dispatcher.subscribe(KeptSeatRanOut, LogBookingEvent())
+    dispatcher.subscribe(BookedByAFriend, LogBookingEvent())
+    dispatcher.subscribe(InvitedSeatAccepted, LogBookingEvent())
+    dispatcher.subscribe(InvitedSeatDeclined, LogBookingEvent())
+    dispatcher.subscribe(InvitedSeatRanOut, LogBookingEvent())
+    dispatcher.subscribe(CalledOffBySender, LogBookingEvent())
     dispatcher.subscribe(NewBookingsSummarised, LogNewBookingsSummary())

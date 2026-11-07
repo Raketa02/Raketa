@@ -14,6 +14,11 @@ of two things happens to it:
   provider from the outbox, with the real fee it kept. A game whose seat opened
   after the cut-off is full at it, and goes ahead short: its leaver's share is
   taken with everybody's.
+- **A covered friends game is never called off** (#751; ``docs/adr/0202``
+  §6): an invited seat is no open seat. Each seat's own held share is taken,
+  and **a cover is taken for each seat whose own player hasn't paid and let go
+  otherwise** — decided here and nowhere before, then taken with the shares. A
+  game sent after its cut-off has its covers decided once its invitations end.
 
 **Correctness depends on it**, as time to pay's does: every read says
 *called off*, and *paid*, from the cut-off on (``BookedGame.called_off_reason``,
@@ -37,10 +42,12 @@ from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant
 from app.modules.proposals.domain.ports import (
     BookedGameChanges,
+    FriendsGameBookings,
     HeldShares,
     PlayerBookings,
     ProposalRepository,
     RefundReason,
+    CoversAtTheCutOff,
     SeatRefunds,
     UndecidedCharges,
 )
@@ -70,9 +77,13 @@ class TheCutOff:
         refunds: SeatRefunds,
         held: HeldShares,
         undecided: UndecidedCharges,
+        friends_games: FriendsGameBookings,
+        covers: CoversAtTheCutOff,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
+        self._friends_games = friends_games
+        self._covers = covers
         self._proposals = proposals
         self._bookings = bookings
         self._games = games
@@ -139,10 +150,17 @@ class TheCutOff:
         return True
 
     async def _take(self, booking_id: UUID, *, now: Instant) -> bool:
-        await self._proposals.load_for_update(booking_id)
+        # A fill's game locks its proposal's row; a friends game, which has no
+        # proposal, its own (#751).
+        if await self._proposals.load_for_update(booking_id) is None:
+            await self._friends_games.locked(booking_id)
         game = await self._bookings.find(booking_id)
         # A game short at its cut-off is the call-off's, whichever process
         # records it; one the club cancelled let its holds go.
         if game is None or game.called_off_reason(now) is not None:
             return False
+        if game.covers_due_at(now):
+            # Each cover decided here, never before: let go for a seat its own
+            # player paid, taken below for every other.
+            await self._covers.settle(booking_id, at=now)
         return await self._held.take(booking_id, at=now) > 0

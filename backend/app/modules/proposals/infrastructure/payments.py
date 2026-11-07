@@ -39,6 +39,11 @@ from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.bookings.domain.ports import BookingDirectory
+from app.modules.payments.application.covers import (
+    CourtToHold,
+    HoldTheCourt,
+    SettleTheCovers,
+)
 from app.modules.payments.application.refunds import (
     GiveTheSharesBack,
     TellTheLateLeaver,
@@ -66,7 +71,9 @@ from app.modules.payments.domain.ports import (
     PaymentMethodRepository,
     SeatChargeRepository,
 )
+from app.modules.payments.domain.errors import SeatChargeNotFound
 from app.modules.payments.domain.seat_charge import PAID, SeatChargeStatus
+from app.modules.proposals.domain.errors import BookingNotFound
 from app.modules.proposals.domain.club_bookings import (
     ClubStatus,
     Takings,
@@ -74,7 +81,7 @@ from app.modules.proposals.domain.club_bookings import (
     known_sum,
 )
 from app.modules.proposals.domain.home import BookingStage, ClubCancelReason
-from app.modules.proposals.domain.home import LateRefund
+from app.modules.proposals.domain.home import LateRefund, PayMode
 from app.modules.proposals.domain.ports import (
     GameToCharge,
     Holding,
@@ -84,6 +91,8 @@ from app.modules.proposals.domain.ports import (
     RefundReason,
     RefusedPayment,
     SeatsCharged,
+    SendersCourt,
+    SendersCourtHeld,
 )
 
 
@@ -131,6 +140,7 @@ class PaymentsSeatCharges:
                 paying_until=game.paying_until,
                 booked_on_a_payment=game.booked_on_a_payment,
                 filled_by=game.filled_by,
+                accepting=game.accepting,
             ),
             players,
             attempt=attempt,
@@ -160,6 +170,72 @@ class PaymentsSeatCharges:
 
 
 @final
+class PaymentsSendersCourts:
+    """``SendersCourts`` over the Payments context's own step (#751): the
+    whole court on the sender's card at send — and, the send refused, the same
+    answers recorded as nothing booked."""
+
+    def __init__(self, hold: HoldTheCourt) -> None:
+        self._hold = hold
+
+    async def hold(
+        self, court: SendersCourt, sender: UUID, *, at: Instant
+    ) -> SendersCourtHeld:
+        return await self._held(court, sender, at=at, books=True)
+
+    async def refused(
+        self, court: SendersCourt, sender: UUID, *, at: Instant
+    ) -> SendersCourtHeld:
+        return await self._held(court, sender, at=at, books=False)
+
+    async def _held(
+        self, court: SendersCourt, sender: UUID, *, at: Instant, books: bool
+    ) -> SendersCourtHeld:
+        try:
+            held = await self._hold.execute(
+                CourtToHold(
+                    game_id=court.booking_id,
+                    club_id=court.club_id,
+                    sport=court.sport,
+                    starts_at=court.start,
+                    share_grosze=court.share_grosze,
+                    court_name=court.court_name,
+                    seats=court.seats,
+                    whole_court=court.pay_mode is PayMode.WHOLE_COURT,
+                    free_to_leave_until=court.free_to_leave_until,
+                    covers_until=court.covers_until,
+                ),
+                sender,
+                at=at,
+                books=books,
+            )
+        except SeatChargeNotFound as theirs:
+            # A booking id another sender's send was refused under.
+            raise BookingNotFound() from theirs
+        return SendersCourtHeld(
+            refused=tuple(
+                RefusedPayment(
+                    seat_charge_id=seat.charge_id,
+                    refusal=PaymentRefusal(seat.reason.value),
+                )
+                for seat in held.refused
+            )
+        )
+
+
+@final
+class PaymentsCoversAtTheCutOff:
+    """``CoversAtTheCutOff`` over the Payments context's own step (#751)."""
+
+    def __init__(self, settle: SettleTheCovers) -> None:
+        self._settle = settle
+
+    async def settle(self, booking_id: UUID, *, at: Instant) -> int:
+        # A friends game's charges are made for its own id.
+        return await self._settle.execute(booking_id, at=at)
+
+
+@final
 class PaymentsUndecidedCharges:
     def __init__(self, release: ReleaseCharges) -> None:
         self._release = release
@@ -186,6 +262,9 @@ _REASONS = {
     RefundReason.CANCELLED_BY_THE_CLUB: PaymentsRefundReason.CANCELLED_BY_THE_CLUB,
     RefundReason.CANCELLED_AFTER_YOU_LEFT: (
         PaymentsRefundReason.CANCELLED_AFTER_YOU_LEFT
+    ),
+    RefundReason.CALLED_OFF_BY_THE_SENDER: (
+        PaymentsRefundReason.CALLED_OFF_BY_THE_SENDER
     ),
 }
 

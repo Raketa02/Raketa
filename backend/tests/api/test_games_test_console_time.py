@@ -63,6 +63,7 @@ GAMES_JOBS = (
     "proposer",
     "proposal-expiry",
     "time-to-pay",
+    "invitations",
     "holding",
     "cut-off",
     "how-did-it-go",

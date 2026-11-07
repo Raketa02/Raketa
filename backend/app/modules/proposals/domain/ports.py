@@ -57,6 +57,7 @@ from app.modules.proposals.domain.home import (
     GameResult,
     LateRefund,
     OpenSeat,
+    PayMode,
 )
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.post import LevelRange
@@ -642,6 +643,80 @@ class GameBookings(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class FriendsGame:
+    """A friends game being sent (#751): what its booking is born with."""
+
+    booking_id: UUID
+    pool_id: UUID
+    club_id: UUID
+    sport: Sport
+    kind: SearchMode
+    start: Instant
+    share_grosze: int
+    sender: UUID
+    first_side: tuple[UUID, ...]
+    second_side: tuple[UUID, ...]
+    pay_mode: PayMode
+    court: BookableCourt
+
+
+@runtime_checkable
+class FriendsGameBookings(Protocol):
+    """**A demand of the Bookings context**: a friends game booked the moment
+    it is sent, its invited seats answered, and its sender calling it off
+    (#751; ``docs/adr/0202`` §5–§6). No proposal stands for it, so every act
+    locks the booking's own row first (``locked``)."""
+
+    async def book(self, game: FriendsGame, *, at: Instant) -> UUID:
+        """Book it on its court — the sender In, every other seat invited —
+        and open its Game with the sender alone on it, in the caller's
+        transaction; answers the Game. ``CourtJustTaken`` when another game
+        claimed the court a moment before."""
+        ...
+
+    async def locked(self, booking_id: UUID) -> BookedGame | None:
+        """The booked game, its row locked until the caller's transaction
+        ends — ``None`` for no such booking."""
+        ...
+
+    async def accept(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> BookedGame:
+        """The friend is In, and seated on the Game. In the caller's
+        transaction."""
+        ...
+
+    async def decline(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> bool:
+        """*Not this time*: whether anything was recorded."""
+        ...
+
+    async def run_out(self, booking_id: UUID, *, at: Instant) -> tuple[UUID, ...]:
+        """Every invitation whose time is up, run out: answers whose."""
+        ...
+
+    async def call_off(self, booking_id: UUID, *, at: Instant) -> BookedGame:
+        """The sender calls it off: the court the club's again, its Game and
+        room ended. In the caller's transaction."""
+        ...
+
+    async def invitations_of(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        """Every friends game on which this player's invitation still waits
+        at ``now``, the soonest to end first."""
+        ...
+
+    async def invitations_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every friends game with an invitation whose time is up by ``now``
+        and not yet run out — candidates, the earliest first."""
+        ...
+
+    async def waiting_of(self, sender_id: UUID, *, now: Instant) -> int:
+        """How many of this sender's friends games still wait for an answer
+        at ``now``."""
+        ...
+
+
 @runtime_checkable
 class BookedGameChanges(Protocol):
     """**A demand of the Bookings context**: what happens to a booked game
@@ -818,6 +893,11 @@ class GameToCharge:
     #: whose payment booked it (``filled_by``), who sees *It's a game!*.
     booked_on_a_payment: bool = False
     filled_by: UUID | None = None
+    #: An invited friend accepting a friends game with *Split the cost*
+    #: (#751): one seat, keyed apart from a fill's and a rescue's, the friend
+    #: told *You're in* — and a refusal asks them to confirm by ``pay_by``,
+    #: their invitation's end, to take the seat.
+    accepting: bool = False
 
 
 @final
@@ -879,6 +959,9 @@ class RefundReason(StrEnum):
     #: The club cancelled a booked game the player had left, their seat still
     #: paid (#623, Q108): in full, in a leaver's words, no new game owed.
     CANCELLED_AFTER_YOU_LEFT = "CANCELLED_AFTER_YOU_LEFT"
+    #: A friends game its sender called off before the cut-off (#751): every
+    #: hold and cover let go.
+    CALLED_OFF_BY_THE_SENDER = "CALLED_OFF_BY_THE_SENDER"
 
 
 @runtime_checkable
@@ -914,6 +997,72 @@ class SeatRefunds(Protocol):
         and they are emailed what will if somebody takes their seat — the share
         less exactly the fee kept on their payment, or no figure while that fee
         is not yet known (#641) — in the caller's transaction."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SendersCourt:
+    """A friends game's court on its sender's card, as the money takes it
+    (#751): every seat — the sender's share and a cover for each other."""
+
+    booking_id: UUID
+    club_id: UUID
+    sport: Sport
+    start: Instant
+    share_grosze: int
+    court_name: str
+    seats: int
+    pay_mode: PayMode
+    #: The club's cut-off while it is ahead, or ``None`` for a game sent after
+    #: it — whose covers are decided when its invitations end, ``covers_until``.
+    free_to_leave_until: Instant | None
+    covers_until: Instant | None = None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SendersCourtHeld:
+    """Every seat held — ``refused`` empty — or nothing booked, and
+    ``refused`` names each of the sender's payments to confirm."""
+
+    refused: tuple[RefusedPayment, ...]
+
+
+@runtime_checkable
+class SendersCourts(Protocol):
+    """**A demand of the Payments context**: the **Cover** (#751;
+    ``docs/adr/0202`` §6) — a friends game's whole court on its sender's card,
+    all or nothing, with them present."""
+
+    async def hold(
+        self, court: SendersCourt, sender: UUID, *, at: Instant
+    ) -> SendersCourtHeld:
+        """Hold the sender's share and a cover per other seat — asked of the
+        provider now, recorded in the caller's transaction with the most they
+        agreed to."""
+        ...
+
+    async def refused(
+        self, court: SendersCourt, sender: UUID, *, at: Instant
+    ) -> SendersCourtHeld:
+        """A refused send's holds, recorded as nothing booked: the same holds
+        ``hold`` asked for — the same keys, so the provider answers the same —
+        each one made let go and each refusal recorded for the sender to
+        confirm, in the caller's transaction."""
+        ...
+
+
+@runtime_checkable
+class CoversAtTheCutOff(Protocol):
+    """**A demand of the Payments context**: at a friends game's cut-off,
+    each cover taken for a seat without its own payment or let go (#751, call
+    7). Asks nothing of the provider: the money follows the commit."""
+
+    async def settle(self, booking_id: UUID, *, at: Instant) -> int:
+        """Let go one cover for each seat its own player paid; the rest are
+        taken with the shares. Answers how many were let go. In the caller's
+        transaction."""
         ...
 
 

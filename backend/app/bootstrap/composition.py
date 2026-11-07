@@ -146,6 +146,15 @@ from app.modules.proposals.application.friends_card import (
     ReadFriendsCourts,
     ReadFriendsLineUp,
 )
+from app.modules.proposals.application.friends_games import (
+    FriendsGameConfirmation,
+    AcceptAFriendsGame,
+    Accepting,
+    DeclineAFriendsGame,
+    CallOffAFriendsGame,
+    RunOutTheInvitations,
+    SendAFriendsGame,
+)
 from app.modules.proposals.application.posting import (
     PostAGame,
     ReadPosting,
@@ -159,6 +168,9 @@ from app.modules.proposals.application.propose_games import (
 from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
+    CoversAtTheCutOff,
+    FriendsGameBookings,
+    SendersCourts,
     FriendRequestsOnHome,
     ReaderRelations,
     BookedGameChanges,
@@ -231,6 +243,7 @@ from app.modules.proposals.infrastructure.bookings import (
     BookingsBookedGames,
     BookingsBookedGameChanges,
     BookingsClubBookings,
+    BookingsFriendsGameBookings,
     BookingsGameBookings,
     BookingsGroupBornGames,
     BookingsPlayerBookings,
@@ -243,6 +256,7 @@ from app.modules.bookings.application.at_the_club import (
     MoveTheBooking,
 )
 from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
+from app.modules.bookings.application.friends_games import FriendsGames
 from app.modules.bookings.application.leaving import (
     CallOffAtTheCutOff,
     LeaveTheBooking,
@@ -301,6 +315,7 @@ from app.modules.payments.application.refunds import (
     GiveTheSharesBack,
     TellTheLateLeaver,
 )
+from app.modules.payments.application.covers import HoldTheCourt, SettleTheCovers
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
@@ -354,6 +369,8 @@ from app.modules.proposals.infrastructure.payments import (
     PaymentsSeatCharges,
     PaymentsSeatRefunds,
     PaymentsUndecidedCharges,
+    PaymentsCoversAtTheCutOff,
+    PaymentsSendersCourts,
 )
 from app.modules.proposals.infrastructure.sqlalchemy_proposal_directory import (
     SqlAlchemyProposalDirectory,
@@ -2104,6 +2121,7 @@ def build_the_holding(
             session, provider=provider, settings=settings, runtime=runtime
         ),
         cards=build_cards_to_fix(session, runtime=runtime),
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2129,6 +2147,8 @@ def build_the_cut_off(
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
         held=build_held_shares(session, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        covers=build_covers_at_the_cut_off(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2435,6 +2455,9 @@ def build_confirm_payment(
         bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         cards=build_cards_to_fix(session, runtime=runtime),
+        friends=build_friends_game_confirmation(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2733,6 +2756,247 @@ def build_read_friends_courts(
 
 
 # --------------------------------------------------------------------------
+# A friends game (docs/adr/0202 §5–§6; #751)
+# --------------------------------------------------------------------------
+
+
+def build_friends_game_bookings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FriendsGameBookings:
+    """A friends game booked at send, its invited seats answered, the sender's
+    call-off — over the Bookings context's own use cases, every act after the
+    booking's row is locked."""
+    bookings = build_booking_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return BookingsFriendsGameBookings(
+        games=FriendsGames(
+            bookings=bookings,
+            opening=build_game_opening(session, runtime=runtime),
+            games=build_game_changes(session, runtime=runtime),
+        ),
+        bookings=bookings,
+        directory=build_booking_directory(session),
+    )
+
+
+def build_senders_courts(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> SendersCourts:
+    """The whole court on a friends game's sender's card, all or nothing, over
+    ``provider`` — the sender's share and a cover per other seat — and the
+    most they agreed to recorded with their terms (#751)."""
+    return PaymentsSendersCourts(
+        HoldTheCourt(
+            methods=build_payment_method_repository(
+                session,
+                event_store=build_domain_event_store(session, runtime=runtime),
+                events=build_event_publisher(session, runtime=runtime),
+            ),
+            charges=_seat_charge_repository(session, runtime),
+            sellers=build_sellers(session, runtime=runtime),
+            payers=build_payers(session),
+            provider=provider,
+            mail=build_mail_queue(session),
+            app_link=f"{settings.APP_SCHEME}://",
+        )
+    )
+
+
+def build_covers_at_the_cut_off(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> CoversAtTheCutOff:
+    """Each cover taken or let go at a friends game's cut-off (#751) — asks
+    nothing of the provider."""
+    return PaymentsCoversAtTheCutOff(
+        SettleTheCovers(charges=_seat_charge_repository(session, runtime))
+    )
+
+
+def _the_fill_of_a_friends_game(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None,
+) -> Fill:
+    """The fill's own *other yeses*, for a friends game's sender and each
+    friend who accepts: every other yes at the hour withdrawn, a full week
+    paused."""
+    return build_fill(
+        session,
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        provider=provider,
+        settings=settings,
+        runtime=runtime,
+    )
+
+
+def build_send_a_friends_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> SendAFriendsGame:
+    """*Send game and pay* (#751): the line-up read as the card reads it, the
+    court held on the sender's card over ``provider``, then booked. ``booked``
+    as the card's."""
+    return SendAFriendsGame(
+        line_up=build_read_friends_line_up(session, booked=booked, runtime=runtime),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        terms=build_club_terms(session, runtime=runtime),
+        methods=build_saved_methods(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        courts=build_senders_courts(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        fill=_the_fill_of_a_friends_game(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_accepting(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> Accepting:
+    """An invited friend's accept itself (#751) — their own share held over
+    ``provider`` with *Split the cost* — on a game its caller locked."""
+    return Accepting(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        members=build_read_members(session, booked=booked, runtime=runtime),
+        methods=build_saved_methods(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        charges=build_seat_charges(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        fill=_the_fill_of_a_friends_game(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+    )
+
+
+def build_accept_a_friends_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> AcceptAFriendsGame:
+    """*Accept and pay 25 zł* on a FRIENDS GAME card (#751)."""
+    return AcceptAFriendsGame(
+        accepting=build_accepting(
+            session,
+            provider=provider,
+            settings=settings,
+            booked=booked,
+            runtime=runtime,
+        ),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_decline_a_friends_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> DeclineAFriendsGame:
+    """*Not this time* on a FRIENDS GAME card (#751)."""
+    return DeclineAFriendsGame(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_friends_game_confirmation(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> FriendsGameConfirmation:
+    """A payment confirmed in the app on a friends game (#751) — the send's,
+    or an accept's again — for ``ConfirmPayment``."""
+    return FriendsGameConfirmation(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        accepting=build_accepting(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        cards=build_cards_to_fix(session, runtime=runtime),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+    )
+
+
+def build_call_off_a_friends_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> CallOffAFriendsGame:
+    """The sender's *Call it off*, before the cut-off (#751): every hold and
+    cover let go."""
+    return CallOffAFriendsGame(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_run_out_the_invitations(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> RunOutTheInvitations:
+    """One run of the invitations job over this session — the job's, the
+    console's and a test's (#751)."""
+    return RunOutTheInvitations(
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+# --------------------------------------------------------------------------
 # Bookings (docs/adr/0189 §5; #541)
 # --------------------------------------------------------------------------
 
@@ -2858,6 +3122,7 @@ def build_read_home(
         friend_requests=build_friend_requests_on_home(
             session, settings=settings, clock=clock, runtime=runtime
         ),
+        friends_games=build_friends_game_bookings(session, runtime=runtime),
         clock=clock,
     )
 

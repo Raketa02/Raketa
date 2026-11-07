@@ -28,6 +28,7 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant
+from app.modules.bookings.domain.booking import Booking
 from app.modules.bookings.domain.ports import BookingDirectory, BookingRepository
 from app.modules.games.domain.attendance import NOT_HERE_STATES, AttendanceState
 from app.modules.games.domain.game import Game
@@ -74,7 +75,10 @@ class BookedAndProposedGames:
     async def about(self, game_id: UUID, *, at: Instant) -> GameBrief | None:
         proposal = await self._proposals.load(game_id)
         if proposal is None:
-            return None
+            # No proposal stands for a friends game (#751): its booking is
+            # the whole of it.
+            sent = await self._bookings.load(game_id)
+            return None if sent is None else _a_friends_game(sent, at=at)
         booking = await self._bookings.load(game_id)
         answered = {
             *proposal.yeses,
@@ -153,6 +157,55 @@ class BookedAndProposedGames:
             waiting_for_a_payment=filling and proposal.waiting_for_a_payment,
             booked_on_a_payment=proposal.booked_on_a_payment,
         )
+
+
+def _a_friends_game(booking: Booking, *, at: Instant) -> GameBrief:
+    """A friends game as a notice tells it (#751): booked at send, so never
+    filling, its people the ones In and the friends still invited."""
+
+    return GameBrief(
+        game_id=booking.booking_id,
+        pool_id=booking.pool_id,
+        sport=booking.sport,
+        game_kind=booking.kind.value,
+        club_id=booking.club_id,
+        starts_at=booking.start,
+        share_grosze=booking.share_grosze,
+        made_at=booking.booked_at,
+        posted_by=None,
+        filling=False,
+        open_seats=booking.open_seats,
+        in_=(),
+        withdrawn=(),
+        undecided=(),
+        named=(),
+        booked=booking.is_booked,
+        seated=booking.players,
+        seats_taken={
+            left.player_id: left.rescued_by
+            for left in booking.departures
+            if left.rescued_by is not None
+        },
+        cancel_reason=None
+        if booking.cancel_reason is None
+        else booking.cancel_reason.value,
+        filled_by=None,
+        book_by=booking.start,
+        fell_back_at=None,
+        left_it_short=tuple(
+            left.player_id
+            for left in booking.departures
+            if left.is_open and left.at < booking.cut_off
+        ),
+        paying={**booking.fixing_until, **booking.kept_until},
+        fixing=frozenset(booking.cards_to_fix)
+        | frozenset(
+            player for player, kept in booking.kept.items() if kept.to_fix_the_card
+        ),
+        sender=booking.sender,
+        invited=tuple(seat.player_id for seat in booking.waiting_at(at)),
+        whole=booking.is_whole,
+    )
 
 
 @final

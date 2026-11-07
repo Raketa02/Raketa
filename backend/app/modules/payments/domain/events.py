@@ -112,6 +112,22 @@ class PaymentMethodUpdated:
     occurred_at: datetime
 
 
+@dataclass(frozen=True)
+class MaximumAgreed:
+    """**The most a friends game's sender agreed to pay**, recorded with their
+    terms acceptance (#751; ``docs/adr/0202`` §6): the sender's own share and a
+    cover for every other seat — the whole court, *We hold 100 zł on your card
+    until Fri 10:00* — for the game ``booking_id``, under the terms they
+    accepted, ``terms_version``. The Payment Services Act's art. 49b allows a
+    hold only for an amount its payer agreed to; this is that consent."""
+
+    player_id: UUID
+    booking_id: UUID
+    amount_grosze: int
+    terms_version: str
+    occurred_at: datetime
+
+
 # --------------------------------------------------------------------------- #
 # The Seat charge stream: one per payment for one player's share of one game
 # --------------------------------------------------------------------------- #
@@ -158,6 +174,11 @@ class SeatChargeAuthorised:
     #: say, and on every hold recorded before it was asked: a default rather
     #: than a version 2, since a row without it is such a hold.
     last_moment: datetime | None = None
+    #: **A Cover** (#751; ``docs/adr/0202`` §6): a friends game's sender's hold
+    #: for a seat that isn't theirs — ``player_id`` is the payer, not the
+    #: seat's player. ``False`` on every share, and on every row recorded
+    #: before: a default, since a row without it is a share.
+    cover: bool = False
 
 
 @dataclass(frozen=True)
@@ -182,6 +203,9 @@ class SeatChargeFailed:
     reason: str
     decline_code: str | None
     occurred_at: datetime
+    #: A cover the sender's card refused at send (#751), as on
+    #: ``SeatChargeAuthorised``.
+    cover: bool = False
 
 
 @dataclass(frozen=True)

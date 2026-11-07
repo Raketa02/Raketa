@@ -30,6 +30,8 @@ from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.proposals.application.commands import (
+    FriendsGameCommand,
+    SendAFriendsGameCommand,
     AnswerProposalCommand,
     ConfirmPaymentCommand,
     FriendsLineUpCommand,
@@ -49,6 +51,10 @@ from app.modules.proposals.application.commands import (
 from app.modules.proposals.domain.overlap import DayRange
 from app.modules.proposals.domain.post import Who
 from app.modules.proposals.presentation.dependencies import (
+    AcceptAFriendsGameDep,
+    DeclineAFriendsGameDep,
+    CallOffAFriendsGameDep,
+    SendAFriendsGameDep,
     ConfirmPaymentDep,
     DealThePoolNowDep,
     SayNoToARescueDep,
@@ -74,6 +80,9 @@ from app.modules.proposals.presentation.dependencies import (
     WithdrawYesDep,
 )
 from app.modules.proposals.presentation.schemas import (
+    FriendsGameAnswerResponse,
+    FriendsGameSentResponse,
+    SendFriendsGameRequest,
     BookingDetailsResponse,
     DeckCountsResponse,
     DepartureResponse,
@@ -1211,3 +1220,210 @@ async def read_friends_courts(
         )
     )
     return FriendsCourtsResponse.from_courts(courts)
+
+
+# --------------------------------------------------------------------------- #
+# A friends game (#751; docs/adr/0202 §5–§6)
+# --------------------------------------------------------------------------- #
+
+
+@pools_router.post(
+    "/{pool_id}/friends-games",
+    response_model=FriendsGameSentResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        **_FRIENDS_RESPONSES,
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                _FRIENDS_RESPONSES[status.HTTP_400_BAD_REQUEST]["description"]
+                + " `sides_not_of_the_line_up` — `partner_id` is not one of the "
+                "friends seated, or the sport is singles."
+            ),
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                _FRIENDS_RESPONSES[status.HTTP_404_NOT_FOUND]["description"]
+                + " `booking_not_found` — `booking_id` is a game somebody else "
+                "sent."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                _LINE_UP_REFUSED
+                + " In the send sheet's order: `payment_method_required` — save a "
+                "method first; `friends_games_waiting` — 2 friends games already "
+                "wait for answers (`details.cap`); `you_play_then` — the sender "
+                "has a game at that hour; `games_per_week_booked` — the sender's "
+                "week is full (`details.games_per_week`, `details.week`); "
+                "`court_just_taken` — another game took the court a moment ago: "
+                "nothing was charged, read the card again; `court_hour_not_for_"
+                "sale` — the club no longer sells it."
+            ),
+        },
+    },
+    summary="Send a friends game, and book its court",
+    description=(
+        "*Send game and pay* on the send sheet: **the court is booked at once** "
+        "(`docs/adr/0202` §5). The line-up is read exactly as the friends card "
+        "reads it; then the sender's own share and **a cover for every other "
+        "seat** — the whole court — are held on their card **all or nothing, "
+        "with them present**, and the most they agreed to is recorded with "
+        "their terms. Held until the club's cut-off (or, far ahead, checked "
+        "and held four days before it). **Every hold in**, the booking is born "
+        "with the sender In and every friend's seat held for them for 24 hours, "
+        "never past the cut-off; the chat opens; the sender's other yeses at "
+        "that hour are withdrawn; each friend is told. **A refused card books "
+        "nothing**: `your_payments` names each payment to confirm in the app, "
+        "then send again with `booking_id`. A retried send that booked answers "
+        "what it booked. At the cut-off each seat's own held share is taken, "
+        "and a cover only for a seat without its own payment."
+    ),
+)
+async def send_a_friends_game(
+    pool_id: UUID,
+    body: SendFriendsGameRequest,
+    user: CurrentUserDep,
+    send: SendAFriendsGameDep,
+) -> FriendsGameSentResponse:
+    sent = await send.execute(
+        SendAFriendsGameCommand(
+            line_up=FriendsLineUpCommand(
+                player_id=user.id,
+                pool_id=pool_id,
+                sport=body.sport,
+                friend_ids=body.friend_ids,
+            ),
+            kind=body.kind,
+            court_id=body.court_id,
+            starts_at=instant(body.starts_at),
+            pay_mode=body.pay_mode,
+            partner_id=body.partner_id,
+            booking_id=body.booking_id,
+        )
+    )
+    return FriendsGameSentResponse.of(sent)
+
+
+_INVITATION_NOT_FOUND = {
+    "model": ErrorResponse,
+    "description": (
+        "`booking_not_found` — no such friends game **for this player**: it does "
+        "not exist, or they were never invited to it. One code for both."
+    ),
+}
+
+_INVITATION_GONE = (
+    "`invitation_not_waiting` — they answered it already, or their 24 hours "
+    "ended. `booking_is_called_off` — the game is off (`details.reason`). "
+    "`game_has_started`. Nothing was recorded."
+)
+
+
+@bookings_router.post(
+    "/{booking_id}/invitation/acceptance",
+    response_model=FriendsGameAnswerResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: _INVITATION_NOT_FOUND,
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                _INVITATION_GONE
+                + " `you_play_then` — *You already have a game at 10:00.* "
+                "`games_per_week_booked` — *Your week is full: 3 games, the most "
+                "you set in Games & money.* (`details.games_per_week`). "
+                "`payment_method_required` — with *Split the cost*, save a method "
+                "first."
+            ),
+        },
+    },
+    summary="Accept a friends game",
+    description=(
+        "*Accept and pay 25 zł* — or, with *Whole court*, *Accept* — on a "
+        "FRIENDS GAME card. **With *Split the cost*** the reader's own share is "
+        "held on their card until the cut-off, with them present: a bank "
+        "confirmation is completed in the app (`your_payment`, then `POST "
+        "/seat-charges/{id}/confirmation`, which accepts), and a refused card "
+        "leaves the seat theirs to retry until their invitation ends. **With "
+        "*Whole court*** nothing is held. Accepted, they are In and in the "
+        "chat, and their other yeses at that hour are withdrawn; the card moves "
+        "to Your games. When the last seat is taken, all four are told *It's a "
+        "game!*. A second accept answers the same."
+    ),
+)
+async def accept_a_friends_game(
+    booking_id: UUID, user: CurrentUserDep, accept: AcceptAFriendsGameDep
+) -> FriendsGameAnswerResponse:
+    accepted = await accept.execute(
+        FriendsGameCommand(player_id=user.id, booking_id=booking_id)
+    )
+    return FriendsGameAnswerResponse.of(accepted)
+
+
+@bookings_router.post(
+    "/{booking_id}/invitation/decline",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_404_NOT_FOUND: _INVITATION_NOT_FOUND,
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": _INVITATION_GONE,
+        },
+    },
+    summary="Decline a friends game",
+    description=(
+        "*Not this time* on a FRIENDS GAME card: the card leaves Home, the seat "
+        "is empty, and the sender is told *Ania can't make it*. A second tap "
+        "records nothing."
+    ),
+)
+async def decline_a_friends_game(
+    booking_id: UUID, user: CurrentUserDep, decline: DeclineAFriendsGameDep
+) -> Response:
+    await decline.execute(
+        FriendsGameCommand(player_id=user.id, booking_id=booking_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@bookings_router.post(
+    "/{booking_id}/call-off",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such friends game **sent by this "
+                "player**. One code for both."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`cut_off_has_passed` — the club's cut-off came: it can no longer "
+                "be called off for free. `booking_is_called_off` — it is off "
+                "already. `game_has_started`. Nothing was recorded."
+            ),
+        },
+    },
+    summary="Call a friends game off",
+    description=(
+        "The sender's *Call it off for everyone*, before the club's cut-off: "
+        "every hold and cover is let go — nobody pays — the court is the club's "
+        "again, the chat closes, and everybody In and every friend still "
+        "invited is told *Tomek called off Saturday 10:00 · Nobody paid*."
+    ),
+)
+async def call_off_a_friends_game(
+    booking_id: UUID, user: CurrentUserDep, call_off: CallOffAFriendsGameDep
+) -> Response:
+    await call_off.execute(
+        FriendsGameCommand(player_id=user.id, booking_id=booking_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

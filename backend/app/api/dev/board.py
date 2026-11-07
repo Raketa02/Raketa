@@ -56,6 +56,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import ClockDep, DbSession, UserRepositoryDep
 from app.api.dev.accounts import seed_accounts_only
 from app.api.dev.dependencies import (
+    ReaderRelationsDep,
     BookingRepositoryDep,
     ClubTermsDep,
     DeckPeopleDep,
@@ -77,12 +78,14 @@ from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, hours, instant, shifted
 from app.modules.bookings.domain.booking import (
+    Answer,
     Booking,
     BookingState,
     CalledOff,
     CancelReason,
 )
 from app.modules.bookings.domain.ports import BookingRepository
+from app.modules.bookings.infrastructure.booking_models import BookingORM
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, day_close_after, local_day
 from app.modules.games.domain.attendance import AttendanceState
 from app.modules.games.domain.game import Game
@@ -437,6 +440,31 @@ class RowRescue(BaseModel):
     said_no: bool = Field(description="They said no to its card.")
 
 
+class RowFriendsSeat(BaseModel):
+    person: PersonRef
+    #: ``IN``, ``WAITING``, ``DECLINED`` or ``RAN_OUT`` — the last read off
+    #: the clock too.
+    state: str
+
+
+class RowFriendsGame(BaseModel):
+    """A friends game in the group they sent, are In on or are invited to —
+    what *Accept*, *Not this time* and *Call it off* act on (#751)."""
+
+    booking_id: UUID
+    starts_at: datetime
+    kind: SearchMode
+    pay_mode: str = Field(description="`SPLIT_THE_COST` or `WHOLE_COURT`.")
+    sender: PersonRef
+    state: BookingState
+    seats: list[RowFriendsSeat] = Field(description="The sender's first.")
+    you_are_the_sender: bool
+    invited_until: datetime | None = Field(
+        description="Their own invitation's end, while it waits on them."
+    )
+    cut_off: datetime
+
+
 class CardOnFilePane(BaseModel):
     brand: str
     last_four: str
@@ -492,6 +520,20 @@ class PersonRow(BaseModel):
             "Every rescue in the group and sport with a seat to take now that "
             "they hold no seat on, soonest first."
         )
+    )
+    friends_games: list[RowFriendsGame] = Field(
+        default_factory=list,
+        description=(
+            "Every friends game in the group and sport they sent, are In on or "
+            "are invited to, soonest first (#751)."
+        ),
+    )
+    friends: list[PersonRef] = Field(
+        default_factory=list,
+        description=(
+            "Their friends among the board's rows — whom *Send a friends game* "
+            "seats beside them, in the board's order (#751)."
+        ),
     )
 
 
@@ -898,6 +940,8 @@ async def read_board(
     provider: PaymentProviderDep,
     offers: RescueOffersDep,
     pools: PoolsDep,
+    bookings: BookingRepositoryDep,
+    relations: ReaderRelationsDep,
 ) -> BoardResponse:
     now = instant(clock.now())
     listing = await the_group(groups, group_id)
@@ -921,6 +965,20 @@ async def read_board(
         rows_of,
         folded.names,
     )
+    friends_games = [
+        booking
+        for booking_id in await _friends_games_in(db, group_id, sport=sport, now=now)
+        if (booking := await bookings.load(booking_id)) is not None
+    ]
+    named: dict[UUID, str] = {}
+    for player in rows_of:
+        nickname = drawn[player].nickname
+        if nickname is not None:
+            named[player] = nickname
+    friends_of: dict[UUID, list[UUID]] = {}
+    for player in rows_of:
+        theirs = set(await relations.friends_among(player, rows_of))
+        friends_of[player] = [friend for friend in rows_of if friend in theirs]
     return BoardResponse(
         group=_console_group(listing, seed, club, await the_protagonist(users)),
         sport=sport,
@@ -944,6 +1002,15 @@ async def read_board(
                 ],
                 booked=folded.booked_by(player),
                 rescues=rescues.get(player, []),
+                friends_games=[
+                    _friends_game(game, player, named, now=now)
+                    for game in friends_games
+                    if player in game.players or game.invitation_of(player) is not None
+                ],
+                friends=[
+                    PersonRef(player_id=friend, nickname=named.get(friend))
+                    for friend in friends_of[player]
+                ],
             )
             for player in rows_of
         ],
@@ -1120,6 +1187,63 @@ async def _games_in(
         .order_by(ProposalORM.start, ProposalORM.id)
     )
     return list(rows.scalars())
+
+
+async def _friends_games_in(
+    db: AsyncSession, pool_id: UUID, *, sport: Sport, now: Instant
+) -> Sequence[UUID]:
+    """Every friends game in the pool and sport whose hour began no earlier
+    than ``LOOK_BACK`` ago, soonest first (#751)."""
+
+    rows = await db.execute(
+        select(BookingORM.id)
+        .where(
+            BookingORM.pool_id == pool_id,
+            BookingORM.sport == sport.value,
+            BookingORM.sender_id.is_not(None),
+            BookingORM.start >= now - LOOK_BACK,
+        )
+        .order_by(BookingORM.start, BookingORM.id)
+    )
+    return list(rows.scalars())
+
+
+def _friends_game(
+    booking: Booking, reader: UUID, names: Mapping[UUID, str], *, now: Instant
+) -> RowFriendsGame:
+    assert booking.sender is not None and booking.pay_mode is not None
+
+    def ref(player: UUID) -> PersonRef:
+        return PersonRef(player_id=player, nickname=names.get(player))
+
+    def state_of(answer: Answer, until: Instant) -> str:
+        if answer is Answer.WAITING and now >= until:
+            return Answer.RAN_OUT.value
+        return "IN" if answer is Answer.ACCEPTED else answer.value
+
+    invited = booking.invitation_of(reader)
+    return RowFriendsGame(
+        booking_id=booking.booking_id,
+        starts_at=booking.start,
+        kind=booking.kind,
+        pay_mode=booking.pay_mode.value,
+        sender=ref(booking.sender),
+        state=booking.state,
+        seats=[
+            RowFriendsSeat(person=ref(booking.sender), state="IN"),
+            *(
+                RowFriendsSeat(
+                    person=ref(seat.player_id), state=state_of(seat.answer, seat.until)
+                )
+                for seat in booking.invited
+            ),
+        ],
+        you_are_the_sender=booking.sender == reader,
+        invited_until=invited.until
+        if invited is not None and invited.waiting_at(now) and booking.is_booked
+        else None,
+        cut_off=booking.cut_off,
+    )
 
 
 # --------------------------------------------------------------------------- #

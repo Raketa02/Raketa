@@ -28,6 +28,11 @@ or, a seat having opened meanwhile, leaves them In with their payment held.
 post they were never dealt — held to everything a yes is, and to who the post
 is for. Only a post: a pick is a stranger's to nobody but the people it names.
 
+**On a friends game it is the send or the accept again** (#751): a sender's
+payment confirmed before the court is booked is held for the next send, which
+takes it; an invited friend's is their accept, the share they confirmed taken
+rather than asked again.
+
 **Withdrawing is leaving, while a payment is awaited** (the mechanics §13): a
 yes taken back from a full game waiting for one payment lets the leaver's hold
 go, and the game is filling again with that seat open.
@@ -238,6 +243,16 @@ class JoinsARescue(Protocol):
     ) -> YesAnswer: ...
 
 
+class ConfirmsAFriendsGame(Protocol):
+    """A payment confirmed for a friends game (#751) — ``friends_games.py``'s
+    ``FriendsGameConfirmation``, declared here so the two modules do not import
+    each other. ``None`` for a game that is no friends game."""
+
+    async def confirmed(
+        self, game_id: UUID, player: UUID, *, confirmed: UUID, now: Instant
+    ) -> YesAnswer | None: ...
+
+
 @final
 class ConfirmPayment:
     """*I confirmed my payment in the app* — **the yes again** (the mechanics
@@ -271,9 +286,11 @@ class ConfirmPayment:
         bookings: PlayerBookings,
         games: BookedGameChanges,
         cards: CardsToFix,
+        friends: ConfirmsAFriendsGame,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
+        self._friends = friends
         self._proposals = proposals
         self._guards = guards
         self._fill = fill
@@ -297,6 +314,16 @@ class ConfirmPayment:
         game_id = await self._charges.confirmed(
             command.seat_charge_id, player_id=player_id, at=now
         )
+        if await self._proposals.load_for_update(game_id) is None:
+            # No proposal stands for a friends game (#751): the sender's hold
+            # for a send to be pressed again, or an invited friend's accept.
+            friends = await self._friends.confirmed(
+                game_id, player_id, confirmed=command.seat_charge_id, now=now
+            )
+            if friends is None:
+                raise ProposalNotFound()
+            await self._uow.commit()
+            return friends
         proposal = await _locked(self._proposals, game_id)
         if proposal.standing_at(now) is Standing.FILLED:
             fixed = await self._card_fixed(

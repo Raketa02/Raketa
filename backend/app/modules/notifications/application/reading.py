@@ -83,12 +83,14 @@ class NoticeWords:
             {notice.club_id for notice in notices if notice.club_id is not None}
         )
         # A notice about no game that names a group names the one a friend
-        # request was asked from (#745).
+        # request was asked from (#745); a friends game's empty seat, the group
+        # it may be opened to (#751).
         groups = await self._names.of_groups(
             {
                 notice.pool_id
                 for notice in notices
-                if notice.game_id is None and notice.pool_id is not None
+                if notice.pool_id is not None
+                and (notice.game_id is None or notice.kind in _NAMING_THE_GROUP)
             }
         )
         return [
@@ -141,8 +143,17 @@ def _drawn(
             court_name=notice.court_name,
             indoor=notice.indoor,
             moved_from=notice.moved_from,
+            game_kind=notice.game_kind,
+            group=None if notice.pool_id is None else groups.get(notice.pool_id),
         )
     )
+
+
+#: The notices about a game that name its group (#751): a friends game's
+#: empty seat may be opened to it.
+_NAMING_THE_GROUP: Final = frozenset(
+    {NoticeKind.CANT_MAKE_IT.value, NoticeKind.DIDNT_ANSWER.value}
+)
 
 
 @dataclass(frozen=True, slots=True)

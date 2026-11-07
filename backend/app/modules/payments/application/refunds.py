@@ -79,6 +79,7 @@ _IN_FULL = frozenset(
         RefundReason.CALLED_OFF_AT_THE_CUT_OFF,
         RefundReason.CANCELLED_BY_THE_CLUB,
         RefundReason.CANCELLED_AFTER_YOU_LEFT,
+        RefundReason.CALLED_OFF_BY_THE_SENDER,
     }
 )
 

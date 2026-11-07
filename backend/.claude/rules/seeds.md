@@ -129,6 +129,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   free whatever made it so, and the crowd is spoken for. `assert_the_full_hour` reads her
   Post a game sheet in *Ogrody 33 Club* and fails the run unless another club is offered
   then, marked, and none at an hour Ogrody 33 has a court.
+- **Two friends games are sent to her** (#751, `app/seeds/friends_games.py`), after the
+  friends layer and before the screens, in *Czwartkowy padel*: `rating-well-established`'s
+  **Split** game to her, `the-one-sport-player` and `rating-barely-established`, both of
+  whom accepted — waiting on her alone — and `the-one-sport-player`'s **Whole court** game to
+  her and the other two, nobody answered; the three friendships the line-ups need are made
+  by the friends layer's own `FriendActs`. Each court is the *Find a court* row with the most
+  of the four free, more than two days out, at no live yes of theirs, in a week everybody In
+  keeps room in — so nothing she is dealt moves — and the two at different hours. The run
+  fails by name unless her Home's *FRIENDS GAME* reads both; a second run sends nothing
+  twice.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

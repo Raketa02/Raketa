@@ -285,6 +285,19 @@ class GameBrief:
     #: It booked the moment the payment it waited for came in: its players
     #: were told *It's a game!* already (Q110).
     booked_on_a_payment: bool = False
+    #: **A friends game**'s sender (#751) — ``None`` on a game a fill booked.
+    #: Its money tells nothing on its own: *It's a game!* is the last seat
+    #: taken, told off the booking.
+    sender: UUID | None = None
+    #: A friends game's friends whose invitation still waits at the instant
+    #: asked about.
+    invited: tuple[UUID, ...] = ()
+    #: Every seat is held by somebody In.
+    whole: bool = False
+
+    @property
+    def is_friends_game(self) -> bool:
+        return self.sender is not None
 
     @property
     def fell_back(self) -> bool:

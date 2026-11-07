@@ -37,6 +37,13 @@ waiting, then *Seat open* once the time ran out or somebody else's seat opened
 — a full game gone back to filling (Q106) — or *called off*. Nothing else is
 on Home before it is booked: no club confirms a game (``docs/adr/0196`` §1).
 
+**A friends game's invitations are a row of their own** (#751;
+``docs/adr/0202`` §5): *FRIENDS GAME · n*, at the very top of Home — every
+friends game whose invitation still waits on the reader, the soonest to end
+first, each its booking as its sender booked it. Not counted in
+``needing_you``. Once the reader accepts, the game is among their games; the
+sender's is there from the send.
+
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
 """
@@ -67,6 +74,7 @@ from app.modules.proposals.domain.ports import (
     DeckPeople,
     DeckPerson,
     FriendRequestsOnHome,
+    FriendsGameBookings,
     HomeFriendRequest,
     ReaderRelations,
     GameResults,
@@ -89,6 +97,15 @@ class HomeGame:
 
 @final
 @dataclass(frozen=True, slots=True)
+class HomeInvitation:
+    """One card in *FRIENDS GAME*: a friends game the reader is invited to."""
+
+    game: BookedGame
+    club_name: str | None
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class Home:
     #: The instant every status and money line was folded against.
     read_at: Instant
@@ -102,6 +119,9 @@ class Home:
     #: *FRIEND REQUESTS* — the requests waiting on the reader, newest first
     #: (``docs/adr/0202`` §1). Empty, and the row gone, once all are answered.
     friend_requests: tuple[HomeFriendRequest, ...] = ()
+    #: *FRIENDS GAME* — the friends games whose invitation waits on the
+    #: reader, the soonest to end first (#751). Their people are in ``people``.
+    friends_games: tuple[HomeInvitation, ...] = ()
 
 
 @final
@@ -119,8 +139,10 @@ class ReadHome:
         holding_times: HoldingTimes,
         relations: ReaderRelations,
         friend_requests: FriendRequestsOnHome,
+        friends_games: FriendsGameBookings,
         clock: Clock,
     ) -> None:
+        self._friends_games = friends_games
         self._relations = relations
         self._friend_requests = friend_requests
         self._bookings = bookings
@@ -172,6 +194,7 @@ class ReadHome:
             )
             if on_home(card.game, card.state, now=now)
         ]
+        invitations = await self._invitations(reader, now=now)
         owed = await owed_by(
             reader,
             proposals=self._proposals,
@@ -185,11 +208,35 @@ class ReadHome:
             games=tuple(cards),
             needing_you=sum(card.state.needs_you for card in cards) + len(owed),
             people=await with_the_readers_friends(
-                await people_on([card.game for card in cards], self._people),
+                await people_on(
+                    [
+                        *(card.game for card in cards),
+                        *(invited.game for invited in invitations),
+                    ],
+                    self._people,
+                ),
                 reader=reader,
                 relations=self._relations,
             ),
             friend_requests=await self._friend_requests.of(reader),
+            friends_games=invitations,
+        )
+
+    async def _invitations(
+        self, reader: UUID, *, now: Instant
+    ) -> tuple[HomeInvitation, ...]:
+        """The friends games whose invitation still waits on the reader."""
+
+        games = [
+            game
+            for booking_id in await self._friends_games.invitations_of(reader, now=now)
+            if (game := await self._bookings.find(booking_id)) is not None
+            and game.invited_now(reader, now=now) is not None
+        ]
+        names = await self._clubs.names_of({game.club_id for game in games})
+        return tuple(
+            HomeInvitation(game=game, club_name=names.get(game.club_id))
+            for game in games
         )
 
     async def _without_a_booking(

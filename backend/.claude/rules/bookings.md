@@ -19,6 +19,9 @@ paths:
   - "app/modules/bookings/application/daily_summary.py"
   - "app/modules/proposals/application/time_to_pay.py"
   - "app/modules/proposals/application/holding.py"
+  - "app/modules/proposals/application/friends_games.py"
+  - "app/modules/bookings/application/friends_games.py"
+  - "app/modules/payments/application/covers.py"
 ---
 
 # Bookings and the fill
@@ -519,6 +522,56 @@ unregistered and the local store reset, so the last yes books the game at every 
   played) — `needs_you` then only for the player awaited, whose *I'm here* it is; and
   `needs_you` while a late claim waits on the reader — their own *I was there*, or somebody
   else's to confirm (`Game.attendance_waits_on`). Who tapped is not on the wire.
+- **A friends game is the Booking's second birth, booked the moment it is sent** (#751;
+  ADR-0202 §5–§6; the friends mechanics §8–§10.3, §11.2;
+  `proposals/application/friends_games.py` orchestrates, `bookings/application/friends_games.py`
+  acts, `payments/application/covers.py` holds). `bookings.booked_by_a_friend` (v1) carries
+  the card's sides with the sender on one, the pay mode (`SPLIT_THE_COST` / `WHOLE_COURT`),
+  `invited_until` (24 h from the send, **never past the cut-off — or, sent after it, the
+  start**: `invited_until`, `TIME_TO_ANSWER`) and the club's cut-off; it folds with **only the
+  sender In** and every other player an `InvitedSeat`, answered by
+  `bookings.invited_seat_accepted` (seated on their side, `last_seat` when it made the game
+  whole), `…invited_seat_declined` and `…invited_seat_ran_out`, and ended by
+  `bookings.called_off_by_the_sender` (`CalledOff.BY_THE_SENDER`, everybody In and every
+  invitee still waiting named). **An invited seat is neither held nor open**: the booking is
+  `BOOKED` with fewer players than seats, so no read sees a rescue (`open_seats` nought, no
+  departure) and the cut-off never calls it off for one. The Game opens with the invited
+  seats open (`GameOpening.open` takes `None` on a side) and `TakeASeat` seats each accept,
+  so the room — the line-up — has the sender from the send and each friend from their
+  accept. Projections: `bookings.sender_id` and `booking_invitations` (migration 0066), read
+  by Home's *FRIENDS GAME* row (`invitations_of`), the invitations job (`invitations_past`)
+  and the send's **at most 2 waiting** (`friends_games_waiting_of`, `FRIENDS_GAMES_WAITING`).
+  **No proposal stands for it, so every friends act locks the booking's own row**
+  (`BookingRepository.load_for_update`, through `FriendsGameBookings.locked`); the cut-off's
+  take locks it when no proposal row is found. **The send** reads the line-up through the
+  card's own `ReadFriendsLineUp`, then asks, in the sheet's order: a method, the waiting cap,
+  the sender's hour and week (`you_play_then`, `games_per_week_booked`), and the court still
+  in the card's list — a court gone is `court_just_taken`. **The court is claimed first**,
+  so a race on the court hour's index is `court_just_taken` before any bank is asked;
+  **then the money**; a refused card rolls the claim back and records the same answers
+  — the same keys, so the provider answers the same — as nothing booked
+  (`SendersCourts.refused`); then the sender's other yeses (`Fill.other_yeses`). **Accepting** is refused for a game at the hour or a full week, holds the
+  friend's own share with *Split* (`GameToCharge.accepting`: keyed `raketa-accept-…`, the
+  refusal *to take the seat* by their invitation's end — the seat stays theirs to retry,
+  nothing recorded on the booking), holds nothing with *Whole court*, and withdraws their
+  other yeses at the hour. A refused share confirmed in the app is the accept again
+  (`ConfirmPayment` → `FriendsGameConfirmation`, when no proposal stands for the game;
+  the accept itself is `Accepting`, shared by `AcceptAFriendsGame`).
+  **The cut-off** settles covers before the take (`CoversAtTheCutOff`, only once the cut-off
+  has come and no invitation waits). **Call it off** is the sender's before the cut-off
+  (`cut_off_has_passed` after): every hold and cover let go (`RefundReason.
+  CALLED_OFF_BY_THE_SENDER`), the Game called off whole, the court free (the partial index);
+  the club reads it `BY_THE_SENDER`. A club's cancel calls it off as any booked game's
+  (nothing records a card owed for it: no proposal — #752's). **Calls made without a
+  ruling**: *Leave* is refused on a friends game (`booking_not_found`, no proposal) and the
+  details send `leaving: null` until #752; a send made after the cut-off takes the sender's
+  share at once and holds the covers until the invitations end, when they are decided;
+  `payments-to-confirm` lists no friends game's payment (no proposal to name); a sender's
+  holding refused far ahead is one card to fix for all his charges (`cards_to_fix` is one
+  per player), so confirming it fixes one and the cut-off takes only the covers held — and
+  not fixed in time, his seat opens as a leaver's and the game turns ordinary — owed to a
+  later ticket. **Seeded by
+  `app/seeds/friends_games.py`** (`seeds.md`).
 - **The club's money, and its day of new bookings** (#548; the mechanics §16.11, §16.12;
   the screens B7, B9). **The Money page** is Proposals', beside the Bookings page
   (`application/club_money.py`): `GET /api/v1/club/money?month=YYYY-MM` reads every booking

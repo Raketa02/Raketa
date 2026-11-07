@@ -87,6 +87,8 @@ class World:
     kuba: dict
     #: The four who booked out Ogrody 33 on Tuesday at 21:00.
     first: list[dict]
+    #: Ogrody 33's desk's session.
+    desk: dict | None = None
 
     @property
     def friends(self) -> list[dict]:
@@ -176,6 +178,7 @@ async def world(client, session_factory, payments, clock, mailbox) -> World:
         ania=ania,
         kuba=kuba,
         first=first,
+        desk=desk,
     )
 
 

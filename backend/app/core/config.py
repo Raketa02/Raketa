@@ -475,6 +475,16 @@ class Settings(BaseSettings):
     TIME_TO_PAY_ENABLED: bool = True
     TIME_TO_PAY_INTERVAL_SECONDS: float = 30
 
+    # --- a friends game's invitations (#751; docs/adr/0202 §5)
+    #
+    # Runs out every invitation whose time to answer ended, so its sender is
+    # told *didn't answer*. Correctness does not depend on it: every read says
+    # so off the clock. **The 24 hours are not here**: they are domain,
+    # `bookings/domain/booking.py`'s `TIME_TO_ANSWER`. Every thirty seconds,
+    # like the other seat jobs.
+    INVITATIONS_ENABLED: bool = True
+    INVITATIONS_INTERVAL_SECONDS: float = 30
+
     # --- the cut-off (#544, the mechanics §12.3, §16.12)
     #
     # **Correctness depends on it**, as on time to pay: a booked game with a

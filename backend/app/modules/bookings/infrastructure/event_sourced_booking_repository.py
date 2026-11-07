@@ -30,15 +30,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.infrastructure.database.stored_time import stored_instant
 from app.kernel import Instant, Sport
-from app.modules.bookings.domain.booking import Booking, BookingState
+from app.modules.bookings.domain.booking import Answer, Booking, BookingState
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.events import (
+    BookedByAFriend,
     BookingConfirmed,
     CalledOffAtCutOff,
+    CalledOffBySender,
     CancelledByClub,
     CardFixed,
     CardToFix,
     CourtMoved,
+    InvitedSeatAccepted,
+    InvitedSeatDeclined,
+    InvitedSeatRanOut,
     KeptSeatRanOut,
     PlayerCheckedIn,
     NoSaidToTheSeat,
@@ -48,6 +53,7 @@ from app.modules.bookings.domain.events import (
 )
 from app.modules.bookings.domain.ports import HeldCourtHour
 from app.modules.bookings.infrastructure.booking_models import (
+    BookingInvitationORM,
     BookingKeepORM,
     BookingORM,
     BookingSeatORM,
@@ -85,6 +91,16 @@ class EventSourcedBookingRepository:
         booking = Booking.from_history(record.event for record in stored)
         self._versions[booking_id] = booking.version
         return booking
+
+    async def load_for_update(self, booking_id: UUID) -> Booking | None:
+        """The booking, its row locked for the rest of the transaction — what
+        every act on a friends game takes first, since no proposal row stands
+        for it (#751). SQLite renders no ``FOR UPDATE``; Postgres holds it."""
+
+        await self._session.execute(
+            select(BookingORM.id).where(BookingORM.id == booking_id).with_for_update()
+        )
+        return await self.load(booking_id)
 
     async def save(self, booking: Booking) -> None:
         pending = booking.pull_events()
@@ -126,6 +142,50 @@ class EventSourcedBookingRepository:
                 )
             )
             self._seat(event.booking_id, event.first_side, event.second_side)
+        elif isinstance(event, BookedByAFriend):
+            self._session.add(
+                BookingORM(
+                    id=event.booking_id,
+                    pool_id=event.pool_id,
+                    club_id=event.club_id,
+                    court_id=event.court_id,
+                    sport=event.sport,
+                    start=event.start,
+                    share_grosze=event.share_grosze,
+                    cut_off=event.cut_off,
+                    state=BookingState.BOOKED.value,
+                    game_id=event.game_id,
+                    booked_at=event.occurred_at,
+                    sender_id=event.sender_id,
+                )
+            )
+            # The sender's seat, and each friend's invitation.
+            self._seat(
+                event.booking_id,
+                tuple(p for p in event.first_side if p == event.sender_id),
+                tuple(p for p in event.second_side if p == event.sender_id),
+            )
+            for seat in booking.invited:
+                self._session.add(
+                    BookingInvitationORM(
+                        booking_id=event.booking_id,
+                        player_id=seat.player_id,
+                        side=seat.side,
+                        until=event.invited_until,
+                        answer=Answer.WAITING.value,
+                    )
+                )
+        elif isinstance(event, InvitedSeatAccepted):
+            self._session.add(
+                BookingSeatORM(
+                    booking_id=event.booking_id,
+                    player_id=event.player_id,
+                    side=event.side,
+                )
+            )
+            await self._answered(event.booking_id, event.player_id, booking)
+        elif isinstance(event, (InvitedSeatDeclined, InvitedSeatRanOut)):
+            await self._answered(event.booking_id, event.player_id, booking)
         elif isinstance(event, SeatLeft):
             await self._row(
                 event.booking_id,
@@ -193,7 +253,7 @@ class EventSourcedBookingRepository:
         elif isinstance(event, NoSaidToTheSeat):
             # A no to a card is the booking's to fold; no read asks it of a row.
             pass
-        elif isinstance(event, (CalledOffAtCutOff, CancelledByClub)):
+        elif isinstance(event, (CalledOffAtCutOff, CancelledByClub, CalledOffBySender)):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
             # A game off has no card to fix (#639), and no seat to keep (#640).
             await self._statement(
@@ -228,6 +288,20 @@ class EventSourcedBookingRepository:
                         booking_id=booking_id, player_id=player_id, side=side
                     )
                 )
+
+    async def _answered(
+        self, booking_id: UUID, player_id: UUID, booking: Booking
+    ) -> None:
+        seat = booking.invitation_of(player_id)
+        assert seat is not None
+        await self._statement(
+            update(BookingInvitationORM)
+            .where(
+                BookingInvitationORM.booking_id == booking_id,
+                BookingInvitationORM.player_id == player_id,
+            )
+            .values(answer=seat.answer.value, answered_at=seat.answered_at)
+        )
 
     async def _unkeep(self, booking_id: UUID, player_id: UUID) -> None:
         await self._statement(
@@ -445,6 +519,52 @@ class SqlAlchemyBookingDirectory:
             .order_by(BookingORM.cut_off, BookingORM.id)
         )
         return list(rows.all())
+
+    async def invitations_of(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingInvitationORM.booking_id)
+            .join(BookingORM, BookingORM.id == BookingInvitationORM.booking_id)
+            .where(
+                BookingInvitationORM.player_id == player_id,
+                BookingInvitationORM.answer == Answer.WAITING.value,
+                BookingInvitationORM.until > now,
+                BookingORM.state != BookingState.CALLED_OFF.value,
+            )
+            .order_by(BookingInvitationORM.until, BookingInvitationORM.booking_id)
+        )
+        return list(rows.all())
+
+    async def invitations_past(self, *, now: Instant) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingInvitationORM.booking_id)
+            .join(BookingORM, BookingORM.id == BookingInvitationORM.booking_id)
+            .where(
+                BookingInvitationORM.answer == Answer.WAITING.value,
+                BookingInvitationORM.until <= now,
+                BookingORM.state != BookingState.CALLED_OFF.value,
+            )
+            .group_by(BookingInvitationORM.booking_id)
+            .order_by(
+                func.min(BookingInvitationORM.until), BookingInvitationORM.booking_id
+            )
+        )
+        return list(rows.all())
+
+    async def friends_games_waiting_of(self, sender_id: UUID, *, now: Instant) -> int:
+        count = await self._session.scalar(
+            select(func.count(func.distinct(BookingORM.id)))
+            .join(
+                BookingInvitationORM,
+                BookingInvitationORM.booking_id == BookingORM.id,
+            )
+            .where(
+                BookingORM.sender_id == sender_id,
+                BookingORM.state != BookingState.CALLED_OFF.value,
+                BookingInvitationORM.answer == Answer.WAITING.value,
+                BookingInvitationORM.until > now,
+            )
+        )
+        return int(count or 0)
 
     async def ever_seated(
         self, player_ids: Collection[UUID]

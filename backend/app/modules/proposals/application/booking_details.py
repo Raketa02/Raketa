@@ -37,6 +37,11 @@ withdraws the yes; **gone back to filling** (Q106), *Seat open*, nobody paid,
 no court, and no *Leave* of its own — its way out is a game still filling's,
 *Withdraw*.
 
+**A friends game's invitee reads it from outside too** (#751): a friend its
+seat is held for — waiting, or once they answered — sees the court with every
+seat the card drew, their own among them, its share and its pay mode, and
+nothing to leave.
+
 **Refused with one code** — ``booking_not_found`` — for a booking that does not
 exist and one the reader has no seat on and is not offered, so a booking id
 says nothing about whose evening it is.
@@ -160,6 +165,8 @@ class ReadBookingDetails:
         if game is None:
             raise BookingNotFound()
         if not game.has_a_seat_for(reader):
+            if game.invitation_of(reader) is not None:
+                return await self._as_invited(game, reader, now=now)
             if not await self._offers.is_offered(game, reader, now=now):
                 raise BookingNotFound()
             return await self._from_outside(game, reader, now=now)
@@ -198,7 +205,44 @@ class ReadBookingDetails:
             played_with=await self._relations.relations_of(
                 reader, [player for player in game.players if player != reader]
             ),
-            leaving=leave_terms(game, state.status, late_refund=late_refund, now=now),
+            # Leaving a friends game is #752's: no *Leave* until then.
+            leaving=None
+            if game.is_friends_game
+            else leave_terms(game, state.status, late_refund=late_refund, now=now),
+        )
+
+    async def _as_invited(
+        self, game: BookedGame, reader: UUID, *, now: Instant
+    ) -> BookingDetails:
+        """A friends game as a friend invited to it sees it (#751): every seat
+        the card drew, theirs among them, unpaid, and nothing to leave."""
+
+        state = state_of(game, None, now=now)
+        names = await self._clubs.names_of([game.club_id])
+        distances = await self._distances.from_player(reader, [game.club_id])
+        return BookingDetails(
+            game=game,
+            read_at=now,
+            state=BookedState(
+                status=state.status,
+                needs_you=False,
+                money=BookedMoney(
+                    share_grosze=game.share_grosze,
+                    paid=False,
+                    free_to_leave_until=None,
+                ),
+                called_off=state.called_off,
+                uncounted=state.uncounted,
+            ),
+            sides=game.seen_by(reader),
+            shows_forecast=False,
+            club_name=names.get(game.club_id),
+            distance_km=distances.get(game.club_id),
+            people=await with_the_readers_friends(
+                await people_on([game], self._people),
+                reader=reader,
+                relations=self._relations,
+            ),
         )
 
     async def _from_outside(

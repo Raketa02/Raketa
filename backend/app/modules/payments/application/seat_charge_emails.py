@@ -99,6 +99,7 @@ def game_booked_email(
     app_link: str,
     booked_on_a_payment: bool = False,
     held_from: Instant | None = None,
+    accepted: bool = False,
 ) -> OutgoingMessage:
     """*It's a game! · 30 zł held* — the booking confirmation, saying when the
     share is taken (#637; the mechanics §12.2, Q113): ``held_until`` is the
@@ -110,11 +111,16 @@ def game_booked_email(
     19:00 and taken on Wed 19:00, the club's cut-off.* **A game booked on a
     payment it waited for** (#625, Q110) was *It's a game!* already when it
     filled: *Your Tue 19:00 is booked · 30 zł held*, never a second *It's a
-    game!*."""
+    game!*. **A friend who accepted a friends game** (#751) is In, the game
+    maybe not yet whole: *You're in · 25 zł held* — *It's a game!* is told
+    when the last seat is taken."""
 
     share = zloty(share_grosze)
     said = f"{share} held" if held_until is not None else f"you paid {share}"
-    if booked_on_a_payment:
+    if accepted:
+        subject = f"You're in · {said}"
+        heading = "You're in" if nickname is None else f"You're in, {nickname}"
+    elif booked_on_a_payment:
         hour = _short_hour(starts_at)
         subject = f"Your {hour} is booked · {said}"
         heading = f"Your {hour} is booked"
@@ -156,6 +162,83 @@ def game_booked_email(
             lines=(
                 f"{_SPORT_WORDS[sport]} at {club}, {court} — {_the_hour(starts_at)}.",
                 *money,
+            ),
+            button_label="Open the game",
+            button_url=app_link,
+        )
+    )
+
+
+def court_held_email(
+    *,
+    to: str,
+    nickname: str | None,
+    club: str,
+    court: str,
+    sport: Sport,
+    starts_at: Instant,
+    share_grosze: int,
+    seats: int,
+    whole_court: bool,
+    held_until: Instant | None,
+    held_from: Instant | None = None,
+    app_link: str,
+) -> OutgoingMessage:
+    """*Your game is booked · 100 zł held* — to a friends game's sender, the
+    moment it is sent (#751; ``docs/adr/0202`` §6; the words §29.7): the whole
+    court on their card, their share and a cover for every other seat, said
+    with the maximum they agreed to above the button — *You pay 25 zł, plus 25
+    zł for any seat still empty then* with *Split the cost*, the whole court
+    with *Whole court*. ``held_until`` is the club's cut-off, ``None`` for a
+    game sent after it, whose share is taken at once; ``held_from`` the
+    Holding time of a card only checked far ahead (#639). *(The words are a
+    call.)*"""
+
+    share, price = zloty(share_grosze), zloty(share_grosze * seats)
+    others = "the other seat" if seats == 2 else "any seat"
+    what = (
+        f"You pay the whole court, {price}."
+        if whole_court
+        else f"You pay {share}, plus {share} for {others} still empty then."
+    )
+    if held_until is None:
+        subject = f"Your game is booked · {price} held"
+        money: tuple[str, ...] = (
+            f"We hold {price} on your card until every friend has answered. {what}",
+            "This game has no free cancellation: it was sent after the club's "
+            "cut-off.",
+        )
+    elif held_from is not None:
+        subject = f"Your game is booked · {price} held from {_short_hour(held_from)}"
+        money = (
+            f"Your card was checked. {price} will be held from "
+            f"{_short_hour(held_from)} until {_short_hour(held_until)}, the club's "
+            f"cut-off. {what}",
+            "A hold lasts only a few days, so we held it for a moment and let it "
+            "go, to check the money is there. You may see it come and go in your "
+            "bank app.",
+        )
+    else:
+        subject = f"Your game is booked · {price} held"
+        money = (
+            f"We hold {price} on your card until {_short_hour(held_until)}, the "
+            f"club's cut-off. {what}",
+            "Call it off before then and nothing is taken.",
+        )
+    return render(
+        ButtonEmail(
+            kind=GAME_BOOKED_KIND,
+            to=to,
+            subject=subject,
+            heading=(
+                "Your game is booked"
+                if nickname is None
+                else f"Your game is booked, {nickname}"
+            ),
+            lines=(
+                f"{_SPORT_WORDS[sport]} at {club}, {court} — {_the_hour(starts_at)}.",
+                *money,
+                f"{club} is the seller and holds it on your card.",
             ),
             button_label="Open the game",
             button_url=app_link,

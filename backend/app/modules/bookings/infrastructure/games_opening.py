@@ -39,8 +39,8 @@ class OpenTheGame:
         booking_id: UUID,
         sport: Sport,
         counted: bool,
-        first_side: tuple[UUID, ...],
-        second_side: tuple[UUID, ...],
+        first_side: tuple[UUID | None, ...],
+        second_side: tuple[UUID | None, ...],
         starts_at: Instant,
         at: Instant,
     ) -> UUID:

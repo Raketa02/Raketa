@@ -90,6 +90,18 @@ told as it is, and a card that filled meanwhile needs nobody.
   friends now* to both when the requests crossed (#745). About no game; always
   on. *Not now*, a cancel, a removal and a block are told nobody.
 
+- ``BookedByAFriend`` — *Tomek invited you to a game*, to each friend invited,
+  opening Home on the card, ``until`` their 24 hours' end (#751).
+  ``InvitedSeatDeclined`` and ``InvitedSeatRanOut`` — *Ania can't make it* / *Ania
+  didn't answer*, to the sender. ``InvitedSeatAccepted`` that takes the last
+  seat — *It's a game!*, to all four, the accepter's their own.
+  ``CalledOffBySender`` — *Tomek called off Saturday 10:00 · Nobody paid.*, to
+  everybody In and every friend still invited, the sender's own copy born
+  seen. **A friends game's money tells
+  nothing on its own**: the sender's holds at send and a friend's at their
+  accept are their own acts, and *It's a game!* is the last seat taken. Every
+  one always on, never emailed.
+
 - ``LevelAsked`` — *Tomek wants to play padel with you.*, to the friend asked;
   ``LevelGot`` — *Zofia has a padel level — you can seat Zofia now.*, to the
   friend who asked, naming the group the ask was made from (#749). Both about
@@ -120,8 +132,13 @@ from uuid import UUID
 from app.application.events import DeliveryContext
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.events import (
+    BookedByAFriend,
     CalledOffAtCutOff,
+    CalledOffBySender,
     CourtMoved,
+    InvitedSeatAccepted,
+    InvitedSeatDeclined,
+    InvitedSeatRanOut,
     KeptSeatRanOut,
     SeatLeft,
 )
@@ -330,6 +347,107 @@ class TellThePlayers:
                 at=at,
             )
 
+    # -- a friends game (#751) ------------------------------------------------
+
+    async def _invited(self, event: BookedByAFriend, *, key: str, at: Instant) -> None:
+        """*Tomek invited you to a game*, to each friend whose invitation
+        still waits at the delivery — opening Home, on the card."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked:
+            return
+        await self._tell(
+            game.invited,
+            notice_about(
+                NoticeKind.FRIENDS_GAME_INVITATION,
+                game,
+                key=f"{NoticeKind.FRIENDS_GAME_INVITATION}:{key}",
+                opens=Opens.HOME,
+                people=(event.sender_id,),
+                until=instant(event.invited_until),
+            ),
+            at=at,
+        )
+
+    async def _seat_answered(
+        self,
+        event: InvitedSeatDeclined | InvitedSeatRanOut,
+        *,
+        key: str,
+        at: Instant,
+    ) -> None:
+        """*Ania can't make it* / *Ania didn't answer*, to the sender, while
+        the game is still on."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked or game.sender is None:
+            return
+        kind = (
+            NoticeKind.CANT_MAKE_IT
+            if isinstance(event, InvitedSeatDeclined)
+            else NoticeKind.DIDNT_ANSWER
+        )
+        await self._give.execute(
+            game.sender,
+            notice_about(
+                kind,
+                game,
+                key=f"{kind}:{key}",
+                opens=Opens.BOOKING,
+                people=(event.player_id,),
+            ),
+            at=at,
+        )
+
+    async def _accepted(
+        self, event: InvitedSeatAccepted, *, key: str, at: Instant
+    ) -> None:
+        """**The last seat taken** — *It's a game!*, to everybody on it; the
+        friend who took it saw it on their own screen. An accept that leaves a
+        seat to answer tells nobody."""
+
+        if not event.last_seat:
+            return
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked:
+            return
+        await self._tell(
+            game.seated,
+            notice_about(
+                NoticeKind.GAME_BOOKED,
+                game,
+                key=f"{NoticeKind.GAME_BOOKED}:{key}",
+                opens=Opens.BOOKING,
+                reason=NoticeReason.LAST_SEAT_TAKEN,
+            ),
+            at=at,
+            whose_act=event.player_id,
+        )
+
+    async def _called_off_by_the_sender(
+        self, event: CalledOffBySender, *, key: str, at: Instant
+    ) -> None:
+        """*Tomek called off Saturday 10:00 · Nobody paid.*, to everybody In
+        and every friend still invited — the sender's own copy born seen, since
+        it was their act (Q102)."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or game.sender is None:
+            return
+        await self._tell(
+            (*event.player_ids, *event.invited),
+            notice_about(
+                NoticeKind.GAME_CALLED_OFF,
+                game,
+                key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
+                opens=Opens.BOOKING,
+                people=(game.sender,),
+                reason=NoticeReason.BY_THE_SENDER,
+            ),
+            at=at,
+            whose_act=game.sender,
+        )
+
     # -- friends (#745) ---------------------------------------------------------
 
     async def _friend_request(
@@ -430,7 +548,9 @@ class TellThePlayers:
             # it filled — the player's own act, on their own screen.
             return
         game = await self._games.about(event.booking_id, at=at)
-        if game is None or not game.booked:
+        if game is None or not game.booked or game.is_friends_game:
+            # A friends game's holds are its sender's and each friend's own
+            # acts; *It's a game!* is its last seat taken (#751).
             return
         # Booked on the payment it waited for, it was *It's a game!* already
         # when it filled: *booked · you paid* now, never twice (Q110).
@@ -1216,6 +1336,11 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     FriendsMade: TellThePlayers._friends_made,
     LevelAsked: TellThePlayers._level_asked,
     LevelGot: TellThePlayers._level_got,
+    BookedByAFriend: TellThePlayers._invited,
+    InvitedSeatDeclined: TellThePlayers._seat_answered,
+    InvitedSeatRanOut: TellThePlayers._seat_answered,
+    InvitedSeatAccepted: TellThePlayers._accepted,
+    CalledOffBySender: TellThePlayers._called_off_by_the_sender,
 }
 
 #: What ``subscribe_the_teller`` hears.

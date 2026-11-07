@@ -18,6 +18,11 @@ record reads who ever held a seat — a mark is a leaver's — while every read 
 the game as it stands now reads only the seats still held. **A seat whose
 holding was refused is marked until when its card may be fixed** (#639).
 
+**``booking_invitations``** is one row per invited seat of a friends game
+(#751): the friend's Home reads the ones still waiting, and the invitations job
+the ones whose time is up. **``bookings.sender_id``** names a friends game's
+sender, so the friends games waiting on them are counted.
+
 **``booking_keeps``** is one row per rescuer whose share was refused and a
 seat kept for them (#640) — not a seat of theirs, so never a ``booking_seats``
 row: the time-to-pay job reads the keeps run out by it, and a rescuer's *To
@@ -83,6 +88,10 @@ class BookingORM(Base):
     open_since: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    #: A friends game's sender (#751) — ``NULL`` on every game a fill booked.
+    sender_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False), nullable=True, index=True
+    )
 
 
 class BookingSeatORM(Base):
@@ -135,3 +144,30 @@ class BookingKeepORM(Base):
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     #: Its running out is recorded: out of the time-to-pay job's read.
     ran_out: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class BookingInvitationORM(Base):
+    """One invited seat of a friends game (#751): the friend, the side the card
+    drew them on, until when they may answer, and how they did."""
+
+    __tablename__ = "booking_invitations"
+    __table_args__ = (
+        Index("ix_booking_invitations_player_id", "player_id"),
+        # The invitations whose time is up — the invitations job's read.
+        Index("ix_booking_invitations_answer_until", "answer", "until"),
+    )
+
+    booking_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
+    #: ``A`` — the first side — or ``B``.
+    side: Mapped[str] = mapped_column(String(1), nullable=False)
+    until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: ``WAITING``, ``ACCEPTED``, ``DECLINED`` or ``RAN_OUT``.
+    answer: Mapped[str] = mapped_column(String(16), nullable=False)
+    answered_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

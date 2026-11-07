@@ -18,8 +18,13 @@ its desk reads and runs them (``bookings``), what each took and gave back
 court a card promises (#671), the kinds of the free courts at a club and hour
 (``clubs``) — and, for the friends card (#750), every hour a club sells with its
 free courts named in the club's order (``clubs``, ``CourtHours`` — the first of
-the proposer's ports to get its row) — each a fact another context owns, read
-through a port declared in this context's words.
+the proposer's ports to get its row) — and, for a friends game (#751), the game
+booked at send, its invited seats answered and called off by its sender
+(``bookings``, ``FriendsGameBookings``) and each cover taken or let go at the
+cut-off (``payments``, ``CoversAtTheCutOff``) — each a fact another context
+owns, read through a port declared in this context's words. The sender's court
+held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
+with the fake.
 
 **Not yet the whole of the context's demands.** The rest of the deck's, the
 proposer's and the fill's ports (#538–#541) were contracted over HTTP and never
@@ -56,10 +61,14 @@ from app.bootstrap.composition import (
     build_clock,
     build_friend_requests_on_home,
     build_reader_relations,
+    build_friends_game_bookings,
+    build_covers_at_the_cut_off,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
 from app.modules.proposals.domain.ports import (
+    CoversAtTheCutOff,
+    FriendsGameBookings,
     BookedGameChanges,
     BookingTakings,
     LateRefunds,
@@ -108,10 +117,22 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     CourtHours,
     ReaderRelations,
     FriendRequestsOnHome,
+    FriendsGameBookings,
+    CoversAtTheCutOff,
 )
 
 
 PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
+    RegisteredImplementation(
+        port=FriendsGameBookings,
+        name="BookingsFriendsGameBookings",
+        build=build_friends_game_bookings,
+    ),
+    RegisteredImplementation(
+        port=CoversAtTheCutOff,
+        name="PaymentsCoversAtTheCutOff",
+        build=build_covers_at_the_cut_off,
+    ),
     RegisteredImplementation(
         port=PlayerBookings,
         name="BookingsPlayerBookings",

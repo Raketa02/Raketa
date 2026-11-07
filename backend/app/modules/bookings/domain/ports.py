@@ -40,6 +40,11 @@ from app.modules.bookings.domain.summary import NewBookingsSummary
 class BookingRepository(Protocol):
     async def load(self, booking_id: UUID) -> Booking | None: ...
 
+    async def load_for_update(self, booking_id: UUID) -> Booking | None:
+        """The booking, its row locked until the caller's transaction ends —
+        what every act on a friends game takes first (#751)."""
+        ...
+
     async def save(self, booking: Booking) -> None:
         """Append what the booking recorded and write its rows, in the caller's
         transaction."""
@@ -59,6 +64,21 @@ class HeldCourtHour:
 @runtime_checkable
 class BookingDirectory(Protocol):
     """The projections, read. Written only by ``BookingRepository.save``."""
+
+    async def invitations_of(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        """Every friends game on which this player's invitation still waits at
+        ``now`` — the soonest to end first (#751)."""
+        ...
+
+    async def invitations_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every friends game with an invitation still waiting whose time is
+        up by ``now`` — candidates, the earliest first (#751)."""
+        ...
+
+    async def friends_games_waiting_of(self, sender_id: UUID, *, now: Instant) -> int:
+        """How many friends games this sender has with an invitation still
+        waiting at ``now`` (#751)."""
+        ...
 
     async def held_at(
         self, club_id: UUID, *, start: Instant, end: Instant | None
@@ -261,12 +281,14 @@ class GameOpening(Protocol):
         booking_id: UUID,
         sport: Sport,
         counted: bool,
-        first_side: tuple[UUID, ...],
-        second_side: tuple[UUID, ...],
+        first_side: tuple[UUID | None, ...],
+        second_side: tuple[UUID | None, ...],
         starts_at: Instant,
         at: Instant,
     ) -> UUID:
-        """Open the game, in the caller's transaction, and answer its id."""
+        """Open the game, in the caller's transaction, and answer its id. A
+        ``None`` on a side is a seat still to be taken — a friends game's
+        invited seat (#751), taken by ``GameChanges.seat`` on its accept."""
         ...
 
 

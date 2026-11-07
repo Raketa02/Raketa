@@ -2355,7 +2355,8 @@
         "type": "string",
         "enum": [
           "SHORT_AT_THE_CUT_OFF",
-          "CANCELLED_BY_THE_CLUB"
+          "CANCELLED_BY_THE_CLUB",
+          "BY_THE_SENDER"
         ],
         "title": "CalledOffReason",
         "description": "Why a game will not be played (the mechanics \u00a714.1, \u00a716.7)."
@@ -2577,7 +2578,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`). `BY_THE_SENDER` \u2014 the player who booked it for their friends called it off before your cut-off: nothing was taken, and the court is yours to sell again (#751)."
           },
           "cancel_reason": {
             "anyOf": [

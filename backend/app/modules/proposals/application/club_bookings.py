@@ -45,7 +45,7 @@ from typing import final
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
-from app.kernel import Clock, Instant, instant, invariant
+from app.kernel import Clock, Instant, instant
 from app.modules.clubs.domain.court_hours import (
     DAY_CLOSES,
     DAY_OPENS,
@@ -285,9 +285,10 @@ class CancelTheGame:
         or ``anyway`` — the game called off; the answer says which."""
 
         now = instant(self._clock.now())
+        # A friends game has no proposal (#751): nothing records a card owed
+        # for it yet — what its cancel owes is #752's to say.
         proposal = await self._proposals.load_for_update(booking_id)
         await _still_the_clubs_to_play(self._bookings, club_id, booking_id, now=now)
-        proposal = invariant(proposal, f"a booking {booking_id} with no proposal")
         came_to = await self._club.cancel(
             booking_id, because=because, anyway=anyway, at=now
         )
@@ -318,8 +319,9 @@ class CancelTheGame:
         # A rescue's payment somebody confirmed for a seat here and never took
         # is let go with the game: nobody pays it.
         await self._undecided.release(booking_id, keeping=(), at=now)
-        proposal.club_cancelled(cancelled.still_in, at=now)
-        await self._proposals.save(proposal)
+        if proposal is not None:
+            proposal.club_cancelled(cancelled.still_in, at=now)
+            await self._proposals.save(proposal)
         await self._uow.commit()
         return CancelOutcome(moved_to=None)
 

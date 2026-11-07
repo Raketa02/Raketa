@@ -22,7 +22,15 @@ from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.bookings.application.event_subscriptions import (
     register_booking_events,
 )
-from app.modules.bookings.domain.events import BookingConfirmed, CourtMoved
+from app.modules.bookings.domain.events import (
+    BookedByAFriend,
+    BookingConfirmed,
+    CalledOffBySender,
+    CourtMoved,
+    InvitedSeatAccepted,
+    InvitedSeatDeclined,
+    InvitedSeatRanOut,
+)
 
 NOW = datetime(2026, 10, 5, 6, tzinfo=timezone.utc)
 START = datetime(2026, 10, 10, 15, tzinfo=timezone.utc)
@@ -177,3 +185,65 @@ def _envelope(encoded, *, payload=None) -> SerializedEventEnvelope:
         payload=encoded.payload if payload is None else payload,
         occurred_at=NOW,
     )
+
+
+def _friends_game_events() -> list[object]:
+    booking = uuid4()
+    return [
+        BookedByAFriend(
+            booking_id=booking,
+            pool_id=uuid4(),
+            club_id=uuid4(),
+            court_id=uuid4(),
+            court_name="Court 3",
+            indoor=True,
+            sport="PADEL",
+            kind="COMPETITIVE",
+            start=START,
+            share_grosze=25_00,
+            sender_id=uuid4(),
+            first_side=(uuid4(), uuid4()),
+            second_side=(uuid4(), uuid4()),
+            pay_mode="SPLIT_THE_COST",
+            invited_until=START,
+            cut_off=START,
+            game_id=uuid4(),
+            occurred_at=NOW,
+        ),
+        InvitedSeatAccepted(
+            booking_id=booking, player_id=uuid4(), side="B", occurred_at=NOW
+        ),
+        InvitedSeatDeclined(booking_id=booking, player_id=uuid4(), occurred_at=NOW),
+        InvitedSeatRanOut(booking_id=booking, player_id=uuid4(), occurred_at=NOW),
+        CalledOffBySender(
+            booking_id=booking,
+            player_ids=(uuid4(),),
+            invited=(uuid4(), uuid4()),
+            occurred_at=NOW,
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("event", "name"),
+    zip(
+        _friends_game_events(),
+        (
+            "bookings.booked_by_a_friend",
+            "bookings.invited_seat_accepted",
+            "bookings.invited_seat_declined",
+            "bookings.invited_seat_ran_out",
+            "bookings.called_off_by_the_sender",
+        ),
+        strict=True,
+    ),
+)
+def test_a_friends_game_s_events_encode_and_decode_at_version_1(event, name):
+    """#751: the Booking's second birth and its invited seats' answers."""
+
+    codec = JsonEventCodec(_catalog())
+
+    encoded = codec.encode(event)
+
+    assert (encoded.event_type, encoded.schema_version) == (name, 1)
+    assert codec.decode(_envelope(encoded)) == event

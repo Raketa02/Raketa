@@ -258,6 +258,21 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   relation to everybody else on the game — the result's *PLAYED WITH* card — and `GET /home` adds
   `friend_requests` (`FriendRequestsOnHome`), not counted in `needing_you`. Both ports are signed
   in `proposals/infrastructure/friends.py`, so the arrow runs `proposals → friends`.
+- **A friends game is sent, answered and called off here** (#751; ADR-0202 §5–§6;
+  `application/friends_games.py`; see `bookings.md` and `payments.md`): `POST /pools/{id}/
+  friends-games` (`SendAFriendsGame`, `FriendsGameSentResponse`: booked, or `your_payments`
+  to confirm and send again with `booking_id`), `POST /bookings/{id}/invitation/acceptance`
+  and `…/invitation/decline` (`AnswerAFriendsGame`), `POST /bookings/{id}/call-off`
+  (`CallOffAFriendsGame`), and the `invitations` job (`RunOutTheInvitations`). Its demands
+  are `FriendsGameBookings` (bookings), `SendersCourts` and `CoversAtTheCutOff` (payments) —
+  the first and last with rows in `proposal_demands.py`. **Home** gains `friends_games`
+  (*FRIENDS GAME · n*, the invitations still waiting on the reader, soonest to end first, not
+  in `needing_you`), and every card and `GET /bookings/{id}` a `friends_game` block (the
+  sender, the pay mode, each seat's state — `IN`, `WAITING` with its end, `CANT_MAKE_IT`,
+  `DIDNT_ANSWER` off the clock, `EMPTY` for #752 — `your_invitation_until`, `can_call_off`);
+  a friend invited and not In reads the details too (`_as_invited`), every seat the card drew
+  among `sides` (`BookedGame.planned_sides`). **A friends game is no proposal**, so
+  `the_game`, `load_for_update` and the payments-to-confirm rows find none for it.
 - **A game still filling has its details, for anybody dealt it** (#542; the mechanics §14.2):
   `GET /proposals/{id}` (`application/proposal_details.py`, rules in `domain/details.py`) is the
   deck's card as a screen for the readers the deck does not serve — a card's *i*, a You're In row,

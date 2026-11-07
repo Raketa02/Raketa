@@ -131,6 +131,12 @@ class GameToCharge:
     #: sees *It's a game!* on their phone.
     booked_on_a_payment: bool = False
     filled_by: UUID | None = None
+    #: An invited friend accepting a friends game with *Split the cost*
+    #: (#751): one seat, its hold keyed apart, the friend told *You're in* —
+    #: never *It's a game!*, which the last seat taken tells — and a refusal
+    #: asks them to confirm by ``pay_by``, their invitation's end, to take the
+    #: seat.
+    accepting: bool = False
 
 
 @final
@@ -159,13 +165,20 @@ class SeatsCharged:
 
 
 def hold_key(
-    game_id: UUID, player_id: UUID, *, attempt: int, at: Instant, rescue: bool = False
+    game_id: UUID,
+    player_id: UUID,
+    *,
+    attempt: int,
+    at: Instant,
+    rescue: bool = False,
+    accepting: bool = False,
 ) -> str:
     """The key a seat's hold is asked under: the game, the player, the attempt
     and the hour — a rescue's apart from the fill's (#545), since the two count
-    their attempts on different streams and one game id carries both."""
+    their attempts on different streams and one game id carries both — and an
+    invited friend's accept apart from both (#751)."""
 
-    kind = "rescue" if rescue else "seat"
+    kind = "accept" if accepting else "rescue" if rescue else "seat"
     return f"raketa-{kind}-{game_id}-{player_id}-{attempt}-{key_hour(at)}"
 
 
@@ -256,7 +269,7 @@ class ChargeTheSeats:
     ) -> Payment | tuple[FailureReason, Payment | None]:
         """One seat's hold, or why it could not be made."""
 
-        return await _held_on_the_card(
+        return await held_on_the_card(
             player,
             methods=self._methods,
             provider=self._provider,
@@ -265,7 +278,12 @@ class ChargeTheSeats:
             description=f"{game.sport.value.title()} · {seller.name}",
             game_id=game.game_id,
             key=hold_key(
-                game.game_id, player, attempt=attempt, at=at, rescue=game.rescue
+                game.game_id,
+                player,
+                attempt=attempt,
+                at=at,
+                rescue=game.rescue,
+                accepting=game.accepting,
             ),
         )
 
@@ -292,24 +310,11 @@ class ChargeTheSeats:
             charge = confirmed.get(player) or _a_hold(
                 game, player, held[player], seller=seller, at=at
             )
-            if until is None:
-                charge.take(booking_id=game.game_id, at=at)
-            elif reaches(charge.last_moment, cut_off=until) or at >= holding_time(
-                until
-            ):
-                charge.keep(
-                    booking_id=game.game_id,
-                    until=taken_by(charge.last_moment, cut_off=until),
-                    at=at,
-                )
-            else:
-                checked[player] = holding_time(until)
-                charge.check(
-                    booking_id=game.game_id,
-                    until=until,
-                    hold_at=checked[player],
-                    at=at,
-                )
+            hold_at = held_for_the_game(
+                charge, booking_id=game.game_id, until=until, at=at
+            )
+            if hold_at is not None:
+                checked[player] = hold_at
             await self._charges.save(charge)
             taken[player] = charge.charge_id
         payers = await self._payers.of(players)
@@ -331,6 +336,7 @@ class ChargeTheSeats:
                     app_link=self._app_link,
                     booked_on_a_payment=game.booked_on_a_payment
                     and player != game.filled_by,
+                    accepted=game.accepting,
                 ),
                 at=at,
             )
@@ -377,7 +383,7 @@ class ChargeTheSeats:
             )
             await self._charges.save(charge)
             seats[player] = RefusedSeat(charge_id=charge.charge_id, reason=reason)
-        if game.pay_by is None and not game.rescue:
+        if game.pay_by is None and not (game.rescue or game.accepting):
             # No time is left to pay — the game's book-by has come: there is
             # nothing to confirm by a time.
             return SeatsCharged(taken={}, refused=seats)
@@ -395,7 +401,9 @@ class ChargeTheSeats:
                     amount_grosze=game.share_grosze,
                     reason=seat.reason,
                     app_link=self._app_link,
-                    rescue=game.rescue,
+                    # An accept's refusal is the seat theirs to take, as a
+                    # rescue's is — until their invitation ends (#751).
+                    rescue=game.rescue or game.accepting,
                     pay_by=game.paying_until.get(player, game.pay_by),
                     # Refused before the cut-off, where the share would only be
                     # held: their time is to fix the card (#638).
@@ -406,7 +414,32 @@ class ChargeTheSeats:
         return SeatsCharged(taken={}, refused=seats)
 
 
-async def _held_on_the_card(
+def held_for_the_game(
+    charge: SeatCharge, *, booking_id: UUID, until: Instant | None, at: Instant
+) -> Instant | None:
+    """A hold made the booked game's: **taken now** with no ``until`` — the
+    game booked after its cut-off — or **kept until ``until``** — or, a hold
+    that would not last until it, **checked**, let go and held again at its
+    Holding time (#639), which is answered; once that time has come it is kept
+    and taken by its last safe moment (``taken_by``). The fill's, a rescue's
+    and a friends game's sender's (#751) alike."""
+
+    if until is None:
+        charge.take(booking_id=booking_id, at=at)
+        return None
+    if reaches(charge.last_moment, cut_off=until) or at >= holding_time(until):
+        charge.keep(
+            booking_id=booking_id,
+            until=taken_by(charge.last_moment, cut_off=until),
+            at=at,
+        )
+        return None
+    hold_at = holding_time(until)
+    charge.check(booking_id=booking_id, until=until, hold_at=hold_at, at=at)
+    return hold_at
+
+
+async def held_on_the_card(
     player: UUID,
     *,
     methods: PaymentMethodRepository,
@@ -588,7 +621,7 @@ class HoldTheCheckedShares:
         refused: dict[UUID, RefusedSeat] = {}
         for charge in due:
             assert charge.held_until is not None
-            outcome = await _held_on_the_card(
+            outcome = await held_on_the_card(
                 charge.player_id,
                 methods=self._methods,
                 provider=self._provider,

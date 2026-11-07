@@ -356,6 +356,24 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   group and the sport it names** (`pool_id`, `sport`, beside `player_id`), so a tap can open
   the questionnaire or the picker — a friend request's push carries them too, unused. No
   migration: `kind` and `opens` are strings wide enough.
+- **Five notices are a friends game's** (#751; the words §29.8–§29.10) — always on, never
+  capped, never emailed, each off a Booking event, the game briefed off its booking when no
+  proposal stands for it (`told_by.py`'s `_a_friends_game`, `GameBrief.sender`, `invited`,
+  `whole`):
+  **`FRIENDS_GAME_INVITATION`** on `bookings.booked_by_a_friend` — *Tomek invited you to a
+  game* / *Saturday 10:00 · Ogrody 33 · Padel · Competitive* — to each friend still invited
+  at the delivery, `until` their 24 hours' end, opening `HOME`; **`CANT_MAKE_IT`** and
+  **`DIDNT_ANSWER`** on `…invited_seat_declined` / `…invited_seat_ran_out` — *Ania can't make
+  it* / *Saturday 10:00 · Invite a friend, or open the seat to Ogrody open play.* — to the
+  sender, the group read for them (`reading.py`'s `_NAMING_THE_GROUP`); **`GAME_BOOKED` ·
+  `LAST_SEAT_TAKEN`** — *It's a game!* / *… — every seat is taken.* — on the accept that took
+  the last seat (`InvitedSeatAccepted.last_seat`), to everybody seated, the accepter's their
+  own; and **`GAME_CALLED_OFF` · `BY_THE_SENDER`** — *Tomek called off Saturday 10:00* /
+  *Nobody paid.* — to everybody In and every friend still invited, the sender's own copy
+  born seen.
+  **A friends game's money tells nothing on its own**: `_seats_booked` steps over it, so the
+  sender's four holds at send and a friend's at their accept are no *It's a game!*. Not
+  built: answering an invitation on Home does not take its row off the bell.
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,
   so a push service down for an hour, raising, would hold the queue for that hour.

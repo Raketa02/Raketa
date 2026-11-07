@@ -41,6 +41,7 @@ from app.modules.payments.domain.errors import (
     PaymentTermsOutdated,
 )
 from app.modules.payments.domain.events import (
+    MaximumAgreed,
     PaymentMethodChanged,
     PaymentMethodRemoved,
     PaymentMethodSaved,
@@ -124,6 +125,9 @@ class PaymentMethod:
     #: When each setup was started, oldest first — the card-testing guard's
     #: count, read off the stream rather than kept anywhere else.
     setups_started_at: tuple[Instant, ...] = ()
+    #: The most this player agreed to pay for each friends game they sent
+    #: (#751): the booking, and the amount above its button.
+    maximums_agreed: dict[UUID, int] = field(default_factory=dict)
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -305,6 +309,33 @@ class PaymentMethod:
             )
         )
 
+    def agree_to_the_maximum(
+        self, *, booking_id: UUID, amount_grosze: int, at: Instant
+    ) -> None:
+        """The player sent a friends game, agreeing to **at most**
+        ``amount_grosze`` for it — their share and a cover for every other seat
+        — under the terms they accepted (#751; ``docs/adr/0202`` §6). Recorded
+        with that consent; a second agreement for one game records nothing.
+        That their card may be charged on these terms is asked before this."""
+
+        invariant(
+            self.consent is not None and not self.terms_needed,
+            f"{self.player_id} agrees to {amount_grosze} with no terms in force",
+        )
+        invariant(amount_grosze > 0, f"a maximum of {amount_grosze} agreed")
+        assert self.consent is not None
+        if booking_id in self.maximums_agreed:
+            return
+        self._record_that(
+            MaximumAgreed(
+                player_id=self.player_id,
+                booking_id=booking_id,
+                amount_grosze=amount_grosze,
+                terms_version=self.consent.terms_version,
+                occurred_at=at,
+            )
+        )
+
     # ------------------------------------------------------------------- fold
 
     def _accepted(
@@ -354,6 +385,11 @@ class PaymentMethod:
         elif isinstance(event, PaymentMethodRemoved):
             self.method = None
             self.consent = None
+        elif isinstance(event, MaximumAgreed):
+            self.maximums_agreed = {
+                **self.maximums_agreed,
+                event.booking_id: event.amount_grosze,
+            }
         elif isinstance(event, PaymentMethodUpdated):
             assert self.method is not None
             self.method = SavedMethod(

@@ -30,3 +30,7 @@ LIVE_POSTS: Final = 2
 #: use lie, in kilometres (the mechanics §4.3, §18). An official group's is its
 #: club's own setting.
 PLAYER_GROUP_CLUBS_WITHIN_KM: Final = 10
+
+#: How many friends games one sender may have waiting for answers at once
+#: (#751; the friends mechanics §8.4, Q34): a third send is refused.
+FRIENDS_GAMES_WAITING: Final = 2
