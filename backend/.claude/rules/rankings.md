@@ -5,11 +5,13 @@ paths:
   - "app/modules/proposals/infrastructure/rankings.py"
   - "app/bootstrap/ranking_demands.py"
   - "migrations/versions/0068_ranking_rows.py"
+  - "migrations/versions/0069_ranking_level_history.py"
+  - "app/engines/racketskill/update_v1/rule.py"
 ---
 
 # Rankings
 
-Decisions that are load-bearing and not obvious from the code (#768;
+Decisions that are load-bearing and not obvious from the code (#768, #769;
 [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
 `docs/specs/rankings/`). The words are root `CONTEXT.md`'s *Rankings* section.
 
@@ -18,7 +20,7 @@ Decisions that are load-bearing and not obvious from the code (#768;
   no event of its own** — it registers nothing in the catalog. `ranking_rows` (migration
   0068) holds **one row per player per sport**, made on their first result there: the
   Level in **hundredths** (the ranking compares Levels at the passport's two decimals, so
-  5,00 is level with any other 5,00), its σ (which prices one win on the gap line, #769),
+  5,00 is level with any other 5,00), its σ (which prices one win on the gap line),
   the count of results, when the last settled, when the Level took its current value,
   when the player first entered General (the 5th result) and Friends (the 1st), and the
   last five outcomes oldest first (`W`/`L`). **A result** is a confirmed competitive result
@@ -40,10 +42,23 @@ Decisions that are load-bearing and not obvious from the code (#768;
   apart — and the form is in stream order, as `Outcome`s (`W`/`L` stored). **When the Level was reached** is when it last took its current value —
   the questionnaire's moment if no result has moved it off that since; two partners moved
   by one result reach it at one instant, and the id decides between them.
+- **The level history is the same fold, point by point** (#769; `ranking_level_history`,
+  migration 0069; `points_of`, and `row_of` is its last point). **One point per stored
+  event** (`event_store.id`, carried on `LevelMove.event_id` and `RatingHistory.opened_by`):
+  the rating's **opening** (results `0`, the questionnaire's Level) and every result —
+  the Level in hundredths, the results by then and when that Level was reached. The opening
+  is kept so the history answers *where a player stood at any instant since the rating
+  opened*. **The move hands `LevelHistory.append` every point of the stream**, and the
+  adapter inserts only the event ids it doesn't hold (`ON CONFLICT DO NOTHING` on the
+  event), so a redelivery changes nothing and a store that never had a player's earlier
+  points gains them on that player's next result. **No night-time job**: today every server
+  process would run one on its own.
 - **The rebuild is a command, not a job**: `make rankings-rebuild` (`…-host` from the host)
   runs `python -m app.modules.rankings.infrastructure.rebuild_cli`, owed once to a store
-  that held results before the ranking shipped, and safe to run again. The seed needs none:
-  its outbox drain delivers every move.
+  that held results before the ranking shipped — **and again to one migrated to 0069**, or
+  every chip there reads `SAME` until each player's next result — and safe to run again
+  (it writes rows and the history's missing points, and reports how many). The seed needs
+  none: its outbox drain delivers every move.
 - **No account deletion exists to hear** (`users`: *nothing deletes a User*), so ADR-0203's
   *a deleted account's rows go* has no producer yet. The read leaves out a row whose player
   nobody can name — its place kept — and the ticket that adds deletion owes this context a
@@ -59,13 +74,42 @@ Decisions that are load-bearing and not obvious from the code (#768;
   and `FRIENDS` arrives with #771; an unknown sport is `422`): **the card** — `NO_LEVEL`
   first, read live from rating's published read (`SportLevels`), then `NEEDS_RESULTS` with
   the count (fewer than 5, whatever their age), then `OFF_THE_LIST` (5 or more, none in the
-  90 days), else `LISTED` with `place`, `of` and `level` — **the podium**, the first three
+  90 days), else `LISTED` with `place`, `of`, `level`, `chip` and `gap_line` — **the podium**, the first three
   rows each with its true place and none with fewer than three, and **the first page of 50
   rows**: place, id, nickname, photo (`RankedFaces`: `users`' nickname, the Player
-  profile's first photograph), `form` (`WIN`/`LOSS`, oldest first), `level` and `is_you`.
-  The clock is read once, so the card, the podium and the rows agree about who dropped off.
-  Pages past the first, the Redis cache and the 50,000-player measurement are #770's; the
-  chip and the gap line #769's.
+  profile's first photograph), `form` (`WIN`/`LOSS`, oldest first), `chip`, `level` and
+  `is_you`. The clock is read once, so the card, the podium and the rows agree about who
+  dropped off. Pages past the first, the Redis cache and the 50,000-player measurement are
+  #770's.
+- **The chip** (`chips_of`, on every row and the `LISTED` card: `UP`/`DOWN` with `places`,
+  `SAME`, `NEW`) compares a place in **today's set**, in today's order, with a place among
+  **the same set** ordered by `LevelHistory.points_at(sport, now − 7 days, …)` — each
+  player's latest point at or before that instant (most results breaking a tie of
+  instants), or, for a player with none by then, their **first** (the opening: a rating
+  opened inside the week, so the player is *New*). So an arrival or a departure moves
+  nobody and an overtake moves both. ***New*** is `now − general_entered_at < 7 days`; a
+  comeback after 90 days reads a real chip, its Level a week ago known. **A listed row with
+  no point at all** (a store the rebuild hasn't filled) stands where it stands now — never
+  an invariant: it would take every reader's page down.
+- **The gap line** (`gap_line` on the `LISTED` card): **the nearest named row above and the
+  nearest below** — a row nobody can name is skipped, and #772's hidden and blocked rows
+  will be skipped the same way (`ReadRanking._nearest_named`, faces asked only for a row
+  off the page). Above: `nickname`, `gap` (two decimals), `wins` and `tied`; below:
+  `nickname` and `gap` (`0` reads *level with you*); last place has no below. **First
+  place is `top_of_the_list` and nothing else** — *Top of the list* is the whole line (the
+  words §30.4), so neither above nor below is sent.
+- **One win is how far the engine's own rule moves the reader's Level in an even game**
+  (`racketskill/update_v1`'s `even_win`, beside `stakes`; no constant changed): each side
+  the sport's own size folded by `one_side` from the reader's own Level and σ — a four as
+  the reader and an equal partner against two more of them — the sport's share, and
+  **the Level `rating_after` leaves at two decimals**, not the raw stake. The rule rounds
+  every new Level, so a padel stake of 0,0149 (σ 0,30) moves it 0,01 and a 0,04 gap takes
+  four wins, not three; **a stake under half a hundredth moves nothing** — every settled
+  padel player's even win (σ ≤ about 0,15) — so `one_win` is `0` and the count is left
+  out rather than promised. `wins_to_close` is the gap over the win in whole hundredths,
+  rounded up; 1–5 is returned as is, above `WINS_COUNTED` (5) or with a win of `0`
+  `null`, and a tie `tied` with no count. **The backend counts and the client draws**: as
+  with *At stake*, nobody else may compute it.
 - **Home's trophy** (`GET /home`'s `ranking`, additive): the sport of the reader's **latest
   result in any sport** (`latest_of`: the row with the latest `last_result_at`, ties to the
   sport registry's order) and their General place there, `null` when not listed; the whole

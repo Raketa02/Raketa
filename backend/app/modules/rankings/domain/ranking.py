@@ -1,6 +1,7 @@
-"""The ranking's rules: what a row is, how a rating's history folds into one,
-who is listed on General, the order, and the reader's place card
-(``docs/adr/0203`` §1–§3; the mechanics §3–§5).
+"""The ranking's rules: what a row is, how a rating's history folds into one
+and into the level history, who is listed on General, the order, the chip, the
+gap line and the reader's place card (``docs/adr/0203`` §1–§6; the mechanics
+§3–§7).
 
 **A result** here is a confirmed competitive result with a winner in the sport:
 exactly a result that moves a level, one ``rating.moved_on_result`` each. A For
@@ -10,17 +11,22 @@ reach this module.
 **The row is a fold of one rating stream**, and the fold is this module's
 :func:`row_of`. The live delivery and the rebuild both call it over the whole
 stream, so the two cannot disagree, and a redelivery folds the same stream to
-the same row.
+the same row. **The level history is the same fold, kept point by point**
+(:func:`points_of`): the row is its last point, with the count and the form
+beside it.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
 
+from app.engines.racketskill.core import SkillEstimate
+from app.engines.racketskill.update_v1 import even_win
 from app.kernel import Instant, Sport, instant, invariant
 
 #: Results in the sport that put a player on General (Q17, kept "for now" in
@@ -40,6 +46,13 @@ PAGE_SIZE: Final = 50
 
 #: The podium's steps; none with fewer rows.
 PODIUM_SIZE: Final = 3
+
+#: The chip's window: the last 7 days, rolling (Q4). *New* lasts as long.
+CHIP_WINDOW: Final = timedelta(days=7)
+
+#: The most wins the gap line counts — *about 5 wins close it*. Above it the
+#: count is left out, so a far gap never discourages (Q19).
+WINS_COUNTED: Final = 5
 
 #: A Level is carried to two decimals (``racketskill``'s own resolution), and
 #: the ranking compares Levels at that resolution: 5,00 is level with any other
@@ -75,26 +88,53 @@ class Outcome(StrEnum):
 @dataclass(frozen=True, slots=True)
 class LevelMove:
     """One result applied to a rating: the game, who won, and the Level and
-    uncertainty after it, **when the result settled**."""
+    uncertainty after it, **when the result settled** — and the stored event
+    that recorded it, which keys its point in the level history."""
 
     game_id: UUID
     won: bool
     mu: float
     sigma: float
     at: Instant
+    event_id: UUID
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class RatingHistory:
     """One player's rating in one sport, as its stream recorded it: where the
-    questionnaire put it, and every result that moved it, in stream order."""
+    questionnaire put it, and every result that moved it, in stream order.
+    ``opened_by`` is the stored event that opened it."""
 
     player_id: UUID
     sport: Sport
     initial_mu: float
     initialised_at: Instant
     moves: tuple[LevelMove, ...]
+    opened_by: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LevelPoint:
+    """Where a player's Level stood from one instant on — one entry of **the
+    level history**, keyed by the stored event that put it there.
+
+    The first is the rating's opening, with no result; each after it is one
+    result. So the history answers *this player's Level, count of results and
+    when that Level was reached, at any instant since the rating opened* —
+    which the chip reads 7 days back (``docs/adr/0203`` §4)."""
+
+    event_id: UUID
+    player_id: UUID
+    sport: Sport
+    #: When it was so: the rating's opening, or when the result settled.
+    at: Instant
+    hundredths: int
+    #: How many results had moved the Level by then.
+    results: int
+    #: When the Level took the value it had then.
+    level_reached_at: Instant
 
 
 @final
@@ -145,8 +185,10 @@ def listed_since(now: Instant) -> Instant:
     return instant(now - LISTED_FOR)
 
 
-def row_of(history: RatingHistory) -> RankingRow | None:
-    """The row a rating's history makes, or ``None`` before its first result.
+def points_of(history: RatingHistory) -> tuple[LevelPoint, ...]:
+    """The level history a rating's stream makes: the opening, then one point
+    per result in stream order. **Empty before the first result** — the
+    history, as the row, is made by a result.
 
     **When the Level was reached** is when it last took its current value at
     two decimals — the questionnaire's moment if no result has moved it off
@@ -155,17 +197,47 @@ def row_of(history: RatingHistory) -> RankingRow | None:
     """
 
     if not history.moves:
-        return None
+        return ()
     level = hundredths_of(history.initial_mu)
     reached = history.initialised_at
-    general_entered_at: Instant | None = None
+    points = [
+        LevelPoint(
+            event_id=history.opened_by,
+            player_id=history.player_id,
+            sport=history.sport,
+            at=history.initialised_at,
+            hundredths=level,
+            results=0,
+            level_reached_at=reached,
+        )
+    ]
     for count, move in enumerate(history.moves, start=1):
         moved_to = hundredths_of(move.mu)
         if moved_to != level:
             level, reached = moved_to, move.at
-        if count == GENERAL_ENTRY:
-            general_entered_at = move.at
-    last = history.moves[-1]
+        points.append(
+            LevelPoint(
+                event_id=move.event_id,
+                player_id=history.player_id,
+                sport=history.sport,
+                at=move.at,
+                hundredths=level,
+                results=count,
+                level_reached_at=reached,
+            )
+        )
+    return tuple(points)
+
+
+def row_of(history: RatingHistory) -> RankingRow | None:
+    """The row a rating's history makes, or ``None`` before its first result:
+    the level history's last point (:func:`points_of`), with the count and the
+    form beside it."""
+
+    points = points_of(history)
+    if not points:
+        return None
+    last = points[-1]
     # The latest settling instant, not the last in stream order: the catch-up
     # and the outbox may apply two results up to a minute out of order
     # (``rating/application/settle_results.py``).
@@ -173,15 +245,205 @@ def row_of(history: RatingHistory) -> RankingRow | None:
     return RankingRow(
         player_id=history.player_id,
         sport=history.sport,
-        hundredths=level,
-        sigma=last.sigma,
-        results=len(history.moves),
+        hundredths=last.hundredths,
+        sigma=history.moves[-1].sigma,
+        results=last.results,
         last_result_at=latest,
-        level_reached_at=reached,
-        general_entered_at=general_entered_at,
-        friends_entered_at=history.moves[0].at,
+        level_reached_at=last.level_reached_at,
+        general_entered_at=(
+            points[GENERAL_ENTRY].at if last.results >= GENERAL_ENTRY else None
+        ),
+        friends_entered_at=points[1].at,
         form=tuple(Outcome.of(move.won) for move in history.moves[-FORM_LENGTH:]),
     )
+
+
+def _order_of(one: RankingRow | LevelPoint) -> tuple[int, int, Instant, UUID]:
+    """The ranking's order, best first, of a row now or a point in the level
+    history: the Level, then more results, then who reached that Level first,
+    then the player id (Q20) — ``ix_ranking_rows_order`` in Python."""
+
+    return (-one.hundredths, -one.results, one.level_reached_at, one.player_id)
+
+
+# --------------------------------------------------------------------------- #
+# The chip — places moved in 7 days (``docs/adr/0203`` §4; the mechanics §6)
+# --------------------------------------------------------------------------- #
+
+
+class ChipKind(StrEnum):
+    """*▲ n*, *▼ n*, *—* or *New* (the words §30.3)."""
+
+    UP = "UP"
+    DOWN = "DOWN"
+    SAME = "SAME"
+    NEW = "NEW"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Chip:
+    kind: ChipKind
+    #: How many places, with ``UP`` and ``DOWN``; ``0`` with ``SAME`` and ``NEW``.
+    places: int = 0
+
+    def __post_init__(self) -> None:
+        moved = self.kind in (ChipKind.UP, ChipKind.DOWN)
+        invariant(
+            self.places >= 1 if moved else self.places == 0,
+            f"a chip whose places don't say how it moved: {self!r}",
+        )
+
+
+def chips_since(now: Instant) -> Instant:
+    """The instant the chip reads the level history at: exactly 7 days ago."""
+
+    return instant(now - CHIP_WINDOW)
+
+
+def chips_of(
+    listed: Sequence[RankingRow],
+    then: Mapping[UUID, LevelPoint],
+    *,
+    now: Instant,
+) -> dict[UUID, Chip]:
+    """Every listed player's chip.
+
+    ``listed`` is **today's set**, in today's order; ``then`` is each of those
+    players' level-history point at :func:`chips_since` — the latest at or
+    before it, or, for a player with none by then, their first. **The chip
+    compares a place in today's order with a place among the same players
+    ordered by those points**, so an arrival or a departure moves nobody, and
+    an overtake moves both (Q5, Q23).
+
+    ***New*** is the 7 days after a first entry into General — the 5th result.
+    A comeback is not new: a returning player's level 7 days ago is known, so
+    the chip is real. **A row with no point at all** — a store the rebuild
+    hasn't filled — stands where it stands now.
+    """
+
+    def then_order(row: RankingRow) -> tuple[int, int, Instant, UUID]:
+        return _order_of(then.get(row.player_id, row))
+
+    then_places = {
+        row.player_id: place
+        for place, row in enumerate(sorted(listed, key=then_order), start=1)
+    }
+    chips: dict[UUID, Chip] = {}
+    for place, row in enumerate(listed, start=1):
+        entered = row.general_entered_at
+        if entered is not None and now - entered < CHIP_WINDOW:
+            chips[row.player_id] = Chip(ChipKind.NEW)
+            continue
+        moved = then_places[row.player_id] - place
+        if moved > 0:
+            chips[row.player_id] = Chip(ChipKind.UP, moved)
+        elif moved < 0:
+            chips[row.player_id] = Chip(ChipKind.DOWN, -moved)
+        else:
+            chips[row.player_id] = Chip(ChipKind.SAME)
+    return chips
+
+
+# --------------------------------------------------------------------------- #
+# The gap line (``docs/adr/0203`` §6; the mechanics §7)
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PlayerAbove:
+    """*0,04 behind Karol · about 3 wins close it*, or *Level with Ewa · one win
+    puts you ahead*."""
+
+    nickname: str
+    #: The Levels' difference, in hundredths; ``0`` when tied.
+    gap: int
+    #: One win to five; ``None`` above five, when no win moves the Level, and
+    #: when tied.
+    wins: int | None
+    tied: bool
+
+    def __post_init__(self) -> None:
+        invariant(self.gap >= 0, f"a player above who is below: {self!r}")
+        invariant(self.tied == (self.gap == 0), f"a tie with a gap: {self!r}")
+        invariant(
+            self.wins is None or (not self.tied and 1 <= self.wins <= WINS_COUNTED),
+            f"a count of wins the line doesn't read: {self!r}",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PlayerBelow:
+    """*Zofia is 0,02 behind you*, or *Zofia is level with you* at ``0``."""
+
+    nickname: str
+    gap: int
+
+    def __post_init__(self) -> None:
+        invariant(self.gap >= 0, f"a player below who is above: {self!r}")
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class GapLine:
+    """The line under the place card: the nearest player above the reader can
+    see, and the nearest below — or, in first place, *Top of the list*, which is
+    the whole line (the words §30.4)."""
+
+    above: PlayerAbove | None
+    below: PlayerBelow | None
+    top_of_the_list: bool
+
+    def __post_init__(self) -> None:
+        invariant(
+            not self.top_of_the_list or (self.above is None and self.below is None),
+            f"a top of the list that says more than *Top of the list*: {self!r}",
+        )
+
+
+def one_win(row: RankingRow) -> int:
+    """How far one win moves the row's Level, in hundredths: **the rating
+    engine's own rule for an even game** (``even_win``) — an opposition at the
+    player's own Level and uncertainty, a four as a side of the player and an
+    equal partner, the sport's share, and the Level the win leaves at two
+    decimals. ``0`` when the stake is under half a hundredth."""
+
+    estimate = SkillEstimate(mu=level_of(row.hundredths), sigma=row.sigma)
+    return hundredths_of(even_win(estimate, sport=row.sport))
+
+
+def wins_to_close(gap: int, *, win: int) -> int | None:
+    """How many even wins close a gap of ``gap`` hundredths, each moving the
+    Level ``win`` hundredths: the gap over the win, rounded up — ``None`` above
+    :data:`WINS_COUNTED`, and when a win moves the Level not at all.
+
+    **Honest, not exact**: the next opponent is never quite even, and the
+    player above may play too."""
+
+    invariant(gap > 0, f"wins counted for a gap that is closed: {gap}")
+    invariant(win >= 0, f"a win that moves a Level down: {win}")
+    if win == 0:
+        return None
+    wins = -(-gap // win)
+    return wins if wins <= WINS_COUNTED else None
+
+
+def player_above(reader: RankingRow, above: RankingRow, nickname: str) -> PlayerAbove:
+    gap = above.hundredths - reader.hundredths
+    if gap == 0:
+        return PlayerAbove(nickname=nickname, gap=0, wins=None, tied=True)
+    return PlayerAbove(
+        nickname=nickname,
+        gap=gap,
+        wins=wins_to_close(gap, win=one_win(reader)),
+        tied=False,
+    )
+
+
+def player_below(reader: RankingRow, below: RankingRow, nickname: str) -> PlayerBelow:
+    return PlayerBelow(nickname=nickname, gap=reader.hundredths - below.hundredths)
 
 
 class CardState(StrEnum):
@@ -209,16 +471,15 @@ class PlaceCard:
     place: int | None = None
     of: int | None = None
     hundredths: int | None = None
+    chip: Chip | None = None
+    gap_line: GapLine | None = None
 
     def __post_init__(self) -> None:
         listed = self.state is CardState.LISTED
+        placed = (self.place, self.of, self.hundredths, self.chip, self.gap_line)
         invariant(
-            listed
-            == (
-                self.place is not None
-                and self.of is not None
-                and self.hundredths is not None
-            ),
+            listed == all(field is not None for field in placed)
+            and (listed or all(field is None for field in placed)),
             f"a place on a card that is not listed, or none on one that is: {self!r}",
         )
 
@@ -230,13 +491,16 @@ def card_of(
     place: int | None,
     of: int,
     now: Instant,
+    chip: Chip | None = None,
+    gap_line: GapLine | None = None,
 ) -> PlaceCard:
     """The reader's General card in a sport.
 
     **No level comes first**, read live from the rating: a reader with no
     rating in the sport has no row either. Then **fewer than five results**,
     whatever their age; then **off the list**, five or more with the last
-    older than the 90 days; and otherwise the place.
+    older than the 90 days; and otherwise the place, the chip and the gap
+    line.
     """
 
     if not holds_a_level:
@@ -254,6 +518,8 @@ def card_of(
         place=place,
         of=of,
         hundredths=row.hundredths,
+        chip=chip,
+        gap_line=gap_line,
     )
 
 

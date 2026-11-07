@@ -9735,6 +9735,45 @@
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
       },
+      "ChipKind": {
+        "type": "string",
+        "enum": [
+          "UP",
+          "DOWN",
+          "SAME",
+          "NEW"
+        ],
+        "title": "ChipKind",
+        "description": "*\u25b2 n*, *\u25bc n*, *\u2014* or *New* (the words \u00a730.3)."
+      },
+      "ChipSchema": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ChipKind",
+            "description": "`UP` \u2014 *\u25b2 2*, on the card *\u25b2 2 up this week*. `DOWN` \u2014 *\u25bc 1*, *\u25bc 1 down this week*. `SAME` \u2014 *\u2014*, *\u2014 no change this week*. `NEW` \u2014 *New*, *New this week*: the 7 days after the 5th result first put the player on General. A comeback after 90 days is never `NEW`."
+          },
+          "places": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Places",
+            "description": "With `UP` and `DOWN` only: how many places \u2014 the *2* of *\u25b2 2*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "places"
+        ],
+        "title": "ChipSchema",
+        "description": "**The places moved in the last 7 days**, rolling: the place now against\nwhere today's same players stood by their Levels exactly 7 days earlier.\nAn arrival or a departure moves nobody; an overtake moves both."
+      },
       "ClaimCodeRequest": {
         "properties": {
           "email": {
@@ -12238,6 +12277,45 @@
           "most"
         ],
         "title": "GamesPerWeekRangeSchema"
+      },
+      "GapLineSchema": {
+        "properties": {
+          "above": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerAboveSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part before the dot; `null` at the top of the list."
+          },
+          "below": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerBelowSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part after it; `null` in last place, where only `above` reads, and at the top of the list."
+          },
+          "top_of_the_list": {
+            "type": "boolean",
+            "title": "Top Of The List",
+            "description": "First place: the whole line reads *Top of the list*, and neither `above` nor `below` is sent."
+          }
+        },
+        "type": "object",
+        "required": [
+          "above",
+          "below",
+          "top_of_the_list"
+        ],
+        "title": "GapLineSchema",
+        "description": "**The line under the place card**, which turns the place into a target:\n*0,04 behind Karol \u00b7 about 3 wins close it \u00b7 Zofia is 0,02 behind you*. It\nnames only rows you can see."
       },
       "Gender": {
         "type": "string",
@@ -15118,6 +15196,28 @@
             ],
             "title": "Level",
             "description": "With `LISTED` only: your Level, two decimals \u2014 *2,71*."
+          },
+          "chip": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChipSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `LISTED` only: your places moved this week, under the Level."
+          },
+          "gap_line": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GapLineSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `LISTED` only: the line under the fold."
           }
         },
         "type": "object",
@@ -15127,7 +15227,9 @@
           "results_to_enter",
           "place",
           "of",
-          "level"
+          "level",
+          "chip",
+          "gap_line"
         ],
         "title": "PlaceCardSchema",
         "description": "**Your place card**, under the switch \u2014 or the card that replaces it\nwhen there is no place to show."
@@ -15189,6 +15291,71 @@
         ],
         "title": "PlayedWithSchema",
         "description": "One person on the game with **your** relation to them."
+      },
+      "PlayerAboveSchema": {
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "gap": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gap",
+            "description": "How far behind them you are, two decimals \u2014 the bold *0,04* of *0,04 behind Karol*. `0` with `tied`."
+          },
+          "wins": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wins",
+            "description": "How many even wins close the gap, each moving your Level as the rating engine's own rule moves it in a game at your own Level: `1` reads *one win closes it*, `2`\u2013`5` *about 3 wins close it*. `null` when more than five would \u2014 the count is left out, *0,31 behind Karol* \u2014 when an even win is too small to move your Level at all, and when `tied`."
+          },
+          "tied": {
+            "type": "boolean",
+            "title": "Tied",
+            "description": "You are level with them, and they are above you on the tie rule: *Level with Ewa \u00b7 one win puts you ahead*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "nickname",
+          "gap",
+          "wins",
+          "tied"
+        ],
+        "title": "PlayerAboveSchema",
+        "description": "The nearest player above you that you can see."
+      },
+      "PlayerBelowSchema": {
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "gap": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gap",
+            "description": "How far behind you they are, two decimals: *Zofia is 0,02 behind you*. `0` reads *Zofia is level with you*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "nickname",
+          "gap"
+        ],
+        "title": "PlayerBelowSchema",
+        "description": "The nearest player below you that you can see."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {
@@ -16199,6 +16366,10 @@
             "title": "Form",
             "description": "Their last results in this sport, **oldest first** \u2014 the record's *Last 5*. Fewer than five is a real answer and is never padded."
           },
+          "chip": {
+            "$ref": "#/components/schemas/ChipSchema",
+            "description": "Their places moved this week \u2014 no *this week* in a row."
+          },
           "level": {
             "type": "number",
             "title": "Level",
@@ -16218,6 +16389,7 @@
           "photo_id",
           "photo_url",
           "form",
+          "chip",
           "level",
           "is_you"
         ],

@@ -50,7 +50,10 @@ from app.modules.proposals.infrastructure.proposal_models import (
     ProposalORM,
     ProposalPersonORM,
 )
-from app.modules.rankings.infrastructure.ranking_model import RankingRowORM
+from app.modules.rankings.infrastructure.ranking_model import (
+    LevelPointORM,
+    RankingRowORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -69,6 +72,7 @@ __all__ = [
     "FriendRelationORM",
     "GroupMemberORM",
     "GroupORM",
+    "LevelPointORM",
     "MailQueueORM",
     "NoticeORM",
     "NotificationPreferencesORM",

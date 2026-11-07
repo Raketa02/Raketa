@@ -1,6 +1,7 @@
 """The Rankings context's ports, **each in its own words**.
 
-One is the context's own projection (``RankingRows``). The rest are its
+Two are the context's own storage — the projection (``RankingRows``) and the
+level history (``LevelHistory``), neither a demand. The rest are its
 neighbours, each signed in ``infrastructure/`` over what the neighbour
 publishes, wired by the composition root, each with a row in
 ``app/bootstrap/ranking_demands.py``:
@@ -26,7 +27,7 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
-from app.modules.rankings.domain.ranking import RankingRow, RatingHistory
+from app.modules.rankings.domain.ranking import LevelPoint, RankingRow, RatingHistory
 
 
 @runtime_checkable
@@ -53,6 +54,29 @@ class RankingRows(Protocol):
     ) -> tuple[RankingRow, ...]:
         """The rows with ``at_least`` results whose last settled after
         ``since``, **in the ranking's order**, best first."""
+        ...
+
+
+@runtime_checkable
+class LevelHistory(Protocol):
+    """The level history: every point a rating's stream makes, **keyed by the
+    event** that made it (``docs/adr/0203`` §10).
+
+    **Same session as the caller**, as the projection is.
+    """
+
+    async def append(self, points: Sequence[LevelPoint]) -> int:
+        """Every point not yet held — how many were new. **A point already held
+        is left as it is**, so a redelivery, or a rebuild after live delivery,
+        changes nothing."""
+        ...
+
+    async def points_at(
+        self, sport: Sport, at: Instant, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, LevelPoint]:
+        """Each player's point in the sport at ``at``: their **latest at or
+        before it** — or, for a player with none by then, **their first**. A
+        player with no point at all is left out."""
         ...
 
 

@@ -38,6 +38,9 @@ from app.modules.rankings.domain.ports import (
 from app.modules.rankings.domain.ranking import LevelMove
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    RATING_AGGREGATE,
+)
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.rankings_world import move_on
@@ -136,10 +139,17 @@ async def test_a_history_is_the_opening_and_every_move_in_stream_order(
     )
 
     history = await histories.history_of(player, Sport.PADEL)
+    opened, *moved = await build_domain_event_store(session).load_stream(
+        aggregate_type=RATING_AGGREGATE,
+        aggregate_id=skill_rating_id(player, Sport.PADEL),
+    )
 
     assert history is not None
     assert (history.player_id, history.sport) == (player, Sport.PADEL)
     assert (history.initial_mu, history.initialised_at) == (2.5, OPENED)
+    # Each carries the stored event that recorded it, which keys its point in
+    # the level history (#769).
+    assert history.opened_by == opened.id
     assert history.moves == (
         LevelMove(
             game_id=first,
@@ -147,6 +157,7 @@ async def test_a_history_is_the_opening_and_every_move_in_stream_order(
             mu=2.56,
             sigma=0.3,
             at=instant(OPENED + timedelta(hours=1)),
+            event_id=moved[0].id,
         ),
         LevelMove(
             game_id=second,
@@ -154,6 +165,7 @@ async def test_a_history_is_the_opening_and_every_move_in_stream_order(
             mu=2.51,
             sigma=0.3,
             at=instant(OPENED + timedelta(hours=2)),
+            event_id=moved[1].id,
         ),
     )
 

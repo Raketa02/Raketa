@@ -19,7 +19,6 @@ from typing import Final
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.stored_time import (
@@ -28,6 +27,7 @@ from app.infrastructure.database.stored_time import (
 )
 from app.kernel import Instant, Sport
 from app.modules.rankings.domain.ranking import Outcome, RankingRow
+from app.modules.rankings.infrastructure.dialect_insert import insert_into
 from app.modules.rankings.infrastructure.ranking_model import RankingRowORM
 
 #: A result in the stored form: ``W`` or ``L``, five at most.
@@ -52,9 +52,7 @@ class SqlAlchemyRankingRows:
         self._session = session
 
     async def save(self, row: RankingRow) -> None:
-        dialect = self._session.get_bind().dialect.name
-        insert = postgresql.insert if dialect == "postgresql" else sqlite.insert
-        statement = insert(RankingRowORM).values(
+        statement = insert_into(self._session, RankingRowORM).values(
             player_id=row.player_id,
             sport=row.sport.value,
             hundredths=row.hundredths,

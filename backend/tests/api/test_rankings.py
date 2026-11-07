@@ -45,6 +45,7 @@ from tests.api.rankings_world import (
     plays,
     ranking,
     results_at,
+    stored_points,
     stored_rows,
     the_catch_up_runs,
 )
@@ -81,6 +82,8 @@ async def test_four_results_need_one_more_and_the_fifth_lists_the_player(
         "place": None,
         "of": None,
         "level": None,
+        "chip": None,
+        "gap_line": None,
     }
     assert (before["listed"], before["rows"], before["podium"]) == (0, [], [])
 
@@ -204,6 +207,8 @@ async def test_ninety_one_days_on_the_player_is_off_the_list_and_the_next_result
         "place": None,
         "of": None,
         "level": None,
+        "chip": None,
+        "gap_line": None,
     }
     assert (gone["listed"], gone["rows"]) == (0, [])
     assert await home_ranking(client, tomek) == {
@@ -357,12 +362,15 @@ async def test_the_rebuild_matches_live_delivery_and_running_it_twice_changes_no
 
 async def test_a_redelivered_move_changes_nothing(client, session_factory, clock, four):
     """Every move Tomek's stream holds, delivered a second time — each folds
-    the whole stream again, the oldest first, and the row is the row."""
+    the whole stream again, the oldest first, and the row is the row. The level
+    history is keyed by the event, so it gains nothing either (#769)."""
 
     tomek, karol, zofia, ines = four.values()
     for _ in range(5):
         await plays(client, session_factory, clock, (tomek, karol), (zofia, ines))
     before = await stored_rows(session_factory)
+    points = await stored_points(session_factory)
+    assert len(points) == 4 * 6
 
     async with session_factory() as session:
         stream = await build_domain_event_store(session).load_stream(
@@ -381,6 +389,7 @@ async def test_a_redelivered_move_changes_nothing(client, session_factory, clock
         await session.commit()
 
     assert await stored_rows(session_factory) == before
+    assert await stored_points(session_factory) == points
 
 
 async def test_a_fold_with_fewer_results_never_replaces_the_stored_row(

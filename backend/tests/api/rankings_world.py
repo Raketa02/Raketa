@@ -1,6 +1,6 @@
 """The ranking's test world: games played and settled through the player
 routes, Levels moved through the rating's own aggregate, and the two reads
-(#768).
+(#768, #769).
 
 ``plays`` is the honest path — a booked game, its score stated and answered
 through the player routes, the outbox delivered as the worker delivers it.
@@ -27,7 +27,10 @@ from app.engines.racketskill.core import SkillEstimate
 from app.engines.racketskill.update_v1 import MovedRating, Stakes
 from app.kernel import Instant, Sport, instant
 from app.modules.games.domain.lineup import GameKind
-from app.modules.rankings.infrastructure.ranking_model import RankingRowORM
+from app.modules.rankings.infrastructure.ranking_model import (
+    LevelPointORM,
+    RankingRowORM,
+)
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.players_world import deliver_the_outbox
@@ -113,9 +116,11 @@ async def move_on(
     at: Instant,
     won: bool = True,
     sport: Sport = Sport.PADEL,
+    sigma: float = 0.3,
 ) -> UUID:
-    """One result moving the player's Level to ``mu`` — every other figure a
-    fixed one — recorded by the rating's own aggregate and committed. Its game."""
+    """One result moving the player's Level to ``mu`` and its uncertainty to
+    ``sigma`` — every other figure a fixed one — recorded by the rating's own
+    aggregate and committed. Its game."""
 
     ratings = build_skill_rating_repository(
         event_store=build_domain_event_store(session),
@@ -128,10 +133,10 @@ async def move_on(
         game_id=game_id,
         moved=MovedRating(
             mu=mu,
-            sigma=0.3,
+            sigma=sigma,
             confidence=60,
-            range_low=round(mu - 0.3, 2),
-            range_high=round(mu + 0.3, 2),
+            range_low=round(mu - sigma, 2),
+            range_high=round(mu + sigma, 2),
             band=BandView(name="Improver", lower=2.5, upper=3.0),
             status="DEVELOPING",
             stakes=Stakes(win=0.03, loss=-0.03),
@@ -154,12 +159,15 @@ async def moves_to(
     at: Instant,
     won: bool = True,
     sport: Sport = Sport.PADEL,
+    sigma: float = 0.3,
 ) -> None:
     """:func:`move_on`, then the outbox delivered — the move folded into the
     player's row."""
 
     async with session_factory() as session:
-        await move_on(session, player["id"], mu, at=at, won=won, sport=sport)
+        await move_on(
+            session, player["id"], mu, at=at, won=won, sport=sport, sigma=sigma
+        )
     await deliver_the_outbox(session_factory)
 
 
@@ -186,6 +194,33 @@ async def stored_rows(session_factory) -> list[tuple]:
             )
             for row in rows.all()
         ]
+
+
+async def stored_points(session_factory) -> list[tuple]:
+    """Every level-history point, every column."""
+
+    async with session_factory() as session:
+        points = await session.scalars(
+            select(LevelPointORM).order_by(LevelPointORM.event_id)
+        )
+        return [
+            (
+                point.event_id,
+                point.player_id,
+                point.sport,
+                point.at,
+                point.hundredths,
+                point.results,
+                point.level_reached_at,
+            )
+            for point in points.all()
+        ]
+
+
+def chips(read: dict) -> dict[str, dict]:
+    """Each row's chip, by nickname — what the list draws beside each Level."""
+
+    return {row["nickname"]: row["chip"] for row in read["rows"]}
 
 
 async def results_at(session_factory, player: dict, levels: list[float], clock) -> None:

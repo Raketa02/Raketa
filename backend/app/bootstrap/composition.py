@@ -554,6 +554,7 @@ from app.modules.rankings.application.projection import (
 )
 from app.modules.rankings.application.reads import ReadHomeRanking, ReadRanking
 from app.modules.rankings.domain.ports import (
+    LevelHistory,
     RankedFaces,
     RankingRows,
     RatingHistories,
@@ -565,6 +566,9 @@ from app.modules.rankings.infrastructure.profile_ranked_faces import (
 from app.modules.rankings.infrastructure.rated_sport_levels import RatedSportLevels
 from app.modules.rankings.infrastructure.rating_stream_histories import (
     RatingStreamHistories,
+)
+from app.modules.rankings.infrastructure.sqlalchemy_level_history import (
+    SqlAlchemyLevelHistory,
 )
 from app.modules.rankings.infrastructure.sqlalchemy_ranking_rows import (
     SqlAlchemyRankingRows,
@@ -3952,6 +3956,12 @@ def build_ranking_rows(session: AsyncSession) -> RankingRows:
     return SqlAlchemyRankingRows(session)
 
 
+def build_level_history(session: AsyncSession) -> LevelHistory:
+    """The level history the chip reads, ``ranking_level_history`` (#769;
+    ``docs/adr/0203`` §4, §10)."""
+    return SqlAlchemyLevelHistory(session)
+
+
 def build_rating_histories(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> RatingHistories:
@@ -3996,16 +4006,19 @@ def build_move_the_ranking(
     return MoveTheRanking(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
+        level_history=build_level_history(session),
     )
 
 
 def build_rebuild_the_rankings(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> RebuildTheRankings:
-    """Every row folded from every rating stream — ``make rankings-rebuild``."""
+    """Every row and level-history point folded from every rating stream —
+    ``make rankings-rebuild``."""
     return RebuildTheRankings(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
+        level_history=build_level_history(session),
         uow=build_unit_of_work(session),
     )
 
@@ -4021,6 +4034,7 @@ def build_read_ranking(
     page."""
     return ReadRanking(
         rows=build_ranking_rows(session),
+        level_history=build_level_history(session),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         levels=build_sport_levels(session, runtime=runtime),
         clock=clock,

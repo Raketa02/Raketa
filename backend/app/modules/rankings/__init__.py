@@ -1,10 +1,11 @@
 """**Rankings** — a ranking per sport, sorted by the level
 (``docs/adr/0203``; ``docs/specs/rankings/``).
 
-A new bounded context that owns **the ranking projection and its reads**. It
-records no event and has no aggregate: every row is a fold of one rating stream,
-written when the rating's ``rating.moved_on_result`` is delivered through the
-outbox, and rebuilt from the event store by the same fold.
+A new bounded context that owns **the ranking projection, its level history
+and their reads**. It records no event and has no aggregate: every row, and
+every point of the history the chip reads 7 days back, is a fold of one rating
+stream, written when the rating's ``rating.moved_on_result`` is delivered
+through the outbox, and rebuilt from the event store by the same fold.
 
 **A stored projection, as a stated exception** to the backend's *derived, never
 stored* (ADR-0203 §10): a page of General is a slice of an order over every

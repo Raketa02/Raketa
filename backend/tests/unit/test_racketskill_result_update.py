@@ -30,6 +30,7 @@ from app.engines.racketskill.update_v1 import (
     SETTLED_SIGMA_FLOOR,
     SHARED_COURT_SHARE,
     STABLE_SIGMA,
+    even_win,
     expected_score,
     information_share,
     one_side,
@@ -145,6 +146,64 @@ def test_the_share_comes_from_how_the_sport_is_played():
     assert information_share(Sport.SQUASH) == 1.0
     assert information_share(Sport.PADEL) == SHARED_COURT_SHARE
     assert information_share(Sport.BADMINTON) == SHARED_COURT_SHARE
+
+
+# ---------------------------------------------------------------------------
+# An even game — how far the ranking's gap line says one win moves a Level
+# (docs/adr/0203 §6)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("sport", list(Sport))
+def test_one_even_win_is_the_rules_own_move(sport):
+    """The rule itself, asked of a game nobody is favourite in: every other
+    player on court at this player's Level and uncertainty, each side folded
+    the way a result folds it, the sport's share — and the Level the win
+    leaves, on the scale's own resolution."""
+
+    player = a_rating(2.71, 0.30)
+    per_side = 2 if information_share(sport) == SHARED_COURT_SHARE else 1
+    side = one_side([player] * per_side)
+    moved = rating_after(
+        player=player,
+        own_side=side,
+        opposition=side,
+        won=True,
+        results_so_far=1,
+        share=information_share(sport),
+    )
+
+    assert even_win(player, sport=sport) == round(moved.mu - player.mu, 2)
+
+
+@pytest.mark.parametrize(
+    "sport, player, move",
+    [
+        # A season in, a four: the stake is 0,0149 — the pair is better known
+        # than either partner (σ/√2) and half the evidence — and the Level it
+        # leaves is a hundredth up.
+        (Sport.PADEL, a_rating(2.71, 0.30), 0.01),
+        # The same player in singles: 0,0572 on their own σ, six hundredths.
+        (Sport.TENNIS, a_rating(2.71, 0.30), 0.06),
+    ],
+)
+def test_what_one_even_win_moves_a_level(sport, player, move):
+    assert even_win(player, sport=sport) == move
+
+
+def test_an_even_win_too_small_to_show_moves_nothing():
+    """A settled padel player's even win is under half a hundredth, and the
+    Level is carried at two decimals: it never moves. No count of such wins
+    closes a gap, which is what the gap line is told."""
+
+    settled = a_rating(2.71, 0.15)
+
+    assert 0 < stakes(
+        player=one_side([settled, settled]),
+        opposition=one_side([settled, settled]),
+        share=SHARED_COURT_SHARE,
+    ).win < 0.005
+    assert even_win(settled, sport=Sport.PADEL) == 0.0
 
 
 def test_no_single_evening_moves_a_level_further_than_the_ceiling():

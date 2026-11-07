@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -11,6 +12,9 @@ from app.kernel import Instant, Sport, instant
 from app.modules.rankings.domain.ranking import (
     LISTED_FOR,
     CardState,
+    Chip,
+    ChipKind,
+    GapLine,
     LevelMove,
     Outcome,
     RatingHistory,
@@ -40,10 +44,16 @@ def history(*moves: tuple[float, bool], initial: float = 2.5) -> RatingHistory:
         initialised_at=START,
         moves=tuple(
             LevelMove(
-                game_id=new_uuid(), won=won, mu=mu, sigma=0.3 - hour / 100, at=at(hour)
+                game_id=new_uuid(),
+                won=won,
+                mu=mu,
+                sigma=0.3 - hour / 100,
+                at=at(hour),
+                event_id=new_uuid(),
             )
             for hour, (mu, won) in enumerate(moves, start=1)
         ),
+        opened_by=new_uuid(),
     )
 
 
@@ -131,7 +141,17 @@ def test_the_card(results, days_ago, expected):
     now = instant(at(results) + timedelta(days=days_ago))
     listed = row is not None and row.listed_on_general(now)
 
-    card = card_of(row, holds_a_level=True, place=1 if listed else None, of=1, now=now)
+    card = card_of(
+        row,
+        holds_a_level=True,
+        place=1 if listed else None,
+        of=1,
+        now=now,
+        chip=Chip(ChipKind.SAME) if listed else None,
+        gap_line=(
+            GapLine(above=None, below=None, top_of_the_list=True) if listed else None
+        ),
+    )
 
     assert card.state is expected
     assert card.results == results
@@ -146,15 +166,7 @@ def test_no_level_comes_before_everything():
 def test_the_trophy_follows_the_latest_result():
     padel = row_of(history((2.6, True), (2.7, True)))
     tennis_history = history((3.0, True))
-    tennis = row_of(
-        RatingHistory(
-            player_id=tennis_history.player_id,
-            sport=Sport.TENNIS,
-            initial_mu=3.0,
-            initialised_at=START,
-            moves=tennis_history.moves,
-        )
-    )
+    tennis = row_of(replace(tennis_history, sport=Sport.TENNIS, initial_mu=3.0))
     assert padel is not None and tennis is not None
 
     assert latest_of((padel, tennis)) is padel
@@ -166,13 +178,7 @@ def test_the_last_result_is_the_latest_to_settle_whatever_the_stream_order():
     the 90 days run from the latest settling instant."""
 
     ordered = history((2.55, True), (2.6, True))
-    late_first = RatingHistory(
-        player_id=ordered.player_id,
-        sport=ordered.sport,
-        initial_mu=ordered.initial_mu,
-        initialised_at=ordered.initialised_at,
-        moves=(ordered.moves[1], ordered.moves[0]),
-    )
+    late_first = replace(ordered, moves=(ordered.moves[1], ordered.moves[0]))
 
     row = row_of(late_first)
 

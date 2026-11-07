@@ -275,6 +275,37 @@ def stakes(
     return _weighed(player=player, opposition=opposition, share=share).stakes
 
 
+def even_win(player: SkillEstimate, *, sport: Sport) -> float:
+    """How far one counted win in an **even game** of the sport moves this
+    player's Level: everybody else on court at the player's own Level and
+    uncertainty.
+
+    **The rule itself, asked of a game nobody is favourite in** — not a second
+    formula. Each side is the sport's own size folded by :func:`one_side`, as a
+    result folds it, so in a four the player's side is them and an equal partner
+    and the opposition two more of them; the sport's share applies, and so does
+    the brake. **The answer is the Level the win leaves**, on the scale's own
+    resolution, so a stake under half a hundredth moves nothing — the honest
+    reading of a Level that is carried at two decimals.
+
+    It is what the ranking's gap line reads as *one win's move*
+    (``docs/adr/0203`` §6), which, as with *at stake*, nobody else may compute.
+    """
+
+    spec = invariant(SPORT_SPECS.get(sport), f"no spec for sport: {sport!r}")
+    side = one_side([player] * (spec.players // 2))
+    moved = rating_after(
+        player=player,
+        own_side=side,
+        opposition=side,
+        won=True,
+        # Only the status word reads the count, and no caller reads it here.
+        results_so_far=1,
+        share=information_share(sport),
+    )
+    return round(moved.mu - clamp_to_scale(player.mu), _LEVEL_DIGITS)
+
+
 def status_for(*, sigma: float, results: int) -> str:
     """Which of the three words this rating's state is.
 
@@ -443,6 +474,7 @@ __all__ = [
     "Band",
     "MovedRating",
     "Stakes",
+    "even_win",
     "expected_score",
     "information_share",
     "one_side",

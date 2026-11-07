@@ -1,8 +1,9 @@
 """``python -m app.modules.rankings.infrastructure.rebuild_cli`` — the rebuild.
 
-What ``make rankings-rebuild`` runs: every ranking row folded from every rating
-stream the event store holds (#768; ``docs/adr/0203`` §10), so the players who
-played before the ranking shipped are on it. **The same fold the delivery
+What ``make rankings-rebuild`` runs: every ranking row and every level-history
+point folded from every rating stream the event store holds (#768, #769;
+``docs/adr/0203`` §10), so the players who played before the ranking shipped
+are on it, with a real week behind their chips. **The same fold the delivery
 runs**, so a rebuild writes what live delivery wrote, and running it twice
 changes nothing.
 
@@ -40,7 +41,8 @@ def main() -> int:
     rebuilt = asyncio.run(rebuild())
     print(
         f"Rankings rebuilt: {rebuilt.rows} row(s) folded from "
-        f"{rebuilt.ratings} rating stream(s)."
+        f"{rebuilt.ratings} rating stream(s), {rebuilt.points} new "
+        f"level-history point(s)."
     )
     return 0
 

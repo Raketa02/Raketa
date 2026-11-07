@@ -8,7 +8,8 @@ addressed stream — its id is the pair — and the rebuild walks every rating
 stream in the order they were opened.
 
 **It replays and remembers nothing**: no version is kept, so nothing read here
-can be saved back onto a rating.
+can be saved back onto a rating. Each event's **stored id** rides along, because
+it is what keys that event's point in the level history (#769).
 
 **The filing is the rating's own**: ``RATING_AGGREGATE`` and ``skill_rating_id``
 are imported rather than respelled, so a rename there is a rename here — the
@@ -21,6 +22,7 @@ from collections.abc import Iterable, Sequence
 from typing import final
 from uuid import UUID
 
+from app.application.events import StoredDomainEvent
 from app.application.ports import DomainEventStore
 from app.kernel import Sport, instant
 from app.modules.rankings.domain.ranking import LevelMove, RatingHistory
@@ -29,7 +31,6 @@ from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     RATING_AGGREGATE,
 )
-from app.shared.domain import DomainEvent
 
 
 @final
@@ -54,15 +55,17 @@ class RatingStreamHistories:
         stored = await self._event_store.load_stream(
             aggregate_type=RATING_AGGREGATE, aggregate_id=rating_id
         )
-        return _history(record.event for record in stored)
+        return _history(stored)
 
 
-def _history(events: Iterable[DomainEvent]) -> RatingHistory | None:
+def _history(records: Iterable[StoredDomainEvent]) -> RatingHistory | None:
     opening: RatingInitialised | None = None
+    opened_by: UUID | None = None
     moves: list[LevelMove] = []
-    for event in events:
+    for record in records:
+        event = record.event
         if isinstance(event, RatingInitialised):
-            opening = event
+            opening, opened_by = event, record.id
         elif isinstance(event, RatingMovedOnResult):
             moves.append(
                 LevelMove(
@@ -71,9 +74,10 @@ def _history(events: Iterable[DomainEvent]) -> RatingHistory | None:
                     mu=event.mu,
                     sigma=event.sigma,
                     at=instant(event.occurred_at),
+                    event_id=record.id,
                 )
             )
-    if opening is None:
+    if opening is None or opened_by is None:
         return None
     return RatingHistory(
         player_id=opening.player_id,
@@ -81,4 +85,5 @@ def _history(events: Iterable[DomainEvent]) -> RatingHistory | None:
         initial_mu=opening.mu,
         initialised_at=instant(opening.occurred_at),
         moves=tuple(moves),
+        opened_by=opened_by,
     )

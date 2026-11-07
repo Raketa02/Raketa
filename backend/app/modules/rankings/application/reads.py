@@ -8,17 +8,24 @@ card, the podium and the rows can't disagree about who dropped off.
 **The places are counted over every listed row.** A row the read leaves out —
 an id nobody can name — keeps its place, so the places stay true; the hidden
 and blocked rows of #772 will leave the same gaps.
+
+**The chips are worked out together, over every listed row**: today's set in
+today's order against the same set ordered by the level history exactly 7 days
+earlier (``chips_of``). **The gap line names only rows the reader can see** —
+here, a row somebody can name — so a nameless neighbour is skipped and the
+line reads against the nearest named one (the mechanics §7.3).
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.rankings.domain.ports import (
+    LevelHistory,
     RankedFace,
     RankedFaces,
     RankingRows,
@@ -28,20 +35,26 @@ from app.modules.rankings.domain.ranking import (
     GENERAL_ENTRY,
     PAGE_SIZE,
     PODIUM_SIZE,
+    Chip,
+    GapLine,
     Outcome,
     PlaceCard,
     RankingRow,
     card_of,
+    chips_of,
+    chips_since,
     latest_of,
     listed_since,
+    player_above,
+    player_below,
 )
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class RankedRow:
-    """One row the reader sees: its true place, the face, the form and the
-    Level."""
+    """One row the reader sees: its true place, the face, the form, the chip
+    and the Level."""
 
     place: int
     player_id: UUID
@@ -50,6 +63,7 @@ class RankedRow:
     photo_url: str | None
     #: The last results in the sport, oldest first.
     form: tuple[Outcome, ...]
+    chip: Chip
     hundredths: int
     is_you: bool
 
@@ -88,18 +102,20 @@ def _place_of(listed: tuple[RankingRow, ...], player_id: UUID) -> int | None:
 
 @final
 class ReadRanking:
-    """``GET /rankings/{sport}?view=GENERAL``: the card, the podium and the
-    first page."""
+    """``GET /rankings/{sport}?view=GENERAL``: the card with its chip and gap
+    line, the podium and the first page."""
 
     def __init__(
         self,
         *,
         rows: RankingRows,
+        level_history: LevelHistory,
         faces: RankedFaces,
         levels: SportLevels,
         clock: Clock,
     ) -> None:
         self._rows = rows
+        self._level_history = level_history
         self._faces = faces
         self._levels = levels
         self._clock = clock
@@ -107,23 +123,40 @@ class ReadRanking:
     async def execute(self, reader: UUID, sport: Sport) -> Ranking:
         now = instant(self._clock.now())
         listed = await _listed(self._rows, sport, now=now)
+        chips = chips_of(
+            listed,
+            await self._level_history.points_at(
+                sport, chips_since(now), [row.player_id for row in listed]
+            ),
+            now=now,
+        )
         own = next(
             (row for row in await self._rows.of_player(reader) if row.sport is sport),
             None,
         )
+        page = listed[:PAGE_SIZE]
+        faces = dict(await self._faces.faces_of([row.player_id for row in page]))
+        place = _place_of(listed, reader)
         card = card_of(
             own,
             holds_a_level=await self._levels.holds_a_level(reader, sport),
-            place=_place_of(listed, reader),
+            place=place,
             of=len(listed),
             now=now,
+            chip=None if place is None else chips[reader],
+            gap_line=(
+                None if place is None else await self._gap_line(listed, place, faces)
+            ),
         )
-        page = listed[:PAGE_SIZE]
-        faces = await self._faces.faces_of([row.player_id for row in page])
         rows = tuple(
             ranked
             for place, row in enumerate(page, start=1)
-            if (ranked := _ranked(row, place, faces, reader=reader)) is not None
+            if (
+                ranked := _ranked(
+                    row, place, faces, reader=reader, chip=chips[row.player_id]
+                )
+            )
+            is not None
         )
         return Ranking(
             sport=sport,
@@ -134,6 +167,43 @@ class ReadRanking:
             rows=rows,
         )
 
+    async def _gap_line(
+        self,
+        listed: tuple[RankingRow, ...],
+        place: int,
+        faces: dict[UUID, RankedFace],
+    ) -> GapLine:
+        """The nearest named row above the reader and the nearest below,
+        measured from the reader's own row — or, in first place, *Top of the
+        list* and nothing else."""
+
+        if place == 1:
+            return GapLine(above=None, below=None, top_of_the_list=True)
+        mine = listed[place - 1]
+        above = await self._nearest_named(reversed(listed[: place - 1]), faces)
+        below = await self._nearest_named(listed[place:], faces)
+        return GapLine(
+            above=None if above is None else player_above(mine, *above),
+            below=None if below is None else player_below(mine, *below),
+            top_of_the_list=False,
+        )
+
+    async def _nearest_named(
+        self, rows: Iterable[RankingRow], faces: dict[UUID, RankedFace]
+    ) -> tuple[RankingRow, str] | None:
+        """The first of ``rows`` somebody can name, asking the faces only of a
+        row off the page — almost always the first one asked about. **Adds
+        every face it asks for to ``faces``**, so the walk below the reader
+        never asks twice about a row the walk above already asked."""
+
+        for row in rows:
+            if row.player_id not in faces:
+                faces.update(await self._faces.faces_of([row.player_id]))
+            face = faces.get(row.player_id)
+            if face is not None and face.nickname is not None:
+                return row, face.nickname
+        return None
+
 
 def _ranked(
     row: RankingRow,
@@ -141,6 +211,7 @@ def _ranked(
     faces: Mapping[UUID, RankedFace],
     *,
     reader: UUID,
+    chip: Chip,
 ) -> RankedRow | None:
     face = faces.get(row.player_id)
     if face is None or face.nickname is None:
@@ -152,6 +223,7 @@ def _ranked(
         photo_id=face.photo_id,
         photo_url=face.photo_url,
         form=row.form,
+        chip=chip,
         hundredths=row.hundredths,
         is_you=row.player_id == reader,
     )
