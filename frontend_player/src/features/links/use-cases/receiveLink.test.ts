@@ -25,6 +25,14 @@ describe('a link arriving', () => {
     });
   });
 
+  /** A friend link is held whoever is on the phone, as a group link is (#756). */
+  it('holds a friend link with nobody signed in', () => {
+    expect(arrival('raketa://f/tk4m9q2z')).toEqual({
+      link: { kind: 'friend', code: 'tk4m9q2z' },
+      landing: { kind: 'held' },
+    });
+  });
+
   it('is nothing when it is not a link', () => {
     expect(arrival('raketa://sign-in')).toBeUndefined();
   });

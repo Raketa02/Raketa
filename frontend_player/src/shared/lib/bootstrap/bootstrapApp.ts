@@ -8,6 +8,7 @@
  *  -> wire focusManager / onlineManager       <- here
  *  -> read credentials from SecureStore       <- here, via restoreSession
  *  -> restore + validate the session          <- here
+ *  -> start reading the install referrer       <- here, not awaited (#756)
  *  -> load fonts                              <- here
  *  -> hide the splash screen                  <- BootstrapGate
  *  -> render
@@ -49,12 +50,19 @@ export interface BootstrapSteps {
    * feature, and `shared/` may never import a feature.
    */
   readonly restoreSession: () => Promise<void>;
+  /**
+   * **Starts** reading the link an Android install carried, once on the app's first launch, and
+   * holds it as if it had been tapped (#756). Supplied by the root layout — links are a feature's —
+   * and **never awaited**: the answer is Google Play's, another app's, and the splash does not wait
+   * on it. It never throws.
+   */
+  readonly readInstallReferrer: () => void;
   readonly loadFonts: () => Promise<void>;
 }
 
 /**
  * The steps `shared/` can supply on its own. The root layout spreads this and adds the
- * two that have to come from a feature.
+ * three that have to come from a feature.
  */
 export const sharedBootstrapSteps = {
   validateConfig: loadEnv,
@@ -63,7 +71,10 @@ export const sharedBootstrapSteps = {
     wireOnlineManager();
   },
   loadFonts,
-} as const satisfies Omit<BootstrapSteps, 'restoreSession' | 'wireCredentials'>;
+} as const satisfies Omit<
+  BootstrapSteps,
+  'restoreSession' | 'wireCredentials' | 'readInstallReferrer'
+>;
 
 export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
   steps.validateConfig();
@@ -74,6 +85,9 @@ export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
   // that painted the unauthenticated tree and then corrected itself is the flash the
   // whole sequence exists to prevent.
   await steps.restoreSession();
+
+  // After the session, so a link it holds is held against the session the launch settled on.
+  steps.readInstallReferrer();
 
   await steps.loadFonts();
 }

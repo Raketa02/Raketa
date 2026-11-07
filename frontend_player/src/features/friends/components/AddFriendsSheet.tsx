@@ -11,7 +11,11 @@
  * │ [Kc] Kazimierz crew                     › │
  * │      10 members · nobody to add           │
  * └───────────────────────────────────────────┘
- *   …the link card, Not on Raketa yet?, under it (#756)
+ * ┌───────────────────────────────────────────┐
+ * │ Not on Raketa yet?                        │
+ * │ [raketa.app/f/tk4m9q2z           ] [Copy] │
+ * │ [New link]                                │
+ * └───────────────────────────────────────────┘
  * ```
  *
  * ## From your groups
@@ -33,11 +37,12 @@
  * navigation hook is used inside the sheet either way: a sheet's content keeps the root's contexts
  * only (architecture Part 13).
  *
- * ## Built for the link card under it
+ * ## The link card under it
  *
- * The sheet's body is a column of sections, and the groups are the first. **#756's link card —
- * *Not on Raketa yet?*, the link, *Copy*, *New link* — is the second**, drawn under them in the same
- * column; nothing about the groups' section assumes it is alone.
+ * The sheet's body is a column of sections, and the groups are the first. **The link card —
+ * *Not on Raketa yet?*, the link, *Copy*, *New link* — is the second** (`FriendLinkCard`, #756),
+ * read when the sheet opens as the groups are; nothing about the groups' section assumes it is
+ * alone.
  */
 
 import Feather from '@expo/vector-icons/Feather';
@@ -49,6 +54,7 @@ import { BottomSheet, Card, theme } from '@/shared/ui';
 import type { GroupToAddFrom } from '../domain/friendList';
 import { useGroupsToAddFrom } from '../hooks/useFriendLists';
 
+import { FriendLinkCard } from './FriendLinkCard';
 import { FRIENDS_COPY, groupCountsLine, groupRowLabel } from './friendsCopy';
 import { ListReading } from './ListReading';
 
@@ -81,6 +87,7 @@ export function AddFriendsSheet({ visible, onClose, groups }: AddFriendsSheetPro
             groups.open(groupId);
           }}
         />
+        <FriendLinkCard reading={visible} />
       </View>
     </BottomSheet>
   );
@@ -167,7 +174,7 @@ function GroupRow({
 }
 
 const s = StyleSheet.create({
-  // 9 between stacked cards: the groups, and the link card under them (#756).
+  // 9 between stacked cards: the groups, and the link card under them.
   sections: { gap: theme.space.sm },
   section: { gap: theme.space.xs },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },

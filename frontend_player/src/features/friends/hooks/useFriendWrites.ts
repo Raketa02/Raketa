@@ -1,9 +1,11 @@
 /**
- * **The five friends writes, and what each re-reads**
- * ([#753](https://github.com/Raketa02/Raketa/issues/753); ADR-0202 §1–§2).
+ * **The six friends writes, and what each re-reads**
+ * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#756](https://github.com/Raketa02/Raketa/issues/756);
+ * ADR-0202 §1–§2).
  *
  * | Hook | Route | Re-reads |
  * | --- | --- | --- |
+ * | `useOpenFriendLink` | `POST /friends/links/{code}/opening` | Home and the bell for `ASKED_YOU`; every face for `FRIEND` |
  * | `useAskToBeFriends` | `POST /friends/requests` | the surface's own read; every face too, when the requests crossed |
  * | `useAcceptFriendRequest` | `POST …/{id}/acceptance` | the surface's own read, every face, and Home |
  * | `useSetAsideFriendRequest` | `POST …/{id}/set-aside` | Home, where the card was, and the surface's own read |
@@ -31,6 +33,18 @@
  * each group's root), every game in detail and Home, as a block does. Asking and cancelling move no
  * face, and re-read none of them.
  *
+ * ## Opening somebody's link (#756)
+ *
+ * **Opening a link puts its owner's request on the opener's Home** (the mechanics §4.2), so an
+ * `ASKED_YOU` re-reads Home, the bell (its notice; the caller hands that re-read in) and this
+ * feature's lists; a `FRIEND` may be the opener's own request crossing the owner's, so it re-reads
+ * every face as an accept does; the opener's own link (`NONE`) moves nothing. **It is idempotent**
+ * — opened again, it makes no second request — so it is retried as a read is: a lost race
+ * (`concurrent_modification`) once, and the network's own failures by the app's rule for reads.
+ * **And it is answered now or not at all** (`networkMode: 'always'`): a link the phone opened
+ * offline is not landed on Home on a reconnect the player never saw; it fails, and the links
+ * feature says why.
+ *
  * ## A refusal that is the state moving is a re-read
  *
  * `already_friends`, `friend_request_already_sent` and `friend_request_not_found` say the surface
@@ -45,6 +59,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
+import { shouldRetryQuery } from '@/shared/lib/query-client';
 
 import { movesTheFaces, type AskedWhere } from '../domain/friendship';
 import type { FriendRelation } from '../domain/vocabulary';
@@ -52,6 +67,7 @@ import {
   acceptFriendRequest,
   askToBeFriends,
   cancelFriendRequest,
+  openFriendLink,
   removeFriend,
   setAsideFriendRequest,
 } from '../use-cases/friends';
@@ -61,12 +77,15 @@ import { friendKeys } from './friendKeys';
 /** The surface's own re-read, handed in by the screen that holds it — see the module note. */
 export type Reread = () => Promise<unknown>;
 
+/** Two acts on the same thing raced, and this one lost — the one refusal an idempotent act retries. */
+export const RACED = 'concurrent_modification';
+
 /** The refusals that mean the surface was drawn from a state that has moved. */
 const MOVED: ReadonlySet<string> = new Set([
   'already_friends',
   'friend_request_already_sent',
   'friend_request_not_found',
-  'concurrent_modification',
+  RACED,
 ]);
 
 /** Whether a refusal is the state moving — re-read, and say nothing. */
@@ -118,6 +137,29 @@ export function useRemoveFriend(playerId: string, reread: Reread) {
   });
 }
 
+/**
+ * **Open somebody's link** — the code, checked as the link was read; answers where the opener stands
+ * with its owner once it is. See the module note.
+ *
+ * @param rereadBell the bell's re-read, handed in — `notifications` draws this feature's controls
+ *   through the record, so naming its keys here would be a dependency both ways.
+ */
+export function useOpenFriendLink(rereadBell: Reread) {
+  const client = useQueryClient();
+  return useMutation<FriendRelation, AppError, string>({
+    mutationFn: (code) => openFriendLink(code),
+    // Idempotent, so retried as a read is — the network's failures twice, and a lost race once.
+    retry: (failures, error) =>
+      (error.code === RACED && failures < 1) || shouldRetryQuery(failures, error),
+    networkMode: 'always',
+    onSuccess: (relation) => {
+      if (relation === 'ASKED_YOU') return rereadHomeToo(client, rereadBell);
+      if (relation === 'FRIEND') return settle(client, undefined, true);
+      return undefined;
+    },
+  });
+}
+
 function rereadIfMoved(client: QueryClient, error: AppError, reread: Reread) {
   return stateMoved(error) ? Promise.all([reread(), rereadTheLists(client)]) : undefined;
 }
@@ -132,7 +174,7 @@ function settle(client: QueryClient, reread: Reread | undefined, faces: boolean)
 }
 
 /** The surface's own read, this feature's lists, and Home — where a request's card stood. */
-function rereadHomeToo(client: QueryClient, reread: Reread | undefined) {
+function rereadHomeToo(client: QueryClient, reread?: Reread) {
   return Promise.all([
     reread?.(),
     rereadTheLists(client),

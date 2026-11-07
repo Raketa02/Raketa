@@ -18,8 +18,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { useClipboard, useShare } from '@/shared/lib/platform';
-import { showToast } from '@/shared/store/toast.store';
+import { useCopyAndSay, useShare } from '@/shared/lib/platform';
 import { Button, theme } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
@@ -37,14 +36,7 @@ export interface GroupLinkActionsProps {
 
 export function GroupLinkActions({ group, short = false }: GroupLinkActionsProps) {
   const sheet = useShare();
-  const clipboard = useClipboard();
-
-  async function copy() {
-    const copied = await clipboard.writeText(group.link);
-    showToast(
-      copied ? { message: COPY.copied, tone: 'ok' } : { message: COPY.notCopied, tone: 'bad' },
-    );
-  }
+  const copyAndSay = useCopyAndSay();
 
   return (
     <View style={s.row}>
@@ -58,7 +50,7 @@ export function GroupLinkActions({ group, short = false }: GroupLinkActionsProps
         label={short ? COPY.copyShort : COPY.copy}
         accessibilityLabel={COPY.copy}
         variant="onDark"
-        onPress={() => void copy()}
+        onPress={() => void copyAndSay(group.link, COPY)}
       />
     </View>
   );

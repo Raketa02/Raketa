@@ -155,14 +155,21 @@ review comment and a test description all use the same word.
 - **`indoor` on the wire** — `true`, `false` or `null`. The mappers drop a `null` to an absent
   `indoor?`, and `courtKindWords` is the one place the phone spells it (#677).
 - **Incoming link** — an address the operating system opens the app with, read by
-  `+native-intent` before anything is routed. Only three are links — `join/<code>` (a **Group
-  link**), `invite/<token>` and `reset/<token>` — by the app's scheme or the **link domain**
-  (`EXPO_PUBLIC_LINK_DOMAIN`, unset today) — plus the bare `raketa://`, the existing-account
-  invitation email's button; anything else is ignored (#520). _Avoid_: deep link
-  for these three — any path is a deep link, and these are the only ones the app answers.
+  `+native-intent` before anything is routed. Only four are links — `join/<code>` (a **Group
+  link**), `invite/<token>`, `reset/<token>` and `f/<code>` (a **Friend link**, #756) — by the
+  app's scheme or the **link domain** (`EXPO_PUBLIC_LINK_DOMAIN`, unset today) — plus the bare
+  `raketa://`, the existing-account invitation email's button; anything else is ignored (#520).
+  _Avoid_: deep link for these four — any path is a deep link, and these are the only ones the
+  app answers.
 - **Held link** — an incoming link not answered yet, kept in memory (one at a time) through
   sign-in and onboarding until a place that can answer it is reached: Join a group, the
-  invitation sheet, or a sheet asking to sign out first. Dies with the process.
+  invitation sheet, a sheet asking to sign out first, or a friend link's opening and Home. Dies
+  with the process.
+- **Install referrer** — the text Google Play keeps from the store page that installed the app,
+  which the public site's Play button sets to its page's link (#755). Read **once, on an Android
+  phone's first launch**, by a launch step (`readTheInstallReferrerOnce`), and a `join/` or `f/`
+  link in it is held as if it had been tapped (#756). An iPhone has none. _Avoid_: "deferred deep
+  link" — nothing is deferred by a service; Play keeps one string, read once.
 - **The shell** — the tabs a signed-in player is inside, and the **one stack** under them:
   `Home · ⚡Play · You`, three fixed columns drawn by `TabBar` and mounted once by `TabShell`.
   Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
@@ -781,9 +788,9 @@ it.
 
 - **Platform port** — a narrow TypeScript interface in `shared/lib/platform/` over one
   capability the app cannot run in a test, with exactly two implementations: the real one that
-  imports the module, and a fake in `src/test-support/platform.ts`. Five exist —
-  `LocationPort`, `ImagePickingPort`, `LiveStreamPort`, `HapticsPort` and `ClipboardPort` (#512,
-  read-only, for Join a group's Paste) — and each is **the only importer of its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
+  imports the module, and a fake in `src/test-support/platform.ts`. Among them
+  `LocationPort`, `ImagePickingPort`, `LiveStreamPort`, `HapticsPort`, `ClipboardPort` (#512, for
+  Join a group's Paste) and `InstallReferrerPort` (#756) — and each is **the only importer of its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
   not tidiness: a native module has no JS underneath it, so a feature that imports one is a
   feature no test can drive — and **the third one is a socket rather than a native module**,
   here on that argument alone, which is why _platform_ and not _native_ is the word. _Avoid_:
@@ -795,8 +802,9 @@ it.
   ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
   Four values — the **Play segment** since #512, the last sport, the last profile and the booked
   games this phone has opened — and a stale or unreadable one is its default, judged by the
-  feature that owns it. **And one flag that is the phone's own**, kept at sign-out: _the guide on
-  Your rating was shown_ (ADR-0200 §8, #732).
+  feature that owns it. **And two flags kept at sign-out**: _the guide on Your rating was shown_,
+  per account (ADR-0200 §8, #732), and _the install referrer was read_, the phone's own, under no
+  account (#756).
   _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
   and never a credential.
 - **Permission state** — the four answers a platform port gives about a capability:

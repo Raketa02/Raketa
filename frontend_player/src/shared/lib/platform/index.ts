@@ -50,6 +50,11 @@
  * one. All native, and the walks a suite has to finish — a refusal, a token registered, a banner
  * tapped — are none it could otherwise reach.
  *
+ * **The ninth is the install referrer** (#756): the link Google Play carried through an Android
+ * install, read once on the app's first launch. Native, and *once* is a rule a fake can count. It is
+ * read before any screen exists — by a bootstrap step the root layout supplies — so it is a value
+ * handed to its caller rather than a provider's.
+ *
  * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
  * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
  * nothing a test would drive, so no port.
@@ -63,12 +68,14 @@ export { useOnForeground, wireFocusManager } from './appState';
 export { useHardwareBack } from './hardwareBack';
 export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
+export { useCopyAndSay, type CopyWords } from './copyAndSay';
 export { KEYBOARD_AVOIDANCE, dismissKeyboard } from './keyboard';
 export { useIsOnline, wireOnlineManager } from './networkState';
 
 export { ensurePermission, type AskablePermission, type PermissionState } from './permission';
 
 export { deviceLocation, type LocationFix, type LocationPort } from './location';
+export { deviceInstallReferrer, type InstallReferrerPort } from './installReferrer';
 export { LocationProvider, useLocation, type LocationProviderProps } from './LocationProvider';
 export {
   deviceImagePicking,

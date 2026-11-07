@@ -168,6 +168,8 @@ export function freeCourt(extra: Partial<Wire['FreeCourtSchema']> = {}): Wire['F
   return {
     club: OGRODY,
     home_club: true,
+    // Read by no screen yet: the home club is never full of itself (#746).
+    home_club_full: false,
     distance_km: 2.4,
     starts_at: '2026-10-03T15:00:00Z',
     share_grosze: 2700,

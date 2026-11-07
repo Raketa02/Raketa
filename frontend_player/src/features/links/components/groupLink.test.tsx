@@ -33,12 +33,12 @@ import {
   openLink,
   resetLocation,
   stubGate,
-  stubLocation,
   stubProfileOptions,
   stubProfileSurface,
   type GateStub,
 } from '@/test-support/onboardingRouter';
-import { fakeLocation } from '@/test-support/platform';
+import { walkANewAccountToFinish } from '@/test-support/newAccountWalk';
+import { fakeInstallReferrer } from '@/test-support/platform';
 import {
   installTransport,
   json,
@@ -48,6 +48,8 @@ import {
 } from '@/test-support/transport';
 
 import { useHeldLinkStore } from '../store/heldLink.store';
+
+import { readTheInstallReferrerOnce } from './installReferrerLink';
 
 const COPY = GROUPS_COPY.joinGroup;
 
@@ -231,76 +233,14 @@ describe('a group link, before the account is in the app', () => {
    * and waits for the last.
    */
   it('is kept through sign-up, the naming and the profile steps', async () => {
-    const kasia = { ...GATE_USER, email: 'kasia@example.com', nickname: null };
-
-    // A new account: unnamed, unrated, with no Player profile — and the server's answers as she
-    // gives it each of them.
-    serve({ email: kasia.email, nickname: null });
-    stubLocation(fakeLocation({ fix: { latitude: 50.06, longitude: 19.94, accuracyMetres: 12 } }));
-    transport.on('POST', '/api/v1/users', () => json<Wire['UserResponse']>(kasia, 201));
-    transport.on('POST', '/api/v1/auth/login', () =>
-      json<Wire['TokenResponse']>({
-        access_token: 'access-1',
-        refresh_token: 'refresh-1',
-        token_type: 'bearer',
-        expires_in: 900,
-      }),
-    );
-    transport.on('PUT', '/api/v1/users/me/name', () => {
-      stubGate(transport, { email: kasia.email, nickname: 'kasia' });
-      return json<Wire['NamingResponse']>({ nickname: 'kasia' });
-    });
-    transport.on('POST', '/api/v1/players/me/profile', () => {
-      stubGate(transport, { email: kasia.email, nickname: 'kasia', hasPlayerProfile: true });
-      return json<Wire['PlayerProfileResponse']>(
-        {
-          player_id: GATE_USER.id,
-          social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
-          photo_ids: [],
-          weekly_hours: [{ day: 3, hour: 19 }],
-          location: { latitude: 50.06, longitude: 19.94 },
-          created_at: '2026-09-26T10:00:00Z',
-          updated_at: '2026-09-26T10:00:00Z',
-        },
-        201,
-      );
-    });
+    // A new account: unnamed, unrated, with no Player profile.
+    serve({ email: 'kasia@example.com', nickname: null });
 
     // The link, before there is an account.
     await launchByLink(`/join/${CODE}`, { signedIn: false });
     await waitFor(() => expect(screen).toHavePathname('/sign-in'));
 
-    // Sign-up.
-    fireEvent.press(screen.getByLabelText('Create an account'));
-    await waitFor(() => expect(screen).toHavePathname('/sign-up'));
-    fireEvent.changeText(screen.getByLabelText('Email'), kasia.email);
-    fireEvent.changeText(screen.getByLabelText('Password'), 'backhand42');
-    fireEvent.changeText(screen.getByLabelText('Repeat password'), 'backhand42');
-    fireEvent.press(screen.getByLabelText('I am 18 or over'));
-    fireEvent.press(screen.getByLabelText('Create account'));
-
-    // The naming.
-    await waitFor(() => expect(screen).toHavePathname('/name'));
-    fireEvent.changeText(screen.getByLabelText('Nickname'), 'kasia');
-    fireEvent.press(screen.getByLabelText('Continue'));
-
-    // The profile steps, straight after the naming.
-    await waitFor(() => expect(screen).toHavePathname('/tags'));
-    fireEvent.press(await screen.findByLabelText('Plays to win'));
-    fireEvent.press(screen.getByLabelText('Here to improve'));
-    fireEvent.press(await screen.findByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/intro'));
-    fireEvent.press(screen.getByLabelText('Next'));
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/availability'));
-    fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/location'));
-    fireEvent.press(screen.getByLabelText('Use my location'));
-    fireEvent.press(await screen.findByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/gender'));
-    fireEvent.press(screen.getByLabelText('Woman'));
+    await walkANewAccountToFinish(transport, { email: 'kasia@example.com', nickname: 'kasia' });
 
     // Nothing was searched for on the way: the link waited.
     expect(searched()).toEqual([]);
@@ -350,5 +290,21 @@ describe('a group link, in the administrator area', () => {
 
     expect(screen).toHavePathname(`/administrator/${CLUB_ID}`);
     expect(searched()).toEqual([]);
+  });
+});
+
+/**
+ * **A group link carried through an Android install** (#756, the friends mechanics §4.3: *this holds
+ * for group links too*) — the public site's group page carries its link on the Google Play button,
+ * and the first launch opens it as if it had been tapped.
+ */
+describe('a group link carried through an Android install', () => {
+  it('opens Join a group on the first launch, its group found', async () => {
+    serve(KUBA);
+
+    await readTheInstallReferrerOnce(fakeInstallReferrer(`https://raketa.app/join/${CODE}`));
+    await launchSignedIn();
+
+    await expectTheGroupOnJoin();
   });
 });

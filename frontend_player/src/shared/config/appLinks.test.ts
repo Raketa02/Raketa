@@ -54,10 +54,11 @@ describe('what the operating systems are told', () => {
   });
 
   /**
-   * One verified filter for the three pages the public site serves an in-app twin of — the paths
-   * `apple-app-site-association` claims on the site's side (#526), and no others.
+   * One verified filter for the four pages the public site serves an in-app twin of — the paths
+   * `apple-app-site-association` claims on the site's side (#526, and `/f/` since #755), and no
+   * others.
    */
-  it('claims the three pages on Android, verified, over https only', () => {
+  it('claims the four pages on Android, verified, over https only', () => {
     expect(nativeLinkConfig('raketa.app').android).toEqual({
       intentFilters: [
         {
@@ -67,6 +68,7 @@ describe('what the operating systems are told', () => {
             { scheme: 'https', host: 'raketa.app', pathPrefix: '/join/' },
             { scheme: 'https', host: 'raketa.app', pathPrefix: '/invite/' },
             { scheme: 'https', host: 'raketa.app', pathPrefix: '/reset/' },
+            { scheme: 'https', host: 'raketa.app', pathPrefix: '/f/' },
           ],
           category: ['BROWSABLE', 'DEFAULT'],
         },
@@ -74,8 +76,9 @@ describe('what the operating systems are told', () => {
     });
   });
 
-  it('knows exactly three pages', () => {
-    expect(LINK_PAGES).toEqual(['join', 'invite', 'reset']);
+  /** A friend link's page, `f/<code>`, is the fourth (#756). */
+  it('knows exactly four pages', () => {
+    expect(LINK_PAGES).toEqual(['join', 'invite', 'reset', 'f']);
   });
 });
 
@@ -86,5 +89,10 @@ describe('the address a link is spelled at', () => {
 
   it('is the web domain once there is one', () => {
     expect(appLinkTo('join', 'k7pq2mxa', 'raketa.app')).toBe('https://raketa.app/join/k7pq2mxa');
+  });
+
+  it('spells a friend link the same way', () => {
+    expect(appLinkTo('f', 'tk4m9q2z', null)).toBe('raketa://f/tk4m9q2z');
+    expect(appLinkTo('f', 'tk4m9q2z', 'raketa.app')).toBe('https://raketa.app/f/tk4m9q2z');
   });
 });

@@ -123,3 +123,61 @@ cannot name Tomek's address**; only a new person's token link can. Naming it wou
 carry a link the app can read (a token, or the invitation's id with a read by it).
 **Nothing here has been seen on a device**, and no universal or app link can be until a domain exists
 (ADR-0187 _Harder_).
+
+## A friend link, and the link an Android install carried (#756)
+
+**A fourth page: `f/<code>`, a friend link** ([#756](https://github.com/Raketa02/Raketa/issues/756),
+PRD [#743](https://github.com/Raketa02/Raketa/issues/743); the friends mechanics §4.2–§4.3). Tomek's
+link, `<public site>/f/<code>`, opens the app by the scheme and, once a domain is set, by the domain:
+`LINK_PAGES` gains `f`, so `app.config.ts`'s verified Android filter gains `/f/` with the rest (the
+site's association file claims `/f/*` since #755). **Its code is checked like a group's** — eight
+letters and digits, read lower case — by `friends`' own `parseFriendLinkCode`, the shape the server
+mints; `friends` spells it rather than borrowing `groups`', since `groups` draws `friends`' pills.
+
+**Held like a group link, whoever is on the phone** (`landingOf`): it is answered by opening it _as
+the account_, so it waits through sign-in, sign-up, the naming and the profile steps, and is answered
+once the account is in the player's app. **In an administrator area it moves as a group link does**
+— a playing administrator is switched to Player, one who does not play waits — so the rule is one
+function for both, `playersLinkMove` (formerly `groupLinkMove`): both are the player's.
+
+**Answered by opening the code, then Home** (`FriendLink`, `friendLinkLanding`). `friends`' opening
+answers where the opener stands with the owner: **`ASKED_YOU` lands on Home** — `shell`'s `openTab`,
+so Home's root, its FRIEND REQUESTS row at the top with _tomek.k wants to be your friend · Invited
+you to Raketa_ — with Home and the bell read again for the request and its notice. A request swallowed
+by the owner's block answers the same, and lands on a Home with no card (ADR-0202's named cost).
+**`NONE` (your own link) and `FRIEND` (a friend's, or your own request crossing theirs) move nobody.**
+**A refusal is a toast, wherever the player is**: `friend_link_not_found` the public page's _Nothing
+at that link_, `unblock_them_first` how to see the request (#748's call, and the sentence a call),
+anything else its recovery sentence. Every outcome lets the link go: it is opened once and never
+tried again. **It is answered now or not at all** — the opening sets `networkMode: 'always'`, so a
+link opened offline fails and says so, rather than landing the player on Home on a reconnect they
+never saw. **Opened again it makes no second request**, so it is retried as a read is: a lost race
+(`concurrent_modification`) once, and a failure of the network's twice, before anything is said —
+so a blip at the end of Zofia's onboarding does not cost her Tomek's request.
+
+**The install referrer, read once on an Android phone's first launch.** The public site's Google
+Play button carries its page's link through the install (#755); `expo-application`'s
+`getInstallReferrerAsync` reads it, behind a new platform port (`installReferrer.ts`, the only
+importer of `expo-application`, fenced and proven by `pnpm test:boundaries`; an iPhone answers
+`null`, and is unchanged). `readTheInstallReferrerOnce` is a **launch step** — `bootstrapApp`'s
+`readInstallReferrer`, supplied by the root layout after the session is restored and **never
+awaited**: the splash does not wait on Google Play. It reads **once, ever** — a flag the phone keeps
+for itself (`installReferrerRead`, under no account, kept at sign-out; a read that fails reads as
+raised, because acting on a stale link every launch is the worse mistake) — and **a `join/` or `f/`
+link in it is held as if it had been tapped**; it never replaces a link already held, which is the
+newer. **The referrer is anybody's text**, as `raketa://` is — any Play listing's address can carry any
+referrer — so `readReferrerLink` reads the page and its value off any `http(s)` host (the laptop's
+`http://localhost:3001` included) and **never a token**: no store button carries one, and Play keeps
+a referrer for 90 days.
+
+**Calls made here, open for the product owner**: the opening's refusal sentences (_Nothing at that
+link_ reused from the public page; the blocked owner's _Unblock them in Blocked players_); `NONE`
+and `FRIEND` moving nobody _silently_ — no toast saying _that's your own link_ or _you're already
+friends_; a referrer link waiting behind any link already held; the flag reading as raised when the
+store cannot be read; and the phone-wide flag standing outside ADR-0188 §2's table, **whose record
+is owed from a root session**.
+
+**Needs a new development build**: `expo-application` is now a direct dependency (it was already
+linked through `expo-notifications`, so a recent build may well carry it — rebuild to be sure). **No
+referrer can be seen until the app is installed from Google Play itself** — a sideloaded build has
+none; the internal testing track is the first place it can be walked.

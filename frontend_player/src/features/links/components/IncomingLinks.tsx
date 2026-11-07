@@ -9,7 +9,11 @@
  *
  * - **A group link** opens **Join a group** with the link in its field and its group found under it,
  *   over Play › Groups so *back* is the list — or, in an administrator area, switches an account that
- *   plays to Player first (`groupLinkMove`).
+ *   plays to Player first (`playersLinkMove`).
+ * - **A friend link** (#756) is opened as the account (`friends`' opening), and lands on **Home**,
+ *   where its owner's request now waits at the top — nowhere for the account's own link or a
+ *   friend's; a dead link, or one whose owner the account blocked, is a toast. In an administrator
+ *   area it moves as a group link does.
  * - **An invitation's link** is read (`by-token`) and weighed against the account signed in
  *   (`invitationLinkOutcome`): the account's own invitation has the invitation sheet offer that club's
  *   again; another address's gets a sheet naming it, with **Sign out**; a spent link says why.
@@ -23,6 +27,7 @@
  * link go.
  */
 
+import { useQueryClient } from '@tanstack/react-query';
 import { router, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -38,16 +43,20 @@ import {
   useInvitationLink,
   useSignOut,
 } from '@/features/auth/types';
+import { linkOpeningMessage, useOpenFriendLink } from '@/features/friends/types';
 import { joinGroupRouteFor } from '@/features/groups/types';
+import { rereadNotices } from '@/features/notifications/types';
 import { openTab } from '@/features/shell/types';
+import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 import { BottomSheet, Button, Note, theme } from '@/shared/ui';
 
 import type { CredentialLink, IncomingLink } from '../domain/incomingLink';
 import {
-  groupLinkMove,
+  friendLinkLanding,
   invitationLinkOutcome,
   letsTheLinkGo,
+  playersLinkMove,
   type LinkHome,
 } from '../domain/linkRules';
 import { letGoOf, useHeldLink } from '../hooks/heldLink';
@@ -76,6 +85,8 @@ export function IncomingLinks({ over }: IncomingLinksProps) {
   switch (link.kind) {
     case 'join':
       return <GroupLink key={link.code} link={link} over={over} />;
+    case 'friend':
+      return <FriendLink key={link.code} link={link} over={over} />;
     case 'invite':
       return <InvitationLink key={link.token} link={link} />;
     case 'reset':
@@ -94,7 +105,7 @@ function GroupLink({ link, over }: { readonly link: LinkOf<'join'>; readonly ove
   const pathname = usePathname();
   const user = useCurrentUser();
   const switchTo = useSwitchProfile();
-  const move = groupLinkMove(over, user.data?.profiles.actsAsPlayer === true);
+  const move = playersLinkMove(over, user.data?.profiles.actsAsPlayer === true);
   // Where the person is at the moment the link is opened, read then rather than closed over: the
   // effect's job is to fire when the link arrives, not whenever the path changes.
   const where = useRef(pathname);
@@ -102,7 +113,7 @@ function GroupLink({ link, over }: { readonly link: LinkOf<'join'>; readonly ove
 
   useEffect(() => {
     switch (move) {
-      case 'open-join':
+      case 'answer':
         letGoOf(link);
         openTab('play', where.current);
         router.push(joinGroupRouteFor(link.code));
@@ -114,6 +125,58 @@ function GroupLink({ link, over }: { readonly link: LinkOf<'join'>; readonly ove
         return;
     }
   }, [link, move, switchTo]);
+
+  return null;
+}
+
+/**
+ * **A friend link: opened as the account, then Home** (#756, the friends mechanics §4.2–§4.3). The
+ * opening puts the owner's request on Home — *wants to be your friend · Invited you to Raketa* — and
+ * the player lands there; Home and the bell are read again by the opening, the bell's re-read handed
+ * in. **The account's own
+ * link, or a friend's, moves nobody**: there is nothing to answer. **A link that cannot be opened is
+ * said, as a toast, wherever the player is** — a dead one *Nothing at that link*, one whose owner
+ * they blocked how to see it, a failed one why — and let go: it is never tried again.
+ *
+ * **Opened once**, whatever renders this again while it is on its way, and answered through
+ * `mutateAsync` so the landing is heard even if this is unmounted first. In an administrator area
+ * the account that plays is switched to Player, and the player's app opens it.
+ */
+function FriendLink({ link, over }: { readonly link: LinkOf<'friend'>; readonly over: LinkHome }) {
+  const pathname = usePathname();
+  const user = useCurrentUser();
+  const switchTo = useSwitchProfile();
+  const client = useQueryClient();
+  const { mutateAsync: open } = useOpenFriendLink(() => rereadNotices(client));
+  const move = playersLinkMove(over, user.data?.profiles.actsAsPlayer === true);
+  // Where the person is when the answer comes, read then — `GroupLink`'s reason.
+  const where = useRef(pathname);
+  where.current = pathname;
+  const asked = useRef(false);
+
+  useEffect(() => {
+    switch (move) {
+      case 'answer':
+        if (asked.current) return;
+        asked.current = true;
+        open(link.code).then(
+          (relation) => {
+            letGoOf(link);
+            if (friendLinkLanding(relation) === 'home') openTab('home', where.current);
+          },
+          (error: AppError) => {
+            showToast({ message: linkOpeningMessage(error), hold: 'read' });
+            letGoOf(link);
+          },
+        );
+        return;
+      case 'switch-to-player':
+        switchTo(PLAYER_PROFILE);
+        return;
+      case 'wait':
+        return;
+    }
+  }, [link, move, switchTo, open]);
 
   return null;
 }

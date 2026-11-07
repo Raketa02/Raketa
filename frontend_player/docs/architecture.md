@@ -185,13 +185,16 @@ feature's `schemas/` before use**, and never let it short-circuit the guard:
 Is the session authorized?  →  Is this route allowed?  →  Are the params valid?  →  load
 ```
 
-**Before any of that, an address from outside is read, and only three are links**
-([#520](https://github.com/Raketa02/Raketa/issues/520)). expo-router hands every address the
-operating system opens the app with to `src/app/+native-intent.ts` before it routes one, and the
-links feature answers: `join/<code>`, `invite/<token>` and `reset/<token>` — by the app's scheme, or
-the web domain once one is set — are read value by value and **held** until a place that can answer
-them is reached (and so is the bare `raketa://`, the existing-account invitation email's button);
-**anything else is ignored**, so no screen in the app is reachable from outside by its path. A held link never short-circuits the guard: it waits through sign-in and onboarding, and is
+**Before any of that, an address from outside is read, and only four are links**
+([#520](https://github.com/Raketa02/Raketa/issues/520), [#756](https://github.com/Raketa02/Raketa/issues/756)).
+expo-router hands every address the operating system opens the app with to `src/app/+native-intent.ts`
+before it routes one, and the links feature answers: `join/<code>`, `invite/<token>`,
+`reset/<token>` and `f/<code>` — by the app's scheme, or the web domain once one is set — are read
+value by value and **held** until a place that can answer them is reached (and so is the bare
+`raketa://`, the existing-account invitation email's button); **anything else is ignored**, so no
+screen in the app is reachable from outside by its path. **One more address is read at launch**:
+the Android install referrer, once, on the first launch (#756) — anybody's text, as the scheme is,
+so it is read for `join/` and `f/` only, off any host, and never for a token. A held link never short-circuits the guard: it waits through sign-in and onboarding, and is
 answered by the authenticated tree once the account is in it. The rules are
 [`features/links.md`](features/links.md).
 
@@ -217,6 +220,7 @@ native process starts
    → wire focusManager / onlineManager to native state
    → read credentials from SecureStore
    → restore + validate/refresh the session
+   → start reading the install referrer        (Android, first launch only; never awaited — #756)
    → initialise authenticated app state
    → hide the splash screen
    → render the authenticated or unauthenticated tree
@@ -1217,15 +1221,16 @@ encodes:
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is importable only by
   `shared/lib/preferences/phonePreferences.ts`, which keeps the per-account choices ADR-0188
-  lists and ADR-0200 §8's one per-phone flag — never a credential (ADR-0008, ADR-0188 §1). The feature flags' saved datafile was its
-  other owner until the flags were removed (#576)
+  lists, ADR-0200 §8's one per-account flag kept past a session, and the one flag the phone keeps
+  for itself, _the install referrer was read_ (#756) — never a credential (ADR-0008, ADR-0188 §1).
+  The feature flags' saved datafile was its other owner until the flags were removed (#576)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
-- `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics` and `expo-clipboard`
-  are importable only by the port that owns each — `platform/location.ts`,
-  `platform/imagePicking.ts`, `platform/liveStream.ts`, `platform/haptics.ts` and
-  `platform/clipboard.ts`, one file each rather than the platform directory, so a module of
-  ports cannot become the device bucket. The ban holds in tests too, which could not drive a
-  native module anyway
+- `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics`, `expo-clipboard` and
+  `expo-application` are importable only by the port that owns each — `platform/location.ts`,
+  `platform/imagePicking.ts`, `platform/liveStream.ts`, `platform/haptics.ts`,
+  `platform/clipboard.ts` and `platform/installReferrer.ts` (#756), one file each rather than the
+  platform directory, so a module of ports cannot become the device bucket. The ban holds in tests
+  too, which could not drive a native module anyway
 - **`Share` from `react-native`** — one name out of a module every screen imports — is importable
   only by `platform/share.ts`, the share sheet's port (#513). It is a path ban with
   `importNames` rather than a pattern, so every other name out of `react-native` stays free

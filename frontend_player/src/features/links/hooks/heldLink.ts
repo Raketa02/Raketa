@@ -3,9 +3,9 @@
  * player's app and the administrator area, let go of by whichever answers it
  * ([#520](https://github.com/Raketa02/Raketa/issues/520)).
  *
- * `holdLink` and `letGoOf` are not hooks: a link arrives before any component exists. They live here
- * because this is the layer that reaches the store — and because holding a link is more than storing
- * it.
+ * `holdLink`, `letGoOf` and `linkHeldNow` are not hooks: a link arrives before any component
+ * exists. They live here because this is the layer that reaches the store — and because holding a
+ * link is more than storing it.
  *
  * **A held link belongs to the session it arrived in** — or to the next one, when it arrived with
  * nobody signed in: the invitation opened signed out is answered by the sign-in it leads to. **When a
@@ -25,6 +25,11 @@ import { useHeldLinkStore } from '../store/heldLink.store';
 /** The link being held, or `null`. */
 export function useHeldLink(): IncomingLink | null {
   return useHeldLinkStore((state) => state.link);
+}
+
+/** The link being held right now, read outside React — the install referrer's question (#756). */
+export function linkHeldNow(): IncomingLink | null {
+  return useHeldLinkStore.getState().link;
 }
 
 /** Watching the session for the one held link — replaced with it, stopped when it is let go of. */

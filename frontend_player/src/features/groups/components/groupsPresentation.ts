@@ -17,6 +17,7 @@
 import { sportInLine, sportLabel, sportShortLabel } from '@/features/onboarding/types';
 import { RELIABILITY_BAND_WORD } from '@/features/player_record/types';
 import { counted } from '@/shared/formatting/counted';
+import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
 import { playerName } from '@/shared/formatting/playerName';
 import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
 import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
@@ -268,10 +269,11 @@ export function shareMessage(groupName: string, link: string): string {
 
 /**
  * *raketa.app/join/K7PQ2MXA* — the link as Info's card draws it (play 57, 60): the address
- * without its scheme, which the mocks never print. Spoken, copied and shared whole.
+ * without its scheme, which the mocks never print. Spoken, copied and shared whole. The drawing is
+ * `shared/formatting`'s since a friend link's card is its third caller (#756).
  */
 export function linkShown(link: string): string {
-  return link.replace(/^https?:\/\//, '');
+  return linkWithoutScheme(link);
 }
 
 /** *Group link, raketa.app/join/K7PQ2MXA* — the card's link, spoken. */

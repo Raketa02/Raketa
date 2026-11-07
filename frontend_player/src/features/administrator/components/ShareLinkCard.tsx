@@ -19,8 +19,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { GROUPS_COPY, linkLabel, linkShown, shareMessage } from '@/features/groups/types';
-import { useClipboard, useShare } from '@/shared/lib/platform';
-import { showToast } from '@/shared/store/toast.store';
+import { useCopyAndSay, useShare } from '@/shared/lib/platform';
 import { Button, DarkCard, theme } from '@/shared/ui';
 
 import type { OfficialGroup } from '../domain/officialGroup';
@@ -30,16 +29,7 @@ import { ADMINISTRATOR_COPY } from './administratorCopy';
 export function ShareLinkCard({ group }: { readonly group: Pick<OfficialGroup, 'name' | 'link'> }) {
   const COPY = ADMINISTRATOR_COPY.group;
   const sheet = useShare();
-  const clipboard = useClipboard();
-
-  async function copy() {
-    const copied = await clipboard.writeText(group.link);
-    showToast(
-      copied
-        ? { message: GROUPS_COPY.link.copied, tone: 'ok' }
-        : { message: GROUPS_COPY.link.notCopied, tone: 'bad' },
-    );
-  }
+  const copyAndSay = useCopyAndSay();
 
   return (
     <DarkCard style={s.card}>
@@ -58,7 +48,12 @@ export function ShareLinkCard({ group }: { readonly group: Pick<OfficialGroup, '
           style={s.door}
           onPress={() => void sheet.shareText(shareMessage(group.name, group.link))}
         />
-        <Button label={COPY.copy} variant="onDark" style={s.door} onPress={() => void copy()} />
+        <Button
+          label={COPY.copy}
+          variant="onDark"
+          style={s.door}
+          onPress={() => void copyAndSay(group.link, GROUPS_COPY.link)}
+        />
       </View>
     </DarkCard>
   );

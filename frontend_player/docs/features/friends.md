@@ -83,7 +83,7 @@ removing's; the busy words; the two refusal sentences; the spoken names of the p
 buttons; a Home card whose group either of them left draws its sport and Level alone, and one asked
 from a screen with no sport draws the chip alone.
 
-**Not here**: the link (#756), the picker, the friends card and the game (#757–#760).
+**Not here**: the picker, the friends card and the game (#757–#760). The link is #756's, below.
 
 **Not seen on a device**: the pill and the tags at a row's right on a narrow phone; the record's two
 buttons at the narrowest width (#753 asks for that walk); the ✓ ▾ marks beside a label; the request
@@ -173,3 +173,43 @@ example _"Nobody's waiting for an answer."_** is not used: §29.3's three empty 
 **Not seen on a device**: the header's pill beside _Friends_ at the narrowest width; the segmented
 control with _Asked you · 12_; the sheet's tiles and chevrons; PLAYED WITH's rows with a long
 nickname beside _request sent_.
+
+## The link card, and opening somebody's link (#756)
+
+**_Not on Raketa yet?_ is the Add friends sheet's second card**
+([#756](https://github.com/Raketa02/Raketa/issues/756); the screens §5; friends 4; the words §29.3):
+your link in a recessed field, without its scheme (`linkShown`, _raketa.app/f/tk4m9q2z_), on one
+line in mono and cut in the middle so the code stays in view — Info's link card's drawing — with
+**Copy** (coral, the card's one action) beside it and a small **New link** under it. The question is
+the card's `h2`, inside it, as friends 4 draws it. **Read when the sheet opens**, beside the groups
+and in their three read states (`ListReading`); its key is under `friendKeys.all`, so every friends
+write reads it again while it is open, which costs one idempotent read.
+
+**The first read makes the link** (#748): the server mints the code then, and two first reads that
+race lose one to `concurrent_modification` — so the read retries that once, over the app's own rule
+for reads (`shouldRetryQuery`, now exported for exactly this).
+
+**Copy** puts the whole link on the clipboard through the port and says _Link copied_, or that the
+phone would not take it — a group page's Copy link's two answers, spelled again here since `groups`
+cannot be read back.
+
+**New link asks first**, as #756 asks: a sheet over the sheet — the record's take-back sheets'
+shape — _Make a new link?_, what it does to the old one, **New link** and **Keep this link**. The
+answer is written into the read (`setQueryData`), the field shows the new link, and the card says
+_New link made. The old one no longer works._ (§29.3's call). It is never retried — each one mints a
+code — and one that raced (`concurrent_modification`) reads the link again and says nothing, the
+friends writes' rule.
+
+**Opening somebody's link is this feature's act; landing is the links feature's**
+(`useOpenFriendLink`, the sixth write): this feature re-reads what the answer moved — Home and the
+bell (handed in) for `ASKED_YOU`, every face for `FRIEND` — and holds the refusal sentences
+(`linkRefused`); how it is retried, when it lands on Home and what it says is
+[`links.md`](links.md#a-friend-link-and-the-link-an-android-install-carried-756).
+
+**Calls for the product owner** (in `friendsCopy.ts`): the confirmation's words; _Link copied_ and
+_Couldn't copy the link_; the card's title as an `h2` inside the card where the groups wear an
+eyebrow above theirs; the blocked owner's sentence; the spoken names.
+
+**Not seen on a device**: the field and **Copy** side by side at the narrowest width, with a long
+domain cut in the middle; the confirmation sheet over the Add friends sheet on Android
+(`ModalStage`'s layer over a layer); the mint line under the field.

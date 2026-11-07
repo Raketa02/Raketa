@@ -4,7 +4,7 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Nine modules may be imported from exactly one place:
+# Ten modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → preferences/phonePreferences.ts
@@ -15,6 +15,7 @@
 #   expo-clipboard                               → platform/clipboard.ts
 #   @stripe/stripe-react-native                  → platform/payments.tsx
 #   expo-notifications                           → platform/push.ts
+#   expo-application                             → platform/installReferrer.ts
 #
 # And one **name** out of a module every screen imports:
 #
@@ -168,6 +169,7 @@ CLIPBOARD_PORT='src/shared/lib/platform/clipboard.ts'
 SHARE_PORT='src/shared/lib/platform/share.ts'
 PAYMENTS_PORT='src/shared/lib/platform/payments.tsx'
 PUSH_PORT='src/shared/lib/platform/push.ts'
+REFERRER_PORT='src/shared/lib/platform/installReferrer.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # The phone-preferences store (ADR-0188 §1) — the one AsyncStorage importer, one file wide: its
@@ -299,6 +301,20 @@ expect_blocked expo-notifications "$OTHER_PLATFORM_FILE" 'push.ts'
 expect_allowed expo-notifications "$PUSH_PORT"
 # And the port itself is still under every other ban.
 expect_blocked @stripe/stripe-react-native "$PUSH_PORT" 'payments.tsx'
+
+echo
+echo "the install referrer — expo-application belongs to platform/installReferrer.ts"
+expect_blocked expo-application "$FEATURE" 'installReferrer.ts'
+expect_blocked expo-application "$SCREEN" 'installReferrer.ts'
+expect_blocked expo-application "$TEST" 'installReferrer.ts'
+expect_blocked expo-application "$SUPPORT" 'installReferrer.ts'
+expect_blocked expo-application "$AUTH" 'installReferrer.ts'
+# One file wide: the phone's pushes beside it may not read the referrer.
+expect_blocked expo-application "$PUSH_PORT" 'installReferrer.ts'
+expect_blocked expo-application "$OTHER_PLATFORM_FILE" 'installReferrer.ts'
+expect_allowed expo-application "$REFERRER_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-notifications "$REFERRER_PORT" 'push.ts'
 
 echo
 echo "the share sheet — { Share } from react-native belongs to platform/share.ts"

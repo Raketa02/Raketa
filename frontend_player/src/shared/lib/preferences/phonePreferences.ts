@@ -131,9 +131,51 @@ export async function raisePhoneFlag(account: string, flag: PhoneFlag): Promise<
 }
 
 /**
+ * **The flags the phone keeps for itself** — under no account, and kept at sign-out
+ * ([#756](https://github.com/Raketa02/Raketa/issues/756)). One: *the install referrer was read*,
+ * which an Android phone does on the app's first launch, before anybody has signed in (the friends
+ * mechanics §4.3). It is a fact about this installation, not about whoever uses it: the link Google
+ * Play carried through the install is opened once, and never handed to a later account.
+ *
+ * **It stands outside ADR-0188 §2's table, which lists per-account values** — as `openedGames` does,
+ * the record is owed from a root session, or the product owner's ruling that *once* lives elsewhere.
+ *
+ * **A read that fails reads as raised**, unlike an account's flag: the one flag here guards a link
+ * being acted on, and acting on a stale one on every launch is the worse of the two mistakes — the
+ * person who loses the referrer still has the site's *Open in Raketa*.
+ */
+export type PhoneWideFlag = 'installReferrerRead';
+
+const PHONE_WIDE_PREFIX = 'raketa.phone-wide-flags.';
+
+/** One entry per flag, under no account. */
+function phoneWideKeyFor(flag: PhoneWideFlag): string {
+  return `${PHONE_WIDE_PREFIX}${flag}`;
+}
+
+/** Whether this phone ever raised the flag — `true` when the store cannot be read, as above. */
+export async function readPhoneWideFlag(flag: PhoneWideFlag): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(phoneWideKeyFor(flag))) === RAISED;
+  } catch {
+    return true;
+  }
+}
+
+/** Raise the phone's flag for good. */
+export async function raisePhoneWideFlag(flag: PhoneWideFlag): Promise<void> {
+  try {
+    await AsyncStorage.setItem(phoneWideKeyFor(flag), RAISED);
+  } catch {
+    // Only the next launch's copy is lost — and it reads the store the way this one could not.
+  }
+}
+
+/**
  * **Forget every account's choices** — a step of the sign-out sequence (ADR-0188 §3). The flag
  * datafile the other AsyncStorage module kept named nobody and was left alone, and so are the
- * flags kept past a session (ADR-0200 §8): they are under a prefix this never lists.
+ * flags kept past a session (ADR-0200 §8, and the phone's own, #756): they are under prefixes this
+ * never lists.
  */
 export async function forgetPhonePreferences(): Promise<void> {
   try {

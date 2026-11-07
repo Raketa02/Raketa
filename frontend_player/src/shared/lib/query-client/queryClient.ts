@@ -22,8 +22,13 @@ const MAX_QUERY_RETRIES = 2;
  *
  * Anything that is not an `AppError` escaped normalization — a bug in a `queryFn`, not a
  * network condition — and retrying it just runs the bug three times.
+ *
+ * Exported for the two calls that retry one thing more, and say so at their call sites (#756) —
+ * the friend link's read, whose first read writes and can lose a race, and opening somebody's link,
+ * a write that is idempotent and so retried as a read is (`friends`' `useFriendLink`,
+ * `useOpenFriendLink`) — so each keeps this rule under its own rather than a copy of it.
  */
-function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
   if (failureCount >= MAX_QUERY_RETRIES) return false;
   if (!(error instanceof AppError)) return false;
   return error.recovery === 'retryable-automatically';

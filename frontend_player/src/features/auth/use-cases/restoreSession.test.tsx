@@ -202,6 +202,7 @@ function renderLaunch() {
           queryClient.setQueryData(authKeys.currentUser(), restored.user);
         }
       },
+      readInstallReferrer: () => {},
       loadFonts: async () => {},
     });
 

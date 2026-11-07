@@ -1,14 +1,16 @@
 /**
- * **The links into the app, as configuration** — the app's scheme, the three pages a link opens, and
+ * **The links into the app, as configuration** — the app's scheme, the four pages a link opens, and
  * the one setting that turns the web domain's links on
  * ([#520](https://github.com/Raketa02/Raketa/issues/520),
  * [ADR-0187](../../../../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
  * §4, §7).
  *
- * A group link in WhatsApp, the invitation email's button and the reset email's link are the public
- * site's pages `join/<code>`, `invite/<token>` and `reset/<token>`. On a phone with Raketa installed
- * the same three open the app — by its own scheme today, and by the web domain once one exists, when
- * iOS and Android are told the domain is the app's (universal links, verified app links). **Which
+ * A group link in WhatsApp, the invitation email's button, the reset email's link and a friend link
+ * are the public site's pages `join/<code>`, `invite/<token>`, `reset/<token>` and `f/<code>` (the
+ * last since [#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics §4.3).
+ * On a phone with Raketa installed the same four open the app — by its own scheme today, and by
+ * the web domain once one exists, when iOS and Android are told the domain is the app's (universal
+ * links, verified app links). **Which
  * domain is a setting, `EXPO_PUBLIC_LINK_DOMAIN`, and none is set anywhere yet**, so the associated
  * domain and the intent filter are simply absent: nothing is claimed that no site could back.
  *
@@ -24,8 +26,11 @@
  */
 export const APP_SCHEME = 'raketa';
 
-/** **The three pages a link opens in the app**, by their first path segment on the public site. */
-export const LINK_PAGES = ['join', 'invite', 'reset'] as const;
+/**
+ * **The four pages a link opens in the app**, by their first path segment on the public site — a
+ * friend link's `f` the fourth (#756).
+ */
+export const LINK_PAGES = ['join', 'invite', 'reset', 'f'] as const;
 
 export type LinkPage = (typeof LINK_PAGES)[number];
 
@@ -81,11 +86,11 @@ export interface NativeLinkConfig {
  * **What iOS and Android are told about the domain** — nothing while there is none.
  *
  * Once set: iOS associates the domain (`applinks:`), and Android gets one **verified** filter for
- * the three pages over `https`, so a tap on the site's link opens the app without a chooser. The
- * site's half is #526's: Apple's association file claims the same three paths, and Android's asset
- * links name this package. The scheme needs no filter of its own — Expo registers `raketa://` from
- * the config's `scheme` — and it opens every path, which is why the app reads every link it is
- * handed before trusting it (`+native-intent`).
+ * the four pages over `https`, so a tap on the site's link opens the app without a chooser. The
+ * site's half is #526's: Apple's association file claims the same four paths (`/f/*` since #755),
+ * and Android's asset links name this package. The scheme needs no filter of its own — Expo
+ * registers `raketa://` from the config's `scheme` — and it opens every path, which is why the app
+ * reads every link it is handed before trusting it (`+native-intent`).
  */
 export function nativeLinkConfig(domain: string | null): NativeLinkConfig {
   if (domain === null) return { ios: {}, android: {} };

@@ -6,10 +6,13 @@
 export {
   forgetPhonePreferences,
   raisePhoneFlag,
+  raisePhoneWideFlag,
   readPhoneFlag,
   readPhonePreference,
+  readPhoneWideFlag,
   savePhonePreference,
   type PhoneFlag,
   type PhonePreference,
+  type PhoneWideFlag,
 } from './phonePreferences';
 export { phonePreferenceKeys } from './phonePreferenceKeys';

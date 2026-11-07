@@ -10,6 +10,8 @@
  * - **+ Add friends** opens the sheet: *From your groups*, each group's tile, name and *8 members ·
  *   2 to add*, and a tap lands on that group's Members — where a request asked turns up on *You
  *   asked* back on the page.
+ * - **The sheet's link card** (#756, friends 4): *Not on Raketa yet?*, your link, **Copy** onto the
+ *   clipboard, and a small **New link** that asks first and then kills the old one.
  *
  * **The friends routes are answered by a small fake of the server** (`friendsServer`): an act moves
  * what the next read says, as it would, so a row that leaves after a press is the page re-read.
@@ -23,18 +25,23 @@ import { RECORD_TITLE } from '@/features/player_record/types';
 import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { useToastQueue } from '@/shared/store/toast.store';
 import { doorRowLabel } from '@/shared/ui';
 import {
+  FRIEND_LINK_PATH,
   FRIEND_REQUESTS_PATH,
   FRIENDS_PATH,
   SPORTS_SERVED,
   launchSignedIn,
+  resetClipboard,
+  stubClipboard,
   stubGate,
   stubMyGroups,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { fakeClipboard, type FakeClipboard } from '@/test-support/platform';
 import { servedReliability } from '@/test-support/playerRecord';
 import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
@@ -51,12 +58,14 @@ import {
   addLabel,
   askedYouTab,
   cancelRequestLabel,
+  friendLinkLabel,
   friendsRowLine,
   groupRowLabel,
 } from './friendsCopy';
 
 const PAGE = FRIENDS_COPY.page;
 const SHEET = FRIENDS_COPY.sheet;
+const LINK = FRIENDS_COPY.link;
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
 interface Person {
@@ -284,6 +293,8 @@ beforeEach(() => {
 afterEach(async () => {
   // One test takes the connection away, and `onlineManager` is a singleton.
   onlineManager.setOnline(true);
+  resetClipboard();
+  useToastQueue.setState({ queue: [] });
   transport.restore();
   queryClient.clear();
   resetSessionStatus();
@@ -469,16 +480,19 @@ describe('+ Add friends', () => {
     expect(await screen.findByTestId(`you-asked-${KUBA.id}`)).toBeTruthy();
   });
 
-  it('says the groups wait for the network, rather than reading forever, while offline', async () => {
+  /** The groups and the link card under them (#756) each wait, and each says so. */
+  it('says the groups and the link wait for the network while offline, never reading forever', async () => {
     friendsServer();
     await openFriends();
     act(() => onlineManager.setOnline(false));
 
     await openSheet();
 
-    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    expect(await screen.findAllByText(offlineMessage('resumes'))).toHaveLength(2);
     expect(screen.queryByText(SHEET.reading)).toBeNull();
+    expect(screen.queryByText(FRIENDS_COPY.link.reading)).toBeNull();
     expect(transport.requestsTo('GET', GROUPS_PATH)).toHaveLength(0);
+    expect(transport.requestsTo('GET', FRIEND_LINK_PATH)).toHaveLength(0);
   });
 
   it('says so when you are in no group', async () => {
@@ -488,5 +502,101 @@ describe('+ Add friends', () => {
     await openSheet();
 
     expect(await screen.findByText(SHEET.none)).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The link card (#756)
+// ---------------------------------------------------------------------------
+
+describe('the Add friends sheet’s link card', () => {
+  const REPLACEMENT_PATH = `${FRIEND_LINK_PATH}/replacement`;
+  const linkAt = (code: string) => `https://raketa.app/f/${code}`;
+  let clipboard: FakeClipboard;
+
+  /** Your link, as `GET /friends/link` answers it — until a New link mints the next code. */
+  function linkServer(codes: readonly string[] = ['tk4m9q2z', 'w8n3r5qa']) {
+    let current = 0;
+    const answer = () =>
+      json<Wire['FriendLinkResponse']>({ code: codes[current]!, link: linkAt(codes[current]!) });
+    transport.on('GET', FRIEND_LINK_PATH, answer);
+    transport.on('POST', REPLACEMENT_PATH, () => {
+      current += 1;
+      return answer();
+    });
+  }
+
+  async function openTheCard() {
+    friendsServer();
+    linkServer();
+    clipboard = fakeClipboard();
+    stubClipboard(clipboard);
+    await openFriends();
+    fireEvent.press(screen.getByRole('button', { name: PAGE.addLabel }));
+    expect(await screen.findByRole('header', { name: SHEET.title })).toBeTruthy();
+    expect(await screen.findByLabelText(friendLinkLabel(linkAt('tk4m9q2z')))).toBeTruthy();
+  }
+
+  const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
+
+  it('shows your link under your groups, without its scheme', async () => {
+    await openTheCard();
+
+    expect(screen.getByText(LINK.title)).toBeTruthy();
+    expect(screen.getByText('raketa.app/f/tk4m9q2z')).toBeTruthy();
+    // Read when the sheet opens, not with the page.
+    expect(transport.requestsTo('GET', FRIEND_LINK_PATH)).toHaveLength(1);
+  });
+
+  it('copies the whole link, and says so', async () => {
+    await openTheCard();
+
+    fireEvent.press(screen.getByRole('button', { name: LINK.copyLabel }));
+
+    await waitFor(() => expect(clipboard.text).toBe(linkAt('tk4m9q2z')));
+    await waitFor(() => expect(toasts()).toEqual([[LINK.copied, 'ok']]));
+  });
+
+  it('says so when the phone would not take it', async () => {
+    await openTheCard();
+    clipboard.writable = false;
+
+    fireEvent.press(screen.getByRole('button', { name: LINK.copyLabel }));
+
+    await waitFor(() => expect(toasts()).toEqual([[LINK.notCopied, 'bad']]));
+    expect(clipboard.text).toBe('');
+  });
+
+  it('asks before a New link, and Keep this link changes nothing', async () => {
+    await openTheCard();
+
+    fireEvent.press(screen.getByRole('button', { name: LINK.newLinkLabel }));
+    expect(await screen.findByRole('header', { name: LINK.confirm.title })).toBeTruthy();
+    expect(screen.getByText(LINK.confirm.body)).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: LINK.confirm.keep }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('header', { name: LINK.confirm.title })).toBeNull(),
+    );
+    expect(transport.requestsTo('POST', REPLACEMENT_PATH)).toHaveLength(0);
+    expect(screen.getByText('raketa.app/f/tk4m9q2z')).toBeTruthy();
+    expect(screen.queryByText(LINK.made)).toBeNull();
+  });
+
+  it('makes a New link, shows it, and says the old one no longer works', async () => {
+    await openTheCard();
+
+    fireEvent.press(screen.getByRole('button', { name: LINK.newLinkLabel }));
+    fireEvent.press(await screen.findByRole('button', { name: LINK.confirm.act }));
+
+    expect(await screen.findByText('raketa.app/f/w8n3r5qa')).toBeTruthy();
+    expect(screen.getByText(LINK.made)).toBeTruthy();
+    expect(screen.queryByRole('header', { name: LINK.confirm.title })).toBeNull();
+    expect(transport.requestsTo('POST', REPLACEMENT_PATH)).toHaveLength(1);
+
+    // Copy now takes the new one.
+    fireEvent.press(screen.getByRole('button', { name: LINK.copyLabel }));
+    await waitFor(() => expect(clipboard.text).toBe(linkAt('w8n3r5qa')));
   });
 });

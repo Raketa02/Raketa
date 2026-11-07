@@ -3,11 +3,12 @@
  * something the app acts on ([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7:
  * *untrusted route input, never able to repoint the backend*).
  *
- * Three links and nothing else, each rebuilt from the parts that were checked: a link that is not
- * one of them — or is one of them malformed — is no link at all.
+ * Four links and nothing else, each rebuilt from the parts that were checked: a link that is not
+ * one of them — or is one of them malformed — is no link at all. And the install referrer Google
+ * Play hands an Android app on its first launch (#756), read for the two links that carry a code.
  */
 
-import { readIncomingLink } from './incomingLinkUrl';
+import { readIncomingLink, readReferrerLink } from './incomingLinkUrl';
 
 const TOKEN = 'Zx9_invite-token-4Kq2Wm8Rt6Yv0Bn3Hs5Jd7Lf1Pg';
 
@@ -43,6 +44,31 @@ describe('a group link', () => {
   ])('is no link when the code cannot be one: %p', (url) => {
     expect(read(url)).toBeUndefined();
   });
+});
+
+/** **A friend link** (#756) — `f/<code>`, its code a group code's shape (the friends mechanics §4.1). */
+describe('a friend link', () => {
+  it.each(['raketa://f/tk4m9q2z', 'raketa:///f/tk4m9q2z', '/f/tk4m9q2z', 'raketa://f/TK4M9Q2Z'])(
+    'reads %p, its code in lower case',
+    (url) => {
+      expect(read(url)).toEqual({ kind: 'friend', code: 'tk4m9q2z' });
+    },
+  );
+
+  it('is read off the web domain once one is set', () => {
+    expect(read('https://raketa.app/f/tk4m9q2z?utm_source=whatsapp', 'raketa.app')).toEqual({
+      kind: 'friend',
+      code: 'tk4m9q2z',
+    });
+    expect(read('https://raketa.app/f/tk4m9q2z')).toBeUndefined();
+  });
+
+  it.each(['raketa://f/tk4m', 'raketa://f/tk4m-9q2', 'raketa://f', 'raketa://F/tk4m9q2z'])(
+    'is no link when it cannot be one: %p',
+    (url) => {
+      expect(read(url)).toBeUndefined();
+    },
+  );
 });
 
 describe('the web domain', () => {
@@ -123,5 +149,50 @@ describe('everything else', () => {
 
   it('reads nothing out of an address far longer than any link', () => {
     expect(read(`raketa://join/k7pq2mxa?${'x'.repeat(10_000)}`)).toBeUndefined();
+  });
+});
+
+/**
+ * **The install referrer** (#756, the friends mechanics §4.3) — the text Google Play keeps from the
+ * store button that installed the app, which the public site sets to the page's own link,
+ * `<public site>/join/<code>` or `<public site>/f/<code>`.
+ *
+ * Anybody can put any text there — a Play listing's address takes any `referrer` — so it is read as
+ * the scheme is: **the page and its value, and nothing else**. Its host proves nothing either way,
+ * so any is taken, the laptop's `http://localhost:3001` included. **Only the two pages that carry a
+ * code**: a token is a credential, and no store button carries one.
+ */
+describe('the install referrer', () => {
+  it.each([
+    ['https://raketa.app/f/tk4m9q2z', { kind: 'friend', code: 'tk4m9q2z' }],
+    ['https://raketa.app/join/K7PQ2MXA', { kind: 'join', code: 'k7pq2mxa' }],
+    ['http://localhost:3001/f/tk4m9q2z', { kind: 'friend', code: 'tk4m9q2z' }],
+    ['https://raketa.app/f/tk4m9q2z?utm_source=whatsapp', { kind: 'friend', code: 'tk4m9q2z' }],
+  ])('reads %p', (referrer, link) => {
+    expect(readReferrerLink(referrer)).toEqual(link);
+  });
+
+  /** Play hands it back decoded; one encoded once more is read the same. */
+  it('reads a link still encoded', () => {
+    expect(readReferrerLink('https%3A%2F%2Fraketa.app%2Ff%2Ftk4m9q2z')).toEqual({
+      kind: 'friend',
+      code: 'tk4m9q2z',
+    });
+  });
+
+  it.each([
+    'utm_source=google-play&utm_medium=organic',
+    `https://raketa.app/invite/${TOKEN}`,
+    `https://raketa.app/reset/${TOKEN}`,
+    'https://raketa.app/',
+    'https://raketa.app/play/join/k7pq2mxa',
+    'https://raketa.app/f/tk4m',
+    'raketa://f/tk4m9q2z',
+    'javascript:alert(1)',
+    '%E0%A4%A',
+    '',
+    `https://raketa.app/f/tk4m9q2z?${'x'.repeat(10_000)}`,
+  ])('is no link: %p', (referrer) => {
+    expect(readReferrerLink(referrer)).toBeUndefined();
   });
 });

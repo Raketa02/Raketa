@@ -1,5 +1,6 @@
 /**
- * **The five acts** (#753) **and the three reads** (#754) — pass-throughs over the routes, the
+ * **The five acts** (#753), **the three reads** (#754) **and the link's three** (#756) — your link
+ * read, a New link, and somebody's link opened — pass-throughs over the routes, the
  * template's uniform-strict escape hatch: every rule a request obeys is the server's aggregate's,
  * every list is in the server's order, and the relation an act answers is spelled as the wire
  * spells it.
@@ -11,17 +12,22 @@ import {
   deleteFriendRequest,
   getFriendRequests,
   getFriends,
+  getFriendLink,
   getGroupsToAddFrom,
   postAcceptance,
+  postFriendLinkOpening,
+  postFriendLinkReplacement,
   postFriendRequest,
   postSetAside,
 } from '../api/friendsApi';
 import type { Friend, FriendRequest, GroupToAddFrom } from '../domain/friendList';
+import type { FriendLink } from '../domain/friendLink';
 import type { AskedWhere } from '../domain/friendship';
 import type { FriendRelation, RequestDirection } from '../domain/vocabulary';
 import {
   toAskRequest,
   toFriend,
+  toFriendLink,
   toFriendRequest,
   toGroupToAddFrom,
 } from '../mappers/friendsMappers';
@@ -66,4 +72,19 @@ export function readFriendRequests(
 /** Your groups, newest joined first, with how many in each you could still ask. */
 export function readGroupsToAddFrom(options: Cancellable = {}): Promise<readonly GroupToAddFrom[]> {
   return getGroupsToAddFrom(options).then((answer) => answer.groups.map(toGroupToAddFrom));
+}
+
+/** Your friend link — made on its first read. */
+export function readFriendLink(options: Cancellable = {}): Promise<FriendLink> {
+  return getFriendLink(options).then(toFriendLink);
+}
+
+/** **New link** — the fresh one; the old is dead. */
+export function replaceFriendLink(): Promise<FriendLink> {
+  return postFriendLinkReplacement().then(toFriendLink);
+}
+
+/** **Open somebody's link** — where the opener stands with its owner once it is. */
+export function openFriendLink(code: string): Promise<FriendRelation> {
+  return postFriendLinkOpening(code).then((answer) => answer.relation);
 }

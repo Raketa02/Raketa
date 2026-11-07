@@ -782,6 +782,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/friends/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your friend link
+         * @description The Add friends sheet's *Not on Raketa yet?* card: `<public site>/f/<code>`, **made the first time you read it** and the same on every read after, until you take a New link. Somebody who opens it finds your request on their Home.
+         */
+        get: operations["read_your_friend_link_api_v1_friends_link_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/friends/link/replacement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New link
+         * @description A fresh code, and **the old one dead at once**: opened in the app or on the public site, it reads `friend_link_not_found`. Requests already made through it stay as they are. No code is ever handed out twice.
+         */
+        post: operations["replace_your_friend_link_api_v1_friends_link_replacement_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/friends/links/{code}/opening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a friend link
+         * @description `code` is what follows `/f/` in the link, read in any case. **The owner's request lands on your Home**, *{nickname} wants to be your friend · Invited you to Raketa*, with Accept and Not now — whether or not you share a group. Opened again, it makes no second request, and a request of theirs you set aside comes back to Home.
+         *
+         *     **Nothing happens** for your own link (`NONE`) or a friend's (`FRIEND`). **If you had asked them, the requests cross**: you are friends at once (`FRIEND`).
+         */
+        post: operations["open_a_friend_link_api_v1_friends_links__code__opening_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/friends/requests": {
         parameters: {
             query?: never;
@@ -4019,6 +4081,11 @@ export interface components {
              */
             home_club: boolean;
             /**
+             * Home Club Full
+             * @description Offered **because the group's home club has no free court at this hour** — another club's, for an official group, which is offered other clubs only then: *Ogrody 33 is full at 10:00*. Always `false` for the home club and for a player group.
+             */
+            home_club_full: boolean;
+            /**
              * Distance Km
              * @description How far it is from the poster; `null` with no Location area.
              */
@@ -4049,6 +4116,23 @@ export interface components {
              * @description Its own *n free*: the poster's best fits free at this hour.
              */
             fits_free: number;
+        };
+        /**
+         * FriendLinkResponse
+         * @description Your Friend link, as the Add friends sheet's *Not on Raketa yet?* card
+         *     shows it (#748).
+         */
+        FriendLinkResponse: {
+            /**
+             * Code
+             * @description What follows `/f/`: eight letters and digits, random, shaped like a group's code. **The same on every read** until you take a New link.
+             */
+            code: string;
+            /**
+             * Link
+             * @description `<public site>/f/<code>` — what **Copy** puts on the clipboard.
+             */
+            link: string;
         };
         /**
          * FriendRelation
@@ -5850,6 +5934,11 @@ export interface components {
              * @description The courts still waiting for your stars. A card appears the day after the game and stays for seven days; ignoring one costs nothing.
              */
             cards: components["schemas"]["OpenCardSchema"][];
+        };
+        /** OpenedFriendLinkResponse */
+        OpenedFriendLinkResponse: {
+            /** @description Your relation to the link's owner once it is opened. `ASKED_YOU` — their request is on your Home, *Invited you to Raketa*: land there. `FRIEND` — you were friends already, or you had asked them and the requests crossed. `NONE` — the link is your own, and nothing happened. */
+            relation: components["schemas"]["FriendRelation"];
         };
         /**
          * Opens
@@ -9741,6 +9830,113 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_your_friend_link_api_v1_friends_link_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendLinkResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two reads or New links of yours raced: retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    replace_your_friend_link_api_v1_friends_link_replacement_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendLinkResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two reads or New links of yours raced: retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    open_a_friend_link_api_v1_friends_links__code__opening_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenedFriendLinkResponse"];
+                };
+            };
+            /** @description `friend_link_not_found` — *Nothing at that link*: the code was replaced by a New link, or no link ever carried it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `unblock_them_first` — you blocked the link's owner; `concurrent_modification` — two acts on the two of you raced: retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

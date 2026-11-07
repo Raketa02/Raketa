@@ -125,6 +125,15 @@ const pushImport = {
     'a test. See #559.',
 };
 
+const installReferrerImport = {
+  group: ['expo-application'],
+  message:
+    'Only src/shared/lib/platform/installReferrer.ts may import expo-application. The install ' +
+    'referrer is native and read once on first launch, and *once* is a rule only a fake can ' +
+    'count — use the InstallReferrerPort from @/shared/lib/platform, and fakeInstallReferrer() ' +
+    'from src/test-support/platform.ts in a test. See #756.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -180,6 +189,7 @@ const CORE_PATTERNS = [
   clipboardImport,
   stripeImport,
   pushImport,
+  installReferrerImport,
   observabilityVendorImports,
 ];
 
@@ -407,6 +417,12 @@ export default [
     // one file wide like the other native ports (#559).
     files: ['src/shared/lib/platform/push.ts'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(pushImport)) },
+  },
+  {
+    // The install referrer — one verb, one file, the same one-file-wide exemption as the other
+    // native ports (#756).
+    files: ['src/shared/lib/platform/installReferrer.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(installReferrerImport)) },
   },
   {
     // The share sheet — one verb, one file, the clipboard's exemption with the path ban

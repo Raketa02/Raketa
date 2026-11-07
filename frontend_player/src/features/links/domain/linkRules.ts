@@ -1,15 +1,16 @@
 /**
  * **What a link does, by who is on the phone** ([#520](https://github.com/Raketa02/Raketa/issues/520),
- * PRD #500 stories 46–48 and 111–119).
+ * PRD #500 stories 46–48 and 111–119; [#756](https://github.com/Raketa02/Raketa/issues/756)).
  *
  * The rules the links feature decides by, over plain data: **where a link lands as it arrives** — its
- * own screen, or held for the place that can answer it; **what a group link does where the account
- * is**; **what an invitation's link means to the account signed in**; and **when an answered link is
- * let go of**. The server answers every question they are asked from; these only decide what the app
- * does with the answers.
+ * own screen, or held for the place that can answer it; **what a group link or a friend link does
+ * where the account is**; **what an invitation's link means to the account signed in**; **where a
+ * friend link lands once opened**; and **when an answered link is let go of**. The server answers
+ * every question they are asked from; these only decide what the app does with the answers.
  */
 
 import type { InvitationLink, InvitationLinkState } from '@/features/auth/types';
+import type { FriendRelation } from '@/features/friends/types';
 
 import type { CredentialLink, IncomingLink } from './incomingLink';
 
@@ -29,8 +30,10 @@ export type Landing =
  *
  * - **A group link is always held.** Join a group is a screen inside the player's app, and a person
  *   signed out, not yet onboarded or wearing their administrator profile is not there yet: the link
- *   waits through all of it and opens once they are (story 48). **The app's bare address** is held
- *   too: what it asks for is the invitation sheet, which is in the app.
+ *   waits through all of it and opens once they are (story 48). **A friend link is held the same
+ *   way** (#756): it is answered by opening it as the account, whose Home the request lands on.
+ *   **The app's bare address** is held too: what it asks for is the invitation sheet, which is in the
+ *   app.
  * - **An invitation or a reset, with nobody signed in, opens its own screen** — *Set your password*,
  *   *Set a new password* — and so does one at a cold start, which does not know yet: the screen sits
  *   under the `(auth)` guard, which hands a phone that turns out to be signed in to the gate, where
@@ -39,7 +42,9 @@ export type Landing =
  *   is taken off the screen they were on for a link that may not be theirs.
  */
 export function landingOf(link: IncomingLink, session: LinkSession): Landing {
-  if (link.kind === 'join' || link.kind === 'open') return { kind: 'held' };
+  if (link.kind === 'join' || link.kind === 'friend' || link.kind === 'open') {
+    return { kind: 'held' };
+  }
   return session === 'signed-in' ? { kind: 'held' } : { kind: 'its-screen', link };
 }
 
@@ -47,18 +52,31 @@ export function landingOf(link: IncomingLink, session: LinkSession): Landing {
 export type LinkHome = 'player' | 'administrator';
 
 /**
- * **What a group link does where the account is** (story 46). Join a group is the player's: it opens
- * in the player's app; in an administrator area it **switches an account that plays to Player** —
- * the switcher's own move, kept as one — and **waits for one that does not**: a link is no reason to
- * take somebody into the player's setup, and *Start playing*'s steps end in the player's app, where
- * it is opened.
+ * **What a group link or a friend link does where the account is** (story 46; #756). Both are the
+ * player's — Join a group is a player's screen, and a friend's request lands on the player's Home —
+ * so each is **answered in the player's app**; in an administrator area it **switches an account
+ * that plays to Player** — the switcher's own move, kept as one — and **waits for one that does
+ * not**: a link is no reason to take somebody into the player's setup, and *Start playing*'s steps
+ * end in the player's app, where it is answered.
  */
-export function groupLinkMove(
+export function playersLinkMove(
   home: LinkHome,
   playsToo: boolean,
-): 'open-join' | 'switch-to-player' | 'wait' {
-  if (home === 'player') return 'open-join';
+): 'answer' | 'switch-to-player' | 'wait' {
+  if (home === 'player') return 'answer';
   return playsToo ? 'switch-to-player' : 'wait';
+}
+
+/**
+ * **Where a friend link lands once it is opened** (#756, the friends mechanics §4.2) — on **Home**
+ * when the owner's request is there (`ASKED_YOU`: asked by the opening, already open, or a set-aside
+ * one brought back — and a request the owner's block swallowed answers the same, landing on a Home
+ * with no card, the cost ADR-0202 names). **Nowhere** for the opener's own link (`NONE`) or a
+ * friend's (`FRIEND`, which is also the opener's own request crossing the owner's): nothing waits
+ * for an answer.
+ */
+export function friendLinkLanding(relation: FriendRelation): 'home' | 'stay' {
+  return relation === 'ASKED_YOU' ? 'home' : 'stay';
 }
 
 /** **What an invitation's link means to the account signed in** when it is opened. */

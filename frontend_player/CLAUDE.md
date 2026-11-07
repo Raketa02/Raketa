@@ -143,12 +143,14 @@ src/
   `player_record`, `payments`, `notifications`, `friends` and `auth` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
-  classes), and six platform ports in `shared/lib/platform/` — `location.ts`,
-  `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `share.ts` (React Native's
-  `Share`, the one fenced name out of that module). Features depend on the port
+  classes), and nine platform ports in `shared/lib/platform/` — `location.ts`,
+  `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `payments.tsx`, `push.ts`,
+  `installReferrer.ts` (`expo-application`, Android's install referrer, #756), `share.ts` (React
+  Native's `Share`, the one fenced name out of that module). Features depend on the port
   and drive the fakes in `src/test-support/platform.ts`. AsyncStorage's one importer is
   `shared/lib/preferences/phonePreferences.ts` — per-account choices, wiped at sign-out
-  (ADR-0188), and one per-phone flag kept at sign-out (ADR-0200 §8). _(lint)_
+  (ADR-0188), one per-account flag kept at sign-out (ADR-0200 §8), and one flag the phone keeps
+  for itself — _the install referrer was read_ (#756, ADR-0188's record owed). _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. _(lint)_ But do not move code to `shared/` because two files use it; keep it local
   until cross-feature ownership is proven (the third caller).
@@ -181,7 +183,7 @@ src/
 | Form input                | The form + one Zod schema                                                                                                        |
 | Navigation                | expo-router — a route param is not app state                                                                                     |
 | Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
-| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); one per-phone flag, kept (ADR-0200 §8)       |
+| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); two flags, kept (ADR-0200 §8, #756)          |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.
@@ -191,8 +193,8 @@ reason. Zustand never holds API entities, tokens, a backend cache, or a global l
 Bootstrap is a **state**, never `user === undefined` — that ambiguity is what flashes a login
 screen while valid credentials are still being read out of the keychain. `shared/lib/bootstrap`
 runs one ordered sequence (error reporting → validate config → wire focus/online managers → read
-SecureStore → restore/validate session → hide splash → render) and nothing renders a route tree
-before it resolves. The guard is a redirect in `(app)/_layout.tsx` keyed on `SessionStatus`;
+SecureStore → restore/validate session → start reading the install referrer, never awaited → hide
+splash → render) and nothing renders a route tree before it resolves. The guard is a redirect in `(app)/_layout.tsx` keyed on `SessionStatus`;
 route groups make the authorization boundary visible in the file tree. iOS Keychain data can
 survive a reinstall, so **a token existing is not proof a session exists** — bootstrap validates
 it.

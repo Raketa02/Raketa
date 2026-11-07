@@ -3,7 +3,9 @@
  * sheets, and Home's FRIEND REQUESTS ([#753](https://github.com/Raketa02/Raketa/issues/753); the
  * words [§29.1–§29.2](../../../../../docs/specs/matchmaking/the-words.md#29-friends)); You ›
  * Friends, the Add friends sheet and the result screen's PLAYED WITH
- * ([#754](https://github.com/Raketa02/Raketa/issues/754); the words §29.1, §29.3).
+ * ([#754](https://github.com/Raketa02/Raketa/issues/754); the words §29.1, §29.3); and the friend
+ * link — the sheet's card, and what opening somebody's says when it cannot
+ * ([#756](https://github.com/Raketa02/Raketa/issues/756); the words §29.3–§29.4).
  *
  * ## Calls, for the product owner to overrule
  *
@@ -29,12 +31,27 @@
  * - **The + of *+ Add friends* is typed**, as #753 typed *+ Add*'s — §29 says drawn, and both turn
  *   at once if the product owner rules so.
  *
+ * And these, written in by #756:
+ *
+ * - **New link asks first**, as #756 asks and §29 has no words for: *Make a new link?* over *The
+ *   link you have now stops working, and anyone who opens it finds nothing there.*, **New link** and
+ *   **Keep this link**.
+ * - **Copy's two answers**, the group page's *Link copied* and *Couldn't copy the link*, spelled
+ *   again here because `groups` draws this feature's pills and cannot be read back.
+ * - **Opening a link of somebody you blocked** (`unblock_them_first`, #748's call): *This link is
+ *   from somebody you blocked. Unblock them in Blocked players to see their request.* A dead link
+ *   says the public page's *Nothing at that link* (§29.4).
+ * - **The spoken names**: *Your friend link, raketa.app/f/tk4m9q2z* for the field, *Copy your
+ *   friend link* and *Make a new link* for its two buttons.
+ *
  * ## The whole nickname, and no pronoun
  *
  * ADR-0199 §1: every sentence naming somebody uses the whole nickname, never with an @. And no
  * sentence says *her*, *his*, *she* or *he* about another player (ADR-0096; the words §29's note).
  */
 
+import { codeMessage, type AppError } from '@/shared/errors';
+import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 
 import type { FriendsTab } from '../domain/friendList';
@@ -120,6 +137,40 @@ export const FRIENDS_COPY = {
     /** What a tap on a group does. */
     openMembers: 'Opens its Members',
   },
+  /**
+   * **The sheet's link card** (the screens §5; friends 4; the words §29.3): the link, **Copy**, and a
+   * small **New link** under it, which asks first.
+   */
+  link: {
+    title: 'Not on Raketa yet?',
+    copy: 'Copy',
+    copyLabel: 'Copy your friend link',
+    copied: 'Link copied',
+    notCopied: 'Couldn’t copy the link',
+    newLink: 'New link',
+    newLinkLabel: 'Make a new link',
+    reading: 'Reading your link…',
+    /** Under the field once a New link is made (§29.3, a call). */
+    made: 'New link made. The old one no longer works.',
+    confirm: {
+      title: 'Make a new link?',
+      body: 'The link you have now stops working, and anyone who opens it finds nothing there.',
+      act: 'New link',
+      busy: 'Making a new link…',
+      keep: 'Keep this link',
+      /** The sheet's close does what *Keep* does, under its own name. */
+      close: 'Not now',
+    },
+  },
+  /**
+   * **Opening somebody's link, refused** — said as a toast wherever the link landed (#756). Any
+   * other failure says its recovery sentence (`codeMessage`).
+   */
+  linkRefused: {
+    friend_link_not_found: 'Nothing at that link',
+    unblock_them_first:
+      'This link is from somebody you blocked. Unblock them in Blocked players to see their request.',
+  } as Readonly<Record<string, string>>,
   /** **The You tab's row** — its title; the line is `friendsRowLine`. */
   row: { title: 'Friends' },
   /** **The result screen's card** (§29.1) — the eyebrow over it, uppercased by its style. */
@@ -246,4 +297,17 @@ export function cancelRequestLabel(nickname: string): string {
 /** A group in the sheet, spoken: its name and its counts. */
 export function groupRowLabel(name: string, members: number, toAdd: number): string {
   return `${name}, ${groupCountsLine(members, toAdd)}`;
+}
+
+/**
+ * **What opening somebody's link says when it cannot** — *Nothing at that link*, the blocked
+ * owner's sentence, or the failure's recovery sentence.
+ */
+export function linkOpeningMessage(error: AppError): string {
+  return codeMessage(FRIENDS_COPY.linkRefused, error);
+}
+
+/** *Your friend link, raketa.app/f/tk4m9q2z* — the card's field, spoken. */
+export function friendLinkLabel(link: string): string {
+  return `Your friend link, ${linkWithoutScheme(link)}`;
 }

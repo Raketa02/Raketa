@@ -994,11 +994,14 @@ export function stubGate(
 
 export const FRIENDS_PATH = '/api/v1/friends';
 export const FRIEND_REQUESTS_PATH = '/api/v1/friends/requests';
+/** Your friend link — the Add friends sheet's card reads it (#756). */
+export const FRIEND_LINK_PATH = '/api/v1/friends/link';
 
 /**
  * **Your friends and the requests each way**, as `GET /friends` and `GET /friends/requests` answer
- * — **nobody** unless the suite says otherwise. The gate stubs them, because the You tab's *Friends*
- * row reads your friends and *Asked you* on every visit (#754). One responder answers both
+ * — **nobody** unless the suite says otherwise — and your friend link, `tk4m9q2z`. The gate
+ * stubs them, because the You tab's *Friends* row reads your friends and *Asked you* on every
+ * visit (#754). One responder answers both
  * directions, reading the one the request asked for.
  */
 export function stubFriends(
@@ -1015,6 +1018,10 @@ export function stubFriends(
 ) {
   transport.on('GET', FRIENDS_PATH, () =>
     json<Wire['FriendsResponse']>({ sport: null, friends: [...friends] }),
+  );
+  // Your link, for a suite that opens the Add friends sheet without saying (#756).
+  transport.on('GET', FRIEND_LINK_PATH, () =>
+    json<Wire['FriendLinkResponse']>({ code: 'tk4m9q2z', link: 'https://raketa.app/f/tk4m9q2z' }),
   );
   transport.on('GET', FRIEND_REQUESTS_PATH, (request) => {
     const direction: Wire['Direction'] = request.path.includes('direction=YOU_ASKED')

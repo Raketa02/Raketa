@@ -21,6 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
+import { readTheInstallReferrerOnce } from '@/features/links/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
@@ -37,7 +38,7 @@ function wireCredentialsStep(): void {
 }
 
 /**
- * The other step `shared/` cannot supply itself: restoring a session belongs to the auth
+ * The second step `shared/` cannot supply itself: restoring a session belongs to the auth
  * feature, and `shared/lib/bootstrap` may never import a feature. Composing them is a
  * route file's job, which is why this adapter is here and is this small.
  *
@@ -52,6 +53,14 @@ async function restoreSessionStep(): Promise<void> {
   }
 }
 
+/**
+ * The third: the link an Android install carried, read once on the first launch and held as if it
+ * had been tapped (#756). Started, never awaited — the splash does not wait on Google Play.
+ */
+function readInstallReferrerStep(): void {
+  void readTheInstallReferrerOnce();
+}
+
 export default function RootLayout() {
   const run = useCallback(
     () =>
@@ -59,6 +68,7 @@ export default function RootLayout() {
         ...sharedBootstrapSteps,
         wireCredentials: wireCredentialsStep,
         restoreSession: restoreSessionStep,
+        readInstallReferrer: readInstallReferrerStep,
       }),
     [],
   );

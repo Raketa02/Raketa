@@ -11,6 +11,9 @@ describe('the same link', () => {
     );
     expect(sameLink({ kind: 'reset', token: TOKEN }, { kind: 'reset', token: TOKEN })).toBe(true);
     expect(sameLink({ kind: 'open' }, { kind: 'open' })).toBe(true);
+    expect(
+      sameLink({ kind: 'friend', code: 'tk4m9q2z' }, { kind: 'friend', code: 'tk4m9q2z' }),
+    ).toBe(true);
   });
 
   it('is not another group, nor another token', () => {
@@ -25,5 +28,8 @@ describe('the same link', () => {
   /** An invitation's and a reset's tokens come from one machinery, and are still two links. */
   it('is not another page with the same value', () => {
     expect(sameLink({ kind: 'invite', token: TOKEN }, { kind: 'reset', token: TOKEN })).toBe(false);
+    expect(sameLink({ kind: 'join', code: 'tk4m9q2z' }, { kind: 'friend', code: 'tk4m9q2z' })).toBe(
+      false,
+    );
   });
 });

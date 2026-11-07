@@ -31,7 +31,7 @@ is referenced from the other by a sentence, not copied.
 | [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore                                                        |
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, a booked game's result screen               |
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
-| [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
+| [`links.md`](links.md)                       | The four links into the app, the reader, the held link, the sheets, the install referrer       |
 | [`notifications.md`](notifications.md)       | You › Account › Notifications, the phone's push, the in-app banner, the list behind the bell   |
 | [`onboarding.md`](onboarding.md)             | The gate, the rating pass and its origins, the level door, the hardware back button            |
 | [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |

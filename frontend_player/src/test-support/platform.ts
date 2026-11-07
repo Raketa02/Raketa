@@ -55,6 +55,7 @@ import type {
   FollowLive,
   HapticsPort,
   ImagePickingPort,
+  InstallReferrerPort,
   LiveStreamPort,
   LiveStreamStatus,
   LiveTyping,
@@ -405,6 +406,32 @@ export function fakeClipboard(text = ''): FakeClipboard {
     },
   };
   return clipboard;
+}
+
+/**
+ * **Google Play's install referrer, as a fake** (#756) — the text it hands the app, or `null` as an
+ * iPhone answers, counting every read so *once* can be asserted. `whileReading` runs between the
+ * read starting and its answer, for the suite about what arrives meanwhile.
+ */
+export interface FakeInstallReferrer extends InstallReferrerPort {
+  readonly reads: number;
+  whileReading?: () => void;
+}
+
+export function fakeInstallReferrer(referrer: string | null): FakeInstallReferrer {
+  let reads = 0;
+  const port: FakeInstallReferrer = {
+    get reads() {
+      return reads;
+    },
+    readReferrer: async () => {
+      reads += 1;
+      await Promise.resolve();
+      port.whileReading?.();
+      return referrer;
+    },
+  };
+  return port;
 }
 
 /**

@@ -13,8 +13,10 @@ import { endSession } from '@/shared/lib/auth';
 
 import {
   raisePhoneFlag,
+  raisePhoneWideFlag,
   readPhoneFlag,
   readPhonePreference,
+  readPhoneWideFlag,
   savePhonePreference,
 } from './phonePreferences';
 
@@ -97,5 +99,34 @@ describe('a flag the phone keeps for an account', () => {
 
     await expect(readPhoneFlag(ADA, 'ratingGuideShown')).resolves.toBe(true);
     await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * **A flag the phone keeps for nobody in particular** (#756) — *the install referrer was read*,
+ * raised on the app's first launch, before anybody has signed in, and never lowered: not by a
+ * sign-out, and not by another account signing in.
+ */
+describe('a flag the phone keeps for itself', () => {
+  it('is down until it is raised, and stays up once it is', async () => {
+    await expect(readPhoneWideFlag('installReferrerRead')).resolves.toBe(false);
+
+    await raisePhoneWideFlag('installReferrerRead');
+
+    await expect(readPhoneWideFlag('installReferrerRead')).resolves.toBe(true);
+  });
+
+  it('is kept when a session ends', async () => {
+    await raisePhoneWideFlag('installReferrerRead');
+
+    await endSession('requested');
+
+    await expect(readPhoneWideFlag('installReferrerRead')).resolves.toBe(true);
+  });
+
+  it('is not an account’s flag of the same name', async () => {
+    await raisePhoneWideFlag('installReferrerRead');
+
+    await expect(readPhoneFlag(ADA, 'ratingGuideShown')).resolves.toBe(false);
   });
 });

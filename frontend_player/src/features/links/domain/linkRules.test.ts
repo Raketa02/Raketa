@@ -6,7 +6,13 @@
 
 import type { InvitationLink, InvitationLinkState } from '@/features/auth/types';
 
-import { groupLinkMove, invitationLinkOutcome, landingOf, letsTheLinkGo } from './linkRules';
+import {
+  friendLinkLanding,
+  invitationLinkOutcome,
+  landingOf,
+  letsTheLinkGo,
+  playersLinkMove,
+} from './linkRules';
 
 const TOKEN = 'Zx9_invite-token-4Kq2Wm8Rt6Yv0Bn3Hs5Jd7Lf1Pg';
 
@@ -18,6 +24,14 @@ describe('where a link lands as it arrives', () => {
    */
   it.each(['signed-in', 'signed-out', 'unknown'] as const)('holds a group link, %s', (session) => {
     expect(landingOf({ kind: 'join', code: 'k7pq2mxa' }, session)).toEqual({ kind: 'held' });
+  });
+
+  /**
+   * A friend link is held like a group link (#756): it is answered by opening it as the account,
+   * so it waits through sign-in, sign-up and onboarding for the player's app.
+   */
+  it.each(['signed-in', 'signed-out', 'unknown'] as const)('holds a friend link, %s', (session) => {
+    expect(landingOf({ kind: 'friend', code: 'tk4m9q2z' }, session)).toEqual({ kind: 'held' });
   });
 
   /** The app's bare address opens nothing of its own: the invitation sheet answers it. */
@@ -116,19 +130,39 @@ describe('an invitation’s link, opened by a signed-in account', () => {
   });
 });
 
-describe('a group link, where the account is', () => {
-  it('opens Join a group in the player’s app', () => {
-    expect(groupLinkMove('player', true)).toBe('open-join');
+/**
+ * **A group link and a friend link, where the account is** — both are answered in the player's app:
+ * Join a group is a player's screen, and a friend's request lands on the player's Home (#756).
+ */
+describe('a group link or a friend link, where the account is', () => {
+  it('is answered in the player’s app', () => {
+    expect(playersLinkMove('player', true)).toBe('answer');
+    expect(playersLinkMove('player', false)).toBe('answer');
   });
 
-  /** Join a group is the player's: an administrator who plays is switched to Player for it. */
+  /** An administrator who plays is switched to Player for it — the switcher's own move. */
   it('switches an administrator who plays to Player', () => {
-    expect(groupLinkMove('administrator', true)).toBe('switch-to-player');
+    expect(playersLinkMove('administrator', true)).toBe('switch-to-player');
   });
 
   /** One who does not play is not taken into the player's setup by a link: it waits. */
   it('waits for an administrator who does not play', () => {
-    expect(groupLinkMove('administrator', false)).toBe('wait');
+    expect(playersLinkMove('administrator', false)).toBe('wait');
+  });
+});
+
+/**
+ * **Where a friend link lands once it is opened** (#756, the friends mechanics §4.2) — on Home when
+ * the owner's request is there, and nowhere for the opener's own link or a friend's.
+ */
+describe('a friend link, once opened', () => {
+  it('lands on Home when the owner’s request is waiting there', () => {
+    expect(friendLinkLanding('ASKED_YOU')).toBe('home');
+  });
+
+  /** Your own link, a friend's, or your own request crossing theirs: nothing to answer. */
+  it.each(['NONE', 'FRIEND'] as const)('moves nobody when it answers %s', (relation) => {
+    expect(friendLinkLanding(relation)).toBe('stay');
   });
 });
 

@@ -41,6 +41,14 @@ export {
 export type { FriendRelation } from './domain/vocabulary';
 
 /**
+ * **A friend link** (#756): its code's shape, which the links feature reads `f/<code>` by, and the
+ * opening, which answers the link where the player's app is reached. The card that shows your own
+ * link is the Add friends sheet's, inside `FriendsPage`.
+ */
+export { parseFriendLinkCode } from './schemas/friendLinkCode';
+export { useOpenFriendLink } from './hooks/useFriendWrites';
+
+/**
  * The feature's words, exported for the suites that walk Members, the record and Home: a test
  * asserting a sentence it spelled itself passes the day the screen stops saying it.
  */
@@ -49,6 +57,7 @@ export {
   acceptLabel,
   addLabel,
   cancelTitle,
+  linkOpeningMessage,
   notNowLabel,
   removeTitle,
   requestsHeading,

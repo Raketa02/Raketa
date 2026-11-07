@@ -17,6 +17,7 @@ function steps(overrides: Partial<BootstrapSteps> = {}): BootstrapSteps {
     wirePlatformManagers: () => {},
     wireCredentials: () => {},
     restoreSession: async () => {},
+    readInstallReferrer: () => {},
     loadFonts: async () => {},
     ...overrides,
   };
@@ -70,12 +71,40 @@ describe('bootstrapApp', () => {
       restoreSession: async () => {
         order.push('session');
       },
+      readInstallReferrer: record('referrer'),
       loadFonts: async () => {
         order.push('fonts');
       },
     });
 
-    expect(order).toEqual(['config', 'managers', 'credentials', 'session', 'fonts']);
+    expect(order).toEqual(['config', 'managers', 'credentials', 'session', 'referrer', 'fonts']);
+  });
+
+  /**
+   * The install referrer is another app's answer (#756): it is asked for at launch and held whenever
+   * it comes, so the splash never waits on Google Play — the step starts it and returns.
+   */
+  it('starts the install referrer’s read without waiting for it', async () => {
+    // Google Play never answers here: a sequence that awaited the step would never resolve.
+    const play = deferred();
+    let asked = false;
+    let resolved = false;
+
+    const run = bootstrapApp(
+      steps({
+        readInstallReferrer: () => {
+          asked = true;
+          return play.promise;
+        },
+      }),
+    ).then(() => {
+      resolved = true;
+    });
+
+    await run;
+    expect(asked).toBe(true);
+    expect(resolved).toBe(true);
+    play.resolve();
   });
 
   it('fails when the config does, without spending a launch on anything else', async () => {

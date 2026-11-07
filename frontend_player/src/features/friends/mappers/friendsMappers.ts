@@ -13,6 +13,7 @@ import { toSport, toWireSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
 
 import type { Friend, FriendRequest, FriendSport, GroupToAddFrom } from '../domain/friendList';
+import type { FriendLink } from '../domain/friendLink';
 import type { AskedWhere } from '../domain/friendship';
 
 type Schemas = components['schemas'];
@@ -61,4 +62,9 @@ export function toGroupToAddFrom(wire: Schemas['GroupToAddFromSchema']): GroupTo
     memberCount: wire.member_count,
     toAdd: wire.to_add,
   };
+}
+
+/** **Your friend link** (#756) — its code and the whole address, as the server prints it. */
+export function toFriendLink(wire: Schemas['FriendLinkResponse']): FriendLink {
+  return { code: wire.code, link: wire.link };
 }
