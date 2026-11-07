@@ -87,7 +87,7 @@ export function playerName(player: NamedPlayer): string {
  * before ADR-0171 (ADR-0199, *Leaves standing*). `-` and `_` are as often inside one word as
  * between two — `anne-marie` and `dorota_w` are what their owners chose — and cutting at a
  * separator rather than at a character count is what keeps the result a word: it is the same
- * rule the seat's three-character caption breaks on purpose, because a 46pt face has no room to
+ * rule the seat's three-character caption breaks on purpose, because a 60pt face has no room to
  * respect it. **The poster's initials now break at all three** (`handleInitials`), so
  * `dorota_w` draws `DW` on a poster and `dorota_w` whole in a box; ADR-0199 names the split, and
  * whoever next touches either rule decides whether they meet again.

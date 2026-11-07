@@ -153,7 +153,7 @@ export interface SeatCaptionProps {
  * the negative insets, the `tag` role and the media shadow are the half a second copy would have
  * drifted on first.
  *
- * Sixty-four characters of handle in a 46pt seat is about four, so the visible label is not the
+ * Sixty-four characters of handle in a 60pt seat is about five, so the visible label is not the
  * name and cannot be: it draws the first three, **hard, with no ellipsis**, because an ellipsis
  * spends one of four characters saying *there was more* on a caption whose whole job is telling
  * four faces apart. **The sentence and the spoken name stay whole** — a truncation of a drawing

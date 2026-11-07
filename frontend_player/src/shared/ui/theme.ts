@@ -1136,17 +1136,22 @@ const size = {
     seatRatio: 0.235,
     seatMin: 17,
     /**
-     * The court a line-up is built on — **the width that makes a seat 46pt**, which is the
-     *  size every rule about a seat is already computed against: 7.12's *"sixty-four
-     *  characters of handle in a 46pt seat is about four"*, and the clear badge's recorded
-     *  conflict between a 44pt target and a 46pt face. 46 / `seatRatio` is 195,7.
+     * The court a line-up is built on — **the width that makes a seat 60pt**, which is the
+     *  size every rule about a seat is computed against: 7.12's *"sixty-four characters of
+     *  handle in a 60pt seat is about five"*, and the clear badge's 44pt target standing half
+     *  over a 60pt face's corner. 60 / `seatRatio` is 255,3.
+     *
+     *  **It was 46 (196) until 2026-11-07** (Part 16): on a device, the near-right seat's three
+     *  letters ran across the bound line into *YOUR SIDE* on padel and badminton, and the ×'s
+     *  44pt target covered a quarter of a 46pt face, so the face's own press — the swap — was
+     *  hard to reach beside it. 60 is the smallest seat at which that caption clears the label.
      *
      *  It is a **fixed** width and not the content width, which is what it was: on a large
      *  phone the content width put the seat at 81pt and every one of those arguments was
      *  being made about a court nobody drew. A drawn object with a rule about its parts is
-     *  sized by the part, not by the page.
+     *  sized by the part, not by the page — and 255 still fits the narrowest phone's 345.
      */
-    build: 196,
+    build: 255,
     /** The court drawn as a **picture beside a sentence** rather than as a surface — the
      *  way onto the court on *Find a game*. It is deliberately under the width at which
      *  `seatRatio` clears `seatMin` (72), so every seat on it is the floor face: a thumbnail

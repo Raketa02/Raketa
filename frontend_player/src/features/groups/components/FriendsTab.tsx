@@ -17,7 +17,7 @@
  *
  * - **Competitive · For fun** sets **this game's kind only** (`friendsGame.store`) — never the Games
  *   deck's switch, never the Play intent (ADR-0202; the README's defaults).
- * - **The court** is `Court` at `court.build`, a seat 46. The reader stands in the first seat,
+ * - **The court** is `Court` at `court.build`, a seat 60. The reader stands in the first seat,
  *   *You 2,71*. **A seated friend** is their face, the seat's three letters over their Level, and
  *   6.9's remove control at its corner (7.12's seat-clear badge): the × takes them off. **An empty
  *   seat** is a dashed ring and a white plus, and opens the picker, as *+ Friends* does.
