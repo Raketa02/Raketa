@@ -333,6 +333,16 @@ describe('the Friends row on You', () => {
     expect(screen.getByRole('button', { name: PAGE.addLabel })).toBeTruthy();
   });
 
+  it('comes back out to You from the page’s back control', async () => {
+    friendsServer();
+    await openFriends();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    expect(await screen.findByLabelText(doorRowLabel(FRIENDS_COPY.row.title, friendsRowLine(2, 2)))).toBeTruthy();
+  });
+
   it('says plainly there are none yet', async () => {
     friendsServer({ friends: [], askedYou: [], youAsked: [] });
     expect(await openYou(friendsRowLine(0, 0))).toBeTruthy();
