@@ -31,7 +31,8 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.proposals.application.commands import (
     FriendsGameCommand,
-    SeatActCommand,
+    SeatInvitationCommand,
+    SeatOpeningCommand,
     SendAFriendsGameCommand,
     AnswerProposalCommand,
     ConfirmPaymentCommand,
@@ -1481,7 +1482,7 @@ async def invite_into_a_seat(
     invite: InviteIntoASeatDep,
 ) -> Response:
     await invite.execute(
-        SeatActCommand(
+        SeatInvitationCommand(
             player_id=user.id,
             booking_id=booking_id,
             seat_of=seat_of,
@@ -1529,7 +1530,7 @@ async def open_a_seat(
     booking_id: UUID, seat_of: UUID, user: CurrentUserDep, open_: OpenASeatDep
 ) -> Response:
     await open_.execute(
-        SeatActCommand(player_id=user.id, booking_id=booking_id, seat_of=seat_of)
+        SeatOpeningCommand(player_id=user.id, booking_id=booking_id, seat_of=seat_of)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

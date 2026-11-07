@@ -383,14 +383,18 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   10:00 · 1 seat still empty* / *At Fri 10:00 you pay 50 zł: your 25 zł and ania's seat.*
   (*… 2 seats still empty* / *… and 2 empty seats.*) — to the sender, opening `BOOKING`,
   `amount_grosze` what the cut-off takes, `until` the cut-off, `people` every seat unpaid.
-  *Can't make it* / *didn't answer* go to **whoever invited** (`GameBrief.invited_by`).
+  *Can't make it* / *didn't answer* go to **the sender**, whoever made the invitation (the
+  mechanics §12), and a card seat its answer opened — after the cut-off, or the one the
+  cut-off opens as its invitation ends there — **alerts the pool** as any rescue does
+  (`_alert_the_pool` reaches only a seat somebody is offered).
   *Someone left your game* on a seat left **empty** reads `reason` **`SEAT_EMPTY`** — *… —
   the seat is empty.* — and no alert is given, since nobody is offered it. **The cover
   line**: inside the day before the cut-off of a *Split* game its sender covers from inside
   it, his copy of *can't make it*, *didn't answer* and *left your game* ends *At Fri 10:00 you
-  pay 50 zł: your 25 zł and ewa's seat.* — `GameBrief.unpaid` (told_by's
-  `_the_cover_line`), carried as `amount_grosze`, `until` and `people` after the one it is
-  about (`Notice.people`'s order, `Said.people_count`): **no new notice field and no
+  pay 50 zł: your 25 zł and ewa's seat.* — `GameBrief.unpaid` (`Booking.cover_line`),
+  carried as `amount_grosze`, `until` and `people` after the one it is about
+  (`Notice.people`'s order, read **by position** through `Said.named`, `None` for one no
+  longer named, so nobody is ever named in another's place): **no new notice field and no
   migration**.
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,

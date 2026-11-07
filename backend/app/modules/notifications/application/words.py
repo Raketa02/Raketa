@@ -134,9 +134,10 @@ class Said:
     #: The game's group, where a notice names it — a friends game's empty seat
     #: may be opened to it (#751).
     group: str | None = None
-    #: How many people the notice names, whether or not each can still be
-    #: named — the cover line counts its seats by it (#752).
-    people_count: int = 0
+    #: Everybody the notice names **in its own order**, ``None`` for one who
+    #: can no longer be named — the cover line reads its people by position
+    #: (#752): the one it is about, then each seat unpaid.
+    named: tuple[str | None, ...] = ()
 
 
 #: A game's kind, as an invitation names it (#751; the words §29.8).
@@ -415,7 +416,7 @@ def words_for(said: Said) -> Words:
             # A friends game its sender covers (#752): the seat is empty, no
             # rescue — and to its *Split* sender inside the day before the
             # cut-off, the cover line.
-            left = said.names[0] if said.names else "Somebody"
+            left = _about(said)
             return Words(
                 title=f"{left} left your game",
                 body=with_the_cover_line(said, f"{game} — the seat is empty."),
@@ -424,7 +425,7 @@ def words_for(said: Said) -> Words:
             after = "it's filling again"
         elif said.until is not None and said.amount_grosze is not None:
             # A friends game's seat open at once, with the cover line (#752).
-            left = said.names[0] if said.names else "Somebody"
+            left = _about(said)
             return Words(
                 title=f"{left} left your game",
                 body=with_the_cover_line(said, f"{game} — the seat is open."),
@@ -707,11 +708,17 @@ def with_the_cover_line(said: Said, body: str) -> str:
     cut-off carries the cover line after its own body (#752): the one it is
     about named first, then each seat unpaid."""
 
-    if said.until is None or said.amount_grosze is None or said.people_count < 2:
+    if said.until is None or said.amount_grosze is None or len(said.named) < 2:
         return body
-    seats = said.people_count - 1
-    named = said.names[1] if len(said.names) > 1 else None
-    return f"{body} {_you_pay(said, seats=seats, named=named)}"
+    seats = len(said.named) - 1
+    return f"{body} {_you_pay(said, seats=seats, named=said.named[1])}"
+
+
+def _about(said: Said) -> str:
+    """The one a notice is about, named first — *Somebody* for one who can no
+    longer be named, never the next person along (#752)."""
+
+    return (said.named[0] if said.named else None) or "Somebody"
 
 
 def _a_friends_game(said: Said, *, sport: str) -> Words:
@@ -733,17 +740,17 @@ def _a_friends_game(said: Said, *, sport: str) -> Words:
             title="Someone took that seat first.", body=f"{when} · {said.club}"
         )
     if said.kind is NoticeKind.COVER_WARNING:
-        seats = max(said.people_count, 1)
+        seats = max(len(said.named), 1)
         empty = "1 seat still empty" if seats == 1 else f"{seats} seats still empty"
         return Words(
             title=f"{when} · {empty}",
             body=_you_pay(
-                said, seats=seats, named=said.names[0] if said.names else None
+                said, seats=seats, named=said.named[0] if said.named else None
             ),
         )
     group = said.group or "the group"
     # With the cover line, the one it is about is named first (#752).
-    who = said.names[0] if said.names else "Somebody"
+    who = _about(said)
     title = (
         f"{who} can't make it"
         if said.kind is NoticeKind.CANT_MAKE_IT

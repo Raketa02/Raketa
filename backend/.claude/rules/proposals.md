@@ -274,11 +274,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   among `sides` (`BookedGame.planned_sides`). **A friends game is no proposal**, so
   `the_game`, `load_for_update` and the payments-to-confirm rows find none for it.
   **Its empty seats** (#752; see `bookings.md`): `POST /bookings/{id}/seats/{seat_of}/
-  invitations` (`InviteIntoASeat`, `{friend_id}`: anybody In, one of their own friends;
+  invitations` (`InviteIntoASeat`, `SeatInvitationCommand`, `{friend_id}`: anybody In, one
+  of their own friends;
   refused naming nobody — `not_a_friend`, `no_level`, `cannot_play_together` against
   everybody In and every friend invited into another seat, `friend_plays_then`,
   `friends_week_is_full`, `already_on_the_game`, `seat_just_taken`) and `…/opening`
-  (`OpenASeat`: the sender, In, before the cut-off — `cut_off_has_passed` after); both
+  (`OpenASeat`, `SeatOpeningCommand`: the sender, In, before the cut-off —
+  `cut_off_has_passed` after); both
   run out a card invitation whose time is up first, as the job would. The accept into a
   seat open to the group pays its payer back (`the_seat_paid_back`) and, the last open
   seat taken, lets go of every rescue payment still pending. `POST /bookings/{id}/departure`

@@ -44,6 +44,7 @@ from uuid import UUID
 from app.application.events import EventStreamVersionConflict
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant
+from app.modules.proposals.application.rescues import lock_the_game
 from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     FriendsGameBookings,
@@ -137,8 +138,9 @@ class TheCutOff:
     async def _call_off(self, booking_id: UUID, *, now: Instant) -> bool:
         # The booking's id is its proposal's, whose row every act on the game
         # locks first — a friends game, which has none, its own (#752).
-        if await self._proposals.load_for_update(booking_id) is None:
-            await self._friends_games.locked(booking_id)
+        await lock_the_game(
+            booking_id, proposals=self._proposals, friends_games=self._friends_games
+        )
         still_in = await self._games.call_off_at_the_cut_off(booking_id, at=now)
         if still_in is None:
             return False
@@ -157,8 +159,9 @@ class TheCutOff:
     async def _take(self, booking_id: UUID, *, now: Instant) -> bool:
         # A fill's game locks its proposal's row; a friends game, which has no
         # proposal, its own (#751).
-        if await self._proposals.load_for_update(booking_id) is None:
-            await self._friends_games.locked(booking_id)
+        await lock_the_game(
+            booking_id, proposals=self._proposals, friends_games=self._friends_games
+        )
         game = await self._bookings.find(booking_id)
         # A game short at its cut-off is the call-off's, whichever process
         # records it; one the club cancelled let its holds go.

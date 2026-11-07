@@ -294,9 +294,6 @@ class GameBrief:
     invited: tuple[UUID, ...] = ()
     #: Every seat is held by somebody In.
     whole: bool = False
-    #: Who invited each friend a friends game ever invited (#752) — the sender
-    #: for the card's own, anybody In for an empty seat's.
-    invited_by: Mapping[UUID, UUID] = field(default_factory=dict)
     #: A friends game's cut-off (#752) — what the cover line names.
     cut_off: Instant | None = None
     #: **The cover line's seats** (#752; the friends mechanics §10.2): inside

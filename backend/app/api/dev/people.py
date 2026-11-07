@@ -74,7 +74,8 @@ from app.modules.proposals.application.commands import (
     PostingCommand,
     ReadPostingSlotCommand,
     RescueCommand,
-    SeatActCommand,
+    SeatInvitationCommand,
+    SeatOpeningCommand,
 )
 from app.modules.proposals.domain.overlap import DayRange
 from app.modules.proposals.domain.post import Who
@@ -789,7 +790,7 @@ async def invite_into_a_seat(
     invite: InviteIntoASeatDep,
 ) -> Response:
     await invite.execute(
-        SeatActCommand(
+        SeatInvitationCommand(
             player_id=acting,
             booking_id=booking_id,
             seat_of=seat_of,
@@ -815,7 +816,7 @@ async def open_a_seat(
     booking_id: UUID, seat_of: UUID, acting: ActingDep, open_: OpenASeatDep
 ) -> Response:
     await open_.execute(
-        SeatActCommand(player_id=acting, booking_id=booking_id, seat_of=seat_of)
+        SeatOpeningCommand(player_id=acting, booking_id=booking_id, seat_of=seat_of)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

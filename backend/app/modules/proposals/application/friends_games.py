@@ -58,7 +58,8 @@ from app.kernel import SPORT_SPECS, Clock, Instant, instant
 from app.modules.bookings.domain.booking import invited_until
 from app.modules.proposals.application.commands import (
     FriendsGameCommand,
-    SeatActCommand,
+    SeatInvitationCommand,
+    SeatOpeningCommand,
     SendAFriendsGameCommand,
 )
 from app.modules.proposals.application.answers import JoinsARescue, YesAnswer
@@ -355,15 +356,10 @@ class Accepting:
             raise InvitationNotWaiting()
         friend = (await self._members.of([player], sport=game.sport, now=now))[0]
         _refuse_unless_free(friend, start=game.start, now=now)
-        # Invited into a seat open to the group (#752): taken from whoever
-        # paid it, once theirs is paid.
+        # Into a seat open to the group — or their own, opened while it waited
+        # for them (#752): taken from whoever paid it, once theirs is paid.
         open_seat = next(
-            (
-                left
-                for left in game.open
-                if seat.seat_of is not None and left.left_by == seat.seat_of
-            ),
-            None,
+            (left for left in game.open if left.left_by == seat.seat), None
         )
         taken: frozenset[UUID] = frozenset()
         if game.pay_mode is PayMode.SPLIT_THE_COST:
@@ -664,10 +660,9 @@ class InviteIntoASeat:
         self._uow = uow
         self._clock = clock
 
-    async def execute(self, command: SeatActCommand) -> None:
+    async def execute(self, command: SeatInvitationCommand) -> None:
         now = instant(self._clock.now())
         inviter, friend = command.player_id, command.friend_id
-        assert friend is not None
         game = await _locked_for(self._friends_games, command.booking_id, inviter)
         if inviter not in game.players:
             # Only somebody In invites: an invitee still answering learns
@@ -727,7 +722,7 @@ class OpenASeat:
         self._uow = uow
         self._clock = clock
 
-    async def execute(self, command: SeatActCommand) -> None:
+    async def execute(self, command: SeatOpeningCommand) -> None:
         now = instant(self._clock.now())
         game = await self._friends_games.locked(command.booking_id)
         if (

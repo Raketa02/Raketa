@@ -258,13 +258,15 @@ async def test_a_friend_with_a_game_then_or_a_full_week_is_refused_naming_nobody
     assert str(piotr["id"]) not in full.text and str(kasia["id"]) not in then.text
 
 
-async def test_an_invitation_into_an_empty_seat_runs_out_like_the_card_s(
+async def test_an_invitation_into_an_empty_seat_runs_out_and_the_sender_is_told(
     client, world, piotr_and_kasia, session_factory, clock, mailbox
 ):
-    piotr, _ = piotr_and_kasia
+    """Ewa invited Kasia: her silence is the sender's to hear (§12)."""
+
+    _, kasia = piotr_and_kasia
     booking = await ania_says_no(client, world)
     assert (
-        await invites(client, world.tomek, booking, seat_of=world.ania, friend=piotr)
+        await invites(client, world.ewa, booking, seat_of=world.ania, friend=kasia)
     ).status_code == 204
     clock.move(timedelta(hours=24))
 
@@ -276,7 +278,7 @@ async def test_an_invitation_into_an_empty_seat_runs_out_like_the_card_s(
         for notice in await notices_of(client, mailbox, world.tomek)
         if notice["kind"] == "DIDNT_ANSWER"
     ]
-    assert [notice["title"] for notice in told] == ["piotr didn't answer"]
+    assert [notice["title"] for notice in told] == ["kasia didn't answer"]
     # The seat is as empty as it was, still Ania's to name.
     seat = the_seat_of(
         (await details_of(client, world.tomek, booking))["friends_game"], world.ania
@@ -710,3 +712,104 @@ async def test_a_clubs_cancel_after_the_cut_off_refunds_every_cover_in_full(
     assert refund_withheld(charges, of=world.tomek) == ["False"] * 3
     assert refund_withheld(charges, of=world.ewa) == ["False"]
     assert UUID(booking)
+
+
+# --------------------------------------------------------------------------- #
+# After review
+# --------------------------------------------------------------------------- #
+
+
+async def test_the_split_sender_leaving_opens_a_seat_still_waiting_too(
+    client, world, session_factory, clock, mailbox
+):
+    """§11.2: *his seat, and any seat no friend has taken, become rescues at
+    once* — Ania may still take hers first."""
+
+    booking = await a_friends_game(client, world)
+    assert (await accepts(client, world.ewa, booking)).status_code == 200
+    assert (await accepts(client, world.magda, booking)).status_code == 200
+
+    assert (await leaves(client, world.tomek, booking)).status_code == 200
+
+    booking_now = await the_booking(session_factory, booking)
+    assert booking_now.open_seats == 2
+    seat = the_seat_of(
+        (await details_of(client, world.ewa, booking))["friends_game"], world.ania
+    )
+    assert seat["state"] == "SEAT_OPEN"
+    assert [one["player_id"] for one in seat["invitations"]] == [str(world.ania["id"])]
+    accepted = await accepts(client, world.ania, booking)
+    assert accepted.status_code == 200, accepted.text
+    assert (await the_booking(session_factory, booking)).open_seats == 1
+
+
+async def test_a_whole_court_seat_taken_after_the_cut_off_pays_the_sender_back(
+    client, world, session_factory, clock, mailbox
+):
+    booking = await a_friends_game(client, world, pay_mode="WHOLE_COURT")
+    for friend in world.friends:
+        assert (await accepts(client, friend, booking)).status_code == 200
+    moves_to(clock, WEDNESDAY)
+    assert (await leaves(client, world.tomek, booking)).status_code == 200
+    await the_cut_off_comes(session_factory, clock, at=FRIDAY_TEN)
+    await mailbox.drain()
+    assert (
+        statuses(await charges_of(session_factory, booking), of=world.tomek)
+        == ["CAPTURED"] * 4
+    )
+
+    assert (await rescues(client, world.kuba, booking)).status_code == 200
+    await mailbox.drain()
+
+    # One of his four comes back, less the fee.
+    charges = await charges_of(session_factory, booking)
+    assert refund_withheld(charges, of=world.tomek) == ["True"]
+
+
+async def test_a_whole_court_rescuer_leaving_late_is_the_one_refunded(
+    client, world, session_factory, clock, mailbox
+):
+    """Kuba paid the sender's seat himself: his seat taken after the cut-off
+    refunds him — never a second cover of the sender's."""
+
+    booking = await a_friends_game(client, world, pay_mode="WHOLE_COURT")
+    for friend in world.friends:
+        assert (await accepts(client, friend, booking)).status_code == 200
+    moves_to(clock, WEDNESDAY)
+    assert (await leaves(client, world.tomek, booking)).status_code == 200
+    assert (await rescues(client, world.kuba, booking)).status_code == 200
+    await the_cut_off_comes(session_factory, clock, at=FRIDAY_TEN)
+    await mailbox.drain()
+    piotr = world.first[1]
+    await joins(client, world.group, piotr)
+
+    assert (await leaves(client, world.kuba, booking)).status_code == 200
+    assert (await rescues(client, piotr, booking)).status_code == 200
+    await mailbox.drain()
+
+    charges = await charges_of(session_factory, booking)
+    assert refund_withheld(charges, of=world.kuba) == ["True"]
+    assert refund_withheld(charges, of=world.tomek) == []
+
+
+async def test_a_seat_the_cut_off_opens_as_its_invitation_ends_alerts_the_pool(
+    client, world, session_factory, clock, mailbox
+):
+    """Sent on Thursday at noon, Ania's invitation ends at the cut-off itself:
+    her seat opens with it, and the pool is alerted as for any rescue."""
+
+    await chooses(client, world.kuba, fill_in_alerts=True)
+    moves_to(clock, THURSDAY_TEN + timedelta(hours=2))
+    booking = await a_friends_game(client, world)
+    for friend in (world.ewa, world.magda):
+        assert (await accepts(client, friend, booking)).status_code == 200
+
+    await the_cut_off_comes(session_factory, clock, at=FRIDAY_TEN)
+
+    assert await fill_in_of(client, world, world.kuba) == [booking]
+    alerted = [
+        notice
+        for notice in await notices_of(client, mailbox, world.kuba)
+        if notice["kind"] == "FILL_IN_ALERT"
+    ]
+    assert [notice["game_id"] for notice in alerted] == [booking]

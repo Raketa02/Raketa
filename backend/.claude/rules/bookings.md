@@ -584,12 +584,14 @@ unregistered and the local store reset, so the last yes books the game at every 
   cut-off, or *Whole court* whatever he did), a card invitation declined or run out — a
   run-out dated by its `until` — or an accepted friend's leave **before** the cut-off is
   empty; **at or after** it a rescue at once, covered unless the leaver paid it themselves
-  (a *Split* friend's own share). **The sender's own leave**: *Split* before the cut-off
-  turns the game **ordinary** (`sender_left_at`) — every open seat uncovered, his seat and
-  every empty seat open at once, short at the cut-off like any game (and short too of a card
-  invitation still unanswered, which ends by it; one run out afterwards opens as of his
-  leave, so the projection's `open_since` finds it); *Whole court* before it his seat opens
-  **covered** by his own share; after the cut-off his leave is a late leave. `state` is
+  (`_paid_their_own`: anybody on *Split*; on *Whole court* the sender and a rescuer, never
+  a friend who accepted free). **The sender's own leave**: *Split* before the cut-off
+  turns the game **ordinary** (`sender_left_at`) — every open seat uncovered, and his seat,
+  every empty seat **and every card seat still waiting** open at once (§11.2, *any seat no
+  friend has taken*): its friend may still accept it, first come — their accept takes their
+  own open seat, a rescue ending their invitation `TAKEN` — and the game is short at the
+  cut-off like any game; *Whole court* before it his seat opens **covered** by his own
+  share; after the cut-off his leave is a late leave. `state` is
   `_restate`'s: `SEAT_OPEN` exactly while a departure is open. **An invitation into a seat**
   (`bookings.seat_invited`, `InvitedSeat.seat_of`/`invited_by`, a `booking_invitations` row
   like the card's): by anybody In, of an empty or open seat, the invitee never on the game
@@ -609,18 +611,23 @@ unregistered and the local store reset, so the last yes books the game at every 
   cover=True)`, nothing while a cover is still held — the cut-off's `SettleTheCovers` lets one
   go for the taker's own share); a leaver's after the cut-off → their own share; a *Whole
   court* invitee taking a seat pays nothing and refunds nobody. **The cover warning**
-  (`bookings.cover_warned`, once, `COVER_WARNING_BEFORE` = 24 h before the cut-off, *Split*,
-  covered, the sender In, a seat in `unpaid_seats` — every seat but his without its own
-  player's payment, a waiting invitation included, each named by its last invitee) is the
-  `cover-warning` job's (`jobs.md`). **A club's cancel** moves a friends game as any booked
+  (`bookings.cover_warned`, once) reads `Booking.cover_line` — inside
+  `COVER_WARNING_BEFORE` (24 h) before the cut-off of a *Split* game the sender covers from
+  inside it, `unpaid_seats`: every seat but his without its own player's payment, a waiting
+  invitation included, each named by its last invitee — the one read the job, the warning
+  and every notice's cover line share; it is the `cover-warning` job's (`jobs.md`). **A club's cancel** moves a friends game as any booked
   game's (a move by cancel changes nothing else: every hold, cover and invitation stays) and
   calls it off with the same refunds — the sender's whole court in full after the cut-off.
-  **Calls made without a ruling**: a declined or run-out seat invitation tells whoever
-  invited, not the sender; re-inviting anybody ever on the game is `already_on_the_game`; the
-  warning is the first run inside the window, so a seat emptying in that first tick may be
-  told twice; a seat taken by a *Whole court* invitee leaves the cover paid; **the cancel
-  that calls a friends game off still owes nobody a card** — no proposal records
-  `ClubCancelled`, and the proposer's owed card is built on one (a gap for a later ticket).
+  **Calls made without a ruling**: re-inviting anybody ever on the game — a friend who
+  declined or left included — is `already_on_the_game` (one `booking_invitations` row a
+  player); the warning is the first run inside the window, so a seat emptying in that first
+  tick may be told twice; a seat taken by a *Whole court* invitee leaves the cover paid; a
+  *Whole court* sender who left can no longer open an empty seat — it waits for the
+  cut-off; **the cancel that calls a friends game off still owes nobody a card** — no
+  proposal records `ClubCancelled`, and the proposer's owed card is built on one (a gap
+  for a later ticket). **#751's local friends games fold anew**: a decline at or after the
+  cut-off is now an open seat while its projected row still reads `BOOKED` — reseed the
+  local store (`make seed`) rather than trust one sent before this.
 - **The club's money, and its day of new bookings** (#548; the mechanics §16.11, §16.12;
   the screens B7, B9). **The Money page** is Proposals', beside the Bookings page
   (`application/club_money.py`): `GET /api/v1/club/money?month=YYYY-MM` reads every booking

@@ -301,6 +301,13 @@ def notice_about(
     )
 
 
+def _what_the_cover_takes(game: GameBrief, unpaid: Collection[UUID]) -> int:
+    """What the cut-off takes from a *Split* sender (#752): his own share, and
+    one for each seat still unpaid."""
+
+    return game.share_grosze * (1 + len(unpaid))
+
+
 @final
 class TellThePlayers:
     """One handler for every event a player is told about."""
@@ -383,10 +390,11 @@ class TellThePlayers:
         key: str,
         at: Instant,
     ) -> None:
-        """*Ania can't make it* / *Ania didn't answer*, to whoever invited them
-        — the sender for the card's own seat, anybody In for an empty seat's
-        (#752) — while the game is still on. Inside the day before the cut-off
-        the sender's carries the cover line."""
+        """*Ania can't make it* / *Ania didn't answer*, to the sender — an
+        invitation into an empty seat's too, whoever made it (#752) — while the
+        game is still on, the cover line inside the day before the cut-off.
+        **A seat that opened by it** — after the cut-off, or on a game turned
+        ordinary — alerts the pool as any rescue does."""
 
         game = await self._games.about(event.booking_id, at=at)
         if game is None or not game.booked or game.sender is None:
@@ -396,9 +404,8 @@ class TellThePlayers:
             if isinstance(event, InvitedSeatDeclined)
             else NoticeKind.DIDNT_ANSWER
         )
-        told = game.invited_by.get(event.player_id, game.sender)
         await self._give.execute(
-            told,
+            game.sender,
             self._with_the_cover_line(
                 notice_about(
                     kind,
@@ -408,10 +415,12 @@ class TellThePlayers:
                     people=(event.player_id,),
                 ),
                 game,
-                to=told,
+                to=game.sender,
             ),
             at=at,
         )
+        # Nobody is offered a seat left empty: the alert reaches only a rescue.
+        await self._alert_the_pool(game, left=event.player_id, at=at)
 
     @staticmethod
     def _with_the_cover_line(notice: Notice, game: GameBrief, *, to: UUID) -> Notice:
@@ -425,7 +434,7 @@ class TellThePlayers:
         return replace(
             notice,
             people=(*notice.people, *game.unpaid),
-            amount_grosze=game.share_grosze * (1 + len(game.unpaid)),
+            amount_grosze=_what_the_cover_takes(game, game.unpaid),
             until=game.cut_off,
         )
 
@@ -496,7 +505,7 @@ class TellThePlayers:
                 key=f"{NoticeKind.COVER_WARNING}:{key}",
                 opens=Opens.BOOKING,
                 people=event.seats,
-                amount_grosze=game.share_grosze * (1 + len(event.seats)),
+                amount_grosze=_what_the_cover_takes(game, event.seats),
                 until=game.cut_off,
             ),
             at=at,

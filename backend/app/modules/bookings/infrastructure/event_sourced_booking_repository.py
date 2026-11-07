@@ -191,11 +191,11 @@ class EventSourcedBookingRepository:
             )
             await self._answered(event.booking_id, event.player_id, booking)
             # Into a seat open to the group, it is taken (#752).
-            await self._open_or_not(booking)
+            await self._project_its_state(booking)
         elif isinstance(event, (InvitedSeatDeclined, InvitedSeatRanOut)):
             await self._answered(event.booking_id, event.player_id, booking)
             # On a game turned ordinary the seat is a rescue at once (#752).
-            await self._open_or_not(booking)
+            await self._project_its_state(booking)
         elif isinstance(event, SeatInvited):
             # An invitation into an empty seat (#752): Home's FRIENDS GAME row
             # and the invitations job read it as they read the card's own.
@@ -211,14 +211,14 @@ class EventSourcedBookingRepository:
         elif isinstance(event, InvitedSeatTaken):
             await self._answered(event.booking_id, event.player_id, booking)
         elif isinstance(event, SeatOpened):
-            await self._open_or_not(booking)
+            await self._project_its_state(booking)
         elif isinstance(event, CoverWarned):
             # Once per game is the booking's to fold; no read asks a row.
             pass
         elif isinstance(event, SeatLeft):
             # Open to be taken — or, on a friends game its sender covers, a
             # seat left empty before the cut-off, no rescue (#752).
-            await self._open_or_not(booking)
+            await self._project_its_state(booking)
             await self._statement(
                 update(BookingSeatORM)
                 .where(
@@ -330,7 +330,7 @@ class EventSourcedBookingRepository:
             .values(answer=seat.answer.value, answered_at=seat.answered_at)
         )
 
-    async def _open_or_not(self, booking: Booking) -> None:
+    async def _project_its_state(self, booking: Booking) -> None:
         """The row's state and the first seat open since that may call it off,
         as the booking folds them now."""
 

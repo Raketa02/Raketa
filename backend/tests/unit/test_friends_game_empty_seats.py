@@ -22,6 +22,7 @@ from app.modules.bookings.domain.booking import (
     BookingState,
     Emptied,
     PayMode,
+    Vacancy,
 )
 from app.modules.bookings.domain.events import (
     CoverWarned,
@@ -102,7 +103,7 @@ def test_a_seat_its_friend_declined_is_empty_and_no_rescue():
     assert not booking.rescuable_at(_hours(4))
     [empty] = booking.empty
     assert (empty.seat_of, empty.side, empty.how) == (ANIA, "B", Emptied.DECLINED)
-    assert booking.vacancies == ((ANIA, "B"),)
+    assert booking.vacancies == (Vacancy(seat_of=ANIA, side="B"),)
     # Nothing happens on its own before the cut-off, and never a call-off.
     assert booking.short_from is None
     assert _replayed(booking).empty == booking.empty
@@ -175,9 +176,8 @@ def test_the_first_accept_takes_the_seat_and_the_other_invitation_ends_taken():
     booking.invite(KASIA, by=EWA, seat_of=ANIA, at=WEDNESDAY + timedelta(hours=1))
     _recorded(booking)
 
-    taken = booking.accept(KASIA, at=WEDNESDAY + timedelta(hours=2))
+    booking.accept(KASIA, at=WEDNESDAY + timedelta(hours=2))
 
-    assert taken is None
     accepted, ended = _recorded(booking)
     assert isinstance(accepted, InvitedSeatAccepted)
     assert (accepted.side, accepted.last_seat) == ("B", True)
@@ -254,9 +254,10 @@ def test_a_friend_invited_into_an_opened_seat_takes_it_first():
     booking.open_to_the_group(ANIA, at=WEDNESDAY)
     booking.invite(PIOTR, by=MAGDA, seat_of=ANIA, at=WEDNESDAY + timedelta(hours=1))
 
-    taken = booking.accept(PIOTR, at=WEDNESDAY + timedelta(hours=2))
+    booking.accept(PIOTR, at=WEDNESDAY + timedelta(hours=2))
 
-    assert taken is not None and taken.covered
+    [taken] = booking.departures
+    assert (taken.rescued_by, taken.covered) == (PIOTR, True)
     assert booking.state is BookingState.BOOKED and booking.is_whole
     assert not booking.rescuable_at(WEDNESDAY + timedelta(hours=2))
     assert _replayed(booking).departures == booking.departures
@@ -487,3 +488,88 @@ def test_an_opened_seat_nobody_took_lacks_its_own_payment_too():
     assert booking.unpaid_seats(now=WEDNESDAY) == (ANIA,)
     booking.rescue(MAREK, at=WEDNESDAY + timedelta(hours=1))
     assert booking.unpaid_seats(now=WEDNESDAY + timedelta(hours=1)) == ()
+
+
+# --------------------------------------------------------------------------- #
+# After review (#752)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_whole_court_rescuer_who_leaves_late_paid_their_own_seat():
+    """Kuba took the sender's seat and paid it himself: leaving after the
+    cut-off, a taker refunds him — never a second cover of the sender's."""
+
+    booking = _sent(PayMode.WHOLE_COURT)
+    for friend, hour in ((EWA, 1), (MAGDA, 2), (ANIA, 3)):
+        booking.accept(friend, at=_hours(hour))
+    booking.leave(TOMEK, at=WEDNESDAY)
+    booking.rescue(KUBA, at=WEDNESDAY + timedelta(hours=1))
+
+    booking.leave(KUBA, at=CUT_OFF + timedelta(hours=1))
+
+    [left] = booking.open_departures
+    assert (left.player_id, left.covered) == (KUBA, False)
+
+
+def test_the_split_sender_leaving_opens_a_seat_still_waiting_too():
+    """§11.2: *his seat, and any seat no friend has taken, become rescues at
+    once* — a friend still invited may still take theirs, first come."""
+
+    booking = _sent()
+    booking.accept(EWA, at=_hours(1))
+    booking.decline(MAGDA, at=_hours(2))
+
+    booking.leave(TOMEK, at=_hours(3))
+
+    assert [left.player_id for left in booking.open_departures] == [
+        TOMEK,
+        MAGDA,
+        ANIA,
+    ]
+    assert booking.waiting_at(_hours(4))[0].player_id == ANIA
+    # Ania takes her own seat back: it is no longer open.
+    booking.accept(ANIA, at=_hours(4))
+    assert [left.player_id for left in booking.open_departures] == [TOMEK, MAGDA]
+    assert ANIA in booking.players
+
+
+def test_a_rescue_on_a_seat_still_waiting_ends_its_friends_invitation():
+    booking = _sent()
+    booking.accept(EWA, at=_hours(1))
+    booking.accept(MAGDA, at=_hours(2))
+    booking.leave(TOMEK, at=_hours(3))
+    booking.rescue(KUBA, at=_hours(4))
+    _recorded(booking)
+
+    booking.rescue(MAREK, at=_hours(5))
+
+    rescued, ended = _recorded(booking)
+    assert isinstance(ended, InvitedSeatTaken)
+    assert (ended.player_id, ended.taken_by) == (ANIA, MAREK)
+    assert booking.is_whole
+    # Ania's 24 hours ending later records nothing more.
+    assert not booking.invited_seat_ran_out(ANIA, at=_hours(30))
+
+
+def test_an_ordinary_game_s_unanswered_seat_is_open_since_the_sender_left():
+    booking = _sent()
+    booking.accept(EWA, at=_hours(1))
+    booking.accept(MAGDA, at=_hours(2))
+    booking.leave(TOMEK, at=_hours(3))
+    booking.rescue(KUBA, at=_hours(4))
+
+    [left] = booking.open_departures
+    assert (left.player_id, left.at) == (ANIA, _hours(3))
+    assert booking.short_at_the_cut_off(now=CUT_OFF)
+    # Her time running out later opens nothing twice.
+    booking.invited_seat_ran_out(ANIA, at=CUT_OFF + timedelta(minutes=1))
+    assert len(booking.open_departures) == 1
+
+
+def test_the_cover_line_reads_only_inside_the_day_before_the_cut_off():
+    booking = _ania_said_no()
+
+    assert booking.cover_line(now=CUT_OFF - COVER_WARNING_BEFORE) == (ANIA,)
+    assert booking.cover_line(now=CUT_OFF - COVER_WARNING_BEFORE - timedelta(1)) == ()
+    assert booking.cover_line(now=CUT_OFF) == ()
+    assert _sent(PayMode.WHOLE_COURT).cover_line(now=CUT_OFF - timedelta(hours=1)) == ()

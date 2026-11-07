@@ -1231,7 +1231,7 @@ def _friends_game(
         return [
             ref(seat.player_id)
             for seat in booking.invited
-            if seat.seat_of == seat_of and seat.waiting_at(now)
+            if seat.seat == seat_of and seat.waiting_at(now)
         ]
 
     invited = booking.invitation_of(reader)
@@ -1258,7 +1258,9 @@ def _friends_game(
                     seat_of=seat.player_id if now >= seat.until else None,
                 )
                 for seat in booking.invited
-                if seat.seat_of is None and seat.answer is Answer.WAITING
+                if seat.seat_of is None
+                and seat.answer is Answer.WAITING
+                and booking.vacancy(seat.player_id) is None
             ),
             *(
                 RowFriendsSeat(

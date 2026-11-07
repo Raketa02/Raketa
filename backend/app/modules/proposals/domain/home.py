@@ -448,7 +448,8 @@ class BookedGame:
         """Every seat of a friends game as it stands at ``now`` (the words
         §29.8; #752): each player In — the sender first — then each seat the
         card still holds for its friend, then each empty seat, then each seat
-        open to the group, every one of them once. An empty or open seat is
+        open to the group (one still waiting for its friend among them, that
+        friend among its invitations), every one of them once. An empty or open seat is
         drawn with the face of whose it was — or, for a ``reader`` invited into
         it, with theirs, still waiting. Empty on a game a fill booked."""
 
@@ -464,8 +465,14 @@ class BookedGame:
             )
             for player in holding
         ]
+        open_ = {left.left_by for left in self.open}
         for seat in self.invited:
-            if seat.seat_of is not None or seat.answer is not InvitationAnswer.WAITING:
+            if (
+                seat.seat_of is not None
+                or seat.answer is not InvitationAnswer.WAITING
+                # Opened while it waited for them (#752): drawn as open below.
+                or seat.player_id in open_
+            ):
                 continue
             # The card's own seat for its friend, waiting — or, its time up,
             # *didn't answer* whether or not the job has recorded it.
@@ -491,7 +498,7 @@ class BookedGame:
                     invited_by=one.invited_by or seat_of,
                 )
                 for one in self.invited
-                if one.seat_of == seat_of and one.waiting_at(now)
+                if one.seat == seat_of and one.waiting_at(now)
             )
             yours = next((one for one in waiting if one.player_id == reader), None)
             seats.append(
