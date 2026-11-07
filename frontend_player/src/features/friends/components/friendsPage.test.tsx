@@ -340,7 +340,9 @@ describe('the Friends row on You', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Back' }));
 
     await waitFor(() => expect(screen).toHavePathname('/you'));
-    expect(await screen.findByLabelText(doorRowLabel(FRIENDS_COPY.row.title, friendsRowLine(2, 2)))).toBeTruthy();
+    expect(
+      await screen.findByLabelText(doorRowLabel(FRIENDS_COPY.row.title, friendsRowLine(2, 2))),
+    ).toBeTruthy();
   });
 
   it('says plainly there are none yet', async () => {
