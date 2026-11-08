@@ -19,6 +19,7 @@ import {
   toUploadedPhoto,
   toWeeklyHours,
   toWireLocation,
+  toWireRankingVisibility,
   toWireWeeklyHours,
 } from './playerProfileMappers';
 
@@ -320,7 +321,7 @@ describe('the profile surface You reads', () => {
     ranking_visibility: 'SHOWN',
   };
 
-  it('carries every fact the tab draws — the week and the declarations, the three social ones, and the two that gate the matcher', () => {
+  it('carries every fact the tab draws — the week and the declarations, the three social ones, the two that gate the matcher, and Show me in General', () => {
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
       week: [{ day: 2, hour: 19 }],
       playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
@@ -329,7 +330,20 @@ describe('the profile surface You reads', () => {
       intro: 'Will travel for a hard game.',
       gender: 'man',
       genderPreference: 'any',
+      showMeInGeneral: true,
     });
+  });
+
+  it('sends Show me in General in the wire’s two words — on is SHOWN, off is HIDDEN', () => {
+    expect(toWireRankingVisibility(true)).toBe('SHOWN');
+    expect(toWireRankingVisibility(false)).toBe('HIDDEN');
+  });
+
+  it('reads a profile hidden from General as Show me in General off', () => {
+    // ADR-0203 §7: the switch on is SHOWN; HIDDEN is the player's row gone from General.
+    expect(
+      toPlayerProfileSurface({ ...SERVED_SURFACE, ranking_visibility: 'HIDDEN' }).showMeInGeneral,
+    ).toBe(false);
   });
 
   it('reads the owner’s own gender and preference in the app’s spellings — the one shape that carries them', () => {

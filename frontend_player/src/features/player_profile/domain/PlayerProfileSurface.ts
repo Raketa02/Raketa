@@ -7,7 +7,8 @@
  * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
  * tags, the photos with their verdicts and the intro
  * ([#471](https://github.com/Raketa02/Raketa/issues/471)), and the owner's own gender and
- * preference ([#472](https://github.com/Raketa02/Raketa/issues/472)). The Search radius and
+ * preference ([#472](https://github.com/Raketa02/Raketa/issues/472)), and *Show me in General*
+ * ([#778](https://github.com/Raketa02/Raketa/issues/778)). The Search radius and
  * the proposals answer left it with the old loop
  * ([#581](https://github.com/Raketa02/Raketa/issues/581)). There is no `has_location`,
  * because a profile cannot be committed without an area. This type is what the route serves
@@ -81,4 +82,11 @@ export interface PlayerProfileSurface {
   readonly gender?: Gender;
   /** Who the owner is willing to be matched with. Always present: `any` is what nothing narrowed means. */
   readonly genderPreference: GenderPreference;
+  /**
+   * ***Show me in General*** — the profile's Ranking visibility, as the switch reads it: on is
+   * shown, off is hidden from General ([ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
+   * §7, [#778](https://github.com/Raketa02/Raketa/issues/778)). **Always present, and on by
+   * default** — a profile committed before the switch existed reads on.
+   */
+  readonly showMeInGeneral: boolean;
 }

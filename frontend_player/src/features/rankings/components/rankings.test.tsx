@@ -26,6 +26,7 @@ import {
   OWN_RECORD_SERVED,
   SPORTS_SERVED,
   launchSignedIn,
+  profileSurface,
   ratingGuideAlreadyShown,
   stubGate,
   stubHome,
@@ -271,13 +272,16 @@ interface RankingServer {
 function rankingServer({
   trophy = { sport: 'PADEL', general_place: 7, friends_place: 4 },
   ratings = [rating('PADEL', 2.71), rating('TENNIS', 3.1)],
+  visibility = 'SHOWN',
 }: {
   readonly trophy?: Wire['HomeRankingSchema'] | null;
   readonly ratings?: readonly Wire['RatingResponse'][];
+  /** *Show me in General*, as his profile read serves it (#778). */
+  readonly visibility?: Wire['RankingVisibility'];
 } = {}): RankingServer {
   stubGate(transport, { ratings: [...ratings], hasPlayerProfile: true });
   stubProfileOptions(transport);
-  stubProfileSurface(transport);
+  stubProfileSurface(transport, profileSurface({ ranking_visibility: visibility }));
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
   stubHome(transport, { ranking: trophy });
   stubOwnRecord(transport, OWN_RECORD_SERVED);
@@ -1633,5 +1637,148 @@ describe('the Friends view (#777)', () => {
     await waitFor(() => expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(2));
     expect(await screen.findByText('3rd')).toBeTruthy();
     expect(viewReads('PADEL', 'GENERAL')).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Show me in General (#778)
+// ---------------------------------------------------------------------------
+
+describe('Show me in General (#778)', () => {
+  const SWITCH_PATH = '/api/v1/players/me/ranking-visibility';
+  const writes = () => transport.requestsTo('PUT', SWITCH_PATH);
+  const HIDDEN_CARD = listedCard({ state: 'HIDDEN', gap_line: null });
+  const generalReads = () => viewReads('PADEL', 'GENERAL');
+  const cardSwitch = () =>
+    within(screen.getByTestId('hidden-from-general')).getByRole('switch', {
+      name: 'Show me in General',
+    });
+  /** The page follows the switch a second at a time — the outbox's own pace. */
+  const aSecond = () => act(() => jest.advanceTimersByTimeAsync(1_000));
+
+  /**
+   * **The switch's route, as the server keeps it**: a write is the profile read's from then on, and
+   * `then` is whatever else the write moves — the ranking, where it has caught up.
+   */
+  function serveTheSwitch(then: () => void = () => undefined) {
+    transport.on('PUT', SWITCH_PATH, (request) => {
+      const { visibility } = request.body as Wire['SetRankingVisibilityRequest'];
+      stubProfileSurface(transport, profileSurface({ ranking_visibility: visibility }));
+      then();
+      return noContent();
+    });
+  }
+
+  it('turned off on You: his card still reads 7th of 13, with Hidden from General and the switch where the gap line was, and no You button', async () => {
+    const server = rankingServer();
+    serveTheSwitch(() => server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD })));
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('You'));
+
+    fireEvent.press(await screen.findByRole('switch', { name: 'Show me in General' }));
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0]!.body).toEqual({ visibility: 'HIDDEN' });
+
+    fireEvent.press(screen.getByLabelText('Home'));
+    fireEvent.press(await screen.findByTestId('ranking-trophy'));
+    await waitFor(() => expect(screen).toHavePathname('/rankings'));
+
+    expect(await screen.findByText('Hidden from General')).toBeTruthy();
+    const card = within(screen.getByTestId('place-card'));
+    expect(card.getByText('7th')).toBeTruthy();
+    expect(card.getByText('of 13')).toBeTruthy();
+    expect(card.getByText('2,71')).toBeTruthy();
+    expect(card.getByTestId('rank-chip-UP', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.queryByTestId('gap-line')).toBeNull();
+    expect(cardSwitch().props.accessibilityState?.checked).toBe(false);
+
+    await rowDrawn(INES);
+    reportOnScreen(INES, STAS, PIOTR);
+    expect(screen.queryByRole('button', { name: /^You · / })).toBeNull();
+  });
+
+  it('turned back on from the card: SHOWN is sent, the page is read again, and the gap line is back', async () => {
+    const server = rankingServer({ visibility: 'HIDDEN' });
+    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
+    serveTheSwitch(() => server.answer('PADEL', general('PADEL')));
+    await openRankings();
+    await screen.findByText('Hidden from General');
+    const readsBefore = generalReads().length;
+
+    fireEvent.press(cardSwitch());
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0]!.body).toEqual({ visibility: 'SHOWN' });
+    await waitFor(() => expect(cardSwitch().props.accessibilityState?.checked).toBe(true));
+    await aSecond();
+
+    expect(said(await screen.findByTestId('gap-line'))).toContain('behind Karol');
+    expect(generalReads()).toHaveLength(readsBefore + 1);
+    expect(screen.queryByText('Hidden from General')).toBeNull();
+    expect(screen.queryByRole('switch')).toBeNull();
+  });
+
+  it('follows the switch while the ranking has not caught up, and stops once it has', async () => {
+    // The ranking follows the profile through the outbox, so a read sent just after the write
+    // answers can still be the one from before.
+    const server = rankingServer({ visibility: 'HIDDEN' });
+    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
+    serveTheSwitch();
+    await openRankings();
+    await screen.findByText('Hidden from General');
+    const readsBefore = generalReads().length;
+
+    fireEvent.press(cardSwitch());
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    await aSecond();
+    await waitFor(() => expect(generalReads()).toHaveLength(readsBefore + 1));
+
+    // Still hidden on the read again, the switch on: the page reads once more, a second later.
+    expect(screen.getByText('Hidden from General')).toBeTruthy();
+    expect(cardSwitch().props.accessibilityState?.checked).toBe(true);
+    server.answer('PADEL', general('PADEL'));
+    await aSecond();
+
+    expect(said(await screen.findByTestId('gap-line'))).toContain('behind Karol');
+    expect(generalReads()).toHaveLength(readsBefore + 2);
+
+    await act(() => jest.advanceTimersByTimeAsync(10_000));
+    expect(generalReads()).toHaveLength(readsBefore + 2);
+  });
+
+  it('stops following after five reads when the ranking never catches up', async () => {
+    const server = rankingServer({ visibility: 'HIDDEN' });
+    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
+    serveTheSwitch();
+    await openRankings();
+    await screen.findByText('Hidden from General');
+    const readsBefore = generalReads().length;
+
+    fireEvent.press(cardSwitch());
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    for (let second = 0; second < 20; second += 1) await aSecond();
+
+    // Five reads a second apart, then the page waits for a pull.
+    expect(generalReads()).toHaveLength(readsBefore + 5);
+    expect(screen.getByText('Hidden from General')).toBeTruthy();
+  });
+
+  it('says why above the card when the write is refused, and the switch is back off', async () => {
+    const server = rankingServer({ visibility: 'HIDDEN' });
+    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
+    transport.on('PUT', SWITCH_PATH, () => errorResponse(409, 'concurrent_modification'));
+    await openRankings();
+    await screen.findByText('Hidden from General');
+    const readsBefore = generalReads().length;
+
+    fireEvent.press(cardSwitch());
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(cardSwitch().props.accessibilityState?.checked).toBe(false);
+    expect(screen.getByText('Hidden from General')).toBeTruthy();
+    // Nothing to follow: the profile never moved.
+    await act(() => jest.advanceTimersByTimeAsync(5_000));
+    expect(generalReads()).toHaveLength(readsBefore);
   });
 });

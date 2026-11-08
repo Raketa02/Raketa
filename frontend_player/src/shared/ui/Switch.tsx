@@ -30,6 +30,23 @@
  * the fill inversion [6.8](../../../docs/design-system.md#68-the-availability-grid) already
  * uses rather than a second on-colour.
  *
+ * **Two consumers, since #778**: *Show me in General* on the You tab, and the same switch on the
+ * Rankings card of a player hidden from General. Each asked for one thing the first spelling did not
+ * have, and each is a prop rather than a second control:
+ *
+ * - **`onDark`** — 5.2's repaint read as a control, as `Segment`'s and `Button`'s `onDark` are. The
+ *   inversion read from the other side: off is a quiet track (`onDarkFill`) under a `surface` knob,
+ *   on is the track standing out of its ground (`surface`) under a `night` knob — as on paper, where
+ *   on is the `ink` track. The words take the card's own two inks, white and `onDarkTiny`.
+ * - **`door`** — a switch standing in a card of door rows (5.5 as amended, the You tab) takes the
+ *   door row's lead square with its glyph, its rhythm, its title and line, and its divider from the
+ *   second row on — `DOOR_ROW`, the door row's own table — so its title starts at the edge every
+ *   title above it does. The track stands where a door row's chevron would. A card of door rows is
+ *   paper, so `door` never meets `onDark`.
+ * - **`accessibilityLabel`** — where the drawn words are not the mode's name. The hidden card draws
+ *   *Hidden from General*, which is what the mode being off means there; the switch is still *Show
+ *   me in General*, off, and a listener hearing *Hidden from General, off* would hear the opposite.
+ *
  * **There is no disabled switch.** Nothing asks for one, and
  * [6.1](../../../docs/design-system.md#61-button)'s rule is that this app never draws a
  * pressable-looking control that refuses — the ceiling on the photo row is a fact of the
@@ -44,6 +61,7 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { DOOR_ROW, RowLead, type DoorRowGlyph } from './DoorRow';
 import { theme } from './theme';
 
 const geometry = theme.size.switch;
@@ -53,36 +71,69 @@ const INSET = (geometry.height - geometry.knob) / 2;
 const TRAVEL = geometry.track - geometry.knob - INSET * 2;
 
 export interface SwitchProps {
-  /** The mode, in the caller's words. This alone is the accessible name. */
+  /** The mode, in the caller's words. This alone is the accessible name, unless one is given. */
   readonly label: string;
   /** One line under the label, drawn and never announced separately. */
   readonly description?: string;
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
+  /**
+   * The name a listener hears, **where the drawn label is not the mode's name** — the hidden card's
+   * *Hidden from General*, on a switch that is *Show me in General*. Absent, it is the label.
+   */
+  readonly accessibilityLabel?: string;
+  /** On the dark card (5.2): the track, the knob and the words repainted for `night`. */
+  readonly onDark?: boolean;
+  /**
+   * In a card of door rows (5.5): the door row's lead, with this glyph, its rhythm, title and line,
+   * and its divider where `divided` — 5.5's `index > 0`, the first row in a card undivided.
+   */
+  readonly door?: { readonly glyph: DoorRowGlyph; readonly divided: boolean };
 }
 
-export function Switch({ label, description, checked, onChange }: SwitchProps) {
+export function Switch({
+  label,
+  description,
+  checked,
+  onChange,
+  accessibilityLabel,
+  onDark = false,
+  door,
+}: SwitchProps) {
+  const ground = onDark ? ON_DARK : PAPER;
+
   return (
     <Pressable
       // `switch` rather than `button`, for 6.8's reason: the state is the point and the role
       // is what carries it (`the-words.md` 20.2 — *prefer the role that carries the state*).
       accessibilityRole="switch"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ checked }}
       onPress={() => onChange(!checked)}
       // Touch has no hover, so the pressed appearance is declared rather than inherited (6.6).
-      style={({ pressed }) => [s.row, pressed ? s.rowPressed : undefined]}
+      style={({ pressed }) => [
+        s.row,
+        door === undefined ? undefined : DOOR_ROW.rhythm,
+        door?.divided === true ? DOOR_ROW.divided : undefined,
+        pressed ? s.rowPressed : undefined,
+      ]}
     >
+      {door === undefined ? null : <RowLead glyph={door.glyph} />}
+
       <View style={s.words}>
-        <Text style={s.label}>{label}</Text>
-        {description === undefined ? null : <Text style={s.description}>{description}</Text>}
+        <Text style={door === undefined ? [s.label, ground.label] : DOOR_ROW.title}>{label}</Text>
+        {description === undefined ? null : (
+          <Text style={door === undefined ? [s.description, ground.description] : DOOR_ROW.line}>
+            {description}
+          </Text>
+        )}
       </View>
 
-      <View style={[s.track, checked ? s.trackOn : s.trackOff]}>
+      <View style={[s.track, checked ? ground.trackOn : ground.trackOff]}>
         <View
           style={[
             s.knob,
-            checked ? s.knobOn : s.knobOff,
+            checked ? ground.knobOn : ground.knobOff,
             { transform: [{ translateX: checked ? TRAVEL : 0 }] },
           ]}
         />
@@ -90,6 +141,28 @@ export function Switch({ label, description, checked, onChange }: SwitchProps) {
     </Pressable>
   );
 }
+
+/**
+ * **The two grounds** — the knob takes the value that reads on the bed it is standing on, at both
+ * ends, on either ground; `Switch.test.tsx` derives every ratio from these.
+ */
+const PAPER = StyleSheet.create({
+  label: { color: theme.color.ink },
+  description: { color: theme.color.muted },
+  trackOff: { backgroundColor: theme.color.line2 },
+  knobOff: { backgroundColor: theme.color.night },
+  trackOn: { backgroundColor: theme.color.ink },
+  knobOn: { backgroundColor: theme.color.surface },
+});
+
+const ON_DARK = StyleSheet.create({
+  label: { color: theme.color.surface },
+  description: { color: theme.color.onDarkTiny },
+  trackOff: { backgroundColor: theme.color.onDarkFill },
+  knobOff: { backgroundColor: theme.color.surface },
+  trackOn: { backgroundColor: theme.color.surface },
+  knobOn: { backgroundColor: theme.color.night },
+});
 
 const s = StyleSheet.create({
   row: {
@@ -102,8 +175,8 @@ const s = StyleSheet.create({
   // `flex: 1`, so a long mode line wraps inside the row rather than pushing the control off
   // the gutter — 6.11's rule for the same reason.
   words: { flex: 1 },
-  label: { ...theme.type.rlValue, color: theme.color.ink },
-  description: { ...theme.type.tiny, color: theme.color.muted, marginTop: theme.space.xxs },
+  label: theme.type.rlValue,
+  description: { ...theme.type.tiny, marginTop: theme.space.xxs },
   track: {
     width: geometry.track,
     height: geometry.height,
@@ -111,13 +184,9 @@ const s = StyleSheet.create({
     padding: INSET,
     flexShrink: 0,
   },
-  trackOff: { backgroundColor: theme.color.line2 },
-  trackOn: { backgroundColor: theme.color.ink },
   knob: {
     width: geometry.knob,
     height: geometry.knob,
     borderRadius: geometry.knob / 2,
   },
-  knobOff: { backgroundColor: theme.color.night },
-  knobOn: { backgroundColor: theme.color.surface },
 });

@@ -65,23 +65,16 @@ export function DoorRow({ glyph, title, line, onPress, divided = false }: DoorRo
       onPress={onPress}
       style={({ pressed }) => [
         s.row,
-        divided ? s.divided : undefined,
+        DOOR_ROW.rhythm,
+        divided ? DOOR_ROW.divided : undefined,
         pressed ? s.pressed : undefined,
       ]}
     >
-      <View style={s.lead}>
-        <Feather
-          name={glyph}
-          size={theme.size.rowLeadGlyph}
-          color={theme.color.night2}
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-        />
-      </View>
+      <RowLead glyph={glyph} />
 
       <View style={s.words}>
-        <Text style={s.title}>{title}</Text>
-        {line === undefined ? null : <Text style={s.line}>{line}</Text>}
+        <Text style={DOOR_ROW.title}>{title}</Text>
+        {line === undefined ? null : <Text style={DOOR_ROW.line}>{line}</Text>}
       </View>
 
       <Feather
@@ -95,15 +88,40 @@ export function DoorRow({ glyph, title, line, onPress, divided = false }: DoorRo
   );
 }
 
-const s = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.sm,
-    // `space.sm` above and below a 28pt lead is 46pt, over 6.5's minimum by geometry.
-    paddingVertical: theme.space.sm,
-  },
+/**
+ * **The lead square**, a glyph inside it — drawn by the door row, and by a switch standing in a card
+ * of door rows (6.12, #778), so every title in the card starts at the same edge. Decoration: hidden
+ * from a listener, as the row's name says what it is.
+ */
+export function RowLead({ glyph }: { readonly glyph: DoorRowGlyph }) {
+  return (
+    <View style={s.lead}>
+      <Feather
+        name={glyph}
+        size={theme.size.rowLeadGlyph}
+        color={theme.color.night2}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+    </View>
+  );
+}
+
+/**
+ * **A row in a card of door rows, as 5.5 sets it** — its rhythm, its divider, its title and its line.
+ * One table for the door row and for a switch standing among door rows (6.12, #778), so a change to
+ * 5.5's rhythm is made once and both rows keep their titles at the same edge.
+ */
+export const DOOR_ROW = StyleSheet.create({
+  // `space.sm` above and below a 28pt lead is 46pt, over 6.5's minimum by geometry.
+  rhythm: { gap: theme.space.sm, paddingVertical: theme.space.sm },
   divided: { borderTopWidth: 1, borderTopColor: theme.color.line2 },
+  title: { ...theme.type.cardTitle, color: theme.color.ink },
+  line: { ...theme.type.tiny, color: theme.color.muted },
+});
+
+const s = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center' },
   // 6.6: the press state for a row whose whole surface is the control.
   pressed: { opacity: 0.7 },
   lead: {
@@ -117,6 +135,4 @@ const s = StyleSheet.create({
   // Takes what the lead and the chevron leave, so a long live line wraps under the title
   // rather than pushing the chevron off the row.
   words: { flex: 1 },
-  title: { ...theme.type.cardTitle, color: theme.color.ink },
-  line: { ...theme.type.tiny, color: theme.color.muted },
 });

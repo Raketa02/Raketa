@@ -12,9 +12,9 @@ set is [`docs/specs/rankings/`](../../../docs/specs/rankings/README.md) and ever
 **Who built what.** #775 drew the header, the reader's card in every General state, the podium and
 the first page of the list; [#776](https://github.com/Raketa02/Raketa/issues/776) the later pages and
 the _You · 212th_ button; [#777](https://github.com/Raketa02/Raketa/issues/777) the _General |
-Friends_ switch, the view the phone remembers, and Friends. Still to come: the _Show me in General_
-switch on the hidden card ([#778](https://github.com/Raketa02/Raketa/issues/778)) and Add friend from
-a stranger's record ([#779](https://github.com/Raketa02/Raketa/issues/779)).
+Friends_ switch, the view the phone remembers, and Friends; [#778](https://github.com/Raketa02/Raketa/issues/778)
+the _Show me in General_ switch on the hidden card, and the page following it. Still to come: Add
+friend from a stranger's record ([#779](https://github.com/Raketa02/Raketa/issues/779)).
 
 **Every number is the server's, and this feature computes none of them.** The order, every place,
 _of N_, the chip, the gap, and how many wins close it are worked out by the backend — the win count
@@ -128,6 +128,26 @@ again_.
 again once the pages above reach place 1. A pull there reads the main read and the window around the
 reader again.
 
+**The hidden card carries the switch** (#778; the screens §4.5; the mechanics §10). Under the fold,
+where the gap line was: _Hidden from General_ and 6.12's switch on the dark card's repaint — You's own
+_Show me in General_, `player_profile`'s (`useShowMeInGeneral`, exported for this), written by the
+same route and **named _Show me in General_, off**, because _Hidden from General_ is what off means
+here. **The card is the server's and the switch is the profile's**: the switch is drawn only while the
+card says `HIDDEN`, and stands where the profile holds it — or where it was pressed, while that write
+is out. A refused write says why above the card, on paper, as the declaration's card says it, and the
+switch is back off. No _You · 7th_ while hidden (`jumpPlace`, as #776 built it).
+
+**The page follows the switch** (`cardBehindTheSwitch`; `useGeneral`'s `SWITCH_FOLLOWED_MS`,
+`SWITCH_FOLLOWED_READS`). The ranking follows the profile through the outbox, whose delivery polls
+once a second, so a card read the moment the write answers still says what it said before. **While
+the card is behind the switch** — hidden with it on, listed with it off — **General is read again a
+second after its last read, at most five times**, then waits for a pull, a focus or its half minute.
+That is how turning it on from the card re-reads the page — a second after the press, never at once,
+because at once is almost always before the delivery — and how a switch turned on You while Rankings
+stands under the Home tab reaches the card. The switch followed is the one the profile **holds**
+(`useShownInGeneral`), never a press still on its way, so a refused write follows nothing. Friends ignores the switch, and
+follows nothing.
+
 **Calls made here, open to overrule:**
 
 - the spoken names: the trophy _Rankings, 7th in padel_ (or _Rankings_), a row _7th, You, 2,71_, a
@@ -137,8 +157,6 @@ reader again.
   it;
 - places 1–3 in `coralInk` where mock 7 draws `coral` (design-system §1.2) — flagged for the product
   owner, because it departs from the mock by name;
-- the hidden card draws the place and _Hidden from General_ without the switch: the server already
-  serves `HIDDEN`, and #778 adds the switch;
 - _Nobody ranked in {sport} yet_ follows the wire's `listed` being 0, so a sport whose only listed
   players are hidden from the reader draws neither that line nor a list;
 - _New_ is a neutral `paper2` chip with `ink`: the spec names no colour for it;
@@ -153,12 +171,29 @@ reader again.
   scrolls away;
 - (#777) **Add friends** is a primary (coral) button in a light card, as _Get your {sport} level_ is:
   §30.6 names no colour, and the Friends page's black pill is that header's own (Part 16);
-- (#777) the trophy's spoken name on Friends, _Rankings, 4th among your friends in padel_.
+- (#777) the trophy's spoken name on Friends, _Rankings, 4th among your friends in padel_;
+- (#778) the card's switch is drawn _Hidden from General_ and named _Show me in General_ — §30.4
+  writes the line, and a listener hearing _Hidden from General, off_ would hear the opposite;
+- (#778) turned on, the switch stands on over a card still reading _Hidden from General_ for the
+  second or so the ranking takes to follow — §30 has no words for _on its way_, and none are drawn;
+- (#778) the page follows a turned switch a second apart, five reads at most, each reading every page
+  of General's window — the outbox's pace, and a ceiling so an outbox that has stopped costs five
+  reads, not one a second;
+- (#778) a refused write from the card is a coral note above the card, the switch back off;
+- (#778) **for the product owner**: §30.4 draws _Hidden from General_ with the switch beside it, and
+  the switch is _Show me in General_ — so the card reads _Hidden from General_ beside a switch that is
+  off, which a sighted reader could take for _not hidden_. Built as the words write it; the line is
+  the switch's label, its track on the right;
+- (#778) **for the product owner**: _on the fold line's right_ (the screens §4.5) is read as the line
+  under the fold, the words on the left and the track at the right edge, as the gap line stands.
 
 #775's and #776's design calls are Part 16 rows of the design system (2026-11-08); #777's depart
-from nothing in it — the segmented control and a primary button, each as the system draws it.
+from nothing in it — the segmented control and a primary button, each as the system draws it. #778's
+switch on the dark card is 6.12's `onDark`, a Part 16 row of its own (2026-11-08).
 
-**Not seen on a device**: the switch under the header and its two views, the Friends cards with
+**Not seen on a device**: the _Show me in General_ switch under the hidden card's fold, the note
+above the card, and the gap line coming back as the page follows; the switch under the header and its
+two views, the Friends cards with
 _Add friends_, the sheet over Rankings, and the whole page — the trophy beside the bell, the dark card's place and
 level, the podium's steps, the rows and the tint, the drawn marks, and the pill over the header —
 and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,

@@ -28,17 +28,29 @@
  * | Photos | `GET /players/me/profile`.photos — the count, and the profile photo's verdict |
  * | Tags | `GET /players/me/profile`.social_tags ∩ `GET /player-profile/options`.social_tag_selection — the ceiling is served |
  * | Intro | `GET /players/me/profile`.intro |
+ * | Show me in General | `GET /players/me/profile`.ranking_visibility — **the row is the switch** |
+ *
+ * ## The one row that is not a door
+ *
+ * *Show me in General* (#778; the You spec §3.14) opens nothing: the row is the design system's
+ * switch, in the door rows' lead and type so it lines up under them, and it **writes at once**, with
+ * no *Save*. A refused write puts it back and says why, in a coral note under the row. It is drawn
+ * once the profile read has landed, and not at all while it has not — there is no switch to draw on
+ * a guess, and a mode with nothing to switch is a row that is not on screen (6.12); the rows above it
+ * already say a failed read's recovery sentence.
  */
 
 import { useRouter } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
 import { useSkillRatings } from '@/features/onboarding/types';
-import { liveLine } from '@/shared/errors';
-import { DoorRow, type DoorRowProps } from '@/shared/ui';
+import { liveLine, recoveryMessage } from '@/shared/errors';
+import { DoorRow, Note, Switch, theme, type DoorRowProps } from '@/shared/ui';
 
 import { playIntentRows } from '../domain/playIntentRows';
 import { useProfileOptions } from '../hooks/useProfileOptions';
 import { useProfileSurface } from '../hooks/useProfileSurface';
+import { useShowMeInGeneral } from '../hooks/useShowMeInGeneral';
 
 import {
   YOU_AREA_ROUTE,
@@ -53,6 +65,8 @@ import {
   AREA_LINE,
   INTRO_TITLE,
   PHOTOS_TITLE,
+  SHOW_ME_IN_GENERAL_LINE,
+  SHOW_ME_IN_GENERAL_TITLE,
   TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
@@ -195,3 +209,32 @@ export function IntroRow({ divided }: YouRowProps) {
     />
   );
 }
+
+export function ShowMeInGeneralRow({ divided }: YouRowProps) {
+  const showMe = useShowMeInGeneral();
+  if (showMe.checked === undefined) return null;
+
+  return (
+    <View>
+      <Switch
+        door={{ glyph: 'eye', divided: divided ?? false }}
+        label={SHOW_ME_IN_GENERAL_TITLE}
+        description={SHOW_ME_IN_GENERAL_LINE}
+        checked={showMe.checked}
+        onChange={showMe.change}
+      />
+      {showMe.writeError === null ? null : (
+        <View style={s.refused}>
+          <Note variant="coral" accessibilityRole="alert">
+            {recoveryMessage(showMe.writeError)}
+          </Note>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  // Under the row and inside the card, off the row's foot by the card's own small step.
+  refused: { marginBottom: theme.space.sm },
+});

@@ -180,6 +180,25 @@ export function jumpPlace(card: PlaceCard | undefined): number | undefined {
   return card?.state === 'LISTED' ? card.place : undefined;
 }
 
+/**
+ * **A card behind the switch** ([#778](https://github.com/Raketa02/Raketa/issues/778); the mechanics
+ * §10) — the reader's card says hidden while *Show me in General* is on, or listed while it is off.
+ *
+ * The ranking follows the switch through the outbox, so a card read just after it turned can still
+ * be the one from before, and the page reads General again until the two agree (`useGeneral`). Only
+ * a placed card can disagree: a card with no place draws the same whichever way the switch is set,
+ * and nothing is behind a switch or a card not yet known.
+ */
+export function cardBehindTheSwitch(
+  card: PlaceCard | undefined,
+  showMeInGeneral: boolean | undefined,
+): boolean {
+  if (card === undefined || showMeInGeneral === undefined) return false;
+  if (card.state === 'HIDDEN') return showMeInGeneral;
+  if (card.state === 'LISTED') return !showMeInGeneral;
+  return false;
+}
+
 /** **The view the page opens on the first time** — General (the screens §3). */
 export const FIRST_VIEW: RankingView = 'GENERAL';
 

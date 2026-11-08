@@ -196,6 +196,10 @@ card** group's last row is `auth`'s `NicknameRow`, its line the nickname whole a
 still `you/name`: the route keeps the word, as the act's path does. The paragraphs above that say
 _Name_ read through it.
 
+**_Show me in General_ closes _On your card_** ([#778](https://github.com/Raketa02/Raketa/issues/778),
+the You screen 3.14), after _Nickname_: `player_profile`'s `ShowMeInGeneralRow`, the one row on the tab
+that is a switch rather than a door. The record is [`player_profile.md`](player_profile.md).
+
 **Home asks a member of a group rated in nothing for a level, first**
 ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7). `groups`' `HomeLevelCard`
 is drawn at the top of Home, above _TO CONFIRM_ and the rail, because until she has a level nothing

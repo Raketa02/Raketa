@@ -45,6 +45,15 @@ export const PHOTOS_TITLE = 'Photos';
 export const TAGS_TITLE = 'Tags';
 export const INTRO_TITLE = 'Intro';
 
+/**
+ * ***Show me in General*** and the sentence under it — the words §30.8's, cited in §27 (ADR-0203 §7,
+ * #778). Not a live line: the row is the switch, and the switch says which way it is set. The title
+ * is also the switch's name on the hidden card on Rankings, which draws *Hidden from General* there.
+ */
+export const SHOW_ME_IN_GENERAL_TITLE = 'Show me in General';
+export const SHOW_ME_IN_GENERAL_LINE =
+  "Players who don't know you can see your place, open your record and send you a request.";
+
 // --- the live lines ---------------------------------------------------------------------------
 
 /**

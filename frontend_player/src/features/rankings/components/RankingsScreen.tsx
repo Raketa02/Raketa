@@ -42,6 +42,7 @@ import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { AddFriendsSheet } from '@/features/friends/types';
 import { MyGroupMonogram, ReadFailure, groupMembersRoute } from '@/features/groups/types';
+import { useShownInGeneral } from '@/features/player_profile/types';
 import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
 import { offlineMessage } from '@/shared/errors';
 import {
@@ -167,9 +168,12 @@ interface ViewPageProps {
   readonly onAddFriends: () => void;
 }
 
-/** General, for one sport: the list in pages — from the top, or around the reader after a jump. */
+/**
+ * General, for one sport: the list in pages — from the top, or around the reader after a jump —
+ * followed to *Show me in General* while the card is behind it (#778).
+ */
 function GeneralView(props: ViewPageProps) {
-  return <ViewPage {...props} read={useGeneral(props.sport)} />;
+  return <ViewPage {...props} read={useGeneral(props.sport, useShownInGeneral())} />;
 }
 
 /** Friends, for one sport: the whole table, read at once. */

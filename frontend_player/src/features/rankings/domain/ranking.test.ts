@@ -7,6 +7,7 @@
 
 import {
   belowTheCard,
+  cardBehindTheSwitch,
   joinPages,
   jumpPlace,
   openingSport,
@@ -196,5 +197,35 @@ describe('what stands below the card (#777)', () => {
   it('is nothing when the Friends card is the page — just you, or none of your friends', () => {
     expect(belowTheCard({ card: { state: 'JUST_YOU' }, listed: 1 })).toBe('nothing');
     expect(belowTheCard({ card: { state: 'NO_FRIEND_LISTED' }, listed: 0 })).toBe('nothing');
+  });
+});
+
+describe('a card behind the switch', () => {
+  // #778; the mechanics §10: the ranking follows Show me in General through the outbox, so a card
+  // read just after the switch turned can still say what it said before.
+  const placed = { place: 7, of: 13, level: 2.71 } as const;
+  const hidden = { state: 'HIDDEN', ...placed } as const;
+  const listed = { state: 'LISTED', ...placed, gapLine: { kind: 'top' } } as const;
+
+  it('is a hidden card with the switch on, and a listed one with it off', () => {
+    expect(cardBehindTheSwitch(hidden, true)).toBe(true);
+    expect(cardBehindTheSwitch(listed, false)).toBe(true);
+  });
+
+  it('is not a card that agrees with the switch', () => {
+    expect(cardBehindTheSwitch(hidden, false)).toBe(false);
+    expect(cardBehindTheSwitch(listed, true)).toBe(false);
+  });
+
+  it('is never a card with no place — not listed, the switch changes nothing it draws', () => {
+    expect(
+      cardBehindTheSwitch({ state: 'NEEDS_RESULTS', results: 2, resultsToEnter: 5 }, false),
+    ).toBe(false);
+    expect(cardBehindTheSwitch({ state: 'OFF_THE_LIST' }, true)).toBe(false);
+  });
+
+  it('is never anything while the card or the switch is unknown', () => {
+    expect(cardBehindTheSwitch(undefined, true)).toBe(false);
+    expect(cardBehindTheSwitch(hidden, undefined)).toBe(false);
   });
 });
