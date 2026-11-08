@@ -337,3 +337,47 @@ and the bell. Where the push and the bell row open is unchanged.
 **Calls for the product owner** (in `friendsCopy.ts`): Not now spoken as _Not now, your padel level_;
 _Starting…_ as the coral button's busy word (onboarding's); the overlapping faces' reachable width.
 **Not seen on a device**: the card with a long nickname, the faces overlapping, and the toast.
+
+## Strangers from the ranking (#779)
+
+**_Add friend_ on a record opened from Rankings sends the request from the ranking.**
+[#779](https://github.com/Raketa02/Raketa/issues/779) (PRD #766; the rankings screens §6–§7; the
+mechanics §12–§13; the words §30.8). **`AskedWhere` is a union now**: `RANKING` carries the page's
+sport, required, and no group — the server refuses one without its sport, and the type says so
+before it can. `recordAskedWhere` is the rule every record's request goes through: the ranking, with
+the page's sport, where Rankings opened the record; else the record, with the caller's group and
+sport. A request from the ranking to a group-mate still names the ranking (call 15).
+
+**The record's foot follows `can_add_friend`** (`recordFootOf`; ADR-0203 §9). _Add friend_ is drawn
+only where the record says a request may be sent — they share a group with the reader now, or are
+listed on General and not hidden. With nothing between them and no request possible, **_Block_
+stands alone** (a call in the screens §6). The other three relations draw their button as before.
+**There is no _Unblock_ on the record any more** — a record never opens across a block (#773) — so
+the `unblock` foot and the record's `blockedByYou` are gone, and the paragraph above on the record's
+foot is superseded by this one.
+
+**The daily limit is said where it was pressed** — `daily_request_limit`, _You've sent 10 requests
+to new people today. Try again tomorrow._ (§30.8), in `WriteNote` under _Add friend_, as every
+friend refusal is. It is not the state moving, so nothing re-reads and _Add friend_ stays: the
+request was not sent. **`unblock_them_first` names You › Blocked players** now (a call): its
+sentence pointed at the record's _Unblock_, which is gone, and Members still offers **+ Add** on
+somebody you blocked. **`player_not_in_your_groups` says _your groups or on the ranking_**, as the
+server widened the code's sentence (#773): a stranger who turned _Show me in General_ off between the
+record's read and the press is who meets it now.
+
+**Home's request card reads _Found you in the padel ranking_** for a request made from the ranking —
+`proposals` maps the wire's `from_ranking` (`fromRanking`) — in place of the whole where-line, as a
+link's _Invited you to Raketa_ stands, with the reliability chip after it and no sport or Level —
+§29.2's group line is the whole line, and §30.8 puts this one in its place. One whose
+sport this build cannot name draws the chip alone. The notice's body is the server's words.
+
+**Not on _Asked you_ — a finding for the product owner.** The ticket asks for the ranking line
+_wherever a request's origin is named today_ and lists You › Friends' _Asked you_; but its rows name
+no origin today (the screens §4.1 draw none, and the row's line is empty), and the wire's
+`FriendRequestSchema` carries none — no group, no link, no ranking. Drawing it there would need a
+backend field first, so nothing changed there.
+
+**Calls for the product owner** (in `friendsCopy.ts`): the limit sentence under _Add friend_'s half
+rather than across both buttons, as §6 of the screens writes it — every friend refusal stands there;
+the new `unblock_them_first` and `player_not_in_your_groups` sentences. **Not seen on a device**: the limit sentence wrapping in the left
+half at the narrowest width; _Block_ alone across the foot; the ranking line on Home's card.

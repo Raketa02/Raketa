@@ -5,9 +5,9 @@
  * §3).
  *
  * The uniform-strict escape hatch (ADR-0009): a block has no rule this client is entitled to
- * apply. What it reaches — one court, and nothing else — is the server's, and what the record says
- * about it is the server's `blocked_by_you`. So this is a type, and the list it fills is the
- * server's, in the server's order: **newest first**.
+ * apply. What it reaches — one court, and a record neither of them can open (ADR-0203 §8) — is the
+ * server's, and this list is the one read that carries the reader's own blocks (#779). So this is a
+ * type, and the list it fills is the server's, in the server's order: **newest first**.
  *
  * Only the reader's **own** blocks are ever here. Nothing on this platform says who blocked the
  * reader, and nothing in this feature could hold it.

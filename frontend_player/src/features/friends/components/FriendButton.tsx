@@ -3,11 +3,12 @@
  * ([#753](https://github.com/Raketa02/Raketa/issues/753); the friends screens §2; Q3, Q40).
  *
  * `player_record`'s sheet draws it beside `blocks`' **Block**, one row of two at the record's foot
- * (`recordFootOf` says which, and when **Unblock** stands alone instead). This is the left half:
+ * (`recordFootOf` says which, and when **Block** stands alone instead: nothing between them, and the
+ * record says no request may be sent). This is the left half:
  *
  * | Relation | Drawn | A press |
  * | --- | --- | --- |
- * | `NONE` | **Add friend**, black | asks, at once |
+ * | `NONE` | **Add friend**, black — where the record says a request may be sent | asks, at once |
  * | `SENT` | **Request sent ▾**, outlined | the cancel sheet |
  * | `ASKED_YOU` | **Accept**, coral | accepts, at once |
  * | `FRIEND` | **Friend ✓ ▾**, outlined | the remove sheet |

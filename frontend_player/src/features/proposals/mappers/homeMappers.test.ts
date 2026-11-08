@@ -409,6 +409,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         nickname: 'ines.d',
         photoUrl: 'https://photos.example/ines.jpg',
         byLink: false,
+        fromRanking: false,
         group: { id: 'group-1', name: 'Kazimierz crew' },
         sport: 'padel',
         level: 3.4,
@@ -428,10 +429,23 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         playerId: 'p-ines',
         nickname: 'ines.d',
         byLink: true,
+        fromRanking: false,
         playerScore: 98,
         reliabilityBand: 'VERY_HIGH',
       },
     ]);
+  });
+
+  it('reads a request from the ranking with the ranking’s sport, and no group (#779)', () => {
+    expect(
+      home([request({ from_ranking: true, group: null, sport: 'SQUASH', level: 2.4 })])
+        .friendRequests,
+    ).toEqual([
+      expect.objectContaining({ fromRanking: true, byLink: false, sport: 'squash', level: 2.4 }),
+    ]);
+    expect(
+      home([request({ from_ranking: true, group: null })]).friendRequests[0],
+    ).not.toHaveProperty('group');
   });
 });
 

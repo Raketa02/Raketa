@@ -24,10 +24,12 @@ export function toAskRequest(
   playerId: string,
   where: AskedWhere,
 ): Schemas['AskToBeFriendsRequest'] {
+  // A request from the ranking names no group: its page shows none, and the server ignores one.
+  const groupId = where.from === 'RANKING' ? undefined : where.groupId;
   return {
     player_id: playerId,
     made_from: where.from,
-    ...(where.groupId === undefined ? {} : { group_id: where.groupId }),
+    ...(groupId === undefined ? {} : { group_id: groupId }),
     ...(where.sport === undefined ? {} : { sport: toWireSport(where.sport) }),
   };
 }

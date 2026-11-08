@@ -4,15 +4,16 @@
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
  * The record a deck tile opens ends with *Block* and the person's name; the confirm sheet says what
- * a block does and offers *Block* and *Cancel*; once blocked, the record no longer opens — a blocked
- * pair's record is refused both ways since [#773](https://github.com/Raketa02/Raketa/issues/773)
- * (ADR-0203), so the record's re-read is refused. **You › Account › Blocked
- * players** lists everyone the reader blocked, each with *Unblock*, which is the way back. Your own
- * record ends in neither.
+ * a block does, and where Unblock is, and offers *Block* and *Cancel*; once blocked, **the record
+ * closes** ([#779](https://github.com/Raketa02/Raketa/issues/779)) — a blocked pair's record is
+ * refused both ways since [#773](https://github.com/Raketa02/Raketa/issues/773) (ADR-0203). **You ›
+ * Account › Blocked players** lists everyone the reader blocked, each with *Unblock*, which is the
+ * one way back. Your own record ends in neither.
  *
  * **The blocks routes are answered by a small fake of the server** (`blockServer`): a block or an
- * unblock changes what the next read of the record and of the list says, as it would — so the row
- * that flips after a press is the record re-read, never this client guessing. The group's deck and
+ * unblock changes what the next read of the record and of the list says, as it would — so a record
+ * opened after a block is refused, and the list's rows are the server's, never this client guessing.
+ * The group's deck and
  * Fill in are observed while the record is open over them, so a refresh of them is a re-read counted
  * at the socket; the list is not observed there, so its refresh is the cache entry's flag
  * (`pin-invalidation`'s rule).
@@ -308,7 +309,7 @@ const invalidated = (queryKey: readonly unknown[]) =>
 const homeReads = () => transport.requestsTo('GET', HOME_PATH).length;
 
 describe('Block, on the record', () => {
-  it('ends the record with Block and the name, and blocks through the confirm sheet', async () => {
+  it('ends the record with Block and the name, blocks through the confirm sheet, and closes the record', async () => {
     const server = blockServer();
     await openKubasRecord();
     seedTheList();
@@ -316,11 +317,10 @@ describe('Block, on the record', () => {
     const row = await screen.findByRole('button', { name: blockRowLabel(KUBA_PERSON.name) });
     const deckBefore = deckReads();
     const fillInBefore = fillInReads();
-    const recordBefore = recordReads(KUBA_PERSON);
     const homeBefore = homeReads();
     fireEvent.press(row);
 
-    // The sheet says what a block does, before it does it.
+    // The sheet says what a block does, before it does it — and where Unblock is (#779).
     expect(
       await screen.findByRole('header', { name: blockSheetTitle(KUBA_PERSON.name) }),
     ).toBeTruthy();
@@ -336,11 +336,13 @@ describe('Block, on the record', () => {
     });
     expect(server.blocked()).toEqual([KUBA_PERSON.id]);
 
-    // The sheet goes, and the record is read again — and refused: a blocked pair's record never
-    // opens (#773), and the way back is You › Blocked players. The record already drawn stays
-    // drawn under a refused re-read; closing it once the block is made is #779's.
+    // The sheet goes, and the record with it (#779): a blocked pair's record never opens (#773), so
+    // it is not read again — its re-read would be refused — and nowhere offers Unblock but You ›
+    // Blocked players.
     await waitFor(() => expect(sheetTitle(KUBA_PERSON)).toBeNull());
-    await waitFor(() => expect(recordReads(KUBA_PERSON)).toBeGreaterThan(recordBefore));
+    await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
+    expect(recordReads(KUBA_PERSON)).toBe(1);
+    expect(blockRow(KUBA_PERSON)).toBeNull();
     expect(unblockRow(KUBA_PERSON)).toBeNull();
     // The group's deck and Fill in are read again: the next card already respects the block.
     expect(deckReads()).toBeGreaterThan(deckBefore);

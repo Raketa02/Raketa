@@ -25,7 +25,7 @@ is referenced from the other by a sentence, not copied.
 | [`_shared.md`](_shared.md)                   | The platform ports, the HTTP client's verbs, the UI primitives                                 |
 | [`administrator.md`](administrator.md)       | The administrator area, its settings and Start playing; the invitation sheet and the switcher  |
 | [`auth.md`](auth.md)                         | Sign-up's attestation, the naming, the You tab, Forgot password, invitations, the last profile |
-| [`blocks.md`](blocks.md)                     | Block and Unblock at the foot of a record, the confirm sheet, You › Account › Blocked players  |
+| [`blocks.md`](blocks.md)                     | Block at the foot of a record, the confirm sheet, You › Account › Blocked players and Unblock  |
 | [`conversations.md`](conversations.md)       | A booked game's room, the optimistic send, the live layer, typing                              |
 | [`friends.md`](friends.md)                   | Friend requests, Members' pills, the record's Add friend, Home; You › Friends; PLAYED WITH     |
 | [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore                                                        |
@@ -77,6 +77,6 @@ startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 - `sportsmanship` — the card at the end of that screen asking how the other players were.
 - `player_record` — the record sheet a face opens.
 - `rankings` — Home's trophy and the Rankings page: a ranking per sport, sorted by the level.
-- `blocks` — Block and Unblock at the foot of that sheet, and You › Account › Blocked players.
+- `blocks` — Block at the foot of that sheet, and You › Account › Blocked players, where Unblock is.
 - `payments`, `notifications`, `links`, `administrator` and `find_a_game_next` (Explore's empty
   page) — each in its own record above.

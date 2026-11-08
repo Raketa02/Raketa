@@ -1,4 +1,4 @@
-import { movesTheFaces, recordFootOf, rowEndOf } from './friendship';
+import { movesTheFaces, recordAskedWhere, recordFootOf, rowEndOf } from './friendship';
 import type { FriendRelation } from './vocabulary';
 
 describe('rowEndOf — the right-hand end of a Members row', () => {
@@ -14,37 +14,61 @@ describe('rowEndOf — the right-hand end of a Members row', () => {
 
 describe('recordFootOf — the record’s two buttons', () => {
   it('draws nothing on your own record', () => {
-    expect(recordFootOf({ isSelf: true, relation: 'NONE', blockedByYou: false })).toEqual({
+    expect(recordFootOf({ isSelf: true, relation: 'NONE', canAddFriend: false })).toEqual({
       kind: 'nothing',
     });
   });
 
-  it('draws Unblock alone on somebody you blocked, whatever stands between you', () => {
-    for (const relation of ['NONE', 'SENT', 'ASKED_YOU', 'FRIEND'] as const) {
-      expect(recordFootOf({ isSelf: false, relation, blockedByYou: true })).toEqual({
-        kind: 'unblock',
-      });
-    }
-  });
-
   it.each<[FriendRelation, string]>([
-    ['NONE', 'ask'],
     ['SENT', 'sent'],
     ['ASKED_YOU', 'accept'],
     ['FRIEND', 'friend'],
   ])('puts the %s button beside Block', (relation, button) => {
-    expect(recordFootOf({ isSelf: false, relation, blockedByYou: false })).toEqual({
+    expect(recordFootOf({ isSelf: false, relation, canAddFriend: false })).toEqual({
       kind: 'pair',
       button,
-      block: true,
     });
   });
 
-  it('draws the friend button alone where the blocks could not be read', () => {
-    expect(recordFootOf({ isSelf: false, relation: 'NONE' })).toEqual({
+  it('puts Add friend beside Block where the record says a request may be sent', () => {
+    expect(recordFootOf({ isSelf: false, relation: 'NONE', canAddFriend: true })).toEqual({
       kind: 'pair',
       button: 'ask',
-      block: false,
+    });
+  });
+
+  it('draws Block alone where nothing stands between you and no request may be sent', () => {
+    expect(recordFootOf({ isSelf: false, relation: 'NONE', canAddFriend: false })).toEqual({
+      kind: 'block',
+    });
+  });
+});
+
+describe('recordAskedWhere — where a request asked from the record is asked from', () => {
+  it('is the record, with the group and the sport the caller opened it from', () => {
+    expect(recordAskedWhere({ rankingSport: undefined, groupId: 'g-1', sport: 'padel' })).toEqual({
+      from: 'RECORD',
+      groupId: 'g-1',
+      sport: 'padel',
+    });
+    expect(
+      recordAskedWhere({ rankingSport: undefined, groupId: undefined, sport: undefined }),
+    ).toEqual({ from: 'RECORD' });
+  });
+
+  it('is the ranking, with the page’s sport, where the record was opened on Rankings', () => {
+    expect(
+      recordAskedWhere({ rankingSport: 'squash', groupId: undefined, sport: 'squash' }),
+    ).toEqual({
+      from: 'RANKING',
+      sport: 'squash',
+    });
+  });
+
+  it('names no group with the ranking, whose page shows none', () => {
+    expect(recordAskedWhere({ rankingSport: 'padel', groupId: 'g-1', sport: 'tennis' })).toEqual({
+      from: 'RANKING',
+      sport: 'padel',
     });
   });
 });

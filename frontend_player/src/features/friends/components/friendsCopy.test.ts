@@ -38,6 +38,12 @@ describe('the request card’s words (§29.2)', () => {
     expect(whereLine({ byLink: true })).toBe('Invited you to Raketa');
   });
 
+  it('reads Found you in the padel ranking for a request from the ranking, in the group line’s place', () => {
+    expect(whereLine({ byLink: false, ranking: 'padel', sportName: 'Padel', level: 3.4 })).toBe(
+      'Found you in the padel ranking',
+    );
+  });
+
   it('says only what the wire named — a group they left, a sport they hold no Level in', () => {
     expect(whereLine({ byLink: false, sportName: 'Padel' })).toBe('Padel ·');
     expect(whereLine({ byLink: false, group: { name: 'Kazimierz crew' } })).toBe(
@@ -48,6 +54,20 @@ describe('the request card’s words (§29.2)', () => {
 
   it('counts the row’s title', () => {
     expect(requestsHeading(1)).toBe('Friend requests · 1');
+  });
+});
+
+describe('a request refused (§30.8)', () => {
+  it('says the daily limit, and that nothing was sent', () => {
+    expect(FRIENDS_COPY.refused['daily_request_limit']).toBe(
+      "You've sent 10 requests to new people today. Try again tomorrow.",
+    );
+  });
+
+  it('sends a player who blocked somebody to You › Blocked players, where Unblock is now', () => {
+    expect(FRIENDS_COPY.refused['unblock_them_first']).toBe(
+      'You blocked this player. Unblock them in You › Blocked players first.',
+    );
   });
 });
 

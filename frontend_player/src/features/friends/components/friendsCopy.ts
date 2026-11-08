@@ -15,7 +15,7 @@
  *   to kuba.w?* over *Nobody is told.*, removing's shape.
  * - **The busy words** (*Asking…*, *Accepting…*, *Cancelling…*, *Removing…*), `blocks`' *Blocking…*.
  * - **The refusals that are not the state moving** (`useFriendWrites`): asking somebody you blocked,
- *   and somebody you no longer share a group with.
+ *   and somebody you no longer share a group with (or who left General since, #773).
  * - **The spoken names of a pill and a card's buttons**: a column of *+ Add* or two cards' *Accept*
  *   name nobody, so each says whom — *Add kuba.w*, `blocks`' *Unblock kuba.w*.
  *
@@ -64,6 +64,18 @@
  *   and a friend request's beside them, would otherwise name nothing.
  * - **The busy words** are onboarding's *Starting…* for the coral button, the start's own, and none
  *   for Not now, which the friend request card's Not now has none of either.
+ *
+ * And these, written in by #779 (strangers from the ranking; the words §30.8 gives the two sentences):
+ *
+ * - **The limit's sentence stands under _Add friend_**, in the friend button's half, as every friend
+ *   refusal does — §30.8 says _under the buttons_.
+ * - **Asking somebody you blocked** names You › Blocked players, since the record's Unblock it named
+ *   is gone (ADR-0203 §8).
+ * - **Asking somebody no longer askable** says _your groups or on the ranking_, the server's own
+ *   widening of the code's sentence (#773).
+ *
+ * _Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
+ * chip beside it — which is §29.2's own: the group line is the whole line, and a link's replaces it.
  *
  * ## The whole nickname, and no pronoun
  *
@@ -217,8 +229,19 @@ export const FRIENDS_COPY = {
   },
   /** Said where a write was pressed, when the server refused it for a reason that is not the state moving. */
   refused: {
-    unblock_them_first: 'You blocked this player. Unblock them on their record first.',
-    player_not_in_your_groups: 'You can only ask people from your groups.',
+    /**
+     * Members still offers **+ Add** on somebody you blocked (no block shows there, #745's call), and
+     * the record's own Unblock is gone (#779, ADR-0203 §8): the way back is You › Blocked players.
+     */
+    unblock_them_first: 'You blocked this player. Unblock them in You › Blocked players first.',
+    /**
+     * Nobody you share a group with, nor listed on General and shown (#773): what a ranking stranger
+     * who turned *Show me in General* off between the read and the press meets — the server's own
+     * widening of the code's sentence, said the app's way (#779).
+     */
+    player_not_in_your_groups: 'You can only ask people from your groups or on the ranking.',
+    /** The eleventh request in a Warsaw day to somebody you share no group with (§30.8). Nothing was sent. */
+    daily_request_limit: "You've sent 10 requests to new people today. Try again tomorrow.",
     /** An ask for a Level (#758) from a group you have since left. */
     not_one_of_your_groups: 'You’re not in this group any more.',
   } as Readonly<Record<string, string>>,
@@ -270,11 +293,18 @@ export function wantsToBeYourFriend(nickname: string): string {
  */
 export function whereLine(request: {
   readonly byLink: boolean;
+  /**
+   * **A request from the ranking** (#779; §30.8): the ranking's sport inside a sentence (*padel*,
+   * `sportInLine`). *Found you in the padel ranking* stands in place of the group line, as a link's
+   * *Invited you to Raketa* does.
+   */
+  readonly ranking?: string;
   readonly group?: { readonly name: string };
   readonly sportName?: string;
   readonly level?: number;
 }): string {
   if (request.byLink) return FRIENDS_COPY.home.byLink;
+  if (request.ranking !== undefined) return foundYouInTheRanking(request.ranking);
   const sport =
     request.sportName === undefined
       ? []
@@ -289,6 +319,11 @@ export function whereLine(request: {
     ...sport,
   ];
   return parts.length === 0 ? '' : `${parts.join(' · ')} ·`;
+}
+
+/** *Found you in the padel ranking* — a request from the ranking's where-line (§30.8). */
+export function foundYouInTheRanking(sportInLine: string): string {
+  return `Found you in the ${sportInLine} ranking`;
 }
 
 /** *Asked you · 2* — the one tab that counts, while requests wait; *Asked you* alone at nought. */

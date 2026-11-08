@@ -5,19 +5,17 @@
  *
  * | Hook | Route | Re-reads |
  * | --- | --- | --- |
- * | `useBlock` | `POST /blocks` | the list, their record, every group's deck and Fill in, and what the withdrawal moved |
- * | `useUnblock` | `DELETE /blocks/{id}` | the list, their record where it is open, every group's deck and Fill in |
+ * | `useBlock` | `POST /blocks` | the list, every group's deck and Fill in, and what the withdrawal moved |
+ * | `useUnblock` | `DELETE /blocks/{id}` | the list, every group's deck and Fill in |
  *
  * ## What a block moves, and so what it re-reads
  *
- * **Their record**, because it says whether the reader blocked them: the row at its foot flips from
- * *Block* to *Unblock* on the re-read, never on a guess. **The record re-reads itself** — the sheet
- * hands its own re-read in (`reread`), because the read is `player_record`'s, and this feature
- * importing that one's keys while that one draws this one's row would be a dependency both ways
- * (architecture Part 1: circular dependencies are defects). A record is never cached between opens,
- * so an unblock on the list has no record to re-read. **Blocked players**, which lists them now.
- * **Every group's deck and Fill in** — not the one the record was opened from: a block keeps the
- * pair off one court in every group they share, so the next card dealt anywhere respects it.
+ * **Their record is not read again: it closes** ([#779](https://github.com/Raketa02/Raketa/issues/779),
+ * ADR-0203 §8). A record never opens between two people either of whom blocked the other, so its
+ * re-read would only be refused; the record sheet hands `BlockRow` its own close instead. And an
+ * unblock is made on the list alone, where no record is open. **Blocked players**, which lists them
+ * now. **Every group's deck and Fill in** — not the one the record was opened from: a block keeps
+ * the pair off one court in every group they share, so the next card dealt anywhere respects it.
  *
  * And, for a block only, **what its withdrawal moved** (ADR-0193 §4): the reader's yeses where the
  * other person is In are taken back — the live yeses, a game still filling in detail — and a game
@@ -25,8 +23,8 @@
  * booking's own read draw. The same reads leaving a booking re-reads, because it is the same
  * departure. An unblock brings no yes back, so it re-reads none of them.
  *
- * Each write **settles once its re-reads have**, so the sheet's *Block* stays busy until the record
- * under it already says *Unblock* — the row never reads *Block* for a frame after the block stood.
+ * Each write **settles once its re-reads have**, so the sheet's *Block* stays busy until everything
+ * the block moved has been read again, and only then does the record close over it.
  *
  * ## Twice is nothing
  *
@@ -55,10 +53,7 @@ import { blockKeys } from './blockKeys';
 /** The one refusal a block retries: it lost a race, and the retry is the idempotent no-op. */
 const RACED = 'concurrent_modification';
 
-/** The open record's own re-read, handed in by the sheet that holds it — see the module note. */
-export type Reread = () => Promise<unknown>;
-
-export function useBlock(playerId: string, reread: Reread) {
+export function useBlock(playerId: string) {
   const client = useQueryClient();
   const mutationKey = blockKeys.block(playerId);
 
@@ -66,7 +61,7 @@ export function useBlock(playerId: string, reread: Reread) {
     mutationKey,
     mutationFn: () => block(playerId),
     retry: (failures, error) => failures < 1 && error.code === RACED,
-    onSuccess: () => rereadAfterBlocking(client, reread),
+    onSuccess: () => rereadAfterBlocking(client),
   });
 
   /** The sheet was closed: forget the act, and drop it from the queue if it is still waiting. */
@@ -81,7 +76,7 @@ export function useBlock(playerId: string, reread: Reread) {
   return { act, takeBack };
 }
 
-export function useUnblock(playerId: string, reread?: Reread) {
+export function useUnblock(playerId: string) {
   const client = useQueryClient();
 
   return useMutation<void, AppError, void>({
@@ -91,23 +86,22 @@ export function useUnblock(playerId: string, reread?: Reread) {
       client.setQueryData<readonly BlockedPlayer[]>(blockKeys.list(), (held) =>
         held?.filter((blocked) => blocked.playerId !== playerId),
       );
-      return rereadAfterUnblocking(client, reread);
+      return rereadAfterUnblocking(client);
     },
   });
 }
 
-function rereadAfterUnblocking(client: QueryClient, reread: Reread | undefined) {
+function rereadAfterUnblocking(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: blockKeys.list() }),
-    reread?.(),
     // Every group's deck, and the Fill in and posting reads under each group's root.
     client.invalidateQueries({ queryKey: proposalKeys.decks() }),
   ]);
 }
 
-function rereadAfterBlocking(client: QueryClient, reread: Reread) {
+function rereadAfterBlocking(client: QueryClient) {
   return Promise.all([
-    rereadAfterUnblocking(client, reread),
+    rereadAfterUnblocking(client),
     // What the withdrawal moved — see the module note.
     client.invalidateQueries({ queryKey: proposalKeys.liveYeses() }),
     client.invalidateQueries({ queryKey: proposalKeys.proposals() }),

@@ -305,6 +305,7 @@ function toHomeFriendRequest(wire: Schemas['HomeFriendRequestSchema']): HomeFrie
     nickname: wire.nickname,
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     byLink: wire.by_link,
+    fromRanking: wire.from_ranking,
     ...(wire.group === null ? {} : { group: { id: wire.group.id, name: wire.group.name } }),
     ...(sport === undefined ? {} : { sport }),
     ...(sport === undefined || wire.level === null ? {} : { level: wire.level }),

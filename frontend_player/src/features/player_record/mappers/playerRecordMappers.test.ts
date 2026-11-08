@@ -90,21 +90,14 @@ describe('the record, off the wire', () => {
 });
 
 /**
- * **The reader's own block, and only where there is somebody to block** (#587, ADR-0193 §3).
- *
- * Since #773 a record opens only when no block stands between the two, either way — a blocked pair
- * is refused, and blocks the server cannot read are a `503` — so the wire no longer says whether the
- * reader blocked the subject. Somebody else's record is *Block*; your own draws no row.
+ * **Whether the record offers *Add friend*** (#779, ADR-0203 §9) — the server's answer, read as it
+ * came. A record that opens is never blocked either way (#773), so nothing here says whether the
+ * reader blocked the subject: *Block* is always *Block*, and Unblock lives in You › Blocked players.
  */
-describe('your own block', () => {
-  it("is false on somebody else's record: a record that opened is never blocked", () => {
-    expect(toPlayerRecord(response()).blockedByYou).toBe(false);
-  });
-
-  it('is absent on your own record, so no row can be drawn there', () => {
-    const own = toPlayerRecord(response({ is_self: true }));
-
-    expect('blockedByYou' in own).toBe(false);
+describe('whether a request may be sent', () => {
+  it('reads can_add_friend as it came', () => {
+    expect(toPlayerRecord(response({ can_add_friend: true })).canAddFriend).toBe(true);
+    expect(toPlayerRecord(response({ can_add_friend: false })).canAddFriend).toBe(false);
   });
 });
 

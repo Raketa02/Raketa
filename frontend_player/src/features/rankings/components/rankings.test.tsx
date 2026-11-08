@@ -1,6 +1,6 @@
 /**
  * **The trophy on Home and the Rankings page, walked through the real route tree**
- * ([#775](https://github.com/Raketa02/Raketa/issues/775)–[#777](https://github.com/Raketa02/Raketa/issues/777),
+ * ([#775](https://github.com/Raketa02/Raketa/issues/775)–[#779](https://github.com/Raketa02/Raketa/issues/779),
  * PRD #766; [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md); the
  * rankings screens §1–§6), with only `fetch` faked.
  *
@@ -16,7 +16,9 @@ import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
-import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
+import { BLOCKS_COPY, blockRowLabel } from '@/features/blocks/types';
+import { FRIENDS_COPY } from '@/features/friends/types';
+import { OWN_RECORD_TITLE, RECORD_TITLE, RECORD_UNAVAILABLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
@@ -923,6 +925,128 @@ describe('a face opens the record', () => {
 
     expect(await screen.findByText(OWN_RECORD_TITLE)).toBeTruthy();
     expect(transport.requestsTo('GET', recordPath(TOMEK.player_id))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A stranger's record from the ranking (#779; the screens §6)
+// ---------------------------------------------------------------------------
+
+const REQUESTS_PATH = '/api/v1/friends/requests';
+const asked = () => transport.requestsTo('POST', REQUESTS_PATH).map((request) => request.body);
+
+/** Piotr, 3rd in padel, whom Tomek shares no group with — listed, so anybody may open his record. */
+function piotrsRecord(
+  over: Partial<Wire['PlayerRecordResponse']> = {},
+): Wire['PlayerRecordResponse'] {
+  return {
+    is_self: false,
+    relation: 'NONE',
+    can_add_friend: true,
+    nickname: PIOTR.nickname,
+    area_code: 'A+050612+0019938',
+    social_tags: [],
+    sports: [{ sport: 'PADEL', level: PIOTR.level, band: 'Established' }],
+    reliability: servedReliability({ player_score: 96, is_new: false }),
+    ...over,
+  };
+}
+
+/**
+ * **The friends route, faked as far as a stranger's request goes**: a request is `SENT`, and his
+ * record says so on its next read — or the eleventh of the day, refused with the limit.
+ */
+function strangerServer({ limitReached = false }: { readonly limitReached?: boolean } = {}) {
+  let relation: Wire['FriendRelation'] = 'NONE';
+  transport.on('POST', REQUESTS_PATH, () => {
+    if (limitReached) return errorResponse(429, 'daily_request_limit');
+    relation = 'SENT';
+    return json<Wire['RelationResponse']>({ relation });
+  });
+  transport.on('GET', recordPath(PIOTR.player_id), () =>
+    json(piotrsRecord({ relation, can_add_friend: relation === 'NONE' })),
+  );
+}
+
+/** Piotr's record, opened from his step on the podium. */
+async function openPiotrsRecord() {
+  await openRankings();
+  fireEvent.press(await screen.findByTestId('podium-third'));
+  expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+  // The record's answer drawn: its foot.
+  await screen.findByRole('button', { name: blockRowLabel(PIOTR.nickname) });
+}
+
+const foot = () => within(screen.getByTestId('record-foot'));
+
+describe('a stranger’s record from the ranking (#779)', () => {
+  it('offers Add friend beside Block, and sends it from the ranking with the page’s sport', async () => {
+    rankingServer();
+    strangerServer();
+    await openPiotrsRecord();
+
+    expect(foot().getByRole('button', { name: FRIENDS_COPY.record.add })).toBeTruthy();
+    expect(foot().getByText(BLOCKS_COPY.row.block)).toBeTruthy();
+
+    fireEvent.press(foot().getByRole('button', { name: FRIENDS_COPY.record.add }));
+
+    await waitFor(() => expect(asked()).toHaveLength(1));
+    // The ranking, its sport, and no group: the page shows none.
+    expect(asked()[0]).toEqual({
+      player_id: PIOTR.player_id,
+      made_from: 'RANKING',
+      sport: 'PADEL',
+    });
+    // The record read again, and its foot is the server's next answer.
+    expect(await screen.findByRole('button', { name: FRIENDS_COPY.record.sent })).toBeTruthy();
+    expect(transport.requestsTo('GET', recordPath(PIOTR.player_id))).toHaveLength(2);
+    // Block still beside it, and Unblock nowhere.
+    expect(foot().getByRole('button', { name: blockRowLabel(PIOTR.nickname) })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Unblock/ })).toBeNull();
+  });
+
+  it('says the daily limit under the buttons when the eleventh is refused, and Add friend stays', async () => {
+    rankingServer();
+    strangerServer({ limitReached: true });
+    await openPiotrsRecord();
+
+    fireEvent.press(foot().getByRole('button', { name: FRIENDS_COPY.record.add }));
+
+    expect(
+      await foot().findByText(FRIENDS_COPY.refused['daily_request_limit'] ?? 'missing'),
+    ).toBeTruthy();
+    expect(foot().getByRole('alert')).toBeTruthy();
+    expect(asked()).toHaveLength(1);
+    // Nothing was sent: the record still offers the request.
+    expect(foot().getByRole('button', { name: FRIENDS_COPY.record.add })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: FRIENDS_COPY.record.sent })).toBeNull();
+  });
+
+  it('draws Block alone, full width, where the record says no request may be sent — and never Unblock', async () => {
+    rankingServer();
+    transport.on('GET', recordPath(PIOTR.player_id), () =>
+      json(piotrsRecord({ can_add_friend: false })),
+    );
+    await openPiotrsRecord();
+
+    expect(foot().getByRole('button', { name: blockRowLabel(PIOTR.nickname) })).toBeTruthy();
+    expect(foot().queryByRole('button', { name: FRIENDS_COPY.record.add })).toBeNull();
+    expect(screen.queryByText(/^Unblock/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Unblock/ })).toBeNull();
+  });
+
+  it('reads the record’s one refusal where the server refuses it — a block, or the switch turned off', async () => {
+    rankingServer();
+    transport.on('GET', recordPath(PIOTR.player_id), () =>
+      errorResponse(404, 'record_unavailable'),
+    );
+    await openRankings();
+
+    fireEvent.press(await screen.findByTestId('podium-third'));
+
+    expect(await screen.findByText(RECORD_UNAVAILABLE)).toBeTruthy();
+    expect(screen.queryByTestId('record-foot')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^(Block|Unblock) / })).toBeNull();
   });
 });
 

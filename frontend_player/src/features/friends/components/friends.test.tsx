@@ -721,6 +721,43 @@ describe('FRIEND REQUESTS on Home', () => {
     expect(left.getByText('Padel 3,40 ·')).toBeTruthy();
   });
 
+  it('says a request from the ranking found you in that sport’s ranking, in the group line’s place (#779)', async () => {
+    friendServer();
+    transport.on('GET', HOME_PATH, () =>
+      json<Wire['HomeResponse']>({
+        read_at: '2026-10-01T08:00:00Z',
+        needing_you: 0,
+        games: [],
+        friends_games: [],
+        level_asks: [],
+        friend_requests: [
+          {
+            player_id: ZOFIA.id,
+            nickname: ZOFIA.name,
+            photo_id: null,
+            photo_url: null,
+            asked_at: '2026-10-01T07:00:00Z',
+            by_link: false,
+            from_ranking: true,
+            group: null,
+            sport: 'PADEL',
+            level: ZOFIA.level,
+            player_score: ZOFIA.score,
+            reliability_band: 'VERY_HIGH',
+          },
+        ],
+      }),
+    );
+    await launchSignedIn();
+
+    const card = within(await screen.findByTestId(`friend-request-${ZOFIA.id}`));
+    expect(card.getByText(wantsToBeYourFriend(ZOFIA.name))).toBeTruthy();
+    expect(card.getByText('Found you in the padel ranking')).toBeTruthy();
+    // In place of the group line — no sport and Level after it — and the chip still beside it.
+    expect(card.queryByText(/Padel 2,69/)).toBeNull();
+    expect(card.getByText('95')).toBeTruthy();
+  });
+
   it('opens their record from the face', async () => {
     friendServer();
     await launchSignedIn();

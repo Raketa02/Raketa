@@ -96,23 +96,10 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
     reliability: reliability(response.reliability),
     ...(response.variety === undefined ? {} : { variety: variety(response.variety) }),
     ...opinion(response),
-    ...ownBlock(response),
     // Spelled as the wire spells it — `friends`' vocabulary holds the two equal.
     relation: response.relation,
+    canAddFriend: response.can_add_friend,
   };
-}
-
-/**
- * **The reader's own block of the subject, or nothing** (#587, ADR-0193 §3).
- *
- * **A record that opens is never blocked, either way** ([#773](https://github.com/Raketa02/Raketa/issues/773),
- * ADR-0203): the server refuses a blocked pair's record with the record's one refusal, and a block
- * state it cannot read is a `503`, so the wire stopped sending `blocked_by_you`. Somebody else's
- * record is therefore `false` — *Block* — and your own is nothing, since there is nobody to block.
- * The *Unblock* this field fed can no longer be reached; taking it out of the foot is #779's.
- */
-function ownBlock(response: PlayerRecordResponse): { readonly blockedByYou?: boolean } {
-  return response.is_self ? {} : { blockedByYou: false };
 }
 
 /**

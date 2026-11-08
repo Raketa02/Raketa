@@ -1,7 +1,8 @@
-# blocks — Block and Unblock on the record, Blocked players under You › Account
+# blocks — Block on the record, Blocked players under You › Account
 
 The client side of the backend's **Blocks** context: a player keeps somebody off their games from
-that person's record, and undoes it from the record or from a list. Built by
+that person's record, and undoes it from a list under You › Account (the record's own _Unblock_ went
+with #779, below). Built by
 [#587](https://github.com/Raketa02/Raketa/issues/587) for PRD
 [#571](https://github.com/Raketa02/Raketa/issues/571), on the contract
 [#586](https://github.com/Raketa02/Raketa/issues/586) built, and decided by
@@ -95,3 +96,17 @@ mattered (the paragraph on the whole name above). On somebody the reader blocked
 alone and full width, and `friends` offers nothing beside it (the friends mechanics §3.5). The step
 above the row moved to the record's foot, which holds both buttons. A block also ends a friendship
 on the server (ADR-0202 §2); the record's re-read after it shows that, and nothing here names it.
+
+**Unblock left the record, and a block closes it** ([#779](https://github.com/Raketa02/Raketa/issues/779);
+[ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §8; the rankings
+screens §6; the words §30.8). Since #773 a record never opens between two people either of whom
+blocked the other, so the row is always _Block_: `BlockRow` lost its `blocked` prop, its _Unblock_
+and the record's re-read, and is handed the record's close instead (`onBlocked`). **Once the block
+stands** — after everything it moved has been read again, so the sheet's _Block_ stays busy until
+then — the confirm sheet and the record close together; the record is not read again, because that
+read would be refused. **The confirm sheet now ends _You can unblock from You › Blocked players._**
+(§30.8, a call), the one way back, and `friends`' refusal for asking somebody you blocked names the
+same place. When _Block_ stands alone is [`friends.md`](friends.md)'s rule. The paragraphs above that put _Unblock_ on the record, read `blockedByYou`, or have a block re-read the
+record describe #587–#753 and are superseded here; Blocked players and its _Unblock_ are unchanged.
+**Not seen on a device**: the confirm sheet and the record closing at once, a layer over a layer on
+Android.

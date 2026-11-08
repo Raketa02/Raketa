@@ -22,6 +22,14 @@ describe('toAskRequest', () => {
       made_from: 'RECORD',
     });
   });
+
+  it('sends a request from the ranking with the page’s sport, and no group (#779)', () => {
+    expect(toAskRequest('p-1', { from: 'RANKING', sport: 'tennis' })).toEqual({
+      player_id: 'p-1',
+      made_from: 'RANKING',
+      sport: 'TENNIS',
+    });
+  });
 });
 
 describe('toFriend', () => {

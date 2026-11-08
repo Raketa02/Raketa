@@ -216,8 +216,9 @@ export function withoutLevelAsksIn(home: Home, sports: readonly Sport[]): Home {
 /**
  * **One friend request on Home** (friends 5; the words §29.2): *Inés wants to be your friend · With
  * you in Kazimierz crew · Padel 3,40 · ✦ 98*. Every part but the requester and their reliability is
- * absent where the wire says nothing: a link's request names no group (`byLink`), a request asked
- * from a screen with no group names none, and neither does one either of them has since left.
+ * absent where the wire says nothing: a link's request names no group (`byLink`), nor does one from
+ * the ranking (`fromRanking`); a request asked from a screen with no group names none, and neither
+ * does one either of them has since left.
  */
 export interface HomeFriendRequest {
   readonly playerId: string;
@@ -227,6 +228,11 @@ export interface HomeFriendRequest {
   readonly photoUrl?: string;
   /** Made by their Friend link: *Invited you to Raketa* in place of the group line. */
   readonly byLink: boolean;
+  /**
+   * Made from the reader's record on the Rankings page (#779): *Found you in the padel ranking* — the
+   * ranking of `sport` — in place of the group line, whether or not they share a group.
+   */
+  readonly fromRanking: boolean;
   /** The group they asked from, while both are in it. */
   readonly group?: { readonly id: string; readonly name: string };
   /** The sport of the screen they asked from — absent for one this build cannot name. */

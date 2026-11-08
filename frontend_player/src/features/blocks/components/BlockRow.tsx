@@ -1,14 +1,15 @@
 /**
- * **The row a record ends with** — *Block kuba.w* behind a confirm sheet, or *Unblock kuba.w*
- * once the reader has ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571
- * stories 1–5 and 18;
- * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
+ * **The *Block* a record ends with**, behind a confirm sheet
+ * ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571 stories 1–5 and 18;
+ * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md);
+ * [#779](https://github.com/Raketa02/Raketa/issues/779), ADR-0203 §8).
  *
- * `player_record`'s sheet draws it last, on every record but your own, from the record's own
- * `blockedByYou` — so which of the two it is was the server's answer at the last read, and a press
- * re-reads the record rather than flipping the row itself (`useBlockWrites`).
+ * `player_record`'s sheet draws it last, on every record but your own. **It is always *Block***: a
+ * record never opens between two people either of whom blocked the other (#773), so there is no
+ * *Unblock* to draw here any more — Unblock lives in You › Blocked players, and the confirm sheet
+ * says so.
  *
- * ## Block asks first; Unblock does not
+ * ## Block asks first
  *
  * **A block can cost the blocker a game** — their yeses where the other person is In are taken back
  * and nothing brings them back — so ADR-0193 says the sheet must say what blocking does, *because
@@ -18,30 +19,32 @@
  * controls never share a name. **Cancel changes nothing**, and closing takes back a block still
  * waiting for the network.
  *
- * **An unblock takes effect on the press.** It costs nothing and moves nothing back — no yes
- * returns — and a second block is one sheet away, so a question in front of it would be friction
- * on the way out of a mistake.
+ * ## A block closes the record
+ *
+ * **Once the block stands, the record closes** (`onBlocked`; the rankings screens §6, a call): it no
+ * longer opens for either of them, so a record left drawn would be one neither may read, and its
+ * re-read would be refused. The block settles once what it moved has been read again, then the
+ * confirm sheet and the record go together.
  *
  * ## The sheet is over the record, not instead of it
  *
  * It is the first sheet drawn **over another sheet**: a child of the record's content, so on iOS its
  * native window is presented from the record's, and on Android `OverlayHost` lays it as the next
- * layer up. Whichever row is drawn is hidden from a screen reader while it is up, as `ExitDoor`'s
- * door is — one name on the row and the act, so the first press reaches the row and the second the
- * act. The sheet goes the moment the re-read record says the block stands.
+ * layer up. The row is hidden from a screen reader while it is up, as `ExitDoor`'s door is — one
+ * name on the row and the act, so the first press reaches the row and the second the act.
  *
  * ## Beside the friend button, or alone
  *
  * Since [#753](https://github.com/Raketa02/Raketa/issues/753) the record's foot is **one row of two**:
  * `friends`' button on the left and this one on the right, drawn *Block* — the name is spoken, the
- * drawing is the half-width button's word. On somebody the reader blocked it is *Unblock*, **alone
- * and full width** (`friends`' `recordFootOf`), and no offer to befriend them stands beside it.
+ * drawing is the half-width button's word. **Where the record offers no friend button** — nothing
+ * stands between them and no request may be sent (#779) — it stands alone, full width (`friends`'
+ * `recordFootOf`).
  *
  * ## Said where it happened
  *
- * A refused block is said on the sheet, with the act still there; a refused unblock under the row
- * (`WriteNote`). Offline, either write waits for the network, and an amber line says so where the
- * press was.
+ * A refused block is said on the sheet, with the act still there. Offline, it waits for the network,
+ * and an amber line says so on the sheet.
  */
 
 import { useRef, useState } from 'react';
@@ -49,15 +52,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { behindOverlay, BottomSheet, Button, theme, type FocusTarget } from '@/shared/ui';
 
-import { useBlock, useUnblock, type Reread } from '../hooks/useBlockWrites';
+import { useBlock } from '../hooks/useBlockWrites';
 
-import {
-  BLOCKS_COPY,
-  blockRowLabel,
-  blockSheetBody,
-  blockSheetTitle,
-  unblockRowLabel,
-} from './blocksCopy';
+import { BLOCKS_COPY, blockRowLabel, blockSheetBody, blockSheetTitle } from './blocksCopy';
 import { WriteNote, type WriteState } from './WriteNote';
 
 const COPY = BLOCKS_COPY;
@@ -67,18 +64,15 @@ export interface BlockRowProps {
   readonly playerId: string;
   /** Their whole name, as the record says it. */
   readonly name: string;
-  /** Whether the reader has blocked them, as the record last read it. */
-  readonly blocked: boolean;
   /**
-   * **The record's own re-read**, which a block or an unblock awaits before it settles — so the row
-   * flips on the server's next answer. The sheet holds that read; this feature never names its key.
+   * **What the record does once the block stands** — it closes: a blocked pair's record never opens
+   * (#779). The sheet holds the record; this feature never names its key.
    */
-  readonly rereadRecord: Reread;
+  readonly onBlocked: () => void;
 }
 
-export function BlockRow({ playerId, name, blocked, rereadRecord }: BlockRowProps) {
-  const { act: blocking, takeBack } = useBlock(playerId, rereadRecord);
-  const unblocking = useUnblock(playerId, rereadRecord);
+export function BlockRow({ playerId, name, onBlocked }: BlockRowProps) {
+  const { act: blocking, takeBack } = useBlock(playerId);
   const [asking, setAsking] = useState(false);
   const row = useRef<View>(null);
 
@@ -96,31 +90,25 @@ export function BlockRow({ playerId, name, blocked, rereadRecord }: BlockRowProp
   return (
     <>
       <View ref={row} style={s.row} {...behindOverlay(asking)}>
-        {blocked ? (
-          <Button
-            label={COPY.row.unblock}
-            accessibilityLabel={unblockRowLabel(name)}
-            variant="secondary"
-            busy={unblocking.isPending}
-            busyLabel={COPY.unblocking}
-            onPress={() => unblocking.mutate()}
-          />
-        ) : (
-          <Button
-            label={COPY.row.block}
-            accessibilityLabel={blockRowLabel(name)}
-            variant="secondary"
-            onPress={ask}
-          />
-        )}
-        <WriteNote write={unblocking} />
+        <Button
+          label={COPY.row.block}
+          accessibilityLabel={blockRowLabel(name)}
+          variant="secondary"
+          onPress={ask}
+        />
       </View>
 
       <BlockSheet
-        // Gone the moment the re-read record says the block stands.
-        visible={asking && !blocked}
+        visible={asking}
         name={name}
-        onBlock={() => blocking.mutate(undefined, { onSuccess: () => setAsking(false) })}
+        onBlock={() =>
+          blocking.mutate(undefined, {
+            onSuccess: () => {
+              setAsking(false);
+              onBlocked();
+            },
+          })
+        }
         onClose={close}
         write={blocking}
         returnFocusTo={row}

@@ -29,6 +29,8 @@ describe('the name', () => {
     expect(blockRowLabel(NAME)).toBe('Block kuba.w');
     expect(unblockRowLabel(NAME)).toBe('Unblock kuba.w');
     expect(blockSheetTitle(NAME)).toBe('Block kuba.w?');
-    expect(blockSheetBody(NAME)).toBe("You won't be put in games with kuba.w. They aren't told.");
+    expect(blockSheetBody(NAME)).toBe(
+      "You won't be put in games with kuba.w. They aren't told. You can unblock from You › Blocked players.",
+    );
   });
 });

@@ -36,8 +36,9 @@
  * here and was not on the twenty-row shortlist. A skeleton, the record, or the refusal.
  *
  * **The refusal draws one line and nothing else.** Never disclosed, held, an account that may
- * not be shown, and no such player answer the same code with the same body, byte for byte — a
- * block is not a gate any more, either way round (ADR-0193 §2). There is no retry on it,
+ * not be shown, no such player, and a block either way between the two (#773, ADR-0203 §8,
+ * superseding ADR-0193 §2 for the record) answer the same code with the same body, byte for byte,
+ * so the refusal never says which. There is no retry on it,
  * because re-asking a refusal returns the refusal —
  * where a failure to *reach* the platform gets the recovery sentence and a control, since that
  * one genuinely can succeed on a second press.
@@ -64,30 +65,31 @@
  * refused record is somebody the reader may not act on, and the buttons would say otherwise.
  * The next surface that wants a foot has to argue for one.
  *
- * ## It ends in Block or Unblock — but not on your own
+ * ## It ends in Block — but not on your own
  *
  * The last row is **`blocks`' `BlockRow`** ([#587](https://github.com/Raketa02/Raketa/issues/587),
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)):
- * *Block kuba.w* behind a confirm sheet, or *Unblock kuba.w* once the reader
- * has. It is not the foot — no caller fills it, and every surface that opens a record gets it —
- * and it reads no global state either: whether the reader blocked the subject is **this read's
- * own answer**, `blocked_by_you`, folded to `blockedByYou` at the wire boundary and absent on your
- * own record and where the server could not read the blocks, so neither row is drawn there. A
- * press re-reads the record — **this sheet hands its own re-read down**, so `blocks` never names
- * this feature's keys while this feature draws its row — and the row is the re-read's answer.
- * Drawn with the record only, as the foot is.
+ * *Block kuba.w* behind a confirm sheet. It is not the foot — no caller fills it, and every surface
+ * that opens a record gets it — and it reads no global state either. **It is always *Block***
+ * ([#779](https://github.com/Raketa02/Raketa/issues/779), ADR-0203 §8): a record never opens
+ * between two people either of whom blocked the other, so there is no *Unblock* here — it lives in
+ * You › Blocked players, and the confirm sheet says so. **Once the block stands, this sheet closes**
+ * (`onBlocked` is the sheet's own close): the record no longer opens for either of them. Drawn with
+ * the record only, as the foot is.
  *
  * ## Its foot is two buttons: Add friend beside Block
  *
  * Since [#753](https://github.com/Raketa02/Raketa/issues/753) (the friends screens §2; Q3, Q40) the
  * last row is **one row of two**: `friends`' `FriendButton` on the left — *Add friend*, *Request
  * sent ▾*, *Accept* or *Friend ✓ ▾*, from this read's own `relation` — and `blocks`' *Block* on the
- * right. **On somebody the reader blocked, *Unblock* stands alone, full width**, and nothing offers to
- * befriend them; **on your own record, neither**. Which of the three is `friends`' `recordFootOf`,
- * read off this record — the rule is that feature's, the read is this one's. Both acts re-read this
- * record before they settle, handed down as the block's is. A request asked here says it was asked
- * from the record, with the group and the sport the caller opened it from (`groupId`, `sport`),
- * which the other person's Home card names.
+ * right. **Add friend only where the record says a request may be sent** (`canAddFriend`, #779):
+ * where nothing stands between them and none may be, *Block* stands alone, full width; **on your own
+ * record, neither**. Which of the three is `friends`' `recordFootOf`, read off this record — the rule
+ * is that feature's, the read is this one's. The friend button's acts re-read this record before they
+ * settle, handed down. A request asked here says where it was asked from (`friends`'
+ * `recordAskedWhere`): the record, with the group and the sport the caller opened it from (`groupId`,
+ * `sport`), which the other person's Home card names — or **the ranking**, with the page's sport,
+ * where the Rankings page opened it (`rankingSport`), so the card reads *Found you in the padel ranking*.
  *
  * ## The account is folded under the blocks
  *
@@ -99,8 +101,8 @@
  *
  * ## Six regions, six elements
  *
- * There is no interactive element inside it other than the pairing row, the Block or Unblock row
- * and the foot, where a caller fills it — so every group merges
+ * There is no interactive element inside it other than the pairing row, the record's own foot
+ * and the caller's, where a caller fills it — so every group merges
  * into the nearest heading (§20.1) and `recordPresentation` writes what each of them says. The
  * counted card and *What opponents said* are two of them for a reason that is not layout: one
  * is headed with a promise about **authorship**, and the other is what would break it. The
@@ -116,7 +118,12 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { BlockRow } from '@/features/blocks/types';
-import { FriendButton, recordFootOf, type AskedWhere } from '@/features/friends/types';
+import {
+  FriendButton,
+  recordAskedWhere,
+  recordFootOf,
+  type AskedWhere,
+} from '@/features/friends/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { BottomSheet, Note, Button, SocialTagRow, theme } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
@@ -204,6 +211,12 @@ export interface PlayerRecordSheetProps {
    * names on the other person's Home (#753). Absent where the surface has no group.
    */
   readonly groupId?: string;
+  /**
+   * **The Rankings page's sport, where that page opened the record** (#779): a request asked here is
+   * then the ranking's, in this sport, and the other person's Home card reads *Found you in the padel
+   * ranking*. Absent everywhere else.
+   */
+  readonly rankingSport?: Sport;
 }
 
 export function PlayerRecordSheet({
@@ -217,6 +230,7 @@ export function PlayerRecordSheet({
   pairing,
   foot,
   groupId,
+  rankingSport,
 }: PlayerRecordSheetProps) {
   const record = usePlayerRecord({
     subject,
@@ -248,12 +262,9 @@ export function PlayerRecordSheet({
             {...(tagOverlap === undefined ? {} : { tagOverlap })}
             {...(pairing === undefined ? {} : { pairing })}
             {...(foot === undefined ? {} : { foot })}
-            where={{
-              from: 'RECORD',
-              ...(groupId === undefined ? {} : { groupId }),
-              ...(sport === undefined ? {} : { sport }),
-            }}
+            where={recordAskedWhere({ rankingSport, groupId, sport })}
             rereadRecord={() => record.refetch()}
+            onBlocked={onClose}
           />
         )}
       </View>
@@ -304,13 +315,16 @@ function Filled({
   foot,
   where,
   rereadRecord,
+  onBlocked,
 }: {
   readonly record: PlayerRecord;
   readonly playerId: string;
   /** Where a request asked from the foot is asked from. */
   readonly where: AskedWhere;
-  /** This read again — what every act at the foot awaits before it settles. */
+  /** This read again — what every friend act at the foot awaits before it settles. */
   readonly rereadRecord: () => Promise<unknown>;
+  /** The sheet's own close — what a block that stands does to it. */
+  readonly onBlocked: () => void;
 } & Pick<
   PlayerRecordSheetProps,
   'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing' | 'foot'
@@ -369,44 +383,47 @@ function Filled({
           last, which is the whole reason it is at the end and inside the scroll (9.1). */}
       {foot === undefined ? null : <View style={s.foot}>{foot}</View>}
 
-      {/* **Add friend beside Block, last** (#753, #587): on every record but your own, from the
-          record's own answers. The acts are `friends'` and `blocks'`; where the reader stands
-          with them is this read's, and so is the re-read every act awaits. */}
-      <RecordFoot record={record} playerId={playerId} where={where} rereadRecord={rereadRecord} />
+      {/* **Add friend beside Block, last** (#753, #587, #779): on every record but your own, from
+          the record's own answers. The acts are `friends'` and `blocks'`; where the reader stands
+          with them is this read's, and so is the re-read every friend act awaits — a block closes
+          the sheet instead. */}
+      <RecordFoot
+        record={record}
+        playerId={playerId}
+        where={where}
+        rereadRecord={rereadRecord}
+        onBlocked={onBlocked}
+      />
     </>
   );
 }
 
 /**
  * **The record's foot** — see the module note. `recordFootOf` says which of the three; a pair is two
- * halves of the row, *Unblock* the row whole.
+ * halves of the row, *Block* alone the row whole.
  */
 function RecordFoot({
   record,
   playerId,
   where,
   rereadRecord,
+  onBlocked,
 }: {
   readonly record: PlayerRecord;
   readonly playerId: string;
   readonly where: AskedWhere;
   readonly rereadRecord: () => Promise<unknown>;
+  readonly onBlocked: () => void;
 }) {
   const foot = recordFootOf(record);
+  const block = <BlockRow playerId={playerId} name={record.nickname} onBlocked={onBlocked} />;
   switch (foot.kind) {
     case 'nothing':
       return null;
-    case 'unblock':
+    case 'block':
       return (
-        <View style={s.footRow}>
-          <View style={s.whole}>
-            <BlockRow
-              playerId={playerId}
-              name={record.nickname}
-              blocked
-              rereadRecord={rereadRecord}
-            />
-          </View>
+        <View style={s.footRow} testID="record-foot">
+          <View style={s.whole}>{block}</View>
         </View>
       );
     case 'pair':
@@ -421,16 +438,7 @@ function RecordFoot({
               rereadRecord={rereadRecord}
             />
           </View>
-          {foot.block ? (
-            <View style={s.half}>
-              <BlockRow
-                playerId={playerId}
-                name={record.nickname}
-                blocked={false}
-                rereadRecord={rereadRecord}
-              />
-            </View>
-          ) : null}
+          <View style={s.half}>{block}</View>
         </View>
       );
   }
@@ -451,7 +459,7 @@ const s = StyleSheet.create({
     marginTop: theme.space.xs,
   },
   half: { flex: 1 },
-  // Unblock alone takes the row whole.
+  // Block alone takes the row whole.
   whole: { flex: 1 },
   refusal: { ...theme.type.tiny, color: theme.color.muted },
   failure: { gap: theme.space.sm },

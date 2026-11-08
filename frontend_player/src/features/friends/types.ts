@@ -58,6 +58,7 @@ export { FriendRequestsRow, type FriendRequestsRowProps } from './components/Fri
 export { LevelAsksRow, type LevelAsksRowProps } from './components/LevelAsksRow';
 
 export {
+  recordAskedWhere,
   recordFootOf,
   type AskedWhere,
   type FriendButton as FriendButtonKind,

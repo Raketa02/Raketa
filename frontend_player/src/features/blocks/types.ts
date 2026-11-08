@@ -3,10 +3,11 @@
  * ([#587](https://github.com/Raketa02/Raketa/issues/587);
  * [ADR-0193](../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
- * **`player_record` draws `BlockRow`** at the foot of every record but your own, from the record's
- * own `blockedByYou`: the record says whether the reader blocked its subject, and this feature owns
- * the act. **The shell composes `BlockedPlayersRow`** into the You tab's ACCOUNT group, and the
- * route file under `you/` mounts `BlockedPlayersScreen`.
+ * **`player_record` draws `BlockRow`** at the foot of every record but your own — always *Block*,
+ * and a block closes the record, since a blocked pair's record never opens
+ * ([#779](https://github.com/Raketa02/Raketa/issues/779), ADR-0203 §8). **Unblock is in You ›
+ * Blocked players alone**: the shell composes `BlockedPlayersRow` into the You tab's ACCOUNT group,
+ * and the route file under `you/` mounts `BlockedPlayersScreen`.
  */
 
 export { BlockRow, type BlockRowProps } from './components/BlockRow';

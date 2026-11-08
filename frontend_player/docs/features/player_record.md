@@ -432,3 +432,16 @@ nothing. The _Unblock_ the field fed is unreachable; taking it out of the foot, 
 _Unblock_ on the record lost those cases (`blocks.test`, `friends.test`): the state cannot occur. After
 a block from the record, the record's re-read is refused and the record already drawn stays drawn
 until the sheet is closed — #779 closes it once the block is made (the rankings screens §6).
+
+**Add friend where the record says so, no Unblock, and a block closes the sheet**
+([#779](https://github.com/Raketa02/Raketa/issues/779); ADR-0203 §8–§9; the rankings screens §6).
+`blockedByYou` and `ownBlock` are gone; the record carries **`canAddFriend`**, the wire's
+`can_add_friend` as it came, and its foot is `friends`' `recordFootOf` of it — the rule, with _Block_
+alone where no request may be sent and no _Unblock_ anywhere, is [`friends.md`](friends.md)'s. **The
+sheet hands `BlockRow` its own close** (`onBlocked`), so a block that stands closes it rather than
+leaving a record neither may read under a refused re-read — the paragraph above's _until the sheet
+is closed_. **A new optional prop, `rankingSport`** — the Rankings page's sport, where that page
+opened the record — goes with `groupId` and `sport` into `friends`' `recordAskedWhere`, which every
+record's request now goes through. The paragraphs above on _Unblock_ at the foot and on blocks that
+could not be read describe #587–#775 and are superseded; since #773 those are a `503`, the recovery
+sentence with _Try again_.

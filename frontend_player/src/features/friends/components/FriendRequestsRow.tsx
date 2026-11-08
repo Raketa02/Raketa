@@ -45,7 +45,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { sportLabel } from '@/features/onboarding/types';
+import { sportInLine, sportLabel } from '@/features/onboarding/types';
 import { useHomeFriendRequests, type HomeFriendRequest } from '@/features/proposals/types';
 import { Button, Card, PlayerPhoto, theme } from '@/shared/ui';
 
@@ -124,8 +124,14 @@ function RequestCard({ request, width, scoreTag, onFace, onAnswered }: RequestCa
   // a press's own callbacks would go with it.
   const accepting = useAcceptFriendRequest(request.playerId, onAnswered);
   const settingAside = useSetAsideFriendRequest(request.playerId, onAnswered);
+  // A request from the ranking names its sport's ranking. One whose sport this build cannot name says
+  // whatever else the wire named — no group, since the ranking's page shows none — so the chip stands
+  // alone.
+  const ranking =
+    request.fromRanking && request.sport !== undefined ? sportInLine(request.sport) : undefined;
   const where = whereLine({
     byLink: request.byLink,
+    ...(ranking === undefined ? {} : { ranking }),
     ...(request.group === undefined ? {} : { group: request.group }),
     ...(request.sport === undefined ? {} : { sportName: sportLabel(request.sport) }),
     ...(request.level === undefined ? {} : { level: request.level }),

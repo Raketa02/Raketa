@@ -346,21 +346,21 @@ export interface PlayerRecord {
    */
   readonly opinion?: Opinion;
   /**
-   * **Whether the reader has blocked them** — the reader's own block, and never theirs of the
-   * reader ([#587](https://github.com/Raketa02/Raketa/issues/587),
-   * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
-   * §3). The sheet ends in *Unblock* for `true` and *Block* for `false`.
-   *
-   * **Absent where no row may be drawn**, folded at the wire boundary: on your own record — there
-   * is nobody to block — and where the server could not read the blocks, when neither row is a
-   * guess worth drawing.
-   */
-  readonly blockedByYou?: boolean;
-  /**
    * **Where the reader stands with them** ([#753](https://github.com/Raketa02/Raketa/issues/753),
    * ADR-0202 §1) — the left button of the record's foot, beside *Block*: *Add friend*, *Request
-   * sent ▾*, *Accept* or *Friend ✓ ▾*. `NONE` on your own record, which draws neither, and asked
-   * for nothing when `blockedByYou` is `true`: *Unblock* stands alone (`friends`' `recordFootOf`).
+   * sent ▾*, *Accept* or *Friend ✓ ▾*. `NONE` on your own record, which draws neither.
+   *
+   * **Nothing here says whether either of them blocked the other** (#773, #779; ADR-0203 §8): a
+   * record never opens across a block, either way, so *Block* is always *Block* and Unblock lives in
+   * You › Blocked players.
    */
   readonly relation: FriendRelation;
+  /**
+   * **Whether to offer *Add friend*** ([#779](https://github.com/Raketa02/Raketa/issues/779),
+   * ADR-0203 §9) — the server's answer: `relation` is `NONE` and a request would be admitted, because
+   * they share a group with the reader now or are listed on General and not hidden. `false` on your
+   * own record. Where it is `false` and nothing stands between them, *Block* stands alone
+   * (`friends`' `recordFootOf`). The daily limit is not in it: the eleventh press is refused.
+   */
+  readonly canAddFriend: boolean;
 }

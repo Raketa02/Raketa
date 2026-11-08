@@ -29,7 +29,9 @@
  * so. **Another sport is another page**, read from its top.
  *
  * **Any face, row or podium step opens the full record**, a stranger's too; the reader's own opens
- * their own (§6). Whose record is up is this screen's state — route-local, as Members holds it — and
+ * their own (§6). **A request asked from it is the ranking's** (#779), in the page's sport, so the
+ * other person's Home reads *Found you in the padel ranking*; *Add friend* is offered where the record
+ * says a request may be sent. Whose record is up is this screen's state — route-local, as Members holds it — and
  * so is the Add friends sheet; both are drawn beside the screen's root, which is hidden from a
  * listener while either is up.
  *
@@ -144,6 +146,8 @@ export function RankingsScreen({ sport: asked }: RankingsScreenProps) {
           onClose={() => setReading(undefined)}
           subject={reading.subject}
           sport={reading.sport}
+          // A request asked here is the ranking's, in the page's sport (#779).
+          rankingSport={reading.sport}
         />
       )}
 

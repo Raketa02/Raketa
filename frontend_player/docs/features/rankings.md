@@ -13,8 +13,9 @@ set is [`docs/specs/rankings/`](../../../docs/specs/rankings/README.md) and ever
 the first page of the list; [#776](https://github.com/Raketa02/Raketa/issues/776) the later pages and
 the _You · 212th_ button; [#777](https://github.com/Raketa02/Raketa/issues/777) the _General |
 Friends_ switch, the view the phone remembers, and Friends; [#778](https://github.com/Raketa02/Raketa/issues/778)
-the _Show me in General_ switch on the hidden card, and the page following it. Still to come: Add
-friend from a stranger's record ([#779](https://github.com/Raketa02/Raketa/issues/779)).
+the _Show me in General_ switch on the hidden card, and the page following it; and
+[#779](https://github.com/Raketa02/Raketa/issues/779) _Add friend_ from a stranger's record, sent from
+the ranking.
 
 **Every number is the server's, and this feature computes none of them.** The order, every place,
 _of N_, the chip, the gap, and how many wins close it are worked out by the backend — the win count
@@ -147,6 +148,13 @@ because at once is almost always before the delivery — and how a switch turned
 stands under the Home tab reaches the card. The switch followed is the one the profile **holds**
 (`useShownInGeneral`), never a press still on its way, so a refused write follows nothing. Friends ignores the switch, and
 follows nothing.
+
+**A request from a record opened here is the ranking's** (#779; the screens §6; the mechanics §12–§13).
+The page hands the record sheet its sport twice: as `sport`, what the record is about, and as
+`rankingSport`, where it was opened — so _Add friend_ sends `RANKING` with the page's sport and no
+group, and the other person's Home reads _Found you in the padel ranking_. A blocked pair's record,
+or a hidden stranger's, reads the record's one refusal. The foot, the daily limit's sentence and the
+Home card are [`friends.md`](friends.md)'s; a block closing the record is [`blocks.md`](blocks.md)'s.
 
 **Calls made here, open to overrule:**
 
