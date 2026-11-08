@@ -30,6 +30,12 @@ export { NicknameRow, YOU_NICKNAME_ROUTE, type NicknameRowProps } from './compon
 export { NicknameScreen } from './components/NicknameScreen';
 export { NICKNAME_ROW_TITLE, SAVE_NICKNAME } from './components/nicknamePresentation';
 export { SignInScreen } from './components/SignInScreen';
+/**
+ * **Whether a route is the screen in view** (#784) — read in the route file and handed to the
+ * stage, whose status bar is light only while it is. The navigator's hooks throw outside a
+ * navigator, so the screen takes the answer as a prop and the suites draw it on its own.
+ */
+export { useScreenInView } from './hooks/useScreenInView';
 export { SignUpScreen } from './components/SignUpScreen';
 
 /**

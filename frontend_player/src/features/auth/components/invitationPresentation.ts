@@ -17,8 +17,12 @@ import type { InvitationLinkState } from '../domain/vocabulary';
 import { authErrorMessage } from './authErrorMessage';
 
 export const INVITATION_COPY = {
-  /** Under the Sign in button, beside *Forgot password?*, on the one sign-in screen everyone shares. */
-  signInLink: 'Have an invitation code?',
+  /**
+   * Under the Sign in button's *or* rule, on the one sign-in screen everyone shares — a statement
+   * on a button since the stage (#784), where it was a question on a text link. The screen it
+   * opens keeps its question for a title.
+   */
+  signInLink: 'I have an invitation code',
   code: {
     title: 'Have an invitation code?',
     lead: 'Type the email the club invited and the 8-character code from its email.',

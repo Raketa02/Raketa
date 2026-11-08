@@ -1,0 +1,67 @@
+/**
+ * **What a screen reader meets, in order** — a rendered tree walked depth first.
+ *
+ * **In `test-support/` because two suites ask the same question** (#784): where a field's refusal
+ * sits — on the label's row or under the box — and the order the sign-in stage's form reads in.
+ * Where a thing sits on the screen is not something a query can see; the order a listener meets it
+ * in is, and for a column it is the same fact.
+ *
+ * Each box is `box:<name>`; each button or link is `<role>:<name>`, never its insides; a header or
+ * an alert is `<role>:<its words>`; every other word is itself. Hidden elements are walked too —
+ * a suite that cares picks the items it wants with `inOrder`.
+ */
+
+/** A host element as `screen.toJSON()` hands it over — only what the walk reads. */
+interface Node {
+  readonly type: string;
+  readonly props: Readonly<Record<string, unknown>>;
+  readonly children: readonly (Node | string)[] | null;
+}
+
+type Rendered = Node | readonly Node[] | string | null;
+
+/** `Array.isArray` does not narrow a readonly array; this does. */
+const isList = (node: Rendered): node is readonly Node[] => Array.isArray(node);
+
+export function readingOrder(tree: Rendered): string[] {
+  const order: string[] = [];
+  const walk = (node: Rendered | undefined): void => {
+    if (node === null || node === undefined) return;
+    if (typeof node === 'string') {
+      order.push(node);
+      return;
+    }
+    if (isList(node)) {
+      node.forEach(walk);
+      return;
+    }
+    const role = node.props.accessibilityRole;
+    const name = node.props.accessibilityLabel;
+    if (node.type === 'TextInput') {
+      order.push(`box:${String(name)}`);
+      return;
+    }
+    if ((role === 'button' || role === 'link') && typeof name === 'string') {
+      order.push(`${role}:${name}`);
+      return;
+    }
+    if (role === 'header' || role === 'alert') {
+      order.push(`${role}:${wordsOf(node.children)}`);
+      return;
+    }
+    node.children?.forEach(walk);
+  };
+  walk(tree);
+  return order;
+}
+
+/** `wanted`, in the order the tree meets them — everything else on the screen dropped. */
+export function inOrder(tree: Rendered, wanted: readonly string[]): string[] {
+  return readingOrder(tree).filter((item) => wanted.includes(item));
+}
+
+function wordsOf(children: Node['children']): string {
+  return (children ?? [])
+    .map((child) => (typeof child === 'string' ? child : wordsOf(child.children)))
+    .join('');
+}

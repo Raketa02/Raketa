@@ -309,6 +309,27 @@ const color = {
   gridLightInk: '#266447',
   gridMid: '#5EC39B',
   gridMidInk: '#1C4A38',
+
+  /** THE STAGE'S GROUND — the dark hero over sign-in (and, from #785, sign-up), and the app's
+   *  FIFTH dark surface: a hero over a screen's top four tenths, behind the paper sheet that holds
+   *  the form ([#784](https://github.com/Raketa02/Raketa/issues/784); the design system's 12.2,
+   *  Part 16 2026-11-08). Argued for its own record, as ADR-0167 §2 said the next dark surface
+   *  would be: the first thing a person sees, drawn the colour of the night the yes screen is.
+   *
+   *  MEASURED off mocks 1–3 at 1x: the hero is ONE flat value, `#15252C`, from the status bar to
+   *  the sheet's edge — not a radial — which is `yesGroundEdge` one step off in red, and is NOT
+   *  that token, for the reason each ground before it gave: a value is written for what was
+   *  drawn, and the yes ground is that screen's alone. Hue 198°, `night`'s family. What sits on
+   *  it, computed: white 15,76 (the wordmark and the headline); `volt` 12,57 (the wordmark's dot,
+   *  a mark). Derived in stageGround.test.ts. Nothing else may draw it. */
+  stageGround: '#15252C',
+
+  /** THE STAGE'S FOOT GLOW — a flat ellipse of light where the sheet meets the hero, brightest at
+   *  the sheet's edge under the middle of the screen and gone a tenth of the hero above it.
+   *  MEASURED off mock 1 three pixels above the sheet; hue 160°, a green the ground falls into
+   *  rather than a second dark. White on it 12,95 — the headline's last line sits just above its
+   *  reach. Derived in stageGround.test.ts; `StageGround.tsx` holds the shape. */
+  stageGlow: '#23352F',
 } as const;
 
 /**
@@ -500,6 +521,19 @@ const type = {
    *  two buttons' own words. The outline, the tilt and the corner are the drawing's own
    *  (`DeckStage.tsx`). Feedback and never a control: nothing announces it. ONE USE. */
   deckStamp: { fontFamily: font.sans[800], fontSize: 22, letterSpacing: 1.1, lineHeight: 26 },
+  /** THE STAGE'S TWO LARGE WORDS — the hero's headline in white and the sheet's title in `ink`,
+   *  on sign-in and sign-up and nowhere else ([#784](https://github.com/Raketa02/Raketa/issues/784);
+   *  12.2, Part 16 2026-11-08). MEASURED off mocks 2 and 3, and the two are one size there: the
+   *  headline's first line is 256pt wide and *Sign in* 69pt, which Archivo 700 at 22 with the sans
+   *  ramp's −0,035em (−0,77) sets at 259 and 65. Line 26, `deckStamp`'s at the same size. Not
+   *  `deckName` at a second size and not `display` back: a decision made for the stage's two words,
+   *  and a third surface that wants a word this size reopens the stage's row in Part 16. */
+  stageTitle: { fontFamily: font.sans[700], fontSize: 22, letterSpacing: -0.77, lineHeight: 26 },
+  /** THE STAGE'S BOX VALUE — what is typed into the sign-in stage's boxes, and their placeholder
+   *  (#784; 6.13 as amended, Part 16 2026-11-08). MEASURED off mock 3: *tomek.k@gmail.com* is 129pt
+   *  wide, which Archivo 400 at 14 sets at 129,1. Line 20, `tiny`'s 1,45 at 14. Every other box keeps
+   *  `rlValue`; a second surface that wants this size reopens the stage's field row in Part 16. */
+  stageValue: { fontFamily: font.sans[400], fontSize: 14, lineHeight: 20 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
   /** The onboarding question itself. The prototype's 650 maps to 700. */
   question: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
@@ -1342,6 +1376,27 @@ const size = {
   railCardRatio: 0.74,
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
+  /** THE STAGE — sign-in's (and from #785 sign-up's) dark hero and the paper sheet over it
+   *  ([#784](https://github.com/Raketa02/Raketa/issues/784); 12.2, Part 16 2026-11-08).
+   *
+   *  `heroShare` is where the sheet's top edge sits at rest, as a SHARE of the window's height:
+   *  mock 1 puts it 366 of the screen's 885 pixels down, 0,41 — *a little under half*. Of the
+   *  window and never of the laid-out screen, because Android's window shrinks for the keyboard
+   *  and the hero must not move when it does.
+   *
+   *  `textMaxScale` is the hero's one Dynamic Type mechanism — the tab bar's `labelMaxScale`
+   *  approach, second instance: the hero is a picture with a fixed room, so its words may neither
+   *  be frozen nor grow without bound. DERIVED in `stageTextCap.test.ts` as the largest step at
+   *  which the headline stays within three lines on the narrowest phone. The form under it is not
+   *  capped: it scrolls.
+   *
+   *  `mark` is the wordmark's volt dot: 22 pixels in mock 2 at 2,85 to the point.
+   *
+   *  `control` is the sheet's control height — its text boxes (6.13's stage look) and its two
+   *  buttons (6.1's `stage` size) alike: 87–88 pixels in mock 3 at 1,82 to the point, so 48, where
+   *  the app's own box is 42. The three are one height in the mock, as 6.13's box and `btnXl` are
+   *  everywhere else. */
+  stage: { heroShare: 0.41, textMaxScale: 1.7, mark: 8, control: 48 },
 } as const;
 
 /** hitSlop presets that lift each control to a 44pt reachable height. Horizontal slop is

@@ -24,6 +24,12 @@
  * above the box and no button beside it to read the box off. **It is never a way to leave a field
  * unnamed** — the name is required either way, and what this chooses is only whether it is drawn.
  *
+ * **`errorOnLabelRow` moves the sentence, and nothing else** ([#784](https://github.com/Raketa02/Raketa/issues/784),
+ * 6.13 as amended in Part 16). The sign-in stage draws a field's refusal on its label's row,
+ * right-aligned, so the form under it does not shift down a line when a box is refused. It is
+ * the same sentence, still announced, beside the same red border; a long one wraps inside its
+ * own column rather than being cut off. Opt-in, so every other field keeps it under the box.
+ *
  * **The reveal control belongs to the field, not to the screen that uses it.** A password box
  * that cannot be read back is the one place where a typo costs a whole form: the player
  * retypes both halves and is told a third time that they do not match, with no way to see
@@ -97,6 +103,13 @@ export interface TextFieldProps extends Omit<
   /** Shown under the field and announced. Absent when the field is fine. */
   readonly error?: string;
   /**
+   * **Draw `error` on the label's row instead of under the box**, right-aligned in its own column
+   * — the sign-in stage's form (#784, 6.13 as amended in Part 16). Opt-in: every other field keeps
+   * its message under the box. A sentence too long for the row wraps inside its column rather
+   * than being cut off, and it is announced exactly as it is under the box.
+   */
+  readonly errorOnLabelRow?: boolean;
+  /**
    * Offer a show / hide control inside the box.
    *
    * Only meaningful on a field that starts masked, so it is opt-in rather than derived
@@ -132,6 +145,13 @@ export interface TextFieldProps extends Omit<
    * The recess is the page's own ground, the step `paper2` takes for a header on paper.
    */
   readonly recessed?: boolean;
+  /**
+   * **The sign-in stage's look** (#784, 6.13 as amended in Part 16): the label in `muted`
+   * sentence case (`rlLabel`), a `size.stage.control` box holding a `stageValue` a gutter in from
+   * each side, and **Show** and **Hide** in sentence case. Opt-in and one-line: every other field keeps
+   * 6.13's own look, and a growing field never asks for this one.
+   */
+  readonly stage?: boolean;
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
@@ -139,11 +159,13 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
     label,
     labelHidden = false,
     error,
+    errorOnLabelRow = false,
     reveal = false,
     growTo = 1,
     disabled = false,
     trailing,
     recessed = false,
+    stage = false,
     ...inputProps
   },
   ref,
@@ -180,9 +202,25 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
     [ref],
   );
 
+  // One sentence, drawn in one of two places: under the box, or on the label's row.
+  const sentence =
+    error === undefined ? null : (
+      <Text
+        style={[s.fieldError, errorOnLabelRow ? s.fieldErrorBeside : undefined]}
+        accessibilityRole="alert"
+      >
+        {error}
+      </Text>
+    );
+  const drawnLabel = labelHidden ? null : (
+    <Text style={[stage ? s.labelStage : s.label, errorOnLabelRow ? s.labelBeside : undefined]}>
+      {label}
+    </Text>
+  );
+
   return (
     <Pressable
-      style={[s.field, disabled ? s.disabled : undefined]}
+      style={[s.field, stage ? s.fieldStage : undefined, disabled ? s.disabled : undefined]}
       // Not an element of its own: the input inside it already carries the name and the
       // role, and a button wrapped around a text box would be announced before it.
       accessible={false}
@@ -192,7 +230,16 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       disabled={disabled}
       onPress={() => input.current?.focus()}
     >
-      {labelHidden ? null : <Text style={s.label}>{label}</Text>}
+      {errorOnLabelRow ? (
+        // The label and the sentence share one row: the label at the start, the sentence at the
+        // end in a column of its own that takes what the label leaves and wraps inside it.
+        <View style={s.labelRow}>
+          {drawnLabel}
+          {sentence}
+        </View>
+      ) : (
+        drawnLabel
+      )}
 
       {/* The border lives on the box rather than on the input, because the reveal control
           sits inside the same box and a border drawn around the input alone would cut it
@@ -204,6 +251,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       <View
         style={[
           s.box,
+          stage ? s.boxStage : undefined,
           recessed ? s.boxRecessed : undefined,
           grows ? s.boxGrown : undefined,
           focused && s.boxFocused,
@@ -238,7 +286,11 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           }
           // State is carried by the border colour AND by the message below, never by
           // colour alone.
-          style={[s.input, grows ? [s.inputGrown, { height: grown }] : undefined]}
+          style={[
+            s.input,
+            stage ? s.inputStage : undefined,
+            grows ? [s.inputGrown, { height: grown }] : undefined,
+          ]}
           placeholderTextColor={theme.color.muted}
           onFocus={(event) => {
             setFocused(true);
@@ -259,20 +311,22 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
             accessibilityState={{ expanded: revealed }}
             onPress={() => setRevealed((shown) => !shown)}
             hitSlop={theme.hit.btn}
-            style={({ pressed }) => [s.reveal, pressed ? s.revealPressed : undefined]}
+            style={({ pressed }) => [
+              s.reveal,
+              stage ? s.revealStage : undefined,
+              pressed ? s.revealPressed : undefined,
+            ]}
           >
-            <Text style={s.revealWord}>{revealed ? 'Hide' : 'Show'}</Text>
+            <Text style={stage ? s.revealWordStage : s.revealWord}>
+              {revealed ? 'Hide' : 'Show'}
+            </Text>
           </Pressable>
         ) : null}
 
         {trailing === undefined ? null : <View style={s.trailing}>{trailing}</View>}
       </View>
 
-      {error !== undefined ? (
-        <Text style={s.fieldError} accessibilityRole="alert">
-          {error}
-        </Text>
-      ) : null}
+      {errorOnLabelRow ? null : sentence}
     </Pressable>
   );
 });
@@ -286,6 +340,28 @@ const s = StyleSheet.create({
     color: theme.color.ink,
     textTransform: 'uppercase',
   },
+  // The stage's look (`stage`): measured off mock 3. The label is its own style rather than an
+  // override of `label`, so 6.13's tracking and uppercase are not carried into it.
+  fieldStage: { gap: theme.space.xs },
+  labelStage: { ...theme.type.rlLabel, color: theme.color.muted },
+  boxStage: { minHeight: theme.size.stage.control },
+  inputStage: {
+    ...theme.type.stageValue,
+    minHeight: theme.size.stage.control,
+    paddingHorizontal: theme.space.lg,
+  },
+  revealStage: { paddingHorizontal: theme.space.lg },
+  revealWordStage: { ...theme.type.btn, color: theme.color.ink },
+  // The label row (`errorOnLabelRow`): the two words sit on one baseline, a grid step apart.
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: theme.space.sm,
+  },
+  // Its natural width, and it gives way only once the row cannot hold it at all.
+  labelBeside: { flexShrink: 1 },
+  // What the label leaves, right-aligned, and wrapping inside that column: never cut off.
+  fieldErrorBeside: { flex: 1, textAlign: 'right' },
   box: {
     flexDirection: 'row',
     alignItems: 'center',

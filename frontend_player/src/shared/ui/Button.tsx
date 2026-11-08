@@ -97,6 +97,16 @@
  * (`CLAUDE.md`), so they are Feather's `check` and `chevron-down`, in the label's own ink and at its
  * size, after it. **Never spoken**: the name is the label (or the caller's `accessibilityLabel`), and
  * a mark says nothing a sighted reader would read aloud. Two only, because two are asked for.
+ *
+ * **`role` and `dot` are the sign-in stage's** ([#784](https://github.com/Raketa02/Raketa/issues/784);
+ * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-08). *I have an
+ * invitation code* is `secondary` in look and a **link** in what it does — it opens a screen carrying
+ * the email typed so far, as *Forgot password?* beside it does — so a screen reader meets it among the
+ * screen's links: `role="link"` changes what it is announced as, and nothing it draws. It carries a
+ * **6pt `coral` dot before its words**, the mock's, kept by the product owner against 1.2's closed
+ * list as an exception on that one control — never spoken, and not a seventh coral meaning for
+ * another button to reach for. Both are here rather than in a feature's copy of this look, which is
+ * `README.md`'s whole rule.
  */
 
 import Feather from '@expo/vector-icons/Feather';
@@ -120,14 +130,19 @@ export type ButtonVariant =
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
  * result screen. All four clear the 44pt reachable minimum once `hit.btn` is applied.
+ * `stage` is 48, the sign-in stage's boxes' height (6.1 and 6.13 as amended 2026-11-08, #784) —
+ * named for its one surface rather than as a fifth step anything may reach for.
  */
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl' | 'stage';
 
 /** 4.2's 10pt corner, or the chip's pill — the yes screen's exception. See the module note. */
 export type ButtonShape = 'rounded' | 'pill';
 
 /** A drawn mark after the label — see the module note. */
 export type ButtonMark = 'tick' | 'chevron';
+
+/** What a screen reader calls it: an action, or a press that opens another screen. */
+export type ButtonRole = 'button' | 'link';
 
 const MARK_GLYPH: Readonly<Record<ButtonMark, 'check' | 'chevron-down'>> = {
   tick: 'check',
@@ -151,6 +166,10 @@ export interface ButtonProps {
   readonly shape?: ButtonShape;
   /** Glyphs drawn after the label, never spoken — see the module note. */
   readonly marks?: readonly ButtonMark[];
+  /** `link` for a press that opens another screen — the stage's invitation button. See the module note. */
+  readonly role?: ButtonRole;
+  /** A 6pt `coral` dot before the label, never spoken — the stage's invitation button's alone. */
+  readonly dot?: boolean;
   readonly disabled?: boolean;
   /** Blocks presses and swaps the label. A busy button is not a disabled button. */
   readonly busy?: boolean;
@@ -179,6 +198,8 @@ export function Button({
   size = 'md',
   shape = 'rounded',
   marks = [],
+  role = 'button',
+  dot = false,
   disabled = false,
   busy = false,
   busyLabel,
@@ -200,7 +221,7 @@ export function Button({
 
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={role}
       accessibilityLabel={accessibilityLabel ?? shown}
       accessibilityHint={accessibilityHint}
       // Disabled and busy reach a screen reader as state. The 40% fill below is the
@@ -235,10 +256,18 @@ export function Button({
         />
       )}
       <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
-        {marks.length === 0 ? (
+        {marks.length === 0 && !dot ? (
           words
         ) : (
           <View style={s.marked}>
+            {dot ? (
+              <View
+                testID="button-dot"
+                style={s.dot}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            ) : null}
             {words}
             {marks.map((mark) => (
               <Feather
@@ -319,6 +348,15 @@ const s = StyleSheet.create({
   labelBox: { paddingVertical: theme.space.xs },
   // The label and its marks on one line, the marks a hair apart — a label's own word gap.
   marked: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
+  // The smallest round mark in the app, at its one size; coral is 3,89 on white, past a mark's 3:1.
+  // A word's gap further from the label than a mark after it, as the mock draws it.
+  dot: {
+    width: theme.size.sportDot,
+    height: theme.size.sportDot,
+    borderRadius: theme.radius.dot,
+    backgroundColor: theme.color.coral,
+    marginRight: theme.space.xs,
+  },
   label: { ...theme.type.btn },
   // Two lines read from the start, so the box stretches rather than centring each of them on
   // its own width. See the module note.
@@ -338,6 +376,7 @@ const HEIGHT = StyleSheet.create({
   md: { minHeight: theme.size.btn },
   lg: { minHeight: theme.size.btnLg },
   xl: { minHeight: theme.size.btnXl },
+  stage: { minHeight: theme.size.stage.control },
 });
 
 const FILL = StyleSheet.create({

@@ -326,3 +326,81 @@ it, so what arrives is a cancellation rather than the 401. The session machine a
 covered**: a launch that starts on an expired access token refreshes with the ordinary `request`
 budget — the rotation is single-flight and shared, so there is no caller to take a class from.
 **Not seen on a device.**
+
+**Sign-in is drawn on the stage, and nothing it does changed**
+([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2). A dark hero
+over the top four tenths of the window — the _Raketa_ wordmark in its top-left corner and _Your next
+game is only one swipe away._ at its foot, the deck arriving in #786 — and a paper sheet with
+rounded top corners over it, holding the form. Every control keeps its target and what it carries,
+the refusals keep their sentences and their sources, and **Sign in** still fires on the button and on
+Go and reads _Signing in…_ while busy. The mocks' _Rakieta_ is read as **Raketa** (ADR-0187 §8).
+Design only: no request, schema, use-case or route changed.
+
+**The stage is a new frame beside `AuthFrame`, not a change to it** (`AuthStage`, `StageHero`,
+`StageGround`; the keyboard props #529 put on the scroll are `FORM_SCROLL`, shared by both frames). The eight other auth screens — the _Forgot password?_ flow, _Have an invitation
+code?_, _Set your password_ and the two links — keep the paper frame and its _RAKETA_ eyebrow,
+because a short recovery task is not crowded by a hero. On the stage the hero's wordmark replaces the
+eyebrow, so the sheet opens on the title alone. Sign-up moves onto it with #785.
+
+**The sheet scrolls and the hero stays put.** The hero is drawn behind the scroll at 0,41 of the
+**window**'s height, and the scroll's content opens with that much transparent room before the
+sheet; a short phone, large text or the keyboard slides the sheet up over the hero, which does not
+move — Android's window shrinks for the keyboard, and a hero sized by the layout would shrink with
+it. **#529's native keyboard inset is kept**: `automaticallyAdjustKeyboardInsets` on the scroll, so
+the form is laid out once and the scroll moves only as far as it must to keep the focused box above
+the keys. No bounce, so the sheet never lifts off the bottom onto the night. The insets come from the
+root's provider through its context — known since the first frame, so the wordmark is clear of the
+status bar first time — and are none where a suite draws the screen with no provider.
+
+**The hero is a picture: hidden from screen readers, untouchable, and its words capped.** ADR-0198:
+the form is the screen. The wordmark and the headline grow with the OS text size only to
+`size.stage.textMaxScale`, the tab bar's mechanism — derived in `stageTextCap.test.ts` as the largest
+step at which every stage headline stays within three lines on a 320pt phone (1,7) — because the
+hero's room is fixed and the picture takes what its words leave. The form is not capped; it scrolls.
+
+**The status bar is light only while sign-in is the screen in view.** A stack keeps sign-in mounted
+under _Forgot password?_ and the invitation screen, and a light bar drawn for as long as it is
+mounted put white icons on their paper. `useScreenInView` reads the navigator's focus **in the route
+file** and hands it to the screen as `inView`: the navigator's hooks throw outside a navigator, and
+the auth suites draw the screen on its own, where it is the screen in view. The sign-in loop (#787)
+will stop and start on the same value. **The bar is always over the night**: a band of the hero's
+ground the status bar's height is drawn over the scroll, so a sheet scrolled all the way up — a short
+phone, the keyboard, large text in the uncapped form — slides under it rather than putting paper
+under white icons.
+
+**The form, top to bottom**: _Sign in_ (the stage's large title); the server's banner when there is
+one; _Email_, **empty, with _you@example.com_ as its placeholder** so the keychain's autofill still
+offers the saved address; _Password_ with **Show**/**Hide** inside the box; **_Forgot password?_,
+quiet and right-aligned straight under the password box** (`AuthLink`'s `quiet`: `muted`, at the end
+of its row) — where the problem is, rather than under the button; **Sign in**, the full-width primary
+button at the boxes' own height; a thin _or_ rule; **_I have an invitation code_**, a white
+outlined box with a small coral dot; and _New to Raketa? Create an account_ at the sheet's foot.
+
+**_I have an invitation code_ is a statement on a link drawn as a button**: 6.1's `secondary`
+button at the stage's height with `Button`'s two new options, **`role="link"`** and a coral **`dot`** before its
+words. It was _Have an invitation code?_ on a text link; the screen it opens keeps that question as
+its title. It opens that screen carrying the email, exactly as before, and a screen reader still
+meets it as a **link**, after _Forgot password?_ among the sign-in screen's links, as the invitation
+suite has always held — it opens a screen rather than acting. Both options are `Button`'s rather than
+a feature's copy of its look (`src/shared/ui/README.md`); the dot is the product owner's, kept
+against design system 1.2.
+
+**A box's own refusal is drawn on its label's row**, right-aligned, and the box keeps its red border:
+_Enter your email address._, _That doesn't look like an email address._ and _Enter your password._,
+today's sentences from today's schema. It is 6.13's new opt-in, `errorOnLabelRow`, so the form does
+not shift down a line under a refused box; a sentence too long for the row wraps in its own column.
+**Every other field in the app keeps its message under the box.** The banner — wrong credentials, no
+connection — stays between the title and _Email_: a refusal about the whole form, above the whole
+form.
+
+**The boxes and buttons are the mock's, on the stage only** — the product owner's ruling on
+2026-11-08, when the review found them drawn in the app's own look: the mocks win on a look. The
+shared field's opt-in **`stage` look** draws a grey sentence-case label, a 48pt box holding a 14pt
+value, and a sentence-case **Show**; `Button`'s **`stage` size** stands both buttons at that height.
+Sign-in's two boxes and two buttons take them, sign-up's will with #785, and **every other field and
+button in the app keeps its look** — the eight other auth screens among them. It is the same build in
+every environment: nothing here is chosen by `EXPO_PUBLIC_ENV`.
+
+**Not seen on a device**: the whole stage — the hero's ground and glow, the sheet over it on a short
+phone with the keyboard up, the label-row refusals, the light status bar, and the hero's words at the
+largest text size — on iOS and Android.

@@ -8,17 +8,33 @@
  * `resetPresentation`'s.
  */
 
-/** Over every auth screen's title. Uppercased by the eyebrow's style, never by the copy. */
+/**
+ * Over the title of every auth screen that keeps today's frame (`AuthFrame`). Uppercased by the
+ * eyebrow's style, never by the copy. Sign-in has none: the stage's wordmark replaces it.
+ */
 export const AUTH_EYEBROW = 'Raketa';
+
+/**
+ * **The stage's wordmark** — the volt dot, then this, in the hero's top-left corner (#784). The
+ * mocks draw *Rakieta*; the product is **Raketa** (ADR-0187 §8).
+ */
+export const STAGE_WORDMARK = 'Raketa';
+
+/** What the stage's email box holds while it is empty — it opens empty, for the keychain's autofill. */
+export const EMAIL_PLACEHOLDER = 'you@example.com';
 
 export const EMAIL_LABEL = 'Email';
 export const PASSWORD_LABEL = 'Password';
 export const REPEAT_PASSWORD_LABEL = 'Repeat password';
 
 export const SIGN_IN_COPY = {
+  /** The hero's line, under the deck (#786): it names the gesture the deck is about to show. */
+  headline: 'Your next game is only one swipe away.',
   title: 'Sign in',
   submit: 'Sign in',
   submitting: 'Signing in…',
+  /** The thin rule between signing in and the other way in. */
+  or: 'or',
   newHere: 'New to Raketa?',
   createAccount: 'Create an account',
 } as const;

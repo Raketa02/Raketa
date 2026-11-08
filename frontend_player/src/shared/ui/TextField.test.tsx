@@ -28,6 +28,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { inOrder } from '@/test-support/readingOrder';
+
 import { TextField, type TextFieldProps } from './TextField';
 import { theme } from './theme';
 
@@ -100,6 +102,63 @@ describe('what the field reports', () => {
     draw();
 
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(box().borderColor).toBe(theme.color.line);
+  });
+});
+
+/**
+ * **Where the sentence goes** — under the box, as every field in the app draws it, or on the
+ * label's own row, which the sign-in stage asks for (#784, 6.13 as amended in Part 16). The row
+ * is opt-in, so a field that does not ask keeps its message where it always was.
+ *
+ * Where a thing sits on the screen is not something a query can see, so this asks what can be
+ * asked: whether the sentence is read before the box or after it.
+ */
+describe('where the failure is drawn', () => {
+  const SENTENCE = 'Enter your email address.';
+
+  /** Where the sentence sits against the box, in the order a screen reader meets them. */
+  const order = () => inOrder(screen.toJSON(), [`alert:${SENTENCE}`, `box:${LABEL}`]);
+
+  it('is under the box unless the caller asks otherwise', () => {
+    draw({ error: SENTENCE });
+
+    expect(order()).toEqual([`box:${LABEL}`, `alert:${SENTENCE}`]);
+  });
+
+  it('is on the label’s row when the caller asks, before the box', () => {
+    draw({ error: SENTENCE, errorOnLabelRow: true });
+
+    expect(order()).toEqual([`alert:${SENTENCE}`, `box:${LABEL}`]);
+  });
+
+  it('still announces itself and still draws the refused border there', () => {
+    draw({ error: SENTENCE, errorOnLabelRow: true });
+
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(box().borderColor).toBe(theme.color.red);
+  });
+
+  /**
+   * A sentence too long for the row takes its own column and wraps inside it, right-aligned,
+   * rather than being cut off: no `numberOfLines`, and a column that can shrink.
+   */
+  it('wraps a long sentence in its own column, right-aligned, rather than cutting it off', () => {
+    draw({ error: SENTENCE, errorOnLabelRow: true });
+
+    const sentence = screen.getByRole('alert');
+    const style = StyleSheet.flatten(sentence.props.style as TextStyle);
+    expect(sentence.props.numberOfLines).toBeUndefined();
+    expect(style.textAlign).toBe('right');
+    expect(style.flex).toBe(1);
+    expect(style.color).toBe(theme.color.red);
+  });
+
+  it('draws the label alone on its row while nothing is wrong', () => {
+    draw({ errorOnLabelRow: true });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText(LABEL)).toBeTruthy();
     expect(box().borderColor).toBe(theme.color.line);
   });
 });
@@ -280,5 +339,57 @@ describe('the geometry', () => {
 
     expect(label.fontFamily).toBe(theme.type.flab.fontFamily);
     expect(label.fontSize).toBe(theme.type.flab.fontSize);
+  });
+});
+
+/**
+ * **The stage's look** (6.13 as amended 2026-11-08, #784): the sign-in stage's boxes as its mocks
+ * draw them — a grey sentence-case label, a 48pt box holding a 14pt value a gutter in from each
+ * side, and a sentence-case **Show** — opt-in, so every other field keeps 6.13's own look. What it
+ * changes is the drawing; the name, the reveal and the refusal are the field's as ever.
+ */
+describe('the stage’s look', () => {
+  function labelStyle(): TextStyle {
+    return StyleSheet.flatten(
+      screen.UNSAFE_getAllByType(Text).find((node) => node.props.children === LABEL)?.props
+        .style as TextStyle,
+    );
+  }
+
+  it('draws the label in muted sentence case, where 6.13 draws it uppercase in ink', () => {
+    draw({ stage: true });
+
+    const label = labelStyle();
+    expect(label.fontFamily).toBe(theme.type.rlLabel.fontFamily);
+    expect(label.fontSize).toBe(theme.type.rlLabel.fontSize);
+    expect(label.color).toBe(theme.color.muted);
+    expect(label.textTransform).toBeUndefined();
+    expect(label.letterSpacing).toBeUndefined();
+  });
+
+  it('is the stage’s control height, with the value a gutter in from the box’s edge', () => {
+    draw({ stage: true });
+
+    expect(box().minHeight).toBe(theme.size.stage.control);
+    expect(input().minHeight).toBe(theme.size.stage.control);
+    expect(input().paddingHorizontal).toBe(theme.space.lg);
+    expect(input().fontSize).toBe(theme.type.stageValue.fontSize);
+    expect(input().fontFamily).toBe(theme.type.stageValue.fontFamily);
+  });
+
+  it('says Show and Hide in sentence case, and still names the field it reveals', () => {
+    draw({ stage: true, secureTextEntry: true, reveal: true });
+
+    const word = screen.getByText('Show');
+    expect(StyleSheet.flatten(word.props.style as TextStyle).textTransform).toBeUndefined();
+    fireEvent.press(screen.getByLabelText(`Show ${LABEL.toLowerCase()}`));
+    expect(screen.getByText('Hide')).toBeTruthy();
+  });
+
+  it('keeps 6.13’s own look unless asked', () => {
+    draw();
+
+    expect(labelStyle().textTransform).toBe('uppercase');
+    expect(box().minHeight).toBe(theme.size.textField.row);
   });
 });

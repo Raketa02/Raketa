@@ -173,6 +173,13 @@ figure. **The reader's own row is tinted `coralSoft`** — _where you are_ in th
 and not its mark. Neither is a seventh entry; both are flagged for the product owner, the first
 because it departs from the mock by name.
 
+**Sign-in draws coral once more, and this one is the product owner's rather than a meaning above**
+([#784](https://github.com/Raketa02/Raketa/issues/784), [12.2](#122-the-stage--sign-in-and-sign-up),
+Part 16 2026-11-08). _I have an invitation code_ carries a **6pt `coral` dot** before its words — a
+mark, 3,89:1 on white against a mark's 3:1. It says no meaning the list holds: it is the mock's, and
+the product owner kept it when asked. It is recorded as what it is, an exception by taste on one
+control, and not as a seventh meaning anything else may reach for.
+
 ## 1.3 Semantic colour is never decorative
 
 | Token   | Means                                  |
@@ -201,6 +208,8 @@ Press feedback is 120ms. Reduced-motion disables all of it.
 ## 1.6 The app is the app
 
 There is no frame, no stage, no scenario rail — see [Part 0](#part-0--reading-a-web-prototype-as-a-native-app).
+Sign-in's _stage_ ([12.2](#122-the-stage--sign-in-and-sign-up)) is not that one: it is a screen's
+own two-part layout, drawn on the phone, and not a harness around it.
 
 ---
 
@@ -232,6 +241,9 @@ There is no frame, no stage, no scenario rail — see [Part 0](#part-0--reading-
 > **Amended 2026-09-30** — a fourth sits beside them on the same terms: a group's game card
 > (`gameGroundTop` / `gameGroundFoot` and the nine other `game*` values drawn on it, #553,
 > [7.22](#722-the-game-card)).
+>
+> **Amended 2026-11-08** — a fifth: the sign-in stage's hero (`stageGround`, flat, and the
+> `stageGlow` at its foot, #784, [12.2](#122-the-stage--sign-in-and-sign-up)).
 
 > `line` **bounds a thing**; `line2` is a **fold inside one thing**. The hairline uses
 > `line2` precisely so a card with two sections reads as one object, not two.
@@ -1159,6 +1171,20 @@ Heights in practice: **32** (tertiary in a card), **34** (default), **40** (scre
 > to two glyphs after the label — Feather's `check` and `chevron-down`, in the label's ink at its
 > size, never spoken — for the record's _Friend ✓ ▾_ and _Request sent ▾_: Archivo ships no ✓, so a
 > mark is a glyph and never a character.
+
+> **Amended 2026-11-08 — `role`, `dot` and the `stage` size, the sign-in stage's**
+> ([#784](https://github.com/Raketa02/Raketa/issues/784), [12.2](#122-the-stage--sign-in-and-sign-up),
+> [Part 16](#part-16--amendments-after-locking)). _I have an invitation code_ is `secondary` at `xl`
+> in look and a **link** in what it does — it opens a screen carrying the email typed so far, as
+> _Forgot password?_ beside it does — so **`role="link"`** changes what a screen reader announces
+> and nothing the button draws. **`dot`** draws a 6pt `coral` dot (`size.sportDot`) before the
+> label, a word's gap from it, never spoken: the mock's mark on that one button, kept by the
+> product owner against [1.2](#12-one-accent-used-sparingly)'s closed list. Both live here and not
+> in a feature's copy of `secondary`, which is `src/shared/ui/README.md`'s rule; the dot is not a
+> seventh coral meaning another button may reach for. **`stage`** is a fifth height, **48**
+> (`size.stage.control`): the stage's two buttons stand at its boxes' height, as `btnXl` stands at
+> 6.13's everywhere else, measured off mock 3. Named for its one surface rather than as a step any
+> screen may reach for.
 
 ## 6.2 Chip — the filter pill
 
@@ -2125,11 +2151,16 @@ label     flab · ink · UPPERCASE, above it · space.xxs between the three part
           labelHidden drops the <Text> and keeps the accessible name
 value     rlValue in ink, space.md in from each side · placeholder in muted
 focused   border ink        refused   border red, AND the message under the box
+label row errorOnLabelRow: the message on the label's row instead, right-aligned, tiny · red,
+          in a column of its own that wraps — opt-in, the sign-in stage's (12.2)
 reveal    btn · ink · UPPERCASE inside the box, no fill and no border of its own
 grown     one rlValue line (16) per line, to the caller's cap, then it scrolls
           box padding (42 − 16) / 2 = 13, so one grown line IS the one-line box
 touch     the FIELD is the surface — label, box and message — 57 tall, no slop
 trailing  a control inside the box after the value — the caller's, and named by the caller
+stage     the sign-in stage's look (12.2): label rlLabel · muted · sentence case, space.xs to a
+          48pt box (size.stage.control), value stageValue (14 / 400) space.lg in from each side,
+          Show and Hide in btn · ink · sentence case — opt-in, one-line, the radius unchanged
 recessed  box on paper, for a field inside a card (play 5)
 ```
 
@@ -2200,6 +2231,25 @@ the keyboard coming up, which is a stronger signal than an opacity that ends wit
 The message is `tiny` in `red` under the box, with `alert`, so it is announced rather than merely
 drawn. **A form-level failure is not this** — it belongs to no field, and there is still no `red`
 Note variant for it, which is why `AuthNotice` remains a feature's.
+
+**The message may sit on the label's row instead, and only where the caller asks**
+([#784](https://github.com/Raketa02/Raketa/issues/784), Part 16 2026-11-08). `errorOnLabelRow`
+draws the same sentence, in the same `tiny` `red` with the same `alert`, at the end of the label's
+row — the label at its natural width, the sentence right-aligned in the column the label leaves,
+on one baseline a `space.sm` apart — and the box keeps its red border. **A sentence too long for
+the row wraps inside its column** and is never cut off. The sign-in stage asks for it
+([12.2](#122-the-stage--sign-in-and-sign-up)), so the form under a refused box does not shift down
+a line; **every other field keeps the message under the box**, where a field with a rule line under
+it (the nickname, the password pair) has its rule and its refusal in one place.
+
+**The stage draws its boxes in the mock's look, and only the stage does** (#784, Part 16
+2026-11-08). `stage` sets the label in `muted` sentence case at `rlLabel`, the box at **48** with its
+value in **`stageValue`** (14 / 400) a gutter in from each side, and **Show** and **Hide** in sentence
+case — each measured off mock 3. It departs from this section's own argument for the label — `flab`
+in `ink`, uppercase, because a form label must be findable at a glance — and the product owner ruled
+that the mocks win on the stage, where a form of two boxes under a large title is found without it.
+**Every other field keeps 6.13's look.** A one-line look: a growing field's arithmetic is the 42pt
+box's, and no growing field asks for this.
 
 **The reveal control belongs to the field, not to the screen.** A password box that cannot be
 read back is the one place where a typo costs a whole form: the player retypes both halves and is
@@ -4628,6 +4678,90 @@ knows which it is**, so it never says one and then the other; offline with nothi
 amber offline `Note` stands in its place. No sport pill is drawn over it — there is no rating to
 list — and on Fill in _+ Post a game_ still floats over it (the screens A3).
 
+## 12.2 The stage — sign-in and sign-up
+
+**A two-part screen: a dark hero over the top four tenths, and a paper sheet with rounded top
+corners rising over it, holding the form** ([#784](https://github.com/Raketa02/Raketa/issues/784),
+PRD #783; mocks 1–3 lead on a look). Sign-in draws it, and sign-up joins it with #785; **the eight
+other auth screens keep their paper frame** and its _RAKETA_ eyebrow, because a short recovery task
+is not crowded by a hero. It is not [1.6](#16-the-app-is-the-app)'s _stage_ — that one is the
+prototype's harness around a phone; this one is a screen's own layout, drawn on the phone.
+
+```
+ground    stageGround, flat, from the status bar down — and the screen's own fill, under the
+          sheet's rounded corners
+glow      stageGlow at the sheet's edge under the middle of the screen, falling to the ground
+          0,45 of the width either side and a tenth of the hero up (StageGround.tsx)
+hero      0,41 of the WINDOW's height (size.stage.heroShare) · drawn BEHIND the scroll, fixed
+          gutter space.xxl, the sheet's · wordmark at the top inset + space.xs · headline at its
+          foot, space.lg above the sheet · hidden from screen readers whole · no touch
+wordmark  an 8pt volt dot (size.stage.mark) · space.xs · Raketa in h1, surface
+picture   the room between the wordmark and the headline — the deck (#786), the podium (#788)
+headline  stageTitle (22 / 700 / −0,77 / 26) in surface, left-aligned
+text cap  maxFontSizeMultiplier size.stage.textMaxScale (1,7) on the hero's words — the tab
+          bar's mechanism; the form under it is not capped
+sheet     paper · top corners radius.sheet (22) · padding space.xxl, its foot the bottom inset
+          or space.md · space.lg between its blocks · footer pushed to its foot
+title     stageTitle in ink, alone — the wordmark replaces the eyebrow
+scroll    the sheet scrolls over the hero, which does not move · keyboard a native inset (#529)
+          · no bounce at either end
+status    light while the stage is the screen in view, the root's dark otherwise · a band of
+          stageGround the inset's height over the scroll, so the bar is always on the night
+```
+
+**The sheet is the scrolling part, and the hero stays put.** The hero is drawn behind the scroll at
+a share of the **window**, and the scroll's content opens with that much transparent room before the
+sheet: at rest the sheet's edge is where the hero ends, and on a short phone, at a large text size or
+with the keyboard up, the sheet slides up over the hero. Of the window and never of the laid-out
+screen, because Android's window shrinks for the keyboard and a hero sized by the layout would shrink
+with it. **The keyboard is still an inset on the scroll** (#529): the form is laid out once and the
+scroll moves only as far as it must to keep the box being typed in above the keys. **No bounce**:
+pulled past either end, the sheet would lift off the bottom onto the night or show its square foot.
+
+**The hero is a picture and is hidden from screen readers** ([ADR-0198](../../docs/adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md)):
+the form is the screen. **Its words grow with large text only to `textMaxScale`**, derived in
+`stageTextCap.test.ts` as the largest step at which every stage headline stays within three lines
+on the narrowest phone — two at the system size, a third taken from the picture at a large one. The
+form scales fully and scrolls.
+
+**The status bar is light only while the stage is the screen in view**: a stack keeps sign-in mounted
+under _Forgot password?_, and a light bar left mounted would draw white icons on paper. The route
+reads the navigator's focus and hands it to the screen. **And it is always over the night**: the
+sheet can scroll all the way up, so a band of the ground the status bar's height is drawn over the
+scroll and the sheet slides under it, as under a header.
+
+**Sign-in's sheet, top to bottom:**
+
+```
+Sign in                                   stageTitle, ink
+[ banner ]                                AuthNotice — wrong credentials, no connection
+Email                Enter your email…    6.13 stage, errorOnLabelRow · empty, you@example.com
+[                                    ]
+Password                                  6.13 stage, errorOnLabelRow, reveal
+[                               Show ]
+                       Forgot password?   AuthLink quiet — muted, at the row's end, under the box
+[            Sign in                 ]    6.1 primary, stage — the boxes' 48 · fires on Go too
+───────────────── or ─────────────────    a `line` rule, the word in tiny, muted
+[  ● I have an invitation code       ]    6.1 secondary, stage, role link, dot
+       New to Raketa? Create an account   AuthLink, at the sheet's foot
+```
+
+**A box's own refusal is drawn on its label's row** — [6.13](#613-the-text-field)'s
+`errorOnLabelRow` — so the form does not shift under somebody who pressed too early; the banner, a
+refusal about the whole form, stays above the whole form. **_I have an invitation code_ is a link**:
+it opens another screen carrying the email, as _Forgot password?_ does, and a screen reader meets it
+among the screen's links — so it is [6.1](#61-button)'s `secondary` button at the `stage` size
+with `role="link"`, and a 6pt `coral` `dot` before its words, the product owner's
+([1.2](#12-one-accent-used-sparingly)).
+
+**The boxes and the buttons are the mock's, not the app's** — the product owner's ruling on
+2026-11-08, that the mocks win on a look. Both boxes take [6.13](#613-the-text-field)'s **`stage`
+look**: the label in `muted` sentence case (`rlLabel`), a **48pt** box (`size.stage.control`)
+holding a **`stageValue`** (14 / 400) a gutter (`space.lg`) in from each side, and **Show** and
+**Hide** in sentence case (`btn`, `ink`). Both buttons stand at the boxes' height, 6.1's **`stage`**
+size. All measured off mock 3. The corner stays `radius.btn`, which is what the mock draws. Every
+other field and button in the app keeps its own look.
+
 ---
 
 # Part 13 — Accessibility
@@ -4806,6 +4940,17 @@ every `Ink` would need a second computed value.
 > Fill in screens (A2.3: _the mocks win over the design system_), and fenced in
 > [Part 16](#part-16--amendments-after-locking) _for this card and a game's details only_. Four
 > exceptions, each named for the thing it is, and still no dark mode.
+
+> **Amended 2026-11-08** — **and the sign-in stage's hero is the app's fifth dark surface, and it is
+> the top of a screen rather than a screen** ([#784](https://github.com/Raketa02/Raketa/issues/784),
+> [12.2](#122-the-stage--sign-in-and-sign-up)). One flat night (`stageGround`) over the top four
+> tenths of sign-in — and of sign-up from #785 — with a glow at its foot (`stageGlow`), both measured
+> off mocks 1–3 and held by `stageGround.test.ts`; the sheet over it is paper, and every control on
+> it is the app's own. What sits on the night is white and one volt dot. **Its record is PRD #783**
+> — the product owner's ruling that this redesign takes no root ADR, being one client's look with no
+> contract or cross-app effect — and it is fenced in [Part 16](#part-16--amendments-after-locking)
+> _for sign-in's and sign-up's hero only_. `#15252C` is the yes ground's edge a step off and is not
+> that token. Five exceptions, each named for the thing it is, and still no dark mode.
 
 ---
 
@@ -5138,6 +5283,10 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-08 | [6.1](#61-button) · [4.3](#43-elevation) · [`RankingList.tsx`](../src/features/rankings/components/RankingList.tsx)                                                                                                                                                                                                                                                                      | Rankings' list was one `Card`, drawn whole; nothing floated over a list but Fill in's _+ Post a game_                                                                                                                                                                                                                                                        | **The list is virtualised (#776)**, so its one white card is drawn **a row at a time**: each row on `surface` between `line` sides, the first with the card's top edge and corners, the last with its foot, `line2` between — the same card. **_You · 212th_ floats at the foot, centred, a `gutter` above the tab bar**: a `dark` button at `md`, 10pt corners, no shadow, shown only while the reader's row is off screen; the list's foot gains its height and two gutters so the last row clears it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | The screens §5.3 place it _at the foot, above the tab bar_ and draw no mock. `dark` is the place card's `night`, so the button reads as the reader's own place, and it keeps coral for the page's one action; a floating button takes no shadow, as _+ Post a game_ takes none. A virtualised list has no one view to wrap in a `Card`, so the card's surface, border and radius are drawn on its rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-08 | [6.12](#612-the-switch) · [5.2](#52-dark-card) · [`Switch.tsx`](../src/shared/ui/Switch.tsx) · [`PlaceCard.tsx`](../src/features/rankings/components/PlaceCard.tsx)                                                                                                                                                                                                                      | 6.12 was specified and unbuilt, for paper only; the hidden card drew _Hidden from General_ alone under its fold (#775)                                                                                                                                                                                                                                       | **The switch on the dark card (#778)**: `onDark` — the track `onDarkFill` off and `surface` on, the knob `surface` off and `night` on, the label `surface` and its line `onDarkTiny`. Under the hidden card's fold, _Hidden from General_ is its label and **_Show me in General_ its name** (`accessibilityLabel`). A refused write is a 5.4 `coral` note **above** the card, on paper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | The screens §4.5 put _Hidden from General_ and the switch on the fold line's right, and draw no mock. `ink` on `night` is a track nobody sees, so the repaint is 6.12's inversion read from the dark side, as `Segment`'s `onDark` reads 6.3's: on is the track standing out of its ground. 7,88:1 and 13,29:1, derived. The note above the card is the declaration card's rule — the repaint has no on-dark coral                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-08 | [6.12](#612-the-switch) · [5.5](#55-row--the-key-value-line) · [`Switch.tsx`](../src/shared/ui/Switch.tsx) · [`DoorRow.tsx`](../src/shared/ui/DoorRow.tsx) `RowLead` · [`YouRows.tsx`](../src/features/player_profile/components/YouRows.tsx)                                                                                                                                            | Every row on the You tab was a door row (5.5 as amended, 2026-09-17)                                                                                                                                                                                                                                                                                         | **_Show me in General_ closes _On your card_ (#778)**: the switch with `door` (`eye`) takes the door row's lead square, its `cardTitle` over `tiny` `muted`, its padding and gap, and its divider; the track stands where a chevron would. The lead is `RowLead` and the rest `DOOR_ROW`, lifted out of the door row so both rows draw from one table. A refused write is a 5.4 `coral` note under the row, inside the card                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | The You spec §3.14: _the row is the switch_, 6.12's on the right. In a card of door rows a switch with no lead would start its title 37pt left of every title above it. The row is still the control, so the lead is inside the press, as the door row's is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [2.1](#21-surfaces-and-structure) · [15.4](#154-dark-mode) · [1.6](#16-the-app-is-the-app) · [`theme.ts`](../src/shared/ui/theme.ts) `stageGround` `stageGlow` `stageTitle` `size.stage` · `AuthStage.tsx` · `StageHero.tsx` · `StageGround.tsx` · `AuthLink.tsx` `quiet`                                                                  | Four dark surfaces, each fenced to its one place (the yes screen, the deck's wash, the radar, the game card); sign-in was a paper form with _RAKETA_ over an `h1` title; no sans role between `h1` (19) and `deckName` (24) titled a screen; the auth text link was `ink` and centred                                                                        | **The stage (#784)**: sign-in is a **dark hero** — `stageGround` `#15252C`, flat, with a **`stageGlow` `#23352F`** ellipse at its foot — over 0,41 of the window, behind a **paper sheet** with `radius.sheet` top corners that scrolls over it; the hero carries a volt dot and _Raketa_ in `h1` white, and the headline in **`stageTitle` (22 / 700 / −0,77 / 26)**, its words capped at **`textMaxScale` 1,7**; the sheet's title is `stageTitle` in `ink` with no eyebrow; _Forgot password?_ is **`AuthLink` `quiet`** (`muted`, at the row's end); _I have an invitation code_ is **6.1 `secondary` at the stage's height, announced as a link**; the status bar is light while the stage is in view. The eight other auth screens keep `AuthFrame`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | PRD #783; mocks 1–3 lead on a look. The **fifth dark surface**, its record PRD #783 rather than an ADR — the product owner's ruling that a one-client look takes no root ADR — and recorded in 2.1 and 15.4 as the other four are: the first screen a person sees, the colour of the night the yes screen is; `#15252C` is `yesGroundEdge` a step off and is not that token, which is the yes screen's alone. Both values and the two sizes are **measured** off the mocks (`stageGround.test.ts` computes what sits on them; `stageTextCap.test.ts` derives the cap). 1.6's _stage_ is the prototype's harness; this one is a screen's own layout. The invitation's way in stays a **link** because it opens a screen carrying the email, and the invitation suite hears it among the links                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-11-08 | [1.2](#12-one-accent-used-sparingly) · [6.1](#61-button) · [12.2](#122-the-stage--sign-in-and-sign-up) · [`Button.tsx`](../src/shared/ui/Button.tsx) `dot` `role`                                                                                                                                                                                                                        | §1.2's coral list closed at six, each later coral a meaning above; every `Button` announced itself as a button                                                                                                                                                                                                                                               | **_I have an invitation code_ carries a 6pt `coral` dot** before its words (#784) — a mark, 3,89:1 on white — drawn by `Button`'s new **`dot`**; the button is announced as a link by its new **`role`**, since it opens a screen carrying the email                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | The mock draws it, and **the product owner kept it** when the grilling asked (PRD #783, 2026-11-08). It means none of the list's meanings, so it is recorded as an **exception by taste on one control**, never a seventh meaning to reach for; flagged with the rest of §1.2's mock-driven coral. On `Button` rather than in a feature's copy of `secondary`, which `src/shared/ui/README.md` forbids                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-08 | [6.13](#613-the-text-field) · [`TextField.tsx`](../src/shared/ui/TextField.tsx) `errorOnLabelRow` · [`SignInScreen.tsx`](../src/features/auth/components/SignInScreen.tsx)                                                                                                                                                                                                               | A field's refusal was drawn under its box, everywhere                                                                                                                                                                                                                                                                                                        | **`errorOnLabelRow`** (#784): opt-in, the message on the **label's row** instead — right-aligned in a column of its own that wraps, `tiny` `red`, still `alert`, the box still red. Sign-in's two boxes take it; **every other field keeps the message under the box**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | PRD #783 story 18: the form does not shift down a line under a refused box, and the sentence still sits on the box it is about. Opt-in, because a field with a rule line under it (the nickname, the password pair) wants its rule and its refusal in one place                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-11-08 | [6.13](#613-the-text-field) · [3.3](#33-the-type-roles) · [6.1](#61-button) · [12.2](#122-the-stage--sign-in-and-sign-up) · [`TextField.tsx`](../src/shared/ui/TextField.tsx) `stage` · [`Button.tsx`](../src/shared/ui/Button.tsx) `stage` · [`theme.ts`](../src/shared/ui/theme.ts) `stageValue` `size.stage.control`                                                                  | Every field drew 6.13's look — a `flab` label in `ink`, uppercase, over a 42pt box with its value in `rlValue`, and _SHOW_ uppercase; buttons stood at 32–42                                                                                                                                                                                                 | **The stage's look** (#784): an opt-in `stage` on the field — the label in **`muted` sentence case at `rlLabel`**, `space.xs` above a **48pt** box (`size.stage.control`), its value in a new **`stageValue` (14 / 400 / 20)** `space.lg` in from each side, and **Show** / **Hide** in sentence case at `btn` in `ink`; the radius stays `btn`. `Button` gains a **`stage` size, 48**, so the stage's two buttons stand at its boxes' height. Sign-in's boxes and buttons take both; **every other field and button keeps its look**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | The product owner's ruling on 2026-11-08, asked when the review found the field look missing: PRD #783's _the mocks win on a look_, on the stage only. It departs from 3.3 and 6.13's argument that a form label is `flab` in `ink` and uppercase so it is found at a glance; on a sheet of two boxes under a 22pt title it is found without it. Every value is measured off mock 3 at 1,82 to the point: the label 28,6pt wide (`rlLabel` 29,1), the value 129 (`stageValue` 129,1), _Show_ 31,8 (`btn` 32,3), boxes and buttons 87–88 pixels                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 # Part 17 — What the reset removed
 
@@ -5203,5 +5352,6 @@ TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller �
 NUMBERS     mono + tabular · weight 600, never 700 — mono 700 is not loaded
             comma decimals · 2,71 · 65% · 1,9 km · 60 min · 18:30
 STATE       every state has a word or a shape, never colour alone
-NEVER       the phone frame, the stage, the scenario rail — the harness is not the app
+NEVER       the phone frame, the harness's stage, the scenario rail — the harness is not the app
+            (sign-in's stage, 12.2, is a screen's own layout and not the harness's)
 ```

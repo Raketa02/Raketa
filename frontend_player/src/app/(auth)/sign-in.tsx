@@ -1,5 +1,8 @@
-import { SignInScreen } from '@/features/auth/types';
+import { SignInScreen, useScreenInView } from '@/features/auth/types';
 
+/** The stage's status bar follows whether sign-in is the screen in view (#784) — the navigator's to say. */
 export default function SignInRoute() {
-  return <SignInScreen />;
+  const inView = useScreenInView();
+
+  return <SignInScreen inView={inView} />;
 }

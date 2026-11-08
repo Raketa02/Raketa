@@ -40,6 +40,21 @@ import { theme } from '@/shared/ui';
 
 import { AUTH_EYEBROW } from './authPresentation';
 
+/**
+ * **The scroll a form lives in, on both auth frames** — #529's three props, here once so the stage
+ * (`AuthStage`) and this frame cannot drift apart on the keyboard. iOS: the keyboard is an inset on
+ * the scroll, set natively, so the form never moves when the keyboard's height does; Android's
+ * window resizes for it and ignores the inset. A tap on a control lands while the keyboard is up,
+ * and a drag puts it away — the form must stay reachable when large text makes it taller than the
+ * screen.
+ */
+export const FORM_SCROLL = {
+  testID: 'auth-frame',
+  automaticallyAdjustKeyboardInsets: true,
+  keyboardShouldPersistTaps: 'handled',
+  keyboardDismissMode: 'on-drag',
+} as const;
+
 export interface AuthFrameProps {
   readonly title: string;
   /** A sentence under the title, for a screen whose question is not obvious from it. */
@@ -50,16 +65,7 @@ export interface AuthFrameProps {
 export function AuthFrame({ title, lead, children }: AuthFrameProps) {
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <ScrollView
-        testID="auth-frame"
-        contentContainerStyle={s.content}
-        // iOS: the keyboard is an inset on the scroll, set natively, so the centred form never
-        // moves when the keyboard's height does. Android's window resizes for it and ignores this.
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        // The form must stay reachable when large text makes it taller than the screen.
-        keyboardDismissMode="on-drag"
-      >
+      <ScrollView {...FORM_SCROLL} contentContainerStyle={s.content}>
         <View style={s.intro}>
           <View style={s.header}>
             <Text style={s.eyebrow}>{AUTH_EYEBROW}</Text>

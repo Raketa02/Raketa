@@ -189,6 +189,66 @@ describe('the marks after the label (6.1, amended)', () => {
   });
 });
 
+/**
+ * **A button that opens a screen is announced as a link** (6.1, amended 2026-11-08, #784): the
+ * sign-in stage's *I have an invitation code* is 6.1 `secondary` in look and a link in what it
+ * does — it opens a screen carrying what was typed — and a screen reader meets it among the
+ * screen's links. The look is the variant's; only the role changes.
+ */
+describe('the role (6.1, amended)', () => {
+  it('is a button unless the caller says the press opens a screen', () => {
+    render(<Button label="Sign in" onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('is a link when asked, drawn exactly as the variant is', () => {
+    render(
+      <Button
+        label="I have an invitation code"
+        variant="secondary"
+        role="link"
+        onPress={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'I have an invitation code' })).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(drawn(false).backgroundColor).toBe(theme.color.surface);
+    expect(drawn(false).borderColor).toBe(theme.color.line);
+    expect(drawn(true).backgroundColor).toBe(theme.color.line2);
+  });
+});
+
+/**
+ * **The coral dot before the label** (6.1 and 1.2, amended 2026-11-08, #784) — the product owner's
+ * mark on the stage's invitation button, kept against 1.2's closed list. A drawn mark, never spoken.
+ */
+/** The sign-in stage's buttons are its boxes' height — 48, measured off mock 3 (6.1, amended). */
+describe('the stage’s size (6.1, amended)', () => {
+  it('stands as tall as the stage’s text boxes', () => {
+    render(<Button label="Sign in" size="stage" onPress={() => {}} />);
+    expect(drawn(false).minHeight).toBe(theme.size.stage.control);
+  });
+});
+
+describe('the dot before the label (6.1, amended)', () => {
+  it('draws a coral dot of the smallest mark’s size before the words, and speaks the words alone', () => {
+    render(<Button label="I have an invitation code" variant="secondary" dot onPress={() => {}} />);
+
+    const dot = screen.getByTestId('button-dot', { includeHiddenElements: true });
+    const style = StyleSheet.flatten(dot.props.style as ViewStyle);
+    expect(style.backgroundColor).toBe(theme.color.coral);
+    expect(style.width).toBe(theme.size.sportDot);
+    expect(screen.getByRole('button', { name: 'I have an invitation code' })).toBeTruthy();
+  });
+
+  it('draws none unless asked', () => {
+    render(<Button label="Sign in" onPress={() => {}} />);
+    expect(screen.queryByTestId('button-dot', { includeHiddenElements: true })).toBeNull();
+  });
+});
+
 describe('the settled button (6.1, amended)', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
