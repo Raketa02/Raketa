@@ -12,7 +12,9 @@ difference between sorting every point of the sport and sorting the week's
 place and every chip are worked out from one reading. **Columns, never ORM
 objects**: a pass hands back every listed row, and hydrating fifty thousand
 entities twice over was most of what it cost. Both dialects the backend runs
-on speak the window, SQLite since 3.25. A player's own rows are one statement
+on speak the window, SQLite since 3.25. **A reader's Friends table is the same
+statement over the reader and their friends alone** (#771), so it is worked
+out on each read from one reading too. A player's own rows are one statement
 on the primary key's prefix. **Same
 session as the write**, so a row folded a moment ago is read by the read that
 follows it in the transaction. The upsert is a statement, never an ORM object,
@@ -27,6 +29,7 @@ backend runs on speak the same clause, SQLite since 3.24.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from typing import Final
 from uuid import UUID
 
@@ -99,8 +102,16 @@ class SqlAlchemyRankingRows:
         return tuple(_row(stored) for stored in rows.all())
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+        self,
+        sport: Sport,
+        *,
+        at_least: int,
+        since: Instant,
+        then: Instant,
+        among: Collection[UUID] | None = None,
     ) -> tuple[ListedAndThen, ...]:
+        if among is not None and not among:
+            return ()
         rows, points = RankingRowORM.__table__, LevelPointORM.__table__
         listed = (
             select(*(rows.c[column] for column in _LISTED))
@@ -108,6 +119,11 @@ class SqlAlchemyRankingRows:
                 rows.c.sport == sport.value,
                 rows.c.results >= at_least,
                 rows.c.last_result_at > since,
+                *(
+                    ()
+                    if among is None
+                    else (rows.c.player_id.in_(sorted(set(among), key=str)),)
+                ),
             )
             .cte("listed")
         )

@@ -1639,8 +1639,9 @@ class HomeLevelAskSchema(BaseModel):
 
 
 class HomeRankingSchema(BaseModel):
-    """Home's trophy, **🏆 #7**, just left of the bell (#768; `docs/adr/0203`
-    §5). A tap opens Rankings on `sport`."""
+    """Home's trophy, **🏆 #7**, just left of the bell (#768, #771;
+    `docs/adr/0203` §5). A tap opens Rankings on `sport`, in the view you last
+    looked at."""
 
     sport: Sport = Field(
         description=(
@@ -1656,10 +1657,24 @@ class HomeRankingSchema(BaseModel):
             "trophy draws no number."
         ),
     )
+    friends_place: int | None = Field(
+        ge=1,
+        description=(
+            "Your place among your friends in `sport` — `null` when you aren't "
+            "listed there (no result in the last 90 days), and when no friend "
+            "of yours is (*Just you so far*), and the trophy draws no number. "
+            "The trophy shows the place of the view you last looked at on "
+            "Rankings, General the first time."
+        ),
+    )
 
     @classmethod
     def of(cls, ranking: HomeRanking) -> "HomeRankingSchema":
-        return cls(sport=ranking.sport, general_place=ranking.general_place)
+        return cls(
+            sport=ranking.sport,
+            general_place=ranking.general_place,
+            friends_place=ranking.friends_place,
+        )
 
 
 class HomeResponse(BaseModel):

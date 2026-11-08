@@ -1,6 +1,6 @@
 """The ranking's reads: a sport's General list as the reader sees it, a page
-of it, and the trophy's place on Home (``docs/adr/0203`` §2–§5; the screens §1,
-§4–§5).
+of it, the reader's Friends table, and the trophy's places on Home
+(``docs/adr/0203`` §2–§5; the screens §1, §4–§5).
 
 **A read, recorded nowhere, and the clock is read once.** Who is listed — five
 results, the last within the 90 days — and every chip are decided by **the
@@ -18,6 +18,12 @@ reader may not see is dropped from the slice and never moves a cursor.
 **The gap line names only rows the reader can see** — here, a row somebody can
 name — so a nameless neighbour is skipped and the line reads against the
 nearest named one (the mechanics §7.3).
+
+**Friends is the same read over a table of its own** (``TheFriendsTable``,
+#771): the reader and their friends with a result in the 90 days, worked out on
+each read, places, chips and the gap line counted within it, and returned
+whole. With no friend listed the card is the page — *just you*, or *no friend
+listed* — and nothing is drawn below it.
 """
 
 from __future__ import annotations
@@ -28,6 +34,7 @@ from typing import Final, NamedTuple, final
 from uuid import UUID
 
 from app.kernel import Clock, Instant, Sport, instant, invariant
+from app.modules.rankings.application.friends_table import TheFriendsTable
 from app.modules.rankings.application.general_order import TheGeneralOrder
 from app.modules.rankings.domain.general_order import (
     ListedRow,
@@ -51,7 +58,9 @@ from app.modules.rankings.domain.ranking import (
     GapLine,
     Outcome,
     PlaceCard,
+    RankingView,
     card_of,
+    friends_card_of,
     latest_of,
     player_above,
     player_below,
@@ -84,16 +93,19 @@ class RankedRow:
 @dataclass(frozen=True, slots=True)
 class Ranking:
     sport: Sport
+    view: RankingView
     #: The instant the read was made at.
     read_at: Instant
     card: PlaceCard
-    #: How many are listed — *of 13*.
+    #: How many are listed in the view — *of 13*.
     listed_count: int
     #: The first three rows, each with its true place — empty with fewer.
     podium: tuple[RankedRow, ...]
-    #: General's first page.
+    #: General's first page, or the whole Friends table — empty when the card
+    #: is the page (*just you*, *no friend listed*).
     rows: tuple[RankedRow, ...]
-    #: The cursor the next page is read after; ``None`` when this is all.
+    #: The cursor the next page is read after; ``None`` when this is all, and
+    #: always in Friends.
     next: OrderKey | None
 
 
@@ -131,6 +143,14 @@ async def _seen(
     """The slice and everybody's face on it, asked in one question."""
 
     rows = await order.rows(page.start, page.stop)
+    return await _seen_of(rows, faces, reader=reader)
+
+
+async def _seen_of(
+    rows: tuple[ListedRow, ...], faces: RankedFaces, *, reader: UUID
+) -> _Seen:
+    """These rows and everybody's face on them, asked in one question."""
+
     known = dict(await faces.faces_of([row.player_id for row in rows]))
     return _Seen(
         rows=rows,
@@ -145,24 +165,30 @@ async def _seen(
 
 @final
 class ReadRanking:
-    """``GET /rankings/{sport}?view=GENERAL``: the card with its chip and gap
-    line, the podium and the first page."""
+    """``GET /rankings/{sport}?view=…``: the card with its chip and gap line,
+    the podium, and General's first page or the whole Friends table."""
 
     def __init__(
         self,
         *,
         general: TheGeneralOrder,
+        friends: TheFriendsTable,
         faces: RankedFaces,
         levels: SportLevels,
         clock: Clock,
     ) -> None:
         self._general = general
+        self._friends = friends
         self._faces = faces
         self._levels = levels
         self._clock = clock
 
-    async def execute(self, reader: UUID, sport: Sport) -> Ranking:
+    async def execute(
+        self, reader: UUID, sport: Sport, *, view: RankingView = RankingView.GENERAL
+    ) -> Ranking:
         now = instant(self._clock.now())
+        if view is RankingView.FRIENDS:
+            return await self._among_friends(reader, sport, now=now)
         read = await self._general.read(sport, now=now, reader=reader)
         order, mine = read.order, read.mine
         page = first_page(order.listed)
@@ -178,12 +204,44 @@ class ReadRanking:
         )
         return Ranking(
             sport=sport,
+            view=RankingView.GENERAL,
             read_at=now,
             card=card,
             listed_count=order.listed,
-            podium=seen.ranked[:PODIUM_SIZE] if len(seen.ranked) >= PODIUM_SIZE else (),
+            podium=_podium_of(seen.ranked),
             rows=seen.ranked,
             next=seen.rows[-1].key if page.stop < order.listed else None,
+        )
+
+    async def _among_friends(
+        self, reader: UUID, sport: Sport, *, now: Instant
+    ) -> Ranking:
+        """The Friends view: the whole table and the card read within it —
+        or, with no friend listed, the card alone."""
+
+        read = await self._friends.read(sport, now=now, reader=reader)
+        table, mine = read.table, read.mine
+        seen = await _seen_of(table.order.rows, self._faces, reader=reader)
+        card = friends_card_of(
+            read.own,
+            holds_a_level=await self._levels.holds_a_level(reader, sport),
+            of=table.listed,
+            friends_listed=read.friends_listed,
+            placed=mine,
+            gap_line=(
+                None if mine is None else await self._gap_line(table, mine, seen.faces)
+            ),
+        )
+        shown = () if card.is_the_page else seen.ranked
+        return Ranking(
+            sport=sport,
+            view=RankingView.FRIENDS,
+            read_at=now,
+            card=card,
+            listed_count=table.listed,
+            podium=_podium_of(shown),
+            rows=shown,
+            next=None,
         )
 
     async def _gap_line(
@@ -218,6 +276,12 @@ class ReadRanking:
             if face is not None and face.nickname is not None:
                 return row, face.nickname
         return None
+
+
+def _podium_of(ranked: tuple[RankedRow, ...]) -> tuple[RankedRow, ...]:
+    """The first three rows the reader sees — none with fewer."""
+
+    return ranked[:PODIUM_SIZE] if len(ranked) >= PODIUM_SIZE else ()
 
 
 async def _walk_up(order: HeldOrder, above: int) -> AsyncIterator[ListedRow]:
@@ -328,21 +392,31 @@ def _ranked(
 @dataclass(frozen=True, slots=True)
 class HomeRanking:
     """Home's trophy: the sport of the reader's latest result, in any sport,
-    and their General place in it — ``None`` when they aren't listed there."""
+    and their place in it in each view — ``None`` where they aren't listed,
+    and in Friends where no friend is either (#771)."""
 
     sport: Sport
     general_place: int | None
+    friends_place: int | None
 
 
 @final
 class ReadHomeRanking:
-    """The trophy's sport and place, or ``None`` with no result anywhere."""
+    """The trophy's sport and places, or ``None`` with no result anywhere. The
+    view it shows is the phone's to remember (the mechanics §8), so both
+    places are sent."""
 
     def __init__(
-        self, *, rows: RankingRows, general: TheGeneralOrder, clock: Clock
+        self,
+        *,
+        rows: RankingRows,
+        general: TheGeneralOrder,
+        friends: TheFriendsTable,
+        clock: Clock,
     ) -> None:
         self._rows = rows
         self._general = general
+        self._friends = friends
         self._clock = clock
 
     async def execute(self, reader: UUID) -> HomeRanking | None:
@@ -350,8 +424,10 @@ class ReadHomeRanking:
         if latest is None:
             return None
         now = instant(self._clock.now())
-        read = await self._general.read(latest.sport, now=now, reader=reader)
+        general = await self._general.read(latest.sport, now=now, reader=reader)
+        friends = await self._friends.read(latest.sport, now=now, reader=reader)
         return HomeRanking(
             sport=latest.sport,
-            general_place=None if read.mine is None else read.mine.place,
+            general_place=None if general.mine is None else general.mine.place,
+            friends_place=friends.place,
         )

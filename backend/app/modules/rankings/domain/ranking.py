@@ -33,8 +33,12 @@ from app.kernel import Instant, Sport, instant, invariant
 #: Q24; the engine review, #781, is where it is revisited).
 GENERAL_ENTRY: Final = 5
 
-#: How long after their last result a player stays listed (Q18). The next
-#: result puts them straight back, with no new wait.
+#: Results in the sport that put a player among their friends' (Q26): the
+#: first.
+FRIENDS_ENTRY: Final = 1
+
+#: How long after their last result a player stays listed (Q18), in both
+#: views (Q26). The next result puts them straight back, with no new wait.
 LISTED_FOR: Final = timedelta(days=90)
 
 #: The form: the last results in the sport, oldest first, as the record's
@@ -58,6 +62,22 @@ WINS_COUNTED: Final = 5
 #: the ranking compares Levels at that resolution: 5,00 is level with any other
 #: 5,00, and the tie rule decides.
 _HUNDREDTHS: Final = 100
+
+
+class RankingView(StrEnum):
+    """Which list a ranking is read in (``docs/adr/0203`` §3). **General** is
+    everybody in Raketa listed in the sport; **Friends** is the reader and their
+    friends, worked out on each read (#771). Both drop a player 90 days after
+    their last result, and both order and place them alike."""
+
+    GENERAL = "GENERAL"
+    FRIENDS = "FRIENDS"
+
+    @property
+    def entry(self) -> int:
+        """The results in the sport that enter this view's list."""
+
+        return GENERAL_ENTRY if self is RankingView.GENERAL else FRIENDS_ENTRY
 
 
 def hundredths_of(mu: float) -> int:
@@ -202,6 +222,14 @@ class RankingRow:
 
         return self.results >= GENERAL_ENTRY and now - self.last_result_at < LISTED_FOR
 
+    def entered(self, view: RankingView) -> Instant | None:
+        """When the player first entered the view's list — the fifth result
+        for General, the first for Friends — or ``None`` before it."""
+
+        if view is RankingView.GENERAL:
+            return self.general_entered_at
+        return self.friends_entered_at
+
 
 def listed_since(now: Instant) -> Instant:
     """The settling instant a last result must be later than to be listed."""
@@ -345,21 +373,24 @@ def chips_of(
     then: Mapping[UUID, LevelPoint],
     *,
     now: Instant,
+    view: RankingView = RankingView.GENERAL,
 ) -> dict[UUID, Chip]:
-    """Every listed player's chip.
+    """Every listed player's chip, in the view ``listed`` is.
 
     ``listed`` is **today's set**, in today's order; ``then`` is each of those
     players' level-history point at :func:`chips_since` — the latest at or
     before it, or, for a player with none by then, their first. **The chip
     compares a place in today's order with a place among the same players
-    ordered by those points**, so an arrival or a departure moves nobody, and
-    an overtake moves both (Q5, Q23).
+    ordered by those points**, so an arrival or a departure moves nobody — a
+    friend just added included, who is in both orders — and an overtake moves
+    both (Q5, Q23).
 
-    ***New*** is the 7 days after a first entry into General — the 5th result.
-    A comeback is not new: a returning player's level 7 days ago is known, so
-    the chip is real. **A row with no point** stands where it stands now: a
-    player with no result in the 7 days — the general order's pass reads no
-    history for them (#770) — and a store the rebuild hasn't filled.
+    ***New*** is the 7 days after a first entry into the view's list — the 5th
+    result for General, the 1st for Friends. A comeback is not new: a
+    returning player's level 7 days ago is known, so the chip is real. **A row
+    with no point** stands where it stands now: a player with no result in the
+    7 days — the pass reads no history for them (#770) — and a store the
+    rebuild hasn't filled.
     """
 
     def then_order(row: RankingRow) -> tuple[int, int, Instant, UUID]:
@@ -371,7 +402,7 @@ def chips_of(
     }
     chips: dict[UUID, Chip] = {}
     for place, row in enumerate(listed, start=1):
-        entered = row.general_entered_at
+        entered = row.entered(view)
         if entered is not None and now - entered < CHIP_WINDOW:
             chips[row.player_id] = Chip(ChipKind.NEW)
             continue
@@ -501,18 +532,28 @@ def player_below(reader: Levelled, below: Levelled, nickname: str) -> PlayerBelo
 
 
 class CardState(StrEnum):
-    """What the reader's place card says (the screens §4.1, §4.3, §4.4)."""
+    """What the reader's place card says (the screens §4.1, §4.3, §4.4, §4.6)."""
 
     #: *YOUR PLACE · 7th · of 13*, with the Level.
     LISTED = "LISTED"
-    #: *2 of 5 games — 3 more competitive padel games put you on the list*.
+    #: Fewer results than the view's entry: *2 of 5 games — 3 more competitive
+    #: padel games put you on the list* in General; *Not ranked in padel yet —
+    #: your first confirmed competitive game puts you on the list* in Friends.
     NEEDS_RESULTS = "NEEDS_RESULTS"
     #: *No squash level yet — get one, then 5 competitive games put you on the
-    #: list*, with **Get your squash level**.
+    #: list*, with **Get your squash level** (*… then one competitive game …*
+    #: in Friends).
     NO_LEVEL = "NO_LEVEL"
     #: *Off the list — no competitive padel game in 90 days. Your next one puts
     #: you back.*
     OFF_THE_LIST = "OFF_THE_LIST"
+    #: Friends only: the reader is listed and no friend is — *Just you so far*,
+    #: with **Add friends**, and nothing below it.
+    JUST_YOU = "JUST_YOU"
+    #: Friends only: neither the reader nor any friend is listed — *None of your
+    #: friends is ranked in padel yet*, with **Add friends**, in the card's
+    #: place, and nothing below it.
+    NO_FRIEND_LISTED = "NO_FRIEND_LISTED"
 
 
 @final
@@ -536,6 +577,13 @@ class PlaceCard:
             and (listed or all(field is None for field in placed)),
             f"a place on a card that is not listed, or none on one that is: {self!r}",
         )
+
+    @property
+    def is_the_page(self) -> bool:
+        """The card stands alone — *Just you so far*, *None of your friends is
+        ranked…* — and nothing is drawn below it (the screens §4.6)."""
+
+        return self.state in (CardState.JUST_YOU, CardState.NO_FRIEND_LISTED)
 
 
 class Placed(Protocol):
@@ -562,16 +610,18 @@ def card_of(
     of: int,
     placed: Placed | None = None,
     gap_line: GapLine | None = None,
+    view: RankingView = RankingView.GENERAL,
 ) -> PlaceCard:
-    """The reader's General card in a sport.
+    """The reader's card in a sport and view.
 
     **No level comes first**, read live from the rating: a reader with no
     rating in the sport has no row either. Then **a place in the order** — the
     order read decides who is listed, at the instant it was worked out, so the
     card and the rows never disagree (#770): the place, the Level, the count
-    and the chip are the order's row's. Then **fewer than five results**,
-    whatever their age; and otherwise **off the list**, five or more with none
-    in the order's 90 days.
+    and the chip are the order's row's. Then **fewer results than the view's
+    entry** (five for General, one for Friends), whatever their age; and
+    otherwise **off the list**, enough of them with none in the order's 90
+    days.
     """
 
     if not holds_a_level:
@@ -586,11 +636,46 @@ def card_of(
             chip=placed.chip,
             gap_line=gap_line,
         )
-    if row is None or row.results < GENERAL_ENTRY:
+    if row is None or row.results < view.entry:
         return PlaceCard(
             state=CardState.NEEDS_RESULTS, results=0 if row is None else row.results
         )
     return PlaceCard(state=CardState.OFF_THE_LIST, results=row.results)
+
+
+def friends_card_of(
+    row: RankingRow | None,
+    *,
+    holds_a_level: bool,
+    of: int,
+    friends_listed: int,
+    placed: Placed | None = None,
+    gap_line: GapLine | None = None,
+) -> PlaceCard:
+    """The reader's card in Friends (the screens §4.6).
+
+    **With a friend listed** it is :func:`card_of`'s, in Friends: the place
+    among them, or the reader's own not-listed card above the friends' table
+    (Q7). **With none**, the card is the whole page — *Just you so far* when
+    the reader is listed, and *None of your friends is ranked…* when they
+    aren't either, whatever their own state.
+    """
+
+    if friends_listed == 0:
+        if placed is not None:
+            return PlaceCard(state=CardState.JUST_YOU, results=placed.results)
+        return PlaceCard(
+            state=CardState.NO_FRIEND_LISTED,
+            results=0 if row is None else row.results,
+        )
+    return card_of(
+        row,
+        holds_a_level=holds_a_level,
+        of=of,
+        placed=placed,
+        gap_line=gap_line,
+        view=RankingView.FRIENDS,
+    )
 
 
 def latest_of(rows: tuple[RankingRow, ...]) -> RankingRow | None:

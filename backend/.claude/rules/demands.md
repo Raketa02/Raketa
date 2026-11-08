@@ -129,9 +129,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the outside world's and are not demands on a context.
   **The seventeenth, `ranking_demands.py`, is Rankings' consumer register** (#768;
   `rankings.md`): the rating's record every row is folded from (`RatingHistories`, over the
-  rating's own streams), the faces (`RankedFaces`) and a level held, read live
-  (`SportLevels`). Home's trophy is a row in Proposals' register, `RankingOnHome` (the
-  tenth's twenty-fourth).
+  rating's own streams), the faces (`RankedFaces`), a level held, read live
+  (`SportLevels`), and since #771 the reader's friends (`ReadersFriends`, over Friends'
+  own read, its friendships arranged through `tests/demands/friends_world.py`). Home's
+  trophy is a row in Proposals' register, `RankingOnHome` (the tenth's twenty-fourth).
   **The eighteenth, `general_order_demands.py`, is the third of `payments_demands.py`'s
   kind** (#770; `rankings.md`): the two adapters of the kept General orders — Redis's, as
   the composition root wraps it, over the suite's fake server, and the in-memory equivalent

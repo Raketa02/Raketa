@@ -15,10 +15,12 @@ publishes, wired by the composition root, each with a row in
 - ``RankedFaces`` — a nickname from ``users``, a photograph from the Player
   profile;
 - ``SportLevels`` — whether the reader holds a level in a sport, read live from
-  the rating.
+  the rating;
+- ``ReadersFriends`` — the reader's friends now, from Friends' own friend list
+  (#771), which the Friends view is worked out over.
 
-Friends' friend list, blocks both ways and *Show me in General* arrive with
-the tickets that read them (#771, #772).
+Blocks both ways and *Show me in General* arrive with the ticket that reads
+them (#772).
 """
 
 from __future__ import annotations
@@ -58,7 +60,13 @@ class RankingRows(Protocol):
         ...
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+        self,
+        sport: Sport,
+        *,
+        at_least: int,
+        since: Instant,
+        then: Instant,
+        among: Collection[UUID] | None = None,
     ) -> tuple[ListedAndThen, ...]:
         """The rows with ``at_least`` results whose last settled after
         ``since``, **in the ranking's order**, best first — **each with its
@@ -66,7 +74,9 @@ class RankingRows(Protocol):
         settled after it: their latest at or before it, or, for a player with
         none by then, their first. **A player with no result since stood then
         where they stand now**, and has no point here. **One pass**, so the
-        order and every chip are worked out from one reading (#770)."""
+        order and every chip are worked out from one reading (#770). With
+        ``among``, only those players' rows — a reader and their friends
+        (#771)."""
         ...
 
 
@@ -138,6 +148,16 @@ class RankedFaces(Protocol):
 class SportLevels(Protocol):
     async def holds_a_level(self, player_id: UUID, sport: Sport) -> bool:
         """Whether the player holds a level in the sport now, read live."""
+        ...
+
+
+@runtime_checkable
+class ReadersFriends(Protocol):
+    async def friends_of(self, reader: UUID) -> frozenset[UUID]:
+        """**The reader's friends now** — the reader never among them, and
+        nobody whose request is merely open either way. Read live, so a friend
+        just added is in the next read, and one removed, or whose block's
+        delivery ended the friendship, is not."""
         ...
 
 

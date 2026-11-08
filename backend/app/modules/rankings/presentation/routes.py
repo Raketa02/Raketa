@@ -1,5 +1,5 @@
-"""The Rankings page's reads (#768, #770; ``docs/adr/0203`` §2–§5; the screens
-§2–§5).
+"""The Rankings page's reads (#768, #770, #771; ``docs/adr/0203`` §2–§5; the
+screens §2–§5).
 
 **Read-only, and it tells nobody anything** (Q10): no push, bell line or email
 is about a place.
@@ -12,6 +12,7 @@ from fastapi import APIRouter, Query, status
 from app.core.exception_handlers import ErrorResponse
 from app.kernel import Sport
 from app.modules.rankings.domain.errors import NotAPage
+from app.modules.rankings.domain.ranking import RankingView
 from app.modules.rankings.presentation.dependencies import (
     ReadGeneralPageDep,
     ReadRankingDep,
@@ -19,7 +20,6 @@ from app.modules.rankings.presentation.dependencies import (
 from app.modules.rankings.presentation.schemas import (
     GeneralPageResponse,
     RankingResponse,
-    RankingView,
     key_of,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
@@ -33,9 +33,9 @@ router = APIRouter(prefix="/rankings", tags=["rankings"])
     status_code=status.HTTP_200_OK,
     summary="A sport's ranking",
     description=(
-        "Your place card, the podium and the first page of the list, in one "
-        "sport and view — sorted by the Level itself, competitive games only. "
-        "An unknown sport is refused."
+        "Your place card, the podium and the list, in one sport and view — "
+        "sorted by the Level itself, competitive games only: General's first "
+        "page, or the whole of Friends. An unknown sport is refused."
     ),
 )
 async def read_ranking(
@@ -44,10 +44,13 @@ async def read_ranking(
     use_case: ReadRankingDep,
     view: RankingView = Query(
         default=RankingView.GENERAL,
-        description="Which list: `GENERAL`, everybody in Raketa listed in the sport.",
+        description=(
+            "Which list: `GENERAL`, everybody in Raketa listed in the sport; "
+            "`FRIENDS`, you and your friends, from the first result."
+        ),
     ),
 ) -> RankingResponse:
-    return RankingResponse.of_ranking(await use_case.execute(user.id, sport), view=view)
+    return RankingResponse.of_ranking(await use_case.execute(user.id, sport, view=view))
 
 
 @router.get(

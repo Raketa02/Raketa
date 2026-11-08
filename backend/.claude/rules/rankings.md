@@ -13,7 +13,7 @@ paths:
 
 # Rankings
 
-Decisions that are load-bearing and not obvious from the code (#768, #769, #770;
+Decisions that are load-bearing and not obvious from the code (#768, #769, #770, #771;
 [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
 `docs/specs/rankings/`). The words are root `CONTEXT.md`'s *Rankings* section.
 
@@ -154,7 +154,7 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770;
   a cold work-out runs its own; one work-out per process per sport (single flight), and the
   keep off the reader's path, are where the cold second goes at a busy sport's write rate.
 - **`GET /rankings/{sport}?view=GENERAL`** (`ReadRanking`; `view` defaults to `GENERAL`,
-  and `FRIENDS` arrives with #771; an unknown sport is `422`): **the card** — `NO_LEVEL`
+  `FRIENDS` below; an unknown sport is `422`): **the card** — `NO_LEVEL`
   first, read live from rating's published read (`SportLevels`), then `NEEDS_RESULTS` with
   the count (fewer than 5, whatever their age), then `OFF_THE_LIST` (5 or more, none in the
   90 days), else `LISTED` with `place`, `of`, `level`, `chip` and `gap_line` — **the podium**, the first three
@@ -164,6 +164,27 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770;
   `is_you` — and `next`, the cursor the second page is read after. The clock is read once,
   and the card, the podium and the rows are one kept order's, so they agree about who
   dropped off.
+- **`view=FRIENDS` is the reader and their friends** (#771; the mechanics §4.2; the
+  screens §4.6; `application/friends_table.py`'s `TheFriendsTable`): Friends' friend list
+  read live through **`ReadersFriends`** (`FriendsReadersFriends`, over Friends'
+  `ReadRelations.friends_of` — the reader's side alone, no block read, as `friends_among`),
+  then **one pass of the projection over that set alone** — `RankingRows.listed(…,
+  at_least=FRIENDS_ENTRY, among={reader, *friends})`, General's own statement with a
+  `player_id IN` — so **at least 1 result** (`FRIENDS_ENTRY`), the last within the same 90
+  days. **Worked out on each read and kept nowhere** — `work_out(…, view=FRIENDS)` into the
+  same `GeneralOrder` shape held in hand (`OrderInHand`), so the card, the podium, the rows
+  and the gap line read it exactly as General's. **Places, chips and the gap line are
+  counted within the set**: a stranger between two friends is not there to be named or
+  passed. **The whole table, never a page** (`next` always `null`; one face question for
+  every row). **The card** (`friends_card_of`): with a friend listed, `card_of(…,
+  view=FRIENDS)` — `LISTED` with the Friends place, or the reader's own not-listed card above
+  the friends' podium and table (Q7): `NO_LEVEL`, `NEEDS_RESULTS` with `results` `0` (*Not
+  ranked in padel yet…*) or `OFF_THE_LIST`; **with none, the card is the page** —
+  **`JUST_YOU`** when the reader is listed, **`NO_FRIEND_LISTED`** when they aren't either,
+  whatever their own state (the PRD's rule, which #767's review kept) — with `rows` and
+  `podium` empty and `listed` still counting (`1` or `0`). `results_to_enter` is the view's
+  (`RankingView.entry`: 5 or 1). **Friends ignores *Show me in General***; #772's blocks
+  will hide rows here too.
 - **The chip** (`chips_of`, on every row and the `LISTED` card: `UP`/`DOWN` with `places`,
   `SAME`, `NEW`) compares a place in **today's set**, in today's order, with a place among
   **the same set** ordered by `LevelHistory.points_at(sport, now − 7 days, …)` — each
@@ -172,7 +193,10 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770;
   opened inside the week, so the player is *New*) — **read in the order's own pass, and only
   for players with a result since then** (#770): one with none stood then where they stand
   now, which is also the right answer where two results settled out of stream order before
-  then. So an arrival or a departure moves nobody and an overtake moves both. ***New*** is `now − general_entered_at < 7 days`; a
+  then. So an arrival or a departure moves nobody and an overtake moves both — **in Friends
+  too, over its own set**: a friend just added stands in today's order and in the week-old
+  one, so adding one moves nobody. ***New*** is `now − general_entered_at < 7 days` — in
+  Friends `friends_entered_at`, the first result (`RankingRow.entered(view)`); a
   comeback after 90 days reads a real chip, its Level a week ago known. **A listed row with
   no point at all** (a store the rebuild hasn't filled) stands where it stands now — never
   an invariant: it would take every reader's page down.
@@ -197,20 +221,25 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770;
   with *At stake*, nobody else may compute it.
 - **Home's trophy** (`GET /home`'s `ranking`, additive): the sport of the reader's **latest
   result in any sport** (`latest_of`: the row with the latest `last_result_at`, ties to the
-  sport registry's order) and their General place there, `null` when not listed; the whole
-  field `null` with no result anywhere. Proposals reads it through **`RankingOnHome`**,
-  signed in `proposals/infrastructure/rankings.py` (`RankingsOnHome`) over
-  `ReadHomeRanking`, with a row in `proposal_demands.py`; `.importlinter`'s
-  `rankings-knows-none-of-its-readers` keeps every arrow running into `rankings`. Friends'
-  place on it is #771's.
+  sport registry's order) and their General place there, `null` when not listed, **and
+  their Friends place there** (#771, `friends_place`: `FriendsRead.place`, `null` when they
+  aren't listed among friends **or no friend is** — *Just you so far* is no place); the whole
+  field `null` with no result anywhere. Both places are sent because the view the trophy
+  shows is the phone's remembered choice (ADR-0188's fourth value), never the server's.
+  Proposals reads it through **`RankingOnHome`**, signed in
+  `proposals/infrastructure/rankings.py` (`RankingsOnHome`) over `ReadHomeRanking`, with a
+  row in `proposal_demands.py`; `.importlinter`'s `rankings-knows-none-of-its-readers`
+  keeps every arrow running into `rankings`.
 - **Its neighbours are ports in its own words**, signed in `rankings/infrastructure/` and
   contracted in **`app/bootstrap/ranking_demands.py`** (the seventeenth register):
   `RatingHistories` (`RatingStreamHistories`, over the rating's own streams through the
   event store — the opening `rating.rating_initialised` and every move, decoded as rating
-  recorded them), `RankedFaces` (`ProfileRankedFaces`) and `SportLevels`
-  (`RatedSportLevels`, over `RatedPlayerQuery`). Friends' friend list, blocks both ways and
-  *Show me in General* join it with #771 and #772. Rankings is on the record's and
-  Notifications' forbidden lists: it tells nobody anything (Q10).
+  recorded them), `RankedFaces` (`ProfileRankedFaces`), `SportLevels`
+  (`RatedSportLevels`, over `RatedPlayerQuery`) and, since #771, `ReadersFriends`
+  (`FriendsReadersFriends`, over Friends' `ReadRelations.friends_of` — so `rankings` is on
+  `.importlinter`'s *friends-knows-none-of-its-readers*). Blocks both ways and *Show me in
+  General* join it with #772. Rankings is on the record's and Notifications' forbidden
+  lists: it tells nobody anything (Q10).
 - **Seeded by `app/seeds/rankings.py`**: `RANKING_GAMES`, nineteen padel games the runner
   hands the played history beside the cohort's own, so each is a past booked game filled,
   played, scored and accepted through the use cases, and the rooms layer's drain folds every
@@ -234,7 +263,19 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770;
   histogram's floor is 2), everybody within the competitive window of everybody, and
   `cohort-a-09`'s *men only* in all-men games. **The fill draws the sides off the Levels
   before any game moved them**, so a loss of hers names whoever it seats across the net.
-  `assert_the_ranking` fails the run by name unless more than a page is listed, she is
+  **Her Friends table** (#771, `write_her_ranked_friends`, run after both friends layers):
+  `HER_FRIENDS` — `cohort-a-11` and `cohort-a-08` above her, `cohort-b-04` and the
+  beginner below, **each at least 0,05 from her and from each other** (a seeded Level
+  moves a hundredth or two between runs, as the fill draws the sides, and #771's first pick
+  of two a hundredth apart swapped) — each ask her from *Padel na Ogrodach* and
+  she accepts, through `AskToBeFriends` and `AcceptFriendRequest`, asked only while nothing
+  stands between them; so *said yes* is told to them and her bell is untouched, and the
+  friends layer's own claim on her two named friends still holds (it reads the named
+  accounts alone). She reads **3rd of 5**, with a podium, the beginner listed among friends
+  from their first result and short of General. **The beginner also played her at tennis**,
+  so her tennis Friends table is the two of them and Home's trophy reads `friends_place` `1`
+  there. `assert_the_ranking` fails the run by name unless more than a page is listed, she is
   listed below the first page and not last, the page around her (`ReadGeneralPage`) holds
-  her, the beginner reads *needs results* with 2–4, and badminton lists nobody. **Her
+  her, the beginner reads *needs results* with 2–4, badminton lists nobody, and her Friends
+  view is `LISTED` with at least three friends and a podium. **Her
   trophy reads tennis**: her evenings are her latest results.

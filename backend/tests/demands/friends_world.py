@@ -1,6 +1,7 @@
 """Friendships and blocks arranged **through their aggregates** for the demand
-suites — asked, answered, set aside, blocked, and asked for a level (#764) —
-saved by their own repositories, never an ``INSERT`` (#745)."""
+suites — asked, answered, set aside, removed, ended by a block (#771), blocked,
+and asked for a level (#764) — saved by their own repositories, never an
+``INSERT`` (#745)."""
 
 from __future__ import annotations
 
@@ -47,6 +48,26 @@ async def befriends(session, one: UUID, other: UUID) -> None:
     friendship = await friendships.load(one, other)
     friendship.ask(requester=one, where=WHERE, at=ASKED_AT)
     friendship.accept(by=other, at=ASKED_AT)
+    await friendships.save(friendship)
+    await session.commit()
+
+
+async def removes(session, by: UUID, other: UUID) -> None:
+    """A friend removes the other (#771)."""
+
+    friendships = _friendships(session)
+    friendship = await friendships.load(by, other)
+    friendship.remove(by=by, at=ASKED_AT)
+    await friendships.save(friendship)
+    await session.commit()
+
+
+async def ends_by_a_block(session, blocker: UUID, other: UUID) -> None:
+    """The friendship a block ends, as the block's delivery ends it (#771)."""
+
+    friendships = _friendships(session)
+    friendship = await friendships.load(blocker, other)
+    friendship.end_by_a_block(blocker=blocker, at=ASKED_AT)
     await friendships.save(friendship)
     await session.commit()
 

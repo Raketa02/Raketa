@@ -215,6 +215,7 @@ async def test_ninety_one_days_on_the_player_is_off_the_list_and_the_next_result
     assert await home_ranking(client, tomek) == {
         "sport": "PADEL",
         "general_place": None,
+        "friends_place": None,
     }
 
     await plays(client, session_factory, clock, (tomek, zofia), (karol, ines))
@@ -306,6 +307,7 @@ async def test_home_carries_the_sport_of_the_latest_result_and_the_general_place
     assert await home_ranking(client, tomek) == {
         "sport": "PADEL",
         "general_place": None,
+        "friends_place": None,
     }
 
     for _ in range(4):
@@ -314,6 +316,7 @@ async def test_home_carries_the_sport_of_the_latest_result_and_the_general_place
     assert await home_ranking(client, tomek) == {
         "sport": "PADEL",
         "general_place": place,
+        "friends_place": None,
     }
 
     # A tennis result after it: the trophy follows the latest result's sport,
@@ -326,6 +329,7 @@ async def test_home_carries_the_sport_of_the_latest_result_and_the_general_place
     assert await home_ranking(client, tomek) == {
         "sport": "TENNIS",
         "general_place": None,
+        "friends_place": None,
     }
 
 

@@ -552,6 +552,7 @@ from app.modules.rankings.application.projection import (
     MoveTheRanking,
     RebuildTheRankings,
 )
+from app.modules.rankings.application.friends_table import TheFriendsTable
 from app.modules.rankings.application.general_order import TheGeneralOrder
 from app.modules.rankings.application.reads import (
     ReadGeneralPage,
@@ -564,7 +565,11 @@ from app.modules.rankings.domain.ports import (
     RankedFaces,
     RankingRows,
     RatingHistories,
+    ReadersFriends,
     SportLevels,
+)
+from app.modules.rankings.infrastructure.friends_readers_friends import (
+    FriendsReadersFriends,
 )
 from app.modules.rankings.infrastructure.in_memory_general_orders import (
     InMemoryGeneralOrders,
@@ -4067,6 +4072,25 @@ def build_rebuild_the_rankings(
     )
 
 
+def build_readers_friends(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadersFriends:
+    """The reader's friends now, **signed in ``rankings/infrastructure/``**
+    over Friends' own read, so the arrow runs ``rankings → friends`` (#771)."""
+    return FriendsReadersFriends(build_read_relations(session, runtime=runtime))
+
+
+def build_the_friends_table(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> TheFriendsTable:
+    """A reader's Friends table: worked out on each read, from one pass over
+    the reader and their friends (#771)."""
+    return TheFriendsTable(
+        rows=build_ranking_rows(session),
+        friends=build_readers_friends(session, runtime=runtime),
+    )
+
+
 def build_the_general_order(
     session: AsyncSession, *, orders: GeneralOrders
 ) -> TheGeneralOrder:
@@ -4084,9 +4108,10 @@ def build_read_ranking(
     runtime: EventRuntime | None = None,
 ) -> ReadRanking:
     """``GET /rankings/{sport}``: the card, the podium and General's first
-    page."""
+    page, or the whole Friends table."""
     return ReadRanking(
         general=build_the_general_order(session, orders=orders),
+        friends=build_the_friends_table(session, runtime=runtime),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         levels=build_sport_levels(session, runtime=runtime),
         clock=clock,
@@ -4112,10 +4137,12 @@ def build_read_general_page(
 def build_read_home_ranking(
     session: AsyncSession, *, clock: Clock, orders: GeneralOrders
 ) -> ReadHomeRanking:
-    """Home's trophy: the sport of the latest result and the General place."""
+    """Home's trophy: the sport of the latest result, and the General and
+    Friends places there."""
     return ReadHomeRanking(
         rows=build_ranking_rows(session),
         general=build_the_general_order(session, orders=orders),
+        friends=build_the_friends_table(session),
         clock=clock,
     )
 

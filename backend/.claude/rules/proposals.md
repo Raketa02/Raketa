@@ -265,7 +265,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `proposals → friends`; `LevelAsksOnHome` has its row in `proposal_demands.py`. **And
   `ranking`** (#768; ADR-0203 §5; `rankings.md`): the trophy left of the bell — the sport of
   the reader's latest result in any sport and their General place there (`null` when not
-  listed), the whole field `null` with no result anywhere — through `RankingOnHome`, signed
+  listed) and since #771 their Friends place (`null` when not listed among friends or no
+  friend is), the whole field `null` with no result anywhere — through `RankingOnHome`, signed
   in `proposals/infrastructure/rankings.py` over Rankings' `ReadHomeRanking`, with its row
   in `proposal_demands.py`.
 - **A friends game is sent, answered and called off here** (#751; ADR-0202 §5–§6;

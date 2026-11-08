@@ -1,4 +1,5 @@
-"""The seeded ranking, read back the way the player app reads it (#768, #770).
+"""The seeded ranking, read back the way the player app reads it (#768, #770,
+#771).
 
 ``app/seeds/rankings.py`` hands its padel games to the played history — and
 ``ranking_crowd.py`` the crowd's — so each is a past booked game filled,
@@ -6,7 +7,8 @@ played, scored and accepted through the use cases a phone runs; the outbox
 drain moves the Levels, and each move folds its row. Each claim is read by
 signing in and reading ``GET /rankings/{sport}``, its pages and ``GET /home``;
 *a second run changes nothing* compares the stored rows, which is the only
-place a write twice would show.
+place a write twice would show, and counts the stored events, where a friend
+asked twice would.
 
 The world is the runner's, cut to what the layer reads: the named accounts,
 everybody the games and her evenings seat out of the real cohort, the crowd,
@@ -18,7 +20,11 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import func, select
 
-from app.bootstrap.composition import build_clock, build_settle_ratings_on_results
+from app.bootstrap.composition import (
+    build_clock,
+    build_settle_ratings_on_results,
+    build_user_repository,
+)
 from app.core.config import get_settings
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.seeds.booked_history import HER_EVENINGS, write_the_played_history
@@ -31,11 +37,14 @@ from app.seeds.cohort import COHORT, PROTAGONIST_HANDLE, Cohort
 from app.seeds.payments import write_the_payment_methods
 from app.seeds.ranking_crowd import RANKING_CROWD_GAMES, RANKING_CROWD
 from app.seeds.rankings import (
+    FRIENDS_PROMISED,
+    HER_FRIENDS,
     RANKING_GAMES,
     RESULTS,
     THE_BEGINNER,
     THE_RANKED,
     read_the_ranking,
+    write_her_ranked_friends,
 )
 from app.seeds.runner import seed, seed_the_cohort
 from tests.api.players_world import deliver_the_outbox
@@ -108,6 +117,7 @@ async def _the_history(session_factory, now) -> None:
         crowd=RANKING_CROWD.members,
     )
     await deliver_the_outbox(session_factory, rounds=200)
+    await write_her_ranked_friends(session_factory, now=now)
 
 
 async def signed_in(client, email: str) -> dict:
@@ -171,7 +181,14 @@ async def test_padel_lists_her_below_page_one_the_beginner_is_short_and_badminto
     # Her latest result is her last tennis evening, the day before her week,
     # so the trophy follows tennis — where four agreed results list nobody
     # until the catch-up confirms the fifth (#768; the mechanics §8).
-    assert home["ranking"] == {"sport": "TENNIS", "general_place": None}
+    # Among her friends one result lists a player, and the beginner, a friend
+    # of hers, played her one tennis evening and lost it: she is first of the
+    # two (#771).
+    assert home["ranking"] == {
+        "sport": "TENNIS",
+        "general_place": None,
+        "friends_place": 1,
+    }
     seeded = await read_the_ranking(session_factory, settings=get_settings(), now=now)
     assert (seeded.place, seeded.of) == (padel["card"]["place"], padel["listed"])
 
@@ -184,7 +201,51 @@ async def test_padel_lists_her_below_page_one_the_beginner_is_short_and_badminto
         ).execute()
     await deliver_the_outbox(session_factory)
     home = (await client.get("/api/v1/home", headers=her)).json()
-    assert home["ranking"] == {"sport": "TENNIS", "general_place": 1}
+    assert home["ranking"] == {
+        "sport": "TENNIS",
+        "general_place": 1,
+        "friends_place": 1,
+    }
+
+
+async def test_her_friends_table_lists_four_of_her_padel_group(
+    client, session_factory, ranked_world, now
+):
+    await _the_history(session_factory, now)
+    her = await signed_in(client, THE_POPULATED_PLAYER.email)
+    nicknames = {
+        handle: await _nickname(session_factory, COHORT.by_handle(handle).email)
+        for handle in HER_FRIENDS
+    }
+
+    friends = (
+        await client.get(
+            "/api/v1/rankings/PADEL", params={"view": "FRIENDS"}, headers=her
+        )
+    ).json()
+
+    listed = [row["nickname"] for row in friends["rows"] if not row["is_you"]]
+    assert sorted(listed) == sorted(nicknames.values())
+    assert len(listed) >= FRIENDS_PROMISED
+    # Two above her, and two below with the beginner: Friends lists from the
+    # first result, General from the fifth.
+    assert (friends["card"]["state"], friends["card"]["place"]) == ("LISTED", 3)
+    assert friends["listed"] == len(HER_FRIENDS) + 1
+    assert nicknames[THE_BEGINNER] in listed
+    assert len(friends["podium"]) == 3 and friends["next"] is None
+    line = friends["card"]["gap_line"]
+    assert line["above"]["nickname"] == nicknames["cohort-a-08"]
+    assert line["below"]["nickname"] == nicknames["cohort-b-04"]
+    seeded = await read_the_ranking(session_factory, settings=get_settings(), now=now)
+    assert (seeded.friends_place, seeded.friends_of) == (3, len(HER_FRIENDS) + 1)
+
+
+async def _nickname(session_factory, email: str) -> str:
+    async with session_factory() as session:
+        users = build_user_repository(session)
+        user = await users.get_by_email(email)
+        assert user is not None
+        return (await users.find_nicknames_of([user.id]))[user.id]
 
 
 async def test_a_second_run_changes_nothing(client, session_factory, ranked_world, now):

@@ -696,10 +696,11 @@ forbidden_modules =
 allow_indirect_imports = false
 
 # Friends lends the reader's relations to every face, and knows none of the
-# faces (docs/adr/0202 §8, #745). Members, the record, the deck, Home and the
-# bell each declare the port they read it through, **signed on their own side**
-# — `groups/infrastructure/`, `player_record/infrastructure/`,
-# `proposals/infrastructure/`, `notifications/infrastructure/` — and the one
+# faces (docs/adr/0202 §8, #745). Members, the record, the deck, Home, the bell
+# and the Rankings' Friends view (#771) each declare the port they read it
+# through, **signed on their own side** — `groups/infrastructure/`,
+# `player_record/infrastructure/`, `proposals/infrastructure/`,
+# `notifications/infrastructure/`, `rankings/infrastructure/` — and the one
 # thing Friends asks of a group, the reader's groups and their members, is a
 # port in Friends' words signed in `groups/infrastructure/` too. So every arrow
 # runs into `friends`, and none out of it towards a reader.
@@ -715,14 +716,16 @@ forbidden_modules =
     app.modules.notifications
     app.modules.player_record
     app.modules.proposals
+    app.modules.rankings
 allow_indirect_imports = true
 
 # Rankings lends Home its trophy, and knows none of its readers (docs/adr/0203
 # §10, #768). Home declares the port it reads the trophy through,
 # `RankingOnHome`, **signed on its own side** in `proposals/infrastructure/` —
 # so the arrow runs into `rankings`, and none out of it towards a reader. The
-# ranking's own neighbours — the rating's streams, the faces, a level held — are
-# ports in its words signed in `rankings/infrastructure/`, each with a row in
+# ranking's own neighbours — the rating's streams, the faces, a level held, the
+# reader's friends (#771) — are ports in its words signed in
+# `rankings/infrastructure/`, each with a row in
 # `app/bootstrap/ranking_demands.py`.
 #
 # `allow_indirect_imports = true`, for the composition-root reason above.

@@ -1,6 +1,6 @@
 """The ranking's seed: a padel General list longer than its first page with
-her below it, a beginner short of it, and a sport nobody is listed in (#768,
-#770; ``docs/adr/0203``).
+her below it, a beginner short of it, a sport nobody is listed in, and her
+Friends table (#768, #770, #771; ``docs/adr/0203``).
 
 **Every result is a past booked game, on the path the product makes games on**
 (``booked_history.py``): the runner hands ``RANKING_GAMES`` in beside the
@@ -38,8 +38,20 @@ whoever the fill seats across the net from her.
 by the instant, never by a uuid. **Badminton is played by nobody**, which is
 the empty sport.
 
+**Her Friends table** (#771): four of her padel group are her friends — two
+above her and two below, one of them the beginner, who is on Friends from their
+first result and short of General — so the table reads *3rd of 5*, with a
+podium, a gap line and a beginner it lists that General doesn't. **Each stands
+at least 0,05 from her and from each other**: a seeded Level moves a hundredth
+or two between runs (the fill draws the sides), and a closer pair would swap.
+**Through the friends' own use cases**: each asks her from *Padel na Ogrodach*,
+where the played history put them both, and she accepts — so *said yes* is
+told to them, and nothing reaches her bell. After the friends layers, which
+make the friends her screens already count on.
+
 **Re-running writes nothing twice**: the history layer finds every game booked
-already, and a fold of an unchanged stream is the row it was.
+already, a fold of an unchanged stream is the row it was, and a friend is asked
+only while nothing stands between the two.
 """
 
 from __future__ import annotations
@@ -52,24 +64,37 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
+    build_accept_friend_request,
+    build_ask_to_be_friends,
     build_general_orders_kept_here,
     build_read_general_page,
     build_read_ranking,
+    build_read_relations,
     build_user_repository,
 )
 from app.core.config import Settings
 from app.kernel import Instant, Sport
+from app.modules.friends.application.commands import AnswerCommand, AskCommand
+from app.modules.friends.domain.friendship import Where
+from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
 from app.modules.rankings.domain.ranking import (
+    FRIENDS_ENTRY,
     GENERAL_ENTRY,
     LISTED_FOR,
     PAGE_SIZE,
+    PODIUM_SIZE,
     CardState,
+    RankingView,
 )
-from app.seeds.booked_history import MADE_AHEAD
+from app.seeds.booked_history import HISTORY_CLUB, HISTORY_GROUPS, MADE_AHEAD
+from app.seeds.bookings import club_id_of
 from app.seeds.catalog import THE_POPULATED_PLAYER
-from app.seeds.clock import FixedClock
+from app.seeds.clock import FixedClock, hours_before
 from app.seeds.cohort import COHORT, PROTAGONIST_HANDLE, PlayedGame
+from app.seeds.groups import group_run_by
+from app.seeds.money import THE_FAKE, SeedMoney
 from app.seeds.ranking_crowd import RANKING_CROWD_GAMES, RANKING_CROWD
+from app.seeds.rooms import deliver_everything_told
 
 #: The sport the list is seeded in, and the one nobody plays.
 RANKED_SPORT: Final = Sport.PADEL
@@ -131,6 +156,23 @@ THE_RANKED: Final[frozenset[str]] = frozenset(
     handle for handle, results in RESULTS.items() if results >= GENERAL_ENTRY
 )
 
+#: **Her friends in padel** (#771), each in her padel group: two above her on
+#: General (3,35 and 3,29 to her 3,21), one below (3,02), and the beginner
+#: (2,96), whom Friends lists from their first result and General doesn't — her
+#: table is *3rd of 5*. **Nobody but the beginner played her at tennis**, so her
+#: tennis table is the beginner and her.
+HER_FRIENDS: Final[tuple[str, ...]] = (
+    "cohort-a-11",
+    "cohort-a-08",
+    "cohort-b-04",
+    THE_BEGINNER,
+)
+#: The group each of them asks her from: hers, which every padel game's people
+#: joined.
+FRIENDS_ASKED_FROM: Final = HISTORY_GROUPS[RANKED_SPORT]
+#: How many friends her table promises to list, at least.
+FRIENDS_PROMISED: Final = 3
+
 
 def _refuse_a_ranking_nobody_could_play() -> None:
     """The declarations against the population, **on import**, so a game that
@@ -174,6 +216,17 @@ def _refuse_a_ranking_nobody_could_play() -> None:
             f"'{THE_BEGINNER}' has {RESULTS[THE_BEGINNER]} result(s); the beginner "
             f"has 2–4"
         )
+    # Every ranking game's people join her padel group, which is where a friend
+    # asks her from.
+    in_her_group = {handle for game in RANKING_GAMES for handle in game.players}
+    strangers = [handle for handle in HER_FRIENDS if handle not in in_her_group]
+    if len(HER_FRIENDS) < FRIENDS_PROMISED or strangers:
+        raise RuntimeError(
+            f"her friends are {FRIENDS_PROMISED} or more of her padel group; "
+            f"{strangers or HER_FRIENDS} is not"
+        )
+    if any(RESULTS[handle] < FRIENDS_ENTRY for handle in HER_FRIENDS):
+        raise RuntimeError("a friend of hers has no padel result to be listed by")
 
 
 _refuse_a_ranking_nobody_could_play()
@@ -193,6 +246,68 @@ class SeededRanking:
     beginner_results: int
     #: The places on the page around her — *You · 56th*'s page.
     around_her: tuple[int, ...]
+    #: Her place among her friends, and how many her table lists (#771).
+    friends_place: int
+    friends_of: int
+
+
+async def write_her_ranked_friends(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    now: Instant,
+    money: SeedMoney = THE_FAKE,
+) -> None:
+    """Each of ``HER_FRIENDS`` asks her from *Padel na Ogrodach* ten days ago,
+    and she accepts the next hour — **through the friends' own use cases**,
+    each act in its own session — then the outbox is drained. A pair already
+    friends is asked nothing; ``assert_the_ranking`` reads the table back."""
+
+    async with session_factory() as session:
+        her = await _id_of(session, THE_POPULATED_PLAYER.email)
+        friends = [
+            await _id_of(session, COHORT.by_handle(handle).email)
+            for handle in HER_FRIENDS
+        ]
+        group = await group_run_by(
+            session,
+            her,
+            club_id=await club_id_of(session, HISTORY_CLUB),
+            name=FRIENDS_ASKED_FROM,
+        )
+    if group is None:
+        raise RuntimeError(
+            f"{FRIENDS_ASKED_FROM} is not seeded — the played history runs first"
+        )
+    for friend in friends:
+        if await _relation(session_factory, her, friend) is FriendRelation.NONE:
+            async with session_factory() as session:
+                await build_ask_to_be_friends(
+                    session, clock=hours_before(now, 10 * 24)
+                ).execute(
+                    AskCommand(
+                        requester_id=friend,
+                        addressee_id=her,
+                        where=Where(
+                            made_from=RequestOrigin.MEMBERS,
+                            group_id=group,
+                            sport=RANKED_SPORT,
+                        ),
+                    )
+                )
+        if await _relation(session_factory, her, friend) is FriendRelation.ASKED_YOU:
+            async with session_factory() as session:
+                await build_accept_friend_request(
+                    session, clock=hours_before(now, 10 * 24 - 1)
+                ).execute(AnswerCommand(reader_id=her, requester_id=friend))
+    await deliver_everything_told(session_factory, money=money)
+
+
+async def _relation(
+    session_factory: async_sessionmaker[AsyncSession], reader: UUID, other: UUID
+) -> FriendRelation:
+    async with session_factory() as session:
+        relations = await build_read_relations(session).relations_of(reader, [other])
+    return relations[other]
 
 
 async def assert_the_ranking(
@@ -210,7 +325,8 @@ async def assert_the_ranking(
     return (
         f"the ranking · {RANKED_SPORT.value.lower()}: {PROTAGONIST_HANDLE} "
         f"{seeded.place} of {seeded.of}, below the first page, her page "
-        f"{seeded.around_her[0]}–{seeded.around_her[-1]}; {THE_BEGINNER} "
+        f"{seeded.around_her[0]}–{seeded.around_her[-1]}; among her friends "
+        f"{seeded.friends_place} of {seeded.friends_of}; {THE_BEGINNER} "
         f"{seeded.beginner_results} of {GENERAL_ENTRY}; "
         f"{EMPTY_SPORT.value.lower()}: nobody listed"
     )
@@ -236,6 +352,7 @@ async def read_the_ranking(
         around = await pages.execute(her, RANKED_SPORT, around_the_reader=True)
         short = (await read.execute(beginner, RANKED_SPORT)).card
         empty = await read.execute(her, EMPTY_SPORT)
+        friends = await read.execute(her, RANKED_SPORT, view=RankingView.FRIENDS)
     where = f"the ranking · {RANKED_SPORT.value.lower()}"
     if padel.card.state is not CardState.LISTED or padel.card.place is None:
         raise RankingIsWrong(f"{where}: {PROTAGONIST_HANDLE} reads {padel.card!r}")
@@ -263,11 +380,25 @@ async def read_the_ranking(
             f"the ranking · {EMPTY_SPORT.value.lower()}: {empty.listed_count} "
             f"listed, and nobody is promised"
         )
+    friends_listed = [row for row in friends.rows if not row.is_you]
+    if (
+        friends.card.state is not CardState.LISTED
+        or friends.card.place is None
+        or len(friends_listed) < FRIENDS_PROMISED
+        or len(friends.podium) != PODIUM_SIZE
+    ):
+        raise RankingIsWrong(
+            f"{where} · friends: {PROTAGONIST_HANDLE} reads {friends.card!r} "
+            f"with {len(friends_listed)} friend(s) listed, and "
+            f"{FRIENDS_PROMISED} or more are promised"
+        )
     return SeededRanking(
         place=padel.card.place,
         of=padel.listed_count,
         beginner_results=short.results,
         around_her=tuple(row.place for row in around.rows),
+        friends_place=friends.card.place,
+        friends_of=friends.listed_count,
     )
 
 

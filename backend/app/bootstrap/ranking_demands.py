@@ -1,8 +1,8 @@
 """The register of what Rankings demands of other contexts, and who signs each
-demand (#768; ``docs/adr/0203`` §10).
+demand (#768, #771; ``docs/adr/0203`` §10).
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Three rows**, each
+consumer gets a new register, not a row in somebody else's. **Four rows**, each
 a port in Rankings' own words signed in ``rankings/infrastructure/``, so each
 of these arrows runs out of ``rankings`` into the neighbour, and none comes
 back (Home's arrow into ``rankings`` is Proposals' own row, ``RankingOnHome``):
@@ -12,11 +12,12 @@ back (Home's arrow into ``rankings`` is Proposals' own row, ``RankingOnHome``):
 - **the faces** (``RankedFaces``, over ``users``' nicknames and the Player
   profile's photographs);
 - **a level held** (``SportLevels``, over rating's published read), which the
-  card's *no level* is read live from.
+  card's *no level* is read live from;
+- **the reader's friends** (``ReadersFriends``, over Friends' own read of the
+  reader's relations), which the Friends view is worked out over (#771).
 
 The projection itself (``RankingRows``) is the context's own storage and not a
-demand. Friends' friend list, blocks and *Show me in General* join this list
-with #771 and #772.
+demand. Blocks and *Show me in General* join this list with #772.
 
 **A row carries a builder over a session**, as the other registers' do.
 """
@@ -28,16 +29,27 @@ from typing import TypeVar
 from app.bootstrap.composition import (
     build_ranked_faces,
     build_rating_histories,
+    build_readers_friends,
     build_sport_levels,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
-from app.modules.rankings.domain.ports import RankedFaces, RatingHistories, SportLevels
+from app.modules.rankings.domain.ports import (
+    RankedFaces,
+    RatingHistories,
+    ReadersFriends,
+    SportLevels,
+)
 
 P = TypeVar("P")
 
 #: What Rankings asks of the rest of the platform.
-RANKING_DEMANDS: tuple[type, ...] = (RatingHistories, RankedFaces, SportLevels)
+RANKING_DEMANDS: tuple[type, ...] = (
+    RatingHistories,
+    RankedFaces,
+    SportLevels,
+    ReadersFriends,
+)
 
 
 RANKING_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
@@ -55,6 +67,11 @@ RANKING_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=SportLevels,
         name="RatedSportLevels",
         build=build_sport_levels,
+    ),
+    RegisteredImplementation(
+        port=ReadersFriends,
+        name="FriendsReadersFriends",
+        build=build_readers_friends,
     ),
 )
 

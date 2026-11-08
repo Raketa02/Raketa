@@ -533,18 +533,20 @@ class LevelAsksOnHome(Protocol):
 @dataclass(frozen=True, slots=True)
 class HomeRanking:
     """Home's trophy, *🏆 #7*, left of the bell (#768; ``docs/adr/0203`` §5):
-    the sport of the reader's latest result, in any sport, and their General
-    place in it — ``None`` when they aren't listed there, and the trophy draws
-    no number."""
+    the sport of the reader's latest result, in any sport, and their place in
+    it in General and among their friends (#771) — each ``None`` when they
+    aren't listed there, Friends' too when no friend is, and the trophy draws
+    no number. Which of the two it shows is the phone's remembered view."""
 
     sport: Sport
     general_place: int | None
+    friends_place: int | None
 
 
 @runtime_checkable
 class RankingOnHome(Protocol):
     async def of(self, reader: UUID) -> HomeRanking | None:
-        """The trophy's sport and place, or ``None`` when the reader has no
+        """The trophy's sport and places, or ``None`` when the reader has no
         result in any sport — read live off the ranking."""
         ...
 

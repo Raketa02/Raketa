@@ -1,6 +1,7 @@
 """The ranking's read in Proposals' words — **signed here**, so the arrow runs
 ``proposals → rankings`` and Rankings imports none of its readers
-(``.importlinter``): Home's trophy (#768; ``docs/adr/0203`` §5)."""
+(``.importlinter``): Home's trophy, its General place and since #771 its
+Friends place (#768; ``docs/adr/0203`` §5)."""
 
 from __future__ import annotations
 
@@ -20,4 +21,8 @@ class RankingsOnHome:
         ranking = await self._read.execute(reader)
         if ranking is None:
             return None
-        return HomeRanking(sport=ranking.sport, general_place=ranking.general_place)
+        return HomeRanking(
+            sport=ranking.sport,
+            general_place=ranking.general_place,
+            friends_place=ranking.friends_place,
+        )

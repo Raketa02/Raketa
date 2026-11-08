@@ -9,7 +9,8 @@ unblocking shows a request made since as it stands.
 
 - ``ReadRelations`` — the reader's relation to a set of players, what every
   face is lent. ``friends_among`` is the cheaper question a face asks: a friend
-  is never hidden (a block ends a friendship), so it reads no block.
+  is never hidden (a block ends a friendship), so it reads no block; and
+  ``friends_of`` every friend at once, for the Rankings' Friends view (#771).
 - ``ReadFriends`` — the reader's friends, each with every sport they are rated
   in, or one: alphabetical without a sport (call 11), highest Level first with
   one (call 4) — and the sports the reader asked each to get a level in (#749).
@@ -117,6 +118,17 @@ class ReadRelations:
         return frozenset(
             row.other_id
             for row in await self._directory.rows_of(reader, among=wanted)
+            if row.relation is FriendRelation.FRIEND
+        )
+
+    async def friends_of(self, reader: UUID) -> frozenset[UUID]:
+        """Every friend of the reader's — the Rankings' Friends view is worked
+        out over them (#771). The reader's side alone, and no block read, as
+        ``friends_among``."""
+
+        return frozenset(
+            row.other_id
+            for row in await self._directory.rows_of(reader)
             if row.relation is FriendRelation.FRIEND
         )
 

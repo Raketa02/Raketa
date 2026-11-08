@@ -150,8 +150,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   themselves handed to the played history (`crowd=`), which joins them to her *Padel na
   Ogrodach* as it joins every padel game's people. Sixty-two are listed in padel, her
   56th, below the first page, on three wins and two losses; `cohort-a-12` has 3; badminton
-  has nobody. Who may play is narrow — no record fixture's count, no named claim near its
-  band's edge, nobody Advanced — and the module says why. `assert_the_ranking` reads the
+  has nobody. **Her Friends table** (#771, `write_her_ranked_friends`, after both friends
+  layers): four of her padel group ask her from *Padel na Ogrodach* and she accepts,
+  through the friends' use cases — 3rd of 5, the beginner among them. Who may play is
+  narrow — no record fixture's count, no named claim near its band's edge, nobody
+  Advanced — and the module says why. `assert_the_ranking` reads the
   page's own use case among the screens and fails the run by name; proven twice over on a
   fresh Postgres, the rebuild equal to live delivery row for row.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer

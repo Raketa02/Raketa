@@ -11,7 +11,7 @@ same fail-soft posture over a server that can't be reached.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -19,6 +19,7 @@ from uuid import UUID
 import pytest
 
 from app.kernel import Instant, InvariantViolated, Sport, instant
+from app.modules.rankings.application.friends_table import TheFriendsTable
 from app.modules.rankings.application.general_order import TheGeneralOrder
 from app.modules.rankings.application.reads import ReadRanking
 from app.modules.rankings.domain.general_order import (
@@ -173,7 +174,13 @@ class Rows:
         return tuple(row for row in self.listed_rows if row.player_id == player_id)
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+        self,
+        sport: Sport,
+        *,
+        at_least: int,
+        since: Instant,
+        then: Instant,
+        among: Collection[UUID] | None = None,
     ) -> tuple[ListedAndThen, ...]:
         self.passes += 1
         return tuple(ListedAndThen(row=row, then=None) for row in self.listed_rows)
@@ -310,6 +317,11 @@ class Rated:
         return True
 
 
+class NoFriends:
+    async def friends_of(self, reader: UUID) -> frozenset[UUID]:
+        return frozenset()
+
+
 async def test_a_card_read_across_a_lost_order_is_the_new_orders_whole():
     karol, tomek = a_row(275), a_row(271)
     rows = Rows([karol, tomek])
@@ -325,6 +337,7 @@ async def test_a_card_read_across_a_lost_order_is_the_new_orders_whole():
 
     ranking = await ReadRanking(
         general=TheGeneralOrder(rows=rows, orders=LosesItsOrder(held)),
+        friends=TheFriendsTable(rows=rows, friends=NoFriends()),
         faces=Named(),
         levels=Rated(),
         clock=MovableClock(NOW),

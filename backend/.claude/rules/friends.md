@@ -95,7 +95,11 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5).
     hidden. Not counted in `needing_you`;
   - **Home's asks for a level** — `LevelAsksOnHome` (`ReadLevelAsksOnHome`, #764, below):
     `GET /home`'s `level_asks`, one card per sport;
-  - **the bell** — Notifications' `Friendships` (`FriendsOfTheReader`, below).
+  - **the bell** — Notifications' `Friendships` (`FriendsOfTheReader`, below);
+  - **the Rankings' Friends view** (#771) — `ReadersFriends`
+    (`rankings/infrastructure/friends_readers_friends.py`), over `ReadRelations.friends_of`:
+    every friend of the reader's at once, from the reader's side and reading no block, as
+    `friends_among` does (`rankings.md`).
 - **Where a request was made** is the request's: `RequestOrigin` `MEMBERS · RECORD · RESULT ·
   LINK`, and the screen's `group_id` and `sport` when it showed them (`Where`; a link's names
   neither). The phone sends the first three (`AskedFrom`, `POST /friends/requests`); `LINK` is

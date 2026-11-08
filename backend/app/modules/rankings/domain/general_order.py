@@ -41,6 +41,7 @@ from app.modules.rankings.domain.ranking import (
     LevelPoint,
     Outcome,
     RankingRow,
+    RankingView,
     chips_of,
     order_of,
 )
@@ -142,7 +143,10 @@ class ListedRow:
 @final
 @dataclass(frozen=True, slots=True)
 class GeneralOrder:
-    """Every listed row of a sport, best first, as worked out at one instant."""
+    """Every listed row of a sport, best first, as worked out at one instant —
+    General's, kept for a minute, or a reader's Friends table, worked out on
+    each read and kept nowhere (#771). One shape, so the card, the podium, the
+    rows and the gap line read either alike."""
 
     sport: Sport
     worked_out_at: Instant
@@ -200,16 +204,22 @@ class OrderInHand:
 
 
 def work_out(
-    sport: Sport, passed: Sequence[ListedAndThen], *, now: Instant
+    sport: Sport,
+    passed: Sequence[ListedAndThen],
+    *,
+    now: Instant,
+    view: RankingView = RankingView.GENERAL,
 ) -> GeneralOrder:
     """The order, its places and its chips, from one pass — in the order the
-    pass read the rows, which is General's."""
+    pass read the rows, which is the ranking's — **in ``view``**, whose list
+    decides what *New* means."""
 
     listed = [one.row for one in passed]
     chips = chips_of(
         listed,
         {one.row.player_id: one.then for one in passed if one.then is not None},
         now=now,
+        view=view,
     )
     return GeneralOrder(
         sport=sport,

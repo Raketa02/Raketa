@@ -1,5 +1,5 @@
-"""What Rankings demands of other contexts (#768), run against every registered
-implementation.
+"""What Rankings demands of other contexts (#768, #771), run against every
+registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident**
 (``docs/adr/0098``). Every implementation registered in
@@ -33,6 +33,7 @@ from app.modules.rankings.domain.ports import (
     RankedFace,
     RankedFaces,
     RatingHistories,
+    ReadersFriends,
     SportLevels,
 )
 from app.modules.rankings.domain.ranking import LevelMove
@@ -44,6 +45,7 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.rankings_world import move_on
+from tests.demands import friends_world
 from tests.unit import image_fixtures
 
 OPENED = instant(datetime(2026, 9, 1, 18, 0, tzinfo=timezone.utc))
@@ -256,3 +258,36 @@ async def test_a_face_is_the_first_photograph_with_a_link_to_it(
 
     assert (face.nickname, face.photo_id) == ("ewa", photo_id)
     assert face.photo_url is not None and str(photo_id) in face.photo_url
+
+
+# --------------------------------------------------------------------------- #
+# ReadersFriends — the reader's friends now (#771)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(ReadersFriends))
+async def test_the_readers_friends_are_friends_now_and_nobody_merely_asked(
+    implementation, session
+):
+    tomek, karol, zofia, ines, ewa = (new_uuid() for _ in range(5))
+    await friends_world.befriends(session, tomek, karol)
+    await friends_world.befriends(session, zofia, tomek)
+    await friends_world.asks(session, tomek, ines)
+    await friends_world.asks(session, ewa, tomek, set_aside=True)
+    await friends_world.befriends(session, karol, zofia)
+    friends: ReadersFriends = implementation.build(session)
+
+    assert await friends.friends_of(tomek) == {karol, zofia}
+    assert await friends.friends_of(ines) == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(ReadersFriends))
+async def test_a_friendship_ended_or_blocked_is_no_friend(implementation, session):
+    tomek, karol, zofia = (new_uuid() for _ in range(3))
+    await friends_world.befriends(session, tomek, karol)
+    await friends_world.befriends(session, tomek, zofia)
+    await friends_world.removes(session, karol, tomek)
+    await friends_world.ends_by_a_block(session, zofia, tomek)
+    friends: ReadersFriends = implementation.build(session)
+
+    assert await friends.friends_of(tomek) == frozenset()

@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant
+from app.modules.rankings.application.friends_table import TheFriendsTable
 from app.modules.rankings.application.general_order import TheGeneralOrder
 from app.modules.rankings.application.reads import ReadRanking
 from app.modules.rankings.domain.general_order import ListedAndThen
@@ -58,7 +59,13 @@ class Rows:
         return tuple(row for row in self._listed if row.player_id == player_id)
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+        self,
+        sport: Sport,
+        *,
+        at_least: int,
+        since: Instant,
+        then: Instant,
+        among: Collection[UUID] | None = None,
     ) -> tuple[ListedAndThen, ...]:
         return tuple(ListedAndThen(row=row, then=None) for row in self._listed)
 
@@ -86,9 +93,16 @@ class Rated:
         return True
 
 
+class NoFriends:
+    async def friends_of(self, reader: UUID) -> frozenset[UUID]:
+        return frozenset()
+
+
 def a_read(listed: Sequence[RankingRow], faces: Faces) -> ReadRanking:
+    rows = Rows(listed)
     return ReadRanking(
-        general=TheGeneralOrder(rows=Rows(listed), orders=InMemoryGeneralOrders()),
+        general=TheGeneralOrder(rows=rows, orders=InMemoryGeneralOrders()),
+        friends=TheFriendsTable(rows=rows, friends=NoFriends()),
         faces=faces,
         levels=Rated(),
         clock=MovableClock(NOW),

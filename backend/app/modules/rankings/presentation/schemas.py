@@ -1,5 +1,5 @@
-"""The ranking on the wire (#768, #769, #770; ``docs/adr/0203``; the screens
-§4–§5).
+"""The ranking on the wire (#768, #769, #770, #771; ``docs/adr/0203``; the
+screens §4–§5).
 
 **Every Level is the two-decimal number the passport prints**, and so is every
 gap; the client draws both with the decimal comma. Places are true places: a
@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -31,7 +30,6 @@ from app.modules.rankings.domain.general_order import (
 )
 from app.modules.rankings.domain.ranking import (
     FORM_LENGTH,
-    GENERAL_ENTRY,
     WINS_COUNTED,
     CardState,
     Chip,
@@ -41,6 +39,7 @@ from app.modules.rankings.domain.ranking import (
     PlaceCard,
     PlayerAbove,
     PlayerBelow,
+    RankingView,
     level_of,
 )
 
@@ -75,13 +74,6 @@ def key_of(cursor: str) -> OrderKey:
     if not key.can_be_written():
         raise NotAPage("a cursor no row stands at")
     return key
-
-
-class RankingView(StrEnum):
-    """Which list the page reads. **General** is everybody in Raketa listed in
-    the sport; **Friends** arrives with #771."""
-
-    GENERAL = "GENERAL"
 
 
 class ChipSchema(BaseModel):
@@ -202,13 +194,22 @@ class PlaceCardSchema(BaseModel):
     state: CardState = Field(
         description=(
             "`LISTED` — *YOUR PLACE · 7th · of 13* and your Level. "
-            "`NEEDS_RESULTS` — fewer than 5 results in the sport: *2 of 5 games — "
-            "3 more competitive padel games put you on the list*. `NO_LEVEL` — no "
-            "level in the sport, read live: *No squash level yet — get one, then "
-            "5 competitive games put you on the list*, with **Get your squash "
-            "level**. `OFF_THE_LIST` — no result in the last 90 days: *Off the "
-            "list — no competitive padel game in 90 days. Your next one puts you "
-            "back.*"
+            "`NEEDS_RESULTS` — fewer results in the sport than the view takes: in "
+            "General *2 of 5 games — 3 more competitive padel games put you on "
+            "the list*; in Friends, with none, *Not ranked in padel yet — your "
+            "first confirmed competitive game puts you on the list*. `NO_LEVEL` — "
+            "no level in the sport, read live: *No squash level yet — get one, "
+            "then 5 competitive games put you on the list* (in Friends *… then "
+            "one competitive game …*), with **Get your squash level**. "
+            "`OFF_THE_LIST` — no result in the last 90 days: *Off the list — no "
+            "competitive padel game in 90 days. Your next one puts you back.* "
+            "**Friends only**: `JUST_YOU` — you are listed and no friend is: *Just "
+            "you so far*, with **Add friends**; `NO_FRIEND_LISTED` — neither you "
+            "nor any friend is: *None of your friends is ranked in padel yet*, "
+            "with **Add friends**, whatever your own state. With either, the card "
+            "is the whole page: nothing is drawn below it. In Friends, "
+            "`NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your "
+            "friends' podium and table."
         )
     )
     results: int = Field(
@@ -220,7 +221,8 @@ class PlaceCardSchema(BaseModel):
     )
     results_to_enter: int = Field(
         description=(
-            "How many results put a player on General — the *5* of *2 of 5 games*."
+            "How many results put a player on the view's list — the *5* of *2 "
+            "of 5 games* in General, `1` in Friends."
         )
     )
     place: int | None = Field(
@@ -241,11 +243,11 @@ class PlaceCardSchema(BaseModel):
     )
 
     @classmethod
-    def of_card(cls, card: PlaceCard) -> "PlaceCardSchema":
+    def of_card(cls, card: PlaceCard, *, view: RankingView) -> "PlaceCardSchema":
         return cls(
             state=card.state,
             results=card.results,
-            results_to_enter=GENERAL_ENTRY,
+            results_to_enter=view.entry,
             place=card.place,
             of=card.of,
             level=None if card.hundredths is None else level_of(card.hundredths),
@@ -314,8 +316,9 @@ class RankingResponse(BaseModel):
     listed: int = Field(
         ge=0,
         description=(
-            "How many are listed in the view and sport. `0` reads *Nobody "
-            "ranked in badminton yet* where the podium and list would be."
+            "How many are listed in the view and sport, you included. `0` in "
+            "General reads *Nobody ranked in badminton yet* where the podium "
+            "and list would be."
         ),
     )
     podium: list[RankedRowSchema] = Field(
@@ -327,26 +330,31 @@ class RankingResponse(BaseModel):
     )
     rows: list[RankedRowSchema] = Field(
         description=(
-            "General's first page of 50, best first: a listed player has at "
-            "least 5 confirmed competitive results with a winner in the sport, "
-            "the last within 90 days. Ordered by Level, then more results, then "
-            "who reached that Level first."
+            "**General**: the first page of 50, best first — a listed player "
+            "has at least 5 confirmed competitive results with a winner in the "
+            "sport, the last within 90 days. **Friends**: the whole table, "
+            "never paged — you and your friends with at least 1 such result, "
+            "the last within 90 days, places, chips and the gap line counted "
+            "among you alone; empty with `JUST_YOU` and `NO_FRIEND_LISTED`. "
+            "Ordered by Level, then more results, then who reached that Level "
+            "first."
         )
     )
     next: str | None = Field(
         description=(
             "The cursor the next page is read **after** — "
             "`GET /rankings/{sport}/general/rows?after=…`. `null` when the "
-            "first page is the whole list. Opaque: hand it back as it came."
+            "first page is the whole list, and always in Friends. Opaque: hand "
+            "it back as it came."
         )
     )
 
     @classmethod
-    def of_ranking(cls, ranking: Ranking, *, view: RankingView) -> "RankingResponse":
+    def of_ranking(cls, ranking: Ranking) -> "RankingResponse":
         return cls(
             sport=ranking.sport,
-            view=view,
-            card=PlaceCardSchema.of_card(ranking.card),
+            view=ranking.view,
+            card=PlaceCardSchema.of_card(ranking.card, view=ranking.view),
             listed=ranking.listed_count,
             podium=[RankedRowSchema.of_row(row) for row in ranking.podium],
             rows=[RankedRowSchema.of_row(row) for row in ranking.rows],

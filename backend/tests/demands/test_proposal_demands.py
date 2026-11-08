@@ -1882,14 +1882,15 @@ async def test_a_cover_is_let_go_for_each_seat_its_own_player_paid(
 
 
 # --------------------------------------------------------------------------- #
-# RankingOnHome — Home's trophy (#768). Its rules are driven whole over HTTP in
-# ``tests/api/test_rankings.py``; here, what is lent: the sport of the latest
-# result and the General place there, or nothing with no result anywhere.
+# RankingOnHome — Home's trophy (#768, #771). Its rules are driven whole over
+# HTTP in ``tests/api/test_rankings.py`` and ``test_ranking_friends.py``; here,
+# what is lent: the sport of the latest result and the General and Friends
+# places there, or nothing with no result anywhere.
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.parametrize("implementation", registered(RankingOnHome))
-async def test_the_trophy_is_the_latest_results_sport_and_the_general_place(
+async def test_the_trophy_is_the_latest_results_sport_and_its_places(
     implementation, client, session, session_factory
 ):
     from tests.api.rankings_world import moves_to
@@ -1907,8 +1908,17 @@ async def test_the_trophy_is_the_latest_results_sport_and_the_general_place(
     await session.rollback()
 
     assert await trophy.of(tomek["id"]) == HomeRanking(
-        sport=Sport.PADEL, general_place=2
+        sport=Sport.PADEL, general_place=2, friends_place=None
     )
     assert await trophy.of(karol["id"]) == HomeRanking(
-        sport=Sport.PADEL, general_place=1
+        sport=Sport.PADEL, general_place=1, friends_place=None
+    )
+
+    # Friends since: each is the other's table, Karol above.
+    async with session_factory() as other:
+        await friends_world.befriends(other, tomek["id"], karol["id"])
+    await session.rollback()
+
+    assert await trophy.of(tomek["id"]) == HomeRanking(
+        sport=Sport.PADEL, general_place=2, friends_place=2
     )

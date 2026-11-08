@@ -3859,7 +3859,7 @@
           "rankings"
         ],
         "summary": "A sport's ranking",
-        "description": "Your place card, the podium and the first page of the list, in one sport and view \u2014 sorted by the Level itself, competitive games only. An unknown sport is refused.",
+        "description": "Your place card, the podium and the list, in one sport and view \u2014 sorted by the Level itself, competitive games only: General's first page, or the whole of Friends. An unknown sport is refused.",
         "operationId": "read_ranking_api_v1_rankings__sport__get",
         "security": [
           {
@@ -3881,10 +3881,10 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/RankingView",
-              "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport.",
+              "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport; `FRIENDS`, you and your friends, from the first result.",
               "default": "GENERAL"
             },
-            "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport."
+            "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport; `FRIENDS`, you and your friends, from the first result."
           }
         ],
         "responses": {
@@ -9726,10 +9726,12 @@
           "LISTED",
           "NEEDS_RESULTS",
           "NO_LEVEL",
-          "OFF_THE_LIST"
+          "OFF_THE_LIST",
+          "JUST_YOU",
+          "NO_FRIEND_LISTED"
         ],
         "title": "CardState",
-        "description": "What the reader's place card says (the screens \u00a74.1, \u00a74.3, \u00a74.4)."
+        "description": "What the reader's place card says (the screens \u00a74.1, \u00a74.3, \u00a74.4, \u00a74.6)."
       },
       "CardType": {
         "type": "string",
@@ -13625,15 +13627,29 @@
             ],
             "title": "General Place",
             "description": "Your place on General in `sport` \u2014 `null` when you aren't listed there (fewer than 5 results, or none in the last 90 days), and the trophy draws no number."
+          },
+          "friends_place": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Friends Place",
+            "description": "Your place among your friends in `sport` \u2014 `null` when you aren't listed there (no result in the last 90 days), and when no friend of yours is (*Just you so far*), and the trophy draws no number. The trophy shows the place of the view you last looked at on Rankings, General the first time."
           }
         },
         "type": "object",
         "required": [
           "sport",
-          "general_place"
+          "general_place",
+          "friends_place"
         ],
         "title": "HomeRankingSchema",
-        "description": "Home's trophy, **\ud83c\udfc6 #7**, just left of the bell (#768; `docs/adr/0203`\n\u00a75). A tap opens Rankings on `sport`."
+        "description": "Home's trophy, **\ud83c\udfc6 #7**, just left of the bell (#768, #771;\n`docs/adr/0203` \u00a75). A tap opens Rankings on `sport`, in the view you last\nlooked at."
       },
       "HomeResponse": {
         "properties": {
@@ -15306,7 +15322,7 @@
         "properties": {
           "state": {
             "$ref": "#/components/schemas/CardState",
-            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer than 5 results in the sport: *2 of 5 games \u2014 3 more competitive padel games put you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list*, with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.*"
+            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table."
           },
           "results": {
             "type": "integer",
@@ -15317,7 +15333,7 @@
           "results_to_enter": {
             "type": "integer",
             "title": "Results To Enter",
-            "description": "How many results put a player on General \u2014 the *5* of *2 of 5 games*."
+            "description": "How many results put a player on the view's list \u2014 the *5* of *2 of 5 games* in General, `1` in Friends."
           },
           "place": {
             "anyOf": [
@@ -16571,7 +16587,7 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Listed",
-            "description": "How many are listed in the view and sport. `0` reads *Nobody ranked in badminton yet* where the podium and list would be."
+            "description": "How many are listed in the view and sport, you included. `0` in General reads *Nobody ranked in badminton yet* where the podium and list would be."
           },
           "podium": {
             "items": {
@@ -16587,7 +16603,7 @@
             },
             "type": "array",
             "title": "Rows",
-            "description": "General's first page of 50, best first: a listed player has at least 5 confirmed competitive results with a winner in the sport, the last within 90 days. Ordered by Level, then more results, then who reached that Level first."
+            "description": "**General**: the first page of 50, best first \u2014 a listed player has at least 5 confirmed competitive results with a winner in the sport, the last within 90 days. **Friends**: the whole table, never paged \u2014 you and your friends with at least 1 such result, the last within 90 days, places, chips and the gap line counted among you alone; empty with `JUST_YOU` and `NO_FRIEND_LISTED`. Ordered by Level, then more results, then who reached that Level first."
           },
           "next": {
             "anyOf": [
@@ -16599,7 +16615,7 @@
               }
             ],
             "title": "Next",
-            "description": "The cursor the next page is read **after** \u2014 `GET /rankings/{sport}/general/rows?after=\u2026`. `null` when the first page is the whole list. Opaque: hand it back as it came."
+            "description": "The cursor the next page is read **after** \u2014 `GET /rankings/{sport}/general/rows?after=\u2026`. `null` when the first page is the whole list, and always in Friends. Opaque: hand it back as it came."
           }
         },
         "type": "object",
@@ -16618,10 +16634,11 @@
       "RankingView": {
         "type": "string",
         "enum": [
-          "GENERAL"
+          "GENERAL",
+          "FRIENDS"
         ],
         "title": "RankingView",
-        "description": "Which list the page reads. **General** is everybody in Raketa listed in\nthe sport; **Friends** arrives with #771."
+        "description": "Which list a ranking is read in (``docs/adr/0203`` \u00a73). **General** is\neverybody in Raketa listed in the sport; **Friends** is the reader and their\nfriends, worked out on each read (#771). Both drop a player 90 days after\ntheir last result, and both order and place them alike."
       },
       "RatingResponse": {
         "properties": {

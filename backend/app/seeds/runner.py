@@ -221,7 +221,11 @@ from app.seeds.photos import (
 )
 from app.seeds.friends import SeededFriends, friend_lines, write_the_friends
 from app.seeds.ranking_crowd import RANKING_CROWD_GAMES, RANKING_CROWD
-from app.seeds.rankings import RANKING_GAMES, assert_the_ranking
+from app.seeds.rankings import (
+    RANKING_GAMES,
+    assert_the_ranking,
+    write_her_ranked_friends,
+)
 from app.seeds.friends_games import (
     SeededFriendsGames,
     friends_game_lines,
@@ -1437,6 +1441,11 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         friends_games = await write_the_friends_games(
             session_factory, settings=settings, now=now, money=money
         )
+        # **Her padel friends after both friends layers** (#771): four she played
+        # with ask her and she accepts, so her Friends table lists them — after
+        # the layers whose friends her other screens count on. Drained by the
+        # layer itself.
+        await write_her_ranked_friends(session_factory, now=now, money=money)
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
