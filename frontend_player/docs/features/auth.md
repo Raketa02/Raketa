@@ -409,7 +409,7 @@ largest text size — on iOS and Android.
 **Create an account is drawn on the same stage, and nothing it does changed**
 ([#785](https://github.com/Raketa02/Raketa/issues/785), PRD #783; design system 12.2, mocks 4 and
 6). The hero is sign-in's — the wordmark exactly where sign-in has it — with _Play ranked. The
-competition starts with you._ at its foot, and the podium arriving in #788. The sheet holds the
+competition starts with you._ at its foot, and the podium over it (#788, below). The sheet holds the
 title alone, the banner, _Email_, _Password_ with the rule under it, _Repeat password_, _I am 18 or
 over_, **Create account** and _Already have an account? Sign in_ at the foot. The same request goes,
 the same refusals come back from the same sources, the box still never arrives ticked, and the
@@ -459,7 +459,7 @@ _karol.t + You_ | _ania.k + kuba.w_, and _Sat 16:00 · Ogrody 33_ with _27 zł_ 
 turned**: a tennis single, _Picked for you_ — `marek.z` 3,15, _74%_, _Thu 19:00 · Ogrody 33_.
 **Right, turned**: a squash _Fill in · seat open_ — _⏱ 2 h_, one empty seat, _stas.w + ola.m_,
 _30 zł_. The tiles show nicknames, not the mocks' _Karol T._ (ADR-0199 §1), chosen so their letters
-are the mocks' — KT, AK, KW, MZ, SW — for the splash (#787) and the podium (#788) to draw. Every name,
+are the mocks' — KT, AK, KW, MZ, SW, ID — for the splash (#787) and the podium (#788) to draw. Every name,
 figure and line is `stageHeroCopy.ts`'s, the cast's posters with them, so one person is one face on
 every picture the hero draws; what the front card hides — the single's second tile, the squash
 game's `ola.m`, its figure and its line — is filled in plausibly so the drawing is whole.
@@ -554,3 +554,56 @@ deal on the way back.
 pick-up and the stamp at half size, the swipe leaving the phone, the splash's night meeting the
 wordmark and the sheet's edge, the tiles and the word on a short phone and with large text, and the
 loop stopping and starting from the deal around _Create an account_ and the app switcher.
+
+**Sign-up's hero is the Rankings podium, with You on the first step** ([#788](https://github.com/Raketa02/Raketa/issues/788),
+PRD #783; design system 12.2, mock 5). Three steps over _Play ranked. The competition starts with
+you._, in 2 / 1 / 3 order: the middle one volt and the tallest, numbered 1, the outer two white at a
+seventh, numbered 2 and 3. `stas.w` stands on 2 under _SW_, `ines.d` on 3 under _ID_, and **You** on
+1, larger, under mock 5's **_TK_** in a **volt ring**, with _You_ beneath. The names, the letters and
+the posters are `stageHeroCopy.ts`'s and `stagePodiumPresentation.ts`'s; `ines.d` joined the cast
+for it.
+
+**The podium is a picture of the live one, not the live one.** `StagePodium` redraws rankings'
+podium in auth from the poster (through `StageFace`, the splash's tile, now shared) and the theme;
+`PodiumSteps` is not exported or changed, for the deck's reason — auth may not import another
+feature. **So a change to the live podium does not reach the hero by itself**, and `rankings.md`
+says so from its side. Where mock 5 draws it differently the mock wins: no Levels, the steps on the
+night rather than in a paper recess, a ring round every face, the third's face a step under the
+second's — except the numbers on the steps, which stay mono where the mock sets a sans, as every
+number in the app is. **The letters are ADR-0167's**: §3 fences initials over a poster to the yes screen, and
+its note of 2026-11-09 extends that to this podium and to nothing else (the product owner's choice,
+asked in #788). _SW_ and _ID_ are cut from the nicknames as the yes tile cuts them; **_TK_ is
+copy**, nobody's initials, kept on the reader where the splash draws You bare — on a podium the
+reader stands first, and a bare tile between two lettered ones would read as a seat nobody holds.
+
+**It rises once, when sign-up opens, and then holds — because it makes a statement, not a
+gesture.** Sign-in's hero loops because it tells a story — a card dealt, picked up, swiped, a game
+made — that is worth seeing again while somebody types. Sign-up's says one thing: _you, first_. Said
+once, it is a statement; said again every few seconds beside the form it would be a gesture, pulling
+the eye off the password box to watch the same sentence. So on open the stage is empty — the
+wordmark and the headline, the steps flat, nobody on them — for long enough that the cross-fade from
+sign-in has landed; then the right step grows up to its height, a moment later the left, a little
+taller, and last the volt middle, the tallest, each with a quick start and a soft landing; as each
+settles its player arrives from slightly below and lands on it — `ines.d`, then `stas.w`, then You
+with the ring. About a second and a half (`motion.stagePodium`), and nothing moves after.
+
+**It plays again each time sign-up is opened again**: _Sign in_ goes back (`dismissTo`), which takes
+sign-up down, and the next _Create an account_ opens a new one, which rises. It does not follow
+`inView`, since nothing is ever pushed over sign-up. **Under reduced motion or a running screen
+reader** it never plays: the podium stands risen with its players from the first frame, or from the
+OS's answer for a screen reader. Each step is drawn whole inside a box of its height that clips it,
+and rising is the step sliding up out of the baseline — the native driver's translate, never a
+scale, which would squash the number on it. Like the deck, the podium is drawn at one size and
+scaled whole into the measured room, never up, **standing on the room's foot** just over the
+headline; on a small phone it gets smaller and the headline keeps its size. `stagePodium.test.tsx`
+drives the clock through the empty stage, the order of the steps and the players, the end state and
+a minute of nothing after it, both collapsed cases, the fit in four rooms, and — through the route
+tree — sign-in → sign-up → back → sign-up rising again.
+
+**Not seen on a device**: the podium and its rise on iOS and Android — the steps against the night,
+the volt ring and the rims at the drawn size, the rise beginning as the cross-fade lands (its 350 ms
+are react-native-screens' iOS default, taken as documented rather than read; Android's fade is its
+own), the rise on the second opening, and a small phone with the headline at three lines — the
+podium is fitted with its names' line counted at the text cap, so in the smallest room it draws at
+about a third of its size and the names come out near 5 pt, which is a picture's detail, not text
+anybody must read.

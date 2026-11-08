@@ -23,6 +23,8 @@
 
 import { theme } from '@/shared/ui';
 
+import { scaleInto, type Size } from './stageFit';
+
 /** The three places on the stage, back to front: the two dealt cards, then the one that stays. */
 export const DECK_PLACES = ['left', 'right', 'front'] as const;
 
@@ -33,12 +35,6 @@ export interface Placement {
   readonly x: number;
   readonly y: number;
   readonly turn: number;
-}
-
-/** A width and a height, in points. */
-export interface Size {
-  readonly width: number;
-  readonly height: number;
 }
 
 /** The fan's box, and where in it the front card's centre is — from the box's top-left corner. */
@@ -95,5 +91,5 @@ export const FAN_BOX: FanBox = boxOfTheFan();
 
 /** The scale that fits the dealt fan into `room` — the binding direction's, never past one. */
 export function fitScale(room: Size): number {
-  return Math.min(1, room.width / FAN_BOX.width, room.height / FAN_BOX.height);
+  return scaleInto(room, FAN_BOX);
 }

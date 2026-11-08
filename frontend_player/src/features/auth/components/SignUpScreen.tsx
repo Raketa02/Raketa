@@ -49,6 +49,10 @@
  * over this — the two screens are one flow, and a stack of alternating stages would take as many
  * backs to leave as presses to build. Opened with nothing under it, from a link, it replaces this
  * screen with sign-in instead. The move each way is the stack's cross-fade (`(auth)/_layout`).
+ *
+ * **Its hero is the podium** ([#788](https://github.com/Raketa02/Raketa/issues/788), mock 5): You on
+ * the first step, rising once when the screen opens (`StagePodium`, `usePodiumRise`) — a picture,
+ * hidden from screen readers, that nothing on the form touches.
  */
 
 import { useRouter } from 'expo-router';
@@ -67,6 +71,8 @@ import { EMAIL_PLACEHOLDER, PASSWORD_LABEL, SIGN_UP_COPY } from './authPresentat
 import { bannerMessage, errorUnderField } from './authErrorMessage';
 import { EmailField } from './EmailField';
 import { PasswordPairFields } from './PasswordPairFields';
+import { StagePodium } from './StagePodium';
+import { usePodiumRise } from './usePodiumRise';
 
 export interface SignUpScreenProps {
   /**
@@ -90,6 +96,9 @@ export function SignUpScreen({ inView = true }: SignUpScreenProps) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const signUp = useSignUp();
+  // The hero's podium, rising once as the screen opens — never under collapsed presentation.
+  // Nothing in it is the form's, and nothing the form does reaches it.
+  const podium = usePodiumRise();
 
   const submit = () => {
     const result = validate(signUpSchema, {
@@ -121,6 +130,7 @@ export function SignUpScreen({ inView = true }: SignUpScreenProps) {
     <AuthStage
       title={SIGN_UP_COPY.title}
       headline={SIGN_UP_COPY.headline}
+      picture={<StagePodium {...podium} />}
       inView={inView}
       footer={
         <AuthLink

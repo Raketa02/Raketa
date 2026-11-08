@@ -11,11 +11,17 @@
  * eyes.
  */
 
-import { contrast, hueAngle, hueDistance, parse } from '@/test-support/contrast';
+import { composite, contrast, hueAngle, hueDistance, parse } from '@/test-support/contrast';
 
 import { theme } from './theme';
 
 const ratio = (a: string, b: string) => contrast(parse(a).rgb, parse(b).rgb);
+
+/** A translucent colour as it lands on an opaque one. */
+const over = (translucent: string, ground: string) => {
+  const { rgb, alpha } = parse(translucent);
+  return composite(rgb, alpha, parse(ground).rgb);
+};
 
 /** WCAG 2.1: AAA for text at 7:1, and 3:1 for a mark that is not text (1.4.11). */
 const AAA = 7;
@@ -56,5 +62,34 @@ describe('the stage’s ground', () => {
   it('glows by a step and not by an edge', () => {
     expect(ratio(GLOW, GROUND)).toBe(1.22);
     expect(Math.round(hueAngle(parse(GLOW).rgb))).toBe(160);
+  });
+});
+
+/**
+ * **Sign-up's podium on the ground** (#788): the two outer steps and the rim round the two other
+ * players' tiles, both white over the night, measured off mock 5.
+ */
+describe('the podium on the stage’s ground', () => {
+  const GROUND = theme.color.stageGround;
+
+  it('lands each colour on the ground where mock 5 measures it', () => {
+    expect(over(theme.color.stageStep, GROUND).map(Math.round)).toEqual([54, 68, 74]);
+    expect(over(theme.color.stageRim, GROUND).map(Math.round)).toEqual([80, 92, 97]);
+  });
+
+  it('carries a step’s white number past AAA', () => {
+    const step = over(theme.color.stageStep, GROUND);
+    expect(contrast(parse(theme.color.surface).rgb, step)).toBe(10.15);
+    expect(contrast(parse(theme.color.surface).rgb, step)).toBeGreaterThanOrEqual(AAA);
+  });
+
+  it('carries the first step’s ink number on volt, and You’s volt ring on the night', () => {
+    expect(ratio(theme.color.ink, theme.color.volt)).toBe(13.96);
+    expect(ratio(theme.color.volt, GROUND)).toBeGreaterThanOrEqual(NON_TEXT);
+  });
+
+  /** A rim, never text: it separates a poster from the night and carries no meaning. */
+  it('draws the rim as a separation, not a mark', () => {
+    expect(contrast(over(theme.color.stageRim, GROUND), parse(GROUND).rgb)).toBe(2.27);
   });
 });

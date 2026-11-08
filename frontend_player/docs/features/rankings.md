@@ -24,6 +24,11 @@ feature's own is in `domain/ranking.ts`: which sports the pill offers (`pillSpor
 first, each part in the app's order), which sport the page opens on (`openingSport`), and how three
 rows stand on the podium (`podiumOf`).
 
+**Sign-up's hero draws a picture of the podium** ([#788](https://github.com/Raketa02/Raketa/issues/788),
+`auth.md`): You on a volt first step between `stas.w` and `ines.d`, redrawn in auth because auth may
+not import this feature. `PodiumSteps` is not exported for it, so **a change to the podium here does
+not reach that picture by itself — whoever changes the podium checks the hero** (`StagePodium.tsx`).
+
 **The page opens on the sport it is asked for, else the trophy's, else the deck's last, else padel**
 (the mechanics §9; `openingSport`). The trophy's tap carries the sport of the reader's latest result;
 a pass begun on the page carries the sport it was begun on. **With nothing carried the page reads the

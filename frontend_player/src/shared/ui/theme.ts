@@ -333,6 +333,21 @@ const color = {
    *  rather than a second dark. White on it 12,95 — the headline's last line sits just above its
    *  reach. Derived in stageGround.test.ts; `StageGround.tsx` holds the shape. */
   stageGlow: '#23352F',
+
+  /** THE PODIUM'S STEP ON THE STAGE — sign-up's hero (#788): the second and third steps, white
+   *  over the ground at a seventh. MEASURED off mock 5 at 1x: #36444A over `stageGround`'s
+   *  #15252C, which is white at 0,14 in each channel. The value `onDarkTag` holds and NOT that
+   *  token: a step is not a tag, and a value is written for what was drawn. What sits on it, over
+   *  the ground: white 10,15 (the step's number). Derived in stageGround.test.ts. Nothing off
+   *  the stage may draw it. */
+  stageStep: 'rgba(255,255,255,0.14)',
+
+  /** THE RIM ROUND A FACE ON THE STAGE — the translucent edge round the two other players'
+   *  tiles on sign-up's podium (#788), where You's is a volt ring. MEASURED off mock 5: #505C61
+   *  over the ground, white at 0,25. A rim and never text: 2,27 against the ground, a line drawn
+   *  to separate a poster's edge from the night rather than to be read (1.4.11 asks 3:1 of a
+   *  mark that carries meaning, and this carries none). Derived in stageGround.test.ts. */
+  stageRim: 'rgba(255,255,255,0.25)',
 } as const;
 
 /**
@@ -983,7 +998,10 @@ const size = {
    *  18–19 in the 54, both 0,34 of the box — kept as a ratio for `RADIUS_RATIO`'s reason: two
    *  sizes of one drawn object, and a point value per size is two numbers to keep in step. It
    *  is the one font size in the app computed from a box, and it is computed inside the tile
-   *  that owns the box; a type role for it would be a role with a size per caller. */
+   *  that owns the box; a type role for it would be a role with a size per caller. The stage's
+   *  hero draws the same tile (`StageFace`) on sign-in's picture of this screen and on sign-up's
+   *  podium, the two places ADR-0167's notes extend §3's initials to, and sets its letters at this
+   *  share of its poster. */
   yesTile: { singles: 64, doubles: 54, initials: 0.34 },
   /** The swipe row — 6.15. A list row that slides left to REVEAL one control behind it, and
    *  the two numbers that are the gesture's own rather than the row's.
@@ -1429,7 +1447,17 @@ const size = {
    *  it: the real deck's 3pt outline (`stroke`) and 12° (`tilt`), but clockwise and top-right, where
    *  mock 2 draws it, `top` below the card's top edge — the mock's 50 pixels, astride the ribbon's
    *  foot. `splashTile` is a face on the hero's *It's a game!* (mocks 7–8): 44pt measured in both,
-   *  45 on the 3pt grid, where the yes screen's own are 54 — the hero is under half a screen. */
+   *  45 on the 3pt grid, where the yes screen's own are 54 — the hero is under half a screen.
+   *
+   *  `podium` is sign-up's Rankings podium (#788), in its own drawing points, which are mock 5's
+   *  at 2,1 pixels to the point (its 390pt phone) put on the 3pt grid — so on that phone it is
+   *  drawn at about its own size, and it is scaled down whole into a smaller room, never up.
+   *  `stepWidth` is each step's, `space.sm` between them; `step` their heights — the first the
+   *  tallest, the third *slightly lower than the second* as the live podium draws them, but
+   *  mock 5's own heights and NOT `size.rankings`', since a change there does not reach the hero
+   *  by itself. `face` is each player's tile, outer edge to outer edge: You's the largest, the
+   *  third's a step under the second's, as mock 5 draws it. `ring` is the volt ring round You's,
+   *  `rim` the translucent edge round the others' (`stageRim`) — both drawn inside the tile. */
   stage: {
     heroShare: 0.41,
     textMaxScale: 1.6,
@@ -1440,6 +1468,13 @@ const size = {
     swipe: { across: 24, turn: 6, outTurn: 18, fadesFrom: 0.6 },
     stamp: { top: 33, tilt: 12, stroke: 3 },
     splashTile: 45,
+    podium: {
+      stepWidth: 93,
+      step: { first: 93, second: 66, third: 51 },
+      face: { first: 63, second: 48, third: 45 },
+      ring: 3,
+      rim: 2,
+    },
   },
 } as const;
 
@@ -1698,6 +1733,29 @@ const motion = {
     swipe: 600,
     splash: 4000,
     reset: 400,
+  },
+  /**
+   * **Sign-up's podium rising** ([#788](https://github.com/Raketa02/Raketa/issues/788), 12.2) —
+   * played **once** when sign-up opens, and never again until it opens again: a statement, not a
+   * gesture, so it does not loop (argued in Part 16 against 1.5). About a second and a half:
+   *
+   * - `empty` — the wordmark and the headline alone, the steps flat and nobody on them; as long
+   *   as the native stack's cross-fade from sign-in (react-native-screens' 350 on iOS, the
+   *   default `(auth)/_layout` keeps), so nothing moves before the screen has landed;
+   * - `step` — one step growing up to its height, `easeDecel`: a quick start and a soft landing;
+   * - `stagger` — how long after one step starts the next does: the third, then the second, then
+   *   the first, last and tallest;
+   * - `player` — each player arriving as their step settles, from a little below, fading in,
+   *   `easeDecel`: `ines.d`, `stas.w`, then You with the volt ring.
+   *
+   * Ends at `empty + 2 × stagger + step + player`, 1 500. Skipped whole under collapsed
+   * presentation, where the podium stands risen with its players from the first frame.
+   */
+  stagePodium: {
+    empty: 350,
+    step: 450,
+    stagger: 200,
+    player: 300,
   },
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },

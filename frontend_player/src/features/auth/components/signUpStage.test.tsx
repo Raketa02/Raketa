@@ -92,7 +92,7 @@ function fillIn(repeat = 'backhand42') {
 }
 
 describe('the hero', () => {
-  /** The same stage as sign-in's, with sign-up's own line under where the podium will stand (#788). */
+  /** The same stage as sign-in's, with sign-up's own line under the podium (#788, `stagePodium.test.tsx`). */
   it('draws the wordmark and sign-up’s headline, hidden from a screen reader', () => {
     drawSignUp();
 

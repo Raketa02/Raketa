@@ -205,8 +205,9 @@ One entrance animation, one sheet animation, one popover animation, one fade —
 [7.13](#713-the-record-block), one disclose, the record sheet's _Full record_ opening and closing;
 since [12.2](#122-the-stage--sign-in-and-sign-up), one deal, sign-in's three miniature cards
 fanning out of a stack when the screen opens — and the loop it begins, sign-in's hero story, the
-one animation here nothing needs (Part 16, 2026-11-08). Press feedback is 120ms. Reduced-motion
-disables all of it.
+one animation here nothing needs (Part 16, 2026-11-08); and one rise, sign-up's podium growing out of
+the hero's baseline when the screen opens, played once and then still (Part 16, 2026-11-09). Press
+feedback is 120ms. Reduced-motion disables all of it.
 
 ## 1.6 The app is the app
 
@@ -246,7 +247,9 @@ own two-part layout, drawn on the phone, and not a harness around it.
 > [7.22](#722-the-game-card)).
 >
 > **Amended 2026-11-08** — a fifth: the sign-in stage's hero (`stageGround`, flat, and the
-> `stageGlow` at its foot, #784, [12.2](#122-the-stage--sign-in-and-sign-up)).
+> `stageGlow` at its foot, #784, [12.2](#122-the-stage--sign-in-and-sign-up)). Since 2026-11-09 its
+> podium's two translucent whites stand on it too — `stageStep`, the outer steps, and `stageRim`, the
+> rim round a face (#788) — fenced to sign-up's hero.
 
 > `line` **bounds a thing**; `line2` is a **fold inside one thing**. The hairline uses
 > `line2` precisely so a card with two sections reads as one object, not two.
@@ -4721,7 +4724,7 @@ hero      0,41 of the WINDOW's height (size.stage.heroShare) · drawn BEHIND the
           foot, space.lg above the sheet · hidden from screen readers whole · no touch
 wordmark  an 8pt volt dot (size.stage.mark) · space.xs · Raketa in h1, surface
 picture   the room between the wordmark and the headline, space.sm clear of each — sign-in's dealt
-          deck (#786, below), sign-up's podium (#788) · measured, and the picture fits itself in
+          deck (#786, below), sign-up's podium (#788, below) · measured, and the picture fits itself in
 headline  stageTitle (22 / 700 / −0,77 / 26) in surface, left-aligned
 text cap  maxFontSizeMultiplier size.stage.textMaxScale (1,6) on the hero's words — the tab
           bar's mechanism; the form under it is not capped
@@ -4791,7 +4794,7 @@ size. All measured off mock 3. The corner stays `radius.btn`, which is what the 
 other field and button in the app keeps its own look.
 
 **Sign-up's sheet, top to bottom** (#785, mocks 4 and 6) — the same stage, with _Play ranked. The
-competition starts with you._ at the hero's foot and the podium (#788) in its picture's room:
+competition starts with you._ at the hero's foot and the podium (#788, below) in its picture's room:
 
 ```
 Create an account                         stageTitle, ink — no eyebrow
@@ -4914,6 +4917,66 @@ is not the hero's to draw, and nobody here is _TK_.
 **One sequence, looped, with no React state** (`components/useStageLoop.ts`): five values carry the whole picture,
 so nothing re-renders as it moves and the form beside it never moves with it. The timings are
 `motion.stageDeck`'s; the geometry is `size.stage`'s.
+
+**Sign-up's picture is the Rankings podium, with You on the first step** ([#788](https://github.com/Raketa02/Raketa/issues/788),
+mock 5) — over _Play ranked. The competition starts with you._ **The podium is an illustration
+copied from the live one, not the live one** (`StagePodium.tsx`): rankings' `PodiumSteps` is not
+made public and not changed, for the deck's reason, so its steps, faces and names are redrawn in auth
+from the poster and this theme — **and a change to the live podium does not reach the picture by
+itself; whoever changes the podium checks the hero.** Where mock 5 draws it differently the mock wins:
+no Levels, the steps standing on the night rather than in a paper recess, a ring round every face,
+the third's face a step under the second's. **Except the numbers**: mock 5 sets them in a bold sans,
+and they stay mono and tabular, as every number is — the place card's gap line made the same call.
+
+```
+steps     2 / 1 / 3, left to right, size.stage.podium.stepWidth (93) each, space.sm apart, on one
+          baseline · heights .step 66 / 93 / 51 — the first the tallest, the third under the second
+          · top corners radius.btn (mock 5's 8,6) · the place at the top, space.sm down
+first     volt, its 1 in num.l tabular ink (13,96)
+outer     stageStep — white at 0,14 over the night (mock 5's #36444A) — their 2 and 3 in num.m
+          tabular surface (10,15)
+faces     .face 63 / 48 / 45 outer edge to outer edge, the third a step under the second as mock 5
+          draws it · a poster at a third-of-the-box corner, its two letters 800 surface textOnMedia
+          at yesTile.initials of the poster (StageFace.tsx, the splash's tile)
+          You: TK, inside a volt ring .ring (3) — volt as a stroke, on the dark
+          stas.w: SW, ines.d: ID, each inside a stageRim (white at 0,25) rim .rim (2)
+names     cardTitle surface, one line, centred under the face, space.xxs below it and space.xs
+          above the step · You under the first, the nicknames under the others
+fit       drawn at its own size (stagePodiumGeometry.ts, the name's line counted at the text cap)
+          and scaled whole into the room, never past 1 · STANDS ON THE ROOM'S FOOT, centred across,
+          so the room over a tall phone's You is night and the steps keep to the headline ·
+          nothing drawn until the room is measured
+words     every one capped at textMaxScale, on one line
+```
+
+**It rises once, when sign-up opens, and then holds** (`components/usePodiumRise.ts`). Sign-in's hero
+loops because it tells a story; sign-up's makes a statement — _you, first_ — and a statement said
+again every few seconds beside a form is a gesture, pulling the eye off the password box. So there
+is no loop:
+
+```
+empty     motion.stagePodium.empty (350) — the wordmark and the headline alone, the steps flat and
+          nobody on them · the length of the iOS cross-fade from sign-in, so it lands first
+steps     the third, then the second .stagger (200) later, then the first another .stagger on —
+          each growing up to its height over .step (450), easeDecel: a quick start, a soft landing
+          · drawn whole inside a box of its height that clips it, and rising is the step sliding up
+          out of the baseline — a translate, never a scale, which would squash its number
+players   as each step settles its player lands: from space.md below, fading in, over .player
+          (300), easeDecel — ines.d, stas.w, then You, the volt ring with them
+holds     at 1 500 (empty + 2 × stagger + step + player) · nothing moves after, however long
+again     each time sign-up is opened again: Sign in goes back and takes sign-up down, and the next
+          Create an account opens a new one, which rises
+collapsed reduced motion or a screen reader: never rises — the podium stands risen with its players
+          from the first frame, or from the OS's answer for a screen reader
+```
+
+**Three of the podium's values are new and fenced to the stage's hero** — `stageStep`, `stageRim`
+and `size.stage.podium` — and **its letters are ADR-0167's**: the initials over a poster, which §3
+fences to the yes screen, extended by the record's note of 2026-11-09 to this picture and to nothing
+else. _SW_ and _ID_ are cut from the nicknames as the yes tile cuts them; **_TK_ is copy**, mock 5's
+letters on the reader's own poster, the product owner's choice where the splash draws You bare: on a
+podium the reader stands first, and a bare tile between two lettered ones would read as a seat nobody
+holds. Never spoken (the hero is hidden whole), never over a photograph (every face is a poster).
 
 ---
 
@@ -5105,7 +5168,9 @@ every `Ink` would need a second computed value.
 > tenths of sign-in — and of sign-up since #785 — with a glow at its foot (`stageGlow`), both measured
 > off mocks 1–3 and held by `stageGround.test.ts`; the sheet over it is paper, and every control on
 > it is the app's own. What sits on the night is white and one volt dot — and, since #786, sign-in's
-> three miniature game cards, each on the game card's own ground. **Its record is PRD #783**
+> three miniature game cards, each on the game card's own ground; since #788, sign-up's podium, a volt
+> step and two in white at a seventh (`stageStep`), its faces in a volt ring or a white rim at a
+> quarter (`stageRim`). **Its record is PRD #783**
 > — the product owner's ruling that this redesign takes no root ADR, being one client's look with no
 > contract or cross-app effect — and it is fenced in [Part 16](#part-16--amendments-after-locking)
 > _for sign-in's and sign-up's hero only_. `#15252C` is the yes ground's edge a step off and is not
@@ -5450,6 +5515,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [6.13](#613-the-text-field) · [`AuthStage.tsx`](../src/features/auth/components/AuthStage.tsx) · [`SignUpScreen.tsx`](../src/features/auth/components/SignUpScreen.tsx) · `PasswordPairFields.tsx` `stage` · `(auth)/_layout.tsx` · [`theme.ts`](../src/shared/ui/theme.ts) `size.stage.textMaxScale`                                      | Sign-up was a paper form with _RAKETA_ over an `h1`, the rule replaced by a refusal under the box, and _Sign in_ pushed a second sign-in; both screens slid in; `textMaxScale` was 1,7                                                                                                                                                                       | **Sign-up on the stage (#785)**: the hero with _Play ranked. The competition starts with you._; the sheet per mocks 4 and 6 — three 6.13 `stage` boxes with label-row refusals and the placeholders _you@example.com_, _At least 8 characters_ and _Once more_, **the rule under the password box all the time**, 6.11, **Create account** at the `stage` size, _Already have an account? Sign in_ at the foot going **back**. **Sign-in ⇄ sign-up cross-fade** (`animation: 'fade'` on sign-up). **`textMaxScale` 1,6**. 6.13's label-row refusal now serves the password pair on the stage too                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | PRD #783; the two screens read as one flow. The refusal moved to the label row, so the rule has nothing to give way to. A screen's animation is the one it is pushed and popped with, so sign-up's carries both directions, and sign-in keeps the slide an email link's recovery screen goes back to it with. **Create account stands at the boxes' 48, as sign-in's button does**: mock 6 draws it at about 31pt, under the 44pt minimum (6.5), and mock 3 draws sign-in's at the boxes' height — one flow, one button. The cap is derived, never chosen: sign-up's line is the one that wraps a fourth time at 1,7 on a 320pt phone (`stageTextCap.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [7.22](#722-the-game-card) · [`StageDeck.tsx`](../src/features/auth/components/StageDeck.tsx) · [`MiniGameCard.tsx`](../src/features/auth/components/MiniGameCard.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.stage.card` `size.stage.fan` `motion.stageDeck`                 | Sign-in's hero room was empty night; nothing on the stage moved                                                                                                                                                                                                                                                                                              | **Sign-in's dealt deck (#786)**: three **miniature game cards** in the hero's room — a padel _Seat open_ straight in front, a tennis _Picked for you_ and a squash _Fill in · seat open_ turned 10° either side — each the game card's look redrawn in auth at **`size.stage.card` 270 × 342** with the card's own roles (a 45pt ribbon, the mock's), a one-line booking strip in `voltStroke` on all three and a **`gameGreen` ribbon** on the Fill in (white 4,62); the fan scaled whole into the measured room, never past 1; and **one deal** — stacked for `motion.stageDeck.stacked` 400, the back cards out over `deal` 500, `easeDecel`, once on open — **§1.5's deal**, dealt from the first frame under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | PRD #783 and mock 2, which lead on a look. **An illustration, not the live card**: auth may not import `proposals` (the gate already reaches auth, so it would be a cycle), and a live component bent around a sign-in picture is the wrong trade — so the cost is written in 7.22, 12.2 and `docs/features/auth.md`: **a change to the game card does not reach the hero by itself**. Drawn at twice the mock's miniature because the mock's words measure the real card's roles at almost exactly half (ribbon 0,49, names 0,42, figure 0,52, share 0,53). The green ribbon is the mock's reading of a Fill in, which the live card does not draw. The deal is the hero's one entrance; the swipe and _It's a game!_ that follow are #787's row. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [15.4](#154-dark-mode) · [`useStageLoop.ts`](../src/features/auth/components/useStageLoop.ts) · [`StageSplash.tsx`](../src/features/auth/components/StageSplash.tsx) · `motion.stageDeck` `.easeAccel` `size.stage.swipe` `.stamp` `.splashTile`                                       | One looping animation nothing needed was refused; two loops in the app (the ripple, the typing pulse), each the signal itself; the yes ground, `yesWord` and initials fenced to the yes screen                                                                                                                                                               | **Sign-in's hero loop (#787)**: after the deal, `still` 2000; the front card **picked up** (`swipe.across` 24, `turn` 6°, `pickUp` 700, `easeDecel`) with **I'M IN** on it — `deckStamp` volt, a 3pt volt outline on `photoScrim`, 12° clockwise, top-right, no price; **swiped off** (`swipe` 600, `easeAccel`, to `outTurn` 18°, fading from `fadesFrom`); then **_It's a game!_ over the whole dark hero but the wordmark** — the yes ground's radial, 45pt posters (`splashTile`) with KT, AK, KW and **You bare**, _vs_, the word in `yesWord`, the booked court's line in `tiny` — for `splash` 4000, the yes screen's entrance under a `fade`; the cards **restacked under it**, the splash fading over them for `reset` 400, and the next deal. About 8,6 s a cycle; only while sign-in is in view and the app not in the background (iOS's `inactive` keeps it running), from the deal on return; never under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | PRD #783 and mocks 2, 7–8. **Against 1.5 — the argument, so the next loop is not taken for free**: the ripple and the typing pulse loop because the motion is the signal; this one is not a signal, it is the app explaining itself to somebody who has never used it — the one gesture it is built on, and that the last yes books a court. That is worth motion on the one screen where nobody has seen a card yet, and on no other. So it is fenced as hard as a loop can be: sign-in only, in view, not in the background, nothing under reduced motion or a screen reader, never touching the form, and no haptic. **The three yes values are ADR-0167's, extended by its note of 2026-11-08** to this picture of that screen and nothing else; the live yes screen is not exported or changed. 45pt is measured off mocks 7–8 (44 in both); 54 is the yes screen's own, a whole screen's. The stamp is clockwise and top-right because mock 2 draws it so. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-09 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [15.4](#154-dark-mode) · [`StagePodium.tsx`](../src/features/auth/components/StagePodium.tsx) · `usePodiumRise.ts` · `StageFace.tsx` · `stageStep` `stageRim` `size.stage.podium` `motion.stagePodium`                                                                                 | Sign-up's hero room was empty night; the stage moved on sign-in alone, on a loop; the podium was Rankings' alone; letters over a poster were the yes screen's and sign-in's picture of it                                                                                                                                                                    | **Sign-up's podium (#788)**: the Rankings podium redrawn in auth — 2 / 1 / 3, `stepWidth` 93, heights 66 / 93 / 51, `radius.btn` tops; the first **volt** with its 1 in `num.l` `ink`, the outer two **`stageStep`** (white at 0,14) with `num.m` white — and on them `stas.w` (**SW**), **You (TK)** in a **3pt volt ring** at 63, and `ines.d` (**ID**), the others in a 2pt **`stageRim`** (white at 0,25) at 48 and 45, names in `cardTitle` white; fitted into the room and standing on its foot. **It rises once**: `motion.stagePodium` — `empty` 350, then the third, second and first steps `stagger` 200 apart, each over `step` 450, `easeDecel`, slid up out of a clip rather than scaled; each player landing from `space.md` below over `player` 300 as their step settles; still at 1 500; again on every opening of sign-up; risen from the first frame under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | PRD #783 and mock 5, which lead on a look; every value measured off it at 2,1 pixels to the point. **Against 1.5 — once, not a loop**: sign-in's loop tells a story worth seeing again while somebody types; sign-up's picture says one thing, _you, first_, and said again it would be a gesture pulling the eye off the form — so it is the deal's kind of motion, an entrance, and it holds. **A picture of the live podium, not the podium**: rankings' `PodiumSteps` is not exported or changed, so a change to it does not reach the hero by itself (`rankings.md` says so from its side). `stageStep` is `onDarkTag`'s value and not that token — a step is not a tag. Numbers stay mono where mock 5 draws a sans, as the place card's gap line did. **The letters are ADR-0167 §3's, extended by its note of 2026-11-09** to this picture and nothing else; _TK_ is copy, the product owner's choice to keep mock 5's letters on the reader where the splash draws You bare. 2.1 and 15.4 name the two whites. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 # Part 17 — What the reset removed
 

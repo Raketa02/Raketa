@@ -7,8 +7,8 @@
  *
  * Nicknames, never the mocks' *Karol T.*: a tile shows the nickname a player chose (ADR-0199 §1),
  * and these were picked so their letters are the mocks' — `karol.t` is KT, `ania.k` AK, `kuba.w`
- * KW, `marek.z` MZ, `stas.w` SW — which is what the splash (#787) and the podium (#788) draw over
- * a poster. **Each carries their poster's look** beside the name, so the same person is the same
+ * KW, `marek.z` MZ, `stas.w` SW, `ines.d` ID — which is what the splash (#787) and the podium
+ * (#788) draw over a poster. **Each carries their poster's look** beside the name, so the same person is the same
  * face on every picture the hero draws: a hue and a pose out of `CourtPoster`'s own closed sets,
  * picked to be the colour mock 2 draws them in, since nobody here has an id for the hash to frame.
  * The club is *Ogrody 33*, the mocks' own.
@@ -27,6 +27,15 @@
  * to face — `karol.t` and **You** against `ania.k` and `kuba.w` — and the yes screen's word over the
  * court the last yes booked. **You is a poster with no letters**: the reader's own face is not the
  * hero's to draw, and nobody here is `TK`.
+ *
+ * ## The podium
+ *
+ * Sign-up's hero (#788, mock 5): the Rankings podium with **You** on the first step, `stas.w` on the
+ * second and `ines.d` on the third. **You keeps mock 5's *TK* here** — the product owner's choice,
+ * against the splash's bare tile — with its volt ring: on a podium the reader is the one ranked first,
+ * and a bare tile among two lettered ones would read as a seat nobody holds. *TK* is nobody's
+ * initials and is never cut from a nickname, so it is written here, the one pair of letters on the
+ * hero that is copy (ADR-0167's note of 2026-11-09).
  */
 
 import type { CourtPosterLook } from '@/shared/ui';
@@ -47,6 +56,7 @@ export const STAGE_CAST = {
   marek: { nickname: 'marek.z', level: 3.15, look: { hue: POSTER_HUES[0], pose: 'forehand' } },
   stas: { nickname: 'stas.w', level: 3.05, look: { hue: POSTER_HUES[9], pose: 'lunge' } },
   ola: { nickname: 'ola.m', level: 2.94, look: { hue: POSTER_HUES[12], pose: 'forehand' } },
+  ines: { nickname: 'ines.d', level: 2.98, look: { hue: POSTER_HUES[4], pose: 'forehand' } },
 } as const satisfies Readonly<Record<string, StagePerson>>;
 
 /** The reader's poster on the splash — the gold-green mocks 7–8 draw their tile in, bare. */
@@ -105,4 +115,12 @@ export const STAGE_SPLASH_COPY = {
   court: 'Court 6',
   /** After the share — *27 zł each*. */
   each: 'each',
+} as const;
+
+/** What the podium says besides the two nicknames — see the module note. */
+export const STAGE_PODIUM_COPY = {
+  /** Under the reader's tile on the first step. */
+  you: 'You',
+  /** Over the reader's poster — mock 5's, nobody's initials. */
+  youLetters: 'TK',
 } as const;

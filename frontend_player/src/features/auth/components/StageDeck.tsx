@@ -24,22 +24,15 @@
  * measured nothing is drawn — a frame at the wrong size would be a jump.
  */
 
-import { useState } from 'react';
-import {
-  Animated,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
 import { MiniGameCard } from './MiniGameCard';
-import { DEALT, FAN_BOX, STACKED, fitScale, type DeckPlace, type Size } from './stageDeckGeometry';
+import { DEALT, FAN_BOX, STACKED, fitScale, type DeckPlace } from './stageDeckGeometry';
 import { STAGE_DECK_CARDS } from './stageDeckPresentation';
 import { STAGE_STAMP } from './stageHeroCopy';
+import { useMeasuredRoom } from './useMeasuredRoom';
 import type { StageDeckMotion } from './useStageLoop';
 
 /** The two cards the deal moves, drawn under the front one: back to front, left then right. */
@@ -96,12 +89,7 @@ function swipeStyle(swipe: Animated.Value, flight: number) {
 
 export function StageDeck({ deal, swipe }: StageDeckMotion) {
   const { width: windowWidth } = useWindowDimensions();
-  const [room, setRoom] = useState<Size>({ width: 0, height: 0 });
-
-  const onLayout = ({ nativeEvent }: LayoutChangeEvent) =>
-    setRoom({ width: nativeEvent.layout.width, height: nativeEvent.layout.height });
-
-  const measured = room.width > 0 && room.height > 0;
+  const { room, measured, onLayout } = useMeasuredRoom();
   const scale = measured ? fitScale(room) : 1;
   // The window's width in the deck's own points: from wherever it was picked up, that is off the phone.
   const flight = windowWidth / scale;

@@ -37,10 +37,12 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated } from 'react-native';
 
 import { useAppInBackground } from '@/shared/lib/platform';
 import { theme, useCollapsedPresentation } from '@/shared/ui';
+
+import { ARRIVE, curve, move, put } from './stageMotion';
 
 /** The splash's three values — how much of it shows, its sides meeting, its word risen. */
 export interface StageSplashMotion {
@@ -66,33 +68,8 @@ export interface StageLoop {
 const BEAT = theme.motion.stageDeck;
 const ENTRANCE = theme.motion.yesEntrance;
 
-/** A theme curve, as `Animated` takes one. */
-const curve = ({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) =>
-  Easing.bezier(x1, y1, x2, y2);
-
-/** `easeDecel`, the app's curve for a thing arriving. */
-const ARRIVE = curve(theme.motion.easeDecel);
-
 /** `easeAccel` — a card thrown off: slow away, then faster; *it accelerates right*. */
 const THROW = curve(theme.motion.easeAccel);
-
-/** One value to one place, on the native driver. */
-function move(
-  value: Animated.Value,
-  toValue: number,
-  duration: number,
-  easing?: (t: number) => number,
-) {
-  return Animated.timing(value, {
-    toValue,
-    duration,
-    useNativeDriver: true,
-    ...(easing === undefined ? {} : { easing }),
-  });
-}
-
-/** One value put somewhere at once — inside the sequence, where `setValue` cannot reach. */
-const put = (value: Animated.Value, toValue: number) => move(value, toValue, 0);
 
 /** The splash is up once its word has landed: the yes screen's entrance, end to end. */
 const ENTRANCE_ENDS = ENTRANCE.wordAfter + ENTRANCE.word;

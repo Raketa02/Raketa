@@ -42,8 +42,9 @@ import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-nat
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { CourtPoster, POSTER_LABEL, playerPhotoRadius, theme } from '@/shared/ui';
+import { theme } from '@/shared/ui';
 
+import { StageFace } from './StageFace';
 import { STAGE_SPLASH, type SplashFace } from './stageSplashPresentation';
 import type { StageSplashMotion } from './useStageLoop';
 
@@ -111,37 +112,15 @@ function Side({ faces }: { readonly faces: readonly SplashFace[] }) {
   return (
     <View style={s.side}>
       {faces.map((face) => (
-        <SplashTile key={face.key} face={face} />
+        <StageFace
+          key={face.key}
+          look={face.look}
+          size={TILE}
+          {...(face.letters === undefined
+            ? { testID: 'stage-splash-you' }
+            : { letters: face.letters })}
+        />
       ))}
-    </View>
-  );
-}
-
-/**
- * A face — the yes tile's drawing: the poster at a third-of-the-box corner, and its two letters over
- * it in the heaviest weight with the on-media shadow, set at a share of the tile.
- */
-function SplashTile({ face }: { readonly face: SplashFace }) {
-  return (
-    <View style={s.tile} {...(face.letters === undefined ? { testID: 'stage-splash-you' } : {})}>
-      <CourtPoster
-        hue={face.look.hue}
-        pose={face.look.pose}
-        accessibilityLabel={POSTER_LABEL}
-        style={StyleSheet.absoluteFill}
-      />
-      {face.letters === undefined ? null : (
-        <View style={s.initials}>
-          <Text
-            style={s.letters}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            maxFontSizeMultiplier={CAP}
-          >
-            {face.letters}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -203,18 +182,4 @@ const s = StyleSheet.create({
   words: { alignItems: 'center', gap: theme.space.xs },
   word: { ...theme.type.yesWord, color: theme.color.volt },
   line: { ...theme.type.tiny, color: theme.color.onDarkTiny, textAlign: 'center' },
-  tile: {
-    width: TILE,
-    height: TILE,
-    borderRadius: playerPhotoRadius(TILE),
-    overflow: 'hidden',
-  },
-  initials: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  // The yes tile's letters: white over the poster's light stop is 4,5:1 by the poster's own bound.
-  letters: {
-    fontFamily: theme.font.sans[800],
-    fontSize: TILE * theme.size.yesTile.initials,
-    color: theme.color.surface,
-    ...theme.shadow.textOnMedia,
-  },
 });
