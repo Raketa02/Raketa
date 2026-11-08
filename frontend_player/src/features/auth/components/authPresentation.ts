@@ -23,6 +23,14 @@ export const STAGE_WORDMARK = 'Raketa';
 /** What the stage's email box holds while it is empty — it opens empty, for the keychain's autofill. */
 export const EMAIL_PLACEHOLDER = 'you@example.com';
 
+/**
+ * **What sign-up's two password boxes hold while they are empty** (#785, mocks 4 and 6). A hint and
+ * never the rule: the rule is written under the first box all the time (`PASSWORD_RULE`), and a
+ * placeholder goes the moment somebody types.
+ */
+export const PASSWORD_PLACEHOLDER = 'At least 8 characters';
+export const REPEAT_PASSWORD_PLACEHOLDER = 'Once more';
+
 export const EMAIL_LABEL = 'Email';
 export const PASSWORD_LABEL = 'Password';
 export const REPEAT_PASSWORD_LABEL = 'Repeat password';
@@ -40,6 +48,8 @@ export const SIGN_IN_COPY = {
 } as const;
 
 export const SIGN_UP_COPY = {
+  /** The hero's line, under the podium (#788): what the ranking is for, with the newcomer in it. */
+  headline: 'Play ranked. The competition starts with you.',
   title: 'Create an account',
   submit: 'Create account',
   submitting: 'Creating account…',

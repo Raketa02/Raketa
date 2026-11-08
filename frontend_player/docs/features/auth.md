@@ -340,7 +340,7 @@ Design only: no request, schema, use-case or route changed.
 `StageGround`; the keyboard props #529 put on the scroll are `FORM_SCROLL`, shared by both frames). The eight other auth screens — the _Forgot password?_ flow, _Have an invitation
 code?_, _Set your password_ and the two links — keep the paper frame and its _RAKETA_ eyebrow,
 because a short recovery task is not crowded by a hero. On the stage the hero's wordmark replaces the
-eyebrow, so the sheet opens on the title alone. Sign-up moves onto it with #785.
+eyebrow, so the sheet opens on the title alone. Sign-up moved onto it with #785, below.
 
 **The sheet scrolls and the hero stays put.** The hero is drawn behind the scroll at 0,41 of the
 **window**'s height, and the scroll's content opens with that much transparent room before the
@@ -354,9 +354,10 @@ status bar first time — and are none where a suite draws the screen with no pr
 
 **The hero is a picture: hidden from screen readers, untouchable, and its words capped.** ADR-0198:
 the form is the screen. The wordmark and the headline grow with the OS text size only to
-`size.stage.textMaxScale`, the tab bar's mechanism — derived in `stageTextCap.test.ts` as the largest
-step at which every stage headline stays within three lines on a 320pt phone (1,7) — because the
-hero's room is fixed and the picture takes what its words leave. The form is not capped; it scrolls.
+`size.stage.textMaxScale`, the tab bar's mechanism — derived in `stageTextCap.test.ts` as the
+largest step at which every stage headline stays within three lines on a 320pt phone (1,7 with
+sign-in's alone, 1,6 since sign-up's joined it) — because the hero's room is fixed and the picture
+takes what its words leave. The form is not capped; it scrolls.
 
 **The status bar is light only while sign-in is the screen in view.** A stack keeps sign-in mounted
 under _Forgot password?_ and the invitation screen, and a light bar drawn for as long as it is
@@ -397,10 +398,55 @@ form.
 2026-11-08, when the review found them drawn in the app's own look: the mocks win on a look. The
 shared field's opt-in **`stage` look** draws a grey sentence-case label, a 48pt box holding a 14pt
 value, and a sentence-case **Show**; `Button`'s **`stage` size** stands both buttons at that height.
-Sign-in's two boxes and two buttons take them, sign-up's will with #785, and **every other field and
-button in the app keeps its look** — the eight other auth screens among them. It is the same build in
-every environment: nothing here is chosen by `EXPO_PUBLIC_ENV`.
+Sign-in's two boxes and two buttons take them, sign-up's three boxes and its button since #785, and
+**every other field and button in the app keeps its look** — the eight other auth screens among
+them. It is the same build in every environment: nothing here is chosen by `EXPO_PUBLIC_ENV`.
 
 **Not seen on a device**: the whole stage — the hero's ground and glow, the sheet over it on a short
 phone with the keyboard up, the label-row refusals, the light status bar, and the hero's words at the
 largest text size — on iOS and Android.
+
+**Create an account is drawn on the same stage, and nothing it does changed**
+([#785](https://github.com/Raketa02/Raketa/issues/785), PRD #783; design system 12.2, mocks 4 and
+6). The hero is sign-in's — the wordmark exactly where sign-in has it — with _Play ranked. The
+competition starts with you._ at its foot, and the podium arriving in #788. The sheet holds the
+title alone, the banner, _Email_, _Password_ with the rule under it, _Repeat password_, _I am 18 or
+over_, **Create account** and _Already have an account? Sign in_ at the foot. The same request goes,
+the same refusals come back from the same sources, the box still never arrives ticked, and the
+auth flow suite's sign-up cases pass untouched. Its headline is longer than sign-in's, and at 1,7
+it wraps a fourth time on a 320pt phone, so the derived cap is now **1,6** for both screens.
+
+**Each box opens empty with a placeholder**: _you@example.com_ in _Email_, as on sign-in, so the
+keychain's autofill is not fighting a value; _At least 8 characters_ in _Password_; _Once more_ in
+_Repeat password_. A placeholder is a hint that goes the moment somebody types, never the rule and
+never the label — the label above the box stays the box's name for a listener.
+
+**The password rule is under the box all the time.** _Use 8 to 128 characters, with at least one
+letter and one digit._ sits under the password box in small grey type before anything is typed and
+after a refusal. Off the stage — _Set a new password_ and _Set your password_, which keep their
+frame — a refusal under the box still takes the rule's line; on the stage every box's refusal is
+drawn on its label row, as sign-in's are, so the rule has nothing to give way to and the form does
+not shift under a press. It is `PasswordPairFields`' opt-in `stage`. The server's _That email
+already has an account. Sign in instead._ is the email box's, on its label row; the banner stays
+between the title and _Email_; the 18+ refusal stays under the tick box.
+
+**The tick box is the mocks' rounded square**, 22pt where it was 20, the corner the cell's 6 —
+design system 6.11's block had said a circle, and the code had always drawn the square. Checked, it
+fills `ink` with a white tick, and the whole row is the target. _Start playing_ draws the same box
+and follows it. The friends picker's circle borrowed the size and keeps its 20.
+
+**Sign-in and sign-up cross-fade, and _Sign in_ goes back.** Sign-up asks the native stack for
+`animation: 'fade'` (`(auth)/_layout.tsx`): a screen's animation is the one it is pushed and popped
+with, so _Create an account_ fades sign-up in over sign-in and the way back fades it out — the frame
+seems to stay while what is in it changes. Sign-in keeps the platform's slide, because it is also
+what a recovery or invitation screen opened from an email link puts in its own place, and that move
+is not this one. _Sign in_ on sign-up is `dismissTo('/sign-in')`, so it returns to the sign-in
+underneath rather than pushing a second one (the stage suite holds that only one is mounted and
+that nothing is left to go back to); opened with nothing under it, it puts sign-in in its place.
+Android's back pops sign-up the same way. The status bar stays light: each screen draws its own
+while it is the one in view. Every other auth screen keeps the platform's slide.
+
+**Not seen on a device**: sign-up's stage on iOS and Android — the sheet over the hero on a short
+phone with the keyboard up, the rule under the box beside a refusal on the label row, the 22pt box,
+the cross-fade both ways (and whether iOS's edge swipe back still works under a fade), and the hero's
+words at the largest text size.

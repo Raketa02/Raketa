@@ -25,10 +25,11 @@
  * unnamed** — the name is required either way, and what this chooses is only whether it is drawn.
  *
  * **`errorOnLabelRow` moves the sentence, and nothing else** ([#784](https://github.com/Raketa02/Raketa/issues/784),
- * 6.13 as amended in Part 16). The sign-in stage draws a field's refusal on its label's row,
- * right-aligned, so the form under it does not shift down a line when a box is refused. It is
- * the same sentence, still announced, beside the same red border; a long one wraps inside its
- * own column rather than being cut off. Opt-in, so every other field keeps it under the box.
+ * 6.13 as amended in Part 16). The stage — sign-in's form and sign-up's — draws a field's refusal
+ * on its label's row, right-aligned, so the form under it does not shift down a line when a box is
+ * refused. It is the same sentence, still announced, beside the same red border; a long one wraps
+ * inside its own column rather than being cut off. Opt-in, so every other field keeps it under the
+ * box.
  *
  * **The reveal control belongs to the field, not to the screen that uses it.** A password box
  * that cannot be read back is the one place where a typo costs a whole form: the player
@@ -104,9 +105,9 @@ export interface TextFieldProps extends Omit<
   readonly error?: string;
   /**
    * **Draw `error` on the label's row instead of under the box**, right-aligned in its own column
-   * — the sign-in stage's form (#784, 6.13 as amended in Part 16). Opt-in: every other field keeps
-   * its message under the box. A sentence too long for the row wraps inside its column rather
-   * than being cut off, and it is announced exactly as it is under the box.
+   * — the stage's forms, sign-in's and sign-up's (#784, #785; 6.13 as amended). Opt-in: every
+   * other field keeps its message under the box. A sentence too long for the row wraps inside its
+   * column rather than being cut off, and it is announced exactly as it is under the box.
    */
   readonly errorOnLabelRow?: boolean;
   /**
@@ -146,10 +147,10 @@ export interface TextFieldProps extends Omit<
    */
   readonly recessed?: boolean;
   /**
-   * **The sign-in stage's look** (#784, 6.13 as amended in Part 16): the label in `muted`
-   * sentence case (`rlLabel`), a `size.stage.control` box holding a `stageValue` a gutter in from
-   * each side, and **Show** and **Hide** in sentence case. Opt-in and one-line: every other field keeps
-   * 6.13's own look, and a growing field never asks for this one.
+   * **The stage's look** — sign-in's and sign-up's boxes (#784, #785; 6.13 as amended): the label
+   * in `muted` sentence case (`rlLabel`), a `size.stage.control` box holding a `stageValue` a gutter
+   * in from each side, and **Show** and **Hide** in sentence case. Opt-in and one-line: every other
+   * field keeps 6.13's own look, and a growing field never asks for this one.
    */
   readonly stage?: boolean;
 }

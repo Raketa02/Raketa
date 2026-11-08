@@ -246,8 +246,8 @@ const s = StyleSheet.create({
   line: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
   // 6.11's box, round — the mocks' circle — and its inversion when picked.
   circle: {
-    width: theme.size.tickBox.box,
-    height: theme.size.tickBox.box,
+    width: theme.size.tickBox.picker,
+    height: theme.size.tickBox.picker,
     borderRadius: theme.radius.pill,
     borderWidth: 1,
     borderColor: theme.color.line,

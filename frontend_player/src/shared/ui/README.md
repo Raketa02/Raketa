@@ -266,11 +266,11 @@ cascade.
 
 **The tick box** (6.11) is one box and one claim beside it, for a statement a player either
 makes or does not. It **borrows the availability cell rather than inventing a second ticked
-thing** — same 20 → 12 geometry, same `Tick`, same fill inversion — and the whole row is the
-target, because a 20pt square is well under the touch minimum and a label outside the
-control is a word beside the thing to hit. It takes `checked` and **has no default for it**:
-a box that arrives ticked is a claim the player never made, and that is the entire reason the
-component exists. The words are the caller's.
+thing** — its 6pt corner, the same 12pt `Tick`, the same fill inversion, at 22pt, the sign-up mocks'
+rounded square (#785) — and the whole row is the target, because a 22pt square is well under the
+touch minimum and a label outside the control is a word beside the thing to hit. It takes
+`checked` and **has no default for it**: a box that arrives ticked is a claim the player never made,
+and that is the entire reason the component exists. The words are the caller's.
 
 `Tick` is 6.8's mark extracted, because two controls now draw it and a second copy of a
 12 × 12 path is exactly the drift this folder exists to prevent. It takes **no props**: a

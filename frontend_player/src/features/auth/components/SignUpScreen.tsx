@@ -31,8 +31,27 @@
  * password rule — a letter and a digit as well as the length — is written under the first before
  * anything is typed. The frame, the email box and the link at the foot are the sign-in screen's
  * pieces, so this screen owns only what it asks.
+ *
+ * **It is drawn on the stage, sign-in's second page** ([#785](https://github.com/Raketa02/Raketa/issues/785),
+ * PRD #783; mocks 4 and 6): the same dark hero with the wordmark where sign-in has it and *Play
+ * ranked. The competition starts with you.* at its foot, and the paper sheet over it holding this
+ * form. **Nothing it does changed**: the same request, the same refusals from the same sources, the
+ * same box that never arrives ticked.
+ *
+ * **Top to bottom**: the title alone; the server's banner when there is one; *Email*, empty under
+ * *you@example.com*; *Password* under *At least 8 characters*, with **Show** and the rule beneath it
+ * **all the time**; *Repeat password* under *Once more*, with its own **Show**; *I am 18 or over*;
+ * **Create account**; and *Already have an account? Sign in* at the sheet's foot. Every box is in the
+ * shared field's `stage` look with its refusal on its label row, as sign-in's are, so a refusal
+ * never pushes the rule out from under the box it describes.
+ *
+ * ***Sign in* goes back** to the sign-in underneath (`dismissTo`) rather than pushing a second one
+ * over this — the two screens are one flow, and a stack of alternating stages would take as many
+ * backs to leave as presses to build. Opened with nothing under it, from a link, it replaces this
+ * screen with sign-in instead. The move each way is the stack's cross-fade (`(auth)/_layout`).
  */
 
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import { Button, TickBox } from '@/shared/ui';
@@ -40,15 +59,25 @@ import { Button, TickBox } from '@/shared/ui';
 import { useSignUp } from '../hooks/useAuthActions';
 import { ADULT_LABEL, signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
 
-import { AuthFields, AuthFrame } from './AuthFrame';
+import { AuthFields } from './AuthFrame';
 import { AuthLink } from './AuthLink';
 import { AuthNotice } from './AuthNotice';
-import { PASSWORD_LABEL, SIGN_UP_COPY } from './authPresentation';
+import { AuthStage } from './AuthStage';
+import { EMAIL_PLACEHOLDER, PASSWORD_LABEL, SIGN_UP_COPY } from './authPresentation';
 import { bannerMessage, errorUnderField } from './authErrorMessage';
 import { EmailField } from './EmailField';
 import { PasswordPairFields } from './PasswordPairFields';
 
-export function SignUpScreen() {
+export interface SignUpScreenProps {
+  /**
+   * Whether sign-up is the screen in view — the route reads it off the navigator
+   * (`useScreenInView`), as sign-in's does. A screen drawn on its own, as the suites draw it, is.
+   */
+  readonly inView?: boolean;
+}
+
+export function SignUpScreen({ inView = true }: SignUpScreenProps) {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -89,7 +118,18 @@ export function SignUpScreen() {
   const banner = bannerMessage(signUp.error);
 
   return (
-    <AuthFrame title={SIGN_UP_COPY.title}>
+    <AuthStage
+      title={SIGN_UP_COPY.title}
+      headline={SIGN_UP_COPY.headline}
+      inView={inView}
+      footer={
+        <AuthLink
+          lead={SIGN_UP_COPY.haveAccount}
+          label={SIGN_UP_COPY.signIn}
+          onPress={() => router.dismissTo('/sign-in')}
+        />
+      }
+    >
       {banner === undefined ? null : <AuthNotice message={banner} />}
 
       <AuthFields>
@@ -97,6 +137,9 @@ export function SignUpScreen() {
           value={email}
           onChangeText={setEmail}
           error={errorFor('email')}
+          errorOnLabelRow
+          stage
+          placeholder={EMAIL_PLACEHOLDER}
           textContentType="emailAddress"
           editable={!signUp.isPending}
         />
@@ -110,6 +153,7 @@ export function SignUpScreen() {
           repeatError={errorFor('confirmPassword')}
           onSubmitEditing={submit}
           editable={!signUp.isPending}
+          stage
         />
 
         {/* Below the three boxes and above the button, because it is the last thing a
@@ -126,13 +170,11 @@ export function SignUpScreen() {
 
       <Button
         label={SIGN_UP_COPY.submit}
-        size="lg"
+        size="stage"
         busyLabel={SIGN_UP_COPY.submitting}
         busy={signUp.isPending}
         onPress={submit}
       />
-
-      <AuthLink lead={SIGN_UP_COPY.haveAccount} label={SIGN_UP_COPY.signIn} href="/sign-in" />
-    </AuthFrame>
+    </AuthStage>
   );
 }

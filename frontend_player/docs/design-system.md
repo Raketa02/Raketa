@@ -1379,7 +1379,7 @@ Sign-up's age question adds a fifth, built the radius slider's way:
 
 | Control                                  | Visual                               | `hitSlop`                                                 |
 | ---------------------------------------- | ------------------------------------ | --------------------------------------------------------- |
-| Tick box row ([6.11](#611-the-tick-box)) | box 20 × 20, row 44 tall, full width | none — the **row** is the surface, box and label together |
+| Tick box row ([6.11](#611-the-tick-box)) | box 22 × 22, row 44 tall, full width | none — the **row** is the surface, box and label together |
 
 The chat map adds a seventh, and it is the tick box row's shape again:
 
@@ -1411,7 +1411,7 @@ are here as well as in `profileControlGeometry.test.ts` because they are the one
 card, the gap or the label cap would spend.
 
 **A `hitSlop` around the box would have been the wrong answer here**, not merely a second
-one. Growing a 20pt square to 44 leaves the sentence beside it inert, so the target stops
+one. Growing a 22pt square to 44 leaves the sentence beside it inert, so the target stops
 where the words start — and the words are what a player reads before deciding. The row is
 the control for the same reason the slider's is.
 
@@ -2016,7 +2016,8 @@ One box and one claim beside it, for a statement a player either makes or does n
 
 ```
 row      height 44, box + label together — THE TOUCH SURFACE
-box      20 x 20, radius 10, 1pt line, surface
+box      22 x 22, radius 6 (availabilityCell) — the sign-up mocks' rounded square — 1pt line,
+         surface
 ticked   fill ink, border ink, the 12 x 12 tick from 6.8 in surface — 17,50:1
 refused  1pt red border, and only while unticked
 label    rlValue / ink, flex 1 so a long claim wraps inside the row
@@ -2031,7 +2032,16 @@ tick is the shape [Part 13](#part-13--accessibility) asks for. A box carrying it
 fill alone is a stain rather than an answer. The tick is the same path at the same 12 × 12,
 drawn from the same tokens.
 
-**The row is the control, not the box** — the same decision the radius slider makes. A 20pt
+**It is the sign-up mocks' rounded square**
+([#785](https://github.com/Raketa02/Raketa/issues/785), mocks 4 and 6; Part 16 2026-11-08):
+22pt — 47 pixels across in mock 6 at 2,1 to the point — with 6.8's cell's 6pt corner, which mock 6
+draws too, where it was a 20pt box. This section's block said _radius 10_, a circle on a 20pt box,
+from the day it was written; the code drew the cell's 6, so the shape the mocks ask for is the one
+that shipped, and the change is the size. _Start playing_ draws this same box for the same claim and
+follows it. **The friends picker's circle is 6.11's box made round** (#757) and stays at the 20 it
+was drawn at (`size.tickBox.picker`): #785 is sign-up's box, not the picker's.
+
+**The row is the control, not the box** — the same decision the radius slider makes. A 22pt
 square is well under the [44pt minimum](#65-touch-targets) on its own, and growing it with
 `hitSlop` would leave the words beside it inert, which is a target that stops where the
 sentence starts.
@@ -2152,7 +2162,7 @@ label     flab · ink · UPPERCASE, above it · space.xxs between the three part
 value     rlValue in ink, space.md in from each side · placeholder in muted
 focused   border ink        refused   border red, AND the message under the box
 label row errorOnLabelRow: the message on the label's row instead, right-aligned, tiny · red,
-          in a column of its own that wraps — opt-in, the sign-in stage's (12.2)
+          in a column of its own that wraps — opt-in, the stage's: sign-in and sign-up (12.2)
 reveal    btn · ink · UPPERCASE inside the box, no fill and no border of its own
 grown     one rlValue line (16) per line, to the caller's cap, then it scrolls
           box padding (42 − 16) / 2 = 13, so one grown line IS the one-line box
@@ -2237,13 +2247,17 @@ Note variant for it, which is why `AuthNotice` remains a feature's.
 draws the same sentence, in the same `tiny` `red` with the same `alert`, at the end of the label's
 row — the label at its natural width, the sentence right-aligned in the column the label leaves,
 on one baseline a `space.sm` apart — and the box keeps its red border. **A sentence too long for
-the row wraps inside its column** and is never cut off. The sign-in stage asks for it
-([12.2](#122-the-stage--sign-in-and-sign-up)), so the form under a refused box does not shift down
-a line; **every other field keeps the message under the box**, where a field with a rule line under
-it (the nickname, the password pair) has its rule and its refusal in one place.
+the row wraps inside its column** and is never cut off. The stage asks for it
+([12.2](#122-the-stage--sign-in-and-sign-up)) — sign-in's two boxes, and sign-up's three since
+[#785](https://github.com/Raketa02/Raketa/issues/785) — so the form under a refused box does not
+shift down a line; **every other field keeps the message under the box**, where a field with a rule
+line under it (the nickname, the password pair off the stage) has its rule and its refusal in one
+place. **On the stage the password pair keeps its rule under the box all the time** and its refusal
+moves up to the label row (`PasswordPairFields`' `stage`), so the rule never gives way to a
+sentence about it.
 
 **The stage draws its boxes in the mock's look, and only the stage does** (#784, Part 16
-2026-11-08). `stage` sets the label in `muted` sentence case at `rlLabel`, the box at **48** with its
+2026-11-08; sign-up's three boxes since #785). `stage` sets the label in `muted` sentence case at `rlLabel`, the box at **48** with its
 value in **`stageValue`** (14 / 400) a gutter in from each side, and **Show** and **Hide** in sentence
 case — each measured off mock 3. It departs from this section's own argument for the label — `flab`
 in `ink`, uppercase, because a form label must be findable at a glance — and the product owner ruled
@@ -4682,10 +4696,11 @@ list — and on Fill in _+ Post a game_ still floats over it (the screens A3).
 
 **A two-part screen: a dark hero over the top four tenths, and a paper sheet with rounded top
 corners rising over it, holding the form** ([#784](https://github.com/Raketa02/Raketa/issues/784),
-PRD #783; mocks 1–3 lead on a look). Sign-in draws it, and sign-up joins it with #785; **the eight
-other auth screens keep their paper frame** and its _RAKETA_ eyebrow, because a short recovery task
-is not crowded by a hero. It is not [1.6](#16-the-app-is-the-app)'s _stage_ — that one is the
-prototype's harness around a phone; this one is a screen's own layout, drawn on the phone.
+PRD #783; mocks 1–6 lead on a look). Sign-in draws it, and sign-up since
+[#785](https://github.com/Raketa02/Raketa/issues/785); **the eight other auth screens keep their
+paper frame** and its _RAKETA_ eyebrow, because a short recovery task is not crowded by a hero. It
+is not [1.6](#16-the-app-is-the-app)'s _stage_ — that one is the prototype's harness around a phone;
+this one is a screen's own layout, drawn on the phone.
 
 ```
 ground    stageGround, flat, from the status bar down — and the screen's own fill, under the
@@ -4698,7 +4713,7 @@ hero      0,41 of the WINDOW's height (size.stage.heroShare) · drawn BEHIND the
 wordmark  an 8pt volt dot (size.stage.mark) · space.xs · Raketa in h1, surface
 picture   the room between the wordmark and the headline — the deck (#786), the podium (#788)
 headline  stageTitle (22 / 700 / −0,77 / 26) in surface, left-aligned
-text cap  maxFontSizeMultiplier size.stage.textMaxScale (1,7) on the hero's words — the tab
+text cap  maxFontSizeMultiplier size.stage.textMaxScale (1,6) on the hero's words — the tab
           bar's mechanism; the form under it is not capped
 sheet     paper · top corners radius.sheet (22) · padding space.xxl, its foot the bottom inset
           or space.md · space.lg between its blocks · footer pushed to its foot
@@ -4707,6 +4722,9 @@ scroll    the sheet scrolls over the hero, which does not move · keyboard a nat
           · no bounce at either end
 status    light while the stage is the screen in view, the root's dark otherwise · a band of
           stageGround the inset's height over the scroll, so the bar is always on the night
+move      sign-in ⇄ sign-up: the native stack's cross-fade, both ways — sign-up's animation 'fade',
+          which it is pushed and popped with · every other auth screen keeps the platform's slide,
+          sign-in's own included
 ```
 
 **The sheet is the scrolling part, and the hero stays put.** The hero is drawn behind the scroll at
@@ -4761,6 +4779,41 @@ holding a **`stageValue`** (14 / 400) a gutter (`space.lg`) in from each side, a
 **Hide** in sentence case (`btn`, `ink`). Both buttons stand at the boxes' height, 6.1's **`stage`**
 size. All measured off mock 3. The corner stays `radius.btn`, which is what the mock draws. Every
 other field and button in the app keeps its own look.
+
+**Sign-up's sheet, top to bottom** (#785, mocks 4 and 6) — the same stage, with _Play ranked. The
+competition starts with you._ at the hero's foot and the podium (#788) in its picture's room:
+
+```
+Create an account                         stageTitle, ink — no eyebrow
+[ banner ]                                AuthNotice — no connection, anything naming no field
+Email              That email already…    6.13 stage, errorOnLabelRow · empty, you@example.com
+[                                    ]
+Password             Use at least 8…      6.13 stage, errorOnLabelRow, reveal · At least 8 characters
+[                               Show ]
+Use 8 to 128 characters, with at least…   tiny, muted — ALWAYS, before and after a refusal
+Repeat password                           6.13 stage, errorOnLabelRow, reveal · Once more
+[                               Show ]    its own Show: the two reveal independently
+[■] I am 18 or over                       6.11 — the mocks' rounded square, never ticked on arrival
+Confirm that you are 18 or over — …       its refusal stays under the box, tiny / red
+[         Create account             ]    6.1 primary, stage — the boxes' 48
+     Already have an account? Sign in     AuthLink at the sheet's foot — BACK to sign-in
+```
+
+**The password rule is drawn all the time.** Off the stage, a refusal under the box took the rule's
+line, so the rule and a sentence about it were never said twice in one place; on the stage the
+refusal is on the label's row, so the rule has nothing to give way to and the form does not shift
+under a press. **The 18+ refusal stays under the tick box**, which has no label row: the box _is_
+its sentence.
+
+**Sign-in and sign-up are two pages of one flow, and the move between them is a cross-fade.** A push
+both ways would slide a second stage over the first, which says _a different place_; the stack's
+`fade` keeps the frame where it is while its contents change. A screen's animation is the one it is
+pushed **and** popped with, so sign-up's alone fades both directions. **_Sign in_ on sign-up goes
+back** to the sign-in underneath (`dismissTo`) rather than pushing a second one — two alternating
+presses would otherwise build a stack as deep as the presses — and Android's back does the same.
+Opened with nothing under it, it puts sign-in in its place. Every other auth screen keeps the
+platform's slide, because it is a step deeper, not a page across — **sign-in's own included**, since
+sign-in is also what a recovery screen opened from an email link puts in its place.
 
 ---
 
@@ -4944,7 +4997,7 @@ every `Ink` would need a second computed value.
 > **Amended 2026-11-08** — **and the sign-in stage's hero is the app's fifth dark surface, and it is
 > the top of a screen rather than a screen** ([#784](https://github.com/Raketa02/Raketa/issues/784),
 > [12.2](#122-the-stage--sign-in-and-sign-up)). One flat night (`stageGround`) over the top four
-> tenths of sign-in — and of sign-up from #785 — with a glow at its foot (`stageGlow`), both measured
+> tenths of sign-in — and of sign-up since #785 — with a glow at its foot (`stageGlow`), both measured
 > off mocks 1–3 and held by `stageGround.test.ts`; the sheet over it is paper, and every control on
 > it is the app's own. What sits on the night is white and one volt dot. **Its record is PRD #783**
 > — the product owner's ruling that this redesign takes no root ADR, being one client's look with no
@@ -5287,6 +5340,8 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-08 | [1.2](#12-one-accent-used-sparingly) · [6.1](#61-button) · [12.2](#122-the-stage--sign-in-and-sign-up) · [`Button.tsx`](../src/shared/ui/Button.tsx) `dot` `role`                                                                                                                                                                                                                        | §1.2's coral list closed at six, each later coral a meaning above; every `Button` announced itself as a button                                                                                                                                                                                                                                               | **_I have an invitation code_ carries a 6pt `coral` dot** before its words (#784) — a mark, 3,89:1 on white — drawn by `Button`'s new **`dot`**; the button is announced as a link by its new **`role`**, since it opens a screen carrying the email                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | The mock draws it, and **the product owner kept it** when the grilling asked (PRD #783, 2026-11-08). It means none of the list's meanings, so it is recorded as an **exception by taste on one control**, never a seventh meaning to reach for; flagged with the rest of §1.2's mock-driven coral. On `Button` rather than in a feature's copy of `secondary`, which `src/shared/ui/README.md` forbids                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-08 | [6.13](#613-the-text-field) · [`TextField.tsx`](../src/shared/ui/TextField.tsx) `errorOnLabelRow` · [`SignInScreen.tsx`](../src/features/auth/components/SignInScreen.tsx)                                                                                                                                                                                                               | A field's refusal was drawn under its box, everywhere                                                                                                                                                                                                                                                                                                        | **`errorOnLabelRow`** (#784): opt-in, the message on the **label's row** instead — right-aligned in a column of its own that wraps, `tiny` `red`, still `alert`, the box still red. Sign-in's two boxes take it; **every other field keeps the message under the box**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | PRD #783 story 18: the form does not shift down a line under a refused box, and the sentence still sits on the box it is about. Opt-in, because a field with a rule line under it (the nickname, the password pair) wants its rule and its refusal in one place                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-11-08 | [6.13](#613-the-text-field) · [3.3](#33-the-type-roles) · [6.1](#61-button) · [12.2](#122-the-stage--sign-in-and-sign-up) · [`TextField.tsx`](../src/shared/ui/TextField.tsx) `stage` · [`Button.tsx`](../src/shared/ui/Button.tsx) `stage` · [`theme.ts`](../src/shared/ui/theme.ts) `stageValue` `size.stage.control`                                                                  | Every field drew 6.13's look — a `flab` label in `ink`, uppercase, over a 42pt box with its value in `rlValue`, and _SHOW_ uppercase; buttons stood at 32–42                                                                                                                                                                                                 | **The stage's look** (#784): an opt-in `stage` on the field — the label in **`muted` sentence case at `rlLabel`**, `space.xs` above a **48pt** box (`size.stage.control`), its value in a new **`stageValue` (14 / 400 / 20)** `space.lg` in from each side, and **Show** / **Hide** in sentence case at `btn` in `ink`; the radius stays `btn`. `Button` gains a **`stage` size, 48**, so the stage's two buttons stand at its boxes' height. Sign-in's boxes and buttons take both; **every other field and button keeps its look**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | The product owner's ruling on 2026-11-08, asked when the review found the field look missing: PRD #783's _the mocks win on a look_, on the stage only. It departs from 3.3 and 6.13's argument that a form label is `flab` in `ink` and uppercase so it is found at a glance; on a sheet of two boxes under a 22pt title it is found without it. Every value is measured off mock 3 at 1,82 to the point: the label 28,6pt wide (`rlLabel` 29,1), the value 129 (`stageValue` 129,1), _Show_ 31,8 (`btn` 32,3), boxes and buttons 87–88 pixels                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-08 | [6.11](#611-the-tick-box) · [6.5](#65-touch-targets) · [`TickBox.tsx`](../src/shared/ui/TickBox.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.tickBox.box` `picker` · [`FriendsPicker.tsx`](../src/features/friends/components/FriendsPicker.tsx)                                                                                                                                 | 6.11's box was 20pt, and its block said _radius 10_ — a circle — while the code drew 6.8's cell's 6; the friends picker's circle read 6.11's size                                                                                                                                                                                                            | **The sign-up mocks' rounded square** (#785, mocks 4 and 6): **22pt**, the cell's **6pt** corner kept, `line` border on `surface`, filled `ink` with the white tick when ticked, the whole row the target. _Start playing_ draws the same box. The block now says the corner the code draws. **The friends picker's circle stays 20** (`size.tickBox.picker`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | PRD #783; the mocks lead on a look. Measured off mock 6 at 2,1 pixels to the point: 47 across, a corner of 12. The same claim is the same control, so _Start playing_ follows sign-up. The picker is a different control borrowing the size, and #785 asked for sign-up's box — a new token rather than a second surface changing as a side effect. **The claim beside the box stays `rlValue` (11,5 / 600)** although mock 6 draws it at about 13pt — the product owner's ruling on 2026-11-08: the issue asked for the box, and a 13pt role would be a new type size for one sentence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [6.13](#613-the-text-field) · [`AuthStage.tsx`](../src/features/auth/components/AuthStage.tsx) · [`SignUpScreen.tsx`](../src/features/auth/components/SignUpScreen.tsx) · `PasswordPairFields.tsx` `stage` · `(auth)/_layout.tsx` · [`theme.ts`](../src/shared/ui/theme.ts) `size.stage.textMaxScale`                                      | Sign-up was a paper form with _RAKETA_ over an `h1`, the rule replaced by a refusal under the box, and _Sign in_ pushed a second sign-in; both screens slid in; `textMaxScale` was 1,7                                                                                                                                                                       | **Sign-up on the stage (#785)**: the hero with _Play ranked. The competition starts with you._; the sheet per mocks 4 and 6 — three 6.13 `stage` boxes with label-row refusals and the placeholders _you@example.com_, _At least 8 characters_ and _Once more_, **the rule under the password box all the time**, 6.11, **Create account** at the `stage` size, _Already have an account? Sign in_ at the foot going **back**. **Sign-in ⇄ sign-up cross-fade** (`animation: 'fade'` on sign-up). **`textMaxScale` 1,6**. 6.13's label-row refusal now serves the password pair on the stage too                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | PRD #783; the two screens read as one flow. The refusal moved to the label row, so the rule has nothing to give way to. A screen's animation is the one it is pushed and popped with, so sign-up's carries both directions, and sign-in keeps the slide an email link's recovery screen goes back to it with. **Create account stands at the boxes' 48, as sign-in's button does**: mock 6 draws it at about 31pt, under the 44pt minimum (6.5), and mock 3 draws sign-in's at the boxes' height — one flow, one button. The cap is derived, never chosen: sign-up's line is the one that wraps a fourth time at 1,7 on a 320pt phone (`stageTextCap.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 # Part 17 — What the reset removed
 

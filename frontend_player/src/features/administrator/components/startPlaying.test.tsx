@@ -10,11 +10,13 @@
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
+import { theme } from '@/shared/ui';
 import {
   GATE_USER,
   launchSignedIn,
@@ -181,6 +183,25 @@ describe('the Adult attestation', () => {
     expect(
       screen.getByRole('checkbox', { name: 'I am 18 or over' }).props.accessibilityState,
     ).toEqual({ checked: false, disabled: false });
+  });
+
+  /**
+   * The same claim is the same control, so it is sign-up's rounded square (#785, 6.11): 22pt with
+   * the cell's corner. How a thing is drawn is a style, which is the one place to read it.
+   */
+  it('draws sign-up’s rounded square', async () => {
+    await startPlaying();
+
+    const drawn = screen
+      .UNSAFE_getAllByType(View)
+      .map((node) => StyleSheet.flatten(node.props.style as ViewStyle | undefined));
+    expect(drawn).toContainEqual(
+      expect.objectContaining({
+        width: 22,
+        height: 22,
+        borderRadius: theme.radius.availabilityCell,
+      }),
+    );
   });
 
   it('says nothing under the box about the steps after it', async () => {

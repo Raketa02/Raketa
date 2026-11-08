@@ -27,10 +27,10 @@ import {
 } from '@/test-support/fontMetrics';
 import { theme } from '@/shared/ui';
 
-import { SIGN_IN_COPY, STAGE_WORDMARK } from './authPresentation';
+import { SIGN_IN_COPY, SIGN_UP_COPY, STAGE_WORDMARK } from './authPresentation';
 
-/** Every headline the stage draws. Sign-up's joins it with its hero (#785). */
-const STAGE_HEADLINES = [SIGN_IN_COPY.headline];
+/** Every headline the stage draws — sign-in's, and sign-up's since #785. */
+const STAGE_HEADLINES = [SIGN_IN_COPY.headline, SIGN_UP_COPY.headline];
 
 /** The most lines a headline may take at the cap — see the module note. */
 const MOST_LINES = 3;
@@ -70,7 +70,8 @@ function largestScaleThatKeeps(): number {
 describe('the stage’s text cap', () => {
   it('is the largest step at which every headline keeps to three lines on the narrowest phone', () => {
     expect(theme.size.stage.textMaxScale).toBe(largestScaleThatKeeps());
-    expect(theme.size.stage.textMaxScale).toBe(1.7);
+    // Sign-in's line alone allowed 1,7; sign-up's (#785) is the one that wraps a fourth time there.
+    expect(theme.size.stage.textMaxScale).toBe(1.6);
   });
 
   it('lets each headline sit on two lines at the system size, as the mock draws it', () => {

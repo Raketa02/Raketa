@@ -1,5 +1,5 @@
 /**
- * **The stage** — sign-in's frame, and from #785 sign-up's: a dark hero over the top four tenths of
+ * **The stage** — sign-in's frame, and sign-up's since #785: a dark hero over the top four tenths of
  * the screen, and a paper sheet with rounded top corners rising over it, holding the form
  * ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2).
  *
@@ -35,8 +35,8 @@
  * So a band of the ground the status bar's height is drawn over the scroll, and the sheet slides
  * under it as it would under a header. At rest it is the hero's own top, the same colour.
  *
- * The footer — *New to Raketa? Create an account* — sits at the foot of the sheet, however tall the
- * screen, and above the home indicator.
+ * The footer — *New to Raketa? Create an account*, *Already have an account? Sign in* — sits at the
+ * foot of the sheet, however tall the screen, and above the home indicator.
  */
 
 import { StatusBar } from 'expo-status-bar';

@@ -6,7 +6,7 @@
  * Where a thing sits on the screen is not something a query can see; the order a listener meets it
  * in is, and for a column it is the same fact.
  *
- * Each box is `box:<name>`; each button or link is `<role>:<name>`, never its insides; a header or
+ * Each box is `box:<name>`; each button, link or tick box is `<role>:<name>`, never its insides; a header or
  * an alert is `<role>:<its words>`; every other word is itself. Hidden elements are walked too —
  * a suite that cares picks the items it wants with `inOrder`.
  */
@@ -41,7 +41,7 @@ export function readingOrder(tree: Rendered): string[] {
       order.push(`box:${String(name)}`);
       return;
     }
-    if ((role === 'button' || role === 'link') && typeof name === 'string') {
+    if ((role === 'button' || role === 'link' || role === 'checkbox') && typeof name === 'string') {
       order.push(`${role}:${name}`);
       return;
     }

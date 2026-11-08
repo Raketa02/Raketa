@@ -875,10 +875,17 @@ const size = {
    *  of it are two marks to keep in step.
    *
    *  The ROW is the touch surface — box and label together — which is what gets the
-   *  control to 44 without a `hit` entry, the way the radius slider's row does. A 20pt
-   *  square with slop around it would be a target that stops at the words. */
+   *  control to 44 without a `hit` entry, the way the radius slider's row does. A 22pt
+   *  square with slop around it would be a target that stops at the words.
+   *
+   *  `box` is the mocks' rounded square (#785): 47 pixels across in mock 6 at 2,1 to the point,
+   *  so 22, where it was 20; the corner stays the cell's 6, which mock 6 draws too (12 pixels).
+   *  `picker` is the friends picker's circle, 6.11's box made round (#757) — kept at the 20 it was
+   *  drawn at, because #785 changed sign-up's box and *Start playing*'s, not the picker's. Named for
+   *  the object, as `availabilityCell` is. */
   tickBox: {
-    box: 20,
+    box: 22,
+    picker: 20,
     row: 44, // = minTouch
   },
   /** The balance bar — 7.11. Three heights, and the segment labels are tied to them: at
@@ -1376,7 +1383,7 @@ const size = {
   railCardRatio: 0.74,
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
-  /** THE STAGE — sign-in's (and from #785 sign-up's) dark hero and the paper sheet over it
+  /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it
    *  ([#784](https://github.com/Raketa02/Raketa/issues/784); 12.2, Part 16 2026-11-08).
    *
    *  `heroShare` is where the sheet's top edge sits at rest, as a SHARE of the window's height:
@@ -1387,7 +1394,8 @@ const size = {
    *  `textMaxScale` is the hero's one Dynamic Type mechanism — the tab bar's `labelMaxScale`
    *  approach, second instance: the hero is a picture with a fixed room, so its words may neither
    *  be frozen nor grow without bound. DERIVED in `stageTextCap.test.ts` as the largest step at
-   *  which the headline stays within three lines on the narrowest phone. The form under it is not
+   *  which every stage headline stays within three lines on the narrowest phone: sign-in's alone
+   *  allowed 1,7, and sign-up's longer line (#785) holds it at 1,6. The form under it is not
    *  capped: it scrolls.
    *
    *  `mark` is the wordmark's volt dot: 22 pixels in mock 2 at 2,85 to the point.
@@ -1396,7 +1404,7 @@ const size = {
    *  buttons (6.1's `stage` size) alike: 87–88 pixels in mock 3 at 1,82 to the point, so 48, where
    *  the app's own box is 42. The three are one height in the mock, as 6.13's box and `btnXl` are
    *  everywhere else. */
-  stage: { heroShare: 0.41, textMaxScale: 1.7, mark: 8, control: 48 },
+  stage: { heroShare: 0.41, textMaxScale: 1.6, mark: 8, control: 48 },
 } as const;
 
 /** hitSlop presets that lift each control to a 44pt reachable height. Horizontal slop is
