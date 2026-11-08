@@ -1,6 +1,7 @@
 ---
 paths:
   - "app/modules/player_record/**"
+  - "app/modules/rankings/application/shown_on_general.py"
 ---
 
 # The player record
@@ -15,38 +16,58 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   it from `player_score` is that it also **enforces admission**, and that is the whole of
   what it decides for itself. Four things are load-bearing. **A record opens on a prior
   disclosure and never on a person**: you are the subject, you **played together** (were on
-  one court), you **share a group**, or you **run a group they are in** (#575) — otherwise a
-  route taking a player id is a player-enumeration endpoint, and a UUID being hard to guess is
-  not an authorization model. A search that showed them and a challenge you share stopped
-  being disclosures with #575, and the challenges are gone (#578). Each
-  strand is a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`, `GroupsTheyShare`,
-  `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game discloses for as
-  long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live**: the two about accounts
-  — the subject's hold, an account that may not be shown — through `matchmaking`'s
-  `AccountGates`, plus the reader's **own** hold, because a hold points both ways. **A block
-  is no gate, in either direction**
-  ([ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
-  §2, #586): the blocker opens the record to undo it, and the blocked person reads the
-  blocker's record byte for byte as before. What the record says of a block is the
-  **reader's own** — `blocked_by_you`, asked once admitted through the tenth demand,
-  `BlocksByTheReader` (`OwnBlocksOfTheReader`, over `BlockQuery.blocks_made_by` with the
-  reader as the blocker), a fact on the sheet that refuses nothing and is `false` on your own
-  record; nothing on any port can answer *did they block me* (§3). **The reader's relation
-  is the twelfth demand** (#745; ADR-0202 §1): `RelationsOfTheReader`
+  one court), you **share a group**, you **run a group they are in** (#575), or — the fourth
+  strand, since #773 — **the Ranking shows them to everybody**: listed on General in at least
+  one sport and *Show me in General* on, for **any reader**, with or without a level
+  ([ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §9) —
+  otherwise a route taking a player id is a player-enumeration endpoint, and a UUID being hard
+  to guess is not an authorization model. A search that showed them and a challenge you share
+  stopped being disclosures with #575, and the challenges are gone (#578). The first three
+  strands are each a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`,
+  `GroupsTheyShare`, `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game
+  discloses for as long as the pair are both on its court, played or not; a group is membership
+  as it stands. **The Ranking's strand is a port of its own, asked after them**: `ShownToEverybody`
+  (`RankingsShownToEverybody`, signed in `player_record/infrastructure/` over Rankings'
+  `ShownOnGeneral` — so `player_record` is on `.importlinter`'s
+  *rankings-knows-none-of-its-readers*), which asks nothing about the reader and takes the
+  response's one instant: the rows are the projection's, so a player is closed to strangers the
+  moment their 90 days run out, and the switch is **the profile's, read live**, so one turned
+  off is closed on the next tap, before the ranking follows it. An unlisted, inactive or hidden
+  player's record is refused a stranger with the one refusal; their other strands still admit
+  whoever they admitted. **The gates run live**: the two about accounts — the subject's hold,
+  an account that may not be shown — through `matchmaking`'s `AccountGates`, the reader's
+  **own** hold, because a hold points both ways, and **a block made by either side**
+  (ADR-0203 §8, #773, superseding
+  [ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+  §2 for the record): `LiveRecordGates` asks `BlockQuery.blocked_between`, symmetric in its
+  arguments, on every strand, group-mates included, so neither of a blocked pair opens the
+  other's record anywhere, and the refusal is the one refusal — the blocked person reads what
+  any closed record reads. **A block state nobody can read is a `503 block_state_unavailable`**
+  (declared on the route), never the record and never the refusal: a gate that cannot be
+  evaluated excludes, and an outage is no verdict about a person. **The record's own-block fact
+  went with it**: `blocked_by_you`, the tenth demand `BlocksByTheReader` and
+  `OwnBlocksOfTheReader` left the domain, the register and the player contract, because a
+  blocked pair's sheet is never drawn; *Blocked players* is the one read that carries the
+  reader's own blocks (ADR-0203 §8), and Unblock lives only there. **The reader's relation is
+  the twelfth demand** (#745; ADR-0202 §1): `RelationsOfTheReader`
   (`FriendsRelationsOfTheReader`, over Friends' `ReadRelations`), in the record's own spelling
   `RecordRelation` — held to `FriendRelation` by a test and put on the wire as that enum,
   `relation` — asked once admitted and never a gate, `NONE` on your own record;
-  `app.modules.friends` is on this context's forbidden list (`friends.md`). `blocked_by_you`
-  is the one demand
-  here that **stands down rather than raising**: an unreadable block state omits
-  `blocked_by_you` and takes no record down (ADR-0193, Consequences). **No gender preference is asked of any strand**: a preference says who a player is
-  willing to be *matched* with, and every strand here already put the pair in front of each
-  other (#575; it had been dropped for whoever runs the group by ADR-0159's 2026-10-02
-  amendment, #566).
+  `app.modules.friends` is on this context's forbidden list (`friends.md`). **The same port
+  says whether *Add friend* may be offered** (#773): `may_ask`, over Friends' own
+  `WhoMayBeAsked` — the object the ask is admitted by, so the button and the press cannot
+  disagree — put on the wire as `can_add_friend`, asked only where the button could be drawn
+  (not your own record, `relation` `NONE`), and `false` otherwise. It is the widened rule
+  (a group shared now, or listed on General and not hidden) and **never the daily limit**,
+  which refuses the press itself. **No gender preference is asked of any strand**: a preference
+  says who a player is willing to be *matched* with, and every strand here already put the
+  pair in front of each other (#575; it had been dropped for whoever runs the group by
+  ADR-0159's 2026-10-02 amendment, #566).
   **Your own record has no gates at all** and is a *second use case* rather than a branch, so
   the screen that tells a player how they appear cannot be taken down by the gate machinery.
-  **The refusals are one refusal, byte for byte** — never disclosed, held and no such player
-  are one `404` with one body, asserted as a sameness rather than as three statuses. And **this context declares its own ports and its
+  **The refusals are one refusal, byte for byte** — never disclosed (nor listed), held,
+  blocked either way and no such player are one `404` with one body, asserted as a sameness
+  rather than as four statuses. And **this context declares its own ports and its
   own types**: it borrows nothing from another context's domain, held by an `.importlinter`
   contract rather than a test, because an application layer importing `CardIdentity` would
   read as sensible reuse in the diff and nothing would go red. The cost is a second
@@ -60,8 +81,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   about whether it is drawn. Resolving it is the one rule
   this context owns (`domain/sport_choice.py`): the sport asked for where they hold a
   rating in it, otherwise their **most counted** — never their highest Level, which would
-  make the header a boast, and never their most recent, which is activity recency wearing a
-  sport's name — ties broken by the sport registry's own order, and `None` for somebody
+  make the header a boast (the boast has a place of its own now, the Ranking, ADR-0203, and
+  a record opened from it arrives with the Ranking page's sport, so it draws that Level), and
+  never their most recent, which is activity recency wearing a sport's name — ties broken by the sport registry's own order, and `None` for somebody
   rated in nothing, whose sheet draws pills and no skill card. Registry order is
   **structural**: both functions walk `Sport` and look the mapping up rather than iterating
   a mapping and sorting after (ADR-0105). **`counted_games` on the skill card is not the
@@ -139,3 +161,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   test walks the emitted contract to prove the words reach exactly one response type — and
   that the band's field is on none — which
   is where *it is not on search result cards* stopped being a promise.
+
+- **Strangers from the ranking are tested** over HTTP in `tests/api/test_ranking_strangers.py`
+  (#773): a stranger opens a listed player's full record, as does a reader with no level; an
+  unlisted, inactive or hidden player's record is refused a stranger with the one refusal
+  while a group-mate still opens it; the switch closes it before any delivery; a block closes
+  it both ways, group-mates included, and a lifted one opens it again. The admission's order in
+  `tests/unit/test_record_admission.py`, the Ranking's strand and the block gate in
+  `tests/demands/test_player_record_demands.py`.

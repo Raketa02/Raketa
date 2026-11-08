@@ -8,9 +8,10 @@ Ola and Kuba play padel with the same group. Ola blocks Kuba. From that moment:
   left.
   Kuba's yes stands. A booked game is never touched.
 - **No later yes puts them together** (§1), whichever of them says it.
-- **Ola sees her block** — on *Blocked players* and on Kuba's record (§3) —
-  **and Kuba sees nothing**: every read he can make is the bytes it was, but
-  for a seat a withdrawal opened.
+- **Ola sees her block** — on *Blocked players* (§3) — **and Kuba sees
+  nothing**: every read he can make is the bytes it was, but for a seat a
+  withdrawal opened. **Neither opens the other's record** (``docs/adr/0203``
+  §8, #773): the record answers the one refusal it answers anybody.
 - **Unblocking is immediate and brings no yes back**, and a second block or a
   second unblock records nothing.
 
@@ -453,7 +454,9 @@ async def test_nothing_kuba_reads_names_the_block_or_moves_for_it(
 ):
     """Every read Kuba can make about Ola and their group is the bytes it was
     (§3). The one thing that moves is a seat on a game Ola was In on — and it
-    moves as it would for a withdrawal by hand, naming nothing."""
+    moves as it would for a withdrawal by hand, naming nothing. **Ola's record
+    closes to him**, as it does to her: the one refusal, which names no block
+    (``docs/adr/0203`` §8)."""
 
     ola, kuba = four[0], four[1]
     pick = await makes(
@@ -464,7 +467,6 @@ async def test_nothing_kuba_reads_names_the_block_or_moves_for_it(
     reads = (
         "/api/v1/users/me",
         "/api/v1/blocks",
-        f"/api/v1/players/{ola['id']}/record",
         f"{GROUPS}/{group}",
         f"{GROUPS}/{group}/members?sport=PADEL",
         f"/api/v1/pools/{group}/fill-in?sport=PADEL",
@@ -486,6 +488,11 @@ async def test_nothing_kuba_reads_names_the_block_or_moves_for_it(
     await blocks(client, ola, kuba)
 
     assert await what_kuba_reads() == before
+    record = await client.get(
+        f"/api/v1/players/{ola['id']}/record", headers=kuba["headers"]
+    )
+    assert record.status_code == 404, record.text
+    assert record.json()["code"] == "record_unavailable"
     seen = await details_of(client, kuba, pick)
     assert seen["in_count"] == 1
     deck = await client.get(
@@ -522,7 +529,8 @@ async def test_unblocking_is_immediate_and_brings_no_yes_back(
     record = await client.get(
         f"/api/v1/players/{kuba['id']}/record", headers=ola["headers"]
     )
-    assert record.json()["blocked_by_you"] is False
+    # The record opens again, the moment the block is lifted (#773).
+    assert record.status_code == 200, record.text
     # Immediate: the same yes may be said again at once.
     again = await says_yes(client, ola, pick)
     assert again.status_code == 200, again.text

@@ -1,4 +1,4 @@
-"""What this context asks of contexts it does not write. **Ten demands.**
+"""What this context asks of contexts it does not write. **Twelve demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
@@ -11,7 +11,7 @@ no aggregate, no table and no migration; every fact it publishes it reads throug
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Eight of the ten are single-player reads and say so in their signatures.** A
+**Most are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
 be a contract nobody can honour cheaply for a caller that never batches. On
 ``SubjectVariety`` that signature is a **fence rather than a convenience**: the
@@ -33,7 +33,11 @@ admission rule.** It does not answer *may this reader see this person* — that 
 this context's decision and it is made in ``application/admission.py``. It
 answers *has this reader already been shown this person*, as a yes or a no, and
 three providers answer it: a court they shared, a group they are both in, and a
-group the reader runs that the subject is in (#575).
+group the reader runs that the subject is in (#575). **The fourth strand is a
+port of its own** (#773; ``docs/adr/0203`` §9): ``ShownToEverybody`` asks no
+question about the reader at all — *does the Ranking show this person to
+everybody* — so it is not a disclosure *to* anybody, and it takes the
+response's one instant, since a listing ends when a clock passes.
 """
 
 from __future__ import annotations
@@ -129,20 +133,42 @@ class PriorDisclosure(Protocol):
 
 
 @runtime_checkable
+class ShownToEverybody(Protocol):
+    """*Does the Ranking show this person to everybody?* — the record's fourth
+    strand (``docs/adr/0203`` §9, #773).
+
+    **Listed on General in at least one sport, and *Show me in General* on.**
+    Lent by the Rankings context, read live: a player whose 90 days ran out, or
+    who turned the switch off, opens to no stranger on the next tap. **It asks
+    nothing about the reader**: General is a page anybody can read, with or
+    without a level, so General discloses whom it shows to everybody at once.
+    The gates still run after it, a block among them.
+    """
+
+    async def shows(self, subject_id: UUID, *, now: Instant) -> bool:
+        """Whether this person is listed on General in a sport at ``now`` and
+        not hidden from it. ``False`` for an id nobody holds."""
+        ...
+
+
+@runtime_checkable
 class RecordGates(Protocol):
     """May this reader be shown this person **right now**?
 
     The two gates about accounts — the subject's hold, an account state that may
-    not be shown — and the reader's own hold, re-evaluated live on every open,
-    because a disclosure made in August is not a permission to show somebody in
-    December (``docs/adr/0095``). They are spelled **once** on this platform; a
-    second spelling of a safety gate is the defect the whole fail-closed rule
-    exists to prevent.
+    not be shown — the reader's own hold, and **a block made by either of them**,
+    re-evaluated live on every open, because a disclosure made in August is not a
+    permission to show somebody in December (``docs/adr/0095``). They are spelled
+    **once** on this platform; a second spelling of a safety gate is the defect
+    the whole fail-closed rule exists to prevent.
 
-    **A block is not one of them, in either direction** (``docs/adr/0193`` §2).
-    It keeps two people off one court, and the record is not a court: the
-    blocker opens it to undo the block, and the blocked person reads it exactly
-    as before. What the record says about a block is ``BlocksByTheReader``'s.
+    **A block is one of them again, in both directions** (``docs/adr/0203`` §8,
+    #773, superseding ``docs/adr/0193`` §2 for the record): neither of a blocked
+    pair opens the other's record, from anywhere, group-mates included. It is
+    refused with the one unnamed refusal, so the blocked person cannot tell it
+    from any other closed record. **A block state that cannot be read raises**
+    — a gate that cannot be evaluated excludes, and an outage is not a verdict
+    about a person, so the route answers 503 rather than the refusal.
 
     **No preference** (#575). The mutual gender preference says who a player is
     willing to be *matched* with, and every strand here is a court shared or a
@@ -163,38 +189,22 @@ class RecordGates(Protocol):
 @runtime_checkable
 class RelationsOfTheReader(Protocol):
     """Where **the reader** stands with this person (``docs/adr/0202`` §1–§2) —
-    the twelfth demand, lent by Friends. **A fact on the sheet and never a
-    gate**: asked only once the record is admitted, and it refuses nothing."""
+    lent by Friends. **Facts on the sheet and never a gate**: asked only once
+    the record is admitted, and they refuse nothing."""
 
     async def relation_to(self, *, reader_id: UUID, subject_id: UUID) -> RecordRelation:
         """The reader's relation to the subject: ``NONE`` where nothing stands,
         and on the reader's own record."""
         ...
 
-
-@runtime_checkable
-class BlocksByTheReader(Protocol):
-    """Has **the reader** blocked this person? Never the other way round.
-
-    **A response may carry the reader's own blocks, never anyone's block of the
-    reader** (``docs/adr/0193`` §3), and this is the record's half of that. The
-    question is directed and the reader is always the one asking about their own
-    block: there is no method here that could answer *did they block me*, so the
-    blocked person's read of the blocker's record cannot differ by a byte.
-
-    **A fact on the sheet and never a gate.** It is asked only once the record
-    is admitted, and its answer refuses nothing.
-
-    **The one demand here that stands down rather than raising.** A block
-    stops only what would put two people on a court (``docs/adr/0193``,
-    Consequences), so a block state that cannot be read takes no record down:
-    the answer is ``None`` — *could not tell* — and the sheet omits the fact
-    rather than drawing a guess about the reader's own block.
-    """
-
-    async def has_blocked(self, *, reader_id: UUID, subject_id: UUID) -> bool | None:
-        """Whether the reader's own block of the subject stands right now, or
-        ``None`` when the reader's blocks could not be read."""
+    async def may_ask(self, *, reader_id: UUID, subject_id: UUID, now: Instant) -> bool:
+        """Whether a friend request from the reader to the subject would be
+        admitted at ``now`` (``docs/adr/0203`` §9, #773): they share a group, or
+        the subject is listed on General and not hidden — **Friends' own rule**,
+        the one the ask is admitted by, so *Add friend* is offered exactly where
+        a press would go through. It says nothing of the daily limit, which
+        refuses the press itself, nor of a block, which never reaches an open
+        record."""
         ...
 
 
@@ -403,8 +413,8 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     SubjectIdentitySource,
     RecordPhotoLink,
     PriorDisclosure,
+    ShownToEverybody,
     RecordGates,
-    BlocksByTheReader,
     RelationsOfTheReader,
     SubjectRatings,
     SubjectForm,
@@ -416,7 +426,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
 
 
 __all__ = [
-    "BlocksByTheReader",
+    "ShownToEverybody",
     "PLAYER_RECORD_DEMANDS",
     "PriorDisclosure",
     "RecordGates",

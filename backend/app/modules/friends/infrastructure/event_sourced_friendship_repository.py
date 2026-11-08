@@ -8,7 +8,9 @@ the aggregate **as it stands** after the append, in the caller's transaction. A
 pair's rows are few and wholly determined by its state, so they are replaced,
 not patched event by event — and so are its ``friend_level_asks`` rows, when
 an ask, its answer or its setting aside is among the events appended (#749,
-#764): nothing else moves them.
+#764): nothing else moves them. **A request that counts towards the daily
+limit adds a row** to ``friend_requests_counted`` (#773), from the event itself:
+the count is of requests sent, so it is appended and never rewritten.
 
 **Constructed per unit of work**: the versions it remembers belong to one.
 """
@@ -23,14 +25,21 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.kernel import invariant
-from app.modules.friends.domain.events import LevelAsked, LevelAskSetAside, LevelGot
+from app.modules.friends.domain.events import (
+    FriendRequested,
+    LevelAsked,
+    LevelAskSetAside,
+    LevelGot,
+)
 from app.modules.friends.domain.friendship import Friendship
 from app.modules.friends.domain.ids import friendship_id
 from app.modules.friends.domain.relation import FriendRelation
 from app.modules.friends.infrastructure.friendship_model import (
     FriendLevelAskORM,
     FriendRelationORM,
+    FriendRequestCountedORM,
 )
+from app.shared.domain import DomainEvent
 
 FRIENDSHIP_AGGREGATE = "friendship"
 
@@ -71,6 +80,7 @@ class EventSourcedFriendshipRepository:
         )
         await self._events.publish_many(pending)
         await self._project(friendship)
+        await self._count(pending)
         if any(
             isinstance(event, LevelAsked | LevelGot | LevelAskSetAside)
             for event in pending
@@ -124,6 +134,26 @@ class EventSourcedFriendshipRepository:
                 )
             )
         await self._session.flush()
+
+    async def _count(self, pending: list[DomainEvent]) -> None:
+        """A row per request sent that counts towards its requester's daily
+        limit (#773)."""
+
+        counted = [
+            event
+            for event in pending
+            if isinstance(event, FriendRequested) and event.counted
+        ]
+        for event in counted:
+            self._session.add(
+                FriendRequestCountedORM(
+                    requester_id=event.requester_id,
+                    asked_at=event.occurred_at,
+                    addressee_id=event.addressee_id,
+                )
+            )
+        if counted:
+            await self._session.flush()
 
     async def _project_the_asks(self, friendship: Friendship) -> None:
         first, second = friendship.first_id, friendship.second_id

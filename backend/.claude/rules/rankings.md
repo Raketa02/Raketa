@@ -5,6 +5,7 @@ paths:
   - "app/seeds/ranking_crowd.py"
   - "app/bootstrap/general_order_demands.py"
   - "app/modules/proposals/infrastructure/rankings.py"
+  - "app/modules/player_record/infrastructure/rankings_shown_to_everybody.py"
   - "app/bootstrap/ranking_demands.py"
   - "migrations/versions/0068_ranking_rows.py"
   - "migrations/versions/0069_ranking_level_history.py"
@@ -14,7 +15,7 @@ paths:
 
 # Rankings
 
-Decisions that are load-bearing and not obvious from the code (#768, #769, #770, #771, #772;
+Decisions that are load-bearing and not obvious from the code (#768, #769, #770, #771, #772, #773;
 [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
 `docs/specs/rankings/`). The words are root `CONTEXT.md`'s *Rankings* section.
 
@@ -261,6 +262,21 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   rounded up; 1–5 is returned as is, above `WINS_COUNTED` (5) or with a win of `0`
   `null`, and a tie `tied` with no count. **The backend counts and the client draws**: as
   with *At stake*, nobody else may compute it.
+- **Who the Ranking shows to everybody is one read, lent to two readers** (#773; ADR-0203
+  §9; the mechanics §12–§13): `ShownOnGeneral` (`application/shown_on_general.py`) — listed on
+  General in at least one sport at the reader's instant (`RankingRow.listed_on_general`, off
+  the player's own rows: the primary key's prefix, never a kept order, so a player is off the
+  moment their 90 days run out) **and *Show me in General* on, read live off the profile**
+  (`GeneralSwitches.switch_of`, asked only while a row is listed) rather than off
+  `ranking_visibility`, so a switch turned off closes the player to strangers on the next tap,
+  before the outbox follows it; a player with no profile is shown to nobody. **The record**
+  reads it as its fourth strand, through `ShownToEverybody` (`RankingsShownToEverybody`, signed in
+  `player_record/infrastructure/`, so `player_record` joined `.importlinter`'s
+  *rankings-knows-none-of-its-readers*), for any reader, with or without a level; **Friends**
+  reads it to admit a request from somebody the two share no group with, through
+  `ShownToStrangers` (`RankingsShownToStrangers`, signed **here**, in
+  `infrastructure/friends_shown_to_strangers.py`, since Friends imports no reader). Blocks are
+  neither's business here: the record's gates and the ask's own refusal read them.
 - **Home's trophy** (`GET /home`'s `ranking`, additive): the sport of the reader's **latest
   result in any sport** (`latest_of`: the row with the latest `last_result_at`, ties to the
   sport registry's order) and their General place there, `null` when not listed, **and

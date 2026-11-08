@@ -482,11 +482,13 @@ class PlayerRecord:
     visible. So the subject's id is deliberately **not** on this type: there is
     nothing here to compare.
 
-    **Two fields are about the reader rather than the subject**:
-    ``blocked_by_reader``, the reader's own block (``docs/adr/0193`` §3), directed
-    so that it can never say anything to the person blocked; and ``relation``,
+    **Two fields are about the reader rather than the subject**: ``relation``,
     the reader's own relation to them (``docs/adr/0202`` §2), which says nothing
-    about anybody else's.
+    about anybody else's; and ``can_add_friend``, whether a request from the
+    reader would be admitted (``docs/adr/0203`` §9, #773). **No block is on it
+    any more**: a blocked pair's record never opens, either way round
+    (``docs/adr/0203`` §8), so there is no sheet for the reader's own block to
+    be drawn on.
 
     **Nothing on this type turns on ``is_self``.** It used to hold two
     sportsmanship fields, at most one ever filled, and an invariant deciding
@@ -496,16 +498,17 @@ class PlayerRecord:
 
     is_self: bool
     identity: SubjectIdentity
-    #: Whether **the reader** has blocked this person (``docs/adr/0193`` §3) —
-    #: their own block and never anybody's block of them, so the blocked
-    #: person's read of the blocker is the same either way. ``False`` on your
-    #: own record: nobody can block themselves. ``None`` when the reader's
-    #: blocks could not be read, and the sheet omits it rather than guessing.
-    blocked_by_reader: bool | None
     #: **The reader's** relation to this person — ``NONE`` on your own record,
     #: where there is no button. A request their own block hides from the
     #: reader reads ``NONE``, as it does everywhere.
     relation: RecordRelation
+    #: Whether **Add friend** may be offered (``docs/adr/0203`` §9, #773):
+    #: nothing stands between them (``relation`` ``NONE``) and a request from
+    #: the reader would be admitted — they share a group now, or the subject
+    #: is listed on General and not hidden. Friends' own rule, asked through
+    #: ``RelationsOfTheReader``. **Not the daily limit**: that refuses the
+    #: press, and the sheet says so then. ``False`` on your own record.
+    can_add_friend: bool
     #: A short-lived signed URL for ``identity.photo_id``, minted for this
     #: response and stored nowhere. **Present exactly when the photo id is**:
     #: signing is a signature over a request that is never sent, so there is no

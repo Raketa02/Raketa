@@ -324,7 +324,7 @@ async def test_a_preference_gates_no_record_for_whoever_runs_the_group_or_anybod
     assert (await record(client, tomek, kuba["id"])).status_code == 200
 
 
-async def test_every_gate_still_refuses_whoever_runs_it_and_a_block_is_none(
+async def test_every_gate_still_refuses_whoever_runs_it_a_block_among_them(
     client, session_factory, ogrody, marta
 ):
     group = await an_official_group(client, marta, ogrody["id"], join_policy="ANYONE")
@@ -335,8 +335,9 @@ async def test_every_gate_still_refuses_whoever_runs_it_and_a_block_is_none(
         await join(client, player, group)
     await block(client, kuba, marta)
 
-    # A block is no gate (`docs/adr/0193` §2): the record opens either way.
-    assert (await record(client, marta, kuba["id"])).status_code == 200
+    # A block made by either side is a gate (`docs/adr/0203` §8, #773): the
+    # member who blocked whoever runs the group is closed to them both ways.
+    assert (await record(client, marta, kuba["id"])).status_code == 404
 
     players.hold_only(client, ewa["id"])
     assert (await record(client, marta, ewa["id"])).status_code == 404

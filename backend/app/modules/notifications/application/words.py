@@ -269,11 +269,14 @@ def _sport_in_a_sentence(said: SaidOfNoGame) -> str:
 
 def _asked_from(said: SaidOfNoGame) -> str:
     """The card's where-line, as far as a push can say it: *With you in
-    Kazimierz crew · Padel*, or *Invited you to Raketa* for a link's. The card
-    on Home adds the Level and the reliability chip, which are live (a call)."""
+    Kazimierz crew · Padel*, *Invited you to Raketa* for a link's, or *Found you
+    in the padel ranking* for the ranking's (#773). The card on Home adds the
+    Level and the reliability chip, which are live (a call)."""
 
     if said.reason == NoticeReason.BY_LINK:
         return "Invited you to Raketa"
+    if said.reason == NoticeReason.FROM_THE_RANKING:
+        return f"Found you in the {_sport_in_a_sentence(said)} ranking"
     sport = None if said.sport is None else _SPORT_WORDS[said.sport]
     if said.group is not None:
         return f"With you in {said.group}" + ("" if sport is None else f" · {sport}")

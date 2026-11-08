@@ -53,6 +53,7 @@ class FriendsRequestsOnHome:
                 photo_url=card.photo_url,
                 asked_at=card.asked_at,
                 by_link=card.where.made_from is RequestOrigin.LINK,
+                from_ranking=card.where.made_from is RequestOrigin.RANKING,
                 group_id=None if card.group is None else card.group.group_id,
                 group_name=None if card.group is None else card.group.name,
                 sport=card.where.sport,

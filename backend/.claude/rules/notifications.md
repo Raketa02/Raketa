@@ -326,7 +326,9 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   (`FriendsOfTheReader` in `told_by.py`, over Friends' `ReadRequestsWaiting` and `ReadRelations`;
   `notification_demands.py`'s tenth row). About no game: `game_id`, `game_kind`, `club_id` and
   `starts_at` are `None`, **the group a request was asked from rides as `pool_id`** and its sport
-  as `sport` (both `None` for a link's, whose `reason` is `BY_LINK`), and the person is `people[0]`
+  as `sport` (both `None` for a link's, whose `reason` is `BY_LINK`; a request made from the
+  ranking names its sport and no group, `reason` `FROM_THE_RANKING`, and reads *Found you in the
+  padel ranking*, #773), and the person is `people[0]`
   — `player_id` on the wire (`NoticeSchema.player_id`) and in the push data. Words from
   `words.py`'s `words_about_no_game(SaidOfNoGame)`, the group's name read through
   `Names.of_groups`. `FRIEND_REQUEST` is told **once per request, only while its card is on the

@@ -43,7 +43,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   exactly what makes an exhaustiveness assertion a claim about something else. One port on
   the record's list has **three** implementations, which is what the suite has to be
   parameterised over: *where has this reader been shown this person* is a question three
-  contexts each answer about themselves.
+  contexts each answer about themselves. **Since #773 the record's list lost
+  `BlocksByTheReader`** (a block is a record gate now, so `LiveRecordGates`' row holds a block
+  either way) **and gained `ShownToEverybody`** (`RankingsShownToEverybody`: the Ranking shows a
+  player to everybody), its players listed through `tests/api/rankings_world.py`'s crowd.
   **The ninth, `payments_demands.py`, is a kind of its own**: the two adapters of one port
   onto the outside world — the fake and Stripe — so a fake that drifts from the provider goes red.
   Its rows build over the **settings**, not a session, and one may be absent: Stripe runs only
@@ -114,7 +117,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   holds a rating, off rating's published read (`RatedAccounts`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
   **Friends' lent relations are rows in three registers** (#745; `friends.md`): the record's
-  twelfth demand `RelationsOfTheReader`; Proposals' `ReaderRelations` (the faces' *friend* tag and
+  twelfth demand `RelationsOfTheReader` (since #773 with `may_ask`, Friends' own rule of who
+  may be asked, arranged through a group's aggregate and the ranking's crowd); Proposals' `ReaderRelations` (the faces' *friend* tag and
   the result's *PLAYED WITH*), `FriendRequestsOnHome` (Home's row, whose cards are driven over
   HTTP — a card needs a named account) and, since #764, `LevelAsksOnHome` (Home's asks for a
   level, its accounts registered over the suite's `client`); and Notifications' `Friendships`

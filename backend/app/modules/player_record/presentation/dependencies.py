@@ -33,7 +33,7 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_account_gates,
-    build_blocks_by_the_reader,
+    build_shown_to_everybody,
     build_relations_of_the_reader,
     build_game_disclosure,
     build_group_disclosure,
@@ -60,7 +60,6 @@ from app.modules.player_record.application.read_player_record import (
     ReadPlayerRecord,
 )
 from app.modules.player_record.domain.ports import (
-    BlocksByTheReader,
     RecordPhotoLink,
     RelationsOfTheReader,
     ReliabilityFilters,
@@ -149,14 +148,18 @@ def get_record_admission(
     db: DbSession,
     holds: AccountHoldQueryDep,
     account_status: AccountStatusQueryDep,
+    blocks: BlockQueryDep,
+    runtime: EventRuntimeDep,
 ) -> RecordAdmission:
-    """The three strands and the gates, assembled per request.
+    """The four strands and the gates, assembled per request.
 
-    The strands are listed **cheapest first**, which is the order they are read
-    in and the first yes ends the walk: a group the pair share is two indexed
-    reads, a court they shared folds the reader's games, and a group the reader
-    runs reads the subject's groups and who runs each. It changes no answer —
-    every strand is admitted under the same gates (#575).
+    The three disclosures are listed **cheapest first**, which is the order they
+    are read in and the first yes ends the walk: a group the pair share is two
+    indexed reads, a court they shared folds the reader's games, and a group the
+    reader runs reads the subject's groups and who runs each. **The Ranking is
+    asked after them** (#773). It changes no answer — every strand is admitted
+    under the same gates (#575), a block either way among them, read over the
+    request's ``BlockQuery`` so a block taken a moment ago closes the next open.
     """
 
     return RecordAdmission(
@@ -165,9 +168,11 @@ def get_record_admission(
             build_game_disclosure(db),
             build_runner_disclosure(db),
         ),
+        everybody=build_shown_to_everybody(db, runtime=runtime),
         gates=build_record_gates(
             accounts=build_account_gates(holds=holds, account_status=account_status),
             holds=holds,
+            blocks=blocks,
         ),
     )
 
@@ -175,21 +180,12 @@ def get_record_admission(
 RecordAdmissionDep = Annotated[RecordAdmission, Depends(get_record_admission)]
 
 
-def get_blocks_by_the_reader(blocks: BlockQueryDep) -> BlocksByTheReader:
-    """The reader's own block, over the request's ``BlockQuery`` — so a block
-    taken a moment ago is on the next sheet (``docs/adr/0193`` §3)."""
-
-    return build_blocks_by_the_reader(blocks)
-
-
-BlocksByTheReaderDep = Annotated[BlocksByTheReader, Depends(get_blocks_by_the_reader)]
-
-
 def get_relations_of_the_reader(
     db: DbSession, runtime: EventRuntimeDep
 ) -> RelationsOfTheReader:
-    """The reader's own relation to the person on the record, over the
-    request's session (``docs/adr/0202`` §1)."""
+    """The reader's own relation to the person on the record, and whether
+    **Add friend** may be offered, over the request's session
+    (``docs/adr/0202`` §1, ``docs/adr/0203`` §9)."""
 
     return build_relations_of_the_reader(db, runtime=runtime)
 
@@ -201,7 +197,6 @@ RelationsOfTheReaderDep = Annotated[
 
 def get_read_player_record(
     admission: RecordAdmissionDep,
-    own_blocks: BlocksByTheReaderDep,
     relations: RelationsOfTheReaderDep,
     identities: SubjectIdentitySourceDep,
     photos: RecordPhotoLinkDep,
@@ -214,7 +209,6 @@ def get_read_player_record(
 ) -> ReadPlayerRecord:
     return ReadPlayerRecord(
         admission=admission,
-        own_blocks=own_blocks,
         relations=relations,
         identities=identities,
         photos=photos,

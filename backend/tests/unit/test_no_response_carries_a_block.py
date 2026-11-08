@@ -1,24 +1,23 @@
-"""A block crosses the wire in exactly two places, and only as the reader's own.
+"""A block crosses the wire in exactly one place, and only as the reader's own.
 
 ``docs/adr/0193`` §3 narrowed ADR-0095 §8's *a block is unrepresentable in a
 response* to **a response may carry the reader's own blocks, never anyone's block
-of the reader**. Two reads carry them:
+of the reader**. Since ``docs/adr/0203`` §8 (#773) **one read carries them**:
 
-- **Blocked players** — ``GET /blocks``, the caller's own blocks;
-- **the player record** — ``blocked_by_you``, whether the reader blocked its
-  subject.
+- **Blocked players** — ``GET /blocks``, the caller's own blocks.
+
+The player record carried the other — ``blocked_by_you`` — until a block made
+by either side became one of its gates: a blocked pair's record never opens, so
+there is no sheet for the reader's own block to be drawn on, and the field left
+the contract.
 
 A rule like that is broken by addition, months later, by somebody adding a
 helpful field to a card, and nothing about the diff would look wrong. So the
 check walks the **emitted contract**, not the source: every schema reachable
-from a *response* on the player surface, transitively. **Both allowed places are
-named here, and every other one is forbidden** — a third is a red build, not a
-review question. The request shape is outside the walk: ``BlockPlayerRequest``
-is what a player *sends*.
-
-What the walk cannot see is direction: that ``blocked_by_you`` is the reader's
-own block and never the subject's of the reader is asserted over HTTP
-(``tests/api/test_player_record.py``, ``tests/api/test_blocking_a_player.py``).
+from a *response* on the player surface, transitively. **The one allowed place
+is named here, and every other one is forbidden** — a second is a red build,
+not a review question. The request shape is outside the walk:
+``BlockPlayerRequest`` is what a player *sends*.
 """
 
 from __future__ import annotations
@@ -34,8 +33,6 @@ FORBIDDEN = re.compile(r"block", re.IGNORECASE)
 #: The *Blocked players* read's schemas, whole: everything on them is the
 #: reader's own blocks.
 BLOCKED_PLAYERS = frozenset({"BlockedPlayersResponse", "BlockedPlayerSchema"})
-#: The one property elsewhere that may name a block: the record's own-block fact.
-OWN_BLOCK_ON_THE_RECORD = ("PlayerRecordResponse", "blocked_by_you")
 
 
 def _refs(node: object) -> set[str]:
@@ -94,25 +91,24 @@ def _spec() -> dict:
 
 def test_the_walk_reaches_the_response_schemas_it_is_meant_to_check():
     """The guard on the guard: a walk that reached nothing would pass forever,
-    and one that no longer reached the two allowed places would be guarding a
-    rule about nothing."""
+    and one that no longer reached the allowed place, or the record, would be
+    guarding a rule about nothing."""
 
     reached = _schemas_reachable_from_responses(_spec())
 
     assert "ErrorResponse" in reached
     assert len(reached) > 5
     assert BLOCKED_PLAYERS <= set(reached)
-    schema, field = OWN_BLOCK_ON_THE_RECORD
-    assert field in reached[schema]["properties"]
+    assert "PlayerRecordResponse" in reached
 
 
-def test_no_response_names_a_block_but_the_two_allowed_places():
+def test_no_response_names_a_block_but_blocked_players():
     offenders = {
         f"{name}.{field}"
         for name, schema in _schemas_reachable_from_responses(_spec()).items()
         if name not in BLOCKED_PLAYERS
         for field in schema.get("properties", {})
-        if FORBIDDEN.search(field) and (name, field) != OWN_BLOCK_ON_THE_RECORD
+        if FORBIDDEN.search(field)
     }
     named = {
         name
@@ -135,14 +131,13 @@ def test_blocked_players_is_served_by_its_own_read_and_no_other():
         assert _operations_reaching(spec, schema) == {"GET /api/v1/blocks"}
 
 
-def test_the_own_block_fact_is_on_the_record_and_nowhere_else():
-    spec = _spec()
-    schema, _ = OWN_BLOCK_ON_THE_RECORD
+def test_the_record_carries_no_block_either_way():
+    """``docs/adr/0203`` §8: a blocked pair's record never opens, so the sheet
+    has nothing to say about a block — the reader's own included."""
 
-    assert _operations_reaching(spec, schema) == {
-        "GET /api/v1/players/me/record",
-        "GET /api/v1/players/{player_id}/record",
-    }
+    record = _schemas_reachable_from_responses(_spec())["PlayerRecordResponse"]
+
+    assert not [field for field in record["properties"] if FORBIDDEN.search(field)]
 
 
 def test_neither_block_write_returns_a_body():

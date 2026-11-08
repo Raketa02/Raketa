@@ -16,6 +16,12 @@
   subscriber that answers the asks, never to a read; and the asks made **of**
   the reader, from the reader's side — who asked them — for their Home, their
   bell and their *Not now*.
+- ``RequestsCounted`` — the ``friend_requests_counted`` projection (#773): how
+  many requests a requester sent since a Warsaw midnight to people they shared
+  no group with, the daily limit's count.
+- ``ShownToStrangers`` — whether the Ranking shows a player to everybody now,
+  which admits a request from outside their groups (#773). **Signed in
+  ``rankings/infrastructure/``**, so the arrow runs ``rankings → friends``.
 - ``ReadersBlocks`` — whom the reader blocked, **the reader's own blocks
   only**, which is what hides a blocked player's request from them
   (``docs/adr/0202`` §2).
@@ -149,6 +155,26 @@ class LevelAsksOfTheReader(Protocol):
         aside**, whoever made it — friend or not now, which is the read's to
         decide. The reader's own side alone: who asked them, never whom
         anybody else was asked by."""
+        ...
+
+
+@runtime_checkable
+class RequestsCounted(Protocol):
+    async def counted_since(self, requester: UUID, since: Instant) -> int:
+        """How many requests the requester has **sent** since ``since`` that
+        count towards their daily limit — asked of somebody they shared no
+        group with (#773). Taken back, answered or ended, each still counts:
+        it was sent."""
+        ...
+
+
+@runtime_checkable
+class ShownToStrangers(Protocol):
+    async def shown(self, player_id: UUID, *, now: Instant) -> bool:
+        """Whether the Ranking shows this player to everybody **now**: listed
+        on General in at least one sport, and *Show me in General* on
+        (``docs/adr/0203`` §9, #773) — what admits a request from somebody
+        they share no group with. ``False`` for an id nobody holds."""
         ...
 
 

@@ -6,16 +6,20 @@ paths:
   - "app/modules/proposals/infrastructure/friends.py"
   - "app/modules/proposals/application/friends.py"
   - "app/modules/player_record/infrastructure/friends_relations.py"
+  - "app/modules/rankings/infrastructure/friends_shown_to_strangers.py"
+  - "migrations/versions/0071_friend_requests_counted.py"
 ---
 
 # Friends
 
-Decisions that are load-bearing and not obvious from the code (#745, #748, #749, #764;
+Decisions that are load-bearing and not obvious from the code (#745, #748, #749, #764, #773;
 [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
-§1–§2, §4 and its 2026-11-07 amendment, §8; [`docs/specs/friends/`](../../../docs/specs/friends/README.md),
-the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5).
+§1–§2, §4 and its 2026-11-07 amendment, §8; [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
+§9; [`docs/specs/friends/`](../../../docs/specs/friends/README.md),
+the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rankings mechanics §13).
 
-- **A Friendship per pair, event-sourced, and two projections beside it.** `app/modules/friends/`
+- **A Friendship per pair, event-sourced, and three projections beside it** —
+  `friend_relations`, `friend_level_asks` and, since #773, `friend_requests_counted`. `app/modules/friends/`
   holds two aggregates — the Friendship, and the Friend link (below). The Friendship is **one
   stream per unordered pair** (`domain/ids.py`: `uuid5` over the
   sorted pair, its own namespace — the opposite of a Block's ordered pair, because a friendship
@@ -41,11 +45,33 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5).
   alone (`FriendshipDirectory.rows_of`), and **no method answers about two other people** — the
   property *Kuba never learns that Tomek and Magda are friends* rests on. A projection rather
   than Blocks' payload scan, because every face on every deck asks it (ADR-0197's budget).
-- **The use case adds two rules the aggregate cannot know** (`application/requests.py`):
-  - **a request is open to people from your groups** — the requester must share a group with
-    them **now** (`ReadersGroups`, signed in `groups/infrastructure/`), else
-    `player_not_in_your_groups`, one body for a stranger and an id nobody holds; a request made
-    by `LINK` (the link's opening, below) is the one way in from outside and skips it;
+- **The use case adds the rules the aggregate cannot know** (`application/requests.py`):
+  - **who may be asked is one rule, `WhoMayBeAsked`** (widened by ADR-0203 §9, #773): the
+    requester shares a group with them **now** (`ReadersGroups`, signed in
+    `groups/infrastructure/`), **or** the addressee is **listed on General in a sport and not
+    hidden** (`ShownToStrangers`, signed in `rankings/infrastructure/friends_shown_to_strangers.py`
+    over Rankings' `ShownOnGeneral`, the switch read live off the profile) — the groups asked
+    first, so a group-mate is admitted whatever the ranking says, a hidden one too. Else
+    `player_not_in_your_groups` — the code kept for the shipped client, the message widened —
+    one body for a stranger off the list, a hidden one and an id nobody holds. A request made
+    by `LINK` (the link's opening, below) skips it. **The record asks the same object**
+    (`RelationsOfTheReader.may_ask`, `player-record.md`), so *Add friend* is offered exactly
+    where a press is admitted;
+  - **at most 10 a Warsaw day to people you share no group with** (#773; Q21): a request the
+    ranking alone admitted **counts** — `FriendRequested.counted`, decided at asking, defaulted
+    `False` for every older row — and the aggregate refuses the eleventh, `daily_request_limit`
+    (`429`, *You've sent 10 requests to new people today. Try again tomorrow.*), after its own
+    refusals, so a friend still reads `already_friends`. **Never counted**: a group-mate's,
+    wherever it was made (the ranking's included — PRD #766 call 15), a link's, and **a
+    crossing** — asking somebody who asked you first records `friend_request_crossed`, an
+    answer, never limited. **The count is of requests sent**: `friend_requests_counted`
+    (migration 0071; `RequestsCounted`, `SqlAlchemyRequestsCounted`), a row per counted
+    `friend_requested`, written by the repository's `save` and never deleted, so a request
+    cancelled, answered or ended still counts for its day. The day is **Warsaw's**
+    (`domain/daily_limit.py`'s `day_began`, through the kernel's `slot_start`), read only for a
+    request that would count. **A call**: two requests from one requester racing to two people
+    are on two streams, so both may read nine and the day end at eleven — a limit against spam,
+    not a ledger;
   - **nobody asks somebody they blocked** (`unblock_them_first`) — it would offer friendship
     across their own block; it names only the reader's own block. A call made without a ruling:
     the mechanics say only that the record never offers it, and Members' **+ Add** shows on
@@ -101,11 +127,18 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5).
     every friend of the reader's at once, from the reader's side and reading no block, as
     `friends_among` does (`rankings.md`).
 - **Where a request was made** is the request's: `RequestOrigin` `MEMBERS · RECORD · RESULT ·
-  LINK`, and the screen's `group_id` and `sport` when it showed them (`Where`; a link's names
-  neither). The phone sends the first three (`AskedFrom`, `POST /friends/requests`); `LINK` is
-  never sent — it is the link's opening (#748). **The group is kept only if the two share it at
-  asking**, so a notice never names a group a client merely sent; the Home card names it only
-  while both are still in it.
+  LINK · RANKING`, and the screen's `group_id` and `sport` when it showed them (`Where`; a
+  link's names neither; **the ranking's names its sport and no group**, an invariant). The phone
+  sends all but `LINK` (`AskedFrom`, `POST /friends/requests`) — `RANKING` from a record opened
+  on the Rankings page, with that page's sport, required (`422` without), its `group_id`
+  ignored; `LINK` is never sent — it is the link's opening (#748). **The group is kept only if
+  the two share it at asking**, so a notice never names a group a client merely sent; the Home
+  card names it only while both are still in it. **A ranking's request reads *Found you in
+  the padel ranking*** on the Home card (`from_ranking`, Proposals' `HomeFriendRequest`) and in
+  its notice (`reason` `FROM_THE_RANKING`), in place of the group line, as a link's *Invited you
+  to Raketa* stands — a group-mate's from the ranking too. **A request from the ranking to a
+  player who turns hidden stays open** (the rankings mechanics §17 call 8): the switch stops new
+  requests, never old ones.
 - **The routes** (player surface, `presentation/routes.py`): `POST /friends/requests` (answers
   `SENT`, or `FRIEND` when it crossed), `POST /friends/requests/{player_id}/acceptance`,
   `POST …/set-aside` (`204`), `DELETE /friends/requests/{player_id}` (cancel, `204` always),
@@ -149,6 +182,11 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5).
   pair is read first (an ask through `LevelsAskedByTheReader`), so a second run asks nobody
   twice; `_refuse_a_seed_that_lies` fails the run by name.
 - **Tested** over HTTP in `tests/api/test_friends.py` (every scene, the notices, the bell),
+  `tests/api/test_ranking_strangers.py` (#773: a stranger's request from the ranking, its card
+  and notice, a hidden player refused, the eleventh refused and group-mates never counted, a
+  request taken back still counted, answers and links never limited, the reset at Warsaw
+  midnight and not UTC's), the limit's rule in `tests/unit/test_friendship.py` and its day in
+  `tests/unit/test_daily_request_limit.py`,
   `tests/api/test_friend_link.py` (the code, New link, every opening case, the public read),
   `tests/api/test_friends_on_every_face.py` (each surface's tag, *PLAYED WITH*, Home's
   requests), `tests/api/test_level_asks.py` (the ask, every refusal, both notices, two askers),

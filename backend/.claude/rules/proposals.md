@@ -256,7 +256,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   slot sheet (`DeckTileSchema.friend`, `BookedTileSchema.friend`, `SlotFitSchema.friend`);
   `DeckPeople` itself knows no reader, so a read that forgets to mark them sends `false`. `GET /bookings/{id}` adds `played_with`, the reader's whole
   relation to everybody else on the game — the result's *PLAYED WITH* card — and `GET /home` adds
-  `friend_requests` (`FriendRequestsOnHome`), not counted in `needing_you`. **And `level_asks`**
+  `friend_requests` (`FriendRequestsOnHome`), not counted in `needing_you` — each card's
+  `by_link` and, since #773, `from_ranking` (*Found you in the padel ranking*, the card's
+  `sport`) saying what stands in place of the group line. **And `level_asks`**
   (#764; ADR-0202 §4's 2026-11-07 amendment): *ASKED FOR A LEVEL*, between the friend requests
   and the reader's games — one card per sport, the sport with the newest ask first, each naming
   its askers newest first (`HomeLevelAsk`, `HomeLevelAsker`: id, nickname, photo) and no group,

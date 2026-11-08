@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.kernel import Sport, invariant
 from app.modules.friends.application.reads import (
@@ -34,6 +34,7 @@ class AskedFrom(StrEnum):
     MEMBERS = RequestOrigin.MEMBERS.value
     RECORD = RequestOrigin.RECORD.value
     RESULT = RequestOrigin.RESULT.value
+    RANKING = RequestOrigin.RANKING.value
 
 
 class AskToBeFriendsRequest(BaseModel):
@@ -41,8 +42,11 @@ class AskToBeFriendsRequest(BaseModel):
     made_from: AskedFrom = Field(
         description=(
             "Where **+ Add** or **Add friend** was pressed: a group's Members (or "
-            "a face on one of its games), the player record, or the result "
-            "screen's *PLAYED WITH* card."
+            "a face on one of its games), the player record, the result "
+            "screen's *PLAYED WITH* card, or **the record opened from the "
+            "Rankings page** — `RANKING`, with that page's `sport` (#773). Their "
+            "Home card and notice then read *Found you in the padel ranking*, "
+            "whether or not you share a group."
         )
     )
     group_id: UUID | None = Field(
@@ -50,20 +54,28 @@ class AskToBeFriendsRequest(BaseModel):
         description=(
             "The group the screen showed — Members' group, or the game's — which "
             "their Home card names (*With you in Kazimierz crew*) while you are "
-            "both in it. Omit it where the screen showed none."
+            "both in it. Omit it where the screen showed none; it is ignored "
+            "with `RANKING`, whose page shows no group."
         ),
     )
     sport: Sport | None = Field(
         default=None,
         description=(
             "The sport the screen showed, whose Level the card prints beside your "
-            "nickname (*Padel 3,40*). Omit it where the screen showed none."
+            "nickname (*Padel 3,40*). Omit it where the screen showed none. "
+            "**Required with `RANKING`**: it is the ranking the card names."
         ),
     )
 
+    @model_validator(mode="after")
+    def _a_ranking_names_its_sport(self) -> "AskToBeFriendsRequest":
+        if self.made_from is AskedFrom.RANKING and self.sport is None:
+            raise ValueError("a request made from the ranking names its sport")
+        return self
+
     def where(self) -> Where:
-        return Where(
-            made_from=RequestOrigin(self.made_from.value),
+        return Where.pressed_on(
+            RequestOrigin(self.made_from.value),
             group_id=self.group_id,
             sport=self.sport,
         )

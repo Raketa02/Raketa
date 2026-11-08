@@ -3,17 +3,20 @@
 A player taps a face and is told who that person is. The rule the route runs on
 (``docs/adr/0159``): **a record is read through a prior disclosure, never about a
 person** — the pair played together, share a group, or the reader runs a group
-the subject is in (#575) — and the gates about accounts are re-evaluated live on
-every open, so a disclosure entitles a reader to ask and never to be answered.
+the subject is in (#575), or the Ranking lists them for everybody (#773,
+``tests/api/test_ranking_strangers.py``) — and the gates are re-evaluated live
+on every open, so a disclosure entitles a reader to ask and never to be
+answered.
 
 **The refusal is the thing most worth testing here**, and it is tested as a
 *sameness* rather than as three statuses: never disclosed, held and no such
 player produce the same bytes, because a response separating *never disclosed*
 from *no such player* would answer *is this id real* about a stranger.
 
-**A block is no gate any more, in either direction** (``docs/adr/0193`` §2). The
-blocker opens the record and reads ``blocked_by_you``; the blocked person reads
-the blocker's record **byte for byte** as they would have unblocked.
+**A block made by either side is a gate again** (``docs/adr/0203`` §8, #773,
+superseding ``docs/adr/0193`` §2 for the record): neither of a blocked pair
+opens the other's record, group-mates included, and the refusal is the one
+refusal, byte for byte.
 
 Every assertion lands on HTTP, through the async client fixture: ASGI transport
 over in-memory SQLite, **no MinIO, no Redis and no sidecar**.
@@ -277,9 +280,10 @@ async def test_a_group_you_share_opens_their_record(
     body = response.json()
     assert body == {
         "is_self": False,
-        "blocked_by_you": False,
-        # Nothing stands between them (`docs/adr/0202` §1).
+        # Nothing stands between them (`docs/adr/0202` §1), and a group-mate
+        # may be asked (`docs/adr/0203` §9).
         "relation": "NONE",
+        "can_add_friend": True,
         # The nickname and no name (``docs/adr/0199`` §6).
         "nickname": "subject",
         "area_code": "A+05151-000013",
@@ -358,9 +362,9 @@ async def test_your_own_record_opens_with_nothing_behind_it(client, searcher):
     assert response.status_code == 200, response.text
     assert response.json()["is_self"] is True
     assert response.json()["nickname"] == "searcher"
-    assert response.json()["nickname"] == "searcher"
-    # Nobody can block themselves, so their own sheet never says they did.
-    assert response.json()["blocked_by_you"] is False
+    # Nobody asks themselves to be friends.
+    assert response.json()["can_add_friend"] is False
+    assert "blocked_by_you" not in response.json()
 
 
 async def test_asking_about_yourself_by_id_is_still_your_own_record(
@@ -492,59 +496,50 @@ async def test_a_preference_gates_no_record(client, session_factory, searcher):
     assert (await record_of(client, kuba, piotr_id)).status_code == 200
 
 
-async def test_a_block_closes_no_record_and_the_blocker_reads_their_own(
+async def test_a_block_closes_the_record_both_ways_group_mates_included(
     client, session_factory, searcher
 ):
-    """**A block is not a record gate, in either direction** (``docs/adr/0193``
-    §2). The blocker opens the record of the person they blocked — it is where
-    they would look to undo it — and it says they blocked them (§3)."""
+    """**A block made by either side is a record gate** (``docs/adr/0203`` §8).
+    The two share a group, and neither opens the other's record: the blocked
+    person reads the one refusal, and so does the blocker, whose way back is
+    You › Blocked players."""
 
     _, owner, member = await two_strangers_in_one_group(
         client, session_factory, searcher
     )
+    assert (await record_of(client, owner["token"], member["id"])).status_code == 200
 
     blocked = await players.block_between(client, member["token"], owner["id"])
     assert blocked.status_code == 204, blocked.text
+    blocker_reads = await record_of(client, member["token"], owner["id"])
+    blocked_reads = await record_of(client, owner["token"], member["id"])
 
-    mine = await record_of(client, member["token"], owner["id"])
-    assert mine.status_code == 200, mine.text
-    assert mine.json()["blocked_by_you"] is True
+    nobody = await record_of(client, owner["token"], uuid4())
+    for refused in (blocker_reads, blocked_reads):
+        assert refused.status_code == 404, refused.text
+        assert without_the_trace(refused) == without_the_trace(nobody)
+
+
+async def test_a_lifted_block_opens_the_record_again(client, session_factory, searcher):
+    _, owner, member = await two_strangers_in_one_group(
+        client, session_factory, searcher
+    )
+    await players.block_between(client, member["token"], owner["id"])
 
     lifted = await client.delete(
         f"/api/v1/blocks/{owner['id']}", headers=players.auth(member["token"])
     )
     assert lifted.status_code == 204, lifted.text
-    again = await record_of(client, member["token"], owner["id"])
-    assert again.json()["blocked_by_you"] is False
+
+    assert (await record_of(client, member["token"], owner["id"])).status_code == 200
+    assert (await record_of(client, owner["token"], member["id"])).status_code == 200
 
 
-async def test_the_blocked_person_reads_the_blocker_byte_for_byte_as_before(
+async def test_both_having_blocked_one_unblock_still_closes_it_both_ways(
     client, session_factory, searcher
 ):
-    """**Nothing the blocked person reads names a block** (``docs/adr/0193``
-    §3). Their read of the blocker's record is the same bytes whether or not
-    they were blocked: ``blocked_by_you`` answers about the reader's own block,
-    and the reader made none."""
-
-    _, owner, member = await two_strangers_in_one_group(
-        client, session_factory, searcher
-    )
-    before = await record_of(client, owner["token"], member["id"])
-
-    blocked = await players.block_between(client, member["token"], owner["id"])
-    assert blocked.status_code == 204, blocked.text
-    after = await record_of(client, owner["token"], member["id"])
-
-    assert before.status_code == after.status_code == 200, after.text
-    assert after.text == before.text
-    assert after.json()["blocked_by_you"] is False
-
-
-async def test_both_having_blocked_each_record_says_only_the_readers_own(
-    client, session_factory, searcher
-):
-    """The record is directed, so the fact is per reader: each reads their own
-    block, and an unblock by one says nothing about the other's."""
+    """Two blocks are two facts (``docs/adr/0193``): lifting one leaves the
+    other standing, and a standing block either way closes the record."""
 
     _, owner, member = await two_strangers_in_one_group(
         client, session_factory, searcher
@@ -555,12 +550,8 @@ async def test_both_having_blocked_each_record_says_only_the_readers_own(
         f"/api/v1/blocks/{owner['id']}", headers=players.auth(member["token"])
     )
 
-    assert (await record_of(client, member["token"], owner["id"])).json()[
-        "blocked_by_you"
-    ] is False
-    assert (await record_of(client, owner["token"], member["id"])).json()[
-        "blocked_by_you"
-    ] is True
+    assert (await record_of(client, member["token"], owner["id"])).status_code == 404
+    assert (await record_of(client, owner["token"], member["id"])).status_code == 404
 
 
 class UnreadableBlocks:
@@ -579,27 +570,34 @@ class UnreadableBlocks:
         raise BlockStateUnavailable("the block store is unreachable")
 
 
-async def test_an_unreadable_block_state_takes_no_record_down(
+async def test_an_unreadable_block_state_shows_nothing_and_names_nobody(
     client, session_factory, searcher
 ):
-    """**A block stops only what would put two people on a court**
-    (``docs/adr/0193``, Consequences): the record opens, and the one fact it
-    could not read — the reader's own block — is **omitted**, so the sheet draws
-    neither *Block* nor *Unblock* rather than a guess."""
+    """**A gate that cannot be evaluated excludes** (``docs/adr/0095`` §5): a
+    block is a record gate now, so a block state nobody can read is a ``503``
+    — never the record, which might show a blocked pair each other, and never
+    the refusal, which would file an outage under a verdict about a person."""
 
     _, owner, member = await two_strangers_in_one_group(
         client, session_factory, searcher
     )
-    readable = (await record_of(client, owner["token"], member["id"])).json()
     players.override(client, get_block_query, UnreadableBlocks)
 
     unreadable = await record_of(client, owner["token"], member["id"])
 
-    assert unreadable.status_code == 200, unreadable.text
-    assert "blocked_by_you" not in unreadable.json()
-    assert unreadable.json() == {
-        key: value for key, value in readable.items() if key != "blocked_by_you"
-    }
+    assert unreadable.status_code == 503, unreadable.text
+    assert unreadable.json()["code"] == "block_state_unavailable"
+
+
+async def test_an_unreadable_block_state_never_reaches_your_own_record(
+    client, session_factory, searcher
+):
+    """Your own record has no gates at all, so nothing a block store does can
+    take *How others see you* down."""
+
+    players.override(client, get_block_query, UnreadableBlocks)
+
+    assert (await own_record(client, searcher["token"])).status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -628,12 +626,12 @@ async def test_a_person_you_have_never_been_shown_is_refused(
 async def test_the_three_refusals_are_byte_identical(
     client, session_factory, searcher
 ):
-    """**Asserted as a sameness, not as three statuses.**
+    """**Asserted as a sameness, not as four statuses.**
 
-    Never disclosed, held and no such player. A payload separating *never
-    disclosed* from *no such player* would answer *is this id real* about a
-    stranger. A block is not among them since ``docs/adr/0193`` §2 — it refuses
-    no record, either way round.
+    Never disclosed, held, blocked and no such player. A payload separating
+    *never disclosed* from *no such player* would answer *is this id real*
+    about a stranger, and one naming a block would tell the blocked person. A
+    block is among them since ``docs/adr/0203`` §8, either way round.
     """
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
@@ -654,7 +652,15 @@ async def test_the_three_refusals_are_byte_identical(
         "the hold, not the fixture, is what refused"
     )
 
-    refusals = (never_disclosed, no_such_player, held)
+    # The reader's own block of somebody their group shows them: the blocker
+    # reads exactly what anybody refused reads.
+    blocked_by_the_reader = await players.block_between(
+        client, searcher["token"], subject
+    )
+    assert blocked_by_the_reader.status_code == 204, blocked_by_the_reader.text
+    blocked = await record_of(client, searcher["token"], subject)
+
+    refusals = (never_disclosed, no_such_player, held, blocked)
     assert {one.status_code for one in refusals} == {404}
     assert len({without_the_trace(one) for one in refusals}) == 1
 

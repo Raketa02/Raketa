@@ -1542,6 +1542,13 @@ class HomeFriendRequestSchema(BaseModel):
             "the group line."
         )
     )
+    from_ranking: bool = Field(
+        description=(
+            "Made from your record on the Rankings page: draw *Found you in the "
+            "padel ranking* — `sport`'s ranking — in place of the group line, "
+            "whether or not you share a group (#773)."
+        )
+    )
     group: HomeFriendRequestGroupSchema | None = Field(
         description=(
             "The group they asked from — *With you in Kazimierz crew* — **while "
@@ -1576,6 +1583,7 @@ class HomeFriendRequestSchema(BaseModel):
             photo_url=request.photo_url,
             asked_at=request.asked_at,
             by_link=request.by_link,
+            from_ranking=request.from_ranking,
             group=None
             if request.group_id is None or request.group_name is None
             else HomeFriendRequestGroupSchema(

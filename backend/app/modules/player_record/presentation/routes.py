@@ -23,9 +23,10 @@ byte: a payload separating *never disclosed* from *no such player* answers *is
 this id real* about a stranger. The client draws one line, and there is nothing
 here to draw a second one from.
 
-**A block refuses nothing here, in either direction** (``docs/adr/0193`` §2).
-The blocker opens the record to undo the block and reads ``blocked_by_you``; the
-blocked person reads the blocker's record byte for byte as before (§3).
+**A block made by either side refuses the record, everywhere** (``docs/adr/0203``
+§8, #773, superseding ``docs/adr/0193`` §2 for the record) — group-mates
+included, with the one refusal, so the blocked person reads what any closed
+record reads. A block state nobody can read is a 503, never the refusal.
 
 **``?sport=`` says what the sheet is about and never who may be seen.** The gates
 run in the partition of the **disclosure** — a fact the platform holds — and the
@@ -57,17 +58,26 @@ _ONE_REFUSAL: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
         "model": ErrorResponse,
         "description": (
-            "`record_unavailable` — **one code for three causes, and the body "
-            "is identical in all three.** You were never shown this person; the "
-            "account is held or in a state that may not be shown; or there is no "
-            "such player. **A block is not one of them**, either way round.\n\n"
+            "`record_unavailable` — **one code for every cause, and the body "
+            "is identical in all of them.** You were never shown this person "
+            "and they are not listed on General, or hidden from it; the account "
+            "is held or in a state that may not be shown; one of you blocked "
+            "the other; or there is no such player.\n\n"
             "**The indistinguishability is the feature.** A response that "
             "separated *never disclosed* from *no such player* would answer *is "
-            "this id real* about a stranger. Draw one line — *This record isn't "
+            "this id real* about a stranger, and one that named a block would "
+            "tell the blocked person. Draw one line — *This record isn't "
             "available.* — and do not branch on anything else here, because "
             "there is nothing else here."
         ),
-    }
+    },
+    status.HTTP_503_SERVICE_UNAVAILABLE: {
+        "model": ErrorResponse,
+        "description": (
+            "`block_state_unavailable` — whether a block stands between you "
+            "could not be read, so nothing was shown. Retry the same request."
+        ),
+    },
 }
 
 
@@ -119,8 +129,8 @@ SportAsked = Annotated[
         "to say about somebody reading their own record, and a hold does not "
         "reach it either — this is the one screen a held player has for "
         "finding out how they appear.\n\n"
-        "`is_self` is `true`, and `blocked_by_you` is `false`: nobody can block "
-        "themselves. Read `is_self` rather than comparing ids.\n\n"
+        "`is_self` is `true`, and `can_add_friend` is `false`. Read `is_self` "
+        "rather than comparing ids.\n\n"
         "**What other players said comes back as the figure and its count** — "
         "`sportsmanship.average` and `sportsmanship.raters`, exactly what a "
         "stranger is served about you. The coarse band that used to stand in "
@@ -152,22 +162,24 @@ async def read_own_record(
         "Who this person is, as of the moment you opened it.\n\n"
         "**Read through a prior disclosure, never about a person.** It opens "
         "for somebody you were on a game with, somebody you share a group "
-        "with, somebody in a group you run, and yourself — and for nobody "
-        "else. Without a rule of that shape this route would be a "
-        "player-enumeration endpoint, and a UUID being hard to guess is not an "
-        "authorization model.\n\n"
-        "**Nothing expires but a group.** A game you were both on discloses "
-        "for as long as you are both on it, so a sheet you could open this "
-        "morning opens next year. A group opens it while you are both in it, "
-        "because its Members lists who is in it now — and while you run a "
-        "group they are in.\n\n"
-        "**The gates are live.** A hold and an account that may not be shown "
-        "are re-evaluated on every open, so a disclosure entitles you to *ask* "
-        "and never to be answered.\n\n"
-        "**A block is not a gate**, either way round. If you blocked this "
-        "person, the record opens and says so — `blocked_by_you` — and offers "
-        "the place to unblock. If they blocked you, nothing here differs by a "
-        "byte.\n\n"
+        "with, somebody in a group you run, **anybody listed on General in a "
+        "sport who hasn't turned *Show me in General* off** — whether or not "
+        "you have a level — and yourself, and for nobody else. Without a rule "
+        "of that shape this route would be a player-enumeration endpoint, and "
+        "a UUID being hard to guess is not an authorization model.\n\n"
+        "**Nothing expires but a group and a listing.** A game you were both "
+        "on discloses for as long as you are both on it, so a sheet you could "
+        "open this morning opens next year. A group opens it while you are "
+        "both in it, because its Members lists who is in it now — and while "
+        "you run a group they are in. General opens it while it lists them: "
+        "ninety days after their last result, or once they turn the switch "
+        "off, it opens for strangers no more.\n\n"
+        "**The gates are live.** A hold, an account that may not be shown and "
+        "**a block made by either of you** are re-evaluated on every open, so "
+        "a disclosure entitles you to *ask* and never to be answered. A block "
+        "closes the record both ways, group-mates included, with the one "
+        "refusal: whoever blocked whom reads only *This record isn't "
+        "available.* Unblock lives in You › Blocked players.\n\n"
         "**Asking about yourself is allowed** and answers `is_self: true` — the "
         "client is told rather than left to compare identifiers. It draws the "
         "same sheet `/players/me/record` does, figure for figure: `is_self` "

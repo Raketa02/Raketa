@@ -1,10 +1,11 @@
 """Wire schemas for the Blocks context: one request, and one read of your own.
 
 **A response may carry the reader's own blocks, never anyone's block of the
-reader** (``docs/adr/0193`` §3). ``BlockedPlayersResponse`` is one of the two
-places a block crosses the wire — the record's ``blocked_by_you`` is the other —
-and ``tests/unit/test_no_response_carries_a_block.py`` names both and refuses a
-third.
+reader** (``docs/adr/0193`` §3). ``BlockedPlayersResponse`` is **the one place**
+a block crosses the wire since ``docs/adr/0203`` §8 took the record's
+``blocked_by_you`` away — a blocked pair's record never opens — and
+``tests/unit/test_no_response_carries_a_block.py`` names it and refuses a
+second.
 
 **The blocker is never in a body.** It is the authenticated caller, always, and
 a field for it would be a field a request could get wrong — or lie about. What a

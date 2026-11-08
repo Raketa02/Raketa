@@ -187,31 +187,28 @@ class Admission:
         self.verdict = verdict
         self.asked: list[tuple[UUID, UUID]] = []
 
-    async def admits(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+    async def admits(self, *, reader_id: UUID, subject_id: UUID, now: Instant) -> bool:
         self.asked.append((reader_id, subject_id))
         return self.verdict
 
 
-class OwnBlocks:
-    """The reader's own blocks: ``(blocker, blocked)`` pairs standing."""
-
-    def __init__(self, *standing: tuple[UUID, UUID]) -> None:
-        self.standing = set(standing)
-        self.asked: list[tuple[UUID, UUID]] = []
-
-    async def has_blocked(self, *, reader_id: UUID, subject_id: UUID) -> bool:
-        self.asked.append((reader_id, subject_id))
-        return (reader_id, subject_id) in self.standing
-
-
 class Relations:
-    """The reader's own relation to each subject — ``NONE`` unless told."""
+    """The reader's own relation to each subject — ``NONE`` unless told — and
+    whether Friends' rule would admit a request (``may``)."""
 
-    def __init__(self, **standing: RecordRelation) -> None:
+    def __init__(self, *, may: bool = True, **standing: RecordRelation) -> None:
         self.standing = standing
+        self.may = may
+        self.asked: list[tuple[UUID, UUID]] = []
+        self.asked_may: list[tuple[UUID, UUID, Instant]] = []
 
     async def relation_to(self, *, reader_id: UUID, subject_id: UUID) -> RecordRelation:
+        self.asked.append((reader_id, subject_id))
         return self.standing.get(str(subject_id), RecordRelation.NONE)
+
+    async def may_ask(self, *, reader_id: UUID, subject_id: UUID, now: Instant) -> bool:
+        self.asked_may.append((reader_id, subject_id, now))
+        return self.may
 
 
 class Clock:
@@ -228,13 +225,12 @@ def reading(
     reliability: Reliability | None = None,
     variety: Variety | None = None,
     sportsmanship: Opinions | None = None,
-    own_blocks: OwnBlocks | None = None,
+    relations: Relations | None = None,
 ):
     identities, links = Identities(identity), Links()
     use_case = ReadPlayerRecord(
         admission=Admission(admits),
-        own_blocks=own_blocks or OwnBlocks(),
-        relations=Relations(),
+        relations=relations or Relations(),
         identities=identities,
         photos=links,
         ratings=ratings or Ratings(),
@@ -296,42 +292,58 @@ async def test_a_refused_read_touches_no_provider():
     assert variety.asked == []
 
 
-async def test_the_readers_own_block_is_on_the_sheet_and_refuses_nothing():
-    """``docs/adr/0193`` §2–§3: the reader's own block is a fact on the sheet,
-    asked once the record is admitted, of the reader's own blocks alone."""
+async def test_add_friend_is_offered_where_friends_rule_admits_a_request():
+    """``docs/adr/0203`` §9: the sheet relays Friends' own rule, asked once the
+    record is admitted, at the response's one instant."""
 
-    own_blocks = OwnBlocks((READER, SUBJECT))
-    use_case, _, _ = reading(admits=True, identity=an_identity(), own_blocks=own_blocks)
+    relations = Relations(may=True)
+    use_case, _, _ = reading(admits=True, identity=an_identity(), relations=relations)
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
-    assert record.blocked_by_reader is True
-    assert own_blocks.asked == [(READER, SUBJECT)]
+    assert record.can_add_friend is True
+    assert relations.asked_may == [(READER, SUBJECT, NOW)]
 
 
-async def test_a_block_of_the_reader_is_never_on_the_sheet():
-    """The subject blocked the reader: the port is asked about the reader's own
-    block, and there is none."""
-
+async def test_add_friend_is_not_offered_where_the_rule_admits_none():
     use_case, _, _ = reading(
-        admits=True, identity=an_identity(), own_blocks=OwnBlocks((SUBJECT, READER))
+        admits=True, identity=an_identity(), relations=Relations(may=False)
     )
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
-    assert record.blocked_by_reader is False
+    assert record.can_add_friend is False
 
 
-async def test_a_refused_read_asks_nothing_about_blocks():
-    own_blocks = OwnBlocks((READER, SUBJECT))
-    use_case, _, _ = reading(
-        admits=False, identity=an_identity(), own_blocks=own_blocks
-    )
+async def test_add_friend_is_never_asked_once_something_stands_between_them():
+    """``SENT``, ``ASKED_YOU`` or ``FRIEND``: the foot's left button is the
+    relation's, so the rule is not asked."""
+
+    for relation in (
+        RecordRelation.SENT,
+        RecordRelation.ASKED_YOU,
+        RecordRelation.FRIEND,
+    ):
+        relations = Relations(may=True, **{str(SUBJECT): relation})
+        use_case, _, _ = reading(
+            admits=True, identity=an_identity(), relations=relations
+        )
+
+        record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+        assert (record.relation, record.can_add_friend) == (relation, False)
+        assert relations.asked_may == []
+
+
+async def test_a_refused_read_asks_nothing_about_friends():
+    relations = Relations(may=True)
+    use_case, _, _ = reading(admits=False, identity=an_identity(), relations=relations)
 
     with pytest.raises(RecordUnavailable):
         await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
-    assert own_blocks.asked == []
+    assert relations.asked == []
+    assert relations.asked_may == []
 
 
 async def test_a_person_the_platform_cannot_describe_refuses_the_same_way():
@@ -348,11 +360,15 @@ async def test_your_own_id_on_the_parameterised_route_still_reads_as_your_own():
     """``is_self`` is the server's answer wherever the read came from — the route
     for a given player, asked about yourself, is your own record."""
 
-    use_case, _, _ = reading(admits=True, identity=an_identity())
+    relations = Relations(may=True)
+    use_case, _, _ = reading(admits=True, identity=an_identity(), relations=relations)
 
     record = await use_case.execute(reader_id=READER, subject_id=READER)
 
     assert record.is_self is True
+    # Nobody asks themselves to be friends.
+    assert record.can_add_friend is False
+    assert relations.asked_may == []
 
 
 async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
@@ -374,8 +390,8 @@ async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
     ).execute(reader_id=READER)
 
     assert record.is_self is True
-    # Nobody can block themselves, so their own sheet never says they did.
-    assert record.blocked_by_reader is False
+    # Nobody asks themselves to be friends.
+    assert record.can_add_friend is False
     assert record.identity == an_identity()
     assert identities.asked == [READER]
 
@@ -449,7 +465,6 @@ async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
     form = Form()
     use_case = ReadPlayerRecord(
         admission=admission,
-        own_blocks=OwnBlocks(),
         relations=Relations(),
         identities=Identities(an_identity()),
         photos=Links(),

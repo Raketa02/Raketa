@@ -89,7 +89,7 @@ from app.modules.player_profile.domain.weekly_hours import (
     Window,
 )
 from app.modules.player_record.domain.ports import (
-    BlocksByTheReader,
+    ShownToEverybody,
     RelationsOfTheReader,
     PriorDisclosure,
     RecordGates,
@@ -453,21 +453,30 @@ async def test_a_pair_nothing_withholds_is_admitted(implementation, session):
 
 
 @pytest.mark.parametrize("implementation", registered(RecordGates))
-async def test_a_block_either_way_round_withholds_nobody(implementation, session):
-    """**A block is not a record gate** (``docs/adr/0193`` §2): the blocker
-    opens the record to undo it, and the blocked person reads it as before."""
+async def test_a_block_either_way_round_withholds_the_pair_both_ways(
+    implementation, session
+):
+    """**A block is a record gate again** (``docs/adr/0203`` §8, #773): whoever
+    made it, neither of the pair is admitted to the other."""
 
-    reader, subject = new_uuid(), new_uuid()
-    await _blocks(session, (reader, subject), (subject, reader))
+    blocker, blocked = new_uuid(), new_uuid()
+    await _blocks(session, (blocker, blocked))
+    gates = implementation.build(session)
+
+    assert await gates.admits(reader_id=blocker, subject_id=blocked) is False
+    assert await gates.admits(reader_id=blocked, subject_id=blocker) is False
+
+
+@pytest.mark.parametrize("implementation", registered(RecordGates))
+async def test_a_lifted_block_and_somebody_elses_block_withhold_nobody(
+    implementation, session
+):
+    reader, subject, other = new_uuid(), new_uuid(), new_uuid()
+    await _blocks(session, (reader, other), lifted=((reader, subject),))
     gates = implementation.build(session)
 
     assert await gates.admits(reader_id=reader, subject_id=subject) is True
     assert await gates.admits(reader_id=subject, subject_id=reader) is True
-
-
-# ---------------------------------------------------------------------------
-# BlocksByTheReader — the reader's own block, and never the other direction
-# ---------------------------------------------------------------------------
 
 
 async def _blocks(session, *pairs: tuple[UUID, UUID], lifted=()) -> None:
@@ -487,43 +496,6 @@ async def _blocks(session, *pairs: tuple[UUID, UUID], lifted=()) -> None:
             block.unblock(occurred_at=at)
         await repository.save(block)
     await session.commit()
-
-
-@pytest.mark.parametrize("implementation", registered(BlocksByTheReader))
-async def test_the_readers_own_block_is_answered(implementation, session):
-    reader, subject = new_uuid(), new_uuid()
-    await _blocks(session, (reader, subject))
-
-    own = implementation.build(session)
-
-    assert await own.has_blocked(reader_id=reader, subject_id=subject) is True
-
-
-@pytest.mark.parametrize("implementation", registered(BlocksByTheReader))
-async def test_a_block_of_the_reader_is_never_the_readers_own(
-    implementation, session
-):
-    """**Directed** (``docs/adr/0193`` §3): the subject blocking the reader is
-    nothing this port can say, so the blocked person's sheet cannot move."""
-
-    reader, subject = new_uuid(), new_uuid()
-    await _blocks(session, (subject, reader))
-
-    own = implementation.build(session)
-
-    assert await own.has_blocked(reader_id=reader, subject_id=subject) is False
-
-
-@pytest.mark.parametrize("implementation", registered(BlocksByTheReader))
-async def test_a_lifted_block_and_a_block_of_somebody_else_are_not_this_one(
-    implementation, session
-):
-    reader, subject, other = new_uuid(), new_uuid(), new_uuid()
-    await _blocks(session, (reader, other), lifted=((reader, subject),))
-
-    own = implementation.build(session)
-
-    assert await own.has_blocked(reader_id=reader, subject_id=subject) is False
 
 
 # ---------------------------------------------------------------------------
@@ -1257,6 +1229,136 @@ async def test_the_readers_relation_to_the_subject_either_way(implementation, se
     assert await of(asker) is RecordRelation.ASKED_YOU
     assert await of(new_uuid()) is RecordRelation.NONE
     assert await of(reader) is RecordRelation.NONE
+
+
+@pytest.mark.parametrize("implementation", registered(RelationsOfTheReader))
+async def test_a_group_mate_may_be_asked_and_a_stranger_off_the_list_may_not(
+    implementation, session
+):
+    """Friends' rule, relayed (``docs/adr/0203`` §9): a group-mate may be
+    asked; somebody the reader shares nothing with and General lists nowhere
+    may not; and nobody asks themselves."""
+
+    reader, mate, stranger = new_uuid(), new_uuid(), new_uuid()
+    await _a_group(session, reader, mate)
+    relations = implementation.build(session)
+
+    async def may(subject):
+        return await relations.may_ask(
+            reader_id=reader, subject_id=subject, now=_now()
+        )
+
+    assert await may(mate) is True
+    assert await may(stranger) is False
+    assert await may(reader) is False
+
+
+@pytest.mark.parametrize("implementation", registered(RelationsOfTheReader))
+async def test_anybody_general_shows_everybody_may_be_asked_until_hidden(
+    implementation, client, session_factory, clock, session
+):
+    from tests.api.rankings_world import a_listed_crowd
+
+    [piotr] = await a_listed_crowd(client, session_factory, clock, 1)
+    relations = implementation.build(session)
+
+    async def may():
+        return await relations.may_ask(
+            reader_id=new_uuid(), subject_id=piotr["id"], now=clock.now()
+        )
+
+    assert await may() is True
+    await _turns_hidden(client, piotr)
+    assert await may() is False
+
+
+async def _turns_hidden(client, player: dict) -> None:
+    """*Show me in General* off, through the player's own route — and **not
+    delivered**: what is read is the profile, live."""
+
+    from tests.api import players_world as players
+
+    turned = await client.put(
+        "/api/v1/players/me/ranking-visibility",
+        json={"visibility": "HIDDEN"},
+        headers=players.auth(player["token"]),
+    )
+    assert turned.status_code == 204, turned.text
+
+
+# ---------------------------------------------------------------------------
+# ShownToEverybody — the Ranking shows them to everybody (#773)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(ShownToEverybody))
+async def test_a_player_listed_on_general_and_shown_is_shown_to_everybody(
+    implementation, client, session_factory, clock, session
+):
+    from tests.api.rankings_world import a_listed_crowd
+
+    [piotr] = await a_listed_crowd(client, session_factory, clock, 1)
+    listing = implementation.build(session)
+
+    assert await listing.shows(piotr["id"], now=clock.now()) is True
+
+
+@pytest.mark.parametrize("implementation", registered(ShownToEverybody))
+async def test_a_hidden_player_is_shown_to_nobody_at_once(
+    implementation, client, session_factory, clock, session
+):
+    """The switch is read off the profile, live — before the ranking's own copy
+    follows it through the outbox."""
+
+    from tests.api.rankings_world import a_listed_crowd
+
+    [piotr] = await a_listed_crowd(client, session_factory, clock, 1)
+    await _turns_hidden(client, piotr)
+    listing = implementation.build(session)
+
+    assert await listing.shows(piotr["id"], now=clock.now()) is False
+
+
+@pytest.mark.parametrize("implementation", registered(ShownToEverybody))
+async def test_ninety_days_after_the_last_result_nobody_is_shown_them(
+    implementation, client, session_factory, clock, session
+):
+    from tests.api.rankings_world import a_listed_crowd
+
+    [piotr] = await a_listed_crowd(client, session_factory, clock, 1)
+    listing = implementation.build(session)
+
+    # The crowd's results settled eight days ago.
+    later = instant(clock.now() + timedelta(days=83))
+    assert await listing.shows(piotr["id"], now=later) is False
+
+
+@pytest.mark.parametrize("implementation", registered(ShownToEverybody))
+async def test_four_results_or_none_or_nobody_at_all_is_shown_to_nobody(
+    implementation, client, session_factory, clock, session
+):
+    from tests.api import players_world as players
+    from tests.api.rankings_world import move_on
+
+    kasia, _ = await players.a_player_on_the_log(
+        client, session_factory, "kasia", mu=5.5
+    )
+    ewa, _ = await players.a_player_on_the_log(
+        client, session_factory, "ewa", mu=5.5
+    )
+    async with session_factory() as writing:
+        for result in range(4):
+            await move_on(
+                writing,
+                kasia,
+                5.5,
+                at=instant(clock.now() - timedelta(days=1, minutes=-result)),
+            )
+    await players.deliver_the_outbox(session_factory)
+    listing = implementation.build(session)
+
+    for nobody in (kasia, ewa, new_uuid()):
+        assert await listing.shows(nobody, now=clock.now()) is False
 
 
 def test_the_records_relation_spells_friends_four_words():

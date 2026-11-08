@@ -40,6 +40,9 @@ class RequestOrigin(StrEnum):
     #: The requester's Friend link, opened by the person asked (#748) — *Invited
     #: you to Raketa* on their Home.
     LINK = "LINK"
+    #: A record opened from the Rankings page, with that page's sport (#773;
+    #: ``docs/adr/0203`` §9) — *Found you in the padel ranking* on their Home.
+    RANKING = "RANKING"
 
 
 class HowFriendsWereMade(StrEnum):

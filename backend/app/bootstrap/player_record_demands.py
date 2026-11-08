@@ -5,7 +5,7 @@
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
 This one is the matcher's kind: a context that writes nothing and asks twelve
-questions of nine others. Rows of the two kinds in one list would make every
+questions of ten others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
@@ -40,10 +40,10 @@ from app.bootstrap.composition import (
     build_account_hold_query,
     build_account_status_query,
     build_block_query,
-    build_blocks_by_the_reader,
     build_domain_event_store,
     build_event_publisher,
     build_game_disclosure,
+    build_shown_to_everybody,
     build_group_disclosure,
     build_photo_storage,
     build_record_gates,
@@ -60,7 +60,7 @@ from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
 from app.modules.player_record.domain.ports import (
     PLAYER_RECORD_DEMANDS,
-    BlocksByTheReader,
+    ShownToEverybody,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -108,7 +108,8 @@ def _photo_link(session: AsyncSession) -> RecordPhotoLink:
 
 
 def _record_gates(session: AsyncSession) -> RecordGates:
-    """The two gates about accounts and the reader's hold, over a session."""
+    """The two gates about accounts, the reader's hold and a block either way,
+    over a session."""
 
     holds = build_account_hold_query(session)
     return build_record_gates(
@@ -116,13 +117,15 @@ def _record_gates(session: AsyncSession) -> RecordGates:
             holds=holds, account_status=build_account_status_query(session)
         ),
         holds=holds,
+        blocks=build_block_query(session),
     )
 
 
-def _own_blocks(session: AsyncSession) -> BlocksByTheReader:
-    """The reader's own block, over the one ``BlockQuery`` a session reads."""
+def _shown_to_everybody(session: AsyncSession) -> ShownToEverybody:
+    """Whom the Ranking shows everybody, over the session's ranking rows and
+    profiles."""
 
-    return build_blocks_by_the_reader(build_block_query(session))
+    return build_shown_to_everybody(session)
 
 
 def _relations(session: AsyncSession) -> RelationsOfTheReader:
@@ -158,14 +161,14 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         build=build_runner_disclosure,
     ),
     RegisteredImplementation(
+        port=ShownToEverybody,
+        name="RankingsShownToEverybody",
+        build=_shown_to_everybody,
+    ),
+    RegisteredImplementation(
         port=RecordGates,
         name="LiveRecordGates",
         build=_record_gates,
-    ),
-    RegisteredImplementation(
-        port=BlocksByTheReader,
-        name="OwnBlocksOfTheReader",
-        build=_own_blocks,
     ),
     RegisteredImplementation(
         port=RelationsOfTheReader,

@@ -719,12 +719,17 @@ forbidden_modules =
     app.modules.rankings
 allow_indirect_imports = true
 
-# Rankings lends Home its trophy, and knows none of its readers (docs/adr/0203
-# §10, #768). Home declares the port it reads the trophy through,
-# `RankingOnHome`, **signed on its own side** in `proposals/infrastructure/` —
-# so the arrow runs into `rankings`, and none out of it towards a reader. The
+# Rankings lends Home its trophy and the record its fourth strand, and knows
+# none of its readers (docs/adr/0203 §9–§10, #768, #773). Home declares the port
+# it reads the trophy through, `RankingOnHome`, and the record the one it reads
+# a listing through, `ShownToEverybody`, each **signed on its own side** — in
+# `proposals/infrastructure/` and `player_record/infrastructure/` — so the
+# arrow runs into `rankings`, and none out of it towards a reader. Friends is
+# the exception that proves the direction: it may import no reader either
+# (above), so its `ShownToStrangers` is signed here, in
+# `rankings/infrastructure/`, as the reader's friends are (#771). The
 # ranking's own neighbours — the rating's streams, the faces, a level held, the
-# reader's friends (#771) — are ports in its words signed in
+# reader's friends — are ports in its words signed in
 # `rankings/infrastructure/`, each with a row in
 # `app/bootstrap/ranking_demands.py`.
 #
@@ -735,5 +740,6 @@ type = forbidden
 source_modules =
     app.modules.rankings
 forbidden_modules =
+    app.modules.player_record
     app.modules.proposals
 allow_indirect_imports = true

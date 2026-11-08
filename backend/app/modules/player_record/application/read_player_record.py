@@ -19,11 +19,12 @@ the sheet is about** — the single thing here nobody else could decide, because
 is a question about the reader rather than about the subject. Every figure that
 lands on this sheet arrives from the context that owns it, already decided.
 
-**One fact is the reader's, and it is a fact rather than a gate**: whether the
-reader blocked the subject (``docs/adr/0193`` §3), asked once the record is
-admitted and refusing nothing. It is directed — the reader's own block, never
-anybody's block of the reader — so the blocked person's sheet does not move by
-a byte.
+**Two facts are the reader's, and they are facts rather than gates**: the
+reader's relation to the subject (``docs/adr/0202`` §1) and whether **Add
+friend** may be offered (``docs/adr/0203`` §9, #773), both lent by Friends and
+asked once the record is admitted. **No block is among them any more**: a block
+made by either side is a gate now (§8), so a blocked pair's sheet is never
+drawn, and the reader's own block left the sheet with it.
 
 **No zone is answered differently depending on who is reading.** What other
 players said used to be the one that was — a figure and a count for a stranger,
@@ -60,7 +61,6 @@ from app.modules.player_record.domain.errors import (
     RecordUnavailable,
 )
 from app.modules.player_record.domain.ports import (
-    BlocksByTheReader,
     RecordPhotoLink,
     RelationsOfTheReader,
     ReliabilityFilters,
@@ -85,8 +85,8 @@ async def assemble_record(
     *,
     subject_id: UUID,
     is_self: bool,
-    blocked_by_reader: bool | None,
     relation: RecordRelation,
+    can_add_friend: bool,
     arrived_from: Sport | None,
     now: Instant,
     identities: SubjectIdentitySource,
@@ -150,8 +150,8 @@ async def assemble_record(
     )
     return PlayerRecord(
         is_self=is_self,
-        blocked_by_reader=blocked_by_reader,
         relation=relation,
+        can_add_friend=can_add_friend,
         identity=identity,
         photo_url=photo_url,
         sports=pills_of(held),
@@ -189,7 +189,6 @@ class ReadPlayerRecord:
         self,
         *,
         admission: RecordAdmission,
-        own_blocks: BlocksByTheReader,
         relations: RelationsOfTheReader,
         identities: SubjectIdentitySource,
         photos: RecordPhotoLink,
@@ -201,7 +200,6 @@ class ReadPlayerRecord:
         clock: Clock,
     ) -> None:
         self._admission = admission
-        self._own_blocks = own_blocks
         self._relations = relations
         self._identities = identities
         self._photos = photos
@@ -235,20 +233,26 @@ class ReadPlayerRecord:
 
         now = self._clock.now()
         if not await self._admission.admits(
-            reader_id=reader_id, subject_id=subject_id
+            reader_id=reader_id, subject_id=subject_id, now=now
         ):
             raise RecordUnavailable(RECORD_UNAVAILABLE)
+        is_self = reader_id == subject_id
+        # The reader's own relation, asked once admitted (`docs/adr/0202`).
+        relation = await self._relations.relation_to(
+            reader_id=reader_id, subject_id=subject_id
+        )
         return await assemble_record(
             subject_id=subject_id,
-            is_self=reader_id == subject_id,
-            # Asked of the reader's own blocks only, and only once admitted: a
-            # fact on the sheet, never a gate (`docs/adr/0193` §2–§3).
-            blocked_by_reader=await self._own_blocks.has_blocked(
-                reader_id=reader_id, subject_id=subject_id
-            ),
-            # The reader's own relation, asked once admitted (`docs/adr/0202`).
-            relation=await self._relations.relation_to(
-                reader_id=reader_id, subject_id=subject_id
+            is_self=is_self,
+            relation=relation,
+            # Friends' own rule, asked only where the button could be drawn:
+            # nothing between them yet, and not the reader's own sheet (#773).
+            can_add_friend=(
+                not is_self
+                and relation is RecordRelation.NONE
+                and await self._relations.may_ask(
+                    reader_id=reader_id, subject_id=subject_id, now=now
+                )
             ),
             arrived_from=arrived_from,
             now=now,
@@ -266,11 +270,12 @@ class ReadPlayerRecord:
 class ReadOwnRecord:
     """Your own record — *How others see you*, and nothing gates it.
 
-    A block is between two people — nobody can block themselves, so this sheet
-    never says you did — the gender preference is mutual, and neither has
-    anything to say about somebody reading their own sheet. A hold does not
-    reach it either: a held player is refused every surface that would show them
-    to somebody else, and this is the one that shows them to themselves.
+    A block is between two people — nobody can block themselves — the gender
+    preference is mutual, and neither has anything to say about somebody
+    reading their own sheet. A hold does not reach it either: a held player is
+    refused every surface that would show them to somebody else, and this is
+    the one that shows them to themselves. **Nobody asks themselves to be
+    friends**, so *Add friend* is never offered here.
     """
 
     def __init__(
@@ -313,8 +318,8 @@ class ReadOwnRecord:
         record = await assemble_record(
             subject_id=reader_id,
             is_self=True,
-            blocked_by_reader=False,
             relation=RecordRelation.NONE,
+            can_add_friend=False,
             arrived_from=arrived_from,
             now=now,
             ratings=self._ratings,

@@ -484,9 +484,10 @@ class PlayerRecordResponse(BaseModel):
 
     **Read through a prior disclosure and never about a person at large.** A
     record opens for somebody you were on a game with, somebody you share a
-    group with, somebody in a group you run, and yourself. Anybody else — and
-    anybody a live gate no longer admits — is `404`, in one shape that names
-    nothing.
+    group with, somebody in a group you run, somebody listed on General who
+    hasn't turned *Show me in General* off, and yourself. Anybody else — and
+    anybody a live gate no longer admits, a block either way among them — is
+    `404`, in one shape that names nothing.
     """
 
     is_self: bool = Field(
@@ -506,29 +507,31 @@ class PlayerRecordResponse(BaseModel):
     relation: FriendRelation = Field(
         description=(
             "**Your** relation to this person — the left button of the record's "
-            "foot, beside *Block* (`docs/adr/0202` §1): `NONE` — **Add friend**; "
-            "`SENT` — **Request sent ▾** (*Cancel request*), for as long as your "
+            "foot, beside *Block* (`docs/adr/0202` §1): `NONE` — **Add friend** "
+            "when `can_add_friend` is `true`, else *Block* stands alone; `SENT` "
+            "— **Request sent ▾** (*Cancel request*), for as long as your "
             "request stays open; `ASKED_YOU` — **Accept**; `FRIEND` — **Friend "
             "✓ ▾** (*Remove friend*). `NONE` on your own record, which draws "
-            "neither button, and draw only *Unblock* when `blocked_by_you` is "
-            "`true`. Nothing here says who else they are friends with."
+            "neither button. Nothing here says who else they are friends "
+            "with.\n\n"
+            "**There is no Unblock here** (`docs/adr/0203` §8): a record never "
+            "opens between two people either of whom blocked the other, so "
+            "*Block* is always *Block*. Unblock lives in You › Blocked players."
         )
     )
-    blocked_by_you: bool = Field(
-        default=OMITTED,
+    can_add_friend: bool = Field(
         description=(
-            "Whether **you** have blocked this person — your own block, and "
-            "never theirs of you. Draw *Unblock* when `true` and *Block* when "
-            "`false`, and no row at all when `is_self` is `true`.\n\n"
-            "**It answers one direction only, and that is the point.** Nothing "
-            "on this response, or any other, says whether they blocked you: "
-            "their record reads the same either way. If you both blocked, each "
-            "of you reads `true` about your own block and nothing about the "
-            "other's.\n\n"
-            "`false` on your own record, always. **Omitted only when your "
-            "blocks could not be read** — draw neither row then, rather than a "
-            "guess; the rest of the record is unaffected."
-        ),
+            "Whether to offer **Add friend** (`docs/adr/0203` §9): `relation` is "
+            "`NONE` and a request from you would be admitted — you share a "
+            "group now, or they are listed on General and haven't turned *Show "
+            "me in General* off. `false` otherwise, and on your own record.\n\n"
+            "**The daily limit is not in it.** Ten requests a Warsaw day may go "
+            "to people you share no group with, and the eleventh press is "
+            "refused `daily_request_limit` — show *You've sent 10 requests to "
+            "new people today. Try again tomorrow.* under the buttons then. "
+            "Send a request made from a record opened on the Rankings page "
+            "with `made_from` `RANKING` and that page's sport."
+        )
     )
     nickname: str = Field(
         ...,
@@ -720,9 +723,7 @@ class PlayerRecordResponse(BaseModel):
             ],
         }
         fields["relation"] = FriendRelation(record.relation.value)
-        if record.blocked_by_reader is not None:
-            # Omitted when the reader's blocks could not be read (`docs/adr/0193`).
-            fields["blocked_by_you"] = record.blocked_by_reader
+        fields["can_add_friend"] = record.can_add_friend
         if identity.intro is not None:
             # Omitted where nothing was written, never `""` (`docs/adr/0170`).
             fields["intro"] = identity.intro

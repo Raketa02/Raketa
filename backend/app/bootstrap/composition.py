@@ -506,6 +506,7 @@ from app.modules.friends.application.requests import (
     AcceptFriendRequest,
     AskToBeFriends,
     SetAsideFriendRequest,
+    WhoMayBeAsked,
 )
 from app.modules.friends.domain.ports import (
     FriendFaces,
@@ -518,8 +519,10 @@ from app.modules.friends.domain.ports import (
     AsksWaitingOnALevel,
     LevelAsksOfTheReader,
     LevelsAskedByTheReader,
+    ShownToStrangers,
     ReadersBlocks,
     ReadersGroups,
+    RequestsCounted,
 )
 from app.modules.friends.infrastructure.event_sourced_friend_link_repository import (
     EventSourcedFriendLinkRepository,
@@ -542,6 +545,9 @@ from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
 from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
     SqlAlchemyLevelAskDirectory,
 )
+from app.modules.friends.infrastructure.sqlalchemy_requests_counted import (
+    SqlAlchemyRequestsCounted,
+)
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
     FriendsReaderRelations,
@@ -560,6 +566,7 @@ from app.modules.rankings.application.reads import (
     ReadHomeRanking,
     ReadRanking,
 )
+from app.modules.rankings.application.shown_on_general import ShownOnGeneral
 from app.modules.rankings.domain.ports import (
     BlocksEitherWay,
     GeneralOrders,
@@ -573,6 +580,9 @@ from app.modules.rankings.domain.ports import (
 )
 from app.modules.rankings.infrastructure.blocks_either_way import (
     QueriedBlocksEitherWay,
+)
+from app.modules.rankings.infrastructure.friends_shown_to_strangers import (
+    RankingsShownToStrangers,
 )
 from app.modules.rankings.infrastructure.friends_readers_friends import (
     FriendsReadersFriends,
@@ -789,7 +799,7 @@ from app.modules.player_record.infrastructure.score_subject_reliability import (
     ScoreSubjectReliability,
 )
 from app.modules.player_record.domain.ports import (
-    BlocksByTheReader,
+    ShownToEverybody,
     RelationsOfTheReader,
     PriorDisclosure,
     RecordGates,
@@ -813,8 +823,8 @@ from app.modules.player_record.infrastructure.live_record_gates import (
 from app.modules.player_record.infrastructure.friends_relations import (
     FriendsRelationsOfTheReader,
 )
-from app.modules.player_record.infrastructure.own_blocks import (
-    OwnBlocksOfTheReader,
+from app.modules.player_record.infrastructure.rankings_shown_to_everybody import (
+    RankingsShownToEverybody,
 )
 from app.modules.player_record.infrastructure.presigned_record_photo import (
     PresignedRecordPhoto,
@@ -3801,6 +3811,33 @@ def build_read_relations(
     )
 
 
+def build_shown_to_strangers(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ShownToStrangers:
+    """Whether the Ranking shows a player to everybody — what admits a request
+    from outside their groups — **signed in ``rankings/infrastructure/``** over
+    the Ranking's own read, so the arrow runs ``rankings → friends`` (#773)."""
+    return RankingsShownToStrangers(build_shown_on_general(session, runtime=runtime))
+
+
+def build_requests_counted(session: AsyncSession) -> RequestsCounted:
+    """The requests that count towards the daily limit,
+    ``friend_requests_counted`` (#773)."""
+    return SqlAlchemyRequestsCounted(session)
+
+
+def build_who_may_be_asked(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> WhoMayBeAsked:
+    """**Who may be asked to be friends** — a group-mate, or anybody the Ranking
+    shows everybody (#773). The rule the ask is admitted by, lent to the record
+    so *Add friend* is offered by it too."""
+    return WhoMayBeAsked(
+        groups=build_readers_groups(session),
+        shown=build_shown_to_strangers(session, runtime=runtime),
+    )
+
+
 def build_ask_to_be_friends(
     session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
 ) -> AskToBeFriends:
@@ -3813,7 +3850,8 @@ def build_ask_to_be_friends(
             events=build_event_publisher(session, runtime=runtime),
         ),
         blocks=build_readers_blocks(session, runtime=runtime),
-        groups=build_readers_groups(session),
+        who=build_who_may_be_asked(session, runtime=runtime),
+        counted=build_requests_counted(session),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -4112,6 +4150,18 @@ def build_follow_the_switch(
         switches=build_general_switches(session, runtime=runtime),
         rows=build_ranking_rows(session),
         orders=orders,
+    )
+
+
+def build_shown_on_general(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ShownOnGeneral:
+    """Whether the Ranking shows a player to everybody: listed on General in a
+    sport, *Show me in General* on, read live (#773) — the record's fourth
+    strand and what admits a stranger's friend request."""
+    return ShownOnGeneral(
+        rows=build_ranking_rows(session),
+        switches=build_general_switches(session, runtime=runtime),
     )
 
 
@@ -4833,34 +4883,40 @@ def build_account_gates(
 
 
 def build_record_gates(
-    *, accounts: AccountGates, holds: AccountHoldQuery
+    *, accounts: AccountGates, holds: AccountHoldQuery, blocks: BlockQuery
 ) -> RecordGates:
-    """The two about accounts, plus the reader's own hold — no preference
-    (#575) and no block (``docs/adr/0193`` §2).
+    """The two about accounts, plus the reader's own hold and **a block either
+    way** (``docs/adr/0203`` §8, #773) — no preference (#575).
 
-    The two are **not built here**: they are ``matchmaking``'s collaborator,
-    already assembled per request, and this line composes rather than copies. A
-    second spelling of a safety gate is the defect the whole rule exists to
-    prevent.
+    None is **built here**: the two are ``matchmaking``'s collaborator and the
+    block the Blocks context's one query, each already assembled per request,
+    and this line composes rather than copies. A second spelling of a safety
+    gate is the defect the whole rule exists to prevent.
     """
 
-    return LiveRecordGates(accounts=accounts, holds=holds)
+    return LiveRecordGates(accounts=accounts, holds=holds, blocks=blocks)
 
 
-def build_blocks_by_the_reader(blocks: BlockQuery) -> BlocksByTheReader:
-    """The record's *you blocked them* — the reader's own block, over the one
-    directed read ``BlockQuery`` has (``docs/adr/0193`` §3)."""
+def build_shown_to_everybody(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ShownToEverybody:
+    """The record's fourth strand — the Ranking shows them to everybody — over
+    the Ranking's own read (``docs/adr/0203`` §9, #773)."""
 
-    return OwnBlocksOfTheReader(blocks)
+    return RankingsShownToEverybody(build_shown_on_general(session, runtime=runtime))
 
 
 def build_relations_of_the_reader(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> RelationsOfTheReader:
     """The record's left button — the reader's own relation to the person on it,
-    over Friends' read (``docs/adr/0202`` §1)."""
+    over Friends' read (``docs/adr/0202`` §1) — and whether **Add friend** may
+    be offered, by Friends' own rule (``docs/adr/0203`` §9, #773)."""
 
-    return FriendsRelationsOfTheReader(build_read_relations(session, runtime=runtime))
+    return FriendsRelationsOfTheReader(
+        build_read_relations(session, runtime=runtime),
+        build_who_may_be_asked(session, runtime=runtime),
+    )
 
 
 # --------------------------------------------------------------------------

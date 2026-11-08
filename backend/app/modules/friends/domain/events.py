@@ -45,6 +45,11 @@ class FriendRequested:
     #: not after an unblock either (``docs/adr/0202`` §2: *Tomek never sees
     #: it*). Defaulted, so the field adds nothing a row must carry.
     unseen: bool = False
+    #: Asked of somebody the requester shared no group with at asking (#773;
+    #: ``docs/adr/0203`` §9): it counts towards the requester's daily limit.
+    #: Decided at asking, because a group joined later must not uncount it.
+    #: Defaulted, so every older row reads as uncounted — none could be.
+    counted: bool = False
 
 
 @dataclass(frozen=True)
