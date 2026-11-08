@@ -1,7 +1,7 @@
 /**
- * **The fast filter's unfold, at its own seam** — the bar growing leftwards from the pill on the
- * UI thread, and simply open under reduced motion (play 41–42, #513). The router suite walks what
- * a tap does; this holds what the bar is drawn at while it does it.
+ * **The sport pill's unfold, at its own seam** — the bar growing leftwards from the pill on the
+ * UI thread, and simply open under reduced motion (play 41–42, #513; shared since #774). The router
+ * suites walk what a tap does; this holds what the bar is drawn at while it does it.
  *
  * Reanimated is real here, as it is in the router harness (ADR-0176 §2): every worklet runs on the
  * JavaScript thread and `withTiming` on the fake clock. Nothing lays anything out under jest, so the
@@ -11,13 +11,28 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { getAnimatedStyle } from 'react-native-reanimated';
 
-import { ReducedMotionProvider, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { GROUPS_COPY } from './groupsCopy';
-import { SportBar, type BarCover } from './SportFilter';
+import { ReducedMotionProvider } from './overlay';
+import { SportBar, type AnotherSport, type BarCover, type SportPillWords } from './SportPill';
+import { theme } from './theme';
 
-const ANOTHER_SPORT = GROUPS_COPY.filter.anotherSport;
+/** A page's words — the bar says only what it is handed. */
+const WORDS: SportPillWords = {
+  sportName: (sport) =>
+    ({ padel: 'Padel', tennis: 'Tennis', squash: 'Squash', badminton: 'Badminton' })[sport],
+  pillLabel: (sport) => `Sport: ${sport}`,
+  pillHint: 'Shows the page for another sport',
+};
+
+const ANOTHER: Omit<AnotherSport, 'onPress'> = {
+  label: 'Another sport',
+  drawn: '+ Another sport',
+  hint: 'Opens the sports',
+  pillHint: 'Offers another sport to rate',
+};
+
+const ANOTHER_SPORT = ANOTHER.label;
 
 const PAD = theme.size.groupPage.filterPad;
 const ROW = 300;
@@ -40,9 +55,10 @@ function drawBar({
       <SportBar
         sports={sports}
         sport="padel"
+        words={WORDS}
         onChoose={onChoose}
         {...(cover === undefined ? {} : { cover })}
-        {...(onAnother === undefined ? {} : { onAnother })}
+        {...(onAnother === undefined ? {} : { another: { ...ANOTHER, onPress: onAnother } })}
       />
     </ReducedMotionProvider>,
   );
@@ -76,7 +92,7 @@ function nextFrame() {
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
 
-describe('the fast filter’s bar', () => {
+describe('the sport pill’s bar', () => {
   it('is drawn at nothing until the layout has said how wide it grows', () => {
     drawBar();
 
@@ -156,7 +172,7 @@ describe('the fast filter’s bar', () => {
     act(() => jest.advanceTimersByTime(FRAME));
 
     const another = within(bar()).getByRole('button', { name: ANOTHER_SPORT });
-    expect(within(another).getByText(GROUPS_COPY.filter.anotherSportDrawn)).toBeTruthy();
+    expect(within(another).getByText(ANOTHER.drawn)).toBeTruthy();
     expect(
       within(bar())
         .getAllByRole('button')

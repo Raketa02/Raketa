@@ -156,16 +156,26 @@ and the first with no gesture. The bar is drawn over the header's measured box, 
 across the page, so **a tap on another sport picks it, and a tap on the current one, anywhere else,
 or Android's back folds it and changes nothing.** The shell's tab bar is outside the page and
 stays live, so leaving by it folds the bar too, and a page the player comes back to is never
-open. It is never a `Modal` (ADR-0178). The fold is immediate; under reduced motion the bar is simply open. `sportFilter.test.tsx` holds the width at
+open. It is never a `Modal` (ADR-0178). The fold is immediate; under reduced motion the bar is simply open. `shared/ui`'s `SportPill.test.tsx` holds the width at
 each end of the unfold and under reduced motion, with the layout handed in as events.
 
 **Open, the bar never ends across the group's tile** (#529 E2). With every sport in it, the bar
 stopped a few points into the tile and a sliver of the tile showed past its round end. The header
-hands the tile to `SportFilterPage`'s `cover`, which measures it, and the bar is told two widths: the
+hands the tile to `cover`, which `SportPillFrame` measures (#774), and the bar is told two widths: the
 one at which it reaches the tile, and the one that covers it whole with `space.xs` to spare — short
 of the back arrow, which stands a `space.sm` gap before the tile. Sports that would end across the
 tile open the bar that far; sports that stop short of it end the bar where they do. Members has no
 tile and covers nothing.
+
+**The pill is shared UI's, and the filter is the page's**
+([#774](https://github.com/Raketa02/Raketa/issues/774)). Rankings draws the very same control, so the
+pill, the bar and the layer they open on — the backdrop, the header's measured box, folding on back
+and on leaving — moved to `shared/ui` as `SportPillFrame`, which takes the sports to offer, the sport
+the page is on and its words, and reports a pick of another sport. **Every word is the caller's**:
+_Shows this group for another sport you play_ and _+ Another sport_ are this page's, so
+`SportFilterFrame` hands them in (`groupsCopy`'s `filter`), with `useGroupSport`'s state and the
+offer behind _+ Another sport_. Nothing changed on screen: the group page's router suites are
+unchanged, and the bar's own suite moved with it.
 
 **Three tabs, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which tab nowhere;
 Q125). Games, Fill in and Friends are each drawn for the filter's sport; Info is the group's own

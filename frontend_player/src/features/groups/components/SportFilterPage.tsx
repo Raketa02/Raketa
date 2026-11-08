@@ -4,22 +4,17 @@
  * [#514](https://github.com/Raketa02/Raketa/issues/514)): its header with the sport pill, what is
  * under the header for the sport chosen, and the bar the pill unfolds into, floating over both.
  *
+ * **The pill, the bar and the layer they open on are shared UI's** — `SportPillFrame`, the one
+ * control Rankings draws too ([#774](https://github.com/Raketa02/Raketa/issues/774)). What is the
+ * group page's is here: the filter's state, and its words.
+ *
  * **One filter, one state**: the sport is `useGroupSport`'s, the one value last picked anywhere in
  * Play, so a sport picked on Members is the sport the group page is on when the player goes back,
  * and the other way round (story 58).
  *
- * **The bar floats over the header and the page under it**: a layer drawn last, laid over the
- * header's own box, with a backdrop across the whole page beneath it — so a tap anywhere but a
- * sport folds it and changes nothing, and so does the back button on Android while it is open.
- * The shell's tab bar is outside the page and stays live; leaving by it folds the bar too. It is
- * never a `Modal` (ADR-0178). The header's box is measured for it, because the bar has to stand
- * exactly where the pill stands.
- *
  * **The open bar covers the group's tile whole or not at all** (#529). The header hands the tile
- * to `cover`, which measures where it stands, and the bar is told the two widths that matter: the
- * one at which it would reach the tile and the one that covers it with `space.xs` to spare — which
- * stops short of the back arrow, a `space.sm` gap before the tile. Members has no tile, and covers
- * nothing.
+ * to `cover`, and the bar opens over it with `space.xs` to spare — which stops short of the back
+ * arrow, a `space.sm` gap before the tile. Members has no tile, and covers nothing.
  *
  * The page draws its own header and body, handed what they need: the header the pill, once there
  * is a sport to show, and the sport itself — Members counts its list in its title — and the body
@@ -38,24 +33,38 @@
  * state and draws the same header, pill and bar.
  */
 
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
 
-import { useHardwareBack } from '@/shared/lib/platform';
-import { theme } from '@/shared/ui';
+import { PICKER_HINT, sportLabel } from '@/features/onboarding/types';
+import { SportPillFrame, type AnotherSport, type SportPillWords } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { useGroupSport, type GroupSport } from '../hooks/useGroupSport';
 
-import { SportBar, SportPill, type BarCover } from './SportFilter';
+import { GROUPS_COPY } from './groupsCopy';
+import { sportPillLabel } from './groupsPresentation';
 
-/** Where the bar's right end stands in from the page's edge: the gutter, less its own inset. */
-const BAR_INSET = theme.size.gutter - theme.size.groupPage.filterPad;
+const COPY = GROUPS_COPY.filter;
 
-interface Box {
-  readonly x: number;
-  readonly width: number;
+/**
+ * The fast filter's words. The two names are read at the call, never at load: the feature barrels
+ * form a cycle (`groupsCopy`), so neither function may be bound yet when this module is.
+ */
+const WORDS: SportPillWords = {
+  sportName: (sport) => sportLabel(sport),
+  pillLabel: (sport) => sportPillLabel(sport),
+  pillHint: COPY.pillHint,
+};
+
+/** *+ Another sport*'s words, its press the page's — `PICKER_HINT` read at render, for that cycle. */
+function anotherSport(onPress: () => void): AnotherSport {
+  return {
+    label: COPY.anotherSport,
+    drawn: COPY.anotherSportDrawn,
+    hint: PICKER_HINT,
+    pillHint: COPY.pillHintAnother,
+    onPress,
+  };
 }
 
 export interface SportFilterPageProps {
@@ -129,137 +138,23 @@ export interface SportFilterFrameProps extends Omit<
 /** **The page around a filter whose state is handed in** — `SportFilterPage`'s drawing. */
 export function SportFilterFrame({ filter, header, children, onAnother }: SportFilterFrameProps) {
   const { sports, sport, toAdd, needsALevel, toOffer, choose } = filter;
-  const [unfolded, setUnfolded] = useState(false);
-  const [headerBox, setHeaderBox] = useState<{ readonly width: number; readonly height: number }>();
-  const [covered, setCovered] = useState<Box>();
-  const headerHeight = headerBox?.height;
-
-  const fold = () => setUnfolded(false);
-
-  function pick(picked: Sport) {
-    if (picked !== sport) choose(picked);
-    fold();
-  }
 
   // *+ Another sport*: only where the page opens the picker, and only while a sport is left.
   const another =
     onAnother === undefined || toOffer.length === 0
       ? undefined
-      : () => {
-          fold();
-          onAnother(toOffer);
-        };
-
-  const pill =
-    sports === undefined || sport === undefined ? undefined : (
-      <SportPill
-        sports={sports}
-        sport={sport}
-        another={another !== undefined}
-        onUnfold={() => setUnfolded(true)}
-      />
-    );
-
-  const cover = (node: ReactNode) => (
-    <View
-      testID="sport-filter-cover"
-      onLayout={(event) => {
-        const { x, width } = event.nativeEvent.layout;
-        setCovered({ x, width });
-      }}
-    >
-      {node}
-    </View>
-  );
-
-  const barCover = coverOf(headerBox?.width, covered);
+      : anotherSport(() => onAnother(toOffer));
 
   return (
-    <View style={s.page}>
-      <View
-        testID="sport-filter-header"
-        onLayout={(event) => {
-          const { width, height } = event.nativeEvent.layout;
-          setHeaderBox({ width, height });
-        }}
-      >
-        {header(pill, cover, sport)}
-      </View>
-
+    <SportPillFrame
+      sports={sports}
+      sport={sport}
+      onPick={choose}
+      words={WORDS}
+      {...(another === undefined ? {} : { another })}
+      header={(pill, cover) => header(pill, cover, sport)}
+    >
       {children(sport, toAdd, needsALevel)}
-
-      {unfolded && sports !== undefined && sport !== undefined ? (
-        <>
-          <FoldAway onFold={fold} />
-          <Pressable
-            testID="sport-filter-backdrop"
-            onPress={fold}
-            accessible={false}
-            importantForAccessibility="no"
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            pointerEvents="box-none"
-            style={[s.barSlot, headerHeight === undefined ? undefined : { height: headerHeight }]}
-          >
-            <SportBar
-              sports={sports}
-              sport={sport}
-              onChoose={pick}
-              {...(barCover === undefined ? {} : { cover: barCover })}
-              {...(another === undefined ? {} : { onAnother: another })}
-            />
-          </View>
-        </>
-      ) : null}
-    </View>
+    </SportPillFrame>
   );
 }
-
-/**
- * The two widths the open bar is told, from where the header stands and where the tile does: the
- * bar's right end is fixed at `BAR_INSET` in from the page's edge, so a width is a distance back
- * from there. Nothing until both are measured.
- */
-function coverOf(headerWidth: number | undefined, tile: Box | undefined): BarCover | undefined {
-  if (headerWidth === undefined || tile === undefined) return undefined;
-  const rightEnd = headerWidth - BAR_INSET;
-  return {
-    reaches: rightEnd - (tile.x + tile.width),
-    whole: rightEnd - (tile.x - theme.space.xs),
-  };
-}
-
-/**
- * **What folds an open bar besides a tap** — mounted only while it is open. Android's back folds it
- * rather than leaving the page (closed, back is the navigator's again). And the page losing focus
- * folds it: the shell's tab bar is outside the page and the backdrop cannot cover it, so a tap
- * there leaves the page with the bar open, and it must not be open when the player comes back.
- */
-function FoldAway({ onFold }: { readonly onFold: () => void }) {
-  useHardwareBack(onFold);
-
-  // Through a ref, so the blur subscription is made once rather than on every render of a parent
-  // whose `fold` is a new function each time — a cleanup per render would fold on every render.
-  const latest = useRef(onFold);
-  latest.current = onFold;
-  useFocusEffect(useCallback(() => () => latest.current(), []));
-
-  return null;
-}
-
-const s = StyleSheet.create({
-  // The layer the bar is laid over: no padding of its own, so its top is the header's.
-  page: { flex: 1 },
-  // Over the header's box, right-aligned so the current sport stands where the pill stood: the
-  // bar's inset is taken back out of the gutter.
-  barSlot: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingHorizontal: BAR_INSET,
-  },
-});

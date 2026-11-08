@@ -38,7 +38,7 @@ export interface GroupHeaderProps {
   readonly backLabel: string;
   /** The sport pill — the page's; Info has none. */
   readonly pill?: ReactNode;
-  /** `SportFilterPage`'s cover, round the tile, so the open bar covers it whole — the page's. */
+  /** The filter's cover (`SportPillFrame` measures it), round the tile, so the open bar covers it whole. */
   readonly cover?: (node: ReactNode) => ReactNode;
   /** Opens Info — the page's header is its door; Info's own presses nothing. */
   readonly onOpen?: () => void;

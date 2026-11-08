@@ -68,7 +68,7 @@
  * they are the deeper responders, so a touch on either is theirs and a touch anywhere else in the
  * row is the header's. The row is pressed rather than a box round the lead and the words because
  * the lead must stay **a direct child of the row**: the group page's sport filter measures the tile
- * against the header's own left edge (`SportFilterPage`'s `cover`), and a box would move its origin.
+ * against the header's own left edge (`SportPillFrame`'s `cover`), and a box would move its origin.
  * The row dims while it is pressed — 6.6's opacity, the back control's own.
  *
  * **The named element is a `button` then, not a `header`**, carrying `pressHint` — a listener has to

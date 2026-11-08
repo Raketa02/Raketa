@@ -101,7 +101,15 @@ tab's header card, as `Card` has `PressableCard`. And by promotion out of Play's
 ([#574](https://github.com/Raketa02/Raketa/issues/574)): `SeatFace` with `SeatCaption` and the
 seat's ring, which the group page, Fill in and a booked game's players card draw. And by _Your
 rating_'s first showing ([#732](https://github.com/Raketa02/Raketa/issues/732)): `Guide` (9.4),
-with its arithmetic in `guideGeometry.ts`. Import them from `@/shared/ui`.
+with its arithmetic in `guideGeometry.ts`. And by promotion out of the group page's fast filter, so
+Rankings draws the very same one ([#774](https://github.com/Raketa02/Raketa/issues/774)):
+`SportPillFrame` (7.21) — the sport pill, the bar it unfolds into and the layer they open on, the
+backdrop and the folds on back and on leaving among it — with the drawing in `SportPill.tsx`. It
+takes the sports to offer, the one the page is on and the page's words, and reports a pick of
+another sport; which sports, which one, and what pressing the pill does are the page's. **It came
+down ahead of its second caller**, which `docs/architecture.md`'s fourth non-negotiable would
+refuse: PRD #766 call 13 decided that Rankings draws the deck's own pill, so the promotion is the
+prefactor that keeps it one control rather than a copy made later. Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

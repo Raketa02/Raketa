@@ -1,6 +1,13 @@
 /**
- * **The fast filter** — the sport pill in a group page's header, and the bar it unfolds into
- * (play 41–42, PRD #500 stories 52–58, [#513](https://github.com/Raketa02/Raketa/issues/513)).
+ * **The sport pill** — the pill in a page's header, and the bar it unfolds into: the group page's
+ * fast filter (play 41–42, PRD #500 stories 52–58, [#513](https://github.com/Raketa02/Raketa/issues/513))
+ * and Rankings' sport, **one control** since [#774](https://github.com/Raketa02/Raketa/issues/774).
+ * A page draws it through `SportPillFrame`, which holds it open or folded; this is the drawing.
+ *
+ * **Every word is the caller's** (`SportPillWords`, `AnotherSport`) — a sport's name, the pill's
+ * name and hint, and *+ Another sport*'s — because what pressing the pill does is the page's to
+ * say: *Shows this group for another sport you play* is the group page's and no other's. The two
+ * chevrons are the drawing's own, a direction rather than a word, and hidden.
  *
  * ## The pill
  *
@@ -17,7 +24,7 @@
  * **leftwards over the group's name** from where the pill was. The current sport sits dark at its
  * right end, exactly where the pill stood, with the chevron flipped to say which way it folds; the
  * other sports **slide out from under it one by one**, nearest first. A tap on another sport picks
- * it; a tap on the current one, or anywhere else on the page (the screen's backdrop), folds the bar
+ * it; a tap on the current one, or anywhere else on the page (the frame's backdrop), folds the bar
  * and changes nothing.
  *
  * **The unfold runs on the UI thread** (ADR-0176 §2's rule for anything that moves per frame): one
@@ -30,16 +37,16 @@
  * sport by its name. **Under reduced motion** the value starts at 1 and the bar is simply open.
  * **Folding is immediate** — see `motion.unfold`.
  *
- * **It ends with *+ Another sport*** while there is a sport left to offer
+ * **It can end with *+ Another sport*** — the group page's, while there is a sport left to offer
  * ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §4): the farthest pill from the
  * current sport, the last to slide out, so it is where the row ends. It is no sport — no dot, the
- * plus in front — and opens *Which sports do you play?* over the sports the reader is unrated in;
- * what those are, and where the pass returns, is the page's.
+ * plus in front — and its press is the page's: the group page opens *Which sports do you play?*
+ * over the sports the reader is unrated in. A page that hands no `another` draws none.
  *
- * **Open, it never ends across the group's tile** (#529): where its sports would stop somewhere
- * over the tile, a sliver of it showed past the bar's round end, so the bar opens that much further
- * and covers it whole (`BarCover`, which the page measures). Where they stop short of the tile, the
- * bar ends where they do.
+ * **Open, it never ends across what it must cover whole** — the group's tile (#529): where its
+ * sports would stop somewhere over the tile, a sliver of it showed past the bar's round end, so the
+ * bar opens that much further and covers it whole (`BarCover`, which the frame measures). Where they
+ * stop short of the tile, the bar ends where they do. A page with nothing to cover hands nothing.
  *
  * Never a `Modal`, and nothing here is one: the bar is a layer of the page (ADR-0178).
  */
@@ -56,16 +63,46 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { PICKER_HINT, sportColour, sportLabel } from '@/features/onboarding/types';
-import { theme, useReducedMotion } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { GROUPS_COPY } from './groupsCopy';
-import { sportPillLabel } from './groupsPresentation';
+import { useReducedMotion } from './overlay';
+import { theme } from './theme';
 
-const COPY = GROUPS_COPY.filter;
-
+/**
+ * The bar's inset round its pills — named for the page that first drew the bar (#513), and the
+ * bar's wherever it is drawn: `chip` + 2 × it is the bar's reachable 45.
+ */
 const PAD = theme.size.groupPage.filterPad;
+
+/** The pill's faint chevron, and the bar's once it has unfolded — the fold's direction. */
+const UNFOLD = '‹';
+const FOLD = '›';
+
+/** **What the pill says**, in the page's words — nothing here is the control's own. */
+export interface SportPillWords {
+  /** A sport's name: drawn beside its dot, and what its pill in the bar is called. */
+  readonly sportName: (sport: Sport) => string;
+  /** The pill, spoken — *Sport: Padel* — and the plain label's name for one sport. */
+  readonly pillLabel: (sport: Sport) => string;
+  /** What pressing the pill does, where there is another sport to switch to. */
+  readonly pillHint: string;
+}
+
+/**
+ * ***+ Another sport***, the bar's last way out (#731) — a page's that offers one, in its words:
+ * drawn with its plus and spoken without it.
+ */
+export interface AnotherSport {
+  /** Spoken — *Another sport*. */
+  readonly label: string;
+  /** Drawn — *+ Another sport*. */
+  readonly drawn: string;
+  /** What pressing it does. */
+  readonly hint: string;
+  /** What pressing the pill does where this is its only other choice — no sport to switch to. */
+  readonly pillHint: string;
+  readonly onPress: () => void;
+}
 
 const EASE = Easing.bezier(
   theme.motion.easeDecel.x1,
@@ -86,16 +123,24 @@ const OPTION_SHARE = 0.5;
 const SLIDE = theme.space.md;
 
 /** The sport's dot and its name — what the pill, the plain label and every pill in the bar draw. */
-function SportName({ sport, onInk = false }: { readonly sport: Sport; readonly onInk?: boolean }) {
+function SportName({
+  name,
+  sport,
+  onInk = false,
+}: {
+  readonly name: string;
+  readonly sport: Sport;
+  readonly onInk?: boolean;
+}) {
   return (
     <>
       <View
-        style={[s.dot, { backgroundColor: sportColour(sport) }]}
+        style={[s.dot, { backgroundColor: theme.sport[sport] }]}
         accessibilityElementsHidden
         importantForAccessibility="no"
       />
       <Text style={[s.label, onInk ? s.labelOnInk : undefined]} numberOfLines={1}>
-        {sportLabel(sport)}
+        {name}
       </Text>
     </>
   );
@@ -115,20 +160,22 @@ function Chevron({ mark, onInk = false }: { readonly mark: string; readonly onIn
 }
 
 export interface SportPillProps {
-  /** The filter's sports. One is a plain label, unless there is another sport to offer. */
+  /** The sports it switches between. One is a plain label, unless there is another sport to offer. */
   readonly sports: readonly Sport[];
   readonly sport: Sport;
+  readonly words: SportPillWords;
   /** The bar ends with *+ Another sport* — so even one sport unfolds (#731). */
-  readonly another?: boolean;
+  readonly another?: AnotherSport;
   readonly onUnfold: () => void;
 }
 
-export function SportPill({ sports, sport, another = false, onUnfold }: SportPillProps) {
+export function SportPill({ sports, sport, words, another, onUnfold }: SportPillProps) {
   const switches = sports.length > 1;
-  if (!switches && !another) {
+  const name = words.sportName(sport);
+  if (!switches && another === undefined) {
     return (
-      <View accessible accessibilityLabel={sportPillLabel(sport)} style={[s.pill, s.pillClosed]}>
-        <SportName sport={sport} />
+      <View accessible accessibilityLabel={words.pillLabel(sport)} style={[s.pill, s.pillClosed]}>
+        <SportName name={name} sport={sport} />
       </View>
     );
   }
@@ -136,14 +183,14 @@ export function SportPill({ sports, sport, another = false, onUnfold }: SportPil
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={sportPillLabel(sport)}
-      accessibilityHint={switches ? COPY.pillHint : COPY.pillHintAnother}
+      accessibilityLabel={words.pillLabel(sport)}
+      accessibilityHint={switches || another === undefined ? words.pillHint : another.pillHint}
       onPress={onUnfold}
       hitSlop={theme.hit.chip}
       style={({ pressed }) => [s.pill, s.pillClosed, pressed ? s.pressed : undefined]}
     >
-      <SportName sport={sport} />
-      <Chevron mark={COPY.unfold} />
+      <SportName name={name} sport={sport} />
+      <Chevron mark={UNFOLD} />
     </Pressable>
   );
 }
@@ -158,16 +205,17 @@ export interface BarCover {
 }
 
 export interface SportBarProps {
-  /** Every sport the filter lists, in the registry's order. */
+  /** Every sport the pill lists, in the order the page hands them. */
   readonly sports: readonly Sport[];
   /** The one the page is on — drawn last, dark. */
   readonly sport: Sport;
+  readonly words: SportPillWords;
   /** A sport was tapped: another one picks it, the current one only folds. */
   readonly onChoose: (sport: Sport) => void;
   /** What the open bar covers whole rather than ending across — absent where nothing is. */
   readonly cover?: BarCover;
-  /** *+ Another sport* was pressed — absent where there is no sport left to offer (#731). */
-  readonly onAnother?: () => void;
+  /** *+ Another sport* — absent where there is none to offer (#731). */
+  readonly another?: AnotherSport;
 }
 
 /** The bar's open width: its sports', or past the tile whole where they would end across it. */
@@ -175,11 +223,11 @@ function openWidth(sports: number, cover: BarCover | undefined): number {
   return cover !== undefined && sports > cover.reaches ? Math.max(sports, cover.whole) : sports;
 }
 
-export function SportBar({ sports, sport, onChoose, cover, onAnother }: SportBarProps) {
+export function SportBar({ sports, sport, words, onChoose, cover, another }: SportBarProps) {
   const reduced = useReducedMotion();
   const others = sports.filter((other) => other !== sport);
   // Everything that slides out from under the current sport: *+ Another sport*, the farthest, first.
-  const sliding = others.length + (onAnother === undefined ? 0 : 1);
+  const sliding = others.length + (another === undefined ? 0 : 1);
 
   const progress = useSharedValue(reduced ? 1 : 0);
   const [rowWidth, setRowWidth] = useState<number>();
@@ -209,20 +257,19 @@ export function SportBar({ sports, sport, onChoose, cover, onAnother }: SportBar
           style={s.row}
           onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
         >
-          {onAnother === undefined ? null : (
+          {another === undefined ? null : (
             // The farthest from the current sport, so the last out: where the row ends.
             <SlideOut order={sliding - 1} count={sliding} progress={progress}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={COPY.anotherSport}
-                // Read at render, never at load: the feature barrels form a cycle (`groupsCopy`).
-                accessibilityHint={PICKER_HINT}
-                onPress={onAnother}
+                accessibilityLabel={another.label}
+                accessibilityHint={another.hint}
+                onPress={another.onPress}
                 hitSlop={theme.hit.chip}
                 style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
               >
                 <Text style={s.label} numberOfLines={1}>
-                  {COPY.anotherSportDrawn}
+                  {another.drawn}
                 </Text>
               </Pressable>
             </SlideOut>
@@ -237,27 +284,27 @@ export function SportBar({ sports, sport, onChoose, cover, onAnother }: SportBar
             >
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={sportLabel(other)}
+                accessibilityLabel={words.sportName(other)}
                 accessibilityState={{ selected: false }}
                 onPress={() => onChoose(other)}
                 hitSlop={theme.hit.chip}
                 style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
               >
-                <SportName sport={other} />
+                <SportName name={words.sportName(other)} sport={other} />
               </Pressable>
             </SlideOut>
           ))}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={sportLabel(sport)}
+            accessibilityLabel={words.sportName(sport)}
             accessibilityState={{ selected: true }}
             onPress={() => onChoose(sport)}
             onLayout={(event) => setPillWidth(event.nativeEvent.layout.width)}
             hitSlop={theme.hit.chip}
             style={({ pressed }) => [s.pill, s.pillCurrent, pressed ? s.pressed : undefined]}
           >
-            <SportName sport={sport} onInk />
-            <Chevron mark={COPY.fold} onInk />
+            <SportName name={words.sportName(sport)} sport={sport} onInk />
+            <Chevron mark={FOLD} onInk />
           </Pressable>
         </View>
       </View>

@@ -126,6 +126,12 @@ export {
 } from './SeatFace';
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
+export {
+  SportPillFrame,
+  type AnotherSport,
+  type SportPillFrameProps,
+  type SportPillWords,
+} from './SportPillFrame';
 export { Star, STAR_FILL, type StarProps } from './Star';
 export { StarRow, type StarNames, type StarRowProps } from './StarRow';
 export { StatBox, StatFigure, StatRow, type StatBoxProps, type StatBoxVariant } from './StatBox';

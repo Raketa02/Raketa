@@ -67,9 +67,6 @@ export const GROUPS_COPY = {
     /** The bar's last way out (#731, ADR-0200 §4): drawn with its plus, spoken without it. */
     anotherSport: 'Another sport',
     anotherSportDrawn: '+ Another sport',
-    /** The pill's faint chevron, and the bar's once it has unfolded — the fold's direction. */
-    unfold: '‹',
-    fold: '›',
   },
   /** The Games tab's card (play 14–17, 39). */
   games: {
