@@ -6,8 +6,8 @@ uuid, an hour of the week as its code, a location as two floats, a gender and an
 intent as their machine codes. Nothing here holds a value object, and nothing
 here holds display text.
 
-Eleven events. Ten belong to the profile's own stream, keyed on the player, and
-they fall into three kinds; the eleventh belongs to a **second aggregate** in
+Twelve events. Eleven belong to the profile's own stream, keyed on the player,
+and they fall into three kinds; the twelfth belongs to a **second aggregate** in
 this context and is kept here because a context's durable names have one home.
 
 **One creation.** ``PlayerProfileCreated`` is the single commit that ends
@@ -17,10 +17,11 @@ lets the same request arriving twice be recognised as the same request without a
 table beside the stream to keep in step with it. The key is evidence about a
 *write*, not about the player, and it is on the creating event only.
 
-**Seven preference changes**, for the profile screen that edits the same values
+**Eight preference changes**, for the profile screen that edits the same values
 later: tags, photos, weekly hours, location, gender and gender preference — and
-the reliability filter (#661), which the creating event never carried: every
-profile starts with it off. Each
+two the creating event never carried: the reliability filter (#661), which
+every profile starts with off, and *Show me in General* (#772), which every
+profile starts with on. Each
 carries the whole new value rather than a delta, because a preference is small,
 replay stays a fold, and *what was it before* is answered by the event before it.
 
@@ -235,6 +236,26 @@ class ReliabilityMinimumSet:
 
     player_id: UUID
     minimum: str | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class RankingVisibilitySet:
+    """*Show me in General*, turned: ``SHOWN`` or ``HIDDEN``, a
+    ``RankingVisibility`` code (``docs/adr/0203`` §7, #772).
+
+    **A fact about the player, never about a row**: the creating event carries
+    no field for it, because every profile starts shown, and a stream with none
+    of these folds to ``SHOWN``. The Rankings context follows it through the
+    outbox into its projection, for every sport — one the player has no result
+    in yet included.
+
+    **What it stops is new**: a request already made through the ranking stays
+    open, and a record already drawn stays drawn (the mechanics §18).
+    """
+
+    player_id: UUID
+    visibility: str
     occurred_at: datetime
 
 

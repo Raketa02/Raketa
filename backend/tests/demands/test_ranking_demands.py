@@ -1,4 +1,4 @@
-"""What Rankings demands of other contexts (#768, #771), run against every
+"""What Rankings demands of other contexts (#768, #771, #772), run against every
 registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident**
@@ -30,6 +30,8 @@ from app.engines.assessment import AssessmentResult, BandView
 from app.engines.racketskill.core import STATUS_INITIAL_ESTIMATE
 from app.kernel import Sport, instant
 from app.modules.rankings.domain.ports import (
+    BlocksEitherWay,
+    GeneralSwitches,
     RankedFace,
     RankedFaces,
     RatingHistories,
@@ -291,3 +293,98 @@ async def test_a_friendship_ended_or_blocked_is_no_friend(implementation, sessio
     friends: ReadersFriends = implementation.build(session)
 
     assert await friends.friends_of(tomek) == frozenset()
+
+
+# --------------------------------------------------------------------------- #
+# BlocksEitherWay — whose rows each view leaves out (#772)
+# --------------------------------------------------------------------------- #
+
+
+async def _blocks(client, blocker_token: str, blocked: UUID) -> None:
+    made = await client.post(
+        "/api/v1/blocks",
+        json={"player_id": str(blocked)},
+        headers=players.auth(blocker_token),
+    )
+    assert made.status_code == 204, made.text
+
+
+@pytest.mark.parametrize("implementation", registered(BlocksEitherWay))
+async def test_a_block_is_answered_for_both_of_them_and_a_lifted_one_for_neither(
+    implementation, client, session
+):
+    blocks: BlocksEitherWay = implementation.build(session)
+    tomek, tomeks = await players.register(client, "tomek")
+    marek, mareks = await players.register(client, "marek")
+    ewa, ewas = await players.register(client, "ewa")
+    await _blocks(client, tomeks, marek)
+    await _blocks(client, ewas, tomek)
+
+    # Whichever of them made it, in one flat set.
+    assert await blocks.blocked_either_way(tomek) == {marek, ewa}
+    assert await blocks.blocked_either_way(marek) == {tomek}
+    assert await blocks.blocked_either_way(ewa) == {tomek}
+
+    lifted = await client.delete(
+        f"/api/v1/blocks/{marek}", headers=players.auth(tomeks)
+    )
+    assert lifted.status_code == 204, lifted.text
+
+    assert await blocks.blocked_either_way(marek) == frozenset()
+    assert await blocks.blocked_either_way(tomek) == {ewa}
+    assert await blocks.blocked_either_way(new_uuid()) == frozenset()
+
+
+# --------------------------------------------------------------------------- #
+# GeneralSwitches — a player's Show me in General, read live (#772)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(GeneralSwitches))
+async def test_a_switch_is_the_profile_as_it_stands_and_the_version_it_stands_at(
+    implementation, client, session
+):
+    switches: GeneralSwitches = implementation.build(session)
+    tomek = await players.a_rated_player(client, "tomek")
+
+    shown = await switches.switch_of(tomek["id"])
+    turned = await client.put(
+        "/api/v1/players/me/ranking-visibility",
+        json={"visibility": "HIDDEN"},
+        headers=players.auth(tomek["token"]),
+    )
+    assert turned.status_code == 204, turned.text
+    hidden = await switches.switch_of(tomek["id"])
+
+    # Every profile starts shown.
+    assert shown is not None and (shown.player_id, shown.hidden) == (tomek["id"], False)
+    assert hidden is not None and hidden.hidden is True
+    # A later reading is at a later version, which is what lets the rows
+    # refuse an older one.
+    assert hidden.version > shown.version
+    assert await switches.switch_of(new_uuid()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(GeneralSwitches))
+async def test_every_switch_is_every_profiles_rated_or_not(
+    implementation, client, session
+):
+    switches: GeneralSwitches = implementation.build(session)
+    tomek = await players.a_rated_player(client, "tomek")
+    ewa, token = await players.register(client, "ewa")
+    await players.commit_profile(client, token)
+    turned = await client.put(
+        "/api/v1/players/me/ranking-visibility",
+        json={"visibility": "HIDDEN"},
+        headers=players.auth(token),
+    )
+    assert turned.status_code == 204, turned.text
+    # An account with no profile has no switch to keep.
+    await players.register(client, "nobody")
+
+    every = await switches.every_switch()
+
+    assert {(one.player_id, one.hidden) for one in every} == {
+        (tomek["id"], False),
+        (ewa, True),
+    }

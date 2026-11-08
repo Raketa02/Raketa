@@ -549,6 +549,7 @@ from app.modules.proposals.infrastructure.friends import (
 )
 from app.modules.proposals.infrastructure.rankings import RankingsOnHome
 from app.modules.rankings.application.projection import (
+    FollowTheSwitch,
     MoveTheRanking,
     RebuildTheRankings,
 )
@@ -560,7 +561,9 @@ from app.modules.rankings.application.reads import (
     ReadRanking,
 )
 from app.modules.rankings.domain.ports import (
+    BlocksEitherWay,
     GeneralOrders,
+    GeneralSwitches,
     LevelHistory,
     RankedFaces,
     RankingRows,
@@ -568,11 +571,17 @@ from app.modules.rankings.domain.ports import (
     ReadersFriends,
     SportLevels,
 )
+from app.modules.rankings.infrastructure.blocks_either_way import (
+    QueriedBlocksEitherWay,
+)
 from app.modules.rankings.infrastructure.friends_readers_friends import (
     FriendsReadersFriends,
 )
 from app.modules.rankings.infrastructure.in_memory_general_orders import (
     InMemoryGeneralOrders,
+)
+from app.modules.rankings.infrastructure.profile_general_switches import (
+    ProfileGeneralSwitches,
 )
 from app.modules.rankings.infrastructure.profile_ranked_faces import (
     ProfileRankedFaces,
@@ -4061,15 +4070,58 @@ def build_rebuild_the_rankings(
     orders: GeneralOrders,
     runtime: EventRuntime | None = None,
 ) -> RebuildTheRankings:
-    """Every row and level-history point folded from every rating stream —
-    ``make rankings-rebuild``."""
+    """Every row and level-history point folded from every rating stream, and
+    every rated player's *Show me in General* followed — ``make
+    rankings-rebuild``."""
     return RebuildTheRankings(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
         level_history=build_level_history(session),
+        switches=build_general_switches(session, runtime=runtime),
         orders=orders,
         uow=build_unit_of_work(session),
     )
+
+
+def build_general_switches(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GeneralSwitches:
+    """A player's *Show me in General*, off their profile — **signed in
+    ``rankings/infrastructure/``**, so the arrow runs ``rankings →
+    player_profile`` (#772)."""
+    event_store = build_domain_event_store(session, runtime=runtime)
+    return ProfileGeneralSwitches(
+        profiles=build_player_profile_repository(
+            event_store=event_store,
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        event_store=event_store,
+    )
+
+
+def build_follow_the_switch(
+    session: AsyncSession,
+    *,
+    orders: GeneralOrders,
+    runtime: EventRuntime | None = None,
+) -> FollowTheSwitch:
+    """*Show me in General* turned, followed by the rows — built per delivery
+    run, over the session the delivery commits in — and the kept order of
+    every sport the player has a row in forgotten (#772)."""
+    return FollowTheSwitch(
+        switches=build_general_switches(session, runtime=runtime),
+        rows=build_ranking_rows(session),
+        orders=orders,
+    )
+
+
+def build_blocks_either_way(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BlocksEitherWay:
+    """Everybody a block stands between the reader and, either way — **signed
+    in ``rankings/infrastructure/``** over the blocks' one query, so the arrow
+    runs ``rankings → blocks`` (#772)."""
+    return QueriedBlocksEitherWay(build_block_query(session, runtime=runtime))
 
 
 def build_readers_friends(
@@ -4114,6 +4166,7 @@ def build_read_ranking(
         friends=build_the_friends_table(session, runtime=runtime),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         levels=build_sport_levels(session, runtime=runtime),
+        blocks=build_blocks_either_way(session, runtime=runtime),
         clock=clock,
     )
 
@@ -4130,6 +4183,7 @@ def build_read_general_page(
     return ReadGeneralPage(
         general=build_the_general_order(session, orders=orders),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
+        blocks=build_blocks_either_way(session, runtime=runtime),
         clock=clock,
     )
 

@@ -57,7 +57,9 @@ name, is what history is recorded under.
 - **One projection is written by a context with no events of its own**: `ranking_rows`
   (#768; ADR-0203 §10), a fold of each rating stream written when `rating.moved_on_result`
   is delivered and by the rebuild, and beside it `ranking_level_history` (#769), the same
-  fold kept point by point, keyed by the stored event. They record no fact the rating
-  stream does not, so there is no event to emit; ADR-0203 §10 is where the stored copy is
-  argued (`rankings.md`).
+  fold kept point by point, keyed by the stored event, and `ranking_visibility` (#772),
+  each player's *Show me in General* followed from `player_profile.ranking_visibility_set`
+  at the profile version it was read at. They record no fact the rating stream and the
+  profile stream do not, so there is no event to emit; ADR-0203 §10 is where the stored
+  copy is argued (`rankings.md`).
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

@@ -98,6 +98,7 @@ from app.modules.player_profile.application.event_subscriptions import (
 from app.modules.rankings.domain.ports import GeneralOrders
 from app.modules.rankings.application.event_subscriptions import (
     subscribe_the_ranking_mover,
+    subscribe_the_switch_follower,
 )
 from app.modules.rating.application.event_subscriptions import (
     register_rating_events,
@@ -240,6 +241,7 @@ class EventRuntime:
             build_tell_the_players,
             build_tell_the_room,
             build_end_friendships_on_a_block,
+            build_follow_the_switch,
             build_move_the_ranking,
             build_withdraw_a_blockers_yeses,
             build_withdraw_a_leavers_yeses,
@@ -320,6 +322,12 @@ class EventRuntime:
         # kept General order (#770).
         subscribe_the_ranking_mover(
             dispatcher, build_move_the_ranking(session, orders=orders, runtime=self)
+        )
+        # And *Show me in General* turned is followed by the player's rows, in
+        # the same transaction, and their sports' kept orders forgotten (#772).
+        subscribe_the_switch_follower(
+            dispatcher,
+            build_follow_the_switch(session, orders=orders, runtime=self),
         )
         # What players are told about a game and its money, given in the
         # delivery's own transaction — and a notice given, pushed to their

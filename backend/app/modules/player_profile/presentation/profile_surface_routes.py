@@ -71,6 +71,11 @@ branches on the phone's permission state instead.
 rule, so the same aggregate holds it. It answers `204` like the preference, and
 is read back on the player's own record, beside how many players in their groups
 it hides — never on the profile read.
+
+**And *Show me in General*** (``docs/adr/0203`` §7, #772): the switch on *On
+your card*, `PUT /players/me/ranking-visibility`, `SHOWN` or `HIDDEN`, `204`.
+Unlike the filter it **is** read back on the profile read, as
+`ranking_visibility`, because the You tab draws its row from that read.
 """
 
 from __future__ import annotations
@@ -85,6 +90,7 @@ from app.modules.player_profile.application.commands import (
     ChangeLocationCommand,
     ChangePhotosCommand,
     ChangeSocialTagsCommand,
+    SetRankingVisibilityCommand,
     SetReliabilityMinimumCommand,
     SetWeeklyHoursCommand,
 )
@@ -97,6 +103,7 @@ from app.modules.player_profile.presentation.dependencies import (
     ChangePhotosDep,
     ChangeSocialTagsDep,
     ReadPlayerProfileDep,
+    SetRankingVisibilityDep,
     SetReliabilityMinimumDep,
     SetWeeklyHoursDep,
 )
@@ -109,6 +116,7 @@ from app.modules.player_profile.presentation.schemas import (
     ChangeSocialTagsRequest,
     PhotosResponse,
     PlayerProfileReadResponse,
+    SetRankingVisibilityRequest,
     SetReliabilityFilterRequest,
     SetWeeklyHoursRequest,
     SocialTagsResponse,
@@ -533,4 +541,38 @@ async def set_reliability_filter(
 ) -> None:
     await use_case.execute(
         SetReliabilityMinimumCommand(player_id=user.id, minimum=payload.minimum)
+    )
+
+
+@router.put(
+    "/ranking-visibility",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: _NO_PROFILE,
+        status.HTTP_409_CONFLICT: _LOST_THE_RACE,
+    },
+    summary="Show me in General",
+    description=(
+        "The switch on *On your card* (`docs/adr/0203` §7, #772): *Players who "
+        "don't know you can see your place, open your record and send you a "
+        "request.* `SHOWN` — on, which every profile starts with — or `HIDDEN`. "
+        "Written at once, with no Save; an unchanged value records nothing.\n\n"
+        "**`HIDDEN`**: your row leaves everybody else's General, in every "
+        "sport, and **places never renumber** — the others read #6, then #8, "
+        "and *of 13* still counts you. You still see your own place, on "
+        "Rankings (the card's state `HIDDEN`) and on Home's trophy. Friends "
+        "ignores the switch: your friends still see you there. It reaches the "
+        "ranking through the outbox, so the next read after it is delivered "
+        "follows it.\n\n"
+        "**`204` and no body**: the switch is read back on "
+        "`GET /players/me/profile`, as `ranking_visibility`."
+    ),
+)
+async def set_ranking_visibility(
+    payload: SetRankingVisibilityRequest,
+    user: CurrentUserDep,
+    use_case: SetRankingVisibilityDep,
+) -> None:
+    await use_case.execute(
+        SetRankingVisibilityCommand(player_id=user.id, visibility=payload.visibility)
     )

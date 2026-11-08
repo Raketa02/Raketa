@@ -8,14 +8,16 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.kernel import Instant, Sport, instant
-from app.modules.rankings.domain.general_order import ListedAndThen, work_out
+from app.kernel import Instant, InvariantViolated, Sport, instant
+from app.modules.rankings.domain.general_order import ListedAndThen, Sight, work_out
 from app.modules.rankings.domain.ranking import (
     LISTED_FOR,
     CardState,
     GapLine,
     LevelMove,
     Outcome,
+    PlaceCard,
+    RankingView,
     RatingHistory,
     card_of,
     latest_of,
@@ -145,7 +147,9 @@ def test_the_card(results, days_ago, expected):
         holds_a_level=True,
         of=1,
         placed=(
-            work_out(Sport.PADEL, [ListedAndThen(row=row, then=None)], now=now).rows[0]
+            work_out(
+                Sport.PADEL, [ListedAndThen(row=row, then=None, hidden=False)], now=now
+            ).rows[0]
             if listed and row is not None
             else None
         ),
@@ -156,6 +160,86 @@ def test_the_card(results, days_ago, expected):
 
     assert card.state is expected
     assert card.results == results
+
+
+def _placed(*, hidden: bool):
+    row = row_of(history(*((2.6, True) for _ in range(5))))
+    assert row is not None
+    return work_out(
+        Sport.PADEL, [ListedAndThen(row=row, then=None, hidden=hidden)], now=at(5)
+    ).rows[0]
+
+
+def test_a_hidden_reader_keeps_their_place_in_general_with_no_gap_line():
+    """*YOUR PLACE · 7th · of 13*, the Level and the chip — and *Hidden from
+    General* where the gap line was (#772; the screens §4.5)."""
+
+    placed = _placed(hidden=True)
+    line = GapLine(above=None, below=None, top_of_the_list=True)
+
+    general = card_of(None, holds_a_level=True, of=13, placed=placed, gap_line=line)
+    friends = card_of(
+        None,
+        holds_a_level=True,
+        of=2,
+        placed=placed,
+        gap_line=line,
+        view=RankingView.FRIENDS,
+    )
+
+    assert general.state is CardState.HIDDEN
+    assert (general.place, general.of, general.chip) == (1, 13, placed.chip)
+    assert general.gap_line is None
+    # Friends ignores the switch.
+    assert friends.state is CardState.LISTED and friends.gap_line == line
+
+
+def test_a_hidden_card_never_carries_a_gap_line_nor_a_listed_one_lacks_it():
+    line = GapLine(above=None, below=None, top_of_the_list=True)
+    placed = dict(
+        results=5, place=7, of=13, hundredths=271, chip=_placed(hidden=False).chip
+    )
+
+    with pytest.raises(InvariantViolated):
+        PlaceCard(state=CardState.HIDDEN, gap_line=line, **placed)
+    with pytest.raises(InvariantViolated):
+        PlaceCard(state=CardState.LISTED, **placed)
+    with pytest.raises(InvariantViolated):
+        PlaceCard(state=CardState.OFF_THE_LIST, results=5, place=7)
+
+
+def test_a_reader_sees_their_own_row_and_nobody_blocked_or_hidden_in_general():
+    shown, hidden = _placed(hidden=False), _placed(hidden=True)
+    blocked = _placed(hidden=False)
+
+    general = Sight(
+        reader=hidden.player_id,
+        view=RankingView.GENERAL,
+        blocked=frozenset({blocked.player_id}),
+    )
+    stranger = Sight(reader=new_uuid(), view=RankingView.GENERAL, blocked=frozenset())
+    friend = Sight(
+        reader=new_uuid(),
+        view=RankingView.FRIENDS,
+        blocked=frozenset({blocked.player_id}),
+    )
+
+    assert [general.sees(row) for row in (shown, hidden, blocked)] == [
+        True,
+        True,
+        False,
+    ]
+    assert [stranger.sees(row) for row in (shown, hidden, blocked)] == [
+        True,
+        False,
+        True,
+    ]
+    # Friends ignores the switch, never a block.
+    assert [friend.sees(row) for row in (shown, hidden, blocked)] == [
+        True,
+        True,
+        False,
+    ]
 
 
 def test_no_level_comes_before_everything():

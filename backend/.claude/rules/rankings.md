@@ -8,12 +8,13 @@ paths:
   - "app/bootstrap/ranking_demands.py"
   - "migrations/versions/0068_ranking_rows.py"
   - "migrations/versions/0069_ranking_level_history.py"
+  - "migrations/versions/0070_ranking_visibility.py"
   - "app/engines/racketskill/update_v1/rule.py"
 ---
 
 # Rankings
 
-Decisions that are load-bearing and not obvious from the code (#768, #769, #770, #771;
+Decisions that are load-bearing and not obvious from the code (#768, #769, #770, #771, #772;
 [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
 `docs/specs/rankings/`). The words are root `CONTEXT.md`'s *Rankings* section.
 
@@ -70,8 +71,8 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   a player straight back, the 5 already met. **The order is the index's**
   (`ix_ranking_rows_order`: sport, hundredths desc, results desc, Level reached asc, player
   id), and every place is unique. **Places are counted over every listed row**: a row the
-  read leaves out keeps its place, so the hidden and blocked rows of #772 will leave the same
-  gaps.
+  read leaves out keeps its place, so a hidden or blocked row (#772) leaves its gap and *of N*
+  still counts it.
 - **A sport's General order is worked out once and kept for a minute** (#770; ADR-0203 §10;
   `domain/general_order.py`, `application/general_order.py`'s `TheGeneralOrder`). **One
   pass** — `RankingRows.listed(…, then=now − 7 days)`, one statement — reads every listed row
@@ -94,8 +95,9 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   counts fewer results than they have — a reader never sees their own Level a minute late.
   The one disagreement kept is a placed reader whose 90 days ran out inside the minute. **The card is the order's**: the place, Level, count and chip
   are the order's row (`card_of(…, placed=…)`), so the card and the rows never disagree.
-  **The order keeps every listed row and none of the reader's filtering**, so #772's hidden
-  and blocked rows are dropped from a slice and leave their gaps.
+  **The order keeps every listed row and none of the reader's filtering** — each row carrying
+  whether it is hidden — so hidden and blocked rows are dropped from each reader's slice and
+  leave their gaps (#772, below).
 - **Where it is kept** (`GeneralOrders`, a port onto the outside world, its eighteenth
   register `app/bootstrap/general_order_demands.py`): **Redis in an API process**
   (`RedisGeneralOrders`, built over the process's command pool and **always wrapped**,
@@ -157,10 +159,10 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   `FRIENDS` below; an unknown sport is `422`): **the card** — `NO_LEVEL`
   first, read live from rating's published read (`SportLevels`), then `NEEDS_RESULTS` with
   the count (fewer than 5, whatever their age), then `OFF_THE_LIST` (5 or more, none in the
-  90 days), else `LISTED` with `place`, `of`, `level`, `chip` and `gap_line` — **the podium**, the first three
-  rows each with its true place and none with fewer than three, and **the first page of 50
-  rows**: place, id, nickname, photo (`RankedFaces`: `users`' nickname, the Player
-  profile's first photograph), `form` (`WIN`/`LOSS`, oldest first), `chip`, `level` and
+  90 days), else `LISTED` with `place`, `of`, `level`, `chip` and `gap_line` — or `HIDDEN`
+  (#772, below) — **the podium**, the first three rows the reader sees, each with its true
+  place, and none with fewer than three, and **the first page of 50 rows**: place, id,
+  nickname, photo (`RankedFaces`: `users`' nickname, the Player profile's first photograph), `form` (`WIN`/`LOSS`, oldest first), `chip`, `level` and
   `is_you` — and `next`, the cursor the second page is read after. The clock is read once,
   and the card, the podium and the rows are one kept order's, so they agree about who
   dropped off.
@@ -183,8 +185,47 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   **`JUST_YOU`** when the reader is listed, **`NO_FRIEND_LISTED`** when they aren't either,
   whatever their own state (the PRD's rule, which #767's review kept) — with `rows` and
   `podium` empty and `listed` still counting (`1` or `0`). `results_to_enter` is the view's
-  (`RankingView.entry`: 5 or 1). **Friends ignores *Show me in General***; #772's blocks
-  will hide rows here too.
+  (`RankingView.entry`: 5 or 1). **Friends ignores *Show me in General***, and blocks hide
+  rows here as in General (#772).
+- ***Show me in General* and blocks** (#772; ADR-0203 §7–§8; the mechanics §5, §10, §11).
+  **The switch is the profile's** (`player_profile.ranking_visibility_set`,
+  `player-profile-and-photos.md`), and **the rows follow it through the outbox**:
+  `FollowTheSwitch` (`application/projection.py`), subscribed per delivery run as the move
+  is (`subscribe_the_switch_follower`), **reads the profile live** (`GeneralSwitches`: hidden
+  and the profile version it stands at) — never the event's payload — writes it with
+  `RankingRows.follow` and forgets the kept order of every sport the player has a row in.
+  **Kept per player, beside the rows, never on them** (`ranking_visibility`, migration
+  0070): a player has no row before their first result, and a switch turned before it must
+  hold when that result's delivery makes the row, so the two writes never meet — and it holds
+  for **every sport** by construction. **A switch read at an older profile version never
+  replaces a newer one** (`INSERT … ON CONFLICT DO UPDATE … WHERE stored.profile_version <
+  new.profile_version`), so two turns delivered in either order, or a redelivery, leave the
+  latest. **A player with no row there is shown**, so nothing was backfilled. **The rebuild
+  follows every profile's switch too** (`GeneralSwitches.every_switch`, every profile stream
+  the store holds; `Rebuilt.switches`), a player with no rating yet included, so a projection
+  rebuilt from nothing lists no hidden player, now or after their first results. **The pass reads it** (`listed` joins it on the
+  player; `ListedAndThen.hidden`, `ListedRow.hidden`, a kept member's last field `H`/`S`), so
+  **the kept order holds every row with its flag** and nothing per reader. **A reader's
+  `Sight`** (`domain/general_order.py`) is asked of every row of a slice: **their own row,
+  always**; **nobody a block stands between them and, whichever of them made it, in either
+  view** — `BlocksEitherWay.blocked_either_way`, read live on every read and page (one
+  payload-indexed statement, the blocks' exclusion set), **failing closed** (the blocks'
+  `BlockStateUnavailable`, `503 block_state_unavailable`, declared on both routes, rather
+  than a list that shows a blocked pair each other);
+  and **in General, nobody hidden** — Friends ignores the switch. So **places never move**:
+  others read #6, then #8, *of 13* still counts the hidden row, a page's cursors are its
+  slice's ends before anything is dropped, and *around me* centres on the reader's true
+  place. **The podium is the first three rows the reader sees**, each with its true place —
+  read on below the first page only when it shows fewer than three — and none with fewer.
+  **A hidden reader's card is `HIDDEN`** (General only): the place, *of N*, the Level and the
+  chip, and **no gap line** — *Hidden from General* and the switch stand there; a hidden
+  reader who isn't listed reads their not-listed card, and in Friends reads `LISTED`. Home's
+  places are the true ones, so a hidden player's trophy keeps its number. **In Friends a
+  block hides the rows at once**, its places kept, before the block's delivery ends the
+  friendship and takes each out of the other's table. The face question asks only for rows
+  the reader sees. **The forget runs inside the delivery's transaction**, as the move's does,
+  so a pass that begins between it and the commit can keep the order from before the turn:
+  others may see a hidden player for up to the minute (the kept order's known limit, above).
 - **The chip** (`chips_of`, on every row and the `LISTED` card: `UP`/`DOWN` with `places`,
   `SAME`, `NEW`) compares a place in **today's set**, in today's order, with a place among
   **the same set** ordered by `LevelHistory.points_at(sport, now − 7 days, …)` — each
@@ -200,10 +241,11 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   comeback after 90 days reads a real chip, its Level a week ago known. **A listed row with
   no point at all** (a store the rebuild hasn't filled) stands where it stands now — never
   an invariant: it would take every reader's page down.
-- **The gap line** (`gap_line` on the `LISTED` card): **the nearest named row above and the
-  nearest below** — a row nobody can name is skipped, and #772's hidden and blocked rows
-  will be skipped the same way (`ReadRanking._nearest_named`, faces asked only for a row
-  off the page). Above: `nickname`, `gap` (two decimals), `wins` and `tied`; below:
+- **The gap line** (`gap_line` on the `LISTED` card): **the nearest row above the reader
+  sees and the nearest below** — a row nobody can name, a hidden row in General and a
+  blocked one either way are skipped (`reads.py`'s `_seen_named`, faces asked only for a row
+  off the page and never for one the reader can't see); with nobody seen above a reader who
+  isn't first, `above` is `null` and only the part about below reads. Above: `nickname`, `gap` (two decimals), `wins` and `tied`; below:
   `nickname` and `gap` (`0` reads *level with you*); last place has no below. **First
   place is `top_of_the_list` and nothing else** — *Top of the list* is the whole line (the
   words §30.4), so neither above nor below is sent.
@@ -237,9 +279,10 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   recorded them), `RankedFaces` (`ProfileRankedFaces`), `SportLevels`
   (`RatedSportLevels`, over `RatedPlayerQuery`) and, since #771, `ReadersFriends`
   (`FriendsReadersFriends`, over Friends' `ReadRelations.friends_of` — so `rankings` is on
-  `.importlinter`'s *friends-knows-none-of-its-readers*). Blocks both ways and *Show me in
-  General* join it with #772. Rankings is on the record's and Notifications' forbidden
-  lists: it tells nobody anything (Q10).
+  `.importlinter`'s *friends-knows-none-of-its-readers*) and, since #772, `BlocksEitherWay`
+  (`QueriedBlocksEitherWay`, over `BlockQuery.exclusions_for`) and `GeneralSwitches`
+  (`ProfileGeneralSwitches`, over the profile repository). Rankings is on the record's and
+  Notifications' forbidden lists: it tells nobody anything (Q10).
 - **Seeded by `app/seeds/rankings.py`**: `RANKING_GAMES`, nineteen padel games the runner
   hands the played history beside the cohort's own, so each is a past booked game filled,
   played, scored and accepted through the use cases, and the rooms layer's drain folds every

@@ -78,6 +78,7 @@ INTRO_URL = "/api/v1/players/me/intro"
 GENDER_URL = "/api/v1/players/me/gender"
 PREFERENCE_URL = "/api/v1/players/me/gender-preference"
 RELIABILITY_FILTER_URL = "/api/v1/players/me/reliability-filter"
+RANKING_VISIBILITY_URL = "/api/v1/players/me/ranking-visibility"
 OPT_IN_URL = "/api/v1/players/me/proposals-opt-in"
 
 #: The fix `a_player` commits with.
@@ -1249,6 +1250,79 @@ async def test_a_filter_left_out_is_refused_at_the_boundary(client):
     assert missing.status_code == 422
 
 
+async def test_show_me_in_general_is_on_by_default_and_read_back(client):
+    """*Show me in General* is on for every profile, one committed before the
+    switch existed included — the profile read says so (#772)."""
+
+    _, headers = await a_player(client)
+
+    body = (await client.get(PROFILE_URL, headers=headers)).json()
+
+    assert body["ranking_visibility"] == "SHOWN"
+
+
+async def test_show_me_in_general_is_turned_off_and_on_with_a_204(
+    client, session_factory
+):
+    """Off, then off again, then on — each change its own event on the
+    profile's stream, the same value again recording nothing, and the read
+    following every one (#772; ``docs/adr/0203`` §7)."""
+
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    off = await client.put(
+        RANKING_VISIBILITY_URL, json={"visibility": "HIDDEN"}, headers=headers
+    )
+    hidden = (await client.get(PROFILE_URL, headers=headers)).json()
+    again = await client.put(
+        RANKING_VISIBILITY_URL, json={"visibility": "HIDDEN"}, headers=headers
+    )
+    on = await client.put(
+        RANKING_VISIBILITY_URL, json={"visibility": "SHOWN"}, headers=headers
+    )
+    shown = (await client.get(PROFILE_URL, headers=headers)).json()
+
+    assert [off.status_code, again.status_code, on.status_code] == [204, 204, 204]
+    assert off.content == b""
+    assert (hidden["ranking_visibility"], shown["ranking_visibility"]) == (
+        "HIDDEN",
+        "SHOWN",
+    )
+    stream = await stream_of(session_factory, player_id)
+    assert len(stream) == before + 2
+    assert [row.event_type for row in stream[-2:]] == [
+        "player_profile.ranking_visibility_set",
+        "player_profile.ranking_visibility_set",
+    ]
+    assert [row.schema_version for row in stream[-2:]] == [1, 1]
+
+
+async def test_showing_a_player_already_shown_appends_no_event(client, session_factory):
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    response = await client.put(
+        RANKING_VISIBILITY_URL, json={"visibility": "SHOWN"}, headers=headers
+    )
+
+    assert response.status_code == 204, response.text
+    assert await stream_length(session_factory, player_id) == before
+
+
+@pytest.mark.parametrize("body", [{}, {"visibility": "PRIVATE"}, {"visibility": None}])
+async def test_a_visibility_that_is_not_shown_or_hidden_is_refused_at_the_boundary(
+    client, session_factory, body
+):
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    response = await client.put(RANKING_VISIBILITY_URL, json=body, headers=headers)
+
+    assert response.status_code == 422, response.text
+    assert await stream_length(session_factory, player_id) == before
+
+
 @pytest.mark.parametrize(
     ("url", "body"),
     [
@@ -1258,10 +1332,19 @@ async def test_a_filter_left_out_is_refused_at_the_boundary(client):
         (GENDER_URL, {"gender": "MAN"}),
         (PREFERENCE_URL, {"gender_preference": "ANY"}),
         (RELIABILITY_FILTER_URL, {"minimum": "HIGH"}),
+        (RANKING_VISIBILITY_URL, {"visibility": "HIDDEN"}),
     ],
-    ids=["tags", "photos", "intro", "gender", "preference", "reliability-filter"],
+    ids=[
+        "tags",
+        "photos",
+        "intro",
+        "gender",
+        "preference",
+        "reliability-filter",
+        "ranking-visibility",
+    ],
 )
-async def test_each_of_the_six_refuses_an_uncommitted_profile_and_needs_a_token(
+async def test_each_of_the_seven_refuses_an_uncommitted_profile_and_needs_a_token(
     client, url, body
 ):
     """As the existing writes refuse: the recovery is onboarding's second
@@ -1277,15 +1360,15 @@ async def test_each_of_the_six_refuses_an_uncommitted_profile_and_needs_a_token(
     assert without_token.status_code == 401
 
 
-def test_the_surface_is_a_read_and_the_eight_writes_and_nothing_else():
+def test_the_surface_is_a_read_and_the_nine_writes_and_nothing_else():
     """Asserted against the routes rather than against prose.
 
     One read; the two writes the Play screens and the cold start had; the
     five the You tab needed (``docs/adr/0179`` §8) — every one of the
     aggregate's transitions under *Later changes, from the profile screen* has
-    its route — and the reliability filter (#661). The radius and the opt-in had
-    one each until #581. A tenth appearing on this router without its ticket is
-    what this test is here to catch.
+    its route — the reliability filter (#661) and *Show me in General* (#772).
+    The radius and the opt-in had one each until #581. An eleventh appearing on
+    this router without its ticket is what this test is here to catch.
     """
 
     from app.modules.player_profile.presentation.profile_surface_routes import router
@@ -1300,6 +1383,7 @@ def test_the_surface_is_a_read_and_the_eight_writes_and_nothing_else():
         ("/players/me/gender", ("PUT",)),
         ("/players/me/gender-preference", ("PUT",)),
         ("/players/me/reliability-filter", ("PUT",)),
+        ("/players/me/ranking-visibility", ("PUT",)),
     }
 
 

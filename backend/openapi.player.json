@@ -1604,6 +1604,66 @@
         ]
       }
     },
+    "/api/v1/players/me/ranking-visibility": {
+      "put": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Show me in General",
+        "description": "The switch on *On your card* (`docs/adr/0203` \u00a77, #772): *Players who don't know you can see your place, open your record and send you a request.* `SHOWN` \u2014 on, which every profile starts with \u2014 or `HIDDEN`. Written at once, with no Save; an unchanged value records nothing.\n\n**`HIDDEN`**: your row leaves everybody else's General, in every sport, and **places never renumber** \u2014 the others read #6, then #8, and *of 13* still counts you. You still see your own place, on Rankings (the card's state `HIDDEN`) and on Home's trophy. Friends ignores the switch: your friends still see you there. It reaches the ranking through the outbox, so the next read after it is delivered follows it.\n\n**`204` and no body**: the switch is read back on `GET /players/me/profile`, as `ranking_visibility`.",
+        "operationId": "set_ranking_visibility_api_v1_players_me_ranking_visibility_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRankingVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/play-intents/{sport}": {
       "put": {
         "tags": [
@@ -3898,6 +3958,16 @@
               }
             }
           },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 your blocks could not be read, so no list is drawn. Retry the same request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -3995,6 +4065,16 @@
           },
           "400": {
             "description": "`not_a_ranking_page` \u2014 a cursor this server never wrote, or a page asked for in two places at once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 your blocks could not be read, so no list is drawn. Retry the same request.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9728,7 +9808,8 @@
           "NO_LEVEL",
           "OFF_THE_LIST",
           "JUST_YOU",
-          "NO_FRIEND_LISTED"
+          "NO_FRIEND_LISTED",
+          "HIDDEN"
         ],
         "title": "CardState",
         "description": "What the reader's place card says (the screens \u00a74.1, \u00a74.3, \u00a74.4, \u00a74.6)."
@@ -12396,7 +12477,7 @@
                 "type": "null"
               }
             ],
-            "description": "The part before the dot; `null` at the top of the list."
+            "description": "The part before the dot; `null` at the top of the list, and when nobody above you is a row you can see \u2014 then only `below` reads."
           },
           "below": {
             "anyOf": [
@@ -15322,7 +15403,7 @@
         "properties": {
           "state": {
             "$ref": "#/components/schemas/CardState",
-            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table."
+            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table. **General only**: `HIDDEN` \u2014 you are listed and turned *Show me in General* off: *YOUR PLACE \u00b7 7th \u00b7 of 13*, your Level and your chip, with *Hidden from General* and the switch where the gap line was; others don't see your row. Friends ignores the switch, so there you read `LISTED`; not listed, you read your not-listed card."
           },
           "results": {
             "type": "integer",
@@ -15346,7 +15427,7 @@
               }
             ],
             "title": "Place",
-            "description": "With `LISTED` only: your place \u2014 *7th*."
+            "description": "With `LISTED` and `HIDDEN` only: your place \u2014 *7th*."
           },
           "of": {
             "anyOf": [
@@ -15359,7 +15440,7 @@
               }
             ],
             "title": "Of",
-            "description": "With `LISTED` only: how many are listed \u2014 *of 13*."
+            "description": "With `LISTED` and `HIDDEN` only: how many are listed \u2014 *of 13* \u2014 hidden players and rows you can't see included."
           },
           "level": {
             "anyOf": [
@@ -15371,7 +15452,7 @@
               }
             ],
             "title": "Level",
-            "description": "With `LISTED` only: your Level, two decimals \u2014 *2,71*."
+            "description": "With `LISTED` and `HIDDEN` only: your Level, two decimals \u2014 *2,71*."
           },
           "chip": {
             "anyOf": [
@@ -15382,7 +15463,7 @@
                 "type": "null"
               }
             ],
-            "description": "With `LISTED` only: your places moved this week, under the Level."
+            "description": "With `LISTED` and `HIDDEN` only: your places moved this week, under the Level."
           },
           "gap_line": {
             "anyOf": [
@@ -15393,7 +15474,7 @@
                 "type": "null"
               }
             ],
-            "description": "With `LISTED` only: the line under the fold."
+            "description": "With `LISTED` only: the line under the fold. `null` with `HIDDEN`, where *Hidden from General* and the switch stand in its place."
           }
         },
         "type": "object",
@@ -15603,6 +15684,10 @@
           "gender_preference": {
             "$ref": "#/components/schemas/GenderPreference",
             "description": "Who the owner is willing to be matched with \u2014 their own setting, served here and on no other response shape (`docs/adr/0179` \u00a74). Always present: it defaults to `ANY` at commit, so there is nothing for its absence to mean."
+          },
+          "ranking_visibility": {
+            "$ref": "#/components/schemas/RankingVisibility",
+            "description": "*Show me in General* (`docs/adr/0203` \u00a77): `SHOWN`, on \u2014 every profile starts with it, one committed before the switch existed included \u2014 or `HIDDEN`. Always present. Written by `PUT /players/me/ranking-visibility`."
           }
         },
         "type": "object",
@@ -15611,7 +15696,8 @@
           "play_intents",
           "social_tags",
           "photos",
-          "gender_preference"
+          "gender_preference",
+          "ranking_visibility"
         ],
         "title": "PlayerProfileReadResponse",
         "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), and\n``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each\nmade while no build had shipped anywhere but ``local``."
@@ -16595,7 +16681,7 @@
             },
             "type": "array",
             "title": "Podium",
-            "description": "The first three rows you see, each with its true place \u2014 first in the middle, second left, third right. **Empty with fewer than three rows**, and the list shows alone."
+            "description": "The first three rows you see, each with its true place \u2014 first in the middle, second left, third right; with second hidden from you, the steps read 1, 3 and 4. **Empty with fewer than three rows you see**, and the list shows alone."
           },
           "rows": {
             "items": {
@@ -16639,6 +16725,14 @@
         ],
         "title": "RankingView",
         "description": "Which list a ranking is read in (``docs/adr/0203`` \u00a73). **General** is\neverybody in Raketa listed in the sport; **Friends** is the reader and their\nfriends, worked out on each read (#771). Both drop a player 90 days after\ntheir last result, and both order and place them alike."
+      },
+      "RankingVisibility": {
+        "type": "string",
+        "enum": [
+          "SHOWN",
+          "HIDDEN"
+        ],
+        "title": "RankingVisibility"
       },
       "RatingResponse": {
         "properties": {
@@ -17625,6 +17719,20 @@
         ],
         "title": "SendMessageRequest",
         "description": "One player's own words."
+      },
+      "SetRankingVisibilityRequest": {
+        "properties": {
+          "visibility": {
+            "$ref": "#/components/schemas/RankingVisibility",
+            "description": "`SHOWN` \u2014 on, which every profile starts with: you are listed in General for everybody. `HIDDEN` \u2014 your row leaves everybody else's General, your place kept and still counted in *of N*; you still see it, and your friends still see you in Friends."
+          }
+        },
+        "type": "object",
+        "required": [
+          "visibility"
+        ],
+        "title": "SetRankingVisibilityRequest",
+        "description": "*Show me in General*, on or off (``docs/adr/0203`` \u00a77, #772)."
       },
       "SetReliabilityFilterRequest": {
         "properties": {

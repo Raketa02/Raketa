@@ -126,7 +126,7 @@ def test_an_overtake_among_friends_moves_both():
 def placed(row: RankingRow):
     return work_out(
         Sport.PADEL,
-        [ListedAndThen(row=row, then=None)],
+        [ListedAndThen(row=row, then=None, hidden=False)],
         now=NOW,
         view=RankingView.FRIENDS,
     ).rows[0]
@@ -246,7 +246,7 @@ class Rows:
     ) -> tuple[ListedAndThen, ...]:
         self.among.append(None if among is None else frozenset(among))
         return tuple(
-            ListedAndThen(row=row, then=None)
+            ListedAndThen(row=row, then=None, hidden=False)
             for row in self._rows
             if row.results >= at_least and (among is None or row.player_id in among)
         )
@@ -273,6 +273,11 @@ class Rated:
         return True
 
 
+class NoBlocks:
+    async def blocked_either_way(self, reader: UUID) -> frozenset[UUID]:
+        return frozenset()
+
+
 async def test_friends_is_the_whole_table_however_long_and_nobody_else():
     friends = [a_row(400 - n, results=1) for n in range(PAGE_SIZE + 10)]
     reader = a_row(300, results=1)
@@ -285,6 +290,7 @@ async def test_friends_is_the_whole_table_however_long_and_nobody_else():
         ),
         faces=Named(),
         levels=Rated(),
+        blocks=NoBlocks(),
         clock=MovableClock(NOW),
     )
 

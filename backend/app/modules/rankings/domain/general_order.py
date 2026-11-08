@@ -16,7 +16,10 @@ out again — so a result settling is reflected on that read.
 
 **It keeps the whole order**, every listed row and none of the reader's
 filtering, so whatever a reader may not see is left out of the slice and
-leaves its gap (the mechanics §5).
+leaves its gap (the mechanics §5): **each row carries whether its player is
+hidden from General** (#772), and a reader's ``Sight`` — their own row
+always, nobody a block stands between them and, and in General nobody hidden —
+is asked of each row of a slice.
 
 **A page is named by a row's place in the order, never by an offset**: a
 cursor is the key a row stood at (``OrderKey``, the four keys of
@@ -106,10 +109,12 @@ class OrderKey:
 class ListedAndThen:
     """A listed row, and the player's level-history point at the chip's
     instant — their latest at or before it, else their first; ``None`` for a
-    row with no point at all."""
+    row with no point at all — and whether the player turned *Show me in
+    General* off (#772), which every player starts without."""
 
     row: RankingRow
     then: LevelPoint | None
+    hidden: bool
 
 
 @final
@@ -129,6 +134,9 @@ class ListedRow:
     #: The last results, oldest first.
     form: tuple[Outcome, ...]
     chip: Chip
+    #: *Show me in General* off (#772): left out of every reader's General
+    #: slice but the player's own, its place kept. Friends ignores it.
+    hidden: bool
 
     @property
     def key(self) -> OrderKey:
@@ -214,9 +222,8 @@ def work_out(
     pass read the rows, which is the ranking's — **in ``view``**, whose list
     decides what *New* means."""
 
-    listed = [one.row for one in passed]
     chips = chips_of(
-        listed,
+        [one.row for one in passed],
         {one.row.player_id: one.then for one in passed if one.then is not None},
         now=now,
         view=view,
@@ -227,18 +234,44 @@ def work_out(
         rows=tuple(
             ListedRow(
                 place=place,
-                player_id=row.player_id,
+                player_id=one.row.player_id,
                 sport=sport,
-                hundredths=row.hundredths,
-                sigma=row.sigma,
-                results=row.results,
-                level_reached_at=row.level_reached_at,
-                form=row.form,
-                chip=chips[row.player_id],
+                hundredths=one.row.hundredths,
+                sigma=one.row.sigma,
+                results=one.row.results,
+                level_reached_at=one.row.level_reached_at,
+                form=one.row.form,
+                chip=chips[one.row.player_id],
+                hidden=one.hidden,
             )
-            for place, row in enumerate(listed, start=1)
+            for place, one in enumerate(passed, start=1)
         ),
     )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Sight:
+    """What one reader sees of an order, in one view (#772; ``docs/adr/0203``
+    §7–§8; the mechanics §5, §10, §11): **their own row, always** — a hidden
+    player still sees their place — **nobody a block stands between them and,
+    whichever of them made it, in either view**, and **in General, nobody
+    hidden from it**; Friends ignores the switch.
+
+    **Asked of each row of a slice, never of the order**: a row left out keeps
+    its place and leaves its gap, and *of N* still counts it."""
+
+    reader: UUID
+    view: RankingView
+    #: Everybody a standing block sits between the reader and, either way.
+    blocked: frozenset[UUID]
+
+    def sees(self, row: ListedRow) -> bool:
+        if row.player_id == self.reader:
+            return True
+        if row.player_id in self.blocked:
+            return False
+        return not (row.hidden and self.view.leaves_out_the_hidden)
 
 
 def kept_fresh(worked_out_at: Instant, now: Instant) -> bool:

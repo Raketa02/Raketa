@@ -48,6 +48,9 @@ from app.modules.player_profile.application.has_player_profile import HasPlayerP
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
+from app.modules.player_profile.application.set_ranking_visibility import (
+    SetRankingVisibility,
+)
 from app.modules.player_profile.application.set_reliability_minimum import (
     SetReliabilityMinimum,
 )
@@ -319,6 +322,19 @@ def get_set_reliability_minimum(
 
 SetReliabilityMinimumDep = Annotated[
     SetReliabilityMinimum, Depends(get_set_reliability_minimum)
+]
+
+
+def get_set_ranking_visibility(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SetRankingVisibility:
+    return SetRankingVisibility(profiles=profiles, uow=uow, clock=clock)
+
+
+SetRankingVisibilityDep = Annotated[
+    SetRankingVisibility, Depends(get_set_ranking_visibility)
 ]
 
 

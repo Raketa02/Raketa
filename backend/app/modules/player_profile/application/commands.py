@@ -13,6 +13,7 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
     PlayIntentSurface,
 )
+from app.modules.player_profile.domain.ranking_visibility import RankingVisibility
 
 
 @dataclass(frozen=True, slots=True)
@@ -247,3 +248,12 @@ class SetReliabilityMinimumCommand:
 
     player_id: UUID
     minimum: ReliabilityBand | None
+
+
+@dataclass(frozen=True, slots=True)
+class SetRankingVisibilityCommand:
+    """*Show me in General* on (``SHOWN``) or off (``HIDDEN``) —
+    ``docs/adr/0203`` §7, #772."""
+
+    player_id: UUID
+    visibility: RankingVisibility

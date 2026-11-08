@@ -26,11 +26,22 @@ from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/rankings", tags=["rankings"])
 
+#: A block is read live on every read (#772), and a read that cannot read the
+#: blocks fails rather than show a blocked pair each other's rows.
+_BLOCKS_UNREADABLE = {
+    "model": ErrorResponse,
+    "description": (
+        "`block_state_unavailable` — your blocks could not be read, so no list "
+        "is drawn. Retry the same request."
+    ),
+}
+
 
 @router.get(
     "/{sport}",
     response_model=RankingResponse,
     status_code=status.HTTP_200_OK,
+    responses={status.HTTP_503_SERVICE_UNAVAILABLE: _BLOCKS_UNREADABLE},
     summary="A sport's ranking",
     description=(
         "Your place card, the podium and the list, in one sport and view — "
@@ -65,6 +76,7 @@ async def read_ranking(
                 "page asked for in two places at once."
             ),
         },
+        status.HTTP_503_SERVICE_UNAVAILABLE: _BLOCKS_UNREADABLE,
     },
     summary="A page of a sport's General list",
     description=(

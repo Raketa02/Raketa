@@ -43,6 +43,7 @@ from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
     PhoneReading,
+    SetRankingVisibilityCommand,
     SetReliabilityMinimumCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
@@ -53,6 +54,9 @@ from app.modules.player_profile.application.declare_play_intent import (
 )
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
+)
+from app.modules.player_profile.application.set_ranking_visibility import (
+    SetRankingVisibility,
 )
 from app.modules.player_profile.application.set_reliability_minimum import (
     SetReliabilityMinimum,
@@ -76,6 +80,7 @@ from app.modules.player_profile.domain.events import (
     PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
+    RankingVisibilitySet,
     ReliabilityMinimumSet,
     SocialTagsChanged,
     WeeklyHoursSet,
@@ -99,6 +104,7 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntentSurface,
 )
 from app.modules.player_profile.domain.profile import MAX_PROFILE_PHOTOS
+from app.modules.player_profile.domain.ranking_visibility import RankingVisibility
 from app.modules.player_profile.infrastructure.event_sourced_play_intent_declaration_repository import (  # noqa: E501
     EventSourcedPlayIntentDeclarationRepository,
 )
@@ -238,6 +244,15 @@ class Harness:
         await SetReliabilityMinimum(
             profiles=self._profiles(), uow=self.uow, clock=self.clock
         ).execute(SetReliabilityMinimumCommand(player_id=player_id, minimum=minimum))
+
+    async def set_ranking_visibility(
+        self, visibility: RankingVisibility, *, player_id=PLAYER
+    ) -> None:
+        await SetRankingVisibility(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(
+            SetRankingVisibilityCommand(player_id=player_id, visibility=visibility)
+        )
 
     async def declare(
         self,
@@ -749,6 +764,58 @@ async def test_a_minimum_the_switch_does_not_offer_is_refused_before_the_store(
 async def test_a_filter_written_without_a_profile_is_refused(harness):
     with pytest.raises(PlayerProfileNotFound):
         await harness.set_reliability_minimum(ReliabilityBand.HIGH)
+
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# Show me in General (#772)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_profile_starts_shown_in_general(harness):
+    await harness.commit_profile()
+
+    assert (await harness.read()).profile.ranking_visibility is RankingVisibility.SHOWN
+
+
+async def test_hiding_from_general_is_its_own_event_and_showing_again_another(
+    harness,
+):
+    """*Show me in General* off, then on — each a new event on the profile's
+    stream (``docs/adr/0203`` §7), carrying the whole new value."""
+
+    await harness.commit_profile()
+    harness.forget_what_the_commit_released()
+
+    await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
+    hidden = (await harness.read()).profile.ranking_visibility
+    await harness.set_ranking_visibility(RankingVisibility.SHOWN)
+
+    first, second = harness.publisher.published
+    assert isinstance(first, RankingVisibilitySet) and first.visibility == "HIDDEN"
+    assert isinstance(second, RankingVisibilitySet) and second.visibility == "SHOWN"
+    assert first.player_id == PLAYER
+    assert hidden is RankingVisibility.HIDDEN
+    assert (await harness.read()).profile.ranking_visibility is RankingVisibility.SHOWN
+
+
+async def test_the_same_visibility_twice_appends_nothing(harness):
+    await harness.commit_profile()
+    harness.forget_what_the_commit_released()
+
+    await harness.set_ranking_visibility(RankingVisibility.SHOWN)
+    await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
+    await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
+
+    assert [type(event) for event in harness.publisher.published] == [
+        RankingVisibilitySet
+    ]
+
+
+async def test_a_visibility_written_without_a_profile_is_refused(harness):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
 
     assert harness.uow.commits == 0
 

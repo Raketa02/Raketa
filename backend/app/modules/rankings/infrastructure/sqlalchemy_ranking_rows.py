@@ -25,6 +25,14 @@ stored.results <= new.results``, so *never replaced by a row with fewer
 results* holds under two deliveries at once: Postgres locks the conflicting row
 and evaluates the condition against what the other committed. Both dialects the
 backend runs on speak the same clause, SQLite since 3.24.
+
+**The rows follow *Show me in General* from ``ranking_visibility``** (#772): a
+switch is kept per player by the same conditional upsert, on the profile
+version it was read at, so a delivery that read an older version takes
+nothing back; the pass joins it on the player, **a player with none shown**.
+Kept beside the rows rather than on them because a switch turned before a
+first result must hold when that result's delivery makes the row, and the two
+writes need never meet.
 """
 
 from __future__ import annotations
@@ -33,7 +41,7 @@ from collections.abc import Collection
 from typing import Final
 from uuid import UUID
 
-from sqlalchemy import Row, and_, case, func, literal, select
+from sqlalchemy import Boolean, Row, and_, case, false, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.stored_time import (
@@ -43,6 +51,7 @@ from app.infrastructure.database.stored_time import (
 from app.kernel import Instant, Sport
 from app.modules.rankings.domain.general_order import ListedAndThen
 from app.modules.rankings.domain.ranking import (
+    GeneralSwitch,
     LevelPoint,
     Outcome,
     RankingRow,
@@ -52,6 +61,7 @@ from app.modules.rankings.infrastructure.dialect_insert import insert_into
 from app.modules.rankings.infrastructure.ranking_model import (
     LevelPointORM,
     RankingRowORM,
+    RankingVisibilityORM,
 )
 
 #: The columns a newer fold rewrites — everything but the key.
@@ -101,6 +111,26 @@ class SqlAlchemyRankingRows:
         )
         return tuple(_row(stored) for stored in rows.all())
 
+    async def follow(self, switch: GeneralSwitch) -> None:
+        statement = insert_into(self._session, RankingVisibilityORM).values(
+            player_id=switch.player_id,
+            hidden=switch.hidden,
+            profile_version=switch.version,
+        )
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[RankingVisibilityORM.player_id],
+                set_={
+                    "hidden": statement.excluded.hidden,
+                    "profile_version": statement.excluded.profile_version,
+                },
+                where=(
+                    RankingVisibilityORM.profile_version
+                    < statement.excluded.profile_version
+                ),
+            )
+        )
+
     async def listed(
         self,
         sport: Sport,
@@ -113,8 +143,18 @@ class SqlAlchemyRankingRows:
         if among is not None and not among:
             return ()
         rows, points = RankingRowORM.__table__, LevelPointORM.__table__
+        switches = RankingVisibilityORM.__table__
         listed = (
-            select(*(rows.c[column] for column in _LISTED))
+            select(
+                *(rows.c[column] for column in _LISTED),
+                # No switch kept is a player shown, as every player starts.
+                func.coalesce(switches.c.hidden, false(), type_=Boolean).label(
+                    "hidden"
+                ),
+            )
+            .select_from(
+                rows.outerjoin(switches, switches.c.player_id == rows.c.player_id)
+            )
             .where(
                 rows.c.sport == sport.value,
                 rows.c.results >= at_least,
@@ -161,6 +201,7 @@ class SqlAlchemyRankingRows:
         read = await self._session.execute(
             select(
                 *(listed.c[column] for column in _LISTED),
+                listed.c.hidden,
                 *(numbered.c[column].label(f"then_{column}") for column in _POINT),
             )
             .select_from(
@@ -218,10 +259,12 @@ def _listed_and_then(sport: Sport, found: Row[tuple[object, ...]]) -> ListedAndT
         friends_entered_at=stored_instant(read["friends_entered_at"]),
         form=Outcome.of_marks(read["form"]),
     )
+    hidden = bool(read["hidden"])
     if read["then_event_id"] is None:
-        return ListedAndThen(row=row, then=None)
+        return ListedAndThen(row=row, then=None, hidden=hidden)
     return ListedAndThen(
         row=row,
+        hidden=hidden,
         then=LevelPoint(
             event_id=read["then_event_id"],
             player_id=read["then_player_id"],

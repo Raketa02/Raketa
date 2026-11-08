@@ -1,6 +1,15 @@
-"""The projection's two writers: **the move**, on every delivered
-``rating.moved_on_result``, and **the rebuild**, over every rating stream
-(``docs/adr/0203`` §10). Each writes the row and the level history together.
+"""The projection's three writers: **the move**, on every delivered
+``rating.moved_on_result``; **the switch**, on every delivered
+``player_profile.ranking_visibility_set`` (#772); and **the rebuild**, over
+every rating stream (``docs/adr/0203`` §10). The move and the rebuild write
+the row and the level history together.
+
+**The switch is read live, never off the event**: the follower asks the
+profile for its *Show me in General* and the version it stands at, and the
+rows follow it, a switch read at an older version never replacing a newer
+one — so two turns delivered in either order, or one delivered twice, leave
+the latest. It forgets the kept order of every sport the player has a row
+in, so the next read leaves them out, or puts them back.
 
 **Both fold the whole stream**, through the one ``row_of`` and the one
 ``points_of``. So a redelivery folds the same stream to the same row and the
@@ -31,8 +40,10 @@ from typing import final
 from app.application.events import DeliveryContext
 from app.application.ports import UnitOfWork
 from app.kernel import Sport
+from app.modules.player_profile.domain.events import RankingVisibilitySet
 from app.modules.rankings.domain.ports import (
     GeneralOrders,
+    GeneralSwitches,
     LevelHistory,
     RankingRows,
     RatingHistories,
@@ -73,6 +84,34 @@ class MoveTheRanking:
 
 
 @final
+class FollowTheSwitch:
+    """A player turned *Show me in General*, so their rows follow it — every
+    sport, one they have no row in yet included — and the kept order of each
+    sport they have a row in is forgotten."""
+
+    def __init__(
+        self,
+        *,
+        switches: GeneralSwitches,
+        rows: RankingRows,
+        orders: GeneralOrders,
+    ) -> None:
+        self._switches = switches
+        self._rows = rows
+        self._orders = orders
+
+    async def __call__(
+        self, event: RankingVisibilitySet, context: DeliveryContext
+    ) -> None:
+        switch = await self._switches.switch_of(event.player_id)
+        if switch is None:
+            return
+        await self._rows.follow(switch)
+        for row in await self._rows.of_player(event.player_id):
+            await self._orders.forget(row.sport)
+
+
+@final
 @dataclass(frozen=True, slots=True)
 class Rebuilt:
     #: Rating streams read.
@@ -81,14 +120,18 @@ class Rebuilt:
     rows: int
     #: Level-history points the store didn't hold yet.
     points: int
+    #: Profiles whose *Show me in General* the rows were made to follow.
+    switches: int
 
 
 @final
 class RebuildTheRankings:
     """Every row and every level-history point, folded from every rating
     stream the event store holds — so the players who played before the
-    ranking shipped are on it, and their chips read a real week. Running it
-    twice changes nothing."""
+    ranking shipped are on it, and their chips read a real week — **and every
+    profile's *Show me in General***, a player with no rating yet included
+    (#772), so a projection rebuilt from nothing never lists a hidden player,
+    now or after their first results. Running it twice changes nothing."""
 
     def __init__(
         self,
@@ -96,12 +139,14 @@ class RebuildTheRankings:
         histories: RatingHistories,
         rows: RankingRows,
         level_history: LevelHistory,
+        switches: GeneralSwitches,
         orders: GeneralOrders,
         uow: UnitOfWork,
     ) -> None:
         self._histories = histories
         self._rows = rows
         self._level_history = level_history
+        self._switches = switches
         self._orders = orders
         self._uow = uow
 
@@ -116,7 +161,12 @@ class RebuildTheRankings:
                 await self._rows.save(row)
                 written += 1
                 points += await self._level_history.append(points_of(history))
+        switches = await self._switches.every_switch()
+        for switch in switches:
+            await self._rows.follow(switch)
         await self._uow.commit()
         for sport in Sport:
             await self._orders.forget(sport)
-        return Rebuilt(ratings=ratings, rows=written, points=points)
+        return Rebuilt(
+            ratings=ratings, rows=written, points=points, switches=len(switches)
+        )

@@ -68,6 +68,7 @@ from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
     PlayerProfile,
 )
+from app.modules.player_profile.domain.ranking_visibility import RankingVisibility
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
@@ -707,6 +708,15 @@ class PlayerProfileReadResponse(BaseModel):
             "nothing for its absence to mean."
         ),
     )
+    ranking_visibility: RankingVisibility = Field(
+        ...,
+        description=(
+            "*Show me in General* (`docs/adr/0203` §7): `SHOWN`, on — every "
+            "profile starts with it, one committed before the switch existed "
+            "included — or `HIDDEN`. Always present. Written by "
+            "`PUT /players/me/ranking-visibility`."
+        ),
+    )
 
     @classmethod
     def from_domain(cls, surface: PlayerProfileSurface) -> "PlayerProfileReadResponse":
@@ -720,6 +730,7 @@ class PlayerProfileReadResponse(BaseModel):
                 for photo_id in profile.photo_ids
             ],
             "gender_preference": profile.gender_preference,
+            "ranking_visibility": profile.ranking_visibility,
         }
         if profile.intro is not None:
             # Omitted where nothing was written, never `""` (`docs/adr/0170`).
@@ -1001,5 +1012,19 @@ class SetReliabilityFilterRequest(BaseModel):
             "the deal, the deck, posts, *Seat open* and Fill in, the details. "
             "**New passes every minimum.** Yeses already given stand, and booked "
             "games never change."
+        ),
+    )
+
+
+class SetRankingVisibilityRequest(BaseModel):
+    """*Show me in General*, on or off (``docs/adr/0203`` §7, #772)."""
+
+    visibility: RankingVisibility = Field(
+        ...,
+        description=(
+            "`SHOWN` — on, which every profile starts with: you are listed in "
+            "General for everybody. `HIDDEN` — your row leaves everybody else's "
+            "General, your place kept and still counted in *of N*; you still "
+            "see it, and your friends still see you in Friends."
         ),
     )

@@ -17,10 +17,12 @@ publishes, wired by the composition root, each with a row in
 - ``SportLevels`` — whether the reader holds a level in a sport, read live from
   the rating;
 - ``ReadersFriends`` — the reader's friends now, from Friends' own friend list
-  (#771), which the Friends view is worked out over.
-
-Blocks both ways and *Show me in General* arrive with the ticket that reads
-them (#772).
+  (#771), which the Friends view is worked out over;
+- ``BlocksEitherWay`` — everybody a block stands between the reader and, either
+  way round, read live from the blocks (#772): their rows are left out of
+  each other's views;
+- ``GeneralSwitches`` — a player's *Show me in General*, read live off their
+  profile with the version it stands at (#772), which the projection follows.
 """
 
 from __future__ import annotations
@@ -37,7 +39,12 @@ from app.modules.rankings.domain.general_order import (
     ListedRow,
     OrderKey,
 )
-from app.modules.rankings.domain.ranking import LevelPoint, RankingRow, RatingHistory
+from app.modules.rankings.domain.ranking import (
+    GeneralSwitch,
+    LevelPoint,
+    RankingRow,
+    RatingHistory,
+)
 
 
 @runtime_checkable
@@ -59,6 +66,14 @@ class RankingRows(Protocol):
         """The player's rows, every sport they have a result in."""
         ...
 
+    async def follow(self, switch: GeneralSwitch) -> None:
+        """**The player's rows follow their *Show me in General*** (#772): the
+        switch is kept beside them, per player, so it holds in **every
+        sport**, one with no row yet included — a switch turned before a first
+        result holds when that result makes the row. **A switch read at an
+        older version never replaces a newer one.**"""
+        ...
+
     async def listed(
         self,
         sport: Sport,
@@ -76,7 +91,8 @@ class RankingRows(Protocol):
         where they stand now**, and has no point here. **One pass**, so the
         order and every chip are worked out from one reading (#770). With
         ``among``, only those players' rows — a reader and their friends
-        (#771)."""
+        (#771). **Each says whether its player is hidden from General**
+        (#772) — every row, whichever view reads it."""
         ...
 
 
@@ -158,6 +174,33 @@ class ReadersFriends(Protocol):
         nobody whose request is merely open either way. Read live, so a friend
         just added is in the next read, and one removed, or whose block's
         delivery ended the friendship, is not."""
+        ...
+
+
+@runtime_checkable
+class BlocksEitherWay(Protocol):
+    async def blocked_either_way(self, reader: UUID) -> frozenset[UUID]:
+        """**Everybody a standing block sits between the reader and, whichever
+        of them made it** — one flat set, so nothing here can tell which way
+        round — read live, so a block made a moment ago hides its rows on the
+        next read and a lifted one shows them again. **Raises rather than
+        answer an empty set it cannot stand behind**: an empty set would show
+        a blocked pair each other's rows."""
+        ...
+
+
+@runtime_checkable
+class GeneralSwitches(Protocol):
+    async def switch_of(self, player_id: UUID) -> GeneralSwitch | None:
+        """The player's *Show me in General* as their profile stands now, read
+        live, with the version it stands at — ``None`` for an id with no
+        profile."""
+        ...
+
+    async def every_switch(self) -> Sequence[GeneralSwitch]:
+        """Every profile's switch — **the rebuild's read**, one a player with
+        no rating yet included, so a projection rebuilt from nothing holds the
+        switch of everybody who could later be listed."""
         ...
 
 
