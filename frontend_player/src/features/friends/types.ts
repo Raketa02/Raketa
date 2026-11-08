@@ -29,6 +29,12 @@ export { FriendsTabs, type FriendsTabsProps } from './components/FriendsTabs';
 export { FriendsRow, type FriendsRowProps } from './components/FriendsRow';
 export type { GroupDoors } from './components/AddFriendsSheet';
 /**
+ * **The Add friends sheet on its own** — your groups and your friend link — for a surface that offers
+ * **Add friends** without the Friends page: Rankings' Friends cards (#777). The caller hands in the
+ * doors, as the shell does for the page, and draws it as a sibling of its own root.
+ */
+export { AddFriendsSheet, type AddFriendsSheetProps } from './components/AddFriendsSheet';
+/**
  * **The picker** (#757) — the frame's other body, from a group's Friends tab: every friend with
  * their Level in the group's sport, the picks the composer's. `useFriendsIn` is the same read, for
  * the faces the group's court draws once they are seated, so a face is the row it was picked from.

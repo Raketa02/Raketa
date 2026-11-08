@@ -6,11 +6,14 @@
  */
 
 import {
+  belowTheCard,
   joinPages,
   jumpPlace,
   openingSport,
   pillSports,
+  placeIn,
   podiumOf,
+  rankingViewFrom,
   type RankedRow,
 } from './ranking';
 
@@ -140,5 +143,58 @@ describe('the place the jump button names', () => {
     expect(jumpPlace({ state: 'NO_LEVEL', resultsToEnter: 5 })).toBeUndefined();
     expect(jumpPlace({ state: 'OFF_THE_LIST' })).toBeUndefined();
     expect(jumpPlace(undefined)).toBeUndefined();
+  });
+});
+
+describe('the view the phone remembers (#777)', () => {
+  // The screens §3: General the first time, and whatever was last looked at after that.
+  it('is the view saved', () => {
+    expect(rankingViewFrom('GENERAL')).toBe('GENERAL');
+    expect(rankingViewFrom('FRIENDS')).toBe('FRIENDS');
+  });
+
+  it('is General with nothing saved, or a value this build has never heard of', () => {
+    expect(rankingViewFrom(undefined)).toBe('GENERAL');
+    expect(rankingViewFrom('CITY')).toBe('GENERAL');
+    expect(rankingViewFrom('friends')).toBe('GENERAL');
+  });
+});
+
+describe('the place Home’s trophy shows (#777)', () => {
+  // The mechanics §8: the trophy's sport, in the view the reader last looked at.
+  it('is the place in the remembered view', () => {
+    expect(placeIn('GENERAL', { generalPlace: 7, friendsPlace: 4 })).toBe(7);
+    expect(placeIn('FRIENDS', { generalPlace: 7, friendsPlace: 4 })).toBe(4);
+  });
+
+  it('is none where the reader has no place in that view — never the other view’s', () => {
+    expect(placeIn('FRIENDS', { generalPlace: 7 })).toBeUndefined();
+    expect(placeIn('GENERAL', { friendsPlace: 4 })).toBeUndefined();
+  });
+});
+
+describe('what stands below the card (#777)', () => {
+  const placed = { place: 4, of: 9, level: 2.71 } as const;
+  const listed = { state: 'LISTED', ...placed, gapLine: { kind: 'top' } } as const;
+
+  it('is the table while anybody is listed', () => {
+    expect(belowTheCard({ card: listed, listed: 9 })).toBe('table');
+    // The reader's own not-listed card stands above the friends' table (Q7).
+    expect(
+      belowTheCard({ card: { state: 'NEEDS_RESULTS', results: 0, resultsToEnter: 1 }, listed: 3 }),
+    ).toBe('table');
+    expect(belowTheCard({ card: undefined, listed: 9 })).toBe('table');
+  });
+
+  it('is Nobody ranked where nobody is listed in the sport', () => {
+    expect(belowTheCard({ card: { state: 'NO_LEVEL', resultsToEnter: 5 }, listed: 0 })).toBe(
+      'nobodyRanked',
+    );
+  });
+
+  // The screens §4.6: with no friend listed the card is the page, whatever is counted.
+  it('is nothing when the Friends card is the page — just you, or none of your friends', () => {
+    expect(belowTheCard({ card: { state: 'JUST_YOU' }, listed: 1 })).toBe('nothing');
+    expect(belowTheCard({ card: { state: 'NO_FRIEND_LISTED' }, listed: 0 })).toBe('nothing');
   });
 });

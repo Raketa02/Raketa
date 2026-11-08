@@ -20,7 +20,7 @@ import type { SportPillWords } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Chip, GapLine, PlaceCard, PlayerAbove, PlayerBelow } from '../domain/ranking';
-import type { ChipKind } from '../domain/vocabulary';
+import type { ChipKind, RankingView } from '../domain/vocabulary';
 
 export const RANKINGS_COPY = {
   /** §30.2 */
@@ -33,6 +33,8 @@ export const RANKINGS_COPY = {
   topOfTheList: 'Top of the list',
   /** §30.4: the whole line, hidden from General — the switch beside it is #778's. */
   hidden: 'Hidden from General',
+  /** §30.6: under *Just you so far* and *None of your friends is ranked…* — opens §29.3's sheet. */
+  addFriends: 'Add friends',
   /** §30.7: the reader's own row, and their step on the podium. */
   you: 'You',
   /** The trophy's spoken name with no place, and the start of it with one. */
@@ -45,6 +47,12 @@ export const RANKINGS_COPY = {
   /** The jump button's hint (#776) — a call: §30.7 writes only what it reads. */
   jumpHint: 'Shows your row in the list',
 } as const;
+
+/** §30.2: the switch under the header, *General* · *Friends* (#777). */
+export const VIEW_WORDS: Readonly<Record<RankingView, string>> = {
+  GENERAL: 'General',
+  FRIENDS: 'Friends',
+};
 
 /**
  * **An ordinal** (§30's `{place}`): *1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 22nd, 23rd …
@@ -71,11 +79,20 @@ export function trophyPlace(place: number | undefined): string | undefined {
   return place === undefined ? undefined : `#${place}`;
 }
 
-/** The trophy, spoken — *Rankings, 7th in padel*, or *Rankings* with no place. */
-export function trophyLabel(sport: Sport, place: number | undefined): string {
+/** Where the trophy's place stands, spoken — the view it is counted in (#777). */
+const TROPHY_AMONG: Readonly<Record<RankingView, string>> = {
+  GENERAL: '',
+  FRIENDS: ' among your friends',
+};
+
+/**
+ * The trophy, spoken — *Rankings, 7th in padel*, *Rankings, 4th among your friends in padel*, or
+ * *Rankings* with no place.
+ */
+export function trophyLabel(sport: Sport, place: number | undefined, view: RankingView): string {
   return place === undefined
     ? RANKINGS_COPY.trophy
-    : `${RANKINGS_COPY.trophy}, ${ordinal(place)} in ${sportInLine(sport)}`;
+    : `${RANKINGS_COPY.trophy}, ${ordinal(place)}${TROPHY_AMONG[view]} in ${sportInLine(sport)}`;
 }
 
 /** §30.3: *of 13*. */
@@ -188,22 +205,32 @@ export function gapLineParts(line: GapLine): readonly LinePart[] {
   return parts.flatMap((part, at) => (at === 0 ? part : [DOT, ...part]));
 }
 
-/** The not-listed cards' line, General's (§30.5) — the cards that carry no place. */
+/** The not-listed cards' line (§30.5) — the cards that carry no place. */
 export type NotListedCard = Extract<
   PlaceCard,
   { readonly state: 'NEEDS_RESULTS' | 'NO_LEVEL' | 'OFF_THE_LIST' }
 >;
 
 /**
- * **A not-listed card's one line** (§30.5, General): *2 of 5 games — 3 more competitive padel games
- * put you on the list* (the singular with one to go, the count kept — a call recorded in §30.5);
- * *No squash level yet — get one, then 5 competitive games put you on the list*; *Off the list — no
- * competitive padel game in 90 days. Your next one puts you back.*
+ * **A not-listed card's one line** (§30.5), in the view's words — the rows §30.5 keys by view:
+ *
+ * - **General**: *2 of 5 games — 3 more competitive padel games put you on the list* (the singular
+ *   with one to go, the count kept — a call recorded in §30.5); *No squash level yet — get one, then 5
+ *   competitive games put you on the list*.
+ * - **Friends** (#777), which takes one result: *Not ranked in padel yet — your first confirmed
+ *   competitive game puts you on the list*; *No squash level yet — get one, then one competitive game
+ *   puts you on the list*.
+ * - **Both**: *Off the list — no competitive padel game in 90 days. Your next one puts you back.*
+ *
+ * Every count is the wire's.
  */
-export function notListedLine(card: NotListedCard, sport: Sport): string {
+export function notListedLine(card: NotListedCard, sport: Sport, view: RankingView): string {
   const inLine = sportInLine(sport);
   switch (card.state) {
     case 'NEEDS_RESULTS': {
+      if (view === 'FRIENDS') {
+        return `Not ranked in ${inLine} yet — your first confirmed competitive game puts you on the list`;
+      }
       const toGo = Math.max(card.resultsToEnter - card.results, 0);
       const more =
         toGo === 1
@@ -212,9 +239,9 @@ export function notListedLine(card: NotListedCard, sport: Sport): string {
       return `${card.results} of ${card.resultsToEnter} games — ${more}`;
     }
     case 'NO_LEVEL': {
-      // Friends' card asks for *one* game (§30.5), General's for 5: the count is the wire's.
+      // Friends' card asks for *one* game (§30.5), General's for the wire's count — 5.
       const then =
-        card.resultsToEnter === 1
+        view === 'FRIENDS'
           ? 'one competitive game puts you on the list'
           : `${card.resultsToEnter} competitive games put you on the list`;
       return `No ${inLine} level yet — get one, then ${then}`;
@@ -222,6 +249,20 @@ export function notListedLine(card: NotListedCard, sport: Sport): string {
     case 'OFF_THE_LIST':
       return `Off the list — no competitive ${inLine} game in 90 days. Your next one puts you back.`;
   }
+}
+
+/** **The Friends cards that are the page** (§30.6) — nobody but the reader is listed, or nobody. */
+export type FriendsCard = Extract<PlaceCard, { readonly state: 'JUST_YOU' | 'NO_FRIEND_LISTED' }>;
+
+/** §30.6, keyed by the card's state, so a state with no words fails to compile. */
+const FRIENDS_CARD_LINE: Readonly<Record<FriendsCard['state'], (sport: Sport) => string>> = {
+  JUST_YOU: () => 'Just you so far',
+  NO_FRIEND_LISTED: (sport) => `None of your friends is ranked in ${sportInLine(sport)} yet`,
+};
+
+/** §30.6: *Just you so far*, or *None of your friends is ranked in padel yet* — each with Add friends. */
+export function friendsCardLine(card: FriendsCard, sport: Sport): string {
+  return FRIENDS_CARD_LINE[card.state](sport);
 }
 
 /** §30.5: the coral button — *Get your squash level*. */

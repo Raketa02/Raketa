@@ -1,12 +1,13 @@
 /**
- * **The trophy on Home and the General page, walked through the real route tree**
- * ([#775](https://github.com/Raketa02/Raketa/issues/775), PRD #766;
- * [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md); the rankings
- * screens §1–§6), with only `fetch` faked.
+ * **The trophy on Home and the Rankings page, walked through the real route tree**
+ * ([#775](https://github.com/Raketa02/Raketa/issues/775)–[#777](https://github.com/Raketa02/Raketa/issues/777),
+ * PRD #766; [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md); the
+ * rankings screens §1–§6), with only `fetch` faked.
  *
  * Tomek is 7th of 13 in padel at 2,71: Karol just above at 2,75, Zofia just below at 2,69, Inés at the
  * top at 3,40. Places 4 and 5 are rows he can't see, so his list skips them. He has no squash level,
- * and nobody is ranked in badminton.
+ * and nobody is ranked in badminton. **Among his friends** (#777) he is 4th of 9 in padel, Ola just
+ * above and Kasia just below; no friend of his is listed in any other sport.
  *
  * Every assertion is about what the player can see, or what left the device.
  */
@@ -17,7 +18,7 @@ import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
-import { savePhonePreference } from '@/shared/lib/preferences';
+import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
 import {
@@ -29,6 +30,7 @@ import {
   stubGate,
   stubHome,
   stubOwnRecord,
+  stubMyGroups,
   stubProfileOptions,
   stubProfileSurface,
   stubRunsInProgress,
@@ -47,6 +49,8 @@ import {
 const WALK_TIMEOUT = 30_000;
 
 const rankingPath = (sport: Wire['Sport']) => `/api/v1/rankings/${sport}`;
+/** The Add friends sheet's groups (#777). */
+const FRIENDS_GROUPS_PATH = '/api/v1/friends/groups';
 const recordPath = (playerId: string) => `/api/v1/players/${playerId}/record`;
 const ASSESSMENTS_PATH = '/api/v1/assessments';
 const SQUASH_RUN = '6f708192-a3b4-4c5d-8e6f-708192a3b775';
@@ -175,6 +179,79 @@ const BADMINTON = (): Wire['RankingResponse'] =>
   });
 
 // ---------------------------------------------------------------------------
+// Among his friends (#777)
+// ---------------------------------------------------------------------------
+
+function friend(
+  place: number,
+  nickname: string,
+  level: number,
+  over: Partial<Wire['RankedRowSchema']> = {},
+): Wire['RankedRowSchema'] {
+  return ranked(place, nickname, level, {
+    player_id: `f0000000-0000-4000-8000-0000000777${String(place).padStart(2, '0')}`,
+    ...over,
+  });
+}
+
+const ANIA = friend(1, 'Ania', 3.2, { chip: { kind: 'UP', places: 1 } });
+const BARTEK = friend(2, 'Bartek', 3.0);
+const OLA = friend(3, 'Ola', 2.8);
+const TOMEK_AMONG_FRIENDS = { ...TOMEK, place: 4, chip: { kind: 'SAME' as const, places: null } };
+const KASIA = friend(5, 'Kasia', 2.6);
+const FRIENDS_ROWS = [
+  ANIA,
+  BARTEK,
+  OLA,
+  TOMEK_AMONG_FRIENDS,
+  KASIA,
+  friend(6, 'Wojtek', 2.5),
+  friend(7, 'Ela', 2.4),
+  friend(8, 'Jan', 2.3),
+  friend(9, 'Iza', 2.1),
+];
+/** His friends without him — the table under a card that is not his place. */
+const ONLY_FRIENDS = FRIENDS_ROWS.filter((row) => !row.is_you);
+
+/** 4th of 9 among his friends: the line names friends, never the strangers between them. */
+const FRIENDS_CARD = listedCard({
+  place: 4,
+  of: 9,
+  results_to_enter: 1,
+  chip: { kind: 'SAME', places: null },
+  gap_line: {
+    above: { nickname: 'Ola', gap: 0.09, wins: 2, tied: false },
+    below: { nickname: 'Kasia', gap: 0.11 },
+    top_of_the_list: false,
+  },
+});
+
+function friends(
+  sport: Wire['Sport'],
+  over: Partial<Wire['RankingResponse']> = {},
+): Wire['RankingResponse'] {
+  return {
+    sport,
+    view: 'FRIENDS',
+    card: FRIENDS_CARD,
+    listed: 9,
+    podium: [ANIA, BARTEK, OLA],
+    rows: FRIENDS_ROWS,
+    next: null,
+    ...over,
+  };
+}
+
+/** No friend listed, nor the reader: the card is the page, with nothing below (the screens §4.6). */
+const NO_FRIEND = (sport: Wire['Sport']): Wire['RankingResponse'] =>
+  friends(sport, {
+    card: notListed('NO_FRIEND_LISTED', { results_to_enter: 1 }),
+    listed: 0,
+    podium: [],
+    rows: [],
+  });
+
+// ---------------------------------------------------------------------------
 // The server
 // ---------------------------------------------------------------------------
 
@@ -183,14 +260,16 @@ let transport: Transport;
 interface RankingServer {
   /** Answer one sport's General read with this, from now on. */
   readonly answer: (sport: Wire['Sport'], read: Wire['RankingResponse']) => void;
+  /** Answer one sport's Friends read with this, from now on (#777). */
+  readonly answerFriends: (sport: Wire['Sport'], read: Wire['RankingResponse']) => void;
 }
 
 /**
  * **Tomek, set up long ago and rated in padel and tennis**, with Home's trophy as given, every sport's
- * General as above, and the records a row opens.
+ * General and Friends as above, and the records a row opens.
  */
 function rankingServer({
-  trophy = { sport: 'PADEL', general_place: 7, friends_place: null },
+  trophy = { sport: 'PADEL', general_place: 7, friends_place: 4 },
   ratings = [rating('PADEL', 2.71), rating('TENNIS', 3.1)],
 }: {
   readonly trophy?: Wire['HomeRankingSchema'] | null;
@@ -202,6 +281,10 @@ function rankingServer({
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
   stubHome(transport, { ranking: trophy });
   stubOwnRecord(transport, OWN_RECORD_SERVED);
+  // The Add friends sheet's groups (#777): none, unless a walk says otherwise.
+  transport.on('GET', FRIENDS_GROUPS_PATH, () =>
+    json<Wire['GroupsToAddFromResponse']>({ groups: [] }),
+  );
 
   const reads = new Map<Wire['Sport'], Wire['RankingResponse']>([
     ['PADEL', general('PADEL')],
@@ -209,8 +292,16 @@ function rankingServer({
     ['SQUASH', SQUASH()],
     ['BADMINTON', BADMINTON()],
   ]);
+  const friendsReads = new Map<Wire['Sport'], Wire['RankingResponse']>([
+    ['PADEL', friends('PADEL')],
+    ['TENNIS', NO_FRIEND('TENNIS')],
+    ['SQUASH', NO_FRIEND('SQUASH')],
+    ['BADMINTON', NO_FRIEND('BADMINTON')],
+  ]);
   for (const sport of ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'] as const) {
-    transport.on('GET', rankingPath(sport), () => json(reads.get(sport)!));
+    transport.on('GET', rankingPath(sport), (request) =>
+      json(request.path.includes('view=FRIENDS') ? friendsReads.get(sport)! : reads.get(sport)!),
+    );
   }
 
   for (const row of PADEL_ROWS.filter((one) => !one.is_you)) {
@@ -228,7 +319,10 @@ function rankingServer({
     );
   }
 
-  return { answer: (sport, read) => reads.set(sport, read) };
+  return {
+    answer: (sport, read) => reads.set(sport, read),
+    answerFriends: (sport, read) => friendsReads.set(sport, read),
+  };
 }
 
 beforeEach(async () => {
@@ -250,6 +344,8 @@ afterEach(async () => {
 
 const trophy = () => screen.getByTestId('ranking-trophy');
 const rankingReads = (sport: Wire['Sport']) => transport.requestsTo('GET', rankingPath(sport));
+const viewReads = (sport: Wire['Sport'], view: Wire['RankingView']) =>
+  rankingReads(sport).filter((request) => request.url.includes(`view=${view}`));
 
 /** Home, then the trophy, then the page for this sport. */
 async function openRankings(sport: Wire['Sport'] = 'PADEL') {
@@ -1231,5 +1327,311 @@ describe('the You · 212th button (#776)', () => {
     await waitFor(() => expect(rankingReads('PADEL')).toHaveLength(2));
     expect(drawnPlaces()).toEqual(placesFrom(210, 214));
     expect(pageRefresh().props.refreshing).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// General | Friends, and the view the phone remembers (#777)
+// ---------------------------------------------------------------------------
+
+const viewSegment = (view: 'General' | 'Friends', selected?: boolean) =>
+  screen.getByRole('button', { name: view, ...(selected === undefined ? {} : { selected }) });
+
+/** Rankings, opened on Friends — the view the phone remembers from an earlier visit. */
+async function openFriends(sport: Wire['Sport'] = 'PADEL') {
+  await savePhonePreference(GATE_USER.id, 'rankingView', 'FRIENDS');
+  await openRankings(sport);
+}
+
+describe('the General | Friends switch (#777)', () => {
+  it('opens on General the first time; Friends reads the page again for the view, and is remembered', async () => {
+    rankingServer();
+    await openRankings();
+    await rowDrawn(KAROL);
+    expect(viewSegment('General', true)).toBeTruthy();
+    expect(viewSegment('Friends', false)).toBeTruthy();
+
+    fireEvent.press(viewSegment('Friends'));
+
+    // Everything below the switch is the view's own: his Friends place, its line, its table.
+    // (The choice reaches the page on the cache's next tick, so wait for the place, not the card.)
+    await screen.findByText('4th');
+    const card = within(screen.getByTestId('place-card'));
+    expect(card.getByText('4th')).toBeTruthy();
+    expect(card.getByText('of 9')).toBeTruthy();
+    expect(said(screen.getByTestId('gap-line'))).toBe(
+      '0,09 behind Ola · about 2 wins close it · Kasia is 0,11 behind you',
+    );
+    expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(1);
+    expect(viewSegment('Friends', true)).toBeTruthy();
+    expect(screen.queryByTestId(`ranked-row-${KAROL.player_id}`)).toBeNull();
+    expect(within(screen.getByTestId('podium-first')).getByText('Ania')).toBeTruthy();
+    // Kept on the phone, for this account.
+    await waitFor(async () =>
+      expect(await readPhonePreference(GATE_USER.id, 'rankingView')).toBe('FRIENDS'),
+    );
+
+    fireEvent.press(viewSegment('General'));
+
+    expect(await screen.findByText('7th')).toBeTruthy();
+    expect(await rowDrawn(KAROL)).toBeTruthy();
+    // Read again for the view, however lately it was read (the screens §3).
+    await waitFor(() => expect(viewReads('PADEL', 'GENERAL')).toHaveLength(2));
+    await waitFor(async () =>
+      expect(await readPhonePreference(GATE_USER.id, 'rankingView')).toBe('GENERAL'),
+    );
+  });
+
+  it('a sport switched on Friends is read in Friends', async () => {
+    rankingServer();
+    await openFriends();
+    await screen.findByText('4th');
+
+    unfoldThePill('Padel');
+    fireEvent.press(
+      within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Tennis' }),
+    );
+
+    await waitFor(() => expect(viewReads('TENNIS', 'FRIENDS')).toHaveLength(1));
+    expect(viewReads('TENNIS', 'GENERAL')).toHaveLength(0);
+    expect(await screen.findByText('None of your friends is ranked in tennis yet')).toBeTruthy();
+  });
+
+  it('opens next time on the view last looked at, reading nothing for the other', async () => {
+    rankingServer();
+    await openFriends();
+
+    expect(await screen.findByText('4th')).toBeTruthy();
+    expect(viewSegment('Friends', true)).toBeTruthy();
+    expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(1);
+    expect(viewReads('PADEL', 'GENERAL')).toHaveLength(0);
+  });
+});
+
+describe('Home’s trophy follows the view (#777)', () => {
+  it('reads the Friends place once Friends was last looked at, and opens on Friends', async () => {
+    rankingServer();
+    await openRankings();
+    await screen.findByText('7th');
+    fireEvent.press(viewSegment('Friends'));
+    await screen.findByText('4th');
+
+    fireEvent.press(screen.getByLabelText('Back to Home'));
+    await waitFor(() => expect(screen).toHavePathname('/'));
+
+    await waitFor(() => expect(within(trophy()).getByText('#4')).toBeTruthy());
+    expect(trophy().props.accessibilityLabel).toBe('Rankings, 4th among your friends in padel');
+
+    fireEvent.press(trophy());
+
+    await waitFor(() => expect(screen).toHavePathname('/rankings'));
+    expect(await screen.findByText('4th')).toBeTruthy();
+    expect(viewSegment('Friends', true)).toBeTruthy();
+  });
+
+  it('reads the Friends place from a launch, the view kept on the phone', async () => {
+    rankingServer();
+    await savePhonePreference(GATE_USER.id, 'rankingView', 'FRIENDS');
+    await launchSignedIn();
+
+    await waitFor(() => expect(within(trophy()).getByText('#4')).toBeTruthy());
+    expect(within(trophy()).queryByText('#7')).toBeNull();
+  });
+
+  it('draws no number with no Friends place, and still opens Rankings on Friends', async () => {
+    rankingServer({ trophy: { sport: 'PADEL', general_place: 7, friends_place: null } });
+    await savePhonePreference(GATE_USER.id, 'rankingView', 'FRIENDS');
+    await launchSignedIn();
+
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/home').length).toBe(1));
+    // General's #7 is not the Friends place: nothing rather than the other view's number.
+    expect(within(trophy()).queryByText(/^#/)).toBeNull();
+    expect(trophy().props.accessibilityLabel).toBe('Rankings');
+
+    fireEvent.press(trophy());
+
+    await waitFor(() => expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(1));
+    expect(viewReads('PADEL', 'GENERAL')).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The Friends view (#777; the screens §4.6)
+// ---------------------------------------------------------------------------
+
+const OGRODY: Wire['MyGroupSchema'] = {
+  id: 'a0000000-0000-4000-8000-000000000777',
+  kind: 'OFFICIAL',
+  name: 'Ogrody open play',
+  monogram: { letters: 'Oo', colour: 2 },
+  sports: ['PADEL'],
+  member_count: 8,
+  home_club: { id: 'c0000000-0000-4000-8000-000000000001', name: 'Ogrody 33' },
+};
+
+describe('the Friends view (#777)', () => {
+  it('listed: the whole table, its podium, rows and chips as in General, his own row You', async () => {
+    rankingServer();
+    await openFriends();
+    await rowDrawn(KASIA);
+
+    expect(drawnPlaces()).toEqual(placesFrom(1, 9));
+    expect(within(screen.getByTestId('podium-second')).getByText('Bartek')).toBeTruthy();
+    expect(within(screen.getByTestId('podium-third')).getByText('Ola')).toBeTruthy();
+    expect(within(rowOf(TOMEK_AMONG_FRIENDS)).getByText('You')).toBeTruthy();
+    expect(within(rowOf(ANIA)).getByTestId('rank-chip-UP', HIDDEN_TOO)).toBeTruthy();
+    // Whole, never paged: neither end asks for anything.
+    fireEvent(theList(), 'endReached');
+    fireEvent(theList(), 'startReached');
+    await act(() => jest.advanceTimersByTimeAsync(1_000));
+    expect(transport.requestsTo('GET', rowsPath('PADEL'))).toHaveLength(0);
+  });
+
+  describe('the You · 4th button', () => {
+    let centring: jest.SpyInstance;
+    beforeEach(() => {
+      centring = jest.spyOn(FlatList.prototype, 'scrollToIndex');
+    });
+    afterEach(() => centring.mockRestore());
+
+    it('shows while his row is off screen, and a tap scrolls to it, reading nothing', async () => {
+      rankingServer();
+      await openFriends();
+      await rowDrawn(KASIA);
+
+      reportOnScreen(ANIA, BARTEK);
+      fireEvent.press(screen.getByRole('button', { name: 'You · 4th' }));
+
+      expect(centring).toHaveBeenCalledWith({ index: 3, viewPosition: 0.5, animated: true });
+      expect(transport.requestsTo('GET', rowsPath('PADEL'))).toHaveLength(0);
+      expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(1);
+
+      reportOnScreen(OLA, TOMEK_AMONG_FRIENDS, KASIA);
+      expect(jumpButton('4th')).toBeNull();
+    });
+  });
+
+  it.each<[string, Wire['RankingResponse'], string]>([
+    [
+      'just you so far',
+      friends('PADEL', {
+        card: notListed('JUST_YOU', { results_to_enter: 1 }),
+        listed: 1,
+        podium: [],
+        rows: [],
+      }),
+      'Just you so far',
+    ],
+    [
+      'none of his friends ranked',
+      NO_FRIEND('PADEL'),
+      'None of your friends is ranked in padel yet',
+    ],
+  ])('%s: the line, and nothing below; Add friends opens the sheet', async (_case, read, line) => {
+    const server = rankingServer();
+    server.answerFriends('PADEL', read);
+    await openFriends();
+
+    expect(said(await screen.findByTestId('friends-card-line'))).toBe(line);
+    expect(screen.queryByTestId('place-card')).toBeNull();
+    expect(screen.queryByTestId('podium')).toBeNull();
+    expect(screen.queryByTestId('nobody-ranked')).toBeNull();
+    expect(listedRows()).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /^You · / })).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Add friends' }));
+
+    expect(await screen.findByRole('header', { name: 'Add friends' })).toBeTruthy();
+  });
+
+  it('Add friends opens the Add friends sheet: your groups, and your friend link', async () => {
+    const server = rankingServer();
+    server.answerFriends('PADEL', NO_FRIEND('PADEL'));
+    stubMyGroups(transport, [OGRODY]);
+    transport.on('GET', FRIENDS_GROUPS_PATH, () =>
+      json<Wire['GroupsToAddFromResponse']>({
+        groups: [{ group_id: OGRODY.id, name: OGRODY.name, member_count: 8, to_add: 2 }],
+      }),
+    );
+    await openFriends();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Add friends' }));
+
+    expect(await screen.findByRole('header', { name: 'Add friends' })).toBeTruthy();
+    expect(await screen.findByText('8 members · 2 to add')).toBeTruthy();
+    expect(await screen.findByText('raketa.app/f/tk4m9q2z')).toBeTruthy();
+    // A group opens its Members, the sheet closing first.
+    fireEvent.press(screen.getByTestId(`add-from-${OGRODY.id}`));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${OGRODY.id}/members`));
+  });
+
+  it.each<[string, Wire['PlaceCardSchema'], string]>([
+    [
+      'not ranked yet',
+      notListed('NEEDS_RESULTS', { results: 0, results_to_enter: 1 }),
+      'Not ranked in padel yet — your first confirmed competitive game puts you on the list',
+    ],
+    [
+      'off the list',
+      notListed('OFF_THE_LIST', { results: 12, results_to_enter: 1 }),
+      'Off the list — no competitive padel game in 90 days. Your next one puts you back.',
+    ],
+  ])('%s: his card above his friends’ podium and table', async (_case, card, line) => {
+    const server = rankingServer();
+    server.answerFriends(
+      'PADEL',
+      friends('PADEL', { card, listed: 8, rows: ONLY_FRIENDS, podium: [ANIA, BARTEK, OLA] }),
+    );
+    await openFriends();
+
+    expect(said(await screen.findByTestId('not-listed-line'))).toBe(line);
+    expect(screen.queryByTestId('place-card')).toBeNull();
+    expect(screen.getByTestId('podium')).toBeTruthy();
+    await rowDrawn(KASIA);
+    expect(listedRows()).toHaveLength(8);
+    expect(screen.queryByRole('button', { name: /^You · / })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add friends' })).toBeNull();
+  });
+
+  it('no level: one competitive game after a level, with Get your squash level, above the table', async () => {
+    const server = rankingServer();
+    const squashFriends = [friend(1, 'Ania', 2.9), friend(2, 'Ola', 2.5)];
+    server.answerFriends(
+      'SQUASH',
+      friends('SQUASH', {
+        card: notListed('NO_LEVEL', { results_to_enter: 1 }),
+        listed: 2,
+        podium: [],
+        rows: squashFriends,
+      }),
+    );
+    await openFriends();
+    await screen.findByText('4th');
+
+    unfoldThePill('Padel');
+    fireEvent.press(
+      within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Squash' }),
+    );
+
+    expect(said(await screen.findByTestId('not-listed-line'))).toBe(
+      'No squash level yet — get one, then one competitive game puts you on the list',
+    );
+    expect(screen.getByRole('button', { name: 'Get your squash level' })).toBeTruthy();
+    expect(await screen.findAllByTestId(/^ranked-row-/)).toHaveLength(2);
+  });
+
+  it('reads Friends again on a pull', async () => {
+    const server = rankingServer();
+    await openFriends();
+    await screen.findByText('4th');
+    server.answerFriends('PADEL', friends('PADEL', { card: { ...FRIENDS_CARD, place: 3 } }));
+
+    await act(async () => {
+      fireEvent(pageRefresh(), 'refresh');
+    });
+
+    await waitFor(() => expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(2));
+    expect(await screen.findByText('3rd')).toBeTruthy();
+    expect(viewReads('PADEL', 'GENERAL')).toHaveLength(0);
   });
 });

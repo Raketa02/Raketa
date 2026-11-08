@@ -14,12 +14,13 @@
  *   never blanks the page. Each press reads it afresh, from the reader's place as it stands.
  *
  * The card and the podium are always the main read's: around the reader the page still knows the
- * reader's place, and draws them above the rows once the window reaches the top of the list.
+ * reader's place, and draws them above the rows once the window reaches the top of the list. What it
+ * hands the page is `RankingRead`, the shape the Friends table hands it too (#777).
  *
  * **The app's defaults, chosen** (architecture Part 7): a place moves when a result settles anywhere
  * in Raketa and the server keeps a sport's order for at most a minute (the rankings mechanics §15),
- * so the moderate class's 30 seconds is fresh enough, and opening the page or foregrounding reads it
- * again. **A read again is every page drawn**, one after another, each below the fresh one before
+ * so the moderate class's 30 seconds is fresh enough while the page is up, foregrounding reads it
+ * again, and **opening it always does** (the screens §2–§3: switching sport or view re-reads the page). **A read again is every page drawn**, one after another, each below the fresh one before
  * it — the query's own refetch, so the window stays whole; a reader deep in the list pays a page a
  * round trip for it, which is what keeps the rows on screen agreeing with each other.
  *
@@ -35,51 +36,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { joinPages, jumpPlace, type PageAt, type RankedRow, type Ranking } from '../domain/ranking';
+import { joinPages, jumpPlace, type PageAt } from '../domain/ranking';
 import { readGeneralPage, type GeneralRead } from '../use-cases/readGeneralPage';
 
 import { rankingKeys } from './rankingKeys';
-
-/** A page of the list that could not be read — said where it was asked for, with its Try again. */
-export interface PageFailure {
-  readonly error: AppError;
-  readonly retry: () => void;
-}
-
-/** **The jump** — the reader's place, while they are listed and shown in General. */
-export interface Jump {
-  readonly place: number;
-  /** Read the page around the reader — for a row the list has not read yet. */
-  readonly toMe: () => void;
-  readonly failure: PageFailure | undefined;
-}
-
-/** Which window of the list is drawn — a new one is a new list, centred on the reader. */
-export type GeneralWindow = 'fromTheTop' | 'aroundMe';
-
-export interface GeneralState {
-  /** The main read — the card, the podium, how many are listed. `undefined` until it lands. */
-  readonly ranking: Ranking | undefined;
-  /** The main read's own failure, while there is nothing to draw. */
-  readonly error: AppError | null;
-  /** The main read is waiting for a connection. */
-  readonly paused: boolean;
-  readonly window: GeneralWindow;
-  /** The rows drawn, best first. */
-  readonly rows: readonly RankedRow[];
-  /** The rows start at place 1 — the card and the podium stand above them. */
-  readonly atTheTop: boolean;
-  readonly loadEarlier: () => void;
-  readonly loadLater: () => void;
-  /** The page above, and the page below, refused. */
-  readonly earlierFailure: PageFailure | undefined;
-  readonly laterFailure: PageFailure | undefined;
-  /** Absent while the reader isn't listed, or is hidden: no button. */
-  readonly jump: Jump | undefined;
-  /** A pull: everything drawn, read again. Settles once every read has landed, refused or not. */
-  readonly reread: () => Promise<unknown>;
-  readonly retry: () => void;
-}
+import type { ListWindow, RankingRead } from './rankingRead';
 
 type Pages = InfiniteData<GeneralRead, PageAt>;
 
@@ -88,7 +49,7 @@ const below = (page: GeneralRead): PageAt | undefined =>
 const above = (page: GeneralRead): PageAt | undefined =>
   page.previous === undefined ? undefined : { at: 'before', cursor: page.previous };
 
-export function useGeneral(sport: Sport): GeneralState {
+export function useGeneral(sport: Sport): RankingRead {
   const queryClient = useQueryClient();
   const [jumped, setJumped] = useState(false);
   const read = ({ pageParam, signal }: { pageParam: PageAt; signal: AbortSignal }) =>
@@ -99,6 +60,8 @@ export function useGeneral(sport: Sport): GeneralState {
     queryFn: read,
     initialPageParam: { at: 'top' },
     getNextPageParam: below,
+    // Opening General — the page, another sport, or the switch back from Friends — always reads it.
+    refetchOnMount: 'always',
   });
 
   const aroundMe = useInfiniteQuery<GeneralRead, AppError, Pages, readonly unknown[], PageAt>({
@@ -110,7 +73,7 @@ export function useGeneral(sport: Sport): GeneralState {
     enabled: jumped,
   });
 
-  const drawn: GeneralWindow = jumped && aroundMe.data !== undefined ? 'aroundMe' : 'fromTheTop';
+  const drawn: ListWindow = jumped && aroundMe.data !== undefined ? 'aroundMe' : 'fromTheTop';
   const shown = drawn === 'aroundMe' ? aroundMe : top;
   const pages = shown.data?.pages ?? [];
   // The page the window read first — the reader's own after a jump, until a pull reads them all.

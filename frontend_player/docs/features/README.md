@@ -38,7 +38,7 @@ is referenced from the other by a sentence, not copied.
 | [`proposals.md`](proposals.md)               | A group's Games deck and details; Games & money; the fill; Home's games; Fill in; posting      |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step that ends setting up, the commit                            |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, reliability in points, counts and filter, what opponents said   |
-| [`rankings.md`](rankings.md)                 | Home's trophy, the Rankings page: the sport pill, the place card, the podium and the list      |
+| [`rankings.md`](rankings.md)                 | Home's trophy, the Rankings page: the sport pill, General and Friends, the card, podium, list  |
 | [`shell.md`](shell.md)                       | Three tabs over one stack, the reset, Home, the bar standing down                              |
 | [`sportsmanship.md`](sportsmanship.md)       | The star card at the foot of a booked game's result screen                                     |
 

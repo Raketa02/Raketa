@@ -15,9 +15,10 @@
  * session ended — a tap on *Sign out*, or the server refusing the credentials — because the store
  * cannot tell *me again* from *somebody else*.
  *
- * **Why `shared/lib` and not a feature.** Four features each own one value (the shell the Play
- * segment, groups the last sport, auth the last profile, and proposals the opened games), and the
- * sign-out sequence in `shared/lib/auth` has to empty it — `shared/` may never import a feature.
+ * **Why `shared/lib` and not a feature.** Five features each own their values (the shell the Play
+ * segment, groups the last sport, auth the last profile, proposals the opened games, and rankings
+ * the view), and the sign-out sequence in `shared/lib/auth` has to empty it — `shared/` may never
+ * import a feature.
  *
  * **Why AsyncStorage.** Not the keychain: that is the credentials store, and one module owning it
  * is what keeps token lifetime auditable (ADR-0008). Not the server: Play would wait on a round
@@ -49,9 +50,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * account and forgotten at sign-out. **That record is owed, from a root session** — or the product
  * owner's ruling that *new* lives elsewhere — and until it exists this value stands outside the
  * table ADR-0188 §2 accepted.
+ *
+ * **And the Rankings view** ([#777](https://github.com/Raketa02/Raketa/issues/777)), *General* or
+ * *Friends* — the view last looked at on the Rankings page, which Home's trophy reads too. It is the
+ * per-account value [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
+ * adds to ADR-0188's table, so its record exists; per account and forgotten at sign-out like the rest.
  */
 export type PhonePreference =
-  'playSegment' | 'lastSport' | 'lastProfile' | 'openedGames' | 'dismissedGames';
+  'playSegment' | 'lastSport' | 'lastProfile' | 'openedGames' | 'dismissedGames' | 'rankingView';
 
 /** Every key this module writes starts with this, and nothing else's does. */
 const PREFIX = 'raketa.phone-preferences.';

@@ -9,9 +9,11 @@
  * - **Not listed** — a light card in the dark card's place, one line: *2 of 5 games — …*, *Off the
  *   list — …*, or *No squash level yet — …* with **Get your squash level**, which starts that sport's
  *   questionnaire and returns to Rankings on this sport (§4.3, §4.4).
- *
- * `JUST_YOU` and `NO_FRIEND_LISTED` are Friends' (#777), which this page does not read yet: they draw
- * nothing here.
+ * - **Friends, when the card is the page** (§4.6, #777) — a light card: *Just you so far*, or *None
+ *   of your friends is ranked in padel yet*, each with **Add friends**, which opens `friends`' own Add
+ *   friends sheet (the page holds it, and hears the press). In Friends the not-listed cards read their
+ *   view's words — *Not ranked in padel yet — …*, and one game after a level — and stand above the
+ *   friends' table.
  *
  * **Volt is the place's**, as a fill anywhere and a stroke only on dark: here it is text on `night`,
  * the confidence ring's own ground (13,96:1 is ink on volt; volt on night is the ring's pair). The
@@ -27,21 +29,33 @@ import { Button, Card, DarkCard, Note, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { GapLine, PlaceCard as ReaderCard, Placed } from '../domain/ranking';
+import type { RankingView } from '../domain/vocabulary';
 
 import { RankChip } from './RankChip';
 import {
   RANKINGS_COPY,
   cardChipWords,
+  friendsCardLine,
   gapLineParts,
   getYourLevelLabel,
   notListedLine,
   ofListed,
   ordinal,
   placeCardSpoken,
+  type FriendsCard,
   type NotListedCard,
 } from './rankingsCopy';
 
-export function PlaceCard({ card, sport }: { readonly card: ReaderCard; readonly sport: Sport }) {
+export interface PlaceCardProps {
+  readonly card: ReaderCard;
+  readonly sport: Sport;
+  /** The view the card is in — a not-listed card says its view's words (§30.5). */
+  readonly view: RankingView;
+  /** **Add friends** was pressed, on a Friends card that is the page — the page opens the sheet. */
+  readonly onAddFriends: () => void;
+}
+
+export function PlaceCard({ card, sport, view, onAddFriends }: PlaceCardProps) {
   switch (card.state) {
     case 'LISTED':
       return <PlacedCard placed={card} below={<GapLineText line={card.gapLine} />} />;
@@ -50,14 +64,13 @@ export function PlaceCard({ card, sport }: { readonly card: ReaderCard; readonly
         <PlacedCard placed={card} below={<Text style={s.line}>{RANKINGS_COPY.hidden}</Text>} />
       );
     case 'NO_LEVEL':
-      return <NoLevelCard card={card} sport={sport} />;
+      return <NoLevelCard card={card} sport={sport} view={view} />;
     case 'NEEDS_RESULTS':
     case 'OFF_THE_LIST':
-      return <NotListed card={card} sport={sport} />;
+      return <NotListed card={card} sport={sport} view={view} />;
     case 'JUST_YOU':
     case 'NO_FRIEND_LISTED':
-      // Friends' (#777): never served to General, which is all this page reads.
-      return null;
+      return <AddFriendsCard card={card} sport={sport} onAddFriends={onAddFriends} />;
   }
 }
 
@@ -123,11 +136,19 @@ function GapLineText({ line }: { readonly line: GapLine }) {
 }
 
 /** §4.3: a light card, one line, no button. */
-function NotListed({ card, sport }: { readonly card: NotListedCard; readonly sport: Sport }) {
+function NotListed({
+  card,
+  sport,
+  view,
+}: {
+  readonly card: NotListedCard;
+  readonly sport: Sport;
+  readonly view: RankingView;
+}) {
   return (
     <Card>
       <Text testID="not-listed-line" style={s.notListed}>
-        {notListedLine(card, sport)}
+        {notListedLine(card, sport, view)}
       </Text>
     </Card>
   );
@@ -140,16 +161,18 @@ function NotListed({ card, sport }: { readonly card: NotListedCard; readonly spo
 function NoLevelCard({
   card,
   sport,
+  view,
 }: {
   readonly card: Extract<ReaderCard, { readonly state: 'NO_LEVEL' }>;
   readonly sport: Sport;
+  readonly view: RankingView;
 }) {
   const addASport = useAddASport(fromRankings(sport));
 
   return (
-    <Card style={s.noLevel}>
+    <Card style={s.withButton}>
       <Text testID="not-listed-line" style={s.notListed}>
-        {notListedLine(card, sport)}
+        {notListedLine(card, sport, view)}
       </Text>
       {addASport.error === null ? null : (
         <Note variant="coral" accessibilityRole="alert">
@@ -162,6 +185,29 @@ function NoLevelCard({
         busyLabel={STARTING_LABEL}
         onPress={() => addASport.rate(sport)}
       />
+    </Card>
+  );
+}
+
+/**
+ * §4.6: *Just you so far*, or *None of your friends is ranked in padel yet*, and **Add friends** — a
+ * light card in the dark card's place, as a not-listed card is, with nothing below it.
+ */
+function AddFriendsCard({
+  card,
+  sport,
+  onAddFriends,
+}: {
+  readonly card: FriendsCard;
+  readonly sport: Sport;
+  readonly onAddFriends: () => void;
+}) {
+  return (
+    <Card style={s.withButton}>
+      <Text testID="friends-card-line" style={s.notListed}>
+        {friendsCardLine(card, sport)}
+      </Text>
+      <Button label={RANKINGS_COPY.addFriends} onPress={onAddFriends} />
     </Card>
   );
 }
@@ -183,6 +229,7 @@ const s = StyleSheet.create({
   fold: { height: StyleSheet.hairlineWidth, backgroundColor: theme.color.onDarkHair },
   line: { ...theme.type.rlLabel, color: theme.color.onDarkTiny },
   strong: { fontFamily: theme.font.mono[600], color: theme.color.surface },
-  noLevel: { gap: theme.space.md },
+  // A light card with its button under the line: §4.4's, and §4.6's.
+  withButton: { gap: theme.space.md },
   notListed: { ...theme.type.rlLabel, color: theme.color.ink },
 });

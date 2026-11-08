@@ -13,7 +13,7 @@ import { StyleSheet, View } from 'react-native';
 import { ReadFailure } from '@/features/groups/types';
 import { Button, theme } from '@/shared/ui';
 
-import type { Jump } from '../hooks/useGeneral';
+import type { Jump } from '../hooks/rankingRead';
 
 import { RANKINGS_COPY, jumpButtonLabel } from './rankingsCopy';
 

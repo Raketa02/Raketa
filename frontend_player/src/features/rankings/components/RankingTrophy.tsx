@@ -3,16 +3,18 @@
  * mechanics §8; [#775](https://github.com/Raketa02/Raketa/issues/775)): the drawn trophy and the
  * reader's place, *🏆 #7*, mono.
  *
- * **The place is General's** in the sport of the reader's latest result, read off Home's one read
- * (`proposals`' `useHomeRanking`). Which view's place it shows follows the view the reader last
- * looked at once Friends exists (#777); until then it is General's.
+ * **The place is the remembered view's** (#777; the mechanics §8) in the sport of the reader's latest
+ * result, read off Home's one read (`proposals`' `useHomeRanking`): General's, or Friends' once the
+ * reader last looked at Friends — the view the page itself opens on (`useRankingView`), so the number
+ * is always the place on the page it opens.
  *
- * **No number, and still a button**, when there is no place — not enough results, off the list,
- * never played — and while Home is being read: a number appearing is the badge's own move, and the
- * pill is the way to the page whatever it says.
+ * **No number, and still a button**, when there is no place in that view — not enough results, off
+ * the list, never played, or in Friends no friend listed — and while Home or the phone is being read:
+ * a number appearing is the badge's own move, and the pill is the way to the page whatever it says.
  *
- * **A tap opens Rankings on the trophy's sport**, pushed over Home (the shell keeps the Home column
- * lit). With no result anywhere the page picks its own sport — the deck's last, or padel.
+ * **A tap opens Rankings on the trophy's sport and view**, pushed over Home (the shell keeps the Home
+ * column lit): the sport in the address, the view the one the page reads off the phone. With no result
+ * anywhere the page picks its own sport — the deck's last, or padel.
  *
  * The trophy is drawn — the character is never used (§30's preamble) — on `night`, the dark card's
  * fill, in white; a pill on paper, so it is the chip's shape (Part 16, 2026-11-08).
@@ -24,6 +26,9 @@ import Svg, { Path } from 'react-native-svg';
 
 import { useHomeRanking } from '@/features/proposals/types';
 import { theme } from '@/shared/ui';
+
+import { placeIn } from '../domain/ranking';
+import { useRankingView } from '../hooks/useRankingView';
 
 import { rankingsRoute } from './rankingsRoutes';
 import { RANKINGS_COPY, trophyLabel, trophyPlace } from './rankingsCopy';
@@ -38,7 +43,10 @@ const HANDLE_WEIGHT = 1.8;
 export function RankingTrophy() {
   const router = useRouter();
   const ranking = useHomeRanking();
-  const place = ranking?.generalPlace;
+  const { view } = useRankingView();
+  // Home's read and the phone's both in, or no place to show — and no words for one.
+  const known = ranking == null || view === undefined ? undefined : { ranking, view };
+  const place = known === undefined ? undefined : placeIn(known.view, known.ranking);
   const figure = trophyPlace(place);
 
   return (
@@ -46,7 +54,9 @@ export function RankingTrophy() {
       testID="ranking-trophy"
       accessibilityRole="button"
       accessibilityLabel={
-        ranking == null ? RANKINGS_COPY.trophy : trophyLabel(ranking.sport, place)
+        known === undefined
+          ? RANKINGS_COPY.trophy
+          : trophyLabel(known.ranking.sport, place, known.view)
       }
       accessibilityHint={RANKINGS_COPY.trophyHint}
       onPress={() => router.push(rankingsRoute(ranking?.sport))}

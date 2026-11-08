@@ -7,8 +7,8 @@
  * **Everything here is the server's answer, carried.** The order, every place, *of N*, the chip, the
  * gap and how many wins close it are worked out by the backend — the win count reads the rating
  * engine's own update rule, so nobody else may compute it (the mechanics §7.2). What is this
- * feature's own is below the types: which sports the pill offers, which sport the page opens on, and
- * how three rows stand on the podium.
+ * feature's own is below the types: which sports the pill offers, which sport the page opens on, how
+ * three rows stand on the podium, which view the phone remembers, and what stands below the card.
  */
 
 import type { GameResult } from '@/shared/vocabulary/gameResult';
@@ -178,6 +178,51 @@ export function joinPages(
  */
 export function jumpPlace(card: PlaceCard | undefined): number | undefined {
   return card?.state === 'LISTED' ? card.place : undefined;
+}
+
+/** **The view the page opens on the first time** — General (the screens §3). */
+export const FIRST_VIEW: RankingView = 'GENERAL';
+
+/** **The two views, in the switch's order** — General first (the screens §3). */
+export const RANKING_VIEWS: readonly RankingView[] = ['GENERAL', 'FRIENDS'];
+
+/**
+ * **The view a saved value opens on** (#777; the screens §3) — the phone hands back a string it has
+ * not judged, and this is the judgement
+ * ([ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)
+ * §4). Nothing saved, or a value this build has never heard of, is General.
+ */
+export function rankingViewFrom(saved: string | undefined): RankingView {
+  return RANKING_VIEWS.find((view) => view === saved) ?? FIRST_VIEW;
+}
+
+/** **A reader's place in each view** — either absent where they have none in it. */
+export interface PlacesByView {
+  readonly generalPlace?: number;
+  readonly friendsPlace?: number;
+}
+
+/**
+ * **The place Home's trophy shows** (#777; the mechanics §8): the one in the view the reader last
+ * looked at, so the number matches the page they land on. **None where they have no place in that
+ * view** — never the other view's.
+ */
+export function placeIn(view: RankingView, places: PlacesByView): number | undefined {
+  return view === 'FRIENDS' ? places.friendsPlace : places.generalPlace;
+}
+
+/**
+ * **What stands below the reader's card** (the screens §4.6, §5.4): the podium and the table while
+ * anybody is listed — the reader's own not-listed card above the friends' table included (Q7) —
+ * *Nobody ranked in {sport} yet* where nobody is, and **nothing when the Friends card is the page**:
+ * *Just you so far*, and *None of your friends is ranked in {sport} yet*, whatever the view counts.
+ */
+export type BelowTheCard = 'table' | 'nobodyRanked' | 'nothing';
+
+export function belowTheCard(ranking: Pick<Ranking, 'card' | 'listed'>): BelowTheCard {
+  const state = ranking.card?.state;
+  if (state === 'JUST_YOU' || state === 'NO_FRIEND_LISTED') return 'nothing';
+  return ranking.listed === 0 ? 'nobodyRanked' : 'table';
 }
 
 /**

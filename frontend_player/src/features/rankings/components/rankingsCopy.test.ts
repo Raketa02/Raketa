@@ -11,6 +11,8 @@ import {
   cardChipWords,
   chipFace,
   gapLineParts,
+  VIEW_WORDS,
+  friendsCardLine,
   getYourLevelLabel,
   jumpButtonLabel,
   nobodyRankedLine,
@@ -61,8 +63,14 @@ describe('the trophy', () => {
   });
 
   it('is named for the page it opens, with the place where there is one', () => {
-    expect(trophyLabel('padel', 7)).toBe('Rankings, 7th in padel');
-    expect(trophyLabel('padel', undefined)).toBe('Rankings');
+    expect(trophyLabel('padel', 7, 'GENERAL')).toBe('Rankings, 7th in padel');
+    expect(trophyLabel('padel', undefined, 'GENERAL')).toBe('Rankings');
+  });
+
+  // #777: the number is the remembered view's, so its name says which.
+  it('names the Friends place as one among friends', () => {
+    expect(trophyLabel('padel', 4, 'FRIENDS')).toBe('Rankings, 4th among your friends in padel');
+    expect(trophyLabel('padel', undefined, 'FRIENDS')).toBe('Rankings');
   });
 });
 
@@ -164,27 +172,55 @@ describe('the gap line', () => {
 
 describe('not listed in General', () => {
   it('counts the results still to play, the singular with one to go', () => {
-    expect(notListedLine({ state: 'NEEDS_RESULTS', results: 2, resultsToEnter: 5 }, 'padel')).toBe(
-      '2 of 5 games — 3 more competitive padel games put you on the list',
-    );
-    expect(notListedLine({ state: 'NEEDS_RESULTS', results: 0, resultsToEnter: 5 }, 'padel')).toBe(
-      '0 of 5 games — 5 more competitive padel games put you on the list',
-    );
-    expect(notListedLine({ state: 'NEEDS_RESULTS', results: 4, resultsToEnter: 5 }, 'padel')).toBe(
-      '4 of 5 games — 1 more competitive padel game puts you on the list',
-    );
+    expect(
+      notListedLine({ state: 'NEEDS_RESULTS', results: 2, resultsToEnter: 5 }, 'padel', 'GENERAL'),
+    ).toBe('2 of 5 games — 3 more competitive padel games put you on the list');
+    expect(
+      notListedLine({ state: 'NEEDS_RESULTS', results: 0, resultsToEnter: 5 }, 'padel', 'GENERAL'),
+    ).toBe('0 of 5 games — 5 more competitive padel games put you on the list');
+    expect(
+      notListedLine({ state: 'NEEDS_RESULTS', results: 4, resultsToEnter: 5 }, 'padel', 'GENERAL'),
+    ).toBe('4 of 5 games — 1 more competitive padel game puts you on the list');
   });
 
   it('asks for a level first in a sport with none', () => {
-    expect(notListedLine({ state: 'NO_LEVEL', resultsToEnter: 5 }, 'squash')).toBe(
+    expect(notListedLine({ state: 'NO_LEVEL', resultsToEnter: 5 }, 'squash', 'GENERAL')).toBe(
       'No squash level yet — get one, then 5 competitive games put you on the list',
     );
     expect(getYourLevelLabel('squash')).toBe('Get your squash level');
   });
 
   it('says how to get back on, off the list', () => {
-    expect(notListedLine({ state: 'OFF_THE_LIST' }, 'padel')).toBe(
+    expect(notListedLine({ state: 'OFF_THE_LIST' }, 'padel', 'GENERAL')).toBe(
       'Off the list — no competitive padel game in 90 days. Your next one puts you back.',
+    );
+  });
+});
+
+// §30.2 and §30.6 (#777).
+describe('the Friends view', () => {
+  it('names the switch’s two views', () => {
+    expect(VIEW_WORDS).toEqual({ GENERAL: 'General', FRIENDS: 'Friends' });
+  });
+
+  it('says Just you so far, or that none of your friends is ranked, each with Add friends', () => {
+    expect(friendsCardLine({ state: 'JUST_YOU' }, 'padel')).toBe('Just you so far');
+    expect(friendsCardLine({ state: 'NO_FRIEND_LISTED' }, 'tennis')).toBe(
+      'None of your friends is ranked in tennis yet',
+    );
+    expect(RANKINGS_COPY.addFriends).toBe('Add friends');
+  });
+
+  // §30.5: Friends takes one result, so a reader with a level and none reads the brief's line.
+  it('says the first game puts the reader on the list, above the friends’ table', () => {
+    expect(
+      notListedLine({ state: 'NEEDS_RESULTS', results: 0, resultsToEnter: 1 }, 'padel', 'FRIENDS'),
+    ).toBe('Not ranked in padel yet — your first confirmed competitive game puts you on the list');
+  });
+
+  it('asks for a level first, then one game', () => {
+    expect(notListedLine({ state: 'NO_LEVEL', resultsToEnter: 1 }, 'squash', 'FRIENDS')).toBe(
+      'No squash level yet — get one, then one competitive game puts you on the list',
     );
   });
 });
@@ -220,9 +256,15 @@ describe('no sentence says her, his, she or he', () => {
         below: { nickname: 'Zofia', gap: 0 },
       }),
       said({ kind: 'between', above: { nickname: 'Ewa', gap: 0, tied: true } }),
-      notListedLine({ state: 'NEEDS_RESULTS', results: 4, resultsToEnter: 5 }, 'padel'),
-      notListedLine({ state: 'NO_LEVEL', resultsToEnter: 5 }, 'padel'),
-      notListedLine({ state: 'OFF_THE_LIST' }, 'padel'),
+      notListedLine({ state: 'NEEDS_RESULTS', results: 4, resultsToEnter: 5 }, 'padel', 'GENERAL'),
+      notListedLine({ state: 'NO_LEVEL', resultsToEnter: 5 }, 'padel', 'GENERAL'),
+      notListedLine({ state: 'OFF_THE_LIST' }, 'padel', 'GENERAL'),
+      notListedLine({ state: 'NEEDS_RESULTS', results: 0, resultsToEnter: 1 }, 'padel', 'FRIENDS'),
+      notListedLine({ state: 'NO_LEVEL', resultsToEnter: 1 }, 'padel', 'FRIENDS'),
+      friendsCardLine({ state: 'JUST_YOU' }, 'padel'),
+      friendsCardLine({ state: 'NO_FRIEND_LISTED' }, 'padel'),
+      ...Object.values(VIEW_WORDS),
+      trophyLabel('padel', 4, 'FRIENDS'),
       nobodyRankedLine('padel'),
       jumpButtonLabel(212),
     ];

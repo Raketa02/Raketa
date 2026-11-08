@@ -49,7 +49,7 @@ import { formatLevel } from '@/shared/formatting/ratingFormat';
 import { PlayerPhoto, RunOfForm, theme } from '@/shared/ui';
 
 import type { RankedRow } from '../domain/ranking';
-import type { GeneralWindow, Jump } from '../hooks/useGeneral';
+import type { Jump, ListWindow } from '../hooks/rankingRead';
 
 import { JUMP_ROOM, JumpToMe } from './JumpToMe';
 import { RankChip } from './RankChip';
@@ -79,7 +79,7 @@ const ON_SCREEN = { itemVisiblePercentThreshold: 50 } as const;
 const FRAMES_TO_CENTRE = 3;
 
 export interface RankingListProps {
-  readonly window: GeneralWindow;
+  readonly window: ListWindow;
   readonly rows: readonly RankedRow[];
   /** Above the rows: the card and the podium, or the failure of the page above. */
   readonly header: ReactElement | null;
@@ -136,7 +136,7 @@ export function RankingList({
     if (jump === undefined) return;
     owed.current = { animated: meAt >= 0, frames: 0 };
     if (meAt >= 0) centre();
-    else jump.toMe();
+    else jump.toMe?.();
   };
 
   return (
