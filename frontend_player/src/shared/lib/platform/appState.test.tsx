@@ -12,7 +12,9 @@ import { focusManager } from '@tanstack/react-query';
 import { render, act } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { useOnForeground } from './appState';
+import { moveAppTo, stopWatchingAppState, watchAppState } from '@/test-support/appState';
+
+import { useAppInBackground, useOnForeground } from './appState';
 
 function Screen({ onForeground }: { readonly onForeground: () => void }) {
   useOnForeground(onForeground);
@@ -84,5 +86,43 @@ describe('coming back to the app', () => {
 
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Whether the app has gone to the background, followed — what a screen that keeps something running reads. */
+function Away() {
+  return <Text>{useAppInBackground() ? 'in the background' : 'in view'}</Text>;
+}
+
+describe('the app in the background', () => {
+  beforeEach(() => watchAppState());
+  afterEach(() => stopWatchingAppState());
+
+  it('follows the app to the background and back', () => {
+    const view = render(<Away />);
+    expect(view.getByText('in view')).toBeTruthy();
+
+    act(() => moveAppTo('background'));
+    expect(view.getByText('in the background')).toBeTruthy();
+
+    act(() => moveAppTo('active'));
+    expect(view.getByText('in view')).toBeTruthy();
+  });
+
+  /** Face ID behind the keychain's autofill makes the app `inactive` on iOS; it is still in view. */
+  it('does not count iOS’s inactive as the background', () => {
+    const view = render(<Away />);
+
+    act(() => moveAppTo('inactive'));
+
+    expect(view.getByText('in view')).toBeTruthy();
+  });
+
+  it('stops listening when the screen goes', () => {
+    const view = render(<Away />);
+
+    view.unmount();
+
+    expect(() => act(() => moveAppTo('background'))).not.toThrow();
   });
 });

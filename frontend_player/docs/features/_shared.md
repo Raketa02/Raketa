@@ -24,7 +24,10 @@ live in `src/test-support/platform.ts`, and a screen reaches each through `useLo
 default is the device, so only a test ever supplies anything else. Beside them sit the two
 lifecycle wirings and `useOnForeground`, the app's one answer to _did we just come back_ — and
 `useOnReturn`, the same question asked of a **screen**: the navigator's focus after a blur, which
-is what a pop is, and which neither `AppState` nor a mount reports.
+is what a pop is, and which neither `AppState` nor a mount reports — and `useAppInBackground`
+(#787), _can the app still be seen_: `AppState`'s `background` alone, so iOS's `inactive` (Face ID
+behind the keychain's autofill) is not away there, as it is for `focusManager`; sign-in's hero
+loop reads it.
 **Location is foreground only** — nothing asks for, checks or starts a background one — and
 it has **two uses, which the permission prompt names**: the area's fix is **coarsened to about a
 kilometre the moment it is read**, and an attendance tap's precise fix (`readPreciseFix`, bounded

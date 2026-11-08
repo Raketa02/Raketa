@@ -12,10 +12,11 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { AccessibilityInfo, StyleSheet, type ViewStyle } from 'react-native';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { ReducedMotionProvider, theme } from '@/shared/ui';
+import { hearAScreenReader, stopHearingAScreenReader } from '@/test-support/screenReader';
 
 import { SignInScreen } from './SignInScreen';
 import { DEALT, FAN_BOX, STACKED, type DeckPlace } from './stageDeckGeometry';
@@ -67,8 +68,11 @@ const ALL_STACKED = { left: STACKED, front: STACKED, right: STACKED };
 
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => {
+  // The hero loops (#787): take the screen down on the fake clock, before the real one is back.
+  cleanup();
   jest.useRealTimers();
   jest.restoreAllMocks();
+  stopHearingAScreenReader();
 });
 
 describe('the three cards, per mock 2', () => {
@@ -151,11 +155,12 @@ describe('the deal', () => {
     expect(placements()).toEqual(DEALT);
   });
 
-  it('deals once, and holds the fan', () => {
+  /** What follows the still moment is the loop's (#787, `stageLoop.test.tsx`). */
+  it('holds the dealt fan still until the front card is picked up', () => {
     drawSignIn();
 
     act(() => jest.advanceTimersByTime(PAST_THE_DEAL));
-    act(() => jest.advanceTimersByTime(PAST_THE_DEAL * 10));
+    act(() => jest.advanceTimersByTime(theme.motion.stageDeck.still - 200));
 
     expect(placements()).toEqual(DEALT);
   });
@@ -178,7 +183,7 @@ describe('under collapsed presentation', () => {
   });
 
   it('deals the cards at once with a screen reader running, and nothing moves', async () => {
-    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    hearAScreenReader();
     drawSignIn();
 
     // The OS answers a promise; let it land.

@@ -56,6 +56,8 @@ export interface AuthStageProps {
   readonly headline: string;
   /** The hero's picture, between the wordmark and the headline — sign-in's deck (#786). */
   readonly picture?: ReactNode;
+  /** Drawn over the whole hero but its wordmark — sign-in's *It's a game!* (#787). */
+  readonly cover?: ReactNode;
   /** Whether the stage is the screen in view — the status bar is light only while it is. */
   readonly inView: boolean;
   /** The line at the foot of the sheet. */
@@ -67,7 +69,15 @@ export interface AuthStageProps {
 /** Where nothing provides insets — a screen drawn on its own, as the suites draw it. */
 const NO_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
-export function AuthStage({ title, headline, picture, inView, footer, children }: AuthStageProps) {
+export function AuthStage({
+  title,
+  headline,
+  picture,
+  cover,
+  inView,
+  footer,
+  children,
+}: AuthStageProps) {
   const { height } = useWindowDimensions();
   // The root's provider, which has known the insets since the app's first frame (`initialMetrics`),
   // so the hero's wordmark is clear of the status bar first time — `TopSafeArea`'s argument against
@@ -79,7 +89,13 @@ export function AuthStage({ title, headline, picture, inView, footer, children }
   return (
     <View style={s.screen}>
       {inView ? <StatusBar style="light" /> : null}
-      <StageHero headline={headline} height={heroHeight} topInset={top} picture={picture} />
+      <StageHero
+        headline={headline}
+        height={heroHeight}
+        topInset={top}
+        picture={picture}
+        cover={cover}
+      />
       <ScrollView
         {...FORM_SCROLL}
         contentContainerStyle={[s.content, { paddingTop: heroHeight }]}

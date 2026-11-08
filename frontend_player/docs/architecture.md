@@ -878,7 +878,10 @@ sessions.
   anything that doesn't fundamentally need the device.
 - **App lifecycle is centralized** in `shared/lib/platform/appState.ts` — Query focus,
   session freshness, privacy screens, observability, reconnect. Not dozens of `AppState`
-  listeners across unrelated screens.
+  listeners across unrelated screens. It answers two questions, and they differ on purpose:
+  `focusManager` (and `useOnForeground`) count iOS's `inactive` as away, for a refetch;
+  `useAppInBackground` counts only `background`, for a screen that keeps something running while
+  it can be seen (sign-in's hero loop, #787).
 - **No overlay touches `Modal`; it draws on `ModalStage`, which is the native window on iOS
   and a layer in the tree on Android** ([ADR-0178](../../docs/adr/0178-an-overlay-on-android-is-a-layer-in-the-tree-not-a-native-window.md)).
   Under the New Architecture a modal's content on Android is laid out at 0 × 0 first and again

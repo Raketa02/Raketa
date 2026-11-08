@@ -58,6 +58,8 @@ import { OrRule } from './OrRule';
 import { RESET_COPY } from './resetPresentation';
 import { askForResetHref } from './resetRoutes';
 import { StageDeck } from './StageDeck';
+import { StageSplash } from './StageSplash';
+import { useStageLoop } from './useStageLoop';
 
 export interface SignInScreenProps {
   /**
@@ -74,6 +76,9 @@ export function SignInScreen({ inView = true }: SignInScreenProps) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const signIn = useSignIn();
+  // The hero's story — while sign-in is in view and the app not in the background, never under
+  // collapsed presentation. Nothing in it is the form's, and nothing the form does reaches it.
+  const loop = useStageLoop(inView);
 
   const submit = () => {
     const result = validate(signInSchema, { email, password });
@@ -94,7 +99,8 @@ export function SignInScreen({ inView = true }: SignInScreenProps) {
     <AuthStage
       title={SIGN_IN_COPY.title}
       headline={SIGN_IN_COPY.headline}
-      picture={<StageDeck />}
+      picture={<StageDeck {...loop.deck} />}
+      cover={loop.splash === undefined ? undefined : <StageSplash {...loop.splash} />}
       inView={inView}
       footer={
         <AuthLink lead={SIGN_IN_COPY.newHere} label={SIGN_IN_COPY.createAccount} href="/sign-up" />

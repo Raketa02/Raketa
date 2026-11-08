@@ -173,8 +173,9 @@ const color = {
    *  radial glow from the centre value out to the edge value with the SVG the poster already
    *  uses. The record calls them the prototype's dropped stage colours, knowingly readmitted —
    *  the design wins — and the next dark surface argues for its own record rather than reusing
-   *  these two. Not a `Soft`, not an `Ink`, not a `Line`: nothing writes on them but the one
-   *  screen's own children, which are the on-dark tokens above.
+   *  these two. Sign-in's hero draws them in its *It's a game!* (#787), a picture of this screen —
+   *  ADR-0167's note of 2026-11-08, and nothing else. Not a `Soft`, not an `Ink`, not a `Line`:
+   *  nothing writes on them but the one screen's own children, which are the on-dark tokens above.
    *
    *  MEASURED off the three mocks at 1x, and NOT the stage colours' bytes: the spec expected
    *  `#08222B` `#071C24` `#0B2B36` `#24505E` to the byte, and the rendered mocks do not hold
@@ -506,7 +507,9 @@ const type = {
    *  than Archivo's. Tracking continues the sans ramp past `display`'s -0.035em: -0.040em at 32
    *  is -1,28. Line height 36, on 3.3's own reasoning for a sans word with ascenders.
    *  ONE USE. A second surface that wants a word this size reopens ADR-0167 §2 rather than
-   *  reaching for this role, which is the whole of why it is named for the screen. */
+   *  reaching for this role, which is the whole of why it is named for the screen. Sign-in's hero
+   *  draws a picture of this screen (#787) and says its word in it: ADR-0167's note of 2026-11-08
+   *  — the same word on a picture of the same screen, and not a second use. */
   yesWord: { fontFamily: font.sans[800], fontSize: 32, letterSpacing: -1.28, lineHeight: 36 },
   /** THE DECK CARD'S NAME — one ~24pt sans role, heavy, one use
    *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
@@ -1417,7 +1420,16 @@ const size = {
    *  `fan` is where the deal puts the two back cards, in the card's drawing points: their centres
    *  `across` either side of the front card's and `down` below it, turned `turn` degrees outwards —
    *  mock 2's 142 and 46 pixels at 2,85 to the point, doubled, on the 3pt grid, and its ten degrees.
-   *  The front card stays where the three were stacked, straight (`stageDeckGeometry.ts`). */
+   *  The front card stays where the three were stacked, straight (`stageDeckGeometry.ts`).
+   *
+   *  `swipe` is the loop's front card (#787), in the same drawing points: picked up `across` to the
+   *  right and turned `turn` degrees — *a little right, a few degrees* — then swiped off turning on
+   *  to `outTurn`, the real deck's own 12° past the pick-up's 6, and fading once it is `fadesFrom` of
+   *  the way off — its last stretch. `stamp` is the **I'M IN** stamp on
+   *  it: the real deck's 3pt outline (`stroke`) and 12° (`tilt`), but clockwise and top-right, where
+   *  mock 2 draws it, `top` below the card's top edge — the mock's 50 pixels, astride the ribbon's
+   *  foot. `splashTile` is a face on the hero's *It's a game!* (mocks 7–8): 44pt measured in both,
+   *  45 on the 3pt grid, where the yes screen's own are 54 — the hero is under half a screen. */
   stage: {
     heroShare: 0.41,
     textMaxScale: 1.6,
@@ -1425,6 +1437,9 @@ const size = {
     control: 48,
     card: { width: 270, height: 342, ribbon: 45 },
     fan: { across: 99, down: 33, turn: 10 },
+    swipe: { across: 24, turn: 6, outTurn: 18, fadesFrom: 0.6 },
+    stamp: { top: 33, tilt: 12, stroke: 3 },
+    splashTile: 45,
   },
 } as const;
 
@@ -1656,17 +1671,40 @@ const motion = {
     buttonsAfter: RISE / 2 + RISE,
   },
   /**
-   * **Sign-in's deck being dealt** ([#786](https://github.com/Raketa02/Raketa/issues/786), 12.2) —
-   * the hero's picture, and the one thing on the stage that moves. The three miniature cards sit
-   * `stacked` exactly on top of each other — a fraction of a second, long enough to read as one
-   * card — then the two back cards slide out to their turned places either side over `deal`,
-   * `easeDecel`, while the front card stays put. Once, on open; the loop that follows (#787) adds
-   * its own beats here. Skipped whole under collapsed presentation, where the cards are dealt from
-   * the first frame and nothing moves.
+   * **Sign-in's hero loop** ([#786](https://github.com/Raketa02/Raketa/issues/786),
+   * [#787](https://github.com/Raketa02/Raketa/issues/787), 12.2) — the hero's picture, and the one
+   * thing on the stage that moves; the **third looping animation in the app**, after `ripple` and
+   * `typing`, argued in Part 16 against 1.5. One cycle, about nine seconds:
+   *
+   * - `stacked` — the three miniature cards exactly on top of each other, read as one card;
+   * - `deal` — the two back cards slide out to their turned places, `easeDecel`;
+   * - `still` — nothing moves, so the cards can be read;
+   * - `pickUp` — the front card lifts a little right and turns, and *I'M IN* comes up on it,
+   *   `easeDecel`;
+   * - `swipe` — it accelerates off past the right edge, fading in its last stretch;
+   * - `splash` — *It's a game!* over the hero, from the moment the card is gone until it fades: its
+   *   own entrance is the yes screen's (`yesEntrance`'s sides and word, under a `fade`);
+   * - `reset` — the splash fades over the cards, restacked under it, and the next cycle deals.
+   *
+   * Only while sign-in is the screen in view and the app is not in the background (iOS's `inactive`
+   * leaves it running); it starts again from the deal on return. Skipped whole under collapsed presentation, where the cards are dealt from the
+   * first frame, nothing moves and the splash is never drawn.
    */
-  stageDeck: { stacked: 400, deal: 500 },
+  stageDeck: {
+    stacked: 400,
+    deal: 500,
+    still: 2000,
+    pickUp: 700,
+    swipe: 600,
+    splash: 4000,
+    reset: 400,
+  },
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },
+  /** Accelerating — cubic-bezier(.4,0,1,1), a thing thrown off: slow away, then faster. Sign-in's
+   *  hero card leaving on its swipe (#787) and nothing else; `easeDecel` is the app's curve for a
+   *  thing arriving, and this is its one leaving. */
+  easeAccel: { x1: 0.4, y1: 0, x2: 1, y2: 1 },
   /** How long a state is SHOWN — the one thing here that reduced motion does not skip.
    *
    *  Nested so the block above keeps its one-line contract (*the four things reduced

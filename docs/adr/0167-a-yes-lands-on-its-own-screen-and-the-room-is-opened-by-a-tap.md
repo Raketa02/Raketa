@@ -9,6 +9,7 @@
   the whole nickname, and the fence stands.
 - **Date:** 2026-09-14
 - **Extended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the same screen, with the word *It's a game!*, greets the player whose yes (or rescue join) books a group game.
+- **§2's and §3's fences extended 2026-11-08** to sign-in's picture of this screen ([#787](https://github.com/Raketa02/Raketa/issues/787), PRD #783; the note below), and to nothing else.
 - **Supersedes, by named sentence,**
   `the-loop-screens.md` §2.1's *"`I'm in` goes to the
   room … The reply is still the redraw (§2.4), and then the screen pushes the room"* — the reply
@@ -43,6 +44,8 @@
   change**: every fact the screen draws is already on the wire. Grilled 2026-09-14.
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The challenge, *Let's play*, the Chats list and the deck's toasts are gone, so §1's landing rules, §4's *Challenge!* and *Matched!*, §5 and the Context's two taps describe nothing. The screen survives as *It's a game!* (ADR-0189): an overlay on `ModalStage` over the whole phone rather than a route the bar stands down for, raised by the fill for the player whose yes filled the game, with *Open game* and *Later*. §2's dark ground, pill, 32 pt word, `volt`, entrance and haptic stand as written, as do §3's initials tile and its four-sided fence.
+
+> **Note — sign-in's picture of this screen (2026-11-08, [#787](https://github.com/Raketa02/Raketa/issues/787), PRD #783).** Sign-in's hero plays a short story on a loop: a miniature game card swiped right becomes *It's a game!* — **a picture of this screen**, drawn inside the auth feature in the dark hero only, with no buttons, hidden from screen readers (ADR-0198). It draws three of the four things §2 and §3 fence *for this screen only*: **the two ground colours** (its radial night), **the word's role** (*It's a game!*, in `volt`), and **the initials over a poster** (*KT*, *AK*, *KW*; the reader's own tile bare). The fences extend to this one picture of the screen, **because it is this screen, drawn smaller**, and to nothing else: no other surface may take the colours, the role or the initials from it, and the next request to do so is still a request to reopen this record. §3's other three sides hold on the picture as they do here — never spoken, never in copy (the letters are cut from the nicknames, as here), never over a photograph (every face on it is a poster). The pill is not drawn, since the picture has no buttons. Recorded in the player app's design system Part 16, 2026-11-08.
 
 ## Context
 

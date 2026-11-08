@@ -1,25 +1,20 @@
 /**
- * **Sign-in's dealt deck** — three miniature Games-deck cards in the hero's room, dealt when the
- * screen opens ([#786](https://github.com/Raketa02/Raketa/issues/786), PRD #783; design system
- * 12.2, mock 2): a padel game waiting for a fourth in front, straight; a tennis single and a squash
- * Fill in turned either side of it. What each card says is `stageDeckPresentation`'s, and each is a
- * `MiniGameCard`, an illustration copied from the real card and never the live deck. This file is
- * the deal and the fit.
+ * **Sign-in's dealt deck** — three miniature Games-deck cards in the hero's room
+ * ([#786](https://github.com/Raketa02/Raketa/issues/786), [#787](https://github.com/Raketa02/Raketa/issues/787),
+ * PRD #783; design system 12.2, mock 2): a padel game waiting for a fourth in front, straight; a
+ * tennis single and a squash Fill in turned either side of it. What each card says is
+ * `stageDeckPresentation`'s, and each is a `MiniGameCard`, an illustration copied from the real card
+ * and never the live deck. This file draws where they stand; **when they move is the loop's**
+ * (`useStageLoop`), handed in as two values.
  *
- * ## The deal
+ * ## The deal, and the swipe
  *
- * The three open stacked exactly on top of each other — only the front card shows — for
- * `motion.stageDeck.stacked`, then the two back cards slide out to their turned places either side
- * over `motion.stageDeck.deal`, decelerating, while the front card stays put. One value drives both
- * back cards, so they leave together as one hand dealing. Once, on open; the loop (#787) takes it
- * from there. `Animated`, which React Native ships, on the native driver — the yes screen's and the
- * deck's own choice, and nothing a sheet's `Modal` can trip on.
- *
- * **Under collapsed presentation the cards are dealt from the first frame and nothing moves** — the
- * app's one rule for reduced motion or a running screen reader (`useCollapsedPresentation`). The
- * value starts dealt when the rule is known on the first render, as reduced motion is (it is the
- * root's context); a screen reader's answer is a promise, and when it lands mid-stack the deal is
- * stopped and the cards are simply where they belong.
+ * `deal` takes the two back cards from exactly under the front one (nought) out to their turned
+ * places either side (one), and nothing else moves them. `swipe` takes the front card from its place
+ * (nought) a little right and turned, with **I'M IN** on it (one) — the real deck's stamp, in volt,
+ * clockwise and top-right where mock 2 draws it, with no price — and on off past the right edge of the
+ * screen, turning further and fading in its last stretch (two). The flight is the window's width at
+ * the deck's scale, so the card leaves the phone whatever the room's size.
  *
  * ## The fit
  *
@@ -29,35 +24,34 @@
  * measured nothing is drawn — a frame at the wrong size would be a jump.
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { useState } from 'react';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 
-import { theme, useCollapsedPresentation } from '@/shared/ui';
+import { theme } from '@/shared/ui';
 
 import { MiniGameCard } from './MiniGameCard';
-import {
-  DEALT,
-  DECK_PLACES,
-  FAN_BOX,
-  STACKED,
-  fitScale,
-  type DeckPlace,
-  type Size,
-} from './stageDeckGeometry';
+import { DEALT, FAN_BOX, STACKED, fitScale, type DeckPlace, type Size } from './stageDeckGeometry';
 import { STAGE_DECK_CARDS } from './stageDeckPresentation';
+import { STAGE_STAMP } from './stageHeroCopy';
+import type { StageDeckMotion } from './useStageLoop';
+
+/** The two cards the deal moves, drawn under the front one: back to front, left then right. */
+const BACK_CARDS = ['left', 'right'] as const satisfies readonly DeckPlace[];
 
 const CARD = theme.size.stage.card;
+const SWIPE = theme.size.stage.swipe;
+const STAMP = theme.size.stage.stamp;
+const CAP = theme.size.stage.textMaxScale;
 
-/** `easeDecel`, the app's one curve for a thing arriving. */
-const EASE = Easing.bezier(
-  theme.motion.easeDecel.x1,
-  theme.motion.easeDecel.y1,
-  theme.motion.easeDecel.x2,
-  theme.motion.easeDecel.y2,
-);
-
-/** From the deal (nought stacked, one dealt) to where the card at `place` stands. */
-function dealTransform(place: DeckPlace, deal: Animated.Value) {
+/** From the deal to where a back card at `place` stands. */
+function dealTransform(place: (typeof BACK_CARDS)[number], deal: Animated.Value) {
   const to = DEALT[place];
   const along = (from: number, end: number) =>
     deal.interpolate({ inputRange: [0, 1], outputRange: [from, end] });
@@ -73,39 +67,44 @@ function dealTransform(place: DeckPlace, deal: Animated.Value) {
   ];
 }
 
-export function StageDeck() {
-  const collapsed = useCollapsedPresentation();
-  // Dealt from the first frame when the rule is already known — see the module note.
-  const deal = useRef(new Animated.Value(collapsed ? 1 : 0)).current;
+/** From the swipe to where the front card stands, and how much of it shows. */
+function swipeStyle(swipe: Animated.Value, flight: number) {
+  return {
+    // Picked up at one and gone at two; it fades over the last stretch of the way off.
+    opacity: swipe.interpolate({
+      inputRange: [0, 1 + SWIPE.fadesFrom, 2],
+      outputRange: [1, 1, 0],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateX: swipe.interpolate({
+          inputRange: [0, 1, 2],
+          outputRange: [STACKED.x, SWIPE.across, SWIPE.across + flight],
+        }),
+      },
+      { translateY: STACKED.y },
+      {
+        rotate: swipe.interpolate({
+          inputRange: [0, 1, 2],
+          outputRange: [`${STACKED.turn}deg`, `${SWIPE.turn}deg`, `${SWIPE.outTurn}deg`],
+        }),
+      },
+    ],
+  };
+}
+
+export function StageDeck({ deal, swipe }: StageDeckMotion) {
+  const { width: windowWidth } = useWindowDimensions();
   const [room, setRoom] = useState<Size>({ width: 0, height: 0 });
-
-  useEffect(() => {
-    if (collapsed) {
-      deal.setValue(1);
-      return undefined;
-    }
-
-    const beat = theme.motion.stageDeck;
-    const dealing = Animated.sequence([
-      Animated.delay(beat.stacked),
-      Animated.timing(deal, {
-        toValue: 1,
-        duration: beat.deal,
-        easing: EASE,
-        useNativeDriver: true,
-      }),
-    ]);
-    dealing.start();
-
-    // Left mid-deal — the screen popped, or the rule arrived: the next run, or the rule, puts the
-    // cards where they belong.
-    return () => dealing.stop();
-  }, [collapsed, deal]);
 
   const onLayout = ({ nativeEvent }: LayoutChangeEvent) =>
     setRoom({ width: nativeEvent.layout.width, height: nativeEvent.layout.height });
 
   const measured = room.width > 0 && room.height > 0;
+  const scale = measured ? fitScale(room) : 1;
+  // The window's width in the deck's own points: from wherever it was picked up, that is off the phone.
+  const flight = windowWidth / scale;
 
   return (
     <View style={StyleSheet.absoluteFill} onLayout={onLayout} testID="stage-deck">
@@ -118,12 +117,12 @@ export function StageDeck() {
             left: (room.width - FAN_BOX.width) / 2,
             top: (room.height - FAN_BOX.height) / 2,
             opacity: measured ? 1 : 0,
-            transform: [{ scale: measured ? fitScale(room) : 1 }],
+            transform: [{ scale }],
           },
         ]}
       >
         {/* Back to front: the two dealt cards under the one that stays. */}
-        {DECK_PLACES.map((place) => (
+        {BACK_CARDS.map((place) => (
           <Animated.View
             key={place}
             testID={`stage-card-${place}`}
@@ -132,6 +131,26 @@ export function StageDeck() {
             <MiniGameCard {...STAGE_DECK_CARDS[place]} />
           </Animated.View>
         ))}
+        <Animated.View testID="stage-card-front" style={[s.card, swipeStyle(swipe, flight)]}>
+          <MiniGameCard {...STAGE_DECK_CARDS.front} />
+          <Animated.View
+            testID="stage-stamp"
+            style={[
+              s.stamp,
+              {
+                opacity: swipe.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ]}
+          >
+            <Text style={s.stampWords} numberOfLines={1} maxFontSizeMultiplier={CAP}>
+              {STAGE_STAMP}
+            </Text>
+          </Animated.View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -144,5 +163,25 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: FAN_BOX.centre.x - CARD.width / 2,
     top: FAN_BOX.centre.y - CARD.height / 2,
+  },
+  // The real deck's stamp — its outline, its corner, its type — set where mock 2 sets it: the card's
+  // top-right, astride the ribbon's foot, turned clockwise. Mock 2 fills it with the dark the tiles'
+  // scrim is, so the volt reads over a poster.
+  stamp: {
+    position: 'absolute',
+    top: STAMP.top,
+    right: theme.space.xl,
+    borderWidth: STAMP.stroke,
+    borderColor: theme.color.volt,
+    borderRadius: theme.radius.btn,
+    backgroundColor: theme.color.photoScrim,
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space.md,
+    transform: [{ rotate: `${STAMP.tilt}deg` }],
+  },
+  stampWords: {
+    ...theme.type.deckStamp,
+    color: theme.color.volt,
+    textTransform: 'uppercase',
   },
 });

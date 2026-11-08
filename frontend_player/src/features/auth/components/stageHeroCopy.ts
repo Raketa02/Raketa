@@ -19,6 +19,14 @@
  * this file fills it in so the drawing is whole**, and nobody sees it: the tennis single's second
  * tile is the reader's, the squash game's other player is `ola.m`, and its figure, its clock line
  * and the single's share are plausible rather than read off the mock.
+ *
+ * ## The loop and *It's a game!*
+ *
+ * The front card is picked up with the real deck's **I'M IN** — its words, uppercased by the stamp,
+ * with no price (#787). Swiped off, it becomes mocks 7–8's splash: the front card's four people face
+ * to face — `karol.t` and **You** against `ania.k` and `kuba.w` — and the yes screen's word over the
+ * court the last yes booked. **You is a poster with no letters**: the reader's own face is not the
+ * hero's to draw, and nobody here is `TK`.
  */
 
 import type { CourtPosterLook } from '@/shared/ui';
@@ -40,6 +48,9 @@ export const STAGE_CAST = {
   stas: { nickname: 'stas.w', level: 3.05, look: { hue: POSTER_HUES[9], pose: 'lunge' } },
   ola: { nickname: 'ola.m', level: 2.94, look: { hue: POSTER_HUES[12], pose: 'forehand' } },
 } as const satisfies Readonly<Record<string, StagePerson>>;
+
+/** The reader's poster on the splash — the gold-green mocks 7–8 draw their tile in, bare. */
+export const STAGE_YOU_LOOK: CourtPosterLook = { hue: POSTER_HUES[0], pose: 'serve' };
 
 /** The words the miniature cards share — the real card's own, kept equal by eye, not by import. */
 export const STAGE_CARD_WORDS = {
@@ -80,4 +91,18 @@ export const STAGE_DECK_COPY = {
     when: 'Thu 21:00',
     shareGrosze: 3000,
   },
+} as const;
+
+/** On the front card as it is picked up — the real deck's yes, uppercased by the stamp. */
+export const STAGE_STAMP = 'I’m in';
+
+/** What *It's a game!* says in the hero — the yes screen's own word, and the booked court. */
+export const STAGE_SPLASH_COPY = {
+  word: 'It’s a game!',
+  versus: 'vs',
+  /** The front card's *Sat 16:00*, as a booked game's line says the day. */
+  when: 'Saturday 16:00',
+  court: 'Court 6',
+  /** After the share — *27 zł each*. */
+  each: 'each',
 } as const;

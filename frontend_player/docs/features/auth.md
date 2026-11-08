@@ -491,16 +491,66 @@ each, so a large text size cuts a name rather than pushing a card's parts out of
 
 **The deal.** When the screen opens the three sit stacked exactly on top of each other for
 `motion.stageDeck.stacked`, then the two back cards slide to their turned places over
-`motion.stageDeck.deal`, `easeDecel`, while the front card stays put. It plays once, when sign-in
-mounts; the swipe and _It's a game!_ that follow, and starting again from the deal when sign-in
-comes back into view, are the loop's (#787). **Under reduced motion or a running screen reader** —
-the app's collapsed-presentation rule — the cards are dealt at once and nothing moves: from the
-first frame under reduced motion, which the root already knows, and the moment the OS answers for a
-screen reader, which is a promise that lands well inside the stacked beat. React Native's `Animated`
-on the native driver, the yes screen's choice. `stageDeck.test.tsx` drives the clock through the
-deal, both collapsed cases and the fit; the hero stays hidden from screen readers, so its queries
-opt into hidden elements.
+`motion.stageDeck.deal`, `easeDecel`, while the front card stays put. It is the first beat of the
+loop below, and the loop starts from it every time. **Under reduced motion or a running screen
+reader** — the app's collapsed-presentation rule — the cards are dealt at once and nothing moves:
+from the first frame under reduced motion, which the root already knows, and the moment the OS
+answers for a screen reader, which is a promise that lands well inside the stacked beat. React
+Native's `Animated` on the native driver, the yes screen's choice. `stageDeck.test.tsx` drives the
+clock through the deal, both collapsed cases and the fit; the hero stays hidden from screen readers,
+so its queries opt into hidden elements.
 
 **Not seen on a device**: the three cards and the deal on iOS and Android — the posters and the
 dashed seats at half size, the turned cards' edges, the fit on a short phone and with large text,
 and the headline under the deck.
+
+**Sign-in's hero plays its story on a loop** ([#787](https://github.com/Raketa02/Raketa/issues/787),
+PRD #783; design system 12.2, mocks 2, 7 and 8). After the deal, a still moment so the cards can be
+read; then the front card is **picked up** — a little right, a few degrees — with **I'M IN** on it,
+the real deck's yes in volt with no price, set clockwise at the card's top-right where mock 2 draws
+it; then **swiped off** past the right edge, accelerating, turning further and fading, while the
+back cards and the headline stay. The moment it is gone the dark hero becomes **_It's a game!_** —
+the yes screen's radial night, the front card's four face to face (`karol.t` KT and **You**, _vs_,
+`ania.k` AK and `kuba.w` KW), _It's a game!_ rising in volt over _Saturday 16:00 · Ogrody 33 · Court
+6 · 27 zł each_, and no buttons. About four seconds on, the cards are **restacked under it**, it
+fades over them, and the next cycle deals: about 8,6 seconds in all. Every beat is a
+`motion.stageDeck` token and every place a `size.stage` one; every string is `stageHeroCopy.ts`'s.
+
+**_It's a game!_ here is a picture of the yes screen, not the yes screen.** `StageSplash` redraws
+its ground, its tiles and its entrance in auth, as #786 redrew the card — the live `ItsAGame` is not
+exported or changed — and it covers **the dark hero only**: drawn over the cards and the headline
+and under the wordmark (`StageHero`'s `cover`), so the sheet is never under it. **You is a poster
+with no letters**: the reader's face is not the hero's to draw, and the mocks' _TK_ is nobody. It
+draws three values ADR-0167 fences to the yes screen — the ground's two colours, the word's role,
+the initials over a poster — and **ADR-0167's note of 2026-11-08 extends the fence to this picture
+and to nothing else**: it is that screen, drawn smaller. As with the card, a change to the yes
+screen does not reach the picture by itself.
+
+**When it runs: only while sign-in is the screen in view and the app is not in the background**
+(`components/useStageLoop.ts`). `inView` is the route's (`useScreenInView`, #784), and the
+background is `useAppInBackground`, new beside `useOnForeground` in `shared/lib/platform`:
+`AppState`'s `background` and only that. **Not `focusManager`'s answer**, which counts iOS's
+`inactive` as away — right for a refetch, wrong here, because `inactive` is also **Face ID behind
+the keychain's autofill**, and a picture that reset itself every time somebody autofilled their
+password would be the hero moving with the form. When _Create an account_, _Forgot password?_ or the
+invitation screen covers sign-in, or the app goes to the background, the loop **stops where it is**;
+when sign-in is back in view with the app in front it **starts again from the deal** — stacked, the
+front card in its place, no splash — so nobody comes back to the middle of a swipe. A **Sign in**
+press touches none of it: a success leaves the screen, and a refusal leaves it running beside the
+banner. **Under reduced motion or a running screen reader it never runs**: the cards are dealt and
+still, and the splash is never drawn.
+
+**One sequence, looped, and no React state.** The whole cycle is one `Animated.sequence` that
+`Animated.loop` runs again from the top, moving five values — the deal, the front card's swipe, and
+the splash's shown, meet and rise — that the deck and the splash draw from. Nothing re-renders as it
+moves, so **typing in the form never moves with it**, and nothing in it sets state outside a test's
+`act`. `stageLoop.test.tsx` drives the clock through the pick-up, the stamp, the swipe, the splash
+at its moment, its going at the reset and its coming again on the next cycle; both collapsed cases
+past several cycles; the app going to the background and back, and iOS's `inactive` leaving it running; typing and a refused sign-in beside it;
+and, through the route tree, the loop holding while sign-up covers sign-in and starting from the
+deal on the way back.
+
+**Not seen on a device**: the loop on iOS and Android, watched for several cycles while typing — the
+pick-up and the stamp at half size, the swipe leaving the phone, the splash's night meeting the
+wordmark and the sheet's edge, the tiles and the word on a short phone and with large text, and the
+loop stopping and starting from the deal around _Create an account_ and the app switcher.

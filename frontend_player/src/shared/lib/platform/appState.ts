@@ -14,7 +14,7 @@
  */
 
 import { focusManager } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 /**
@@ -69,4 +69,32 @@ export function useOnForeground(run: () => void): void {
       }),
     [],
   );
+}
+
+/**
+ * **Whether the app has gone to the background** — `AppState`'s `background`, and only that — for
+ * a screen that keeps something running only while it can be seen: sign-in's hero loop (#787) stops
+ * when the app goes away and starts again from its first beat on return.
+ *
+ * **Not `focusManager`'s answer, on purpose.** That one counts iOS's `inactive` as away, which is
+ * right for a refetch; but `inactive` is also the app switcher half-swiped, Control Centre, a call
+ * banner — and **Face ID behind the keychain's autofill**, which is how most people fill the very
+ * form this loop sits beside. A picture that reset itself every time somebody autofilled their
+ * password would be the hero moving with the form. So a screen asking *can I still be seen* reads
+ * the background alone. It is still this module's, as every reading of the app's lifecycle is
+ * (Part 13): one place says what each state means.
+ *
+ * Read at the first render, so a screen mounted while the app is away does not start for a frame.
+ */
+export function useAppInBackground(): boolean {
+  const [away, setAway] = useState(() => AppState.currentState === 'background');
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      setAway(state === 'background');
+    });
+    return () => subscription.remove();
+  }, []);
+
+  return away;
 }

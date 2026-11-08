@@ -14,6 +14,11 @@
  * **The room between the wordmark and the headline is the picture's** — sign-in's dealt deck
  * (#786), sign-up's podium (#788) — and it is whatever height those two leave, so the picture
  * measures it and fits itself in. Without a picture it is empty night.
+ *
+ * **A cover is drawn over the whole hero but the wordmark** — sign-in's *It's a game!* (#787), which
+ * becomes the dark hero and nothing more: the cards and the headline go under it, the wordmark stays
+ * in its corner over it, and the sheet is never under it because the hero ends where the sheet
+ * begins.
  */
 
 import type { ReactNode } from 'react';
@@ -33,11 +38,16 @@ export interface StageHeroProps {
   readonly topInset: number;
   /** What the room between the wordmark and the headline draws — fitted to it by itself. */
   readonly picture?: ReactNode;
+  /**
+   * What is drawn over the whole hero — the picture and the headline both — and under the wordmark:
+   * sign-in's *It's a game!* (#787). It fills the hero and lays itself out in it.
+   */
+  readonly cover?: ReactNode;
 }
 
 const CAP = theme.size.stage.textMaxScale;
 
-export function StageHero({ headline, height, topInset, picture }: StageHeroProps) {
+export function StageHero({ headline, height, topInset, picture, cover }: StageHeroProps) {
   return (
     <View
       style={[s.hero, { height }]}
@@ -57,6 +67,10 @@ export function StageHero({ headline, height, topInset, picture }: StageHeroProp
         <Text style={s.headline} maxFontSizeMultiplier={CAP}>
           {headline}
         </Text>
+        {/* Absolute in the column, so it fills the whole hero — Yoga sets an absolute child against
+            its parent's border, not its padding — and drawn after the room and the headline, so it
+            is over both. The wordmark is raised above it. */}
+        {cover === undefined ? null : <View style={StyleSheet.absoluteFill}>{cover}</View>}
       </View>
     </View>
   );
@@ -71,7 +85,8 @@ const s = StyleSheet.create({
     paddingHorizontal: theme.space.xxl,
     paddingBottom: theme.space.lg,
   },
-  wordmark: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
+  // Raised over the cover: the wordmark stays in its corner while *It's a game!* fills the hero.
+  wordmark: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs, zIndex: 1 },
   // Volt as a fill on the dark — 2.2's rule, 12,57 on the ground.
   mark: {
     width: theme.size.stage.mark,

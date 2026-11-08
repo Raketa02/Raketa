@@ -64,7 +64,7 @@
  * response — which is the thing the boundary exists to prevent.
  */
 
-export { useOnForeground, wireFocusManager } from './appState';
+export { useAppInBackground, useOnForeground, wireFocusManager } from './appState';
 export { useHardwareBack } from './hardwareBack';
 export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
