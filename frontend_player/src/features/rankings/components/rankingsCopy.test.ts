@@ -12,6 +12,7 @@ import {
   chipFace,
   gapLineParts,
   getYourLevelLabel,
+  jumpButtonLabel,
   nobodyRankedLine,
   notListedLine,
   ordinal,
@@ -201,6 +202,12 @@ describe('the list', () => {
       '7th, You, 2,71',
     );
   });
+
+  // §30.7: the jump button (#776).
+  it('names the jump button You and the reader’s place', () => {
+    expect(jumpButtonLabel(212)).toBe('You · 212th');
+    expect(jumpButtonLabel(1)).toBe('You · 1st');
+  });
 });
 
 describe('no sentence says her, his, she or he', () => {
@@ -217,6 +224,7 @@ describe('no sentence says her, his, she or he', () => {
       notListedLine({ state: 'NO_LEVEL', resultsToEnter: 5 }, 'padel'),
       notListedLine({ state: 'OFF_THE_LIST' }, 'padel'),
       nobodyRankedLine('padel'),
+      jumpButtonLabel(212),
     ];
 
     for (const sentence of sentences) {

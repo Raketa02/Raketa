@@ -120,6 +120,64 @@ export interface Ranking {
   readonly podium: readonly RankedRow[];
   /** General's first page of 50, best first; Friends whole. */
   readonly rows: readonly RankedRow[];
+  /**
+   * **The cursor General's second page is read after** (#776) — opaque, handed back as it came.
+   * Absent when the first page is the whole list, and always in Friends.
+   */
+  readonly next?: string;
+}
+
+/**
+ * **A page of General** (#776; the screens §5.3) — 50 places of the list, the rows of them the reader
+ * sees, best first, and the cursors either side: `previous` to read the page above, `next` the page
+ * below, each absent at that end of the list. A page with rows the reader can't see holds fewer.
+ */
+export interface GeneralPage {
+  readonly rows: readonly RankedRow[];
+  readonly previous?: string;
+  readonly next?: string;
+}
+
+/**
+ * **Where a page of General is read from** — the main read's own first page, the page with the
+ * reader in the middle (*You · 212th*), or the page below or above a cursor.
+ */
+export type PageAt =
+  | { readonly at: 'top' }
+  | { readonly at: 'aroundMe' }
+  | { readonly at: 'after'; readonly cursor: string }
+  | { readonly at: 'before'; readonly cursor: string };
+
+/**
+ * **General's pages, end to end** (#776). Each page is read against the order as it stands at that
+ * read, so a row that moved past a cursor between two reads comes back on the next page that way. It
+ * is drawn once, **where it already stands** — on the page nearest the one the window read first,
+ * `first`, which is 0 from the top and the reader's own page after a jump — so nothing the reader is
+ * looking at moves under them. A pull reads every page again, and puts it right.
+ */
+export function joinPages(
+  pages: readonly Pick<GeneralPage, 'rows'>[],
+  first = 0,
+): readonly RankedRow[] {
+  const byNearest = pages
+    .map((_page, at) => at)
+    .sort((one, other) => Math.abs(one - first) - Math.abs(other - first));
+  const keptOn = new Map<string, number>();
+  for (const at of byNearest) {
+    for (const row of pages[at]?.rows ?? []) {
+      if (!keptOn.has(row.playerId)) keptOn.set(row.playerId, at);
+    }
+  }
+  return pages.flatMap((page, at) => page.rows.filter((row) => keptOn.get(row.playerId) === at));
+}
+
+/**
+ * **The place the floating *You · 212th* button names** (the screens §5.3): the reader's, while they
+ * are listed. **None when they are hidden from General** (the mechanics §10) or not listed, and none
+ * where the card could not be read — no button.
+ */
+export function jumpPlace(card: PlaceCard | undefined): number | undefined {
+  return card?.state === 'LISTED' ? card.place : undefined;
 }
 
 /**

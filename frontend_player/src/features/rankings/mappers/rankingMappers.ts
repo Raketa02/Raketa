@@ -14,6 +14,7 @@ import type { components } from '@/generated/schema';
 import type {
   Chip,
   GapLine,
+  GeneralPage,
   PlaceCard,
   Placed,
   PlayerAbove,
@@ -32,6 +33,16 @@ export function toRanking(wire: Schemas['RankingResponse']): Ranking {
     listed: wire.listed,
     podium: wire.podium.map(toRankedRow),
     rows: wire.rows.map(toRankedRow),
+    ...(wire.next === null ? {} : { next: wire.next }),
+  };
+}
+
+/** **A page of General** (#776): its rows, and each cursor only where that end has more. */
+export function toGeneralPage(wire: Schemas['GeneralPageResponse']): GeneralPage {
+  return {
+    rows: wire.rows.map(toRankedRow),
+    ...(wire.previous === null ? {} : { previous: wire.previous }),
+    ...(wire.next === null ? {} : { next: wire.next }),
   };
 }
 

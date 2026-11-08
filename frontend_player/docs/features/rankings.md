@@ -10,9 +10,9 @@ set is [`docs/specs/rankings/`](../../../docs/specs/rankings/README.md) and ever
 `components/rankings.test.tsx`.
 
 **The page is General only, for now.** #775 draws the header, the reader's card in every General
-state, the podium and the first page of the list. The _General | Friends_ switch and the view the
-phone remembers are [#777](https://github.com/Raketa02/Raketa/issues/777)'s, the later pages and the
-_You · 212th_ button [#776](https://github.com/Raketa02/Raketa/issues/776)'s, the _Show me in General_
+state, the podium and the first page of the list; [#776](https://github.com/Raketa02/Raketa/issues/776)
+the later pages and the _You · 212th_ button. The _General | Friends_ switch and the view the
+phone remembers are [#777](https://github.com/Raketa02/Raketa/issues/777)'s, the _Show me in General_
 switch on the hidden card [#778](https://github.com/Raketa02/Raketa/issues/778)'s, and Add friend from
 a stranger's record [#779](https://github.com/Raketa02/Raketa/issues/779)'s. The domain already
 carries every card state the contract has, so `JUST_YOU` and `NO_FRIEND_LISTED` are mapped and draw
@@ -63,8 +63,39 @@ nickname, the reader's own too**, as §30.7 writes it; only a row reads _You_.
 **A pull reads the page again**, a refused read says why with _Try again_, and a read waiting for a
 connection says so; nothing but the pull is drawn under the header while the first read is out.
 
-**The list is a `map` in a `ScrollView`**, fifty rows at most on one read. Paging (#776) brings more,
-and is where it becomes a virtualised list (architecture Part 12).
+**General is read in pages of 50, as two windows over one list** (#776; the screens §5.3;
+`useGeneral`), each an infinite query. **From the top**, the main read is the first page — the card,
+the podium and the first 50 rows, one kept order's — and each page after it is read below the last
+one's cursor. **Around the reader**, the page with them in the middle, then the page above or below.
+Every cursor is the server's, handed back as it came. A row that dropped past a cursor between two
+reads comes back on the next page that way, and **is drawn once, where it already stands** — on the
+page nearest the one the window read first (`joinPages`) — so nothing the reader is looking at moves
+under them; a pull reads every page again and puts it right.
+
+**The list is a `FlatList`, the card and the podium its header** (architecture Part 12). Within half a
+screen of either end it asks for the next page that way — once: an end reached while its page is on
+its way joins it, and **an end reached while the list is read again is owed**, asked for once that
+read has landed, because the list says an end once and would not say it again to a reader holding
+still at it. A page landing above the rows on screen is laid in without moving them
+(`maintainVisibleContentPosition`). A page is drawn whole as it lands, fifty light rows, so the
+reader's row is on hand to centre the moment a jump lands. A page refused says why at the end it was
+asked for, with _Try again_, and the rows already drawn stay.
+
+**The floating _You · 212th_ shows while the reader's row is off screen** (`jumpPlace`): only while
+they are listed — never hidden from General (the mechanics §10), never off the list — and only once
+the list has first said what is on screen, so it never flashes up before. A row is on screen once half
+of it is. **A tap centres the reader's row**: where the list already draws it, a scroll and nothing
+read; further down than the list has read, the page around them, **drawn as a new list only once it
+has landed** — until then the list stays where it was. Each tap reads that page afresh. A row not yet
+laid out is scrolled to as nearly as the header and an average row put it, and centred once it has
+been, on the next few frames and whenever the content grows. **While a centring is owed the top of
+the list asks for nothing**: a new list starts at its top, and would otherwise read the page above
+before it reached the reader. The reader's own drag takes the list back. A jump refused says why where the button stood, with _Try
+again_.
+
+**Around the reader, the card and the podium wait at the top of the list**: they stand above the rows
+again once the pages above reach place 1. A pull there reads the main read and the window around the
+reader again.
 
 **Calls made here, open to overrule:**
 
@@ -79,9 +110,18 @@ and is where it becomes a virtualised list (architecture Part 12).
   serves `HIDDEN`, and #778 adds the switch;
 - _Nobody ranked in {sport} yet_ follows the wire's `listed` being 0, so a sport whose only listed
   players are hidden from the reader draws neither that line nor a list;
-- _New_ is a neutral `paper2` chip with `ink`: the spec names no colour for it.
+- _New_ is a neutral `paper2` chip with `ink`: the spec names no colour for it;
+- (#776) _You · 212th_ is a `dark` button, centred at the foot — the spec places it at the foot and
+  draws no mock — with the hint _Shows your row in the list_;
+- (#776) a tap on _You · {n}th_ for a row the list already draws scrolls to it and reads nothing: the
+  page around the reader is read only for a row further down;
+- (#776) around the reader, the card and the podium are drawn only once the window reaches the top,
+  so the list never reads 3rd and then 187th.
 
 The design calls are Part 16 rows of the design system (2026-11-08).
 
 **Not seen on a device**: the whole page — the trophy beside the bell, the dark card's place and
-level, the podium's steps, the rows and the tint, the drawn marks, and the pill over the header.
+level, the podium's steps, the rows and the tint, the drawn marks, and the pill over the header —
+and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,
+the jump landing centred, and the button over the list. The suites say what the list reports (the
+rows on screen, an end reached), because a test renderer lays nothing out.

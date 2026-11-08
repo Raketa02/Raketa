@@ -42,6 +42,8 @@ export const RANKINGS_COPY = {
   pillHint: 'Shows the ranking in another sport',
   openRecord: 'Opens their record',
   openOwnRecord: 'Opens your record',
+  /** The jump button's hint (#776) — a call: §30.7 writes only what it reads. */
+  jumpHint: 'Shows your row in the list',
 } as const;
 
 /**
@@ -245,6 +247,11 @@ export function rankedRowLabel(row: {
   readonly isYou: boolean;
 }): string {
   return `${ordinal(row.place)}, ${rowName(row)}, ${formatLevel(row.level)}`;
+}
+
+/** §30.7: the floating jump button, *You · 212th* (#776). Spoken as it reads. */
+export function jumpButtonLabel(place: number): string {
+  return `${RANKINGS_COPY.you} · ${ordinal(place)}`;
 }
 
 /**

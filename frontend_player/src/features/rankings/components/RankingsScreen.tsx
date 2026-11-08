@@ -8,17 +8,18 @@
  * sports, the reader's rated ones first. Switching sport is a new read of the page.
  *
  * **Under it, General** (§4, §5): the reader's place card — or the not-listed card in its place —
- * then the podium with three rows the reader sees, then the first page of the list on one white
- * card; *Nobody ranked in badminton yet* where nobody is listed. The *General | Friends* switch is
- * #777's, the pages after the first and the *You · 212th* button #776's.
+ * then the podium with three rows the reader sees, then the list on one white card, in pages of 50
+ * with the floating *You · 212th* (#776, `RankingList`); *Nobody ranked in badminton yet* where
+ * nobody is listed. The *General | Friends* switch is #777's.
  *
  * **The page opens on** the sport it was asked for — the trophy's, or the one a pass returns to —
  * else the deck's last, else padel (`useRankingsSport`), and draws nothing below the header until it
  * knows which.
  *
- * **A pull reads the page again** — places move whenever a result settles anywhere in Raketa. While the
- * first read is out nothing is drawn under the header but the pull; a refused read says why with
- * *Try again*, and a read waiting for a connection says so.
+ * **A pull reads the page again** — every page drawn, the main read with them: places move whenever a
+ * result settles anywhere in Raketa. While the first read is out nothing is drawn under the header
+ * but the pull; a refused read says why with *Try again*, and a read waiting for a connection says
+ * so. **Another sport is another page**, read from its top.
  *
  * **Any face, row or podium step opens the full record**, a stranger's too; the reader's own opens
  * their own (§6). Whose record is up is this screen's state — route-local, as Members holds it.
@@ -28,7 +29,7 @@
 
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
+import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { ReadFailure } from '@/features/groups/types';
 import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
@@ -37,7 +38,7 @@ import { Note, ScreenHeader, SportPillFrame, theme, TopSafeArea } from '@/shared
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { podiumOf, type RankedRow } from '../domain/ranking';
-import { useRanking } from '../hooks/useRanking';
+import { useGeneral } from '../hooks/useGeneral';
 import { useRankingsSport } from '../hooks/useRankingsSport';
 
 import { PlaceCard } from './PlaceCard';
@@ -70,16 +71,19 @@ export function RankingsScreen({ sport: asked }: RankingsScreenProps) {
           />
         )}
       >
-        {sport === undefined ? null : <GeneralPage sport={sport} />}
+        {sport === undefined ? null : <GeneralPage key={sport} sport={sport} />}
       </SportPillFrame>
     </TopSafeArea>
   );
 }
 
-/** General, for one sport: the card, the podium and the first page of the list. */
+/**
+ * General, for one sport: the card and the podium, then the list in pages — from the top, or around
+ * the reader once the jump has landed.
+ */
 function GeneralPage({ sport }: { readonly sport: Sport }) {
-  const read = useRanking(sport, 'GENERAL');
-  const ranking = read.data;
+  const general = useGeneral(sport);
+  const { ranking } = general;
   const [reading, setReading] = useState<RecordSubject>();
   // A pull is the pull's own state, never the query's: a background refetch spins nothing, and a
   // pull spins until its read has landed, refused or not (ShellScreen's rule).
@@ -87,18 +91,60 @@ function GeneralPage({ sport }: { readonly sport: Sport }) {
   const pull = () => {
     if (pulling) return;
     setPulling(true);
-    void read.refetch().finally(() => setPulling(false));
+    void general.reread().finally(() => setPulling(false));
   };
 
   const open = (row: RankedRow) =>
     setReading({ kind: row.isYou ? 'me' : 'player', playerId: row.playerId });
   const podium = ranking === undefined ? undefined : podiumOf(ranking.podium);
 
+  const top =
+    ranking === undefined ? (
+      general.error !== null ? (
+        <ReadFailure error={general.error} onRetry={general.retry} />
+      ) : general.paused ? (
+        <Note variant="amber">{offlineMessage('resumes')}</Note>
+      ) : null
+    ) : (
+      <>
+        {ranking.card === undefined ? null : <PlaceCard card={ranking.card} sport={sport} />}
+        {ranking.listed === 0 ? (
+          <Text testID="nobody-ranked" style={s.nobody}>
+            {nobodyRankedLine(sport)}
+          </Text>
+        ) : podium === undefined ? null : (
+          <PodiumSteps podium={podium} onOpen={open} />
+        )}
+      </>
+    );
+  const shownRows = ranking === undefined || ranking.listed === 0 ? [] : general.rows;
+
   return (
-    <>
-      <ScrollView
-        testID="rankings-page"
-        contentContainerStyle={s.body}
+    <View style={s.page}>
+      <RankingList
+        window={general.window}
+        rows={shownRows}
+        header={
+          <View style={s.header}>
+            {general.atTheTop ? top : null}
+            {general.earlierFailure === undefined ? null : (
+              <ReadFailure
+                error={general.earlierFailure.error}
+                onRetry={general.earlierFailure.retry}
+              />
+            )}
+          </View>
+        }
+        footer={
+          general.laterFailure === undefined ? null : (
+            <View style={s.footer}>
+              <ReadFailure
+                error={general.laterFailure.error}
+                onRetry={general.laterFailure.retry}
+              />
+            </View>
+          )
+        }
         refreshControl={
           <RefreshControl
             refreshing={pulling}
@@ -108,31 +154,11 @@ function GeneralPage({ sport }: { readonly sport: Sport }) {
             progressBackgroundColor={theme.color.paper}
           />
         }
-      >
-        {ranking === undefined ? (
-          read.error !== null ? (
-            <ReadFailure error={read.error} onRetry={() => void read.refetch()} />
-          ) : read.fetchStatus === 'paused' ? (
-            <Note variant="amber">{offlineMessage('resumes')}</Note>
-          ) : null
-        ) : (
-          <>
-            {ranking.card === undefined ? null : <PlaceCard card={ranking.card} sport={sport} />}
-            {ranking.listed === 0 ? (
-              <Text testID="nobody-ranked" style={s.nobody}>
-                {nobodyRankedLine(sport)}
-              </Text>
-            ) : (
-              <>
-                {podium === undefined ? null : <PodiumSteps podium={podium} onOpen={open} />}
-                {ranking.rows.length === 0 ? null : (
-                  <RankingList rows={ranking.rows} onOpen={open} />
-                )}
-              </>
-            )}
-          </>
-        )}
-      </ScrollView>
+        onOpen={open}
+        onStartReached={general.loadEarlier}
+        onEndReached={general.loadLater}
+        jump={general.jump}
+      />
 
       {reading === undefined ? null : (
         <PlayerRecordSheet
@@ -142,17 +168,16 @@ function GeneralPage({ sport }: { readonly sport: Sport }) {
           sport={sport}
         />
       )}
-    </>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
-  body: {
-    paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
-    gap: theme.space.sm,
-  },
+  page: { flex: 1 },
+  // The card, the podium — or what stands in their place — above the rows, `sm` apart and from them.
+  header: { gap: theme.space.sm, paddingBottom: theme.space.sm },
+  footer: { paddingTop: theme.space.sm },
   nobody: {
     ...theme.type.rlLabel,
     color: theme.color.muted,

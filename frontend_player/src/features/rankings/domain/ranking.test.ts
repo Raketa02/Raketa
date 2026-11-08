@@ -5,7 +5,14 @@
  * §2, §5.1).
  */
 
-import { openingSport, pillSports, podiumOf, type RankedRow } from './ranking';
+import {
+  joinPages,
+  jumpPlace,
+  openingSport,
+  pillSports,
+  podiumOf,
+  type RankedRow,
+} from './ranking';
 
 describe('the sports the pill offers', () => {
   // PRD #766 call 9: all four, the reader's rated ones first, then the rest — each part in the app's
@@ -74,5 +81,64 @@ describe('the podium', () => {
   it('is none with fewer than three rows', () => {
     expect(podiumOf([row(1), row(2)])).toBeUndefined();
     expect(podiumOf([])).toBeUndefined();
+  });
+});
+
+describe('General’s pages, joined', () => {
+  // #776: General loads in pages of 50, each read after (or before) the last row's key as the order
+  // stands at that read — so a row that dropped past the cursor between two reads comes back on the
+  // next page. The list draws it once, where it already stands.
+  it('lays the pages end to end, best first', () => {
+    expect(joinPages([{ rows: [row(1), row(2)] }, { rows: [row(3), row(5)] }])).toEqual([
+      row(1),
+      row(2),
+      row(3),
+      row(5),
+    ]);
+  });
+
+  it('draws a row that came back on a later page once, where it already stands', () => {
+    const moved = { ...row(2), place: 4 };
+
+    expect(joinPages([{ rows: [row(1), row(2)] }, { rows: [row(3), moved] }])).toEqual([
+      row(1),
+      row(2),
+      row(3),
+    ]);
+  });
+
+  // Around the reader the window's first page is in the middle: a page read above it later is laid
+  // in before it, and a row that climbed past the cursor stays where it already stood.
+  it('keeps a row where the window first drew it, however many pages were laid in above', () => {
+    const climbed = { ...row(6), place: 3 };
+    const above = { rows: [row(2), climbed] };
+    const first = { rows: [row(5), row(6), row(7)] };
+
+    expect(joinPages([above, first], 1)).toEqual([row(2), row(5), row(6), row(7)]);
+  });
+
+  it('is nothing with no page', () => {
+    expect(joinPages([])).toEqual([]);
+  });
+});
+
+describe('the place the jump button names', () => {
+  // The screens §5.3: *You · 212th* — not shown when the reader isn't listed, nor, in General,
+  // hidden.
+  const placed = { place: 212, of: 480, level: 2.71 } as const;
+
+  it('is the reader’s place when they are listed', () => {
+    expect(jumpPlace({ state: 'LISTED', ...placed, gapLine: { kind: 'between' } })).toBe(212);
+  });
+
+  it('is none when the reader is hidden from General', () => {
+    expect(jumpPlace({ state: 'HIDDEN', ...placed })).toBeUndefined();
+  });
+
+  it('is none when the reader is not listed, or no card could be read', () => {
+    expect(jumpPlace({ state: 'NEEDS_RESULTS', results: 2, resultsToEnter: 5 })).toBeUndefined();
+    expect(jumpPlace({ state: 'NO_LEVEL', resultsToEnter: 5 })).toBeUndefined();
+    expect(jumpPlace({ state: 'OFF_THE_LIST' })).toBeUndefined();
+    expect(jumpPlace(undefined)).toBeUndefined();
   });
 });

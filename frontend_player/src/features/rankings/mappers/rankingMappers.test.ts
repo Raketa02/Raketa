@@ -7,7 +7,7 @@
 
 import type { components } from '@/generated/schema';
 
-import { toRanking } from './rankingMappers';
+import { toGeneralPage, toRanking } from './rankingMappers';
 
 type Wire = components['schemas'];
 
@@ -201,5 +201,30 @@ describe('the page', () => {
     expect(ranking.listed).toBe(13);
     expect(ranking.podium.map((one) => one.place)).toEqual([1, 2, 3]);
     expect(ranking.rows).toHaveLength(3);
+  });
+});
+
+describe('the cursors (#776)', () => {
+  it('carries the main read’s cursor below its first page, and none when that page is the whole list', () => {
+    expect(toRanking(response({ next: 'k-50' })).next).toBe('k-50');
+    expect('next' in toRanking(response({ next: null }))).toBe(false);
+  });
+
+  it('reads a page of General: its rows, and the cursors either side, each only where there is one', () => {
+    const page = toGeneralPage({
+      sport: 'PADEL',
+      listed: 480,
+      rows: [row({ place: 51, player_id: 'p-51' })],
+      previous: 'k-51',
+      next: 'k-100',
+    });
+
+    expect(page.rows.map((one) => one.playerId)).toEqual(['p-51']);
+    expect(page.previous).toBe('k-51');
+    expect(page.next).toBe('k-100');
+
+    const ends = toGeneralPage({ sport: 'PADEL', listed: 3, rows: [], previous: null, next: null });
+    expect('previous' in ends).toBe(false);
+    expect('next' in ends).toBe(false);
   });
 });

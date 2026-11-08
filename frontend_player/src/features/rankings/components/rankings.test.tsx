@@ -13,7 +13,7 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -288,6 +288,8 @@ function said(node: { readonly props: { readonly children?: unknown } }): string
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
 const rowOf = (row: Wire['RankedRowSchema']) => screen.getByTestId(`ranked-row-${row.player_id}`);
+/** Every row the list draws, best first. */
+const listedRows = () => screen.queryAllByTestId(/^ranked-row-/);
 
 /** A row's form, read off the squares it draws — `RunOfForm`'s mint and grey. */
 function formOf(row: Wire['RankedRowSchema']): string[] {
@@ -556,7 +558,7 @@ describe('the place card', () => {
     // A light card, one line, no button.
     expect(screen.queryByRole('button', { name: /^Get your/ })).toBeNull();
     // The list is drawn under it all the same.
-    expect(screen.getByTestId('ranking-list')).toBeTruthy();
+    expect(listedRows().length).toBeGreaterThan(0);
   });
 
   it(
@@ -703,7 +705,7 @@ describe('the podium', () => {
     server.answer('PADEL', general('PADEL', { podium: [], rows: [INES, TOMEK], listed: 2 }));
     await openRankings();
 
-    expect(await screen.findByTestId('ranking-list')).toBeTruthy();
+    expect(await screen.findAllByTestId(/^ranked-row-/)).toHaveLength(2);
     expect(screen.queryByTestId('podium')).toBeNull();
   });
 });
@@ -712,9 +714,9 @@ describe('the rows', () => {
   it('draw each place — coral for 1–3, grey after, skipping the rows he can’t see', async () => {
     rankingServer();
     await openRankings();
-    await screen.findByTestId('ranking-list');
+    await screen.findAllByTestId(/^ranked-row-/);
 
-    const places = within(screen.getByTestId('ranking-list'))
+    const places = screen
       .getAllByTestId(/^ranked-place-/)
       .map((node) => [node.props.children as number, StyleSheet.flatten(node.props.style).color]);
     expect(places).toEqual([
@@ -730,7 +732,7 @@ describe('the rows', () => {
   it('draw the form as the record’s squares, oldest first and never padded', async () => {
     rankingServer();
     await openRankings();
-    await screen.findByTestId('ranking-list');
+    await screen.findAllByTestId(/^ranked-row-/);
 
     expect(formOf(INES)).toEqual(['WIN', 'WIN', 'LOSS', 'WIN', 'WIN']);
     expect(formOf(TOMEK)).toEqual(['WIN', 'LOSS', 'WIN']);
@@ -739,7 +741,7 @@ describe('the rows', () => {
   it('draw every chip: up and down with their counts, the same, and New', async () => {
     rankingServer();
     await openRankings();
-    await screen.findByTestId('ranking-list');
+    await screen.findAllByTestId(/^ranked-row-/);
 
     const chip = (row: Wire['RankedRowSchema'], kind: Wire['ChipKind']) =>
       within(within(rowOf(row)).getByTestId(`rank-chip-${kind}`, HIDDEN_TOO));
@@ -757,7 +759,7 @@ describe('the rows', () => {
   it('read You on the reader’s own row, tinted', async () => {
     rankingServer();
     await openRankings();
-    await screen.findByTestId('ranking-list');
+    await screen.findAllByTestId(/^ranked-row-/);
 
     const own = rowOf(TOMEK);
     expect(within(own).getByText('You')).toBeTruthy();
@@ -781,7 +783,7 @@ describe('an empty sport', () => {
 
     expect(await screen.findByText('Nobody ranked in badminton yet')).toBeTruthy();
     expect(screen.queryByTestId('podium')).toBeNull();
-    expect(screen.queryByTestId('ranking-list')).toBeNull();
+    expect(listedRows()).toHaveLength(0);
   });
 });
 
@@ -879,5 +881,355 @@ describe('reading the page', () => {
     act(() => onlineManager.setOnline(true));
 
     expect(await screen.findByText('7th')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// General in pages, and the jump to his row (#776)
+// ---------------------------------------------------------------------------
+
+/*
+ * Here Tomek is 212th of 480. **Each page holds a few rows rather than the server's 50**, so a test
+ * renderer with no layout draws the whole list at once: the list asks for every page the same way
+ * whatever a page holds, and a page with rows the reader can't see holds fewer than 50 anyway.
+ */
+
+const rowsPath = (sport: Wire['Sport']) => `/api/v1/rankings/${sport}/general/rows`;
+
+/** Somebody at a place in the long list — nobody in particular. */
+const crowd = (place: number) => ranked(place, `player.${place}`, 3.9 - place / 200);
+const placesFrom = (first: number, last: number) =>
+  Array.from({ length: last - first + 1 }, (_unused, at) => first + at);
+const crowdFrom = (first: number, last: number) => placesFrom(first, last).map(crowd);
+const TOMEK_212 = { ...TOMEK, place: 212 };
+
+function page(
+  rows: readonly Wire['RankedRowSchema'][],
+  previous: string | null,
+  next: string | null,
+): Wire['GeneralPageResponse'] {
+  return { sport: 'PADEL', listed: 480, rows: [...rows], previous, next };
+}
+
+/**
+ * The pages route, answering each query it is asked with its page, or with a refusal made afresh for
+ * every read — anything else is refused as a page this server never wrote.
+ */
+function servePages(
+  pages: Readonly<Record<string, Wire['GeneralPageResponse'] | (() => Response)>>,
+) {
+  transport.on('GET', rowsPath('PADEL'), (request) => {
+    const answer = pages[request.path.split('?')[1] ?? ''];
+    if (answer === undefined) return errorResponse(400, 'not_a_ranking_page');
+    return typeof answer === 'function' ? answer() : json(answer);
+  });
+}
+
+const AROUND_212 = page(
+  [crowd(210), crowd(211), TOMEK_212, crowd(213), crowd(214)],
+  'above-210',
+  'below-214',
+);
+
+/** The main read with Tomek 212th of 480: the card, the podium, and the first page, 1–5. */
+const LONG_LIST = () =>
+  general('PADEL', {
+    card: listedCard({ place: 212, of: 480 }),
+    listed: 480,
+    podium: crowdFrom(1, 3),
+    rows: crowdFrom(1, 5),
+    next: 'below-5',
+  });
+
+/** Tomek 212th: the main read's first page is 1–5, the pages after and around him as below. */
+function longListServer(): RankingServer {
+  const server = rankingServer({
+    trophy: { sport: 'PADEL', general_place: 212, friends_place: null },
+  });
+  server.answer('PADEL', LONG_LIST());
+  servePages({
+    'after=below-5': page(crowdFrom(6, 10), 'above-6', 'below-10'),
+    'around_me=true': AROUND_212,
+    'before=above-210': page(crowdFrom(205, 209), 'above-205', 'below-209'),
+    'after=below-214': page(crowdFrom(215, 219), 'above-215', 'below-219'),
+  });
+  return server;
+}
+
+const theList = () => screen.getByTestId('rankings-page');
+const pageReads = () =>
+  transport.requestsTo('GET', rowsPath('PADEL')).map((request) => request.path.split('?')[1]);
+const drawnPlaces = () =>
+  screen.getAllByTestId(/^ranked-place-/).map((node) => node.props.children as number);
+const rowDrawn = (row: Wire['RankedRowSchema']) =>
+  screen.findByTestId(`ranked-row-${row.player_id}`);
+const jumpButton = (place: string) => screen.queryByRole('button', { name: `You · ${place}` });
+/** The reader's finger on the list — what scrolling up or down from a jump begins with. */
+const drag = () => fireEvent(theList(), 'scrollBeginDrag');
+
+/**
+ * **What the list reports as it settles** — the rows at least half on screen. The platform's list
+ * measures that; a test renderer lays nothing out, so the test says it, as `endReached` is said.
+ */
+function reportOnScreen(...rows: readonly Wire['RankedRowSchema'][]) {
+  fireEvent(theList(), 'viewableItemsChanged', {
+    viewableItems: rows.map((row, index) => ({
+      key: row.player_id,
+      index,
+      isViewable: true,
+      item: { playerId: row.player_id, isYou: row.is_you },
+    })),
+    changed: [],
+  });
+}
+
+describe('General in pages (#776)', () => {
+  it('loads the next page as the list nears its end — asked once, each row once, none missing', async () => {
+    longListServer();
+    await openRankings();
+    await rowDrawn(crowd(5));
+    // The first page is the main read's own: nothing else is asked for until the end is near.
+    expect(drawnPlaces()).toEqual(placesFrom(1, 5));
+    expect(pageReads()).toEqual([]);
+
+    fireEvent(theList(), 'endReached');
+    // Reached again before the page has landed: the page on its way is the answer.
+    fireEvent(theList(), 'endReached');
+
+    await rowDrawn(crowd(10));
+    expect(drawnPlaces()).toEqual(placesFrom(1, 10));
+    expect(pageReads()).toEqual(['after=below-5']);
+  });
+
+  it('draws a row the next page brings back once, where it already stood', async () => {
+    longListServer();
+    // Player 5 dropped to 7th between the two reads, past the cursor: the next page brings them back.
+    servePages({
+      'after=below-5': page([crowd(6), { ...crowd(5), place: 7 }, crowd(8)], 'above-6', 'below-8'),
+    });
+    await openRankings();
+    await rowDrawn(crowd(5));
+
+    fireEvent(theList(), 'endReached');
+
+    await rowDrawn(crowd(8));
+    expect(drawnPlaces()).toEqual([1, 2, 3, 4, 5, 6, 8]);
+    expect(screen.getAllByTestId(`ranked-row-${crowd(5).player_id}`)).toHaveLength(1);
+  });
+
+  it('asks for the page below once a pull that was on its way has landed', async () => {
+    longListServer();
+    await openRankings();
+    await rowDrawn(crowd(5));
+    let answer = () => {};
+    const held = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    transport.on('GET', rankingPath('PADEL'), async () => {
+      await held;
+      return json(LONG_LIST());
+    });
+    fireEvent(pageRefresh(), 'refresh');
+    await act(() => jest.advanceTimersByTimeAsync(100));
+
+    // The end, reached while the list is read again: nothing asked yet…
+    fireEvent(theList(), 'endReached');
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(pageReads()).toEqual([]);
+
+    await act(async () => answer());
+
+    // …and the page below once the read has landed, though the list never said the end again.
+    await rowDrawn(crowd(10));
+    expect(pageReads()).toEqual(['after=below-5']);
+  });
+
+  it('asks for nothing at the end of a list that is all on its first page', async () => {
+    rankingServer();
+    await openRankings();
+    await rowDrawn(ZOFIA);
+
+    fireEvent(theList(), 'endReached');
+    fireEvent(theList(), 'startReached');
+    await act(() => jest.advanceTimersByTimeAsync(1_000));
+
+    expect(pageReads()).toEqual([]);
+  });
+
+  it('says why when the page below is refused, and Try again asks for it again', async () => {
+    longListServer();
+    servePages({ 'after=below-5': () => errorResponse(503, 'block_state_unavailable') });
+    await openRankings();
+    await rowDrawn(crowd(5));
+
+    fireEvent(theList(), 'endReached');
+    // Through the automatic retries the error model allows.
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: 'Try again' });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    // The rows already drawn stay.
+    expect(drawnPlaces()).toEqual(placesFrom(1, 5));
+
+    servePages({ 'after=below-5': page(crowdFrom(6, 10), 'above-6', 'below-10') });
+    fireEvent.press(again);
+
+    await rowDrawn(crowd(10));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('the You · 212th button (#776)', () => {
+  let centring: jest.SpyInstance;
+  beforeEach(() => {
+    centring = jest.spyOn(FlatList.prototype, 'scrollToIndex');
+  });
+  afterEach(() => centring.mockRestore());
+
+  it('shows while his row is off screen; a tap lands on the page around it, centred, and it hides once the row shows', async () => {
+    longListServer();
+    await openRankings();
+    await rowDrawn(crowd(5));
+    // Nothing floats before the list has said what is on screen.
+    expect(jumpButton('212th')).toBeNull();
+
+    reportOnScreen(crowd(1), crowd(2), crowd(3));
+    const jump = screen.getByRole('button', { name: 'You · 212th' });
+    expect(jump.props.accessibilityHint).toBe('Shows your row in the list');
+
+    fireEvent.press(jump);
+
+    await rowDrawn(TOMEK_212);
+    expect(pageReads()).toEqual(['around_me=true']);
+    // A new list: the page around him, his row in the middle of it…
+    expect(drawnPlaces()).toEqual(placesFrom(210, 214));
+    // …and in the middle of the screen.
+    expect(centring).toHaveBeenLastCalledWith(
+      expect.objectContaining({ index: 2, viewPosition: 0.5 }),
+    );
+    // The card and the podium stand at the top of the list, which is still to be read.
+    expect(screen.queryByTestId('place-card')).toBeNull();
+    expect(screen.queryByTestId('podium')).toBeNull();
+
+    reportOnScreen(crowd(211), TOMEK_212, crowd(213));
+    expect(jumpButton('212th')).toBeNull();
+
+    // Scrolled away again, it comes back.
+    reportOnScreen(crowd(213), crowd(214));
+    expect(jumpButton('212th')).toBeTruthy();
+  });
+
+  it('loads the pages above and below his once it has jumped', async () => {
+    longListServer();
+    await openRankings();
+    await rowDrawn(crowd(5));
+    reportOnScreen(crowd(1));
+    fireEvent.press(screen.getByRole('button', { name: 'You · 212th' }));
+    await rowDrawn(TOMEK_212);
+    // The new list starts at its top on the way to his row: nothing above is read for that.
+    fireEvent(theList(), 'startReached');
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(pageReads()).toEqual(['around_me=true']);
+
+    drag();
+    fireEvent(theList(), 'startReached');
+    await rowDrawn(crowd(205));
+    fireEvent(theList(), 'endReached');
+    await rowDrawn(crowd(219));
+
+    expect(drawnPlaces()).toEqual(placesFrom(205, 219));
+    expect(pageReads()).toEqual(['around_me=true', 'before=above-210', 'after=below-214']);
+  });
+
+  it('stands the card and the podium back above the rows once the pages above reach the top', async () => {
+    // Tomek 7th of 13, the first page only three rows long, so his own is not on it.
+    const server = rankingServer();
+    server.answer('PADEL', general('PADEL', { rows: [INES, STAS, PIOTR], next: 'below-3' }));
+    servePages({
+      'around_me=true': page([KAROL, TOMEK, ZOFIA], 'above-6', null),
+      'before=above-6': page([INES, STAS, PIOTR], null, 'below-3'),
+    });
+    await openRankings();
+    await rowDrawn(PIOTR);
+    reportOnScreen(INES, STAS);
+
+    fireEvent.press(screen.getByRole('button', { name: 'You · 7th' }));
+    await rowDrawn(TOMEK);
+    expect(drawnPlaces()).toEqual([6, 7, 8]);
+    expect(screen.queryByTestId('place-card')).toBeNull();
+
+    drag();
+    fireEvent(theList(), 'startReached');
+
+    await rowDrawn(INES);
+    expect(drawnPlaces()).toEqual([1, 2, 3, 6, 7, 8]);
+    expect(screen.getByTestId('place-card')).toBeTruthy();
+    expect(screen.getByTestId('podium')).toBeTruthy();
+  });
+
+  it('scrolls to his row where the list already draws it, reading nothing', async () => {
+    rankingServer();
+    await openRankings();
+    await rowDrawn(TOMEK);
+    reportOnScreen(INES, STAS, PIOTR);
+
+    fireEvent.press(screen.getByRole('button', { name: 'You · 7th' }));
+
+    expect(centring).toHaveBeenCalledWith({ index: 4, viewPosition: 0.5, animated: true });
+    expect(pageReads()).toEqual([]);
+  });
+
+  it.each([
+    ['not listed', notListed('NEEDS_RESULTS', { results: 2 })],
+    ['hidden from General', listedCard({ state: 'HIDDEN', gap_line: null })],
+  ])('is not shown when he is %s', async (_case, card) => {
+    const server = rankingServer();
+    server.answer('PADEL', general('PADEL', { card }));
+    await openRankings();
+    await rowDrawn(INES);
+
+    reportOnScreen(INES, STAS, PIOTR);
+
+    expect(screen.queryByRole('button', { name: /^You · / })).toBeNull();
+  });
+
+  it('says why where it stood when the jump is refused, and Try again jumps', async () => {
+    longListServer();
+    servePages({ 'around_me=true': () => errorResponse(503, 'block_state_unavailable') });
+    await openRankings();
+    await rowDrawn(crowd(5));
+    reportOnScreen(crowd(1));
+
+    fireEvent.press(screen.getByRole('button', { name: 'You · 212th' }));
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: 'Try again' });
+    // The list stays where it was.
+    expect(drawnPlaces()).toEqual(placesFrom(1, 5));
+    expect(jumpButton('212th')).toBeNull();
+
+    servePages({ 'around_me=true': AROUND_212 });
+    fireEvent.press(again);
+
+    await rowDrawn(TOMEK_212);
+    expect(drawnPlaces()).toEqual(placesFrom(210, 214));
+  });
+
+  it('reads the page around him again on a pull, with the card', async () => {
+    longListServer();
+    await openRankings();
+    await rowDrawn(crowd(5));
+    reportOnScreen(crowd(1));
+    fireEvent.press(screen.getByRole('button', { name: 'You · 212th' }));
+    await rowDrawn(TOMEK_212);
+
+    await act(async () => {
+      fireEvent(pageRefresh(), 'refresh');
+    });
+
+    await waitFor(() => expect(pageReads()).toEqual(['around_me=true', 'around_me=true']));
+    await waitFor(() => expect(rankingReads('PADEL')).toHaveLength(2));
+    expect(drawnPlaces()).toEqual(placesFrom(210, 214));
+    expect(pageRefresh().props.refreshing).toBe(false);
   });
 });
