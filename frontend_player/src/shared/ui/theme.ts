@@ -895,6 +895,28 @@ const size = {
    *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
    *  the card-coloured ring that keeps one face from merging into the next. */
   groupPage: { seat: 34, filterPad: 9, stackFace: 28, stackOverlap: 9, stackRing: 2 },
+  /** RANKINGS ([#775](https://github.com/Raketa02/Raketa/issues/775); the rankings screens §1, §4,
+   *  §5; Part 16, 2026-11-08). Read off rankings 1, 4 and 6 at 1x and put on the 3pt grid:
+   *
+   *  - `trophyPill` — Home's dark pill left of the bell, and `trophy` the drawn cup inside it at the
+   *    tab icon's weight. Its reachable height is `hit.trophy`'s.
+   *  - `place` — the rows' place column: *212* in `num.s` with room, so paging (#776) never reflows it.
+   *  - the podium: the first's face a step larger than the others', and the three steps — first the
+   *    tallest, third *slightly lower than second* (the screens §5.1).
+   *  - `chipMark` — the drawn ▲ / ▼ in a chip, `chipDash` and `chipDashWeight` its drawn —. */
+  rankings: {
+    trophyPill: 30,
+    trophy: 15,
+    place: 33,
+    podiumFirstFace: 57,
+    podiumFace: 48,
+    stepFirst: 72,
+    stepSecond: 54,
+    stepThird: 45,
+    chipMark: 6,
+    chipDash: 9,
+    chipDashWeight: 2,
+  },
   /** THE ARRIVED RING — the members card on an official group's page in the administrator area
    *  (#529): how much of the group has arrived, the players over the group size, round the
    *  percentage it draws inside. A drawn object on `surface`, the ring's light-card sibling: a
@@ -1339,6 +1361,8 @@ const hit = {
    *  targets, which is the neighbour rule read vertically. No horizontal slop: the row is
    *  already the card's width. */
   peopleRow: { top: 3, bottom: 3 },
+  /** Home's trophy pill (#775): 30 tall, lifted to 44. */
+  trophy: { top: 7, bottom: 7 },
   /** The week grid's hour cell (6.8): half the 4pt gap on every side, which is all the
    *  neighbour rule allows and exactly enough that the reachable areas tile the grid with no
    *  dead point between two cells. It does not reach 44 — see `size.availability`. */

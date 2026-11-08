@@ -642,6 +642,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/me/ranking-visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Show me in General
+         * @description The switch on *On your card* (`docs/adr/0203` §7, #772): *Players who don't know you can see your place, open your record and send you a request.* `SHOWN` — on, which every profile starts with — or `HIDDEN`. Written at once, with no Save; an unchanged value records nothing.
+         *
+         *     **`HIDDEN`**: your row leaves everybody else's General, in every sport, and **places never renumber** — the others read #6, then #8, and *of 13* still counts you. You still see your own place, on Rankings (the card's state `HIDDEN`) and on Home's trophy. Friends ignores the switch: your friends still see you there. It reaches the ranking through the outbox, so the next read after it is delivered follows it.
+         *
+         *     **`204` and no body**: the switch is read back on `GET /players/me/profile`, as `ranking_visibility`.
+         */
+        put: operations["set_ranking_visibility_api_v1_players_me_ranking_visibility_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/play-intents/{sport}": {
         parameters: {
             query?: never;
@@ -737,7 +761,9 @@ export interface paths {
          * Block a player
          * @description **Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.
          *
-         *     **It reaches nothing else.** You both stay in your groups and see each other in their Members lists, either of you can open the other's record, and a chat you already share keeps working.
+         *     **It closes the record and the ranking both ways** (`docs/adr/0203` §8): neither of you can open the other's record, anywhere, group-mates included — each reads *This record isn't available* — and neither sees the other's row in the Ranking.
+         *
+         *     **It reaches nothing else.** You both stay in your groups and see each other in their Members lists, and a chat you already share keeps working.
          *
          *     **Your yeses where they are In are taken back** — on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.
          *
@@ -747,7 +773,7 @@ export interface paths {
          *
          *     **There is no reason field.** A reason belongs to a report, and this is not one.
          *
-         *     **Neither side is notified.** You can read your own blocks — `GET /blocks`, and `blocked_by_you` on a record — and nothing in this API tells anybody they were blocked.
+         *     **Neither side is notified.** You can read your own blocks — `GET /blocks`, the one read that carries them, and where Unblock lives — and nothing in this API tells anybody they were blocked.
          *
          *     **The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.
          */
@@ -859,7 +885,9 @@ export interface paths {
         put?: never;
         /**
          * Ask to be friends
-         * @description **+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it, and they are told once.
+         * @description **+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it — or *Found you in the padel ranking* for a request made from the ranking — and they are told once.
+         *
+         *     **Who may be asked** (`docs/adr/0203` §9): somebody you share a group with now, or anybody listed on General in a sport who hasn't turned *Show me in General* off — the record's `can_add_friend` says which. **At most 10 a Warsaw day to people you share no group with**; a request to a group-mate is never counted, wherever it is made, and neither is accepting one or asking somebody who asked you first.
          *
          *     **If they had already asked you, the requests cross**: you are friends at once, both are told, and the answer is `FRIEND`.
          *
@@ -1461,7 +1489,7 @@ export interface paths {
          *
          *     **Nothing gates it.** The gender preference is mutual and has nothing to say about somebody reading their own record, and a hold does not reach it either — this is the one screen a held player has for finding out how they appear.
          *
-         *     `is_self` is `true`, and `blocked_by_you` is `false`: nobody can block themselves. Read `is_self` rather than comparing ids.
+         *     `is_self` is `true`, and `can_add_friend` is `false`. Read `is_self` rather than comparing ids.
          *
          *     **What other players said comes back as the figure and its count** — `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 §5, which names what that costs. It changes nothing about how you are matched: Player reliability is what the reliability filter reads.
          *
@@ -1487,19 +1515,57 @@ export interface paths {
          * One player's record
          * @description Who this person is, as of the moment you opened it.
          *
-         *     **Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
+         *     **Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, **anybody listed on General in a sport who hasn't turned *Show me in General* off** — whether or not you have a level — and yourself, and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
          *
-         *     **Nothing expires but a group.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now — and while you run a group they are in.
+         *     **Nothing expires but a group and a listing.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now — and while you run a group they are in. General opens it while it lists them: ninety days after their last result, or once they turn the switch off, it opens for strangers no more.
          *
-         *     **The gates are live.** A hold and an account that may not be shown are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
-         *
-         *     **A block is not a gate**, either way round. If you blocked this person, the record opens and says so — `blocked_by_you` — and offers the place to unblock. If they blocked you, nothing here differs by a byte.
+         *     **The gates are live.** A hold, an account that may not be shown and **a block made by either of you** are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered. A block closes the record both ways, group-mates included, with the one refusal: whoever blocked whom reads only *This record isn't available.* Unblock lives in You › Blocked players.
          *
          *     **Asking about yourself is allowed** and answers `is_self: true` — the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.
          *
          *     **`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.
          */
         get: operations["read_player_record_api_v1_players__player_id__record_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rankings/{sport}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A sport's ranking
+         * @description Your place card, the podium and the list, in one sport and view — sorted by the Level itself, competitive games only: General's first page, or the whole of Friends. An unknown sport is refused.
+         */
+        get: operations["read_ranking_api_v1_rankings__sport__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rankings/{sport}/general/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page of a sport's General list
+         * @description General in pages of 50, best first: **after** a cursor, **before** one, or **around you** — the 50 rows with you in the middle, held to the list's ends. With none of them it is the first page, the main read's own; around you when you aren't listed is the first page too. Each page carries the cursors for the page above and below. A row that moved since the last page is never shown twice for the rows it passed.
+         */
+        get: operations["read_general_page_api_v1_rankings__sport__general_rows_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2945,14 +3011,14 @@ export interface components {
              * @description Who to ask. You are never sent.
              */
             player_id: string;
-            /** @description Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, or the result screen's *PLAYED WITH* card. */
+            /** @description Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** — `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. */
             made_from: components["schemas"]["AskedFrom"];
             /**
              * Group Id
-             * @description The group the screen showed — Members' group, or the game's — which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none.
+             * @description The group the screen showed — Members' group, or the game's — which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, whose page shows no group.
              */
             group_id?: string | null;
-            /** @description The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none. */
+            /** @description The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none. **Required with `RANKING`**: it is the ranking the card names. */
             sport?: components["schemas"]["Sport"] | null;
         };
         /**
@@ -2961,7 +3027,7 @@ export interface components {
          *     made by opening the link, never sent here.
          * @enum {string}
          */
-        AskedFrom: "MEMBERS" | "RECORD" | "RESULT";
+        AskedFrom: "MEMBERS" | "RECORD" | "RESULT" | "RANKING";
         /**
          * AssessmentStepResponse
          * @description The server-driven step: at most one of `question` / `result` is set, and
@@ -3413,6 +3479,12 @@ export interface components {
             booked: number;
         };
         /**
+         * CardState
+         * @description What the reader's place card says (the screens §4.1, §4.3, §4.4, §4.6).
+         * @enum {string}
+         */
+        CardState: "LISTED" | "NEEDS_RESULTS" | "NO_LEVEL" | "OFF_THE_LIST" | "JUST_YOU" | "NO_FRIEND_LISTED" | "HIDDEN";
+        /**
          * CardType
          * @description The three cards a deck deals (the mechanics §8.1).
          * @enum {string}
@@ -3509,6 +3581,27 @@ export interface components {
              * @description Every tag this player now holds, as ids served by `GET /player-profile/options`. **The list is the selection** — what is absent is dropped. Re-checked against the served vocabulary and the served floor and ceiling exactly as the commit re-checks them; the same id twice is refused with `duplicate_social_tag`.
              */
             social_tags: string[];
+        };
+        /**
+         * ChipKind
+         * @description *▲ n*, *▼ n*, *—* or *New* (the words §30.3).
+         * @enum {string}
+         */
+        ChipKind: "UP" | "DOWN" | "SAME" | "NEW";
+        /**
+         * ChipSchema
+         * @description **The places moved in the last 7 days**, rolling: the place now against
+         *     where today's same players stood by their Levels exactly 7 days earlier.
+         *     An arrival or a departure moves nobody; an overtake moves both.
+         */
+        ChipSchema: {
+            /** @description `UP` — *▲ 2*, on the card *▲ 2 up this week*. `DOWN` — *▼ 1*, *▼ 1 down this week*. `SAME` — *—*, *— no change this week*. `NEW` — *New*, *New this week*: the 7 days after the 5th result first put the player on General. A comeback after 90 days is never `NEW`. */
+            kind: components["schemas"]["ChipKind"];
+            /**
+             * Places
+             * @description With `UP` and `DOWN` only: how many places — the *2* of *▲ 2*.
+             */
+            places: number | null;
         };
         /**
          * ClaimCodeRequest
@@ -4953,7 +5046,7 @@ export interface components {
             /** @description The agreed score. ``null`` until something settles on one — including while a lone score is still waiting, because a score nobody has answered yet is not the result, and on a `DISPUTED` game, whose two scores named different winners. Two scores naming the same winner settle on the **closer**: the smaller margin in games, and on a tie the first put up. */
             score?: components["schemas"]["ScoreSchema"] | null;
             /** @description Win or loss **for you**. ``null`` for every standing but a confirmed one: a game nobody scored moves nobody's Level and has no outcome to give anybody. */
-            outcome?: components["schemas"]["Outcome"] | null;
+            outcome?: components["schemas"]["app__modules__games__domain__results__Outcome"] | null;
             /**
              * Proposals
              * @description The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` — a confirmed score is `score`, and a disputed or unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's. Always empty on a For fun game, whose score is the result the moment it is put up: it asks nobody.
@@ -5026,6 +5119,23 @@ export interface components {
             most: number;
         };
         /**
+         * GapLineSchema
+         * @description **The line under the place card**, which turns the place into a target:
+         *     *0,04 behind Karol · about 3 wins close it · Zofia is 0,02 behind you*. It
+         *     names only rows you can see.
+         */
+        GapLineSchema: {
+            /** @description The part before the dot; `null` at the top of the list, and when nobody above you is a row you can see — then only `below` reads. */
+            above: components["schemas"]["PlayerAboveSchema"] | null;
+            /** @description The part after it; `null` in last place, where only `above` reads, and at the top of the list. */
+            below: components["schemas"]["PlayerBelowSchema"] | null;
+            /**
+             * Top Of The List
+             * @description First place: the whole line reads *Top of the list*, and neither `above` nor `below` is sent.
+             */
+            top_of_the_list: boolean;
+        };
+        /**
          * Gender
          * @description What a player says about themselves — self-declared, freely changed.
          *
@@ -5050,6 +5160,35 @@ export interface components {
          * @enum {string}
          */
         GenderPreference: "WOMEN_ONLY" | "MEN_ONLY" | "ANY";
+        /**
+         * GeneralPageResponse
+         * @description **A page of General**: 50 places of the list, the rows of them you see
+         *     and the cursors either side. Scrolling to either end reads the next page
+         *     that way.
+         */
+        GeneralPageResponse: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Listed
+             * @description How many are listed in General in the sport — *of 480*.
+             */
+            listed: number;
+            /**
+             * Rows
+             * @description The page's rows, best first, each with its true place — the same rows the main read draws. **50 places**: a row you can't see leaves its gap, so a page may hold fewer.
+             */
+            rows: components["schemas"]["RankedRowSchema"][];
+            /**
+             * Previous
+             * @description The cursor the page above is read **before** — `?before=…`. `null` at the top of the list.
+             */
+            previous: string | null;
+            /**
+             * Next
+             * @description The cursor the page below is read **after** — `?after=…`. `null` at the bottom of the list.
+             */
+            next: string | null;
+        };
         /**
          * GroupAtClubSchema
          * @description A group inside a club's card, with what it is to the reader.
@@ -5488,6 +5627,11 @@ export interface components {
              * @description Made by their Friend link: draw *Invited you to Raketa* in place of the group line.
              */
             by_link: boolean;
+            /**
+             * From Ranking
+             * @description Made from your record on the Rankings page: draw *Found you in the padel ranking* — `sport`'s ranking — in place of the group line, whether or not you share a group (#773).
+             */
+            from_ranking: boolean;
             /** @description The group they asked from — *With you in Kazimierz crew* — **while you are both in it**. `null` for a link's request, for one asked from a screen that showed no group, and once either of you left. */
             group: components["schemas"]["HomeFriendRequestGroupSchema"] | null;
             /** @description The sport of the screen they asked from, if it showed one. */
@@ -5670,6 +5814,26 @@ export interface components {
             photo_url: string | null;
         };
         /**
+         * HomeRankingSchema
+         * @description Home's trophy, **🏆 #7**, just left of the bell (#768, #771;
+         *     `docs/adr/0203` §5). A tap opens Rankings on `sport`, in the view you last
+         *     looked at.
+         */
+        HomeRankingSchema: {
+            /** @description The sport of your latest confirmed competitive result, in any sport — after a tennis win, tennis. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * General Place
+             * @description Your place on General in `sport` — `null` when you aren't listed there (fewer than 5 results, or none in the last 90 days), and the trophy draws no number.
+             */
+            general_place: number | null;
+            /**
+             * Friends Place
+             * @description Your place among your friends in `sport` — `null` when you aren't listed there (no result in the last 90 days), and when no friend of yours is (*Just you so far*), and the trophy draws no number. The trophy shows the place of the view you last looked at on Rankings, General the first time.
+             */
+            friends_place: number | null;
+        };
+        /**
          * HomeResponse
          * @description **Home**: the reader's games from the moment they fill, and the friend
          *     requests, friends game invitations and asks for a level waiting on them.
@@ -5706,6 +5870,8 @@ export interface components {
              * @description *ASKED FOR A LEVEL · n*, between `friend_requests` and `games` (#764; `docs/adr/0202` §4's 2026-11-07 amendment): **one card per sport**, the sport with the newest ask first — every friend's ask for a level still waiting on you. A card leaves once you hold any level in its sport, by any route, or say **Not now**, and an asker leaves it once no longer your friend or blocked by you; a new friend's ask in the sport brings it back, naming only the askers you have not set aside. It never expires. The row and its title are gone when this is empty. Not counted in `needing_you`.
              */
             level_asks: components["schemas"]["HomeLevelAskSchema"][];
+            /** @description The trophy left of the bell (#768): the sport of your latest result and your General place in it. **`null` when you have no result in any sport** — the trophy still shows, with no number, and still opens Rankings. */
+            ranking?: components["schemas"]["HomeRankingSchema"] | null;
         };
         /**
          * HomeStatus
@@ -6557,17 +6723,6 @@ export interface components {
              */
             times_on_court: number;
         };
-        /**
-         * Outcome
-         * @description What a confirmed result says about one of the people who played.
-         *
-         *     Two values. *Unscored* is not a third: a game with no agreed result produces
-         *     **no outcome for anybody**, which is ADR-0049's *an evening, not evidence*
-         *     stated as a type — the absence has one spelling, and it is not being in the
-         *     answer.
-         * @enum {string}
-         */
-        Outcome: "WIN" | "LOSS";
         /** OverlapCellSchema */
         OverlapCellSchema: {
             /**
@@ -6843,6 +6998,44 @@ export interface components {
             club_id: string;
         };
         /**
+         * PlaceCardSchema
+         * @description **Your place card**, under the switch — or the card that replaces it
+         *     when there is no place to show.
+         */
+        PlaceCardSchema: {
+            /** @description `LISTED` — *YOUR PLACE · 7th · of 13* and your Level. `NEEDS_RESULTS` — fewer results in the sport than the view takes: in General *2 of 5 games — 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet — your first confirmed competitive game puts you on the list*. `NO_LEVEL` — no level in the sport, read live: *No squash level yet — get one, then 5 competitive games put you on the list* (in Friends *… then one competitive game …*), with **Get your squash level**. `OFF_THE_LIST` — no result in the last 90 days: *Off the list — no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` — you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` — neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table. **General only**: `HIDDEN` — you are listed and turned *Show me in General* off: *YOUR PLACE · 7th · of 13*, your Level and your chip, with *Hidden from General* and the switch where the gap line was; others don't see your row. Friends ignores the switch, so there you read `LISTED`; not listed, you read your not-listed card. */
+            state: components["schemas"]["CardState"];
+            /**
+             * Results
+             * @description Your confirmed competitive results with a winner in the sport — *2 of 5 games*. `0` with `NO_LEVEL`.
+             */
+            results: number;
+            /**
+             * Results To Enter
+             * @description How many results put a player on the view's list — the *5* of *2 of 5 games* in General, `1` in Friends.
+             */
+            results_to_enter: number;
+            /**
+             * Place
+             * @description With `LISTED` and `HIDDEN` only: your place — *7th*.
+             */
+            place: number | null;
+            /**
+             * Of
+             * @description With `LISTED` and `HIDDEN` only: how many are listed — *of 13* — hidden players and rows you can't see included.
+             */
+            of: number | null;
+            /**
+             * Level
+             * @description With `LISTED` and `HIDDEN` only: your Level, two decimals — *2,71*.
+             */
+            level: number | null;
+            /** @description With `LISTED` and `HIDDEN` only: your places moved this week, under the Level. */
+            chip: components["schemas"]["ChipSchema"] | null;
+            /** @description With `LISTED` only: the line under the fold. `null` with `HIDDEN`, where *Hidden from General* and the switch stand in its place. */
+            gap_line: components["schemas"]["GapLineSchema"] | null;
+        };
+        /**
          * PlayIntent
          * @description What kind of game a player wants, in one sport.
          *
@@ -6907,6 +7100,48 @@ export interface components {
              */
             player_id: string;
             relation: components["schemas"]["FriendRelation"];
+        };
+        /**
+         * PlayerAboveSchema
+         * @description The nearest player above you that you can see.
+         */
+        PlayerAboveSchema: {
+            /**
+             * Nickname
+             * @description Whole, never with an @ (docs/adr/0199 §1).
+             */
+            nickname: string;
+            /**
+             * Gap
+             * @description How far behind them you are, two decimals — the bold *0,04* of *0,04 behind Karol*. `0` with `tied`.
+             */
+            gap: number;
+            /**
+             * Wins
+             * @description How many even wins close the gap, each moving your Level as the rating engine's own rule moves it in a game at your own Level: `1` reads *one win closes it*, `2`–`5` *about 3 wins close it*. `null` when more than five would — the count is left out, *0,31 behind Karol* — when an even win is too small to move your Level at all, and when `tied`.
+             */
+            wins: number | null;
+            /**
+             * Tied
+             * @description You are level with them, and they are above you on the tie rule: *Level with Ewa · one win puts you ahead*.
+             */
+            tied: boolean;
+        };
+        /**
+         * PlayerBelowSchema
+         * @description The nearest player below you that you can see.
+         */
+        PlayerBelowSchema: {
+            /**
+             * Nickname
+             * @description Whole, never with an @ (docs/adr/0199 §1).
+             */
+            nickname: string;
+            /**
+             * Gap
+             * @description How far behind you they are, two decimals: *Zofia is 0,02 behind you*. `0` reads *Zofia is level with you*.
+             */
+            gap: number;
         };
         /**
          * PlayerProfileOptionsResponse
@@ -7000,6 +7235,8 @@ export interface components {
             gender?: components["schemas"]["Gender"];
             /** @description Who the owner is willing to be matched with — their own setting, served here and on no other response shape (`docs/adr/0179` §4). Always present: it defaults to `ANY` at commit, so there is nothing for its absence to mean. */
             gender_preference: components["schemas"]["GenderPreference"];
+            /** @description *Show me in General* (`docs/adr/0203` §7): `SHOWN`, on — every profile starts with it, one committed before the switch existed included — or `HIDDEN`. Always present. Written by `PUT /players/me/ranking-visibility`. */
+            ranking_visibility: components["schemas"]["RankingVisibility"];
         };
         /**
          * PlayerProfileResponse
@@ -7055,9 +7292,10 @@ export interface components {
          *
          *     **Read through a prior disclosure and never about a person at large.** A
          *     record opens for somebody you were on a game with, somebody you share a
-         *     group with, somebody in a group you run, and yourself. Anybody else — and
-         *     anybody a live gate no longer admits — is `404`, in one shape that names
-         *     nothing.
+         *     group with, somebody in a group you run, somebody listed on General who
+         *     hasn't turned *Show me in General* off, and yourself. Anybody else — and
+         *     anybody a live gate no longer admits, a block either way among them — is
+         *     `404`, in one shape that names nothing.
          */
         PlayerRecordResponse: {
             /**
@@ -7067,17 +7305,19 @@ export interface components {
              *     `true` on `/players/me/record` always, and on the parameterised route when a client asks about itself.
              */
             is_self: boolean;
-            /** @description **Your** relation to this person — the left button of the record's foot, beside *Block* (`docs/adr/0202` §1): `NONE` — **Add friend**; `SENT` — **Request sent ▾** (*Cancel request*), for as long as your request stays open; `ASKED_YOU` — **Accept**; `FRIEND` — **Friend ✓ ▾** (*Remove friend*). `NONE` on your own record, which draws neither button, and draw only *Unblock* when `blocked_by_you` is `true`. Nothing here says who else they are friends with. */
+            /**
+             * @description **Your** relation to this person — the left button of the record's foot, beside *Block* (`docs/adr/0202` §1): `NONE` — **Add friend** when `can_add_friend` is `true`, else *Block* stands alone; `SENT` — **Request sent ▾** (*Cancel request*), for as long as your request stays open; `ASKED_YOU` — **Accept**; `FRIEND` — **Friend ✓ ▾** (*Remove friend*). `NONE` on your own record, which draws neither button. Nothing here says who else they are friends with.
+             *
+             *     **There is no Unblock here** (`docs/adr/0203` §8): a record never opens between two people either of whom blocked the other, so *Block* is always *Block*. Unblock lives in You › Blocked players.
+             */
             relation: components["schemas"]["FriendRelation"];
             /**
-             * Blocked By You
-             * @description Whether **you** have blocked this person — your own block, and never theirs of you. Draw *Unblock* when `true` and *Block* when `false`, and no row at all when `is_self` is `true`.
+             * Can Add Friend
+             * @description Whether to offer **Add friend** (`docs/adr/0203` §9): `relation` is `NONE` and a request from you would be admitted — you share a group now, or they are listed on General and haven't turned *Show me in General* off. `false` otherwise, and on your own record.
              *
-             *     **It answers one direction only, and that is the point.** Nothing on this response, or any other, says whether they blocked you: their record reads the same either way. If you both blocked, each of you reads `true` about your own block and nothing about the other's.
-             *
-             *     `false` on your own record, always. **Omitted only when your blocks could not be read** — draw neither row then, rather than a guess; the rest of the record is unaffected.
+             *     **The daily limit is not in it.** Ten requests a Warsaw day may go to people you share no group with, and the eleventh press is refused `daily_request_limit` — show *You've sent 10 requests to new people today. Try again tomorrow.* under the buttons then. Send a request made from a record opened on the Rankings page with `made_from` `RANKING` and that page's sport.
              */
-            blocked_by_you?: boolean;
+            can_add_friend: boolean;
             /**
              * Nickname
              * @description Their handle, unique across the platform, and the title of the sheet — drawn large, with nothing under it, and never with an @. **Nothing may derive a familiar form from it**: every sentence naming somebody uses the whole nickname or names nobody (``docs/adr/0199`` §1).
@@ -7598,6 +7838,96 @@ export interface components {
             /** High */
             high: number;
         };
+        /**
+         * RankedRowSchema
+         * @description One listed player: place, face, form and Level. **A tap opens their
+         *     record.**
+         */
+        RankedRowSchema: {
+            /**
+             * Place
+             * @description Their true place — coral for 1–3, grey after. A row you can't see leaves a gap, so places may skip a number.
+             */
+            place: number;
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Nickname
+             * @description Whole, never with an @ (docs/adr/0199 §1).
+             */
+            nickname: string;
+            /** Photo Id */
+            photo_id: string | null;
+            /**
+             * Photo Url
+             * @description A short-lived link to their first photograph; `null` with `photo_id` draws initials.
+             */
+            photo_url: string | null;
+            /**
+             * Form
+             * @description Their last results in this sport, **oldest first** — the record's *Last 5*. Fewer than five is a real answer and is never padded.
+             */
+            form: components["schemas"]["app__modules__rankings__domain__ranking__Outcome"][];
+            /** @description Their places moved this week — no *this week* in a row. */
+            chip: components["schemas"]["ChipSchema"];
+            /**
+             * Level
+             * @description Their Level, two decimals, right-aligned.
+             */
+            level: number;
+            /**
+             * Is You
+             * @description Your own row — it reads **You** and is tinted.
+             */
+            is_you: boolean;
+        };
+        /**
+         * RankingResponse
+         * @description **Rankings**, for one sport and view: your card, the podium and the
+         *     list, best first.
+         */
+        RankingResponse: {
+            sport: components["schemas"]["Sport"];
+            view: components["schemas"]["RankingView"];
+            card: components["schemas"]["PlaceCardSchema"];
+            /**
+             * Listed
+             * @description How many are listed in the view and sport, you included. `0` in General reads *Nobody ranked in badminton yet* where the podium and list would be.
+             */
+            listed: number;
+            /**
+             * Podium
+             * @description The first three rows you see, each with its true place — first in the middle, second left, third right; with second hidden from you, the steps read 1, 3 and 4. **Empty with fewer than three rows you see**, and the list shows alone.
+             */
+            podium: components["schemas"]["RankedRowSchema"][];
+            /**
+             * Rows
+             * @description **General**: the first page of 50, best first — a listed player has at least 5 confirmed competitive results with a winner in the sport, the last within 90 days. **Friends**: the whole table, never paged — you and your friends with at least 1 such result, the last within 90 days, places, chips and the gap line counted among you alone; empty with `JUST_YOU` and `NO_FRIEND_LISTED`. Ordered by Level, then more results, then who reached that Level first.
+             */
+            rows: components["schemas"]["RankedRowSchema"][];
+            /**
+             * Next
+             * @description The cursor the next page is read **after** — `GET /rankings/{sport}/general/rows?after=…`. `null` when the first page is the whole list, and always in Friends. Opaque: hand it back as it came.
+             */
+            next: string | null;
+        };
+        /**
+         * RankingView
+         * @description Which list a ranking is read in (``docs/adr/0203`` §3). **General** is
+         *     everybody in Raketa listed in the sport; **Friends** is the reader and their
+         *     friends, worked out on each read (#771). Both drop a player 90 days after
+         *     their last result, and both order and place them alike.
+         * @enum {string}
+         */
+        RankingView: "GENERAL" | "FRIENDS";
+        /**
+         * RankingVisibility
+         * @enum {string}
+         */
+        RankingVisibility: "SHOWN" | "HIDDEN";
         /**
          * RatingResponse
          * @description One sport's Skill rating.
@@ -8266,6 +8596,14 @@ export interface components {
              *     **Send the same one on a retry.** A repeat answers `200` with the same message and the same `seq`, and records nothing — so a send that paused offline and resumed can never become two messages.
              */
             client_message_id: string;
+        };
+        /**
+         * SetRankingVisibilityRequest
+         * @description *Show me in General*, on or off (``docs/adr/0203`` §7, #772).
+         */
+        SetRankingVisibilityRequest: {
+            /** @description `SHOWN` — on, which every profile starts with: you are listed in General for everybody. `HIDDEN` — your row leaves everybody else's General, your place kept and still counted in *of N*; you still see it, and your friends still see you in Friends. */
+            visibility: components["schemas"]["RankingVisibility"];
         };
         /**
          * SetReliabilityFilterRequest
@@ -8951,6 +9289,17 @@ export interface components {
             time_to?: components["schemas"]["TimeTo"] | null;
         };
         /**
+         * Outcome
+         * @description What a confirmed result says about one of the people who played.
+         *
+         *     Two values. *Unscored* is not a third: a game with no agreed result produces
+         *     **no outcome for anybody**, which is ADR-0049's *an evening, not evidence*
+         *     stated as a type — the absence has one spelling, and it is not being in the
+         *     answer.
+         * @enum {string}
+         */
+        app__modules__games__domain__results__Outcome: "WIN" | "LOSS";
+        /**
          * PaymentToConfirmSchema
          * @description What the phone confirms a refused payment with, on the club's account:
          *     the provider's own confirmation, with ``client_secret`` and the seller's
@@ -9018,6 +9367,13 @@ export interface components {
             /** @description What the time to `confirm_by` is for (#638; Q113): `FIX_THE_CARD` before the club's cut-off — *Fix your card by 14:40*, with a line that nothing is paid now; `PAY` after it — *Confirm your payment by 14:40*. `null` with `confirm_by`. */
             time_to: components["schemas"]["TimeTo"] | null;
         };
+        /**
+         * Outcome
+         * @description How one result went for the row's player: a green square, or a grey
+         *     one. **Two**: a game with no winner is no result, so it is never here.
+         * @enum {string}
+         */
+        app__modules__rankings__domain__ranking__Outcome: "WIN" | "LOSS";
     };
     responses: never;
     parameters: never;
@@ -10290,6 +10646,55 @@ export interface operations {
             };
         };
     };
+    set_ranking_visibility_api_v1_players_me_ranking_visibility_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRankingVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     declare_play_intent_api_v1_play_intents__sport__put: {
         parameters: {
             query?: never;
@@ -10670,7 +11075,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `player_not_in_your_groups` — they are in none of your groups. Somebody outside them can be asked only through your link. */
+            /** @description `player_not_in_your_groups` — they are in none of your groups, and not listed on General in any sport, or hidden from it. Somebody else can be asked only through your link. One answer for all of them, and for an id nobody holds. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -10695,6 +11100,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `daily_request_limit` — you have sent 10 requests today to people you share no group with: *You've sent 10 requests to new people today. Try again tomorrow.* Nothing was sent. A request to somebody in one of your groups still goes through, and the count starts again at midnight, Warsaw time. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -11943,9 +12357,9 @@ export interface operations {
                 };
             };
             /**
-             * @description `record_unavailable` — **one code for three causes, and the body is identical in all three.** You were never shown this person; the account is held or in a state that may not be shown; or there is no such player. **A block is not one of them**, either way round.
+             * @description `record_unavailable` — **one code for every cause, and the body is identical in all of them.** You were never shown this person and they are not listed on General, or hidden from it; the account is held or in a state that may not be shown; one of you blocked the other; or there is no such player.
              *
-             *     **The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line — *This record isn't available.* — and do not branch on anything else here, because there is nothing else here.
+             *     **The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger, and one that named a block would tell the blocked person. Draw one line — *This record isn't available.* — and do not branch on anything else here, because there is nothing else here.
              */
             404: {
                 headers: {
@@ -11962,6 +12376,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether a block stands between you could not be read, so nothing was shown. Retry the same request. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_ranking_api_v1_rankings__sport__get: {
+        parameters: {
+            query?: {
+                /** @description Which list: `GENERAL`, everybody in Raketa listed in the sport; `FRIENDS`, you and your friends, from the first result. */
+                view?: components["schemas"]["RankingView"];
+            };
+            header?: never;
+            path: {
+                sport: components["schemas"]["Sport"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — your blocks could not be read, so no list is drawn. Retry the same request. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_general_page_api_v1_rankings__sport__general_rows_get: {
+        parameters: {
+            query?: {
+                /** @description A `next` cursor: the 50 rows below it. */
+                after?: string | null;
+                /** @description A `previous` cursor: the 50 rows above it. */
+                before?: string | null;
+                /** @description The page with your row in the middle — *You · 212th*. */
+                around_me?: boolean;
+            };
+            header?: never;
+            path: {
+                sport: components["schemas"]["Sport"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneralPageResponse"];
+                };
+            };
+            /** @description `not_a_ranking_page` — a cursor this server never wrote, or a page asked for in two places at once. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — your blocks could not be read, so no list is drawn. Retry the same request. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

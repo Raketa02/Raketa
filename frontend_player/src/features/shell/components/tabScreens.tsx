@@ -10,6 +10,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { FriendRequestsRow, LevelAsksRow } from '@/features/friends/types';
 import { HomeLevelCard } from '@/features/groups/types';
@@ -21,6 +22,8 @@ import {
   PaymentsToConfirm,
   rereadHome,
 } from '@/features/proposals/types';
+import { RankingTrophy } from '@/features/rankings/types';
+import { theme } from '@/shared/ui';
 
 import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
@@ -62,13 +65,22 @@ import { HOME_COPY } from './shellCopy';
  * the friends screens §6.4; Q129), drawn only while a friend's ask waits, handed the same record and
  * bell, and the *level asked* notice's toast for a start that fails. **For a player rated in nothing
  * it stands in place of *Get your level*** — `groups`' rule, which reads the same Home.
+ *
+ * **The trophy stands just left of the bell** (`rankings`' `RankingTrophy`, [#775](https://github.com/Raketa02/Raketa/issues/775);
+ * the rankings screens §1; Q13): the reader's General place in the sport of their latest result, and
+ * the way to Rankings — the bell keeps the corner.
  */
 export function HomeScreen() {
   const client = useQueryClient();
   return (
     <ShellScreen
       title={HOME_COPY.title}
-      right={<NoticeBell />}
+      right={
+        <View style={s.headerRight}>
+          <RankingTrophy />
+          <NoticeBell />
+        </View>
+      }
       onRefresh={() => rereadHome(client)}
     >
       <HomeLevelCard />
@@ -111,3 +123,8 @@ function HomeFriendRows() {
     </>
   );
 }
+
+const s = StyleSheet.create({
+  // The trophy, then the bell in the corner: the bell's own 44pt target is its spacing on the right.
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
+});

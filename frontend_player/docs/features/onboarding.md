@@ -367,3 +367,15 @@ same one request) and that run's own step, counted as `levelDoor` counts it. Hom
 for **Carry on** and _You're on question 5._ It is `undefined` until a run is known — none, in flight,
 or unreadable — because that door's start and its Carry on are one act (`useAddASport`, which hands an
 unfinished run back), so unlike the level door it draws its start at once.
+
+## Rankings' Get your level (#775)
+
+**A pass has a fourth origin, Rankings** ([#775](https://github.com/Raketa02/Raketa/issues/775); the
+rankings mechanics §9; ADR-0200 §5's _a pass ends where it began_). `PassOrigin` gained
+`{ kind: 'rankings', sport }` (`fromRankings`), begun by the page's _Get your {sport} level_ through
+`useAddASport` like the passport's chip — one sport, at its question route. `stopDestination` answers
+`rankings` whatever the pass produced, the last _Your rating_ says **_Back to Rankings_** (a call:
+§30 writes nothing for it), and `returnOf` hands the gate `{ kind: 'rankings', sport }` — the sport
+the page was on, rated or not — which `(app)/_layout` lands as Rankings on that sport with Home
+beneath. `DoorOrigin` is now _Home or a group_ by inclusion rather than _not the passport_: Rankings
+opens no picker, so `LEVEL_DOOR_COPY` owes it no line. **Not seen on a device**: the landing.

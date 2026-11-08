@@ -26,6 +26,7 @@ import type {
   HomeFriendRequest,
   HomeGame,
   HomeLevelAsk,
+  HomeRanking,
   Leaving,
   RescueOffer,
 } from '../domain/home';
@@ -249,6 +250,27 @@ export function toHome(wire: Schemas['HomeResponse']): Home {
     levelAsks: (levelAsks ?? [])
       .map(toHomeLevelAsk)
       .filter((one): one is HomeLevelAsk => one !== undefined),
+    ...homeRanking(wire.ranking),
+  };
+}
+
+/**
+ * **The trophy's ranking** (#775). `null` is a reader with no result anywhere, and a server older than
+ * #768 sends nothing: no ranking either way. A sport this build cannot name is none too — the trophy
+ * opens the page on that sport, and there is no page for it.
+ */
+function homeRanking(wire: Schemas['HomeRankingSchema'] | null | undefined): {
+  readonly ranking?: HomeRanking;
+} {
+  if (wire === null || wire === undefined) return {};
+  const sport = toSport(wire.sport);
+  if (sport === undefined) return {};
+  return {
+    ranking: {
+      sport,
+      ...(wire.general_place === null ? {} : { generalPlace: wire.general_place }),
+      ...(wire.friends_place === null ? {} : { friendsPlace: wire.friends_place }),
+    },
   };
 }
 

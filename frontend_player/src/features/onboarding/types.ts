@@ -104,14 +104,16 @@ export {
   type PassRated,
 } from './hooks/useEndOnboardingPass';
 /**
- * **Where a pass began** — Home, the Skill passport, or a group's tab
- * ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5) — and what
+ * **Where a pass began** — Home, the Skill passport, a group's tab
+ * ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §5), or Rankings'
+ * *Get your {sport} level* (#775) — and what
  * the app lands once it ends (`PassReturn`).
  */
 export {
   FROM_HOME,
   FROM_THE_PASSPORT,
   fromAGroup,
+  fromRankings,
   type PassOrigin,
   type PassReturn,
 } from './domain/onboardingPass';

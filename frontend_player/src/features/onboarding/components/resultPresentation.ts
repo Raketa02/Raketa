@@ -45,6 +45,8 @@ export function lastControlLabel(destination: PassDestination, groupName?: strin
       return 'See your ratings';
     case 'home':
       return 'Back to Home';
+    case 'rankings':
+      return 'Back to Rankings';
     case 'rate':
       // Never the last sport's: there is a sport after it. Named as the control that rates it.
       return rateNextLabel(destination.sport);

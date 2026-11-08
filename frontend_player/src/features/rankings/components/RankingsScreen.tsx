@@ -1,0 +1,162 @@
+/**
+ * **Rankings** — a ranking per sport, sorted by the level
+ * ([#775](https://github.com/Raketa02/Raketa/issues/775); [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
+ * the rankings screens §2–§5; rankings 2–11).
+ *
+ * **The header** (§2): ‹ back to Home, *Rankings* with *Competitive games only* under it, small and
+ * grey, and on the right **the deck's own sport pill** (`SportPillFrame`, #774), offering all four
+ * sports, the reader's rated ones first. Switching sport is a new read of the page.
+ *
+ * **Under it, General** (§4, §5): the reader's place card — or the not-listed card in its place —
+ * then the podium with three rows the reader sees, then the first page of the list on one white
+ * card; *Nobody ranked in badminton yet* where nobody is listed. The *General | Friends* switch is
+ * #777's, the pages after the first and the *You · 212th* button #776's.
+ *
+ * **The page opens on** the sport it was asked for — the trophy's, or the one a pass returns to —
+ * else the deck's last, else padel (`useRankingsSport`), and draws nothing below the header until it
+ * knows which.
+ *
+ * **A pull reads the page again** — places move whenever a result settles anywhere in Raketa. While the
+ * first read is out nothing is drawn under the header but the pull; a refused read says why with
+ * *Try again*, and a read waiting for a connection says so.
+ *
+ * **Any face, row or podium step opens the full record**, a stranger's too; the reader's own opens
+ * their own (§6). Whose record is up is this screen's state — route-local, as Members holds it.
+ *
+ * **Pushed over Home, the Home column lit** (Q11): the shell lists `/rankings` inside Home's tab.
+ */
+
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
+
+import { ReadFailure } from '@/features/groups/types';
+import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
+import { offlineMessage } from '@/shared/errors';
+import { Note, ScreenHeader, SportPillFrame, theme, TopSafeArea } from '@/shared/ui';
+import type { Sport } from '@/shared/vocabulary/sport';
+
+import { podiumOf, type RankedRow } from '../domain/ranking';
+import { useRanking } from '../hooks/useRanking';
+import { useRankingsSport } from '../hooks/useRankingsSport';
+
+import { PlaceCard } from './PlaceCard';
+import { PodiumSteps } from './PodiumSteps';
+import { RankingList } from './RankingList';
+import { RANKINGS_COPY, RANKINGS_PILL_WORDS, nobodyRankedLine } from './rankingsCopy';
+
+export interface RankingsScreenProps {
+  /** The sport the page was opened on — the trophy's, or a pass's way back. Absent: the deck's, or padel. */
+  readonly sport?: Sport;
+}
+
+export function RankingsScreen({ sport: asked }: RankingsScreenProps) {
+  const { sports, sport, pick } = useRankingsSport(asked);
+
+  return (
+    <TopSafeArea style={s.screen}>
+      <SportPillFrame
+        sports={sports}
+        sport={sport}
+        onPick={pick}
+        words={RANKINGS_PILL_WORDS}
+        header={(pill) => (
+          <ScreenHeader
+            onBack={() => router.back()}
+            backLabel={RANKINGS_COPY.back}
+            title={RANKINGS_COPY.title}
+            subline={RANKINGS_COPY.subline}
+            right={pill}
+          />
+        )}
+      >
+        {sport === undefined ? null : <GeneralPage sport={sport} />}
+      </SportPillFrame>
+    </TopSafeArea>
+  );
+}
+
+/** General, for one sport: the card, the podium and the first page of the list. */
+function GeneralPage({ sport }: { readonly sport: Sport }) {
+  const read = useRanking(sport, 'GENERAL');
+  const ranking = read.data;
+  const [reading, setReading] = useState<RecordSubject>();
+  // A pull is the pull's own state, never the query's: a background refetch spins nothing, and a
+  // pull spins until its read has landed, refused or not (ShellScreen's rule).
+  const [pulling, setPulling] = useState(false);
+  const pull = () => {
+    if (pulling) return;
+    setPulling(true);
+    void read.refetch().finally(() => setPulling(false));
+  };
+
+  const open = (row: RankedRow) =>
+    setReading({ kind: row.isYou ? 'me' : 'player', playerId: row.playerId });
+  const podium = ranking === undefined ? undefined : podiumOf(ranking.podium);
+
+  return (
+    <>
+      <ScrollView
+        testID="rankings-page"
+        contentContainerStyle={s.body}
+        refreshControl={
+          <RefreshControl
+            refreshing={pulling}
+            onRefresh={pull}
+            tintColor={theme.color.muted}
+            colors={[theme.color.muted]}
+            progressBackgroundColor={theme.color.paper}
+          />
+        }
+      >
+        {ranking === undefined ? (
+          read.error !== null ? (
+            <ReadFailure error={read.error} onRetry={() => void read.refetch()} />
+          ) : read.fetchStatus === 'paused' ? (
+            <Note variant="amber">{offlineMessage('resumes')}</Note>
+          ) : null
+        ) : (
+          <>
+            {ranking.card === undefined ? null : <PlaceCard card={ranking.card} sport={sport} />}
+            {ranking.listed === 0 ? (
+              <Text testID="nobody-ranked" style={s.nobody}>
+                {nobodyRankedLine(sport)}
+              </Text>
+            ) : (
+              <>
+                {podium === undefined ? null : <PodiumSteps podium={podium} onOpen={open} />}
+                {ranking.rows.length === 0 ? null : (
+                  <RankingList rows={ranking.rows} onOpen={open} />
+                )}
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {reading === undefined ? null : (
+        <PlayerRecordSheet
+          visible
+          onClose={() => setReading(undefined)}
+          subject={reading}
+          sport={sport}
+        />
+      )}
+    </>
+  );
+}
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: theme.color.paper },
+  body: {
+    paddingHorizontal: theme.size.gutter,
+    paddingBottom: theme.space.lg,
+    gap: theme.space.sm,
+  },
+  nobody: {
+    ...theme.type.rlLabel,
+    color: theme.color.muted,
+    textAlign: 'center',
+    paddingVertical: theme.space.xl,
+  },
+});

@@ -421,3 +421,14 @@ re-read this record before they settle, handed down as the block's was; a reques
 came from the record, with the sport the sheet was opened for and the group the caller names
 (`groupId`, a new optional prop — Members, the deck, a game's details, a booked game, Fill in and
 Post a game pass theirs). The rules and the words are [`friends.md`](friends.md)'s.
+
+**A record that opens is never blocked, so the wire stopped saying whether it was**
+([#775](https://github.com/Raketa02/Raketa/issues/775) regenerated the types #773 changed). Since
+#773 the server refuses a blocked pair's record both ways with the record's one refusal, and a block
+state it cannot read is a `503` — so `blocked_by_you` left the contract and `can_add_friend` joined
+it. `ownBlock` now folds somebody else's record to `blockedByYou: false` — _Block_ — and your own to
+nothing. The _Unblock_ the field fed is unreachable; taking it out of the foot, and using
+`can_add_friend`, is [#779](https://github.com/Raketa02/Raketa/issues/779)'s. The suites that walked an
+_Unblock_ on the record lost those cases (`blocks.test`, `friends.test`): the state cannot occur. After
+a block from the record, the record's re-read is refused and the record already drawn stays drawn
+until the sheet is closed — #779 closes it once the block is made (the rankings screens §6).

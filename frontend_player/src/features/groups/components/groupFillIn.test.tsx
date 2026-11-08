@@ -447,6 +447,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: 'NONE',
+        can_add_friend: true,
         nickname: 'karol.t',
         area_code: 'A+050612+0019938',
         social_tags: [],

@@ -20,6 +20,10 @@ describe('the last control on Your rating', () => {
     // ADR-0200 §5 — and no summary any more: *Your starting ratings* went with #730.
     expect(lastControlLabel({ kind: 'home' }, 'Padel at Kazimierz')).toBe('Back to Home');
   });
+
+  it('goes back to Rankings for a pass begun on its Get your level (#775)', () => {
+    expect(lastControlLabel({ kind: 'rankings' }, 'Padel at Kazimierz')).toBe('Back to Rankings');
+  });
 });
 
 describe('the next sport on Your rating', () => {

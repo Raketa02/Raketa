@@ -138,6 +138,12 @@ export type { HomeFriendRequest } from './domain/home';
  * entry gate runs through the shell as a rating pass ends.
  */
 export { rereadHomeAfterALevel, useHomeLevelAsks } from './hooks/useHome';
+/**
+ * **The trophy left of the bell** (#775) — the reader's ranking off Home's one read, which
+ * `rankings` draws: the sport of the latest result and the places in it.
+ */
+export { useHomeRanking } from './hooks/useHome';
+export type { HomeRanking } from './domain/home';
 export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
 
 /**

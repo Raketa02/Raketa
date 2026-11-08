@@ -7,7 +7,8 @@
  *   *request sent*, *friend* or **Accept** — and the pill acts while the rest of the row opens the
  *   record.
  * - **The record**: its foot is *Add friend* beside *Block*, *Request sent ▾* and *Friend ✓ ▾* behind
- *   a sheet that asks first, *Accept*, or *Unblock* alone; your own has neither.
+ *   a sheet that asks first, or *Accept*; your own has neither. (A blocked pair's record never opens
+ *   since #773, so *Unblock* alone is no longer reachable.)
  * - **Home**: *FRIEND REQUESTS · n* above Your games while a request waits — *Not now* and *Accept*
  *   take the card, and the row and its title go with the last one.
  *
@@ -19,7 +20,7 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
-import { BLOCKS_COPY, blockRowLabel, unblockRowLabel } from '@/features/blocks/types';
+import { BLOCKS_COPY, blockRowLabel } from '@/features/blocks/types';
 import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
 import { proposalKeys } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -94,7 +95,7 @@ const MICHAL = person(2, 'michal.r', 2.44, 48);
 const MAGDA = person(3, 'magda.p', 2.66, 97);
 /** She asked Tomek: **Accept**. */
 const ZOFIA = person(4, 'zofia.b', 2.69, 95);
-/** Blocked by Tomek: *Unblock* alone on the record. */
+/** Nothing between them, as INES. */
 const KUBA = person(5, 'kuba.w', 2.8, 96);
 const PEOPLE = [INES, MICHAL, MAGDA, ZOFIA, KUBA];
 
@@ -163,7 +164,6 @@ function friendServer(
     [ZOFIA.id]: 'ASKED_YOU',
     [KUBA.id]: 'NONE',
   },
-  { blocked = [KUBA.id] }: { readonly blocked?: readonly string[] } = {},
 ): FriendServer {
   const relations = new Map(Object.entries(initially));
   const setAside = new Set<string>();
@@ -202,7 +202,7 @@ function friendServer(
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: relation(who),
-        blocked_by_you: blocked.includes(who.id),
+        can_add_friend: true,
         nickname: who.name,
         area_code: 'A+050612+0019938',
         social_tags: [],
@@ -259,6 +259,7 @@ function friendServer(
         photo_url: null,
         asked_at: '2026-10-01T07:00:00Z',
         by_link: false,
+        from_ranking: false,
         group: { id: CREW.id, name: CREW.name },
         sport: 'PADEL',
         level: who.level,
@@ -311,16 +312,9 @@ async function openRecordOf(who: Person) {
   fireEvent.press(screen.getByTestId(`member-${who.id}`));
   expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
   await waitFor(() => expect(transport.requestsTo('GET', recordPath(who)).length).toBe(1));
-  // The record's answer drawn: its foot, or Unblock alone.
-  await screen.findByRole('button', { name: new RegExp(`^(Block|Unblock) ${who.name}$`) });
+  // The record's answer drawn: its foot.
+  await screen.findByRole('button', { name: blockRowLabel(who.name) });
 }
-
-/**
- * The buttons spoken exactly so — a role query also matches a button by its drawn words, and
- * Members under the sheet draws *Accept* on zofia.b's pill, spoken *Accept zofia.b*.
- */
-const spokenExactly = (name: string) =>
-  screen.queryAllByRole('button').filter((button) => button.props.accessibilityLabel === name);
 
 const bellReads = () => transport.requestsTo('GET', NOTICES_PATH).length;
 
@@ -540,23 +534,6 @@ describe('the record’s foot', () => {
     expect(server.relation(MAGDA)).toBe('NONE');
   });
 
-  it('somebody you blocked: Unblock alone, and nothing offers to befriend them', async () => {
-    friendServer();
-    await openRecordOf(KUBA);
-
-    expect(await screen.findByRole('button', { name: unblockRowLabel(KUBA.name) })).toBeTruthy();
-    expect(screen.getByText(BLOCKS_COPY.row.unblock)).toBeTruthy();
-    expect(screen.queryByTestId('record-foot')).toBeNull();
-    for (const word of [
-      COPY.record.add,
-      COPY.record.sent,
-      COPY.record.accept,
-      COPY.record.friend,
-    ]) {
-      expect(spokenExactly(word)).toHaveLength(0);
-    }
-  });
-
   it('your own: neither button', async () => {
     friendServer();
     await openMembers();
@@ -710,6 +687,7 @@ describe('FRIEND REQUESTS on Home', () => {
             photo_url: null,
             asked_at: '2026-10-01T07:00:00Z',
             by_link: true,
+            from_ranking: false,
             group: null,
             sport: null,
             level: null,
@@ -723,6 +701,7 @@ describe('FRIEND REQUESTS on Home', () => {
             photo_url: null,
             asked_at: '2026-10-01T06:00:00Z',
             by_link: false,
+            from_ranking: false,
             group: null,
             sport: 'PADEL',
             level: INES.level,

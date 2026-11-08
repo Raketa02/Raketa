@@ -55,6 +55,8 @@ const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   booking: 'home',
   // The recent notices behind Home's bell (#559).
   notices: 'home',
+  // Rankings, behind the trophy left of the bell (#775; Q11: the Home tab stays lit).
+  rankings: 'home',
 };
 
 /**

@@ -140,6 +140,18 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 }
 
 /**
+ * **The sport the deck last showed** — what Rankings opens on when Home's trophy names no sport
+ * ([#775](https://github.com/Raketa02/Raketa/issues/775); the rankings mechanics §9). The filter's own
+ * answer for a player group, so the same judgement as a group page's: the sport last picked while the
+ * reader is still rated in it, else the first they are rated in. `null` for a reader rated in nothing,
+ * whose deck shows no sport; `undefined` while either read is out.
+ */
+export function useDeckSport(): Sport | null | undefined {
+  const { sports, sport } = useGroupSport();
+  return sports === undefined ? undefined : (sport ?? null);
+}
+
+/**
  * **An official group's declared sports, whoever is reading** — the Administrator's Members
  * (#529). Somebody who runs a group need not play, so the filter lists every sport the group
  * declares, in the order it is served (the registry's), and opens on the first. **A pick is held

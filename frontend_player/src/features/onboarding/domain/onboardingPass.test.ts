@@ -13,6 +13,7 @@ import {
   admissionTo,
   begin,
   fromAGroup,
+  fromRankings,
   nextDestination,
   positionOf,
   recordRated,
@@ -329,6 +330,29 @@ describe('what the app lands, once a pass has ended', () => {
       tab: 'fillIn',
       sport: undefined,
     });
+  });
+});
+
+describe('where a pass begun on Rankings ends', () => {
+  // The rankings mechanics §9 and ADR-0200 §5: *Get your squash level* on Rankings starts that
+  // sport's questionnaire, and the pass returns to Rankings — on the sport the page was on.
+  const rankingsPass = () => begin(['squash'], fromRankings('squash'));
+
+  it('carries the sport the page was on', () => {
+    expect(rankingsPass().origin).toEqual({ kind: 'rankings', sport: 'squash' });
+  });
+
+  it('goes back to Rankings whatever the pass produced', () => {
+    expect(stopDestination(rankingsPass())).toEqual({ kind: 'rankings' });
+    expect(nextDestination(rankingsPass(), 'squash')).toEqual({ kind: 'rankings' });
+  });
+
+  it('lands Rankings on that sport, rated or not', () => {
+    const rated = recordRated(rankingsPass(), { assessmentId: PADEL_RUN, sport: 'squash' });
+
+    expect(returnOf(rated)).toEqual({ kind: 'rankings', sport: 'squash' });
+    // Continue later, or the sport abandoned: the page is still the one she left.
+    expect(returnOf(rankingsPass())).toEqual({ kind: 'rankings', sport: 'squash' });
   });
 });
 

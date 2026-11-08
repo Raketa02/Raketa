@@ -164,6 +164,23 @@ export interface Home {
    * This feature reads them because they ride on Home's read; `friends` draws them and answers them.
    */
   readonly levelAsks: readonly HomeLevelAsk[];
+  /**
+   * **The trophy left of the bell** (#775; the rankings screens §1) — absent while the reader has no
+   * result in any sport, when the trophy draws no number and still opens Rankings. This feature reads
+   * it because it rides on Home's read; `rankings` draws it.
+   */
+  readonly ranking?: HomeRanking;
+}
+
+/**
+ * **The trophy's ranking** (the rankings mechanics §8) — the sport of the reader's latest result in
+ * any sport, and their place in it on each view: absent where they have none there, which draws the
+ * trophy with no number.
+ */
+export interface HomeRanking {
+  readonly sport: Sport;
+  readonly generalPlace?: number;
+  readonly friendsPlace?: number;
 }
 
 /**

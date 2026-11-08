@@ -57,6 +57,11 @@ describe('which tab a route is inside', () => {
     expect(barStandsDown('/notices')).toBe(false);
   });
 
+  it('keeps Home lit on Rankings behind its trophy (#775, Q11), and the bar up', () => {
+    expect(tabForPathname('/rankings')).toBe('home');
+    expect(barStandsDown('/rankings')).toBe(false);
+  });
+
   it('answers the root for a path the shell does not own', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
     // that is never asked rather than a claim that /sign-in is the Home tab — and it is the

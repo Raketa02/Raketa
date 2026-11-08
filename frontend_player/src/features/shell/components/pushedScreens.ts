@@ -42,6 +42,8 @@ export const PUSHED_SCREENS = [
   // The recent notices behind Home's bell (#559): pushed over Home, and back is Home — a row opens
   // its game over the list, so back from the game is the list.
   'notices',
+  // Rankings, behind the trophy left of the bell (#775): pushed over Home, and back is Home.
+  'rankings',
   // Every screen behind a row on You: each is pushed over the tab, and backing out returns to the
   // row it was tapped from
   // ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)

@@ -25,6 +25,11 @@ export const GAME_VOCABULARY_AGREES: {
   readonly standing: Exact<GameStanding, components['schemas']['GameStanding']>;
   readonly kind: Exact<GameKind, components['schemas']['GameKind']>;
   readonly side: Exact<GameSide, components['schemas']['GameSide']>;
-  readonly outcome: Exact<Outcome, components['schemas']['Outcome']>;
+  // The contract has two outcomes since Rankings (#768) — a result's and a ranking row's form — so
+  // the generator names each by its module.
+  readonly outcome: Exact<
+    Outcome,
+    components['schemas']['app__modules__games__domain__results__Outcome']
+  >;
   readonly attendance: Exact<AttendanceState, components['schemas']['AttendanceState']>;
 } = { standing: true, kind: true, side: true, outcome: true, attendance: true };

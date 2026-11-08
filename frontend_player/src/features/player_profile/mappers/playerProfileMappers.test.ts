@@ -317,6 +317,7 @@ describe('the profile surface You reads', () => {
     intro: 'Will travel for a hard game.',
     gender: 'MAN',
     gender_preference: 'ANY',
+    ranking_visibility: 'SHOWN',
   };
 
   it('carries every fact the tab draws — the week and the declarations, the three social ones, and the two that gate the matcher', () => {

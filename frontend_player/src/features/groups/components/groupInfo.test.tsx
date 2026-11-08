@@ -1158,6 +1158,7 @@ describe('Members', () => {
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: 'NONE',
+        can_add_friend: true,
         nickname: ZOFIA.name,
         area_code: 'A+050612+0019938',
         social_tags: [],

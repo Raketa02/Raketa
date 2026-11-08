@@ -382,6 +382,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     photo_url: 'https://photos.example/ines.jpg',
     asked_at: '2026-10-01T07:00:00Z',
     by_link: false,
+    from_ranking: false,
     group: { id: 'group-1', name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,
@@ -891,5 +892,40 @@ describe('toHome — a friend’s ask for a level waiting on the reader (#765)',
     const older = home([]);
     delete (older as Partial<Wire['HomeResponse']>).level_asks;
     expect(toHome(older).levelAsks).toEqual([]);
+  });
+});
+
+describe('toHome — the trophy left of the bell (#775)', () => {
+  const home = (ranking?: Wire['HomeRankingSchema'] | null): Wire['HomeResponse'] => ({
+    read_at: '2026-10-01T08:00:00Z',
+    needing_you: 0,
+    games: [],
+    friend_requests: [],
+    friends_games: [],
+    level_asks: [],
+    ...(ranking === undefined ? {} : { ranking }),
+  });
+
+  it('reads the sport of the latest result and both places in it', () => {
+    expect(toHome(home({ sport: 'PADEL', general_place: 7, friends_place: 4 })).ranking).toEqual({
+      sport: 'padel',
+      generalPlace: 7,
+      friendsPlace: 4,
+    });
+  });
+
+  it('leaves out a place the reader has none in, so the trophy draws no number', () => {
+    expect(
+      toHome(home({ sport: 'TENNIS', general_place: null, friends_place: null })).ranking,
+    ).toEqual({ sport: 'tennis' });
+  });
+
+  it('is absent with no result anywhere, from an older server, and in a sport this build cannot name', () => {
+    expect(toHome(home(null)).ranking).toBeUndefined();
+    expect(toHome(home()).ranking).toBeUndefined();
+    expect(
+      toHome(home({ sport: 'CURLING' as Wire['Sport'], general_place: 3, friends_place: null }))
+        .ranking,
+    ).toBeUndefined();
   });
 });

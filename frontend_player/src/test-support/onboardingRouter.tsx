@@ -34,6 +34,7 @@ import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
 import SeatInviteRoute from '@/app/(app)/(tabs)/booking/[bookingId]/invite';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
+import RankingsRoute from '@/app/(app)/(tabs)/rankings';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
@@ -161,6 +162,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/booking/[bookingId]/invite': SeatInviteRoute,
   // The recent notices behind Home's bell (#559), under a `notices` segment the shell counts as Home's.
   '(app)/(tabs)/notices': NoticesRoute,
+  // Rankings, behind the trophy left of Home's bell (#775).
+  '(app)/(tabs)/rankings': RankingsRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -614,6 +617,7 @@ export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
   intro: 'Will travel for a hard game.',
   gender: 'MAN',
   gender_preference: 'ANY',
+  ranking_visibility: 'SHOWN',
 };
 
 /**
@@ -815,6 +819,8 @@ export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
   is_self: true,
   // Nothing stands between a player and themself: the route answers `NONE` on your own record.
   relation: 'NONE',
+  // Nobody asks themself: the route answers `false` on your own record.
+  can_add_friend: false,
   nickname: GATE_USER_NICKNAME,
   area_code: 'A+050612+0019938',
   social_tags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],

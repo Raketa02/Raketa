@@ -67,6 +67,9 @@
  * route the passport is belongs to the feature that owns the screen, not to this file — the same
  * seam `NAMING_STEP` and `SOCIAL_STEPS_ENTRY` cross.
  *
+ * **A pass begun on Rankings' *Get your {sport} level* ends on Rankings** (#775), on that sport, with
+ * Home laid down beneath it — the route the rankings feature names.
+ *
  * **A pass that began on a group ends on it** ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
  * §5, #729) the same way: Play laid down, and the group's page over it on the tab the pass
  * began on, standing on the sport it rated last — the route the groups feature names.
@@ -97,6 +100,7 @@ import {
 import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
 import { IncomingLinks } from '@/features/links/types';
 import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
+import { rankingsRoute } from '@/features/rankings/types';
 import { useRereadAfterALevel, useShellLanding } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
@@ -111,14 +115,21 @@ export default function AppLayout() {
   // Where a pass that has just ended lands, by where it began. A Home pass is already where
   // `/` opens, and is never handed here; a passport pass goes back to the passport,
   // with the You tab laid down beneath it; a group's goes back to the group, on the tab it began
-  // on and the sport it rated last, with Play beneath it.
+  // on and the sport it rated last, with Play beneath it; Rankings' *Get your {sport} level* goes
+  // back to Rankings on that sport, with Home beneath it (#775).
   const land = useCallback(
     (back: PassReturn) => {
-      if (back.kind === 'passport') {
-        landInTheApp('you', { pathname: YOU_PASSPORT_ROUTE });
-        return;
+      switch (back.kind) {
+        case 'passport':
+          landInTheApp('you', { pathname: YOU_PASSPORT_ROUTE });
+          return;
+        case 'rankings':
+          landInTheApp('home', rankingsRoute(back.sport));
+          return;
+        case 'group':
+          landInTheApp('play', groupReturnRoute(back.groupId, back.tab, back.sport));
+          return;
       }
-      landInTheApp('play', groupReturnRoute(back.groupId, back.tab, back.sport));
     },
     [landInTheApp],
   );

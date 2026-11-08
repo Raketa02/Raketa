@@ -69,23 +69,34 @@ export interface RatedRun {
  * the sport just rated — never on the passport, which is where a group's card used to send it.
  * **Identifiers only**, as `rated` is: the group's name is TanStack Query's, read where the
  * way back is labelled, and a copy here would go stale the moment its Owner renamed it.
+ *
+ * `rankings` is the Rankings page's *Get your {sport} level* ([#775](https://github.com/Raketa02/Raketa/issues/775);
+ * the rankings mechanics §9): a pass of that one sport, ending back on Rankings **on the sport the
+ * page was on** — the one just asked for, rated or not.
  */
 export type PassOrigin =
   | { readonly kind: 'home' }
   | { readonly kind: 'passport' }
-  | { readonly kind: 'group'; readonly groupId: string; readonly tab: GroupTab };
+  | { readonly kind: 'group'; readonly groupId: string; readonly tab: GroupTab }
+  | { readonly kind: 'rankings'; readonly sport: Sport };
 
 /**
  * **Where a door into the picker can stand** — a group's tab, or Home. The Skill passport has its
- * own door, *Add a sport*, which never opens the picker.
+ * own door, *Add a sport*, which never opens the picker, and so has Rankings: its *Get your {sport}
+ * level* is one sport, begun at the question route.
  */
-export type DoorOrigin = Exclude<PassOrigin, { readonly kind: 'passport' }>;
+export type DoorOrigin = Extract<PassOrigin, { readonly kind: 'home' | 'group' }>;
 
 /** Home — and a run reached with no pass running, which has nowhere else to have begun. */
 export const FROM_HOME: Extract<PassOrigin, { readonly kind: 'home' }> = { kind: 'home' };
 
 /** The Skill passport's *Add a sport*. */
 export const FROM_THE_PASSPORT: PassOrigin = { kind: 'passport' };
+
+/** Rankings, on the sport the page was on when *Get your {sport} level* was pressed. */
+export function fromRankings(sport: Sport): Extract<PassOrigin, { readonly kind: 'rankings' }> {
+  return { kind: 'rankings', sport };
+}
 
 /** A group's tab — the one the player was on when they pressed the door. */
 export function fromAGroup(
@@ -254,7 +265,9 @@ export type PassDestination =
    * Back on the group the pass began on, on its tab (ADR-0200 §5) — whatever the pass
    * produced, for the passport's reason: she was in the app, and that is the screen she left.
    */
-  | { readonly kind: 'group' };
+  | { readonly kind: 'group' }
+  /** Back on Rankings, on the sport its *Get your {sport} level* was pressed on (#775). */
+  | { readonly kind: 'rankings' };
 
 /**
  * Where a player who **stops before the end of the queue** goes.
@@ -275,6 +288,8 @@ export function stopDestination(pass: OnboardingPass | undefined): PassDestinati
       return { kind: 'passport' };
     case 'group':
       return { kind: 'group' };
+    case 'rankings':
+      return { kind: 'rankings' };
     case 'home':
       return { kind: 'home' };
   }
@@ -303,6 +318,8 @@ export function nextDestination(pass: OnboardingPass | undefined, sport: Sport):
  *
  * - **home → nothing.** Home is where the app opens, which is where every pass enters it.
  * - **passport → the passport**, the You tab beneath it (ADR-0179 §3).
+ * - **rankings → Rankings, on the sport the page was on** (#775) — rated or not: the page reads
+ *   the card again, and a level got there turns *No squash level yet* into the list's card.
  * - **group → that group, on the tab it began on, standing on the sport rated last**
  *   (ADR-0200 §3, §5). *The sport just rated* is the last in `rated`: the last sport of the
  *   queue when she finished, the one she stopped after on *Done for now*, the one before an
@@ -314,6 +331,7 @@ export function nextDestination(pass: OnboardingPass | undefined, sport: Sport):
  */
 export type PassReturn =
   | { readonly kind: 'passport' }
+  | { readonly kind: 'rankings'; readonly sport: Sport }
   | {
       readonly kind: 'group';
       readonly groupId: string;
@@ -327,6 +345,8 @@ export function returnOf(pass: OnboardingPass): PassReturn | undefined {
       return undefined;
     case 'passport':
       return { kind: 'passport' };
+    case 'rankings':
+      return { kind: 'rankings', sport: pass.origin.sport };
     case 'group':
       return {
         kind: 'group',

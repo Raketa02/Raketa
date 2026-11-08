@@ -25,6 +25,7 @@ import {
   type Home,
   type HomeFriendRequest,
   type HomeLevelAsk,
+  type HomeRanking,
 } from '../domain/home';
 import {
   keepDismissedGames,
@@ -70,6 +71,19 @@ export function useHomeLevelAsks(): readonly HomeLevelAsk[] | undefined {
   const home = useHome();
   if (home.data !== undefined) return home.data.levelAsks;
   return home.isError || home.fetchStatus === 'paused' ? NO_LEVEL_ASKS : undefined;
+}
+
+/**
+ * **The trophy left of the bell** (#775) — the reader's ranking, off Home's one read: `undefined`
+ * only **while Home has yet to answer**; `null` once it has and there is none — no result in any
+ * sport — and, as for the level asks, while it is refused or waiting for a connection with nothing
+ * held: none known. The trophy is drawn either way, a number only with a place, and Rankings opens on
+ * its sport; it is `rankings`' to draw, and the read is Home's, and so this feature's.
+ */
+export function useHomeRanking(): HomeRanking | null | undefined {
+  const home = useHome();
+  if (home.data !== undefined) return home.data.ranking ?? null;
+  return home.isError || home.fetchStatus === 'paused' ? null : undefined;
 }
 
 /**

@@ -246,7 +246,7 @@ function friendsServer(
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: relation(who),
-        blocked_by_you: false,
+        can_add_friend: true,
         nickname: who.name,
         area_code: 'A+050612+0019938',
         social_tags: [],

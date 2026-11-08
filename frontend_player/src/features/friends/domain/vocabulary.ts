@@ -23,9 +23,10 @@ export type FriendRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
 /**
  * **The screen a request is asked from** — which the request keeps, and which its card on the other
  * person's Home names through the group the screen showed. A link's request (#748) is never sent:
- * opening the link makes it.
+ * opening the link makes it. `RANKING` is a record opened from the Rankings page (#773), sent with
+ * that page's sport; nothing in the app sends it yet — #779 does.
  */
-export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT';
+export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING';
 
 /**
  * **Which way an open request points** (#754) — the Friends page's two request tabs, each its own

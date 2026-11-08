@@ -132,7 +132,7 @@ function bookingServer(
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: relations.get(id) ?? 'NONE',
-        blocked_by_you: false,
+        can_add_friend: true,
         nickname: name,
         area_code: 'A+050612+0019938',
         social_tags: [],

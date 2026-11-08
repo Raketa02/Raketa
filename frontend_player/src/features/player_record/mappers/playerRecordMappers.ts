@@ -105,15 +105,14 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
 /**
  * **The reader's own block of the subject, or nothing** (#587, ADR-0193 §3).
  *
- * Dropped on your own record whatever the wire says — the server answers `false` there, and a
- * `false` is a *Block* row the sheet would draw — so a row on your own face is unrepresentable
- * rather than merely unserved. Omitted on the wire when the blocks could not be read, and
- * omitted here with it: no row is drawn, rather than a guess.
+ * **A record that opens is never blocked, either way** ([#773](https://github.com/Raketa02/Raketa/issues/773),
+ * ADR-0203): the server refuses a blocked pair's record with the record's one refusal, and a block
+ * state it cannot read is a `503`, so the wire stopped sending `blocked_by_you`. Somebody else's
+ * record is therefore `false` — *Block* — and your own is nothing, since there is nobody to block.
+ * The *Unblock* this field fed can no longer be reached; taking it out of the foot is #779's.
  */
 function ownBlock(response: PlayerRecordResponse): { readonly blockedByYou?: boolean } {
-  return response.is_self || response.blocked_by_you === undefined
-    ? {}
-    : { blockedByYou: response.blocked_by_you };
+  return response.is_self ? {} : { blockedByYou: false };
 }
 
 /**

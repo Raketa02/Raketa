@@ -241,7 +241,7 @@ function askServer(
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: 'FRIEND',
-        blocked_by_you: false,
+        can_add_friend: true,
         nickname: who.nickname,
         area_code: 'A+050612+0019938',
         social_tags: [],
@@ -295,6 +295,7 @@ describe('ASKED FOR A LEVEL on Home', () => {
           photo_url: null,
           asked_at: '2026-11-07T07:00:00Z',
           by_link: false,
+          from_ranking: false,
           group: null,
           sport: null,
           level: null,

@@ -239,3 +239,11 @@ seat around `proposals`' `SeatInvite` (the game, and who is on it) and `InviteOr
 foot), with `groups`' doors in the Add friends sheet — three features, each read by another, so
 neither can draw the rest. The pick is the screen's own; the record of it is
 [`proposals.md`](proposals.md).
+
+**Home has a trophy left of the bell, and Rankings is pushed over Home** ([#775](https://github.com/Raketa02/Raketa/issues/775);
+the rankings screens §1, §2; Q11, Q13). `HomeScreen`'s right slot is a row now, `rankings`'
+`RankingTrophy` then `notifications`' `NoticeBell`, so the bell keeps the corner. `/rankings` is a
+pushed screen (`PUSHED_SCREENS`) under a segment `INSIDE_A_TAB` counts as Home's, so the Home column
+stays lit there, as on the notices. The trophy reads Home's own read, so it costs no request; the
+page's reads are the feature's ([`rankings.md`](rankings.md)). The entry gate lands a pass begun on
+Rankings back on it with Home beneath (`useShellLanding`), as it lands a group with Play beneath.

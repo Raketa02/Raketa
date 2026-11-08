@@ -38,6 +38,7 @@ is referenced from the other by a sentence, not copied.
 | [`proposals.md`](proposals.md)               | A group's Games deck and details; Games & money; the fill; Home's games; Fill in; posting      |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step that ends setting up, the commit                            |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, reliability in points, counts and filter, what opponents said   |
+| [`rankings.md`](rankings.md)                 | Home's trophy, the Rankings page: the sport pill, the place card, the podium and the list      |
 | [`shell.md`](shell.md)                       | Three tabs over one stack, the reset, Home, the bar standing down                              |
 | [`sportsmanship.md`](sportsmanship.md)       | The star card at the foot of a booked game's result screen                                     |
 
@@ -75,6 +76,7 @@ startup sequence. Above that: the HTTP client with its 401 → refresh → retry
   entering, correcting, agreeing, disagreeing and no-shows that close it.
 - `sportsmanship` — the card at the end of that screen asking how the other players were.
 - `player_record` — the record sheet a face opens.
+- `rankings` — Home's trophy and the Rankings page: a ranking per sport, sorted by the level.
 - `blocks` — Block and Unblock at the foot of that sheet, and You › Account › Blocked players.
 - `payments`, `notifications`, `links`, `administrator` and `find_a_game_next` (Explore's empty
   page) — each in its own record above.

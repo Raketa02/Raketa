@@ -63,6 +63,10 @@ export { groupReturnRoute } from './components/groupRoutes';
 export { HomeLevelCard } from './components/HomeLevelCard';
 /** The reads behind it — what a notice opening Home on its card marks stale (#731). */
 export { groupKeys } from './hooks/groupKeys';
+/**
+ * **The sport the deck last showed** (#775) — Rankings opens on it when Home's trophy names no sport.
+ */
+export { useDeckSport } from './hooks/useGroupSport';
 
 /**
  * **The home-club search, for a Location area** ([#733](https://github.com/Raketa02/Raketa/issues/733),

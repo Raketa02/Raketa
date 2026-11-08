@@ -148,6 +148,7 @@ function karolsRecord(): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
     relation: 'NONE',
+    can_add_friend: true,
     nickname: 'karol.t',
     area_code: 'A+050612+0019938',
     social_tags: [],

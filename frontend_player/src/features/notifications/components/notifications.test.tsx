@@ -1637,6 +1637,7 @@ describe('a friend’s notices', () => {
     photo_url: null,
     asked_at: '2026-10-02T12:00:00Z',
     by_link: false,
+    from_ranking: false,
     group: { id: CREW_ID, name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,
@@ -1680,7 +1681,7 @@ describe('a friend’s notices', () => {
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: 'FRIEND',
-        blocked_by_you: false,
+        can_add_friend: true,
         nickname: 'ines.d',
         area_code: 'A+050612+0019938',
         social_tags: [],

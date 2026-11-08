@@ -4,8 +4,10 @@
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
  * The record a deck tile opens ends with *Block* and the person's name; the confirm sheet says what
- * a block does and offers *Block* and *Cancel*; once blocked, the row reads *Unblock*. **You ›
- * Account › Blocked players** lists everyone the reader blocked, each with *Unblock*. Your own
+ * a block does and offers *Block* and *Cancel*; once blocked, the record no longer opens — a blocked
+ * pair's record is refused both ways since [#773](https://github.com/Raketa02/Raketa/issues/773)
+ * (ADR-0203), so the record's re-read is refused. **You › Account › Blocked
+ * players** lists everyone the reader blocked, each with *Unblock*, which is the way back. Your own
  * record ends in neither.
  *
  * **The blocks routes are answered by a small fake of the server** (`blockServer`): a block or an
@@ -58,6 +60,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
+  errorResponse,
   installTransport,
   json,
   noContent,
@@ -141,17 +144,17 @@ const PAGE: Wire['GroupResponse'] = {
   is_administrator: false,
 };
 
-/** Somebody's record as the route answers it, `blocked_by_you` read off the server's state. */
-function recordOf(who: Person, blockedByYou: boolean | undefined): Wire['PlayerRecordResponse'] {
+/** Somebody's record as the route answers it, to a reader with no block between them. */
+function recordOf(who: Person): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
     relation: 'NONE',
+    can_add_friend: true,
     nickname: who.name,
     area_code: 'A+050612+0019938',
     social_tags: [],
     sports: [{ sport: 'PADEL', level: 2.8, band: 'Established' }],
     reliability: servedReliability({ player_score: 96, is_new: false }),
-    ...(blockedByYou === undefined ? {} : { blocked_by_you: blockedByYou }),
   };
 }
 
@@ -163,8 +166,9 @@ interface BlockServer {
 /**
  * **The blocks routes, faked** — the rules the routes document and nothing more: a block is
  * idempotent and answers 204, an unblock lifts the reader's own block and never 404s, the list is
- * newest first, and a record's `blocked_by_you` is the reader's own block of its subject — omitted
- * when `blocksUnreadable`, as the route omits it when it cannot read them.
+ * newest first, and a record is refused with `record_unavailable` while a block stands between the
+ * two (#773), and with `block_state_unavailable` when `blocksUnreadable`, as the route refuses it
+ * when it cannot read them.
  */
 function blockServer(
   initially: readonly Person[] = [],
@@ -199,9 +203,11 @@ function blockServer(
       if (at >= 0) standing.splice(at, 1);
       return noContent();
     });
-    transport.on('GET', recordPath(who), () =>
-      json(recordOf(who, blocksUnreadable ? undefined : isBlocked(who))),
-    );
+    transport.on('GET', recordPath(who), () => {
+      if (blocksUnreadable) return errorResponse(503, 'block_state_unavailable');
+      if (isBlocked(who)) return errorResponse(404, 'record_unavailable');
+      return json(recordOf(who));
+    });
   }
 
   return { blocked: () => [...standing] };
@@ -214,8 +220,7 @@ beforeEach(() => {
   stubGate(transport, { ratings: [rating('PADEL', 2.71)], hasPlayerProfile: true });
   stubProfileOptions(transport);
   stubProfileSurface(transport);
-  // The server answers `false` on your own record; no row may be drawn from it all the same.
-  stubOwnRecord(transport, { ...OWN_RECORD_SERVED, blocked_by_you: false });
+  stubOwnRecord(transport, OWN_RECORD_SERVED);
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
 });
 
@@ -331,13 +336,12 @@ describe('Block, on the record', () => {
     });
     expect(server.blocked()).toEqual([KUBA_PERSON.id]);
 
-    // The sheet goes, and the record — re-read — now offers the way back.
+    // The sheet goes, and the record is read again — and refused: a blocked pair's record never
+    // opens (#773), and the way back is You › Blocked players. The record already drawn stays
+    // drawn under a refused re-read; closing it once the block is made is #779's.
     await waitFor(() => expect(sheetTitle(KUBA_PERSON)).toBeNull());
-    expect(
-      await screen.findByRole('button', { name: unblockRowLabel(KUBA_PERSON.name) }),
-    ).toBeTruthy();
-    expect(blockRow(KUBA_PERSON)).toBeNull();
-    expect(recordReads(KUBA_PERSON)).toBeGreaterThan(recordBefore);
+    await waitFor(() => expect(recordReads(KUBA_PERSON)).toBeGreaterThan(recordBefore));
+    expect(unblockRow(KUBA_PERSON)).toBeNull();
     // The group's deck and Fill in are read again: the next card already respects the block.
     expect(deckReads()).toBeGreaterThan(deckBefore);
     expect(fillInReads()).toBeGreaterThan(fillInBefore);
@@ -392,43 +396,15 @@ describe('Block, on the record', () => {
     expect(blockRow(KUBA_PERSON)).toBeTruthy();
   });
 
-  it('unblocks from the record at once, and reads the record, the deck and Fill in again', async () => {
-    const server = blockServer([KUBA_PERSON]);
-    await openKubasRecord();
-    seedTheList();
-
-    const row = await screen.findByRole('button', { name: unblockRowLabel(KUBA_PERSON.name) });
-    expect(blockRow(KUBA_PERSON)).toBeNull();
-    const deckBefore = deckReads();
-    const fillInBefore = fillInReads();
-    const homeBefore = homeReads();
-    fireEvent.press(row);
-
-    // No sheet: an unblock costs nothing and brings nothing back.
-    await waitFor(() =>
-      expect(transport.requestsTo('DELETE', unblockPath(KUBA_PERSON))).toHaveLength(1),
-    );
-    expect(sheetTitle(KUBA_PERSON)).toBeNull();
-    expect(server.blocked()).toEqual([]);
-
-    expect(
-      await screen.findByRole('button', { name: blockRowLabel(KUBA_PERSON.name) }),
-    ).toBeTruthy();
-    expect(unblockRow(KUBA_PERSON)).toBeNull();
-    expect(deckReads()).toBeGreaterThan(deckBefore);
-    expect(fillInReads()).toBeGreaterThan(fillInBefore);
-    expect(invalidated(blockKeys.list())).toBe(true);
-    // Nothing comes back with it, so nothing the withdrawal moved is read again.
-    expect(homeReads()).toBe(homeBefore);
-    for (const key of WITHDRAWAL_READS) expect(invalidated(key)).toBe(false);
-  });
-
-  it('draws neither row where the blocks could not be read', async () => {
+  it('draws no row where the blocks could not be read: the record itself is refused', async () => {
     blockServer([], { blocksUnreadable: true });
     await openKubasRecord();
 
-    // The record itself is drawn whole — its header is in — and only the row is missing.
-    expect(await screen.findByText(KUBA_PERSON.name)).toBeTruthy();
+    // Since #773 the route answers `503` rather than a record with no block state in it, so no row
+    // is drawn because no record is.
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', recordPath(KUBA_PERSON)).length).toBe(1),
+    );
     expect(blockRow(KUBA_PERSON)).toBeNull();
     expect(unblockRow(KUBA_PERSON)).toBeNull();
   });
@@ -477,6 +453,14 @@ describe('Blocked players, under You › Account', () => {
   it('unblocks from the list, and the row on You says so', async () => {
     const server = blockServer([ZOFIA, KUBA_PERSON]);
     await openBlockedPlayers(blockedCountLine(2));
+    // The crew's deck and Fill in, unobserved here, and what a withdrawal moved (#775: the record's
+    // Unblock is gone since #773, so the list is where an unblock's reads are proven).
+    const deck = proposalKeys.deck(CREW.id, 'padel', 'competitive');
+    const fillIn = proposalKeys.fillIn(CREW.id, 'padel');
+    seed(deck);
+    seed(fillIn);
+    seedTheList();
+    const homeBefore = homeReads();
 
     fireEvent.press(await screen.findByRole('button', { name: unblockRowLabel(KUBA_PERSON.name) }));
 
@@ -484,6 +468,12 @@ describe('Blocked players, under You › Account', () => {
       expect(transport.requestsTo('DELETE', unblockPath(KUBA_PERSON))).toHaveLength(1),
     );
     expect(server.blocked()).toEqual([ZOFIA.id]);
+    // The next deck and Fill in are read again, and the list; nothing comes back with an unblock,
+    // so nothing the withdrawal moved is.
+    await waitFor(() => expect(invalidated(deck)).toBe(true));
+    expect(invalidated(fillIn)).toBe(true);
+    expect(homeReads()).toBe(homeBefore);
+    for (const key of WITHDRAWAL_READS) expect(invalidated(key)).toBe(false);
     await waitFor(() => expect(screen.queryByTestId(`blocked-${KUBA_PERSON.id}`)).toBeNull());
     expect(screen.getByTestId(`blocked-${ZOFIA.id}`)).toBeTruthy();
 
