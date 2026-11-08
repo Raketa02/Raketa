@@ -40,6 +40,7 @@ from fastapi import FastAPI
 from app.bootstrap.composition import (
     build_background_session_factory,
     close_payment_provider,
+    build_general_orders,
     build_nudge_publisher,
     build_payment_provider,
     build_push_notifications,
@@ -148,6 +149,10 @@ def build_lifespan(settings: Settings):
                     # And the push service a notice reaches a player's phones
                     # through (#549).
                     push=build_push_notifications(settings),
+                    # And the store this process's requests read the kept
+                    # General orders from, so a ranking write forgets its
+                    # sport's where the next read looks (#770).
+                    orders=build_general_orders(app.state.redis),
                     proposer_due=proposer_due,
                 )
                 # Kept on the application because the delivery worker's identity

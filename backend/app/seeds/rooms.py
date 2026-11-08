@@ -53,6 +53,7 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
+    build_general_orders_kept_here,
     build_recording_push,
     build_member_faces,
     build_membership,
@@ -202,6 +203,10 @@ async def deliver_everything_told(
                 # Nobody seeded has a phone, so nothing is pushed — and a
                 # notice is still given, and listed (#549).
                 push=build_recording_push(),
+                # And no order is kept here: every read this run makes works
+                # its order out, and an API process holding one shows it for
+                # at most its minute (#770).
+                orders=build_general_orders_kept_here(),
             )
             published = await batch.execute(worker_id="seed")
         if not published:

@@ -1,8 +1,10 @@
 """The Rankings context's ports, **each in its own words**.
 
 Two are the context's own storage — the projection (``RankingRows``) and the
-level history (``LevelHistory``), neither a demand. The rest are its
-neighbours, each signed in ``infrastructure/`` over what the neighbour
+level history (``LevelHistory``), neither a demand — and one is the outside
+world's: **the kept orders** (``GeneralOrders``, #770), each sport's General
+order worked out and kept for a minute in the ephemeral store, lossy by design.
+The rest are its neighbours, each signed in ``infrastructure/`` over what the neighbour
 publishes, wired by the composition root, each with a row in
 ``app/bootstrap/ranking_demands.py``:
 
@@ -27,6 +29,12 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
+from app.modules.rankings.domain.general_order import (
+    GeneralOrder,
+    ListedAndThen,
+    ListedRow,
+    OrderKey,
+)
 from app.modules.rankings.domain.ranking import LevelPoint, RankingRow, RatingHistory
 
 
@@ -50,10 +58,15 @@ class RankingRows(Protocol):
         ...
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant
-    ) -> tuple[RankingRow, ...]:
+        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+    ) -> tuple[ListedAndThen, ...]:
         """The rows with ``at_least`` results whose last settled after
-        ``since``, **in the ranking's order**, best first."""
+        ``since``, **in the ranking's order**, best first — **each with its
+        player's level-history point at ``then``** where their last result
+        settled after it: their latest at or before it, or, for a player with
+        none by then, their first. **A player with no result since stood then
+        where they stand now**, and has no point here. **One pass**, so the
+        order and every chip are worked out from one reading (#770)."""
         ...
 
 
@@ -125,4 +138,73 @@ class RankedFaces(Protocol):
 class SportLevels(Protocol):
     async def holds_a_level(self, player_id: UUID, sport: Sport) -> bool:
         """Whether the player holds a level in the sport now, read live."""
+        ...
+
+
+class GeneralOrderLost(Exception):
+    """A kept order could not be read to the end — the store went away
+    mid-read. **The read works the order out again**: a kept order is a copy
+    the projection can always make."""
+
+
+@runtime_checkable
+class HeldOrder(Protocol):
+    """One kept order, read where it is kept: every read of it is of the same
+    order, whatever was kept after it."""
+
+    @property
+    def worked_out_at(self) -> Instant: ...
+
+    @property
+    def listed(self) -> int:
+        """How many rows the order holds — *of 480*."""
+        ...
+
+    async def rows(self, start: int, stop: int) -> tuple[ListedRow, ...]:
+        """The rows from index ``start`` to ``stop``, best first."""
+        ...
+
+    async def place_of(self, player_id: UUID) -> int | None:
+        """The player's place, or ``None`` when the order doesn't list them."""
+        ...
+
+    async def ahead_of(self, key: OrderKey) -> int:
+        """How many rows stand strictly ahead of ``key`` in the order."""
+        ...
+
+    async def up_to(self, key: OrderKey) -> int:
+        """How many rows stand ahead of ``key`` or at it."""
+        ...
+
+
+@runtime_checkable
+class GeneralOrders(Protocol):
+    """Each sport's General order, worked out and kept (``docs/adr/0203``
+    §10). **Lossy**: an order that is gone is worked out again, so nothing
+    here may fail a read — an adapter whose store is down holds nothing.
+
+    **Every forget is counted**, and an order is kept with the count its pass
+    began at: one kept at an older count — a pass that read the projection
+    before a write, and kept after that write forgot — **is held by nobody**,
+    so a write is never undone by a slow pass."""
+
+    async def held(self, sport: Sport) -> HeldOrder | None:
+        """The order last kept for the sport at the current count, however
+        old — whether it is fresh enough to read is the reader's to judge —
+        or ``None``."""
+        ...
+
+    async def forgotten(self, sport: Sport) -> int:
+        """How many times the sport's order has been forgotten — what a pass
+        reads before it reads the projection."""
+        ...
+
+    async def keep(self, order: GeneralOrder, *, forgotten: int) -> None:
+        """Keep the order for its sport, in place of the one held — worked
+        out by a pass that began at ``forgotten``."""
+        ...
+
+    async def forget(self, sport: Sport) -> None:
+        """Forget the sport's order, and count it: a ranking write in it
+        moved a row."""
         ...

@@ -117,6 +117,7 @@ from app.seeds.cohort import (
     COHORT,
     PROTAGONIST_HANDLE,
     STARS_ARE_ONE_TO_FIVE,
+    CohortMember,
     PlayedGame,
 )
 from app.seeds.groups import group_repository, group_run_by, join_group
@@ -362,17 +363,19 @@ async def _people(
     handles: Iterable[str],
     *,
     named: Sequence[SeedAccount],
+    crowd: Sequence[CohortMember] = (),
     now: Instant,
 ) -> dict[str, _Person]:
-    """Everybody the games name: a cohort member by handle, anybody else by the
-    slug of a named account."""
+    """Everybody the games name: a cohort member by handle, a member of the
+    ranking's crowd by theirs, anybody else by the slug of a named account."""
 
     accounts = {account.slug: account for account in (THE_POPULATED_PLAYER, *named)}
+    outside = {member.handle: member for member in crowd}
     users = build_user_repository(session)
     people: dict[str, _Person] = {}
     for handle in sorted(set(handles)):
-        if handle.startswith("cohort-"):
-            member = COHORT.by_handle(handle)
+        if handle.startswith("cohort-") or handle in outside:
+            member = outside.get(handle) or COHORT.by_handle(handle)
             email, days = member.email, member.committed_days_ago
             intents = {
                 Sport(sport): PlayIntent(intent) for sport, intent in member.intents
@@ -489,13 +492,15 @@ async def write_the_played_history(
     now: Instant,
     games: Sequence[PlayedGame] = (),
     named: Sequence[SeedAccount] = (),
+    crowd: Sequence[CohortMember] = (),
     money: SeedMoney = THE_FAKE,
 ) -> SeededHistory:
     """Write every declared game and her evenings, oldest first, then what her
     opponents said about her.
 
     ``games`` are the declared games the runner hands in; ``named`` are the
-    accounts besides the cohort they may name; every seat is held through
+    accounts besides the cohort they may name, and ``crowd`` the players
+    outside it — the ranking's crowd (#770); every seat is held through
     ``money``'s provider. **After the cohort, the cards, the clubs and their
     courts**, which it reads and never writes."""
 
@@ -505,6 +510,7 @@ async def write_the_played_history(
             session,
             (handle for one in planned for handle in one.game.players),
             named=named,
+            crowd=crowd,
             now=now,
         )
         her = people[PROTAGONIST_HANDLE]

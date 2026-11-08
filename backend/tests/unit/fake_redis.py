@@ -13,11 +13,13 @@ the adapters at all*.
 **A deliberate subset, and it stays one.** It implements exactly the commands
 the adapters issue and nothing more, so a new command in an adapter is an
 `AttributeError` here rather than a silent divergence. The semantics it does
-model are four: **expiry**, against a clock a test moves rather than the host's;
+model are five: **expiry**, against a clock a test moves rather than the host's;
 **`HINCRBY` creating the field it increments**; **`SADD` creating the set it adds
-to**; and **pub/sub delivering only to whoever is subscribed at the moment of the
+to**; **pub/sub delivering only to whoever is subscribed at the moment of the
 publish**, which is at-most-once and is exactly what makes a dropped frame a
-thing a test can drive.
+thing a test can drive; and **a sorted set whose members all score `0`, read
+by index and counted by lexical range** — byte order, as Redis compares them —
+which is how the ranking's kept General order is paged (#770).
 
 Expiry is the one a presence test drives directly (`docs/adr/0156`): a typing
 heartbeat is cleared by nothing but its key running out, so *the app was killed*
@@ -82,11 +84,26 @@ class FakeRedis:
         hash_[key] = int(hash_.get(key, 0)) + amount
         return hash_[key]
 
-    async def hset(self, name: str, key: str, value: Any) -> int:
+    async def hset(
+        self,
+        name: str,
+        key: str | None = None,
+        value: Any = None,
+        mapping: dict[str, Any] | None = None,
+    ) -> int:
         hash_ = self._hash(name)
-        existed = key in hash_
-        hash_[key] = str(value)
-        return 0 if existed else 1
+        fields = dict(mapping or {})
+        if key is not None:
+            fields[key] = value
+        added = 0
+        for field, field_value in fields.items():
+            added += field not in hash_
+            hash_[field] = str(field_value)
+        return added
+
+    async def hget(self, name: str, key: str) -> str | None:
+        value = self._read_hash(name).get(key)
+        return None if value is None else str(value)
 
     async def hmget(self, name: str, keys: Iterable[str]) -> list[str | None]:
         hash_ = self._read_hash(name)
@@ -113,15 +130,60 @@ class FakeRedis:
         self._expires_at[name] = self._now + seconds
         return True
 
-    async def set(self, name: str, value: Any, ex: int | None = None) -> bool:
+    async def set(
+        self, name: str, value: Any, ex: int | None = None, get: bool = False
+    ) -> bool | str | None:
+        replaced = self._values.get(name) if self._live(name) else None
         self._values[name] = str(value)
         self._expires_at.pop(name, None)
         if ex is not None:
             self._expires_at[name] = self._now + ex
-        return True
+        return replaced if get else True
 
     async def get(self, name: str) -> str | None:
         return self._values.get(name) if self._live(name) else None
+
+    async def incr(self, name: str, amount: int = 1) -> int:
+        value = int(self._values[name]) + amount if self._live(name) else amount
+        self._values[name] = str(value)
+        return value
+
+    async def delete(self, *names: str) -> int:
+        deleted = 0
+        for name in names:
+            if self._live(name):
+                del self._values[name]
+                self._expires_at.pop(name, None)
+                deleted += 1
+        return deleted
+
+    async def exists(self, *names: str) -> int:
+        return sum(1 for name in names if self._live(name))
+
+    async def zadd(self, name: str, mapping: dict[str, float]) -> int:
+        """Members all at one score are what the ranking keeps; a different
+        score is a command this fake doesn't model, and says so."""
+
+        if any(score != 0 for score in mapping.values()):
+            raise NotImplementedError("only members at score 0 are modelled")
+        members = self._set(name)
+        added = sum(1 for member in mapping if member not in members)
+        members.update(mapping)
+        return added
+
+    async def zrange(self, name: str, start: int, end: int) -> list[str]:
+        members = sorted(self._values[name], key=_bytes) if self._live(name) else []
+        stop = len(members) if end == -1 else end + 1
+        return members[start:stop]
+
+    async def zlexcount(self, name: str, min: str, max: str) -> int:
+        if not self._live(name):
+            return 0
+        return sum(
+            1
+            for member in self._values[name]
+            if _above(member, min) and _below(member, max)
+        )
 
     async def mget(self, keys: Iterable[str]) -> list[str | None]:
         return [self._values.get(key) if self._live(key) else None for key in keys]
@@ -192,6 +254,28 @@ class FakeRedis:
         return self._values[name] if self._live(name) else {}
 
 
+def _bytes(member: str) -> bytes:
+    return member.encode()
+
+
+def _above(member: str, bound: str) -> bool:
+    if bound == "-":
+        return True
+    if bound == "+":
+        return False
+    inclusive, edge = bound[0] == "[", bound[1:].encode()
+    return member.encode() >= edge if inclusive else member.encode() > edge
+
+
+def _below(member: str, bound: str) -> bool:
+    if bound == "+":
+        return True
+    if bound == "-":
+        return False
+    inclusive, edge = bound[0] == "[", bound[1:].encode()
+    return member.encode() <= edge if inclusive else member.encode() < edge
+
+
 class FakePubSub:
     """One subscription, over an ``asyncio.Queue``.
 
@@ -246,8 +330,42 @@ class FakePipeline:
         self._queued.append(("hincrby", (name, key, amount), {}))
         return self
 
-    def hset(self, name: str, key: str, value: Any) -> "FakePipeline":
-        self._queued.append(("hset", (name, key, value), {}))
+    def hset(
+        self,
+        name: str,
+        key: str | None = None,
+        value: Any = None,
+        mapping: dict[str, Any] | None = None,
+    ) -> "FakePipeline":
+        self._queued.append(("hset", (name, key, value), {"mapping": mapping}))
+        return self
+
+    def hget(self, name: str, key: str) -> "FakePipeline":
+        self._queued.append(("hget", (name, key), {}))
+        return self
+
+    def get(self, name: str) -> "FakePipeline":
+        self._queued.append(("get", (name,), {}))
+        return self
+
+    def incr(self, name: str, amount: int = 1) -> "FakePipeline":
+        self._queued.append(("incr", (name, amount), {}))
+        return self
+
+    def delete(self, *names: str) -> "FakePipeline":
+        self._queued.append(("delete", names, {}))
+        return self
+
+    def exists(self, *names: str) -> "FakePipeline":
+        self._queued.append(("exists", names, {}))
+        return self
+
+    def zadd(self, name: str, mapping: dict[str, float]) -> "FakePipeline":
+        self._queued.append(("zadd", (name, mapping), {}))
+        return self
+
+    def zlexcount(self, name: str, min: str, max: str) -> "FakePipeline":
+        self._queued.append(("zlexcount", (name, min, max), {}))
         return self
 
     def expire(self, name: str, seconds: int) -> "FakePipeline":
@@ -258,8 +376,10 @@ class FakePipeline:
         self._queued.append(("sadd", (name, *values), {}))
         return self
 
-    def set(self, name: str, value: Any, ex: int | None = None) -> "FakePipeline":
-        self._queued.append(("set", (name, value), {"ex": ex}))
+    def set(
+        self, name: str, value: Any, ex: int | None = None, get: bool = False
+    ) -> "FakePipeline":
+        self._queued.append(("set", (name, value), {"ex": ex, "get": get}))
         return self
 
     async def execute(self) -> list[Any]:

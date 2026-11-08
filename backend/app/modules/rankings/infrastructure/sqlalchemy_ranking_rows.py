@@ -1,7 +1,19 @@
 """``RankingRows`` over ``ranking_rows``.
 
-**A sport's listed rows are one statement on ``ix_ranking_rows_order``**, read
-in place order; a player's own rows one on the primary key's prefix. **Same
+**A sport's listed rows are one statement** (#770), read in place order,
+**each joined to its player's level-history point at the chip's instant** —
+**for a player whose last result settled after it**. Their points are numbered
+per player — the latest at or before the instant first (most results breaking
+a tie of instants), else the fewest results first, which is the opening — and
+the first kept. **A player with no result since stood then where they stand
+now**, so their history is never read: at 50,000 listed players that is the
+difference between sorting every point of the sport and sorting the week's
+(the Rankings rule note has the numbers and the plans). So the order, every
+place and every chip are worked out from one reading. **Columns, never ORM
+objects**: a pass hands back every listed row, and hydrating fifty thousand
+entities twice over was most of what it cost. Both dialects the backend runs
+on speak the window, SQLite since 3.25. A player's own rows are one statement
+on the primary key's prefix. **Same
 session as the write**, so a row folded a moment ago is read by the read that
 follows it in the transaction. The upsert is a statement, never an ORM object,
 so every read refreshes what the session already holds (``populate_existing``).
@@ -18,7 +30,7 @@ from __future__ import annotations
 from typing import Final
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import Row, and_, case, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.stored_time import (
@@ -26,13 +38,18 @@ from app.infrastructure.database.stored_time import (
     stored_instant_or_none,
 )
 from app.kernel import Instant, Sport
-from app.modules.rankings.domain.ranking import Outcome, RankingRow
+from app.modules.rankings.domain.general_order import ListedAndThen
+from app.modules.rankings.domain.ranking import (
+    LevelPoint,
+    Outcome,
+    RankingRow,
+    marks_of,
+)
 from app.modules.rankings.infrastructure.dialect_insert import insert_into
-from app.modules.rankings.infrastructure.ranking_model import RankingRowORM
-
-#: A result in the stored form: ``W`` or ``L``, five at most.
-_MARKS: Final = {Outcome.WIN: "W", Outcome.LOSS: "L"}
-_OUTCOMES: Final = {mark: outcome for outcome, mark in _MARKS.items()}
+from app.modules.rankings.infrastructure.ranking_model import (
+    LevelPointORM,
+    RankingRowORM,
+)
 
 #: The columns a newer fold rewrites — everything but the key.
 _FOLDED: Final = (
@@ -62,7 +79,7 @@ class SqlAlchemyRankingRows:
             level_reached_at=row.level_reached_at,
             general_entered_at=row.general_entered_at,
             friends_entered_at=row.friends_entered_at,
-            form="".join(_MARKS[outcome] for outcome in row.form),
+            form=marks_of(row.form),
         )
         await self._session.execute(
             statement.on_conflict_do_update(
@@ -82,24 +99,123 @@ class SqlAlchemyRankingRows:
         return tuple(_row(stored) for stored in rows.all())
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant
-    ) -> tuple[RankingRow, ...]:
-        rows = await self._session.scalars(
-            select(RankingRowORM)
+        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+    ) -> tuple[ListedAndThen, ...]:
+        rows, points = RankingRowORM.__table__, LevelPointORM.__table__
+        listed = (
+            select(*(rows.c[column] for column in _LISTED))
             .where(
-                RankingRowORM.sport == sport.value,
-                RankingRowORM.results >= at_least,
-                RankingRowORM.last_result_at > since,
+                rows.c.sport == sport.value,
+                rows.c.results >= at_least,
+                rows.c.last_result_at > since,
+            )
+            .cte("listed")
+        )
+        by_then = points.c.at <= then
+        numbered = (
+            select(
+                *(points.c[column] for column in _POINT),
+                func.row_number()
+                .over(
+                    partition_by=points.c.player_id,
+                    order_by=(
+                        # The points by then first, the latest of them first...
+                        case((by_then, literal(0)), else_=literal(1)),
+                        case((by_then, points.c.at)).desc(),
+                        case((by_then, -points.c.results), else_=points.c.results),
+                        # ...and with none by then, the fewest results first.
+                        points.c.at,
+                    ),
+                )
+                .label("nth"),
+            )
+            .select_from(
+                listed.join(
+                    points,
+                    and_(
+                        points.c.sport == sport.value,
+                        points.c.player_id == listed.c.player_id,
+                    ),
+                )
+            )
+            # Only who moved since then: everybody else stood then as now.
+            .where(listed.c.last_result_at > then)
+            .subquery("numbered")
+        )
+        read = await self._session.execute(
+            select(
+                *(listed.c[column] for column in _LISTED),
+                *(numbered.c[column].label(f"then_{column}") for column in _POINT),
+            )
+            .select_from(
+                listed.outerjoin(
+                    numbered,
+                    and_(
+                        numbered.c.player_id == listed.c.player_id,
+                        numbered.c.nth == 1,
+                    ),
+                )
             )
             .order_by(
-                RankingRowORM.hundredths.desc(),
-                RankingRowORM.results.desc(),
-                RankingRowORM.level_reached_at,
-                RankingRowORM.player_id,
+                listed.c.hundredths.desc(),
+                listed.c.results.desc(),
+                listed.c.level_reached_at,
+                listed.c.player_id,
             )
-            .execution_options(populate_existing=True)
         )
-        return tuple(_row(stored) for stored in rows.all())
+        return tuple(_listed_and_then(sport, found) for found in read.all())
+
+
+#: The columns a pass reads of a row and of its point — never the ORM objects.
+_LISTED: Final = (
+    "player_id",
+    "hundredths",
+    "sigma",
+    "results",
+    "last_result_at",
+    "level_reached_at",
+    "general_entered_at",
+    "friends_entered_at",
+    "form",
+)
+_POINT: Final = (
+    "event_id",
+    "player_id",
+    "at",
+    "hundredths",
+    "results",
+    "level_reached_at",
+)
+
+
+def _listed_and_then(sport: Sport, found: Row[tuple[object, ...]]) -> ListedAndThen:
+    read = found._mapping
+    row = RankingRow(
+        player_id=read["player_id"],
+        sport=sport,
+        hundredths=read["hundredths"],
+        sigma=read["sigma"],
+        results=read["results"],
+        last_result_at=stored_instant(read["last_result_at"]),
+        level_reached_at=stored_instant(read["level_reached_at"]),
+        general_entered_at=stored_instant_or_none(read["general_entered_at"]),
+        friends_entered_at=stored_instant(read["friends_entered_at"]),
+        form=Outcome.of_marks(read["form"]),
+    )
+    if read["then_event_id"] is None:
+        return ListedAndThen(row=row, then=None)
+    return ListedAndThen(
+        row=row,
+        then=LevelPoint(
+            event_id=read["then_event_id"],
+            player_id=read["then_player_id"],
+            sport=sport,
+            at=stored_instant(read["then_at"]),
+            hundredths=read["then_hundredths"],
+            results=read["then_results"],
+            level_reached_at=stored_instant(read["then_level_reached_at"]),
+        ),
+    )
 
 
 def _row(stored: RankingRowORM) -> RankingRow:
@@ -113,5 +229,5 @@ def _row(stored: RankingRowORM) -> RankingRow:
         level_reached_at=stored_instant(stored.level_reached_at),
         general_entered_at=stored_instant_or_none(stored.general_entered_at),
         friends_entered_at=stored_instant(stored.friends_entered_at),
-        form=tuple(_OUTCOMES[mark] for mark in stored.form),
+        form=Outcome.of_marks(stored.form),
     )

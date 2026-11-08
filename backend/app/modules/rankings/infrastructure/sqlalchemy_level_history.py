@@ -10,9 +10,11 @@ points a store never had gains them on their next result.
 **Each player's point at an instant is two statements**: the latest at or
 before it for each player — a window over **every point of the sport up to the
 instant**, partitioned by player along ``ix_ranking_level_history_points``,
-whose rows past the listed players are dropped here (what that costs at 50,000
-players is #770's measurement) — then the first point of whoever has none by
-then: only players whose rating opened since, every one of them *New*. Both
+whose rows past the players asked about are dropped here — then the first point
+of whoever has none by then: only players whose rating opened since, every one
+of them *New*. **General's chips no longer read it**: its pass reads the points
+of the week's movers alone, beside the rows (#770, ``SqlAlchemyRankingRows``);
+this is for a read over a few players. Both
 dialects the backend runs on speak the window, SQLite since 3.25.
 """
 

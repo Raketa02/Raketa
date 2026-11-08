@@ -552,16 +552,29 @@ from app.modules.rankings.application.projection import (
     MoveTheRanking,
     RebuildTheRankings,
 )
-from app.modules.rankings.application.reads import ReadHomeRanking, ReadRanking
+from app.modules.rankings.application.general_order import TheGeneralOrder
+from app.modules.rankings.application.reads import (
+    ReadGeneralPage,
+    ReadHomeRanking,
+    ReadRanking,
+)
 from app.modules.rankings.domain.ports import (
+    GeneralOrders,
     LevelHistory,
     RankedFaces,
     RankingRows,
     RatingHistories,
     SportLevels,
 )
+from app.modules.rankings.infrastructure.in_memory_general_orders import (
+    InMemoryGeneralOrders,
+)
 from app.modules.rankings.infrastructure.profile_ranked_faces import (
     ProfileRankedFaces,
+)
+from app.modules.rankings.infrastructure.redis_general_orders import (
+    FailSoftGeneralOrders,
+    RedisGeneralOrders,
 )
 from app.modules.rankings.infrastructure.rated_sport_levels import RatedSportLevels
 from app.modules.rankings.infrastructure.rating_stream_histories import (
@@ -3195,9 +3208,11 @@ def build_read_home(
     *,
     settings: Settings,
     clock: Clock,
+    orders: GeneralOrders,
     runtime: EventRuntime | None = None,
 ) -> ReadHome:
-    """Home: the reader's booked games and the ones that need them (#542)."""
+    """Home: the reader's booked games and the ones that need them (#542) —
+    and the trophy, read off the kept General order (#770)."""
     return ReadHome(
         bookings=build_player_bookings(session, runtime=runtime),
         results=build_game_results(session, runtime=runtime),
@@ -3218,7 +3233,7 @@ def build_read_home(
         level_asks=build_level_asks_on_home(
             session, settings=settings, runtime=runtime
         ),
-        ranking=build_ranking_on_home(session, clock=clock),
+        ranking=build_ranking_on_home(session, clock=clock, orders=orders),
         friends_games=build_friends_game_bookings(session, runtime=runtime),
         clock=clock,
     )
@@ -3998,20 +4013,48 @@ def build_sport_levels(
     return RatedSportLevels(build_rated_player_query(session, runtime=runtime))
 
 
+def build_general_orders(client: Redis | None) -> GeneralOrders:
+    """Each sport's kept General order, in the ephemeral store — **wrapped,
+    always** (#770): an order is a copy the projection can always make, so a
+    store that is down holds nothing and keeps nothing, and a read works the
+    order out instead. **Kept nowhere where the store never came up** — a
+    request then works its order out, as a run with no store does."""
+    if client is None:
+        return build_general_orders_kept_here()
+    return FailSoftGeneralOrders(RedisGeneralOrders(client))
+
+
+def build_general_orders_kept_here() -> GeneralOrders:
+    """Orders kept in this process's memory, **one store per call** — for a
+    run with no ephemeral store of its own (a seed run's drain and its screen
+    reads), and the in-memory equivalent every test reads through. An API
+    process that holds an order after a seed shows it for at most its minute;
+    the rebuild forgets the API's in Redis itself."""
+    return InMemoryGeneralOrders()
+
+
 def build_move_the_ranking(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    orders: GeneralOrders,
+    runtime: EventRuntime | None = None,
 ) -> MoveTheRanking:
     """A result's row folded again — built per delivery run, over the session
-    the delivery commits in (#768)."""
+    the delivery commits in (#768) — and its sport's kept order forgotten in
+    the store this run's readers read (#770)."""
     return MoveTheRanking(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
         level_history=build_level_history(session),
+        orders=orders,
     )
 
 
 def build_rebuild_the_rankings(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession,
+    *,
+    orders: GeneralOrders,
+    runtime: EventRuntime | None = None,
 ) -> RebuildTheRankings:
     """Every row and level-history point folded from every rating stream —
     ``make rankings-rebuild``."""
@@ -4019,8 +4062,17 @@ def build_rebuild_the_rankings(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
         level_history=build_level_history(session),
+        orders=orders,
         uow=build_unit_of_work(session),
     )
+
+
+def build_the_general_order(
+    session: AsyncSession, *, orders: GeneralOrders
+) -> TheGeneralOrder:
+    """A sport's General order as a read finds it: the kept one while fresh,
+    or worked out in one pass and kept (#770)."""
+    return TheGeneralOrder(rows=build_ranking_rows(session), orders=orders)
 
 
 def build_read_ranking(
@@ -4028,28 +4080,52 @@ def build_read_ranking(
     *,
     settings: Settings,
     clock: Clock,
+    orders: GeneralOrders,
     runtime: EventRuntime | None = None,
 ) -> ReadRanking:
     """``GET /rankings/{sport}``: the card, the podium and General's first
     page."""
     return ReadRanking(
-        rows=build_ranking_rows(session),
-        level_history=build_level_history(session),
+        general=build_the_general_order(session, orders=orders),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         levels=build_sport_levels(session, runtime=runtime),
         clock=clock,
     )
 
 
-def build_read_home_ranking(session: AsyncSession, *, clock: Clock) -> ReadHomeRanking:
+def build_read_general_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    orders: GeneralOrders,
+    runtime: EventRuntime | None = None,
+) -> ReadGeneralPage:
+    """``GET /rankings/{sport}/general/rows``: a page of General (#770)."""
+    return ReadGeneralPage(
+        general=build_the_general_order(session, orders=orders),
+        faces=build_ranked_faces(session, settings=settings, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_home_ranking(
+    session: AsyncSession, *, clock: Clock, orders: GeneralOrders
+) -> ReadHomeRanking:
     """Home's trophy: the sport of the latest result and the General place."""
-    return ReadHomeRanking(rows=build_ranking_rows(session), clock=clock)
+    return ReadHomeRanking(
+        rows=build_ranking_rows(session),
+        general=build_the_general_order(session, orders=orders),
+        clock=clock,
+    )
 
 
-def build_ranking_on_home(session: AsyncSession, *, clock: Clock) -> RankingOnHome:
+def build_ranking_on_home(
+    session: AsyncSession, *, clock: Clock, orders: GeneralOrders
+) -> RankingOnHome:
     """Home's trophy — Rankings' read, signed in ``proposals/infrastructure/``
     (``docs/adr/0203`` §5)."""
-    return RankingsOnHome(build_read_home_ranking(session, clock=clock))
+    return RankingsOnHome(build_read_home_ranking(session, clock=clock, orders=orders))
 
 
 def build_member_relations(

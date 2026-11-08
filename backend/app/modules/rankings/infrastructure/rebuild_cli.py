@@ -12,7 +12,10 @@ ships to a store that already holds results, and every result after that
 reaches its row through the outbox. ``docs/adr/0092``'s register is for loops.
 Thin on purpose — the use case comes out of the composition root, so it walks
 the store a request does — and under ``app/`` because the container image
-copies ``app/`` and not ``scripts/``.
+copies ``app/`` and not ``scripts/``. **It forgets every sport's kept General
+order in the ephemeral store the API reads** (#770), so the next read works
+the rebuilt rows out; a store it cannot reach is told nothing, and an order
+held there lasts its minute.
 """
 
 from __future__ import annotations
@@ -21,19 +24,27 @@ import asyncio
 
 from app.bootstrap.composition import (
     build_background_session_factory,
+    build_general_orders,
     build_rebuild_the_rankings,
 )
 from app.core.config import get_settings
 from app.infrastructure.database.engine import create_engine
+from app.infrastructure.redis_client import create_redis_client
 from app.modules.rankings.application.projection import Rebuilt
 
 
 async def rebuild() -> Rebuilt:
-    engine = create_engine(get_settings())
+    settings = get_settings()
+    engine = create_engine(settings)
+    store = create_redis_client(settings)
     try:
         async with build_background_session_factory(engine)() as session:
-            return await build_rebuild_the_rankings(session).execute()
+            return await build_rebuild_the_rankings(
+                session, orders=build_general_orders(store)
+            ).execute()
     finally:
+        # See ``redis_client.close_redis`` for the ignore.
+        await store.aclose()  # type: ignore[attr-defined]
         await engine.dispose()
 
 

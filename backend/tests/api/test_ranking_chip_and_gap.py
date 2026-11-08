@@ -33,6 +33,7 @@ from tests.api.rankings_world import (
     results_at,
     stored_points,
 )
+from tests.unit.kept_orders import kept_orders_of
 
 UP_1 = {"kind": "UP", "places": 1}
 DOWN_1 = {"kind": "DOWN", "places": 1}
@@ -422,9 +423,13 @@ async def test_the_rebuild_fills_the_history_and_running_it_twice_changes_nothin
     assert await stored_points(session_factory) == []
 
     async with session_factory() as session:
-        first = await build_rebuild_the_rankings(session).execute()
+        first = await build_rebuild_the_rankings(
+            session, orders=kept_orders_of(session_factory)
+        ).execute()
     async with session_factory() as session:
-        second = await build_rebuild_the_rankings(session).execute()
+        second = await build_rebuild_the_rankings(
+            session, orders=kept_orders_of(session_factory)
+        ).execute()
 
     assert (first.rows, first.points, second.points) == (4, len(live), 0)
     assert await stored_points(session_factory) == live

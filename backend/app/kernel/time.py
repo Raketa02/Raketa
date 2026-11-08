@@ -105,10 +105,11 @@ def instant(value: datetime) -> Instant:
     rather than refused: UTC is the canonical spelling, not an extra demand.
     """
 
-    invariant(
-        value.tzinfo is not None and value.utcoffset() is not None,
-        f"instant from a naive datetime: {value!r}",
-    )
+    # Asked first and the message made only on failure: every stored time is
+    # read through here, and formatting the value on every call was most of
+    # what fifty thousand ranking rows cost to read (#770).
+    if value.tzinfo is None or value.utcoffset() is None:
+        invariant(False, f"instant from a naive datetime: {value!r}")
     return Instant(value.astimezone(timezone.utc))
 
 

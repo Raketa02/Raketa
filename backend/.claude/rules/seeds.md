@@ -142,9 +142,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
 - **The ranking is results, so its seed is played history** (#768,
   `app/seeds/rankings.py`; `rankings.md`): nineteen padel games, `RANKING_GAMES`, handed to
   the played history beside `PLAYED_GAMES` and written as every declared game is — the
-  rooms layer's outbox drain moves the Levels and folds every row. Fourteen are listed in
-  padel, her mid-list on three wins and two losses; `cohort-a-12` has 3; badminton has
-  nobody. Who may play is narrow — no record fixture's count, no named claim near its
+  rooms layer's outbox drain moves the Levels and folds every row. **And the ranking's
+  crowd** (#770, `app/seeds/ranking_crowd.py`): forty-eight padel players **outside the
+  cohort** — written by `seed_the_cohort(cohort=RANKING_CROWD, clear_the_week=True)`, so the
+  histogram, the aging refusal and every deck never see them, and their week is cleared so
+  the proposer deals none of them — with a card each and `RANKING_CROWD_GAMES`, sixty games among
+  themselves handed to the played history (`crowd=`), which joins them to her *Padel na
+  Ogrodach* as it joins every padel game's people. Sixty-two are listed in padel, her
+  56th, below the first page, on three wins and two losses; `cohort-a-12` has 3; badminton
+  has nobody. Who may play is narrow — no record fixture's count, no named claim near its
   band's edge, nobody Advanced — and the module says why. `assert_the_ranking` reads the
   page's own use case among the screens and fails the run by name; proven twice over on a
   fresh Postgres, the rebuild equal to live delivery row for row.

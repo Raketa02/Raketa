@@ -45,6 +45,7 @@ from app.bootstrap.composition import (
     build_player_bookings,
     build_proposal_directory,
     build_read_friends_courts,
+    build_general_orders_kept_here,
     build_read_home,
     build_send_a_friends_game,
     build_user_repository,
@@ -339,7 +340,10 @@ async def _read_back(
     slug_of = {player: slug for slug, player in ids.items()}
     async with session_factory() as session:
         home = await build_read_home(
-            session, settings=settings, clock=FixedClock(at=now)
+            session,
+            settings=settings,
+            clock=FixedClock(at=now),
+            orders=build_general_orders_kept_here(),
         ).execute(ids[THE_POPULATED_PLAYER.slug])
     games = []
     for invitation in home.friends_games:

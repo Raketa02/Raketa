@@ -50,6 +50,7 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
 )
 from app.shared.ids import new_uuid
 from tests.unit.event_log import append
+from tests.unit.kept_orders import kept_orders_of
 
 #: Where a profile is committed unless a test says otherwise, at the platform's
 #: own coarse precision.
@@ -509,6 +510,9 @@ async def deliver_the_outbox(
                 nudges=nudges,
                 payments=provider,
                 push=push if push is not None else RecordingPush(),
+                # The orders the test's application reads, so a ranking write
+                # forgets the one its next request would read (#770).
+                orders=kept_orders_of(session_factory),
                 proposer_due=proposer_due,
             )
             delivered = await batch.execute(worker_id="tests")

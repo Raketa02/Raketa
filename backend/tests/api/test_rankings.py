@@ -49,6 +49,7 @@ from tests.api.rankings_world import (
     stored_rows,
     the_catch_up_runs,
 )
+from tests.unit.kept_orders import kept_orders_of
 
 
 @pytest.fixture
@@ -353,7 +354,9 @@ async def test_the_rebuild_matches_live_delivery_and_running_it_twice_changes_no
 
     for _ in range(2):
         async with session_factory() as session:
-            rebuilt = await build_rebuild_the_rankings(session).execute()
+            rebuilt = await build_rebuild_the_rankings(
+                session, orders=kept_orders_of(session_factory)
+            ).execute()
         assert (rebuilt.ratings, rebuilt.rows) == (4, 4)
         assert await stored_rows(session_factory) == live
 
@@ -377,7 +380,7 @@ async def test_a_redelivered_move_changes_nothing(client, session_factory, clock
             aggregate_type=RATING_AGGREGATE,
             aggregate_id=skill_rating_id(tomek["id"], Sport.PADEL),
         )
-        mover = build_move_the_ranking(session)
+        mover = build_move_the_ranking(session, orders=kept_orders_of(session_factory))
         for record in stream:
             if isinstance(record.event, RatingMovedOnResult):
                 await mover(

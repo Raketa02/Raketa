@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.bootstrap.composition import (
     build_fake_payments,
+    build_general_orders_kept_here,
     build_nobody_is_following,
     build_recording_push,
 )
@@ -201,4 +202,5 @@ def _worker_polling_through(polls: _Polls) -> EventWorker:
         nudges=build_nobody_is_following(),
         payments=build_fake_payments(),
         push=build_recording_push(),
+        orders=build_general_orders_kept_here(),
     )

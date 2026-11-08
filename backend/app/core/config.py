@@ -626,8 +626,10 @@ class Settings(BaseSettings):
     # --- the ephemeral store (docs/adr/0093)
     #
     # **Redis holds only what is allowed to be lossy** — since the searches went
-    # (#579) that is a room's live channel and who is typing in it — and nothing
-    # else. Everything the platform must be able to say later is a durable row.
+    # (#579) that is a room's live channel and who is typing in it, and since
+    # #770 each sport's kept General order, a copy the ranking projection can
+    # always make again — and nothing else. Everything the platform must be able
+    # to say later is a durable row.
     #
     # A **server-to-server** address, like `PHOTO_STORAGE_ENDPOINT_URL` and
     # `PHOTO_REVIEW_ENDPOINT_URL`, so the public-network scheme rule has nothing to

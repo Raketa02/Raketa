@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Seventeen registers, and they are seventeen on purpose — one per kind of claim.**
+  **Eighteen registers, and they are eighteen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -132,8 +132,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   rating's own streams), the faces (`RankedFaces`) and a level held, read live
   (`SportLevels`). Home's trophy is a row in Proposals' register, `RankingOnHome` (the
   tenth's twenty-fourth).
+  **The eighteenth, `general_order_demands.py`, is the third of `payments_demands.py`'s
+  kind** (#770; `rankings.md`): the two adapters of the kept General orders — Redis's, as
+  the composition root wraps it, over the suite's fake server, and the in-memory equivalent
+  every test, a seed run and the rebuild read through — so an in-memory store that drifts
+  from Redis's goes red.
   **A row carries a builder, and not always over a bare session.** Most build over a
-  session; `payments_demands.py`'s and `push_demands.py`'s build over the settings.
+  session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
+  `general_order_demands.py`'s over a Redis client.
   `game_demands.py` builds over the session alone since the game's pairing is read side
   against side from the people's Levels (#575), and **no test in this repository needs
   Redis running**.

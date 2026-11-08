@@ -95,6 +95,7 @@ from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
     subscribe_player_profile_handlers,
 )
+from app.modules.rankings.domain.ports import GeneralOrders
 from app.modules.rankings.application.event_subscriptions import (
     subscribe_the_ranking_mover,
 )
@@ -140,6 +141,7 @@ class EventRuntime:
         nudges: NudgePublisher,
         payments: PaymentProvider,
         push: PushNotifications,
+        orders: GeneralOrders,
         proposer_due: DueForProposing | None = None,
     ) -> EventBatch:
         """One batch of the outbox, over this session.
@@ -164,6 +166,11 @@ class EventRuntime:
         Expo, a seed run's recording service, whose players have no phones —
         and a default here would be phones pushed, or not, by nobody's choice.
 
+        **``orders`` is required on the same argument** (#770): a ranking write
+        forgets its sport's kept General order in the store this run's readers
+        read — the API's ephemeral store, a seed run's own memory — and a
+        default here would be an order forgotten somewhere nobody reads.
+
         **``proposer_due`` is the one that may be absent**: it is where this
         process's proposer is told what changed (#540), and a seed run or a
         command-line drain has no proposer listening. Absent is a real answer —
@@ -184,6 +191,7 @@ class EventRuntime:
                 nudges=nudges,
                 payments=payments,
                 push=push,
+                orders=orders,
                 proposer_due=proposer_due,
             ),
             uow=build_unit_of_work(session),
@@ -199,6 +207,7 @@ class EventRuntime:
         nudges: NudgePublisher,
         payments: PaymentProvider,
         push: PushNotifications,
+        orders: GeneralOrders,
         proposer_due: DueForProposing | None = None,
     ) -> EventDispatcher:
         """The process's subscriptions, plus the ones that need this batch's session.
@@ -307,9 +316,10 @@ class EventRuntime:
             build_settle_ratings_on_results(session, runtime=self, clock=clock),
         )
         # And a Level moved on a result moves its player's ranking row, in the
-        # same transaction (#768; `docs/adr/0203` §10).
+        # same transaction (#768; `docs/adr/0203` §10), and forgets its sport's
+        # kept General order (#770).
         subscribe_the_ranking_mover(
-            dispatcher, build_move_the_ranking(session, runtime=self)
+            dispatcher, build_move_the_ranking(session, orders=orders, runtime=self)
         )
         # What players are told about a game and its money, given in the
         # delivery's own transaction — and a notice given, pushed to their
@@ -400,6 +410,7 @@ def build_event_delivery_worker(
     nudges: NudgePublisher,
     payments: PaymentProvider,
     push: PushNotifications,
+    orders: GeneralOrders,
     clock: Clock | None = None,
     proposer_due: DueForProposing | None = None,
 ) -> EventWorker:
@@ -408,8 +419,9 @@ def build_event_delivery_worker(
     It runs inside the API process, beside the streams, so the system lines it
     writes reach open conversations without anybody refreshing — which is what
     ``nudges`` is, and why it has no default here either. ``push`` is the push
-    service a notice reaches a phone through. ``proposer_due`` is this
-    process's proposer, told what the delivery changed.
+    service a notice reaches a phone through; ``orders`` the store this
+    process's readers read the kept General orders from. ``proposer_due`` is
+    this process's proposer, told what the delivery changed.
     """
 
     processing_clock = clock or SystemClock()
@@ -422,6 +434,7 @@ def build_event_delivery_worker(
             nudges=nudges,
             payments=payments,
             push=push,
+            orders=orders,
             proposer_due=proposer_due,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,

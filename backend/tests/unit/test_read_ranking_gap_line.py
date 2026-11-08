@@ -13,13 +13,17 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant
+from app.modules.rankings.application.general_order import TheGeneralOrder
 from app.modules.rankings.application.reads import ReadRanking
+from app.modules.rankings.domain.general_order import ListedAndThen
 from app.modules.rankings.domain.ports import RankedFace
 from app.modules.rankings.domain.ranking import (
     PAGE_SIZE,
-    LevelPoint,
     Outcome,
     RankingRow,
+)
+from app.modules.rankings.infrastructure.in_memory_general_orders import (
+    InMemoryGeneralOrders,
 )
 from app.shared.ids import new_uuid
 from tests.unit.fake_clock import MovableClock
@@ -54,19 +58,9 @@ class Rows:
         return tuple(row for row in self._listed if row.player_id == player_id)
 
     async def listed(
-        self, sport: Sport, *, at_least: int, since: Instant
-    ) -> tuple[RankingRow, ...]:
-        return self._listed
-
-
-class NoHistory:
-    async def append(self, points: Sequence[LevelPoint]) -> int:
-        raise AssertionError("a read writes nothing")
-
-    async def points_at(
-        self, sport: Sport, at: Instant, player_ids: Collection[UUID]
-    ) -> Mapping[UUID, LevelPoint]:
-        return {}
+        self, sport: Sport, *, at_least: int, since: Instant, then: Instant
+    ) -> tuple[ListedAndThen, ...]:
+        return tuple(ListedAndThen(row=row, then=None) for row in self._listed)
 
 
 class Faces:
@@ -94,8 +88,7 @@ class Rated:
 
 def a_read(listed: Sequence[RankingRow], faces: Faces) -> ReadRanking:
     return ReadRanking(
-        rows=Rows(listed),
-        level_history=NoHistory(),
+        general=TheGeneralOrder(rows=Rows(listed), orders=InMemoryGeneralOrders()),
         faces=faces,
         levels=Rated(),
         clock=MovableClock(NOW),

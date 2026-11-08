@@ -104,7 +104,8 @@ Rules to preserve:
   times, so a job must be safe beside itself. A window or threshold is domain; only the
   cadence is configuration.
 - **The outside world sits behind ports** — photo storage, the photo-check sidecar (fails
-  open), a room's live channel on Redis (fails soft), the mail queue and `Mailer`, `PaymentProvider`,
+  open), a room's live channel on Redis (fails soft), each sport's kept General order on
+  Redis (`GeneralOrders`; fails soft, #770), the mail queue and `Mailer`, `PaymentProvider`,
   `PushNotifications` (Expo; fails soft).
   `.importlinter` keeps each SDK out of every domain and application layer, including
   through the adapter, and `tests/conftest.py` overrides each port, so no test needs a
@@ -141,7 +142,7 @@ changing code that calls into another context, read its rule.**
 | `games.md` | the booked game: opening, a seat left and taken, call-offs, results, the pairing |
 | `conversations.md` | rooms, their end and the live channel |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |
-| `rankings.md` | the ranking: one row per player per sport folded from the rating stream on every `rating.moved_on_result`, the level history keyed by the event, the rebuild, who is listed on General (5 results, 90 days), the order, the place card, the chip (7 days, rolling, *New*), the gap line and its wins, the podium, Home's trophy |
+| `rankings.md` | the ranking: one row per player per sport folded from the rating stream on every `rating.moved_on_result`, the level history keyed by the event, the rebuild, who is listed on General (5 results, 90 days), the order, the place card, the chip (7 days, rolling, *New*), the gap line and its wins, the podium, Home's trophy; a sport's General order worked out in one pass and kept a minute (Redis, forgotten on every write), pages of 50 by cursor and around the reader, the 50,000-player measurement |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
 | `friends.md` | friendships: a request, *Not now*, crossing, cancel and remove; a block ends one and hides a blocked player's request, live; the reader's relation lent to every face; Home's friend requests and the two notices; the link; asking a friend for a level, once per sport, answered by the rating's first level, and waiting on their Home until they have it or say *Not now* |
 | `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; the Cover a friends game's sender holds; proposals and the group deck; sending, answering and calling off a friends game; its empty seats — invited into, opened to the group, opened at the cut-off — the cover warning and leaving it |

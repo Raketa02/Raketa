@@ -118,6 +118,7 @@ from app.modules.proposals.domain.ports import (
     ProposalDirectory,
     ProposalRepository,
 )
+from app.modules.rankings.presentation.dependencies import GeneralOrdersDep
 
 
 def get_proposal_repository(
@@ -274,8 +275,10 @@ def get_read_deck_counts(
 ReadDeckCountsDep = Annotated[ReadDeckCounts, Depends(get_read_deck_counts)]
 
 
-def get_read_home(db: DbSession, settings: SettingsDep, clock: ClockDep) -> ReadHome:
-    return build_read_home(db, settings=settings, clock=clock)
+def get_read_home(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, orders: GeneralOrdersDep
+) -> ReadHome:
+    return build_read_home(db, settings=settings, clock=clock, orders=orders)
 
 
 ReadHomeDep = Annotated[ReadHome, Depends(get_read_home)]

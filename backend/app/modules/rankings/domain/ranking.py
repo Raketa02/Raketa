@@ -22,7 +22,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
-from typing import Final, final
+from typing import Final, Protocol, final
 from uuid import UUID
 
 from app.engines.racketskill.core import SkillEstimate
@@ -82,6 +82,24 @@ class Outcome(StrEnum):
     @classmethod
     def of(cls, won: bool) -> "Outcome":
         return cls.WIN if won else cls.LOSS
+
+    @property
+    def mark(self) -> str:
+        """The stored form's letter: ``W`` or ``L``."""
+
+        return "W" if self is Outcome.WIN else "L"
+
+    @classmethod
+    def of_marks(cls, marks: str) -> tuple["Outcome", ...]:
+        """A stored form read back, oldest first."""
+
+        return tuple(cls.WIN if mark == "W" else cls.LOSS for mark in marks)
+
+
+def marks_of(form: Sequence[Outcome]) -> str:
+    """A form as it is stored: ``WWLWL``."""
+
+    return "".join(outcome.mark for outcome in form)
 
 
 @final
@@ -163,14 +181,20 @@ class RankingRow:
     form: tuple[Outcome, ...]
 
     def __post_init__(self) -> None:
+        # Asked together first, and the messages only made when one fails: a
+        # pass makes one of these per listed player, and an f-string naming the
+        # row was most of what fifty thousand of them cost (#770).
+        entered = (self.general_entered_at is None) == (self.results < GENERAL_ENTRY)
+        if self.results >= 1 and len(self.form) == min(self.results, FORM_LENGTH):
+            if entered:
+                return
         invariant(self.results >= 1, f"a ranking row with no result: {self!r}")
         invariant(
             len(self.form) == min(self.results, FORM_LENGTH),
             f"a form that is not the last results: {self!r}",
         )
         invariant(
-            (self.general_entered_at is None) == (self.results < GENERAL_ENTRY),
-            f"an entry into General that is not the fifth result: {self!r}",
+            entered, f"an entry into General that is not the fifth result: {self!r}"
         )
 
     def listed_on_general(self, now: Instant) -> bool:
@@ -258,10 +282,27 @@ def row_of(history: RatingHistory) -> RankingRow | None:
     )
 
 
-def _order_of(one: RankingRow | LevelPoint) -> tuple[int, int, Instant, UUID]:
-    """The ranking's order, best first, of a row now or a point in the level
-    history: the Level, then more results, then who reached that Level first,
-    then the player id (Q20) — ``ix_ranking_rows_order`` in Python."""
+class Ordered(Protocol):
+    """Anything that stands somewhere in General's order: a row now, a point
+    in the level history, a row of a worked-out order, a page's cursor."""
+
+    @property
+    def hundredths(self) -> int: ...
+
+    @property
+    def results(self) -> int: ...
+
+    @property
+    def level_reached_at(self) -> Instant: ...
+
+    @property
+    def player_id(self) -> UUID: ...
+
+
+def order_of(one: Ordered) -> tuple[int, int, Instant, UUID]:
+    """The ranking's order, best first: the Level, then more results, then who
+    reached that Level first, then the player id (Q20) —
+    ``ix_ranking_rows_order`` in Python, and the only spelling of it here."""
 
     return (-one.hundredths, -one.results, one.level_reached_at, one.player_id)
 
@@ -289,10 +330,8 @@ class Chip:
 
     def __post_init__(self) -> None:
         moved = self.kind in (ChipKind.UP, ChipKind.DOWN)
-        invariant(
-            self.places >= 1 if moved else self.places == 0,
-            f"a chip whose places don't say how it moved: {self!r}",
-        )
+        if not (self.places >= 1 if moved else self.places == 0):
+            invariant(False, f"a chip whose places don't say how it moved: {self!r}")
 
 
 def chips_since(now: Instant) -> Instant:
@@ -318,12 +357,13 @@ def chips_of(
 
     ***New*** is the 7 days after a first entry into General — the 5th result.
     A comeback is not new: a returning player's level 7 days ago is known, so
-    the chip is real. **A row with no point at all** — a store the rebuild
-    hasn't filled — stands where it stands now.
+    the chip is real. **A row with no point** stands where it stands now: a
+    player with no result in the 7 days — the general order's pass reads no
+    history for them (#770) — and a store the rebuild hasn't filled.
     """
 
     def then_order(row: RankingRow) -> tuple[int, int, Instant, UUID]:
-        return _order_of(then.get(row.player_id, row))
+        return order_of(then.get(row.player_id, row))
 
     then_places = {
         row.player_id: place
@@ -403,7 +443,21 @@ class GapLine:
         )
 
 
-def one_win(row: RankingRow) -> int:
+class Levelled(Protocol):
+    """What prices one win and measures a gap: a ranking row now, or a row of a
+    worked-out order."""
+
+    @property
+    def sport(self) -> Sport: ...
+
+    @property
+    def hundredths(self) -> int: ...
+
+    @property
+    def sigma(self) -> float: ...
+
+
+def one_win(row: Levelled) -> int:
     """How far one win moves the row's Level, in hundredths: **the rating
     engine's own rule for an even game** (``even_win``) — an opposition at the
     player's own Level and uncertainty, a four as a side of the player and an
@@ -430,7 +484,7 @@ def wins_to_close(gap: int, *, win: int) -> int | None:
     return wins if wins <= WINS_COUNTED else None
 
 
-def player_above(reader: RankingRow, above: RankingRow, nickname: str) -> PlayerAbove:
+def player_above(reader: Levelled, above: Levelled, nickname: str) -> PlayerAbove:
     gap = above.hundredths - reader.hundredths
     if gap == 0:
         return PlayerAbove(nickname=nickname, gap=0, wins=None, tied=True)
@@ -442,7 +496,7 @@ def player_above(reader: RankingRow, above: RankingRow, nickname: str) -> Player
     )
 
 
-def player_below(reader: RankingRow, below: RankingRow, nickname: str) -> PlayerBelow:
+def player_below(reader: Levelled, below: Levelled, nickname: str) -> PlayerBelow:
     return PlayerBelow(nickname=nickname, gap=reader.hundredths - below.hundredths)
 
 
@@ -484,43 +538,59 @@ class PlaceCard:
         )
 
 
+class Placed(Protocol):
+    """The reader's row in a worked-out order: the place and what the card
+    reads off it."""
+
+    @property
+    def place(self) -> int: ...
+
+    @property
+    def hundredths(self) -> int: ...
+
+    @property
+    def results(self) -> int: ...
+
+    @property
+    def chip(self) -> Chip: ...
+
+
 def card_of(
     row: RankingRow | None,
     *,
     holds_a_level: bool,
-    place: int | None,
     of: int,
-    now: Instant,
-    chip: Chip | None = None,
+    placed: Placed | None = None,
     gap_line: GapLine | None = None,
 ) -> PlaceCard:
     """The reader's General card in a sport.
 
     **No level comes first**, read live from the rating: a reader with no
-    rating in the sport has no row either. Then **fewer than five results**,
-    whatever their age; then **off the list**, five or more with the last
-    older than the 90 days; and otherwise the place, the chip and the gap
-    line.
+    rating in the sport has no row either. Then **a place in the order** — the
+    order read decides who is listed, at the instant it was worked out, so the
+    card and the rows never disagree (#770): the place, the Level, the count
+    and the chip are the order's row's. Then **fewer than five results**,
+    whatever their age; and otherwise **off the list**, five or more with none
+    in the order's 90 days.
     """
 
     if not holds_a_level:
         return PlaceCard(state=CardState.NO_LEVEL, results=0)
+    if placed is not None:
+        return PlaceCard(
+            state=CardState.LISTED,
+            results=placed.results,
+            place=placed.place,
+            of=of,
+            hundredths=placed.hundredths,
+            chip=placed.chip,
+            gap_line=gap_line,
+        )
     if row is None or row.results < GENERAL_ENTRY:
         return PlaceCard(
             state=CardState.NEEDS_RESULTS, results=0 if row is None else row.results
         )
-    if not row.listed_on_general(now):
-        return PlaceCard(state=CardState.OFF_THE_LIST, results=row.results)
-    invariant(place is not None, f"a listed row with no place: {row!r}")
-    return PlaceCard(
-        state=CardState.LISTED,
-        results=row.results,
-        place=place,
-        of=of,
-        hundredths=row.hundredths,
-        chip=chip,
-        gap_line=gap_line,
-    )
+    return PlaceCard(state=CardState.OFF_THE_LIST, results=row.results)
 
 
 def latest_of(rows: tuple[RankingRow, ...]) -> RankingRow | None:

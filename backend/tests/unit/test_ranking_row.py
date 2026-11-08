@@ -9,11 +9,10 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.kernel import Instant, Sport, instant
+from app.modules.rankings.domain.general_order import ListedAndThen, work_out
 from app.modules.rankings.domain.ranking import (
     LISTED_FOR,
     CardState,
-    Chip,
-    ChipKind,
     GapLine,
     LevelMove,
     Outcome,
@@ -144,10 +143,12 @@ def test_the_card(results, days_ago, expected):
     card = card_of(
         row,
         holds_a_level=True,
-        place=1 if listed else None,
         of=1,
-        now=now,
-        chip=Chip(ChipKind.SAME) if listed else None,
+        placed=(
+            work_out(Sport.PADEL, [ListedAndThen(row=row, then=None)], now=now).rows[0]
+            if listed and row is not None
+            else None
+        ),
         gap_line=(
             GapLine(above=None, below=None, top_of_the_list=True) if listed else None
         ),
@@ -158,9 +159,7 @@ def test_the_card(results, days_ago, expected):
 
 
 def test_no_level_comes_before_everything():
-    assert card_of(None, holds_a_level=False, place=None, of=3, now=START).state is (
-        CardState.NO_LEVEL
-    )
+    assert card_of(None, holds_a_level=False, of=3).state is CardState.NO_LEVEL
 
 
 def test_the_trophy_follows_the_latest_result():

@@ -318,6 +318,7 @@ def test_the_walk_has_something_to_walk():
         "photos.py",
         "posts.py",
         "proposals.py",
+        "ranking_crowd.py",
         "rankings.py",
         "rescues.py",
         "rooms.py",

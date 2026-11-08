@@ -231,6 +231,49 @@ async def results_at(session_factory, player: dict, levels: list[float], clock) 
         clock.move(timedelta(hours=1))
 
 
+async def a_listed_crowd(
+    client, session_factory, clock, count: int, *, top: float = 6.0
+) -> list[dict]:
+    """``count`` players listed in padel, best first and a hundredth apart:
+    each filed on the log at their own Level, then five results there settled
+    eight days ago — so nobody is *New* — and the outbox delivered once. Their
+    ids, tokens and nicknames, in place order."""
+
+    crowd = []
+    for n in range(count):
+        name = f"crowd{n:03d}"
+        player_id, token = await players.a_player_on_the_log(
+            client, session_factory, name, mu=round(top - n / 100, 2)
+        )
+        crowd.append({"id": player_id, "token": token, "nickname": name})
+    settled = instant(clock.now() - timedelta(days=8))
+    async with session_factory() as session:
+        for n, player in enumerate(crowd):
+            for result in range(5):
+                await move_on(
+                    session,
+                    player["id"],
+                    round(top - n / 100, 2),
+                    at=instant(settled + timedelta(minutes=result)),
+                )
+    await deliver_the_outbox(session_factory, rounds=count)
+    return crowd
+
+
+async def general_rows(client, player: dict, sport: str = "PADEL", **params) -> dict:
+    read = await client.get(
+        f"/api/v1/rankings/{sport}/general/rows",
+        params=params,
+        headers=players.auth(player["token"]),
+    )
+    assert read.status_code == 200, read.text
+    return read.json()
+
+
+def places(read: dict) -> list[int]:
+    return [row["place"] for row in read["rows"]]
+
+
 async def level_of(client, player: dict) -> float:
     read = await client.get(
         "/api/v1/players/me/record",

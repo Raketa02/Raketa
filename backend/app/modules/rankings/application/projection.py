@@ -12,6 +12,12 @@ alone and one a store never had is filled on the player's next result. Nothing
 here keeps a cursor: the rating streams are the record, as they are for the
 rating's own catch-up (``docs/adr/0139``).
 
+**Each forgets its sport's kept General order** (#770), so the next read
+works it out again and a result settling is reflected on it. The forget is the
+delivery's last act before its commit, so a read that worked the order out in
+between keeps what it read for at most the minute; one that misses a reader
+the projection lists is worked out again (``TheGeneralOrder``).
+
 **No commit** in the move: the transaction is the delivery's. The rebuild is a
 command-line run of its own and commits once at the end
 (``infrastructure/rebuild_cli.py``).
@@ -26,6 +32,7 @@ from app.application.events import DeliveryContext
 from app.application.ports import UnitOfWork
 from app.kernel import Sport
 from app.modules.rankings.domain.ports import (
+    GeneralOrders,
     LevelHistory,
     RankingRows,
     RatingHistories,
@@ -38,7 +45,8 @@ from app.modules.rating.domain.events import RatingMovedOnResult
 class MoveTheRanking:
     """A result moved a Level, so the player's row in that sport is folded
     again from their rating stream — made on the first result — and the level
-    history gains the result's point."""
+    history gains the result's point — and the sport's kept order is
+    forgotten."""
 
     def __init__(
         self,
@@ -46,10 +54,12 @@ class MoveTheRanking:
         histories: RatingHistories,
         rows: RankingRows,
         level_history: LevelHistory,
+        orders: GeneralOrders,
     ) -> None:
         self._histories = histories
         self._rows = rows
         self._level_history = level_history
+        self._orders = orders
 
     async def __call__(
         self, event: RatingMovedOnResult, context: DeliveryContext
@@ -59,6 +69,7 @@ class MoveTheRanking:
         if history is not None and row is not None:
             await self._rows.save(row)
             await self._level_history.append(points_of(history))
+            await self._orders.forget(row.sport)
 
 
 @final
@@ -85,11 +96,13 @@ class RebuildTheRankings:
         histories: RatingHistories,
         rows: RankingRows,
         level_history: LevelHistory,
+        orders: GeneralOrders,
         uow: UnitOfWork,
     ) -> None:
         self._histories = histories
         self._rows = rows
         self._level_history = level_history
+        self._orders = orders
         self._uow = uow
 
     async def execute(self) -> Rebuilt:
@@ -104,4 +117,6 @@ class RebuildTheRankings:
                 written += 1
                 points += await self._level_history.append(points_of(history))
         await self._uow.commit()
+        for sport in Sport:
+            await self._orders.forget(sport)
         return Rebuilt(ratings=ratings, rows=written, points=points)

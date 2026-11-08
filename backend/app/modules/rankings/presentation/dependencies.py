@@ -10,15 +10,39 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.api.dependencies import ClockDep, DbSession, SettingsDep
-from app.bootstrap.composition import build_read_ranking
-from app.modules.rankings.application.reads import ReadRanking
+from app.api.dependencies import ClockDep, DbSession, SettingsDep, StoreOrNothingDep
+from app.bootstrap.composition import (
+    build_general_orders,
+    build_read_general_page,
+    build_read_ranking,
+)
+from app.modules.rankings.application.reads import ReadGeneralPage, ReadRanking
+from app.modules.rankings.domain.ports import GeneralOrders
+
+
+def get_general_orders(store: StoreOrNothingDep) -> GeneralOrders:
+    """Each sport's kept General order, over the process's ephemeral store —
+    **per request**, so the fail-soft wrapper complains once a request at
+    most. A ``Depends`` so a test reads through the in-memory equivalent."""
+    return build_general_orders(store)
+
+
+GeneralOrdersDep = Annotated[GeneralOrders, Depends(get_general_orders)]
 
 
 def get_read_ranking(
-    db: DbSession, settings: SettingsDep, clock: ClockDep
+    db: DbSession, settings: SettingsDep, clock: ClockDep, orders: GeneralOrdersDep
 ) -> ReadRanking:
-    return build_read_ranking(db, settings=settings, clock=clock)
+    return build_read_ranking(db, settings=settings, clock=clock, orders=orders)
 
 
 ReadRankingDep = Annotated[ReadRanking, Depends(get_read_ranking)]
+
+
+def get_read_general_page(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, orders: GeneralOrdersDep
+) -> ReadGeneralPage:
+    return build_read_general_page(db, settings=settings, clock=clock, orders=orders)
+
+
+ReadGeneralPageDep = Annotated[ReadGeneralPage, Depends(get_read_general_page)]

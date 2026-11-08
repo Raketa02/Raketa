@@ -1,21 +1,34 @@
-"""The ranking on the wire (#768, #769; ``docs/adr/0203``; the screens §4–§5).
+"""The ranking on the wire (#768, #769, #770; ``docs/adr/0203``; the screens
+§4–§5).
 
 **Every Level is the two-decimal number the passport prints**, and so is every
 gap; the client draws both with the decimal comma. Places are true places: a
 row the reader can't see leaves a gap, and `of` still counts it. **The backend
 counts the wins and the client draws them**: the count reads the rating
 engine's update rule, which nobody else may compute.
+
+**A cursor is opaque**: the key a row stood at in the order, written here and
+read back only here (``cursor_of``, ``key_of``) — a client hands back what it
+was given and never builds one.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from app.kernel import Sport
-from app.modules.rankings.application.reads import RankedRow, Ranking
+from app.modules.rankings.application.reads import GeneralPage, RankedRow, Ranking
+from app.modules.rankings.domain.errors import NotAPage
+from app.modules.rankings.domain.general_order import (
+    OrderKey,
+    instant_of_micros,
+    micros_of,
+)
 from app.modules.rankings.domain.ranking import (
     FORM_LENGTH,
     GENERAL_ENTRY,
@@ -30,6 +43,38 @@ from app.modules.rankings.domain.ranking import (
     PlayerBelow,
     level_of,
 )
+
+
+def cursor_of(key: OrderKey) -> str:
+    """A row's key as a cursor: its four keys, dot-separated, base64url."""
+
+    written = (
+        f"{key.hundredths}.{key.results}.{micros_of(key.level_reached_at)}."
+        f"{key.player_id.hex}"
+    )
+    return base64.urlsafe_b64encode(written.encode()).decode().rstrip("=")
+
+
+def key_of(cursor: str) -> OrderKey:
+    """The key a cursor names — :class:`NotAPage` for one this server never
+    wrote: unreadable, or naming a key no kept order could hold."""
+
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        hundredths, results, micros, player = (
+            base64.urlsafe_b64decode(padded.encode()).decode().split(".")
+        )
+        key = OrderKey(
+            hundredths=int(hundredths),
+            results=int(results),
+            level_reached_at=instant_of_micros(int(micros)),
+            player_id=UUID(hex=player),
+        )
+    except (ValueError, OverflowError, UnicodeDecodeError, binascii.Error) as error:
+        raise NotAPage("an unreadable cursor") from error
+    if not key.can_be_written():
+        raise NotAPage("a cursor no row stands at")
+    return key
 
 
 class RankingView(StrEnum):
@@ -288,6 +333,13 @@ class RankingResponse(BaseModel):
             "who reached that Level first."
         )
     )
+    next: str | None = Field(
+        description=(
+            "The cursor the next page is read **after** — "
+            "`GET /rankings/{sport}/general/rows?after=…`. `null` when the "
+            "first page is the whole list. Opaque: hand it back as it came."
+        )
+    )
 
     @classmethod
     def of_ranking(cls, ranking: Ranking, *, view: RankingView) -> "RankingResponse":
@@ -298,4 +350,46 @@ class RankingResponse(BaseModel):
             listed=ranking.listed_count,
             podium=[RankedRowSchema.of_row(row) for row in ranking.podium],
             rows=[RankedRowSchema.of_row(row) for row in ranking.rows],
+            next=None if ranking.next is None else cursor_of(ranking.next),
+        )
+
+
+class GeneralPageResponse(BaseModel):
+    """**A page of General**: 50 places of the list, the rows of them you see
+    and the cursors either side. Scrolling to either end reads the next page
+    that way."""
+
+    sport: Sport
+    listed: int = Field(
+        ge=0,
+        description="How many are listed in General in the sport — *of 480*.",
+    )
+    rows: list[RankedRowSchema] = Field(
+        description=(
+            "The page's rows, best first, each with its true place — the same "
+            "rows the main read draws. **50 places**: a row you can't see "
+            "leaves its gap, so a page may hold fewer."
+        )
+    )
+    previous: str | None = Field(
+        description=(
+            "The cursor the page above is read **before** — `?before=…`. "
+            "`null` at the top of the list."
+        )
+    )
+    next: str | None = Field(
+        description=(
+            "The cursor the page below is read **after** — `?after=…`. `null` "
+            "at the bottom of the list."
+        )
+    )
+
+    @classmethod
+    def of_page(cls, page: GeneralPage) -> "GeneralPageResponse":
+        return cls(
+            sport=page.sport,
+            listed=page.listed_count,
+            rows=[RankedRowSchema.of_row(row) for row in page.rows],
+            previous=None if page.previous is None else cursor_of(page.previous),
+            next=None if page.next is None else cursor_of(page.next),
         )

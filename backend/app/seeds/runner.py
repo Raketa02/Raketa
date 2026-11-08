@@ -76,7 +76,7 @@ aggregate.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from os import environ
 from typing import Sequence
 from uuid import UUID
@@ -220,6 +220,7 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.friends import SeededFriends, friend_lines, write_the_friends
+from app.seeds.ranking_crowd import RANKING_CROWD_GAMES, RANKING_CROWD
 from app.seeds.rankings import RANKING_GAMES, assert_the_ranking
 from app.seeds.friends_games import (
     SeededFriendsGames,
@@ -854,8 +855,13 @@ async def seed_the_cohort(
     settings: Settings | None = None,
     photos: PhotoStorage | None = None,
     photographs: bool = True,
+    clear_the_week: bool = False,
 ) -> tuple[SeededMember, ...]:
     """Write the whole population, each member on the clock their row names.
+
+    ``clear_the_week`` clears each member's week straight after the commit, as
+    the profile screen's edit does — the ranking's crowd (``ranking_crowd.py``),
+    whom the proposer must deal into nobody's deck.
 
     Every write is the same use case a request runs — a registration, a rating
     earned by answering the questionnaire, a profile commit, a declaration per
@@ -877,6 +883,7 @@ async def seed_the_cohort(
                 settings=settings,
                 photos=photos,
                 photographs=photographs,
+                clear_the_week=clear_the_week,
             )
             for member in cohort.members
         ]
@@ -891,6 +898,7 @@ async def _seed_member(
     settings: Settings,
     photos: PhotoStorage,
     photographs: bool,
+    clear_the_week: bool = False,
 ) -> SeededMember:
     use_cases = _build(
         session,
@@ -914,7 +922,9 @@ async def _seed_member(
         else ()
     )
     committed = await _ensure_profile(
-        use_cases, player_id, _profile_of(member, uploaded)
+        use_cases,
+        player_id,
+        replace(_profile_of(member, uploaded), clear_the_week=clear_the_week),
     )
     return SeededMember(
         member=member,
@@ -1279,6 +1289,18 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
+            # **The ranking's crowd, outside the cohort** (#770): rated through
+            # the questionnaire, their week cleared, so the histogram above and
+            # every deck below never see them.
+            crowd = await seed_the_cohort(
+                session,
+                cohort=RANKING_CROWD,
+                clock=FixedClock(at=now),
+                settings=settings,
+                photos=photos,
+                photographs=False,
+                clear_the_week=True,
+            )
         # **The payment methods straight after the people**, each saved through
         # the setup a phone runs. Nothing below reads one yet and a saved card
         # changes nothing any other layer reads, so its place is free; it is
@@ -1286,7 +1308,10 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         payment_methods = await write_the_payment_methods(
             session_factory,
             now=now,
-            cohort=[(member.member.handle, member.player_id) for member in members],
+            cohort=[
+                (member.member.handle, member.player_id)
+                for member in (*members, *crowd)
+            ],
             money=money,
         )
         # **The clubs next, before anything that could stand at one.** A club
@@ -1332,9 +1357,11 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             settings=settings,
             now=now,
             # The ranking's padel games beside the cohort's own (#768): her
-            # list is results, and a result is a past booked game.
-            games=(*PLAYED_GAMES, *RANKING_GAMES),
+            # list is results, and a result is a past booked game — and the
+            # crowd's, among themselves, which put her below page one (#770).
+            games=(*PLAYED_GAMES, *RANKING_GAMES, *RANKING_CROWD_GAMES),
             named=ACCOUNTS,
+            crowd=RANKING_CROWD.members,
             money=money,
         )
         # **After the games and before anything reads a record**, because a card
@@ -1352,7 +1379,10 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             session_factory,
             settings=settings,
             now=now,
-            cohort=[(member.member.handle, member.player_id) for member in members],
+            cohort=[
+                (member.member.handle, member.player_id)
+                for member in (*members, *crowd)
+            ],
             money=money,
         )
         # **Her booked games, after the games still filling** (#541): seated

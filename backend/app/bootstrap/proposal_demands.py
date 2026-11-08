@@ -66,6 +66,7 @@ from app.bootstrap.composition import (
     build_clock,
     build_friend_requests_on_home,
     build_level_asks_on_home,
+    build_general_orders_kept_here,
     build_ranking_on_home,
     build_reader_relations,
     build_friends_game_bookings,
@@ -262,7 +263,9 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=RankingOnHome,
         name="RankingsOnHome",
-        build=lambda session: build_ranking_on_home(session, clock=build_clock()),
+        build=lambda session: build_ranking_on_home(
+            session, clock=build_clock(), orders=build_general_orders_kept_here()
+        ),
     ),
 )
 

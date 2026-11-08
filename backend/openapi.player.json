@@ -3911,6 +3911,111 @@
         }
       }
     },
+    "/api/v1/rankings/{sport}/general/rows": {
+      "get": {
+        "tags": [
+          "rankings"
+        ],
+        "summary": "A page of a sport's General list",
+        "description": "General in pages of 50, best first: **after** a cursor, **before** one, or **around you** \u2014 the 50 rows with you in the middle, held to the list's ends. With none of them it is the first page, the main read's own; around you when you aren't listed is the first page too. Each page carries the cursors for the page above and below. A row that moved since the last page is never shown twice for the rows it passed.",
+        "operationId": "read_general_page_api_v1_rankings__sport__general_rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 50 rows below it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 50 rows below it."
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `previous` cursor: the 50 rows above it.",
+              "title": "Before"
+            },
+            "description": "A `previous` cursor: the 50 rows above it."
+          },
+          {
+            "name": "around_me",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "The page with your row in the middle \u2014 *You \u00b7 212th*.",
+              "default": false,
+              "title": "Around Me"
+            },
+            "description": "The page with your row in the middle \u2014 *You \u00b7 212th*."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_ranking_page` \u2014 a cursor this server never wrote, or a page asked for in two places at once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups": {
       "get": {
         "tags": [
@@ -12337,6 +12442,61 @@
         "title": "GenderPreference",
         "description": "Who a player is willing to be matched with \u2014 durable, never per game.\n\n**Durable because the gate is mutual.** It has to be evaluated against a\nplayer when somebody *else's* game is being made and they are not present,\nand a setting made at the moment could not bind that direction at all."
       },
+      "GeneralPageResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "listed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Listed",
+            "description": "How many are listed in General in the sport \u2014 *of 480*."
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RankedRowSchema"
+            },
+            "type": "array",
+            "title": "Rows",
+            "description": "The page's rows, best first, each with its true place \u2014 the same rows the main read draws. **50 places**: a row you can't see leaves its gap, so a page may hold fewer."
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous",
+            "description": "The cursor the page above is read **before** \u2014 `?before=\u2026`. `null` at the top of the list."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the page below is read **after** \u2014 `?after=\u2026`. `null` at the bottom of the list."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "listed",
+          "rows",
+          "previous",
+          "next"
+        ],
+        "title": "GeneralPageResponse",
+        "description": "**A page of General**: 50 places of the list, the rows of them you see\nand the cursors either side. Scrolling to either end reads the next page\nthat way."
+      },
       "GroupAtClubSchema": {
         "properties": {
           "id": {
@@ -16428,6 +16588,18 @@
             "type": "array",
             "title": "Rows",
             "description": "General's first page of 50, best first: a listed player has at least 5 confirmed competitive results with a winner in the sport, the last within 90 days. Ordered by Level, then more results, then who reached that Level first."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read **after** \u2014 `GET /rankings/{sport}/general/rows?after=\u2026`. `null` when the first page is the whole list. Opaque: hand it back as it came."
           }
         },
         "type": "object",
@@ -16437,7 +16609,8 @@
           "card",
           "listed",
           "podium",
-          "rows"
+          "rows",
+          "next"
         ],
         "title": "RankingResponse",
         "description": "**Rankings**, for one sport and view: your card, the podium and the\nlist, best first."

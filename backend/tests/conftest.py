@@ -60,7 +60,11 @@ from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
     get_photo_review,
     get_photo_storage,
 )
+from app.modules.rankings.presentation.dependencies import (  # noqa: E402
+    get_general_orders,
+)
 from tests.unit.fake_clock import MovableClock  # noqa: E402
+from tests.unit.kept_orders import kept_orders_of  # noqa: E402
 from tests.unit.fake_mailer import RecordingMailer  # noqa: E402
 from tests.unit.fake_redis import FakeRedis  # noqa: E402
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
@@ -180,6 +184,20 @@ def live_channel():
     return FakeRedis()
 
 
+@pytest.fixture
+def general_orders(session_factory):
+    """Each sport's kept General order, **in memory** — the ephemeral store's
+    in-memory equivalent, one per test database, so the outbox a test drains
+    forgets the order its next request reads (``tests/unit/kept_orders.py``).
+
+    Overridden on `client` regardless, so no test needs Redis for it either;
+    the Redis adapter is held to the same contract over the fake server in
+    ``tests/demands/test_general_order_demands.py``.
+    """
+
+    return kept_orders_of(session_factory)
+
+
 @pytest_asyncio.fixture
 async def app(
     session_factory,
@@ -187,6 +205,7 @@ async def app(
     photo_review,
     live_channel,
     payments,
+    general_orders,
 ):
     """The application every API test drives, with its seams already replaced.
 
@@ -216,6 +235,7 @@ async def app(
     # left (#579), and it runs over the fake rather than being stubbed past.
     app.dependency_overrides[get_redis] = lambda: live_channel
     app.dependency_overrides[get_redis_subscriber] = lambda: live_channel
+    app.dependency_overrides[get_general_orders] = lambda: general_orders
     try:
         yield app
     finally:
