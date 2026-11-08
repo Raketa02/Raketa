@@ -11,10 +11,12 @@
  * mechanism, derived in `stageTextCap.test.ts` — because the hero's room is fixed and the picture
  * takes what the words leave. The form under it is not capped.
  *
- * The room between the wordmark and the headline is where the deck (#786) and the podium (#788)
- * will be drawn, given whatever height those two leave; until then it is empty night.
+ * **The room between the wordmark and the headline is the picture's** — sign-in's dealt deck
+ * (#786), sign-up's podium (#788) — and it is whatever height those two leave, so the picture
+ * measures it and fits itself in. Without a picture it is empty night.
  */
 
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
@@ -29,11 +31,13 @@ export interface StageHeroProps {
   readonly height: number;
   /** The status bar's inset, which the wordmark sits under. */
   readonly topInset: number;
+  /** What the room between the wordmark and the headline draws — fitted to it by itself. */
+  readonly picture?: ReactNode;
 }
 
 const CAP = theme.size.stage.textMaxScale;
 
-export function StageHero({ headline, height, topInset }: StageHeroProps) {
+export function StageHero({ headline, height, topInset, picture }: StageHeroProps) {
   return (
     <View
       style={[s.hero, { height }]}
@@ -49,7 +53,7 @@ export function StageHero({ headline, height, topInset }: StageHeroProps) {
             {STAGE_WORDMARK}
           </Text>
         </View>
-        <View style={s.room} />
+        <View style={s.room}>{picture}</View>
         <Text style={s.headline} maxFontSizeMultiplier={CAP}>
           {headline}
         </Text>
@@ -76,7 +80,7 @@ const s = StyleSheet.create({
     backgroundColor: theme.color.volt,
   },
   word: { ...theme.type.h1, color: theme.color.surface },
-  // The deck's room (#786), between the wordmark and the headline.
-  room: { flex: 1 },
+  // The picture's room, between the wordmark and the headline, a step clear of each.
+  room: { flex: 1, marginVertical: theme.space.sm },
   headline: { ...theme.type.stageTitle, color: theme.color.surface },
 });

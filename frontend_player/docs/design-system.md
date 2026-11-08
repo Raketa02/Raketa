@@ -202,8 +202,10 @@ column of levels lines up. **A level changing from 2,71 to 2,80 does not reflow 
 One entrance animation, one sheet animation, one popover animation, one fade — and, since
 [6.15](#615-the-swipe-row), one settle, the card of a swiped row coming to rest; since
 [7.21](#721-the-group-page), one unfold, a group's sport filter opening out of its pill; since
-[7.13](#713-the-record-block), one disclose, the record sheet's _Full record_ opening and closing.
-Press feedback is 120ms. Reduced-motion disables all of it.
+[7.13](#713-the-record-block), one disclose, the record sheet's _Full record_ opening and closing;
+since [12.2](#122-the-stage--sign-in-and-sign-up), one deal, sign-in's three miniature cards
+fanning out of a stack when the screen opens. Press feedback is 120ms. Reduced-motion disables all
+of it.
 
 ## 1.6 The app is the app
 
@@ -836,7 +838,9 @@ two radii.
 Six shadows exist, five of them for things that genuinely float. **Cards never have one** — depth
 on paper comes from the surface change and the 1pt `line` border, and the deck card is here
 because [4.2](#42-radius) says it is not a card. **The one amendment is the club result**
-(below), and it is named rather than absorbed.
+(below), and it is named rather than absorbed. Sign-in's three miniature game cards
+([12.2](#122-the-stage--sign-in-and-sign-up), #786) cast the deck card's shadow because they are a
+picture of the deck, dealt and — from #787 — swiped; they are not a seventh shadow.
 
 RN cannot express CSS spread, so these are calibrated approximations, with `elevation`
 for Android:
@@ -3607,6 +3611,10 @@ stamps, the fly-off, the haptic, the three buttons) — whose cards behind now f
 shrink — and its tiles are the one door to a player's record; the rest of the card, and the **i**,
 open the game.
 
+**Sign-in's hero draws a miniature copy of this card** ([12.2](#122-the-stage--sign-in-and-sign-up),
+#786) — redrawn in the auth feature, never this component. **A change to the card here does not
+reach it by itself: whoever changes the card checks the hero** (`MiniGameCard.tsx`).
+
 ## 7.23 The setup checklist and the method card
 
 ```
@@ -4711,7 +4719,8 @@ hero      0,41 of the WINDOW's height (size.stage.heroShare) · drawn BEHIND the
           gutter space.xxl, the sheet's · wordmark at the top inset + space.xs · headline at its
           foot, space.lg above the sheet · hidden from screen readers whole · no touch
 wordmark  an 8pt volt dot (size.stage.mark) · space.xs · Raketa in h1, surface
-picture   the room between the wordmark and the headline — the deck (#786), the podium (#788)
+picture   the room between the wordmark and the headline, space.sm clear of each — sign-in's dealt
+          deck (#786, below), sign-up's podium (#788) · measured, and the picture fits itself in
 headline  stageTitle (22 / 700 / −0,77 / 26) in surface, left-aligned
 text cap  maxFontSizeMultiplier size.stage.textMaxScale (1,6) on the hero's words — the tab
           bar's mechanism; the form under it is not capped
@@ -4814,6 +4823,51 @@ presses would otherwise build a stack as deep as the presses — and Android's b
 Opened with nothing under it, it puts sign-in in its place. Every other auth screen keeps the
 platform's slide, because it is a step deeper, not a page across — **sign-in's own included**, since
 sign-in is also what a recovery screen opened from an email link puts in its place.
+
+**Sign-in's picture is the dealt deck: three miniature game cards** ([#786](https://github.com/Raketa02/Raketa/issues/786),
+mock 2) — the front one straight, a padel game waiting for a fourth; a tennis single turned to the
+left; a squash _Fill in_ turned to the right. **The miniature is an illustration copied from the
+game card ([7.22](#722-the-game-card)), not the card**: `MiniGameCard` redraws its look in the auth
+feature with plain props, from the poster, the balance bar and this theme, because the live deck is
+`proposals`' and auth may not import it. **A later change to the game card does not reach the
+miniature by itself — whoever changes the card checks the hero.**
+
+```
+size      size.stage.card — 270 × 342, DRAWN at twice mock 2's miniature, where its words measure
+          the real card's own roles; the deck is scaled whole into the room (about 0,5 at 390pt)
+card      radius.deckCard · shadow.deckCard · the card's ground, gameGroundTop → gameGroundFoot
+ribbon    size.stage.card.ribbon 45 (the mock's band; the real card's is 30) · h2 surface · the
+          clock: Feather clock infoGlyph + num.xs tabular · coralInk on Seat open, gameRibbon on a
+          game dealt, gameGreen on a Fill in (mock 2's; white on it 4,62)
+body      padding space.md · gap space.sm · the tiles take what the rest leave
+tiles     2 × 2 in doubles, one row of two tall tiles in singles · gap space.sm · radius.card ·
+          a CourtPoster full-bleed, the nickname in h2 surface over its Level (· paid) in num.xs
+          onDarkTiny on photoScrim · the reader's seat dashed volt, its words alone in h2 volt ·
+          an empty seat dashed onDarkHair · courtStroke 1,5
+forecast  the figure in num.xl tabular, the real card's three (gameGreen / gameAmber / gameRed) ·
+          space.md · BalanceBar lg onDark, the fold at the centre, the sides as its labels
+booking   ONE line — h2 surface, the share in num.m tabular volt at its end · gameCourtBooked,
+          voltStroke courtStroke, radius.card, padding space.md — on all three, as mock 2 draws it
+words     every one capped at textMaxScale and on one line (the reader's seat: two)
+fan       size.stage.fan — the back cards 99 either side and 33 below the front card's centre,
+          turned 10° outwards, in drawing points (stageDeckGeometry.ts) · the front card straight,
+          on top
+fit       the fan's box scaled to the room's binding direction, never past 1 · nothing drawn until
+          the room is measured
+deal      stacked exactly for motion.stageDeck.stacked (400), then the two back cards slide out over
+          motion.stageDeck.deal (500), easeDecel, the front card still · once, on open · collapsed
+          presentation: dealt from the first frame, nothing moves
+```
+
+**Where mock 2 departs from the app, the mock wins**, because the miniature is a picture of the mock:
+no _vs_ line and no week grid; a one-line booking strip where the court block has a tag over its
+line, bordered in the booked court's volt stroke on all three; the reader's seat with its words and
+no price under them; and a green ribbon on the _Fill in_, which the real card does not have. **One
+departure the other way**: the tile rows are equal, as the real card draws them, where mock 2 draws
+the top row about half the bottom's height — a row that short would be its scrim alone. **The
+names are nicknames**, never the mock's _Karol T._ (ADR-0199 §1), and every one of them, every figure
+and every line is `stageHeroCopy.ts`'s, the cast's posters with them — a hue and a pose out of the
+poster's own closed sets, picked for the colour the mock draws each person in.
 
 ---
 
@@ -4991,15 +5045,18 @@ every `Ink` would need a second computed value.
 > bar stands. Decided by
 > [ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) and the Games &
 > Fill in screens (A2.3: _the mocks win over the design system_), and fenced in
-> [Part 16](#part-16--amendments-after-locking) _for this card and a game's details only_. Four
-> exceptions, each named for the thing it is, and still no dark mode.
+> [Part 16](#part-16--amendments-after-locking) _for this card and a game's details only_ — and for
+> sign-in's miniature copy of the card ([#786](https://github.com/Raketa02/Raketa/issues/786),
+> [12.2](#122-the-stage--sign-in-and-sign-up)), which is a picture of this card and draws its ground
+> and inks with it. Four exceptions, each named for the thing it is, and still no dark mode.
 
 > **Amended 2026-11-08** — **and the sign-in stage's hero is the app's fifth dark surface, and it is
 > the top of a screen rather than a screen** ([#784](https://github.com/Raketa02/Raketa/issues/784),
 > [12.2](#122-the-stage--sign-in-and-sign-up)). One flat night (`stageGround`) over the top four
 > tenths of sign-in — and of sign-up since #785 — with a glow at its foot (`stageGlow`), both measured
 > off mocks 1–3 and held by `stageGround.test.ts`; the sheet over it is paper, and every control on
-> it is the app's own. What sits on the night is white and one volt dot. **Its record is PRD #783**
+> it is the app's own. What sits on the night is white and one volt dot — and, since #786, sign-in's
+> three miniature game cards, each on the game card's own ground. **Its record is PRD #783**
 > — the product owner's ruling that this redesign takes no root ADR, being one client's look with no
 > contract or cross-app effect — and it is fenced in [Part 16](#part-16--amendments-after-locking)
 > _for sign-in's and sign-up's hero only_. `#15252C` is the yes ground's edge a step off and is not
@@ -5342,6 +5399,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-08 | [6.13](#613-the-text-field) · [3.3](#33-the-type-roles) · [6.1](#61-button) · [12.2](#122-the-stage--sign-in-and-sign-up) · [`TextField.tsx`](../src/shared/ui/TextField.tsx) `stage` · [`Button.tsx`](../src/shared/ui/Button.tsx) `stage` · [`theme.ts`](../src/shared/ui/theme.ts) `stageValue` `size.stage.control`                                                                  | Every field drew 6.13's look — a `flab` label in `ink`, uppercase, over a 42pt box with its value in `rlValue`, and _SHOW_ uppercase; buttons stood at 32–42                                                                                                                                                                                                 | **The stage's look** (#784): an opt-in `stage` on the field — the label in **`muted` sentence case at `rlLabel`**, `space.xs` above a **48pt** box (`size.stage.control`), its value in a new **`stageValue` (14 / 400 / 20)** `space.lg` in from each side, and **Show** / **Hide** in sentence case at `btn` in `ink`; the radius stays `btn`. `Button` gains a **`stage` size, 48**, so the stage's two buttons stand at its boxes' height. Sign-in's boxes and buttons take both; **every other field and button keeps its look**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | The product owner's ruling on 2026-11-08, asked when the review found the field look missing: PRD #783's _the mocks win on a look_, on the stage only. It departs from 3.3 and 6.13's argument that a form label is `flab` in `ink` and uppercase so it is found at a glance; on a sheet of two boxes under a 22pt title it is found without it. Every value is measured off mock 3 at 1,82 to the point: the label 28,6pt wide (`rlLabel` 29,1), the value 129 (`stageValue` 129,1), _Show_ 31,8 (`btn` 32,3), boxes and buttons 87–88 pixels                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-08 | [6.11](#611-the-tick-box) · [6.5](#65-touch-targets) · [`TickBox.tsx`](../src/shared/ui/TickBox.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.tickBox.box` `picker` · [`FriendsPicker.tsx`](../src/features/friends/components/FriendsPicker.tsx)                                                                                                                                 | 6.11's box was 20pt, and its block said _radius 10_ — a circle — while the code drew 6.8's cell's 6; the friends picker's circle read 6.11's size                                                                                                                                                                                                            | **The sign-up mocks' rounded square** (#785, mocks 4 and 6): **22pt**, the cell's **6pt** corner kept, `line` border on `surface`, filled `ink` with the white tick when ticked, the whole row the target. _Start playing_ draws the same box. The block now says the corner the code draws. **The friends picker's circle stays 20** (`size.tickBox.picker`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | PRD #783; the mocks lead on a look. Measured off mock 6 at 2,1 pixels to the point: 47 across, a corner of 12. The same claim is the same control, so _Start playing_ follows sign-up. The picker is a different control borrowing the size, and #785 asked for sign-up's box — a new token rather than a second surface changing as a side effect. **The claim beside the box stays `rlValue` (11,5 / 600)** although mock 6 draws it at about 13pt — the product owner's ruling on 2026-11-08: the issue asked for the box, and a 13pt role would be a new type size for one sentence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [6.13](#613-the-text-field) · [`AuthStage.tsx`](../src/features/auth/components/AuthStage.tsx) · [`SignUpScreen.tsx`](../src/features/auth/components/SignUpScreen.tsx) · `PasswordPairFields.tsx` `stage` · `(auth)/_layout.tsx` · [`theme.ts`](../src/shared/ui/theme.ts) `size.stage.textMaxScale`                                      | Sign-up was a paper form with _RAKETA_ over an `h1`, the rule replaced by a refusal under the box, and _Sign in_ pushed a second sign-in; both screens slid in; `textMaxScale` was 1,7                                                                                                                                                                       | **Sign-up on the stage (#785)**: the hero with _Play ranked. The competition starts with you._; the sheet per mocks 4 and 6 — three 6.13 `stage` boxes with label-row refusals and the placeholders _you@example.com_, _At least 8 characters_ and _Once more_, **the rule under the password box all the time**, 6.11, **Create account** at the `stage` size, _Already have an account? Sign in_ at the foot going **back**. **Sign-in ⇄ sign-up cross-fade** (`animation: 'fade'` on sign-up). **`textMaxScale` 1,6**. 6.13's label-row refusal now serves the password pair on the stage too                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | PRD #783; the two screens read as one flow. The refusal moved to the label row, so the rule has nothing to give way to. A screen's animation is the one it is pushed and popped with, so sign-up's carries both directions, and sign-in keeps the slide an email link's recovery screen goes back to it with. **Create account stands at the boxes' 48, as sign-in's button does**: mock 6 draws it at about 31pt, under the 44pt minimum (6.5), and mock 3 draws sign-in's at the boxes' height — one flow, one button. The cap is derived, never chosen: sign-up's line is the one that wraps a fourth time at 1,7 on a 320pt phone (`stageTextCap.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [7.22](#722-the-game-card) · [`StageDeck.tsx`](../src/features/auth/components/StageDeck.tsx) · [`MiniGameCard.tsx`](../src/features/auth/components/MiniGameCard.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.stage.card` `size.stage.fan` `motion.stageDeck`                 | Sign-in's hero room was empty night; nothing on the stage moved                                                                                                                                                                                                                                                                                              | **Sign-in's dealt deck (#786)**: three **miniature game cards** in the hero's room — a padel _Seat open_ straight in front, a tennis _Picked for you_ and a squash _Fill in · seat open_ turned 10° either side — each the game card's look redrawn in auth at **`size.stage.card` 270 × 342** with the card's own roles (a 45pt ribbon, the mock's), a one-line booking strip in `voltStroke` on all three and a **`gameGreen` ribbon** on the Fill in (white 4,62); the fan scaled whole into the measured room, never past 1; and **one deal** — stacked for `motion.stageDeck.stacked` 400, the back cards out over `deal` 500, `easeDecel`, once on open — **§1.5's deal**, dealt from the first frame under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | PRD #783 and mock 2, which lead on a look. **An illustration, not the live card**: auth may not import `proposals` (the gate already reaches auth, so it would be a cycle), and a live component bent around a sign-in picture is the wrong trade — so the cost is written in 7.22, 12.2 and `docs/features/auth.md`: **a change to the game card does not reach the hero by itself**. Drawn at twice the mock's miniature because the mock's words measure the real card's roles at almost exactly half (ribbon 0,49, names 0,42, figure 0,52, share 0,53). The green ribbon is the mock's reading of a Fill in, which the live card does not draw. The deal is the hero's one entrance; the swipe and _It's a game!_ that follow are #787's row. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 # Part 17 — What the reset removed
 

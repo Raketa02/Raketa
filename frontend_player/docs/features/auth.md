@@ -330,11 +330,11 @@ budget — the rotation is single-flight and shared, so there is no caller to ta
 **Sign-in is drawn on the stage, and nothing it does changed**
 ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2). A dark hero
 over the top four tenths of the window — the _Raketa_ wordmark in its top-left corner and _Your next
-game is only one swipe away._ at its foot, the deck arriving in #786 — and a paper sheet with
-rounded top corners over it, holding the form. Every control keeps its target and what it carries,
-the refusals keep their sentences and their sources, and **Sign in** still fires on the button and on
-Go and reads _Signing in…_ while busy. The mocks' _Rakieta_ is read as **Raketa** (ADR-0187 §8).
-Design only: no request, schema, use-case or route changed.
+game is only one swipe away._ at its foot, the deck dealt between them since #786 — and a paper
+sheet with rounded top corners over it, holding the form. Every control keeps its target and what it
+carries, the refusals keep their sentences and their sources, and **Sign in** still fires on the
+button and on Go and reads _Signing in…_ while busy. The mocks' _Rakieta_ is read as **Raketa**
+(ADR-0187 §8). Design only: no request, schema, use-case or route changed.
 
 **The stage is a new frame beside `AuthFrame`, not a change to it** (`AuthStage`, `StageHero`,
 `StageGround`; the keyboard props #529 put on the scroll are `FORM_SCROLL`, shared by both frames). The eight other auth screens — the _Forgot password?_ flow, _Have an invitation
@@ -450,3 +450,57 @@ while it is the one in view. Every other auth screen keeps the platform's slide.
 phone with the keyboard up, the rule under the box beside a refusal on the label row, the 22pt box,
 the cross-fade both ways (and whether iOS's edge swipe back still works under a fade), and the hero's
 words at the largest text size.
+
+**Sign-in's hero deals three miniature game cards** ([#786](https://github.com/Raketa02/Raketa/issues/786),
+PRD #783; design system 12.2, mock 2), fanned between the wordmark and the headline. **Front,
+straight**: a padel game waiting for a fourth — _Seat open · ⏱ 21 h 00_, `karol.t` 2,75, `ania.k`
+2,68 and `kuba.w` 2,80, each _paid_, the reader's dashed volt seat _You complete it_, _91%_ over
+_karol.t + You_ | _ania.k + kuba.w_, and _Sat 16:00 · Ogrody 33_ with _27 zł_ in volt. **Left,
+turned**: a tennis single, _Picked for you_ — `marek.z` 3,15, _74%_, _Thu 19:00 · Ogrody 33_.
+**Right, turned**: a squash _Fill in · seat open_ — _⏱ 2 h_, one empty seat, _stas.w + ola.m_,
+_30 zł_. The tiles show nicknames, not the mocks' _Karol T._ (ADR-0199 §1), chosen so their letters
+are the mocks' — KT, AK, KW, MZ, SW — for the splash (#787) and the podium (#788) to draw. Every name,
+figure and line is `stageHeroCopy.ts`'s, the cast's posters with them, so one person is one face on
+every picture the hero draws; what the front card hides — the single's second tile, the squash
+game's `ola.m`, its figure and its line — is filled in plausibly so the drawing is whole.
+
+**The hero is an illustration copied from the game card, not the game card.** `MiniGameCard` is the
+real card's look — the ribbon with its status and clock, the 2 × 2 tiles with a poster, the nickname
+and the Level on the scrim, the dashed volt seat, the forecast's figure and two-sided bar, the
+booking strip — redrawn in auth with plain props from what shared UI already makes public: the
+poster (`CourtPoster`), the balance bar, the theme. **The live Games deck is not made public and not
+changed**: auth importing `proposals` would be an import cycle, and it would bend a live card around
+a sign-in picture. **The cost: a later redesign of the game card does not reach the hero by itself,
+so whoever changes the card checks the hero** (`MiniGameCard.tsx`, `stageDeckPresentation.ts`);
+`proposals.md` and design system 7.22 say so from the card's side. Where mock 2 draws the card
+differently from the app the mock wins, because this is a picture of the mock: no _vs_ line and no
+week grid, a one-line booking strip bordered in the booked court's volt stroke on all three, the
+reader's seat with its words alone, and a green ribbon on the Fill in. **One departure the other
+way**: the tile rows are equal, as the live card draws them, where mock 2 draws the top row about
+half the bottom's height — a top row that short would be its scrim and nothing else.
+
+**Drawn at one size, then scaled into the room.** The miniature is drawn at `size.stage.card` —
+twice mock 2's miniature, because its words measure the real card's own roles at about half — and
+the fan (`size.stage.fan`, the back cards either side, a little lower, turned outwards) is scaled
+whole into the room the wordmark and the headline leave (`stageDeckGeometry.ts`). That room is
+**measured**, because a short phone, a tall one and a headline at the text cap's three lines each
+leave a different one; on a 390pt phone the deck draws at a little under half its size, smaller on a
+375 × 667 one, and it never runs over the headline. It is never drawn larger than its own size, and
+nothing is drawn until the room is known. The cards' words take the hero's text cap and one line
+each, so a large text size cuts a name rather than pushing a card's parts out of its box.
+
+**The deal.** When the screen opens the three sit stacked exactly on top of each other for
+`motion.stageDeck.stacked`, then the two back cards slide to their turned places over
+`motion.stageDeck.deal`, `easeDecel`, while the front card stays put. It plays once, when sign-in
+mounts; the swipe and _It's a game!_ that follow, and starting again from the deal when sign-in
+comes back into view, are the loop's (#787). **Under reduced motion or a running screen reader** —
+the app's collapsed-presentation rule — the cards are dealt at once and nothing moves: from the
+first frame under reduced motion, which the root already knows, and the moment the OS answers for a
+screen reader, which is a promise that lands well inside the stacked beat. React Native's `Animated`
+on the native driver, the yes screen's choice. `stageDeck.test.tsx` drives the clock through the
+deal, both collapsed cases and the fit; the hero stays hidden from screen readers, so its queries
+opt into hidden elements.
+
+**Not seen on a device**: the three cards and the deal on iOS and Android — the posters and the
+dashed seats at half size, the turned cards' edges, the fit on a short phone and with large text,
+and the headline under the deck.

@@ -31,6 +31,11 @@ then you, then the rest — the one rule every mock (2–8, 10) agrees with; `ri
 `chargesAtOnce` (whether a yes says _Pay_: _Book it now_ — always, since #676 — or a rescue, Q124),
 `countdownOf` (under 24 h, floored), `standingCards` (a card past its deadline leaves silently), `weekCapOf` (the fortnight's capped weeks) and `refusalOutcome`.
 
+**Sign-in's hero draws a miniature copy of the game card** — `auth`'s `MiniGameCard`, redrawn there
+and never this feature's component ([#786](https://github.com/Raketa02/Raketa/issues/786); see
+`auth.md`). **A change to the card's look here does not reach it by itself: whoever changes the card
+checks the hero.**
+
 **The kind is the switch's, corrected by the intent.** The group page's Competitive · For fun switch
 (`groups`' game-intent store, which Friends shares) hands in the kind chosen; the read says which
 segments the player's intent shows, and a choice it does not show is read again as the segment it

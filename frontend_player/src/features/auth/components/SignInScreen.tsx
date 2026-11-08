@@ -57,6 +57,7 @@ import { invitationCodeHref } from './invitationRoutes';
 import { OrRule } from './OrRule';
 import { RESET_COPY } from './resetPresentation';
 import { askForResetHref } from './resetRoutes';
+import { StageDeck } from './StageDeck';
 
 export interface SignInScreenProps {
   /**
@@ -93,6 +94,7 @@ export function SignInScreen({ inView = true }: SignInScreenProps) {
     <AuthStage
       title={SIGN_IN_COPY.title}
       headline={SIGN_IN_COPY.headline}
+      picture={<StageDeck />}
       inView={inView}
       footer={
         <AuthLink lead={SIGN_IN_COPY.newHere} label={SIGN_IN_COPY.createAccount} href="/sign-up" />

@@ -248,7 +248,8 @@ const color = {
    *  `#101B22` at the foot, hue 199–205°, which is `night`'s family. What sits on them, computed
    *  half-way down: white 15,34; `volt` 12,24; `gameGreen` 3,32 (the forecast's figure, large);
    *  `gameAmber` 8,71; `gameRed` 3,39 (the figure, large). Derived in gameGround.test.ts. Nothing
-   *  else may draw these. */
+   *  else may draw these — but for sign-in's miniature copy of the card (#786, `MiniGameCard`),
+   *  which is a picture of this card and draws its ground, its ribbon and its inks with it. */
   gameGroundTop: '#1C333F',
   gameGroundFoot: '#101B22',
 
@@ -260,7 +261,8 @@ const color = {
   /** THE CARD'S GREEN — measured off the mocks' IN tag, *Book it now* tag and forecast figure, all
    *  one value. Hue 155°: between `mint` (163°) and `mintInk`, and neither of them, because on this
    *  ground `mintInk` carries a figure at 2,67 and white on `mint` is 4,07. As a FILL under white,
-   *  4,62 (the two tags); as the forecast's figure on the ground, 3,32 — large text only. */
+   *  4,62 (the two tags, and the Fill in ribbon sign-in's miniature card draws, #786); as the
+   *  forecast's figure on the ground, 3,32 — large text only. */
   gameGreen: '#308361',
 
   /** The overlap grid's two unlit shades: DARK — fewer than all but one free — and DIM — all but
@@ -1403,8 +1405,27 @@ const size = {
    *  `control` is the sheet's control height — its text boxes (6.13's stage look) and its two
    *  buttons (6.1's `stage` size) alike: 87–88 pixels in mock 3 at 1,82 to the point, so 48, where
    *  the app's own box is 42. The three are one height in the mock, as 6.13's box and `btnXl` are
-   *  everywhere else. */
-  stage: { heroShare: 0.41, textMaxScale: 1.6, mark: 8, control: 48 },
+   *  everywhere else.
+   *
+   *  `card` is sign-in's **miniature game card** (#786, 12.2) at the size it is DRAWN, before the
+   *  deck is scaled into the hero's room: mock 2's front card is 385 × 488 pixels at 2,85 to the
+   *  point, and its words measure the real card's own roles at almost exactly half their size — so
+   *  the miniature is drawn at twice the mock's size, 270 × 342, with `gameCard`'s roles, and the
+   *  deck is scaled by about a half on a 390pt phone. `ribbon` is the mock's band at that size, 45 —
+   *  half again the real card's 30, the one proportion the mock draws chunkier.
+   *
+   *  `fan` is where the deal puts the two back cards, in the card's drawing points: their centres
+   *  `across` either side of the front card's and `down` below it, turned `turn` degrees outwards —
+   *  mock 2's 142 and 46 pixels at 2,85 to the point, doubled, on the 3pt grid, and its ten degrees.
+   *  The front card stays where the three were stacked, straight (`stageDeckGeometry.ts`). */
+  stage: {
+    heroShare: 0.41,
+    textMaxScale: 1.6,
+    mark: 8,
+    control: 48,
+    card: { width: 270, height: 342, ribbon: 45 },
+    fan: { across: 99, down: 33, turn: 10 },
+  },
 } as const;
 
 /** hitSlop presets that lift each control to a 44pt reachable height. Horizontal slop is
@@ -1634,6 +1655,16 @@ const motion = {
     /** When the buttons start: the moment the word lands. */
     buttonsAfter: RISE / 2 + RISE,
   },
+  /**
+   * **Sign-in's deck being dealt** ([#786](https://github.com/Raketa02/Raketa/issues/786), 12.2) —
+   * the hero's picture, and the one thing on the stage that moves. The three miniature cards sit
+   * `stacked` exactly on top of each other — a fraction of a second, long enough to read as one
+   * card — then the two back cards slide out to their turned places either side over `deal`,
+   * `easeDecel`, while the front card stays put. Once, on open; the loop that follows (#787) adds
+   * its own beats here. Skipped whole under collapsed presentation, where the cards are dealt from
+   * the first frame and nothing moves.
+   */
+  stageDeck: { stacked: 400, deal: 500 },
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },
   /** How long a state is SHOWN — the one thing here that reduced motion does not skip.
