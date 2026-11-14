@@ -1,4 +1,4 @@
-"""What the Discovery context refuses (#793)."""
+"""What the Discovery context refuses (#793, #794)."""
 
 from __future__ import annotations
 
@@ -13,3 +13,15 @@ class NotANewInRaketaPage(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__("Not a page of New in Raketa: an unreadable cursor.")
+
+
+class NotASameLevelPage(BadRequestError):
+    """A See all page of *Same competitive level* asked after a cursor this
+    server never wrote (#794)."""
+
+    code = "not_a_same_level_page"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Not a page of Same competitive level players: an unreadable cursor."
+        )

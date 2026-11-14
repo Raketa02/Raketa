@@ -211,6 +211,9 @@ class NoticeReason(StrEnum):
     #: A friend request made from Home's *New in Raketa* row, or a record
     #: opened from it: *Found you among new players* (#793).
     FROM_NEW_PLAYERS = "FROM_NEW_PLAYERS"
+    #: A friend request made from Home's *Same competitive level players*, in
+    #: its sport (#794): *Your level in padel · 91% even*.
+    FROM_SAME_LEVEL = "FROM_SAME_LEVEL"
     #: A friends game its sender called off: *Tomek called off Saturday 10:00
     #: · Nobody paid.* (#751; the words §29.10).
     BY_THE_SENDER = "BY_THE_SENDER"
@@ -353,6 +356,7 @@ def friend_request_notice(
     by_link: bool,
     from_the_ranking: bool = False,
     from_new_players: bool = False,
+    from_same_level: bool = False,
 ) -> Notice:
     """*{nickname} wants to be your friend* (#745) — about no game: **the group
     rides as ``pool_id``** (a group's pool is filed under the group's own id) and
@@ -360,7 +364,9 @@ def friend_request_notice(
     request names neither (its ``Where`` cannot) and says so as its ``reason``,
     and the ranking's names its sport and no group, its ``reason``
     ``FROM_THE_RANKING`` (#773); New in Raketa's names no group, its
-    ``reason`` ``FROM_NEW_PLAYERS`` (#793). Opens Home, where the card is."""
+    ``reason`` ``FROM_NEW_PLAYERS`` (#793); Same competitive level's names its
+    sport and no group, its ``reason`` ``FROM_SAME_LEVEL`` (#794). Opens Home,
+    where the card is."""
 
     return Notice(
         kind=NoticeKind.FRIEND_REQUEST,
@@ -380,6 +386,8 @@ def friend_request_notice(
             if from_the_ranking
             else NoticeReason.FROM_NEW_PLAYERS.value
             if from_new_players
+            else NoticeReason.FROM_SAME_LEVEL.value
+            if from_same_level
             else None
         ),
     )

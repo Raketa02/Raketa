@@ -329,7 +329,13 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   as `sport` (both `None` for a link's, whose `reason` is `BY_LINK`; a request made from the
   ranking names its sport and no group, `reason` `FROM_THE_RANKING`, and reads *Found you in the
   padel ranking*, #773; one from New in Raketa names no group, `reason` `FROM_NEW_PLAYERS`, and
-  reads *Found you among new players*, #793), and the person is `people[0]`
+  reads *Found you among new players*, #793; one from Same competitive level names its sport and
+  no group, `reason` `FROM_SAME_LEVEL`, and reads *Your level in padel · 91% even* — today's %
+  between the notice's reader and the requester, through Notifications' own **`PercentsEven`**
+  (`ForecastPercentsEven`: the matcher's `forecast_the_sides` over rating's estimates, one a
+  side; `notification_demands.py`'s eleventh row), asked once for every such row by
+  `NoticeWords.of(…, reader=)` at push time and on every read — or *Found you at your padel
+  level* once either holds no level there, #794), and the person is `people[0]`
   — `player_id` on the wire (`NoticeSchema.player_id`) and in the push data. Words from
   `words.py`'s `words_about_no_game(SaidOfNoGame)`, the group's name read through
   `Names.of_groups`. `FRIEND_REQUEST` is told **once per request, only while its card is on the

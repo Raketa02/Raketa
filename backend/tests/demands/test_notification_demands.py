@@ -48,6 +48,7 @@ from app.modules.notifications.domain.ports import (
     GroupJoiners,
     Names,
     PaidShares,
+    PercentsEven,
     RatedAccounts,
     SeatOffers,
 )
@@ -71,6 +72,9 @@ from app.shared.ids import new_uuid
 from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.proposals_world import a_club_and_its_desk, every_hour_of_the_week
 from tests.demands.test_player_record_demands import _a_club, _a_rating
+from app.bootstrap.composition import build_ruleset
+from app.engines.racketskill.core import SkillEstimate
+from app.modules.matchmaking.domain.balance import forecast_the_sides
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
 NOW = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -870,6 +874,38 @@ async def test_a_rating_in_any_sport_counts_and_none_does_not(implementation, se
 
     assert await ratings.rated_among([OLA, KUBA, EWA]) == {OLA, KUBA}
     assert await ratings.rated_among([]) == frozenset()
+
+
+# --------------------------------------------------------------------------- #
+# PercentsEven — a same level request's line, today (#794)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PercentsEven))
+async def test_today_s_percent_is_the_matcher_s_forecast_and_absent_without_a_level(
+    implementation, session
+):
+    evens: PercentsEven = implementation.build(session)
+    await _a_rating(session, TOMEK, sport=Sport.PADEL, mu=2.71)
+    await _a_rating(session, OLA, sport=Sport.PADEL, mu=2.69)
+    await _a_rating(session, KUBA, sport=Sport.TENNIS, mu=3.35)
+    await session.commit()
+
+    read = await evens.between(
+        TOMEK, [(OLA, Sport.PADEL), (KUBA, Sport.TENNIS), (EWA, Sport.PADEL)]
+    )
+
+    sides = forecast_the_sides(
+        (TOMEK,),
+        (OLA,),
+        {TOMEK: SkillEstimate(mu=2.71, sigma=0.35), OLA: SkillEstimate(2.69, 0.35)},
+        sport=Sport.PADEL,
+        rules=build_ruleset().balance,
+    )
+    assert sides is not None
+    # Kuba is rated in tennis, Tomek isn't; Ewa holds no level at all.
+    assert read == {(OLA, Sport.PADEL): sides[0].pct}
+    assert await evens.between(TOMEK, []) == {}
 
 
 # --------------------------------------------------------------------------- #

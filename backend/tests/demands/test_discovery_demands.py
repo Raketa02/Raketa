@@ -20,6 +20,7 @@ import pytest_asyncio
 from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
+    build_ruleset,
     build_skill_rating_repository,
 )
 from app.bootstrap.discovery_demands import (
@@ -28,18 +29,23 @@ from app.bootstrap.discovery_demands import (
     implementations_of,
 )
 from app.engines.assessment import AssessmentResult, BandView
-from app.engines.racketskill.core import STATUS_INITIAL_ESTIMATE
+from app.engines.racketskill.core import STATUS_INITIAL_ESTIMATE, SkillEstimate
+from app.engines.racketskill.update_v1 import MovedRating, Stakes
 from app.kernel import Sport, instant
 from app.modules.discovery.domain.directory import Area
+from app.modules.discovery.domain.levels import Band, CurrentLevel, Estimate
 from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
     DirectoryFaces,
     DirectorySources,
+    HowEven,
+    LevelSources,
     LevelsHeld,
     ReadersRelations,
     SportLevel,
 )
 from app.modules.discovery.domain.relation import Relation
+from app.modules.matchmaking.domain.balance import forecast_the_sides
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.modules.users.domain.events import UserRegistered
@@ -282,3 +288,130 @@ async def test_a_face_is_a_link_to_the_owners_photograph(implementation, session
     url = await faces.photo_url(owner, photo)
 
     assert str(photo) in url and str(owner) in url
+
+
+# --------------------------------------------------------------------------- #
+# LevelSources — where a rating stands (#794)
+# --------------------------------------------------------------------------- #
+
+
+async def _moved(session, player_id: UUID, *, mu: float, sigma: float, sport: Sport):
+    ratings = build_skill_rating_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    rating = await ratings.find_for(player_id=player_id, sport=sport)
+    assert rating is not None
+    rating.move_on_result(
+        game_id=new_uuid(),
+        moved=MovedRating(
+            mu=mu,
+            sigma=sigma,
+            confidence=70,
+            range_low=round(mu - sigma, 2),
+            range_high=round(mu + sigma, 2),
+            band=BandView(name="Established", lower=2.7, upper=3.8),
+            status="Calibrating",
+            stakes=Stakes(win=0.03, loss=-0.03),
+        ),
+        won=True,
+        opposition=SkillEstimate(mu=mu, sigma=0.3),
+        information_share=0.5,
+        occurred_at=OPENED,
+    )
+    await ratings.save(rating)
+    await session.commit()
+
+
+@pytest.mark.parametrize("implementation", registered(LevelSources))
+async def test_a_rating_stands_at_its_opening_then_at_its_last_result(
+    implementation, session
+):
+    sources: LevelSources = implementation.build(session)
+    zofia, ola = new_uuid(), new_uuid()
+    await _rated(session, zofia, mu=2.60, sport=Sport.PADEL)
+
+    opened = await sources.level_of(zofia, Sport.PADEL)
+    assert opened == CurrentLevel(
+        player_id=zofia,
+        sport=Sport.PADEL,
+        mu=2.60,
+        sigma=0.34,
+        band=Band(name="Improver", lower=2.5, upper=3.0),
+        results=0,
+    )
+
+    await _moved(session, zofia, mu=2.69, sigma=0.21, sport=Sport.PADEL)
+    moved = await sources.level_of(zofia, Sport.PADEL)
+    assert moved == CurrentLevel(
+        player_id=zofia,
+        sport=Sport.PADEL,
+        mu=2.69,
+        sigma=0.21,
+        band=Band(name="Established", lower=2.7, upper=3.8),
+        results=1,
+    )
+    assert await sources.level_of(zofia, Sport.TENNIS) is None
+    assert await sources.level_of(ola, Sport.PADEL) is None
+
+
+@pytest.mark.parametrize("implementation", registered(LevelSources))
+async def test_every_level_is_every_rating_as_it_stands(implementation, session):
+    sources: LevelSources = implementation.build(session)
+    zofia = new_uuid()
+    await _rated(session, zofia, mu=2.60, sport=Sport.PADEL)
+    await _rated(session, zofia, mu=2.55, sport=Sport.SQUASH)
+    await _moved(session, zofia, mu=2.69, sigma=0.21, sport=Sport.PADEL)
+
+    levels = {
+        (one.sport, one.mu, one.results)
+        for one in await sources.every_level()
+        if one.player_id == zofia
+    }
+
+    assert levels == {(Sport.PADEL, 2.69, 1), (Sport.SQUASH, 2.55, 0)}
+
+
+# --------------------------------------------------------------------------- #
+# HowEven — the matcher's own forecast, one a side (#794)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(HowEven))
+@pytest.mark.parametrize("sport", list(Sport))
+def test_the_percent_is_the_matchers_forecast_one_player_a_side(implementation, sport):
+    even: HowEven = implementation.build(None)
+    you, them = UUID(int=10), UUID(int=11)
+
+    for yours, theirs in [((2.71, 0.13), (2.69, 0.13)), ((2.71, 0.13), (2.35, 0.8))]:
+        sides = forecast_the_sides(
+            (you,),
+            (them,),
+            {you: SkillEstimate(*yours), them: SkillEstimate(*theirs)},
+            sport=sport,
+            rules=build_ruleset().balance,
+        )
+        assert sides is not None
+        assert even.percent_even(sport, Estimate(*yours), Estimate(*theirs)) == (
+            sides[0].pct
+        )
+
+
+@pytest.mark.parametrize("implementation", registered(HowEven))
+def test_the_percent_falls_with_the_gap_and_with_either_doubt(implementation):
+    even: HowEven = implementation.build(None)
+    rules = build_ruleset().balance
+
+    def pct(gap: float, yours: float = 0.1, theirs: float = 0.1) -> int:
+        return even.percent_even(
+            Sport.PADEL, Estimate(2.71, yours), Estimate(2.71 + gap, theirs)
+        )
+
+    assert pct(0.0) >= pct(0.05) >= pct(0.2) >= pct(1.0)
+    assert pct(0.0) > pct(0.2)
+    assert pct(0.05) == pct(-0.05)
+    assert pct(0.05, theirs=0.1) > pct(0.05, theirs=0.8)
+    assert pct(0.05, yours=0.1) > pct(0.05, yours=0.8)
+    # The forecast's own bounds.
+    assert pct(0.0, 0.0, 0.0) == rules.pct_max
+    assert pct(3.0) == rules.pct_min

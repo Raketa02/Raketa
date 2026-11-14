@@ -54,7 +54,7 @@ name, is what history is recorded under.
   webhook's inbox — the id of every provider notice already read, written in the transaction
   that acted on it, the outbox's mirror (ADR-0190 §3). What a notice *moves* is still
   event-sourced.
-- **One projection is written by a context with no events of its own**: `ranking_rows`
+- **Projections written by contexts with no events of their own**: `ranking_rows`
   (#768; ADR-0203 §10), a fold of each rating stream written when `rating.moved_on_result`
   is delivered and by the rebuild, and beside it `ranking_level_history` (#769), the same
   fold kept point by point, keyed by the stored event (#772's `ranking_visibility` was
@@ -63,5 +63,7 @@ name, is what history is recorded under.
   (`rankings.md`). **And `discovery_players` with `discovery_player_tags`** (#793; ADR-0204
   §10): the player directory, written whole from what `users` and the Player profile hold when
   one of their events is delivered, and by the rebuild — no fact their streams don't hold
-  (`discovery.md`).
+  (`discovery.md`); and beside them `discovery_levels` (#794), each rating stream's current
+  Level, written when `rating.rating_initialised` or `rating.moved_on_result` is delivered and
+  by the same rebuild.
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

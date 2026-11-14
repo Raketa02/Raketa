@@ -1,10 +1,11 @@
-"""Home's people rows (#793; ``docs/adr/0204`` §5, §10, §12; the home-rows
-mechanics §7). **New in Raketa** is here; Same competitive level and Same vibe
-join it (#794, #795).
+"""Home's people rows (#793, #794; ``docs/adr/0204`` §4, §5, §10, §12; the
+home-rows mechanics §6, §7). **New in Raketa** and **Same competitive level**
+are here; Same vibe joins them (#795).
 
-**Read-only, and it tells nobody anything** (the mechanics §14): no push, bell
-line or email is about somebody joining Raketa. A request sent from a tile is an
-ordinary friend request, `made_from` `NEW_PLAYERS`.
+**Read-only, and they tell nobody anything** (the mechanics §14): no push, bell
+line or email is about somebody joining Raketa or reading as even. A request
+sent from a card is an ordinary friend request, `made_from` `NEW_PLAYERS` or
+`SAME_LEVEL`.
 """
 
 from __future__ import annotations
@@ -18,16 +19,23 @@ from app.kernel import Sport
 from app.modules.discovery.presentation.dependencies import (
     ReadNewInRaketaPageDep,
     ReadNewInRaketaDep,
+    ReadSameLevelDep,
+    ReadSameLevelPageDep,
 )
 from app.modules.discovery.presentation.schemas import (
     NewInRaketaPlayerSchema,
     NewInRaketaPageResponse,
     NewInRaketaResponse,
+    SameLevelPageResponse,
+    SameLevelPlayerSchema,
+    SameLevelResponse,
     key_of,
+    same_level_key_of,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
 new_in_raketa_router = APIRouter(prefix="/new-in-raketa", tags=["discovery"])
+same_level_router = APIRouter(prefix="/same-level", tags=["discovery"])
 
 _LEFT_OUT = (
     "**Never on it**: you, anybody you blocked or who blocked you, players with "
@@ -104,5 +112,72 @@ async def read_new_in_raketa_page(
     return NewInRaketaPageResponse.of(
         await use_case.execute(
             user.id, sport=sport, after=None if after is None else key_of(after)
+        )
+    )
+
+
+@same_level_router.get(
+    "",
+    response_model=SameLevelResponse,
+    status_code=status.HTTP_200_OK,
+    responses=_BLOCKS_UNREADABLE,
+    summary="Home's Same competitive level players row",
+    description=(
+        "The players a competitive game with would be most even — each in the "
+        "sport where you two are evenest, by the app's Forecast with one player "
+        "a side. Ten: fresh good matches first (70% or more, not your friend, "
+        "not asked by you; somebody who asked you counts as fresh), then the "
+        "gaps — friends, those you asked, weaker matches — best % first. "
+        "**Empty while you hold no level anywhere.** " + _LEFT_OUT
+    ),
+)
+async def read_same_level(
+    user: CurrentUserDep, use_case: ReadSameLevelDep
+) -> SameLevelResponse:
+    return SameLevelResponse(
+        players=[
+            SameLevelPlayerSchema.of(card) for card in await use_case.execute(user.id)
+        ]
+    )
+
+
+@same_level_router.get(
+    "/all",
+    response_model=SameLevelPageResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`not_a_same_level_page` — a cursor this server never wrote."
+            ),
+        },
+        **_BLOCKS_UNREADABLE,
+    },
+    summary="Same competitive level's See all",
+    description=(
+        "Everybody who shares a sport with you, best % first, friends where "
+        "they fall, in pages of 20 — each in your evenest shared sport, or with "
+        "`sport` everybody holding a level in it, compared there — and the "
+        "sports you share with somebody. Empty while you hold no level. " + _LEFT_OUT
+    ),
+)
+async def read_same_level_page(
+    user: CurrentUserDep,
+    use_case: ReadSameLevelPageDep,
+    sport: Sport | None = Query(
+        default=None,
+        description="Compare everybody in this sport, and keep only them.",
+    ),
+    after: str | None = Query(
+        default=None,
+        description="A `next` cursor: the 20 players behind it.",
+    ),
+) -> SameLevelPageResponse:
+    return SameLevelPageResponse.of(
+        await use_case.execute(
+            user.id,
+            sport=sport,
+            after=None if after is None else same_level_key_of(after),
         )
     )

@@ -13,8 +13,14 @@ what the neighbour publishes, wired by the composition root, each with a row in
 - ``BlocksEitherWay`` — everybody the reader blocked or who blocked the reader,
   whom no people row may show (``docs/adr/0204`` §2);
 - ``LevelsHeld`` — every sport a person holds a level in, read live off the
-  rating's published read (#794's level projection may take its place);
-- ``DirectoryFaces`` — a short-lived link to a photograph the directory names.
+  rating's published read, for New in Raketa's tiles;
+- ``DirectoryFaces`` — a short-lived link to a photograph the directory names;
+- ``LevelSources`` — what a player's rating stream in a sport stands at now,
+  which every current-level entry is written from (#794);
+- ``HowEven`` — **the Forecast for one player a side**, the one forecast
+  function's: *Same competitive level*'s % even (#794).
+
+The current levels (``PlayerLevels``, #794) are the context's own storage too.
 """
 
 from __future__ import annotations
@@ -26,6 +32,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.discovery.domain.directory import DirectoryEntry
+from app.modules.discovery.domain.levels import CurrentLevel, Estimate
 from app.modules.discovery.domain.new_in_raketa import Joiner
 from app.modules.discovery.domain.relation import Relation
 
@@ -119,4 +126,90 @@ class DirectoryFaces(Protocol):
     async def photo_url(self, player_id: UUID, photo_id: UUID) -> str:
         """A short-lived link to the photograph, signed as its owner. Signing
         is arithmetic: nothing asks whether the object is still there."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Candidate:
+    """Somebody a level window found, with their face and every level they
+    hold among the sports the reader is compared in."""
+
+    player_id: UUID
+    nickname: str
+    photo_id: UUID | None
+    levels: tuple[CurrentLevel, ...]
+
+
+@runtime_checkable
+class PlayerLevels(Protocol):
+    """Every player's current level per sport — one entry per player and
+    sport, **indexed by sport and level** (#794).
+
+    **Same session as the caller**, as the directory is.
+    """
+
+    async def save(self, level: CurrentLevel) -> None:
+        """Write the entry — **unless the one stored has more results**: a
+        fold read before a later move committed never takes the move back."""
+        ...
+
+    async def of_player(self, player_id: UUID) -> Mapping[Sport, CurrentLevel]:
+        """Every sport this player holds a level in."""
+        ...
+
+    async def near(
+        self,
+        around: Mapping[Sport, float],
+        *,
+        within: float | None,
+        beyond: float | None,
+        compared_in: Collection[Sport],
+        leaving_out: Collection[UUID],
+    ) -> tuple[Candidate, ...]:
+        """Everybody who may be on a people row — named, playing, *Show me to
+        new people* on, none of ``leaving_out`` — holding a level in one of
+        ``around``'s sports **within** ``within`` of the level given there
+        (everybody, with ``None``) and further than ``beyond`` from it (``None``:
+        no nearer window was read). Each with every level they hold in
+        ``compared_in``, by player id."""
+        ...
+
+    async def shared_sports(
+        self, sports: Collection[Sport], *, leaving_out: Collection[UUID]
+    ) -> tuple[Sport, ...]:
+        """Which of these sports at least one player who may be on a people row
+        holds a level in, in the sports' own order."""
+        ...
+
+    async def least_doubt(self, sports: Collection[Sport]) -> Mapping[Sport, float]:
+        """The least Uncertainty anybody holds in each of these sports — absent
+        where nobody holds a level. Nobody a window has not read yet is surer,
+        which is what bounds how even they could read."""
+        ...
+
+
+@runtime_checkable
+class LevelSources(Protocol):
+    """The rating, asked about a player's level as it stands now."""
+
+    async def level_of(self, player_id: UUID, sport: Sport) -> CurrentLevel | None:
+        """Where the player's rating in the sport stands — ``None`` for a sport
+        they hold none in."""
+        ...
+
+    async def every_level(self) -> Sequence[CurrentLevel]:
+        """Every rating there is, as it stands — the rebuild's walk, in the
+        order the ratings were opened."""
+        ...
+
+
+@runtime_checkable
+class HowEven(Protocol):
+    def percent_even(self, sport: Sport, yours: Estimate, theirs: Estimate) -> int:
+        """The Forecast for a game in ``sport`` with one player a side — in
+        padel and badminton the two as opposite sides (call 8 of #790) — as the
+        whole percent a game card prints. It falls with the gap and with either
+        Uncertainty, within the forecast's own bounds. **Arithmetic, never a
+        read.**"""
         ...

@@ -5113,6 +5113,138 @@
         }
       }
     },
+    "/api/v1/same-level": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Home's Same competitive level players row",
+        "description": "The players a competitive game with would be most even \u2014 each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, weaker matches \u2014 best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_level_api_v1_same_level_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameLevelResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/same-level/all": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Same competitive level's See all",
+        "description": "Everybody who shares a sport with you, best % first, friends where they fall, in pages of 20 \u2014 each in your evenest shared sport, or with `sport` everybody holding a level in it, compared there \u2014 and the sports you share with somebody. Empty while you hold no level. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_level_page_api_v1_same_level_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Compare everybody in this sport, and keep only them.",
+              "title": "Sport"
+            },
+            "description": "Compare everybody in this sport, and keep only them."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 players behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 players behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameLevelPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_same_level_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invitations/claim": {
       "post": {
         "tags": [
@@ -9111,7 +9243,7 @@
           },
           "made_from": {
             "$ref": "#/components/schemas/AskedFrom",
-            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it \u2014 `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*."
+            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it \u2014 `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it \u2014 `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel \u00b7 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there."
           },
           "group_id": {
             "anyOf": [
@@ -9124,7 +9256,7 @@
               }
             ],
             "title": "Group Id",
-            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING` and `NEW_PLAYERS`, whose screens show no group."
+            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, `NEW_PLAYERS` and `SAME_LEVEL`, whose screens show no group."
           },
           "sport": {
             "anyOf": [
@@ -9135,7 +9267,7 @@
                 "type": "null"
               }
             ],
-            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS`, whose line names no sport. **Required with `RANKING`**: it is the ranking the card names."
+            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS`, whose line names no sport. **Required with `RANKING`** \u2014 it is the ranking the card names \u2014 **and with `SAME_LEVEL`**: it is the sport their line compares."
           }
         },
         "type": "object",
@@ -9152,7 +9284,8 @@
           "RECORD",
           "RESULT",
           "RANKING",
-          "NEW_PLAYERS"
+          "NEW_PLAYERS",
+          "SAME_LEVEL"
         ],
         "title": "AskedFrom",
         "description": "The screen a request is asked from. **Not a link**: a request by link is\nmade by opening the link, never sent here."
@@ -13498,6 +13631,11 @@
             "title": "From New Players",
             "description": "Made from Home's *New in Raketa* row, or a record opened from it: draw *Found you among new players* in place of the group line (#793)."
           },
+          "from_same_level": {
+            "type": "boolean",
+            "title": "From Same Level",
+            "description": "Made from Home's *Same competitive level players* row, or a record opened from it, in `sport` (#794): draw *Your level in padel \u00b7 91% even* \u2014 `percent_even` \u2014 in place of the group line, or *Found you at your padel level* when `percent_even` is `null`."
+          },
           "group": {
             "anyOf": [
               {
@@ -13542,6 +13680,20 @@
           "reliability_band": {
             "$ref": "#/components/schemas/ReliabilityBand",
             "description": "The band of that figure, the code their record serves."
+          },
+          "percent_even": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Even",
+            "description": "With `from_same_level`: **today's** % even between you two in `sport` \u2014 the app's Forecast with one player a side, worked out on this read. `null` once either of you holds no level there, and on every other card."
           }
         },
         "type": "object",
@@ -13554,11 +13706,13 @@
           "by_link",
           "from_ranking",
           "from_new_players",
+          "from_same_level",
           "group",
           "sport",
           "level",
           "player_score",
-          "reliability_band"
+          "reliability_band",
+          "percent_even"
         ],
         "title": "HomeFriendRequestSchema",
         "description": "One card in *FRIEND REQUESTS* \u2014 *In\u00e9s wants to be your friend \u00b7 With you\nin Kazimierz crew \u00b7 Padel 3,40 \u00b7 \u2726 98*, **Not now** and **Accept**."
@@ -14463,6 +14617,31 @@
         ],
         "title": "LeavingSchema",
         "description": "What *Leave the game* would cost now (the mechanics \u00a713)."
+      },
+      "LevelBandSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "*Established* \u2014 RacketSkill's own word."
+          },
+          "lower": {
+            "type": "number",
+            "title": "Lower"
+          },
+          "upper": {
+            "type": "number",
+            "title": "Upper"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lower",
+          "upper"
+        ],
+        "title": "LevelBandSchema",
+        "description": "A band as the rating published it with the Level \u2014 the comparison\nbar's bold name. Its edges travel with it; never derived from a level."
       },
       "LevelRangeSchema": {
         "properties": {
@@ -17767,6 +17946,173 @@
           "calibration_priority"
         ],
         "title": "ResultResponse"
+      },
+      "SameLevelPageResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameLevelPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 20, best % first, friends where they fall \u2014 with `sport`, everybody holding a level in it, compared there."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport you share with somebody, in the sports' own order \u2014 the pill's chips beside *All*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "next",
+          "sports"
+        ],
+        "title": "SameLevelPageResponse"
+      },
+      "SameLevelPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` draws their court poster."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "shown": {
+            "$ref": "#/components/schemas/SameLevelSportSchema",
+            "description": "The sport the card shows: the one where you two are evenest \u2014 or, on a See all page asked for a sport, that one."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/SameLevelSportSchema"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "**Every** sport you share, most even first \u2014 the comparison sheet's blocks, so it needs no read. *N sports \u203a* when there is more than one."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them \u2014 the round friend button: `NONE` **+**, `SENT` **\u2026**, `FRIEND` **\u2713**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `SAME_LEVEL` and the card's sport."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "shown",
+          "sports",
+          "relation"
+        ],
+        "title": "SameLevelPlayerSchema",
+        "description": "One *Same competitive level* card."
+      },
+      "SameLevelResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameLevelPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 10: **fresh** good matches first \u2014 70% even or more, neither your friend nor somebody you asked \u2014 best % first; then the **gaps** at the right \u2014 your friends, those you asked and weaker matches \u2014 best % first. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row**: you hold no level anywhere, or nobody shares a sport with you."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "SameLevelResponse"
+      },
+      "SameLevelSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "your_level": {
+            "type": "number",
+            "title": "Your Level",
+            "description": "Your Level in the sport \u2014 *You 2,71*."
+          },
+          "their_level": {
+            "type": "number",
+            "title": "Their Level",
+            "description": "Theirs \u2014 *zofia.b 2,69*."
+          },
+          "percent_even": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Percent Even",
+            "description": "How even a game between you two would be \u2014 the app's Forecast with one player a side, the figure a game card prints: green at 70 and above, amber 55\u201369, red below 55; the word under it is always *EVEN*. It falls with the gap and with how unsure the app is of either level, and tops out at 96."
+          },
+          "level_gap": {
+            "type": "number",
+            "title": "Level Gap",
+            "description": "Their level less yours, to the hundredth, signed: `-0.02` is *0,02 below you*, `0.09` *0,09 above you*, `0` *Same level*. A level gap, never a row's **gap** (a place after the fresh good matches)."
+          },
+          "your_band": {
+            "$ref": "#/components/schemas/LevelBandSchema",
+            "description": "Your band in the sport \u2014 the bar's name in bold."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "your_level",
+          "their_level",
+          "percent_even",
+          "level_gap",
+          "your_band"
+        ],
+        "title": "SameLevelSportSchema",
+        "description": "You and them in one sport you both hold a level in."
       },
       "SavedMethodSchema": {
         "properties": {

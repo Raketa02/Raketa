@@ -101,6 +101,7 @@ from app.modules.rankings.application.event_subscriptions import (
 )
 from app.modules.discovery.infrastructure.event_subscriptions import (
     subscribe_the_directory_follower,
+    subscribe_the_level_follower,
 )
 from app.modules.rating.application.event_subscriptions import (
     register_rating_events,
@@ -244,6 +245,7 @@ class EventRuntime:
             build_tell_the_room,
             build_end_friendships_on_a_block,
             build_follow_the_directory,
+            build_follow_the_levels,
             build_move_the_ranking,
             build_withdraw_a_blockers_yeses,
             build_withdraw_a_leavers_yeses,
@@ -330,6 +332,11 @@ class EventRuntime:
         # same transaction (#793; `docs/adr/0204` §10).
         subscribe_the_directory_follower(
             dispatcher, build_follow_the_directory(session, runtime=self)
+        )
+        # And a Level opened or moved writes that player's current level in
+        # the sport, in the same transaction (#794; `docs/adr/0204` §10).
+        subscribe_the_level_follower(
+            dispatcher, build_follow_the_levels(session, runtime=self)
         )
         # What players are told about a game and its money, given in the
         # delivery's own transaction — and a notice given, pushed to their

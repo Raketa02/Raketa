@@ -27,6 +27,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
+from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import Booking
 from app.modules.bookings.domain.ports import BookingDirectory, BookingRepository
@@ -65,6 +66,7 @@ from app.modules.proposals.domain.ports import (
 )
 from app.modules.proposals.domain.proposal import Standing
 from app.modules.proposals.domain.rescues import rescuable
+from app.modules.matchmaking.domain.balance import forecast_the_sides
 from app.modules.rating.domain.ports import RatedPlayerQuery
 from app.modules.users.domain.ports import UserRepository
 
@@ -475,3 +477,32 @@ class RatingsRatedAccounts:
             rated |= found
             unknown -= found
         return frozenset(rated)
+
+
+@final
+class ForecastPercentsEven:
+    """``PercentsEven`` by **the matcher's own forecast** over rating's
+    published estimates, live — the reader and each requester one a side, the
+    figure *Same competitive level* printed (#794). One estimates read per
+    sport; somebody unrated there is absent, and so is the figure."""
+
+    def __init__(self, *, ratings: RatedPlayerQuery, ruleset: Ruleset) -> None:
+        self._ratings = ratings
+        self._rules = ruleset.balance
+
+    async def between(
+        self, reader: UUID, others: Collection[tuple[UUID, Sport]]
+    ) -> Mapping[tuple[UUID, Sport], int]:
+        by_sport: dict[Sport, set[UUID]] = {}
+        for other, sport in others:
+            by_sport.setdefault(sport, set()).add(other)
+        evens: dict[tuple[UUID, Sport], int] = {}
+        for sport, people in by_sport.items():
+            levels = await self._ratings.estimates_for({reader, *people}, sport=sport)
+            for other in people:
+                sides = forecast_the_sides(
+                    (reader,), (other,), levels, sport=sport, rules=self._rules
+                )
+                if sides is not None:
+                    evens[(other, sport)] = sides[0].pct
+        return evens

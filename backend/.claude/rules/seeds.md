@@ -183,6 +183,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `assert_new_in_raketa` reads her row and See all among the screens, the relations held only
   on the run that wrote them (their ages are that run's). The friends layer's Home claim reads
   the named accounts alone, since the newcomer who asked her is on her Home too.
+- **Same competitive level writes no player, and a request each way** (#794,
+  `app/seeds/same_level.py`; `discovery.md`): the cohort already sits around her padel and
+  tennis Levels, so she asks `cohort-c-01` from the row and `cohort-b-03` asks her, both in
+  padel, after New in Raketa, drained by the layer itself; `assert_same_level` reads her row
+  and See all among the screens. **Nobody on the seed reads 70%** — five results leave a Level
+  as unsure as hers — so her row is all gaps, and the run says so as a cost.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

@@ -14,10 +14,16 @@ from app.api.dependencies import ClockDep, DbSession, SettingsDep
 from app.bootstrap.composition import (
     build_read_new_in_raketa,
     build_read_new_in_raketa_page,
+    build_read_same_level,
+    build_read_same_level_page,
 )
 from app.modules.discovery.application.new_in_raketa import (
     ReadNewInRaketaPage,
     ReadNewInRaketa,
+)
+from app.modules.discovery.application.same_level import (
+    ReadSameLevel,
+    ReadSameLevelPage,
 )
 
 
@@ -39,3 +45,17 @@ def get_read_new_in_raketa_page(
 ReadNewInRaketaPageDep = Annotated[
     ReadNewInRaketaPage, Depends(get_read_new_in_raketa_page)
 ]
+
+
+def get_read_same_level(db: DbSession, settings: SettingsDep) -> ReadSameLevel:
+    return build_read_same_level(db, settings=settings)
+
+
+ReadSameLevelDep = Annotated[ReadSameLevel, Depends(get_read_same_level)]
+
+
+def get_read_same_level_page(db: DbSession, settings: SettingsDep) -> ReadSameLevelPage:
+    return build_read_same_level_page(db, settings=settings)
+
+
+ReadSameLevelPageDep = Annotated[ReadSameLevelPage, Depends(get_read_same_level_page)]

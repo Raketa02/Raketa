@@ -47,6 +47,11 @@ class RequestOrigin(StrEnum):
     #: ``docs/adr/0204`` §9) — *Found you among new players* on their Home.
     #: Names no group and no sport: the line is the whole line.
     NEW_PLAYERS = "NEW_PLAYERS"
+    #: Home's *Same competitive level players* row, or a record opened from it
+    #: (#794; ``docs/adr/0204`` §9), with the card's sport — *Your level in
+    #: padel · 91% even* on their Home, worked out when it is read. Names no
+    #: group.
+    SAME_LEVEL = "SAME_LEVEL"
 
 
 class HowFriendsWereMade(StrEnum):

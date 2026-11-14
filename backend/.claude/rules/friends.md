@@ -118,8 +118,9 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
     every friend of the reader's at once, from the reader's side and reading no block, as
     `friends_among` does (`rankings.md`).
 - **Where a request was made** is the request's: `RequestOrigin` `MEMBERS · RECORD · RESULT ·
-  LINK · RANKING · NEW_PLAYERS`, and the screen's `group_id` and `sport` when it showed them (`Where`; a
-  link's names neither; **the ranking's names its sport and no group**, an invariant). The phone
+  LINK · RANKING · NEW_PLAYERS · SAME_LEVEL`, and the screen's `group_id` and `sport` when it
+  showed them (`Where`; a link's names neither; **the ranking's and Same competitive level's
+  name their sport and no group**, invariants). The phone
   sends all but `LINK` (`AskedFrom`, `POST /friends/requests`) — `RANKING` from a record opened
   on the Rankings page, with that page's sport, required (`422` without), its `group_id`
   ignored; `LINK` is never sent — it is the link's opening (#748). **The group is kept only if
@@ -130,7 +131,11 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
   to Raketa* stands — a group-mate's from the ranking too. **New in Raketa's** (#793,
   `NEW_PLAYERS`, its row or a record opened from it) **names no group and no sport** —
   `pressed_on` drops either sent — and reads *Found you among new players* (`from_new_players`, `reason`
-  `FROM_NEW_PLAYERS`; `discovery.md`). **A request to a player who then
+  `FROM_NEW_PLAYERS`; `discovery.md`). **Same competitive level's** (#794, `SAME_LEVEL`, its
+  row or a record opened from it, **its sport required**, `422` without, the group dropped)
+  reads *Your level in padel · 91% even* — **today's** %, worked out when read — or *Found
+  you at your padel level* once either holds no level there (`from_same_level` and
+  `percent_even` on the Home card, `reason` `FROM_SAME_LEVEL`; `discovery.md`). **A request to a player who then
   turns *Show me to new people* off stays open** (the home-rows mechanics §4.3, call 12): the
   switch stops new requests, never old ones.
 - **The routes** (player surface, `presentation/routes.py`): `POST /friends/requests` (answers

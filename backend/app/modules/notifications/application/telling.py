@@ -583,6 +583,7 @@ class TellThePlayers:
                 by_link=event.made_from == RequestOrigin.LINK.value,
                 from_the_ranking=event.made_from == RequestOrigin.RANKING.value,
                 from_new_players=event.made_from == RequestOrigin.NEW_PLAYERS.value,
+                from_same_level=event.made_from == RequestOrigin.SAME_LEVEL.value,
             ),
             at=at,
         )

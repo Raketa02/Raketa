@@ -1556,6 +1556,14 @@ class HomeFriendRequestSchema(BaseModel):
             "(#793)."
         )
     )
+    from_same_level: bool = Field(
+        description=(
+            "Made from Home's *Same competitive level players* row, or a record "
+            "opened from it, in `sport` (#794): draw *Your level in padel · 91% "
+            "even* — `percent_even` — in place of the group line, or *Found you "
+            "at your padel level* when `percent_even` is `null`."
+        )
+    )
     group: HomeFriendRequestGroupSchema | None = Field(
         description=(
             "The group they asked from — *With you in Kazimierz crew* — **while "
@@ -1580,6 +1588,16 @@ class HomeFriendRequestSchema(BaseModel):
     reliability_band: ReliabilityBand = Field(
         description="The band of that figure, the code their record serves."
     )
+    percent_even: int | None = Field(
+        ge=0,
+        le=100,
+        description=(
+            "With `from_same_level`: **today's** % even between you two in "
+            "`sport` — the app's Forecast with one player a side, worked out on "
+            "this read. `null` once either of you holds no level there, and on "
+            "every other card."
+        ),
+    )
 
     @classmethod
     def of(cls, request: HomeFriendRequest) -> "HomeFriendRequestSchema":
@@ -1592,6 +1610,7 @@ class HomeFriendRequestSchema(BaseModel):
             by_link=request.by_link,
             from_ranking=request.from_ranking,
             from_new_players=request.from_new_players,
+            from_same_level=request.from_same_level,
             group=None
             if request.group_id is None or request.group_name is None
             else HomeFriendRequestGroupSchema(
@@ -1601,6 +1620,7 @@ class HomeFriendRequestSchema(BaseModel):
             level=request.level,
             player_score=request.reliability_points,
             reliability_band=request.reliability_band,
+            percent_even=request.percent_even,
         )
 
 

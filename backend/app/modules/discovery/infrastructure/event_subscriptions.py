@@ -1,14 +1,20 @@
 """Who the Discovery context hears. **It records no event of its own**, so it
 registers nothing in the catalog.
 
-**One listener, the follower**, on every user and Player profile event that
-changes what a directory entry holds — the account opened, named or disabled;
-the profile committed, its tags, photographs, area or *Show me to new people*
-changed (and *Show me in General*'s old event, decode-only, which folds into
-the switch). Each names one account, and the follower writes that account's
-entry again from what the owners hold now (``docs/adr/0204`` §10). It
-**writes**, so it is subscribed per delivery run over that run's session
+**Two listeners.** **The directory's follower**, on every user and Player
+profile event that changes what a directory entry holds — the account opened,
+named or disabled; the profile committed, its tags, photographs, area or *Show
+me to new people* changed (and *Show me in General*'s old event, decode-only,
+which folds into the switch). Each names one account, and the follower writes
+that account's entry again from what the owners hold now (``docs/adr/0204``
+§10). It **writes**, so it is subscribed per delivery run over that run's session
 (``app/bootstrap/events.py``), as the ranking's mover is.
+
+**The levels' follower** (#794), on the rating's two events that set a Level
+— ``rating.rating_initialised``, the questionnaire's, and
+``rating.moved_on_result`` — each naming one player and sport, whose entry is
+written again from where the rating stream stands. It writes too, so it is
+subscribed the same way.
 
 **Here, not in ``application/``**, because the event classes are the owners'
 types and the application layer borrows none (``.importlinter``'s
@@ -23,7 +29,9 @@ from typing import Any
 from uuid import UUID
 
 from app.application.events import DeliveryContext, EventDispatcher
+from app.kernel import Sport
 from app.modules.discovery.application.directory import FollowTheDirectory
+from app.modules.discovery.application.levels import FollowTheLevels
 from app.modules.player_profile.domain.events import (
     LocationChanged,
     PhotosChanged,
@@ -32,6 +40,7 @@ from app.modules.player_profile.domain.events import (
     ShowMeToNewPeopleSet,
     SocialTagsChanged,
 )
+from app.modules.rating.domain.events import RatingInitialised, RatingMovedOnResult
 from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
     UserDisabled,
@@ -75,3 +84,22 @@ def _following(
         await follower.execute(whose(event))
 
     return follow
+
+
+#: The rating's events that set a Level — the levels' follower hears these.
+LEVELS_FOLLOWED: tuple[type, ...] = (RatingInitialised, RatingMovedOnResult)
+
+
+def subscribe_the_level_follower(
+    dispatcher: EventDispatcher, follower: FollowTheLevels
+) -> None:
+    """Each Level opened or moved writes its player's entry in that sport the
+    moment it is delivered."""
+
+    async def follow(
+        event: RatingInitialised | RatingMovedOnResult, context: DeliveryContext
+    ) -> None:
+        await follower.execute(event.player_id, Sport(event.sport))
+
+    for event_cls in LEVELS_FOLLOWED:
+        dispatcher.subscribe(event_cls, follow)

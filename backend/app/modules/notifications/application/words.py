@@ -217,6 +217,10 @@ class SaidOfNoGame:
     group: str | None = None
     sport: Sport | None = None
     reason: str | None = None
+    #: A request from *Same competitive level*: today's % even between the
+    #: reader and the requester in ``sport`` (#794), ``None`` once either holds
+    #: no level there.
+    percent_even: int | None = None
 
 
 def words_about_no_game(said: SaidOfNoGame) -> Words:
@@ -270,9 +274,11 @@ def _sport_in_a_sentence(said: SaidOfNoGame) -> str:
 def _asked_from(said: SaidOfNoGame) -> str:
     """The card's where-line, as far as a push can say it: *With you in
     Kazimierz crew · Padel*, *Invited you to Raketa* for a link's, *Found you
-    in the padel ranking* for the ranking's (#773), or *Found you among new
-    players* for New in Raketa's (#793). The card on Home adds the Level and
-    the reliability chip, which are live (a call)."""
+    in the padel ranking* for the ranking's (#773), *Found you among new
+    players* for New in Raketa's (#793), or *Your level in padel · 91% even* —
+    *Found you at your padel level* once either holds no level there — for
+    Same competitive level's (#794; the words §31.10). The card on Home adds
+    the Level and the reliability chip, which are live (a call)."""
 
     if said.reason == NoticeReason.BY_LINK:
         return "Invited you to Raketa"
@@ -280,6 +286,11 @@ def _asked_from(said: SaidOfNoGame) -> str:
         return f"Found you in the {_sport_in_a_sentence(said)} ranking"
     if said.reason == NoticeReason.FROM_NEW_PLAYERS:
         return "Found you among new players"
+    if said.reason == NoticeReason.FROM_SAME_LEVEL:
+        sport_word = _sport_in_a_sentence(said)
+        if said.percent_even is None:
+            return f"Found you at your {sport_word} level"
+        return f"Your level in {sport_word} · {said.percent_even}% even"
     sport = None if said.sport is None else _SPORT_WORDS[said.sport]
     if said.group is not None:
         return f"With you in {said.group}" + ("" if sport is None else f" · {sport}")

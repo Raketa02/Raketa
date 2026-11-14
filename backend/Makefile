@@ -211,7 +211,7 @@ rankings-rebuild:  ## fold every ranking row from the rating history in the even
 rankings-rebuild-host: ## the same rebuild from the host — needs .env, like seed-host
 	poetry run python -m app.modules.rankings.infrastructure.rebuild_cli
 
-discovery-rebuild:  ## write every player-directory entry from the accounts in the event store
+discovery-rebuild:  ## write every player-directory entry and current level from the event store
 	$(COMPOSE_LOCAL) exec api python -m app.modules.discovery.infrastructure.rebuild_cli
 
 discovery-rebuild-host: ## the same rebuild from the host — needs .env, like seed-host

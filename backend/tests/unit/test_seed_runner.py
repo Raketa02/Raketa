@@ -331,6 +331,7 @@ def test_the_walk_has_something_to_walk():
         "rescues.py",
         "rooms.py",
         "runner.py",
+        "same_level.py",
         "screens.py",
         "sportsmanship.py",
     }

@@ -406,6 +406,7 @@ from app.modules.notifications.domain.ports import (
     NoticeDirectory,
     NotificationPreferencesRepository,
     PaidShares,
+    PercentsEven,
     PushNotifications,
     RatedAccounts,
     SeatOffers,
@@ -421,6 +422,7 @@ from app.modules.notifications.infrastructure.told_by import (
     BookedAndProposedGames,
     BookedHours,
     DirectoryGroupJoiners,
+    ForecastPercentsEven,
     FriendsOfTheReader,
     GameStreamCourts,
     PlatformNames,
@@ -554,16 +556,27 @@ from app.modules.discovery.application.directory import (
     FollowTheDirectory,
     RebuildTheDirectory,
 )
+from app.modules.discovery.application.levels import (
+    FollowTheLevels,
+    RebuildTheLevels,
+)
 from app.modules.discovery.application.new_in_raketa import (
     ReadNewInRaketaPage,
     ReadNewInRaketa,
+)
+from app.modules.discovery.application.same_level import (
+    ReadSameLevel,
+    ReadSameLevelPage,
 )
 from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
     DirectoryFaces,
     DirectorySources,
+    HowEven,
+    LevelSources,
     LevelsHeld,
     PlayerDirectory,
+    PlayerLevels,
     ReadersRelations,
 )
 from app.modules.discovery.infrastructure.account_directory_sources import (
@@ -575,14 +588,21 @@ from app.modules.discovery.infrastructure.blocks_either_way import (
 from app.modules.discovery.infrastructure.friends_readers_relations import (
     FriendsReadersRelations,
 )
+from app.modules.discovery.infrastructure.matcher_how_even import MatcherHowEven
 from app.modules.discovery.infrastructure.presigned_directory_faces import (
     PresignedDirectoryFaces,
 )
 from app.modules.discovery.infrastructure.published_levels_held import (
     PublishedLevelsHeld,
 )
+from app.modules.discovery.infrastructure.rating_stream_levels import (
+    RatingStreamLevels,
+)
 from app.modules.discovery.infrastructure.sqlalchemy_player_directory import (
     SqlAlchemyPlayerDirectory,
+)
+from app.modules.discovery.infrastructure.sqlalchemy_player_levels import (
+    SqlAlchemyPlayerLevels,
 )
 from app.modules.rankings.application.projection import (
     MoveTheRanking,
@@ -3298,7 +3318,8 @@ def build_friend_requests_on_home(
     return FriendsRequestsOnHome(
         build_read_requests_on_home(
             session, settings=settings, clock=clock, runtime=runtime
-        )
+        ),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
     )
 
 
@@ -4337,6 +4358,81 @@ def build_read_new_in_raketa_page(
         levels=build_levels_held(session, runtime=runtime),
         faces=build_directory_faces(settings),
         clock=clock,
+    )
+
+
+def build_player_levels(session: AsyncSession) -> PlayerLevels:
+    """Every player's current level per sport, ``discovery_levels`` (#794)."""
+    return SqlAlchemyPlayerLevels(session)
+
+
+def build_level_sources(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> LevelSources:
+    """Where each rating stream stands, **signed in
+    ``discovery/infrastructure/``** over the rating's own streams (#794)."""
+    return RatingStreamLevels(
+        event_store=build_domain_event_store(session, runtime=runtime)
+    )
+
+
+def build_how_even() -> HowEven:
+    """*Same competitive level*'s % even: the matcher's own forecast, one
+    player a side, under the live ruleset (#794)."""
+    return MatcherHowEven(build_ruleset())
+
+
+def build_follow_the_levels(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FollowTheLevels:
+    """A Level opened or moved writes that player's entry in the sport —
+    built per delivery run, over the session the delivery commits in (#794)."""
+    return FollowTheLevels(
+        sources=build_level_sources(session, runtime=runtime),
+        levels=build_player_levels(session),
+    )
+
+
+def build_rebuild_the_levels(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RebuildTheLevels:
+    """Every entry written from every rating — ``make discovery-rebuild``."""
+    return RebuildTheLevels(
+        sources=build_level_sources(session, runtime=runtime),
+        levels=build_player_levels(session),
+        uow=build_unit_of_work(session),
+    )
+
+
+def build_read_same_level(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameLevel:
+    """``GET /same-level``: Home's row of ten (#794)."""
+    return ReadSameLevel(
+        levels=build_player_levels(session),
+        even=build_how_even(),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_read_same_level_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameLevelPage:
+    """``GET /same-level/all``: See all, in pages of 20 (#794)."""
+    return ReadSameLevelPage(
+        levels=build_player_levels(session),
+        even=build_how_even(),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        faces=build_directory_faces(settings),
     )
 
 
@@ -5525,6 +5621,17 @@ def build_seat_offers(
     )
 
 
+def build_percents_even(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PercentsEven:
+    """Today's % even for a request from *Same competitive level*: the
+    matcher's own forecast over rating's estimates (#794)."""
+    return ForecastPercentsEven(
+        ratings=build_rated_player_query(session, runtime=runtime),
+        ruleset=build_ruleset(),
+    )
+
+
 def build_notice_names(session: AsyncSession) -> Names:
     """A person's nickname and a club's name, for what a notice says."""
     return PlatformNames(
@@ -5535,7 +5642,9 @@ def build_notice_names(session: AsyncSession) -> Names:
 
 
 def build_notice_words(session: AsyncSession) -> NoticeWords:
-    return NoticeWords(names=build_notice_names(session))
+    return NoticeWords(
+        names=build_notice_names(session), evens=build_percents_even(session)
+    )
 
 
 def build_notice_friendships(

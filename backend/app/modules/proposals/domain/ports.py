@@ -467,8 +467,9 @@ class HomeFriendRequest:
     """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
     you to Raketa* for a link's, *Found you in the padel ranking* for the
-    ranking's (#773), or *Found you among new players* for New in Raketa's
-    (#793)."""
+    ranking's (#773), *Found you among new players* for New in Raketa's
+    (#793), or *Your level in padel · 91% even* for Same competitive level's
+    (#794)."""
 
     requester_id: UUID
     nickname: str
@@ -482,6 +483,9 @@ class HomeFriendRequest:
     #: Made from Home's *New in Raketa* row, or a record opened from it (#793):
     #: *Found you among new players*.
     from_new_players: bool
+    #: Made from Home's *Same competitive level players* row, or a record
+    #: opened from it, in ``sport`` (#794).
+    from_same_level: bool
     #: The group it was asked from, **while both are in it**.
     group_id: UUID | None
     group_name: str | None
@@ -491,6 +495,11 @@ class HomeFriendRequest:
     level: float | None
     reliability_points: int
     reliability_band: ReliabilityBand
+    #: For a request from *Same competitive level*: **today's** % even between
+    #: the reader and the requester in ``sport`` — the Forecast with one
+    #: player a side, worked out on this read — ``None`` once either holds no
+    #: level there (*Found you at your padel level*), and for any other.
+    percent_even: int | None = None
 
 
 @runtime_checkable

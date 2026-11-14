@@ -2,7 +2,7 @@
 demand (#793; ``docs/adr/0204`` §10).
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Five rows**, each
+consumer gets a new register, not a row in somebody else's. **Seven rows**, each
 a port in Discovery's own words signed in ``discovery/infrastructure/``, so each
 arrow runs out of ``discovery`` into the neighbour and none comes back:
 
@@ -15,10 +15,15 @@ arrow runs out of ``discovery`` into the neighbour and none comes back:
   read): nobody a block stands between is on a people row;
 - **the levels held** (``LevelsHeld``, over rating's published read): a tile's
   sport lines and See all's sport pill;
-- **a face's link** (``DirectoryFaces``, over the photo store).
+- **a face's link** (``DirectoryFaces``, over the photo store);
+- **where a rating stands** (``LevelSources``, over the rating's own streams,
+  #794): every current-level entry is written from it, live and in the
+  rebuild;
+- **how even two players are** (``HowEven``, over the matcher's own forecast,
+  #794): *Same competitive level*'s % even.
 
-The directory itself (``PlayerDirectory``) is the context's own storage and not
-a demand.
+The directory and the current levels (``PlayerDirectory``, ``PlayerLevels``)
+are the context's own storage and not demands.
 
 **A row carries a builder over a session**, as the other registers' do; the
 faces' builds over the settings the session's application runs under.
@@ -32,6 +37,8 @@ from app.bootstrap.composition import (
     build_blocks_either_way,
     build_directory_faces,
     build_directory_sources,
+    build_how_even,
+    build_level_sources,
     build_levels_held,
     build_readers_relations,
 )
@@ -41,6 +48,8 @@ from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
     DirectoryFaces,
     DirectorySources,
+    HowEven,
+    LevelSources,
     LevelsHeld,
     ReadersRelations,
 )
@@ -54,6 +63,8 @@ DISCOVERY_DEMANDS: tuple[type, ...] = (
     BlocksEitherWay,
     LevelsHeld,
     DirectoryFaces,
+    LevelSources,
+    HowEven,
 )
 
 
@@ -82,6 +93,16 @@ DISCOVERY_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=DirectoryFaces,
         name="PresignedDirectoryFaces",
         build=lambda session: build_directory_faces(get_settings()),
+    ),
+    RegisteredImplementation(
+        port=LevelSources,
+        name="RatingStreamLevels",
+        build=build_level_sources,
+    ),
+    RegisteredImplementation(
+        port=HowEven,
+        name="MatcherHowEven",
+        build=lambda session: build_how_even(),
     ),
 )
 
