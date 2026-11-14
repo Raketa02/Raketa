@@ -73,6 +73,14 @@
  * hex added for nothing. It is drawn on the dark card and nowhere else, where the theme fences
  * the colour.
  *
+ * **`waiting` is the eighth variant: a request waiting on somebody else, as a control**
+ * ([#800](https://github.com/Raketa02/Raketa/issues/800), home rows 6;
+ * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-14). The group
+ * sheet's *Asked* is drawn cream with a brown-gold word, and it is pressed — it opens *Withdraw
+ * request* — so it is a button and not 6.4's warn tag, whose two colours it takes: `amberSoft` and
+ * `amber` (5,06:1), amber being 1.3's *reversible, not yet settled*, which a request is. It presses
+ * into `amberLine`, the fold the system already has for that bed.
+ *
  * **`shape` is a seventh option and it is not a variant**
  * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). 4.2's rule is *the chip — the only true pill*, and every button is a 10pt rounded
@@ -125,7 +133,7 @@ import { useReducedMotion } from './overlay';
 import { theme } from './theme';
 
 export type ButtonVariant =
-  'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'arranging' | 'onDark';
+  'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'arranging' | 'onDark' | 'waiting';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
@@ -391,6 +399,7 @@ const FILL = StyleSheet.create({
   settled: { backgroundColor: theme.color.mintInk },
   volt: { backgroundColor: theme.color.volt },
   arranging: { backgroundColor: theme.color.arranging },
+  waiting: { backgroundColor: theme.color.amberSoft },
 });
 
 const PRESSED = StyleSheet.create({
@@ -403,6 +412,8 @@ const PRESSED = StyleSheet.create({
   volt: { opacity: 0.7 },
   // Volt's rule, for the same reason.
   arranging: { opacity: 0.7 },
+  // Amber's own fold — a colour the system already has for this bed, not one invented for a press.
+  waiting: { backgroundColor: theme.color.amberLine },
 });
 
 const LABEL = StyleSheet.create({
@@ -414,6 +425,8 @@ const LABEL = StyleSheet.create({
   volt: { color: theme.color.ink },
   // `ink` and never white: 2,48:1 against 7,05:1 — the module note.
   arranging: { color: theme.color.ink },
+  // 5,06:1 on `amberSoft` — the warn tag's ink on the warn tag's bed.
+  waiting: { color: theme.color.amber },
 });
 
 /**
@@ -433,4 +446,5 @@ const GLOSS = StyleSheet.create({
   settled: { color: theme.color.surface },
   volt: { color: theme.color.ink },
   arranging: { color: theme.color.ink },
+  waiting: { color: theme.color.amber },
 });

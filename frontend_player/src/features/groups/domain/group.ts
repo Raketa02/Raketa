@@ -18,7 +18,7 @@ import type { FriendRelation } from '@/features/friends/types';
 import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { GroupKind, GroupRelation, JoinPolicy, ReadAs } from './vocabulary';
+import type { GroupKind, GroupRelation, HeatTag, JoinPolicy, ReadAs } from './vocabulary';
 
 /**
  * The group's tile: two letters **as typed** — never re-cased — and a colour **key** from 0 to 7
@@ -229,6 +229,50 @@ export interface GroupDetails {
 export interface EditedGroup {
   readonly group: Group;
   readonly admitted: readonly GroupPerson[];
+}
+
+/**
+ * **One card of Home's *Hottest groups*** ([#800](https://github.com/Raketa02/Raketa/issues/800);
+ * ADR-0204 §3; the Home rows mechanics §5) — and **everything its group sheet shows**, so tapping the
+ * card needs no second read. Drawn for any reader, **whether they are in the group or not**; the
+ * group's page stays members-only.
+ *
+ * Every figure is the server's: the heat, its share, the tag, the order, which faces and how many
+ * friends. The phone draws them.
+ */
+export interface HottestGroup {
+  readonly id: string;
+  readonly kind: GroupKind;
+  readonly name: string;
+  readonly monogram: Monogram;
+  /** The sport dots, in the registry's order. */
+  readonly sports: readonly Sport[];
+  /** Every member, today — the card's *11 players*. */
+  readonly memberCount: number;
+  /** *Open group* (Anyone) or *Closed group* (People I approve) on the sheet. */
+  readonly joinPolicy: JoinPolicy;
+  /**
+   * The sheet's *run by* — **an official group's club**, by its name, or **a player group's Owner**,
+   * by their whole nickname. `null` only for an Owner who can no longer be named, and the sheet then
+   * says nobody runs it rather than a name it does not have.
+   */
+  readonly runBy: string | null;
+  /** The club it plays at. */
+  readonly club: ClubName;
+  /** Games with court time in the last 7 days, none called off — *14 games this week*. */
+  readonly gamesThisWeek: number;
+  /** Members who joined in the last 30 days and stayed — the green *+3 this month*, above nought. */
+  readonly newThisMonth: number;
+  /** The heat bar, 0 to 1: this card's heat over the HOTTEST card's, or the row's highest. */
+  readonly heatShare: number;
+  readonly tag: HeatTag | null;
+  /** Up to six members' faces — the sheet's six, the card's first four; never the reader's. */
+  readonly faces: readonly GroupPerson[];
+  /** The reader's friends in it now — *7 of your friends play here*. */
+  readonly friendsCount: number;
+  readonly relation: GroupRelation;
+  /** Whether the reader runs this official group — their chip is *Join*, whatever the policy. */
+  readonly isAdministrator: boolean;
 }
 
 /** A group's name is 1–40 characters once trimmed (ADR-0183 §3). The field stops at 40. */

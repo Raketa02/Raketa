@@ -61,6 +61,14 @@ export { groupReturnRoute } from './components/groupRoutes';
  * places it; whether it is drawn is this feature's rule.
  */
 export { HomeLevelCard } from './components/HomeLevelCard';
+/**
+ * **Home's HOTTEST GROUPS** ([#800](https://github.com/Raketa02/Raketa/issues/800); ADR-0204 §3; the
+ * Home rows screens §3): the row the shell draws just below *Your games*, the re-read Home's pull
+ * makes of it, and whether *Your games* says the groupless line (`GROUPS_COPY.hottest.groupless`).
+ */
+export { HottestGroupsRow } from './components/HottestGroupsRow';
+export { rereadHomeGroups } from './hooks/useHottestGroups';
+export { useInNoGroup } from './hooks/useGroups';
 /** The reads behind it — what a notice opening Home on its card marks stale (#731). */
 export { groupKeys } from './hooks/groupKeys';
 /**

@@ -180,6 +180,13 @@ mark, 3,89:1 on white against a mark's 3:1. It says no meaning the list holds: i
 the product owner kept it when asked. It is recorded as what it is, an exception by taste on one
 control, and not as a seventh meaning anything else may reach for.
 
+**Home's heat bar ends in `coral`, the hot tag's meaning** ([#800](https://github.com/Raketa02/Raketa/issues/800),
+[7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet), Part 16
+2026-11-14; the Home rows screens §3.2, whose mocks win on a look). A Hottest groups card's bar runs
+from `amber` to `coral` up to the group's heat: the list's fifth entry, _hot_, drawn as a length
+rather than a tag, and a mark rather than a text bed. Not a seventh entry; flagged for the product
+owner with the rest.
+
 ## 1.3 Semantic colour is never decorative
 
 | Token   | Means                                  |
@@ -191,6 +198,11 @@ control, and not as a seventh meaning anything else may reach for.
 
 `info` is the deep teal already in the palette rather than a new blue. **The palette does
 not grow to accommodate a new meaning; a meaning is assigned to a colour already present.**
+
+> **Amended 2026-11-14** — a Hottest groups card's growth, _+3 this month_, is drawn in `mintInk`
+> ([#800](https://github.com/Raketa02/Raketa/issues/800), [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet);
+> home rows 3–6 draw it green): players who joined and **stayed**, a gain that is already banked,
+> which is _settled_ read as a count. It is the figure's ink and never its only word.
 
 ## 1.4 Numbers are monospaced, always
 
@@ -250,6 +262,11 @@ own two-part layout, drawn on the phone, and not a harness around it.
 > `stageGlow` at its foot, #784, [12.2](#122-the-stage--sign-in-and-sign-up)). Since 2026-11-09 its
 > podium's two translucent whites stand on it too — `stageStep`, the outer steps, and `stageRim`, the
 > rim round a face (#788) — fenced to sign-up's hero.
+>
+> **Amended 2026-11-14** — and one translucent white that is not a ground: `groupBandStripe`, white
+> at 0,12, the paler stripes over a Hottest groups card's band in the group's own `MONOGRAM_HUES`
+> colour (#800, [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet)).
+> Nothing is written on it, and it is drawn on that band alone.
 
 > `line` **bounds a thing**; `line2` is a **fold inside one thing**. The hairline uses
 > `line2` precisely so a card with two sections reads as one object, not two.
@@ -813,7 +830,10 @@ is 13 — the darker fill makes the corner read tighter at the same radius.
 > [ADR-0167](../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 > §2. The chip is still the only true pill among the controls the system's surfaces draw; the
 > exception is one screen's and is fenced there. **Amended 2026-11-06**: and Members' friend pills
-> (#753), the second surface the record was reopened for ([6.1](#61-button)).
+> (#753), the second surface the record was reopened for ([6.1](#61-button)). **Amended
+> 2026-11-14**: and Home's Hottest groups (#800, [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet)) —
+> the card's chip and the group sheet's _Join_, _Ask to join_ and _Open group_, which home rows 3–6
+> draw as pills; the sheet's _Asked_ keeps 6.1's corner, as home rows 6 draws it.
 
 > **Amended 2026-09-15** — and the Players tab draws three more, on
 > [ADR-0169](../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3 and
@@ -1077,16 +1097,17 @@ Used for every key-value list: the result screen's figures, the evidence trail's
 height 34   paddingHorizontal 15   radius 10   label 12 / 700
 ```
 
-| Variant   | Fill                    | Label  | Pressed fill                 |
-| --------- | ----------------------- | ------ | ---------------------------- |
-| primary   | `coralInk`              | `#fff` | `coral`                      |
-| dark      | `night`                 | `#fff` | `night2`                     |
-| secondary | `surface` + 1pt `line`  | `ink`  | `line2`                      |
-| settled   | `mintInk`               | `#fff` | `mint`                       |
-| volt      | `volt`                  | `ink`  | `opacity: .7`                |
-| arranging | `arranging`             | `ink`  | `opacity: .7`                |
-| on-dark   | `rgba(255,255,255,.17)` | `#fff` | `rgba(255,255,255,.26)`      |
-| disabled  | —                       | —      | `opacity: .4`, not pressable |
+| Variant   | Fill                    | Label   | Pressed fill                 |
+| --------- | ----------------------- | ------- | ---------------------------- |
+| primary   | `coralInk`              | `#fff`  | `coral`                      |
+| dark      | `night`                 | `#fff`  | `night2`                     |
+| secondary | `surface` + 1pt `line`  | `ink`   | `line2`                      |
+| settled   | `mintInk`               | `#fff`  | `mint`                       |
+| volt      | `volt`                  | `ink`   | `opacity: .7`                |
+| arranging | `arranging`             | `ink`   | `opacity: .7`                |
+| on-dark   | `rgba(255,255,255,.17)` | `#fff`  | `rgba(255,255,255,.26)`      |
+| waiting   | `amberSoft`             | `amber` | `amberLine`                  |
+| disabled  | —                       | —       | `opacity: .4`, not pressable |
 
 Heights in practice: **32** (tertiary in a card), **34** (default), **40** (screen action),
 **42** (the primary action on a result screen). All clear the touch minimum.
@@ -3481,9 +3502,12 @@ beyond them.
 ## 7.20 The group monogram
 
 ```
-tile      square · side 38 on a list card, 28 in a row, 36 in a group page's header
+tile      square · side 38 on a list card, 28 in a row, 36 in a group page's header,
+          48 on the group sheet (7.30)
 corner    0,27 × side          letters   sans 700 · surface · 0,37 × side, fitted to the tile
 fill      MONOGRAM_HUES[key]   — the backend's colour key 0–7, never a colour
+shield    side 45 · square on top, the two lower corners 0,4 × side · a 3pt surface ring —
+          a Hottest groups card's badge over its band (7.30)
 ```
 
 **A group's tile: two letters cut by the backend on a colour fixed for the group for ever**
@@ -3980,6 +4004,54 @@ close control and its hold is long enough to read two lines and reach for it (`m
 6 s). It is placed by the notifications feature, never pushed onto the toast queue, and spoken once,
 queued, as it arrives.
 
+## 7.30 Home's Hottest groups: the card, the group sheet and the withdraw sheet
+
+```
+card        5.1's card, its padding moved inside so the band runs to its edges · overflow hidden ·
+            a peeking rail card (7.7, 0,74 × content) on Home's row frame (HomeRow)
+band        size.hottest.band (39) · the group's MONOGRAM_HUES colour · diagonal stripes
+            size.hottest.stripe (9) wide, as far apart, in groupBandStripe (white 0,12)
+shield      7.20's shield, size.hottest.shieldTop (15) below the card's top, md from its left
+tag         a pill at the band's top-right, sm in · ink · size.tag high · tag type in surface ·
+            ▲ drawn in volt (size.hottest.tagMark) for HOTTEST, 6.8's volt Plus for GROWING
+body        md at the sides, 9 under the shield · h2 name, one line · the dots and the sports'
+            names, tiny muted, one line cut with an ellipsis
+figures     two columns · num.m tabular ink over tiny muted words · the growth "+3" mono 600 in
+            mintInk, "this month" after it in the words' muted
+heat bar    size.hottest.heatBar (6) · a line2 track, pill · the fill a gradient amber → coral
+            from the left to the served share
+foot        up to four faces (FaceStack, 28), their press grown to 44 by hit.btn · the chip:
+            6.1's button, sm, pill — dark for Join and Ask to join, secondary for Asked and
+            You're in
+sheet       9.1's sheet · the title row's act (9.1 as amended): dark pill for Join / Ask to join,
+            waiting at 6.1's corner for Asked, secondary pill for Open group · 7.20's tile at
+            48 · tiny muted identity line and sports written out · two stat cards: 5.1's card,
+            num.l tabular over tiny muted · six faces and a tiny line
+withdraw    the same sheet: "Waiting for … to answer" as its title · Withdraw request, 6.1's
+            secondary at lg
+```
+
+**The card is two doors, and not one element** ([#800](https://github.com/Raketa02/Raketa/issues/800);
+the Home rows screens §3.2; home rows 3, 3.2, 4, 5, 21). The chip acts; anywhere else opens the
+group sheet. So it is 5.1's `Card` with its pressed border drawn by the presses that open the sheet,
+and the chip is a button of its own, as Home's game card draws its two. **The band is the group's
+colour** — the tile's `MONOGRAM_HUES` hue, with paler stripes laid over it in one white, not a
+second palette — and the shield overlaps it and the body as the mocks draw it. The tag is the one
+dark pill on the band and its mark is volt, a fill on `ink`. **The heat bar runs from `amber` to
+`coral`**: heat is what [1.2](#12-one-accent-used-sparingly)'s _hot tag_ already means, and its
+coral end is that meaning at the bar's far end rather than a seventh — the amber start, _not yet_,
+is where an unheated bar stops. Every figure is mono, and the growth is `mintInk`, the system's
+_settled_ green at a size it can be read at on white.
+
+**The group sheet's one button stands on its title row** (9.1 as amended), and _Asked_ there is the
+**`waiting` button** — amber's soft bed and its ink, the warn tag's two colours as a control, since
+it is pressed: it opens _Withdraw request_. **The withdraw sheet is the same sheet**, its title and
+body swapped, because two native windows — one leaving as the next arrives — are where iOS drops the
+second. _Withdraw request_ is the outlined `secondary` button: the screens §3.3 name a
+_destructive-outline_ button the system does not have, and an outline is the half of it this system
+holds. **Not seen on a device**: the card, the band's stripes, the shield's overlap, the bar's
+gradient, the two sheets.
+
 # Part 8 — Scrolling patterns
 
 Two horizontal patterns with different jobs.
@@ -4035,6 +4107,11 @@ close   28 circle, line2 background, top-right
 ```
 
 **The scrim is the night colour, not black — the dim matches the palette.**
+
+> **A sheet may carry one act on its title row** ([Part 16](#part-16--amendments-after-locking),
+> 2026-11-14). The group sheet (home rows 6, [#800](https://github.com/Raketa02/Raketa/issues/800))
+> draws its one button between the title and the close: `action`, fixed with the head, so the act
+> never scrolls away from the title it acts on. Not on a sheet with a `mark`.
 
 > **A sheet may put a mark over a centred title** ([Part 16](#part-16--amendments-after-locking),
 > 2026-09-26). The invitation sheet (club 5, [#518](https://github.com/Raketa02/Raketa/issues/518))
@@ -5561,6 +5638,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-14 | [7.7](#77-the-card-rail) · [Part 8](#part-8--scrolling-patterns) · [6.5](#65-touch-targets) · [6.6](#66-press-states) · [`HomeRow.tsx`](../src/shared/ui/HomeRow.tsx) `HomeRow` `HomeRowRail` · `hit.rowLink` · `PagerDots` `testID`                                                                                                                                                     | Each of Home's four rails — FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL, _Your games_ — drew its own section, eyebrow heading, Strip and card width from the same copied styles, and nothing offered _See all ›_                                                                                                                                        | **One Home row frame in shared UI** ([#798](https://github.com/Raketa02/Raketa/issues/798); the Home rows screens §2). `HomeRow` is the section — `space.lg` above, the eyebrow heading, `space.sm` over what follows — with an optional **control** and an optional **link** on the heading's line: the row's words with a hidden `›`, ink `rlValue`, a `link` role named by the row, pressed at `.7`, its 16pt line overhanging the eyebrow's 12 rather than growing it, reached by `hit.rowLink` (`{ top: 13, bottom: 7, left: 3, right: 15 }`, 36 high — 6.5's third exception). `HomeRowRail` takes the row's cards and draws 7.7's two geometries over Part 8's Strip — **peeking** (a lone card at the content width, more at `railCardRatio`, free unless the row asks to snap) and **paging** (the content width, snapping, the dots under it tracking the scroll) — handing each card its width, one `ScrollView` never remounted. The four rails moved onto it with **nothing on screen changing**; _TO CONFIRM_, a list in one card, keeps its own section                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Five new rows were coming (PRD #789: Hottest groups, Same competitive level, New in Raketa, Same vibe, Top 10), each with the same heading and rail — five more copies of the styles four rows already copied. **Two parts rather than one**, because a row says something in place of its rail (_Your games_' empty sentences, Top 10's _Nobody ranked in squash yet_). **The link's words are handed in**, as the sport pill's are, and its name names what it opens, since three _See all_s on one screen would be one name for three places. **36 high and not 44**: the mocks draw the link on the heading's line with the rows no further apart than a row with none, and the room above and below is all there is; a slop into the rail would take a press meant for a card. The link is drawn by no row yet — the first is #801's. **Not seen on a device**: that the four rows did not move is asked for a look                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-11-14 | [6.12](#612-the-switch) · [`Switch.tsx`](../src/shared/ui/Switch.tsx) `onDark` `accessibilityLabel`                                                                                                                                                                                                                                                                                      | Two props on the switch for the Rankings card of a player hidden from General (#778): the dark card's repaint, and _Show me in General_ named over the drawn _Hidden from General_                                                                                                                                                                           | **Unbuilt** ([#799](https://github.com/Raketa02/Raketa/issues/799)). The switch has one consumer, You's _Show me to new people_, with `door`; 6.12 keeps both props specified and its note says so                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | ADR-0204 §2 retired _Show me in General_ and the `HIDDEN` card with it — nobody is hidden from the ranking — so both props lost their only caller. A prop no caller passes is a branch no screen exercises; 6.12's precedent is to keep the decision and drop the code                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-14 | [Part 8](#part-8--scrolling-patterns) · [7.16](#716-the-photo-panel) · [`PhotoCarousel.tsx`](../src/shared/ui/PhotoCarousel.tsx) `PhotoCarousel` · [`theme.ts`](../src/shared/ui/theme.ts) `size.photoCarouselRatio` · Part 8's Strip note · Appendix B                                                                                                                                  | The record drew one photo, the panel's, and nothing drew a player's others                                                                                                                                                                                                                                                                                   | **The photo carousel** ([#799](https://github.com/Raketa02/Raketa/issues/799); the Home rows screens §6.3, §9.3; home rows 23): every photo in the player's order, a card `size.photoCarouselRatio` (0,5) of the content width and 4:5 tall — `PHOTO_PANEL`'s shape, read off it — `radius.card`, over Part 8's Strip — gap 9, bleeding past the gutter, `snapToInterval` a card and the gap, `decelerationRate` fast. **Nothing with no photo**; **a lone photo keeps the card's size**. Hidden from a listener, as `PlayerPhoto` is. Drawn on the record sheet under the header; the vibe sheet (#803) draws the same one                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | ADR-0204 §2: any record opens with all of a player's photos. **Half the width** because home rows 23 draws two side by side, the second running to the sheet's edge — a ratio, for `railCardRatio`'s reason. **4:5** is the photo panel's own shape, so a photo crops alike on the panel and in the carousel. **One carousel for two sheets** is the screens §9.3's call. **A lone photo at the content width** would be a 4:5 card taller than the sheet's first screen. **Not seen on a device**: the two cards, the bleed and the snap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-14 | [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet) · 7.20 · 6.1 · 9.1 · `Button` `waiting` · `BottomSheet` `action` · `theme.ts` `color.groupBandStripe` `size.hottest` `size.monogram.shield` `.sheet` · `GroupMonogram` `shape`                                                                                                                         | No card drew a group to a reader outside it; a sheet's title row held the title and the close; a waiting request was a tag, never pressed                                                                                                                                                                                                                    | **Home's Hottest groups card and its two sheets** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home rows screens §3; home rows 3–6, 21): the striped band in the group's `MONOGRAM_HUES` colour (stripes `groupBandStripe`, white 0,12), the tile as a **shield** over band and body (45, square top, lower corners 0,4 × side, a 3pt surface ring), the tag on an `ink` pill with its mark in volt, mono figures with the growth in `mintInk`, the **heat bar** amber → coral to the served share, four faces, the chip a `sm` pill (`dark` to ask, `secondary` once asked or in). **The group sheet** puts its one button on the title row (`BottomSheet`'s `action`), _Asked_ there a new **`waiting`** button — `amberSoft` / `amber` (5,06:1), pressed `amberLine` — the tile at 48 and two outlined stat cards. **The withdraw sheet** is the same sheet, its title and body swapped; _Withdraw request_ is `secondary` at `lg`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Every look is the mocks' (home rows 3–6, 21), read off them at 1× onto the 3pt grid. **Stripes in one white over the hue**, not a second palette: the band says _this group's colour_. **The heat bar's coral end** is 1.2's _hot tag_ meaning — heat — not a seventh coral; its amber start is _not yet_. **`waiting`** because _Asked_ on the sheet is pressed (it opens Withdraw), so it cannot be 6.4's tag, whose colours it takes. **One sheet for two faces**: iOS drops a second native window opened as the first closes. **`secondary` for Withdraw request**: the screens' _destructive-outline_ button does not exist here. **Not seen on a device**: all of it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 # Part 17 — What the reset removed
 

@@ -134,6 +134,12 @@ const color = {
 
   scrim: 'rgba(10,52,65,0.45)', // the night colour at 45%, not black
 
+  /** A HOTTEST GROUPS CARD'S BAND (#800; home rows 3–5, 21): the paler diagonal stripes over the
+   *  group's own `MONOGRAM_HUES` colour. White at 0,12 over the hue rather than a second hue per
+   *  key — eight keys would need eight, and the band says *this group's colour*, not a ninth one.
+   *  Nothing is written on a stripe: the tag sits on its own `ink` pill. */
+  groupBandStripe: 'rgba(255,255,255,0.12)',
+
   /** THE COURT'S GROUND, and the system's only rule for text over a GENERATED fill.
    *
    *  The court is drawn from the selected sport's hue, so the ratio behind a white label
@@ -934,7 +940,36 @@ const size = {
    *  is the same drawing at the same two sizes. `chip` is the profile switcher's face (#518, as
    *  slimmed 2026-10-01): the worn profile drawn small enough that the pill reads as a control
    *  rather than as a second avatar beside the header's. */
-  monogram: { card: 38, row: 28, header: 36, chip: 22, radius: 0.27, letters: 0.37 },
+  monogram: {
+    card: 38,
+    row: 28,
+    header: 36,
+    chip: 22,
+    /** A Hottest groups card's shield, overlapping its band (#800, home rows 3), and the group
+     *  sheet's rounded badge (home rows 6) — the same tile at two more sizes, read off the mocks. */
+    shield: 45,
+    sheet: 48,
+    radius: 0.27,
+    letters: 0.37,
+  },
+  /** HOME'S HOTTEST GROUPS CARD ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home
+   *  rows screens §3.2; home rows 3–5, 21), read off the mocks at 1× and put on the 3pt grid:
+   *
+   *  - `band` — the striped band across the top, and `stripe` each stripe's width across, the gap
+   *    between two the same;
+   *  - `shieldTop` — how far below the card's top the shield (`monogram.shield`) starts, so it
+   *    overlaps the band and the body; `shieldRing` its white ring, and `shieldFoot` the share of
+   *    its side that rounds its two lower corners — a shield's, where a tile rounds all four;
+   *  - `heatBar` — the bar's height; `tagMark` the drawn ▲ in the HOTTEST pill. */
+  hottest: {
+    band: 39,
+    stripe: 9,
+    shieldTop: 15,
+    shieldRing: 3,
+    shieldFoot: 0.4,
+    heatBar: 6,
+    tagMark: 6,
+  },
   /** THE PROFILE SWITCHER'S CHIP (club 7, #518; slimmed 2026-10-01) — a face at `monogram.chip`
    *  (22) beside a drawn ⇅, in PROPORTION to the product owner's mock rather than at its pixels: the
    *  face about three quarters of the pill's height, the arrows about two fifths of the face's. So

@@ -801,6 +801,18 @@ export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGrou
   );
 }
 
+/** Home's Hottest groups (#800) — none unless the suite says, so the row is hidden. */
+export const HOTTEST_GROUPS_PATH = '/api/v1/hottest-groups';
+
+export function stubHottestGroups(
+  transport: Transport,
+  groups: readonly Wire['HottestGroupSchema'][] = [],
+) {
+  transport.on('GET', HOTTEST_GROUPS_PATH, () =>
+    json<Wire['HottestGroupsResponse']>({ groups: [...groups] }),
+  );
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -987,6 +999,7 @@ export function stubGate(
   stubConversations(transport);
   stubSportsmanship(transport);
   stubMyGroups(transport);
+  stubHottestGroups(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);

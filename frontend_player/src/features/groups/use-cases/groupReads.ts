@@ -15,16 +15,25 @@ import {
   getGroup,
   getGroupMembers,
   getHomeClubs,
+  getHottestGroups,
   getJoinRequests,
   getJoinSearch,
   getMyGroups,
   type Cancellable,
 } from '../api/groupsApi';
-import type { ClubSearch, Group, GroupMember, JoinRequest, MyGroup } from '../domain/group';
+import type {
+  ClubSearch,
+  Group,
+  GroupMember,
+  HottestGroup,
+  JoinRequest,
+  MyGroup,
+} from '../domain/group';
 import {
   toGroup,
   toGroupMembers,
   toHomeClubSearch,
+  toHottestGroups,
   toJoinRequests,
   toJoinSearch,
   toMyGroups,
@@ -53,6 +62,13 @@ export async function readJoinRequests(
   options: Cancellable = {},
 ): Promise<readonly JoinRequest[]> {
   return toJoinRequests(await getJoinRequests(groupId, options));
+}
+
+/** **Home's Hottest groups** (#800) — up to six, in the row's order; none hides the row. */
+export async function readHottestGroups(
+  options: Cancellable = {},
+): Promise<readonly HottestGroup[]> {
+  return toHottestGroups(await getHottestGroups(options));
 }
 
 export async function searchHomeClubs(

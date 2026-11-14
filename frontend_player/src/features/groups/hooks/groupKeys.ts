@@ -31,6 +31,19 @@ export const groupKeys = {
   answers: (groupId: string) => [...groupKeys.requests(groupId), 'answer'] as const,
   /** **A mutation key**: leaving or deleting one group — found to take a waiting one back (#529). */
   exit: (groupId: string) => [...groupKeys.detail(groupId), 'exit'] as const,
+  /**
+   * **Home's Hottest groups** (#800) — one read for every reader's row, with no parameter: the row
+   * is the whole app's (the Home rows mechanics §3). A join, an ask and a withdraw rewrite it.
+   */
+  hottest: () => [...groupKeys.all, 'hottest'] as const,
+  /**
+   * **Mutation keys**: the writes that move the reader's relation to a group — a join (or an ask)
+   * and a withdraw — under one root, so Home's row can let go of a tap on any card whose write is
+   * still in flight (#800).
+   */
+  relationWrites: () => [...groupKeys.all, 'relation'] as const,
+  joins: () => [...groupKeys.relationWrites(), 'join'] as const,
+  withdrawals: () => [...groupKeys.relationWrites(), 'withdraw'] as const,
   /** Every cached search — the root a join rewrites. */
   searches: () => [...groupKeys.all, 'search'] as const,
   /** New group's home-club search, for one text. */

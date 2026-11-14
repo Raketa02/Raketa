@@ -1663,6 +1663,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups/{group_id}/join-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw a Join request
+         * @description The *Asked* sheet's **Withdraw request**: the caller's request leaves the Owner's, the Administrator's and the club's lists **at once**, and **nobody is told** — no notice, no line, no email. The caller's `relation` to the group reads `NONE` again, and they may ask again. **A request already answered or gone changes nothing and still answers 204**: one approved a moment earlier leaves the caller a member, and a group deleted meanwhile took its requests with it — **this route refuses nothing**.
+         */
+        delete: operations["withdraw_join_request_api_v1_groups__group_id__join_request_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/groups/{group_id}/members": {
         parameters: {
             query?: never;
@@ -1777,6 +1797,26 @@ export interface paths {
          * @description One field, four matches, answered as **club cards with groups inside**. A club whose name or district contains `q` comes with **every** group at it; a group whose name contains `q` comes inside its club's card, with **only** the matching groups when the club itself did not match — ignoring case and accents either way. **Any text containing `/join/<code>` is a link**, whatever domain or words are around it, and finds exactly that group; a link that leads nowhere answers no clubs with `read_as` `LINK` — *nothing at that link*. **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A–Z and no distance. A blank `q` finds nothing.
          */
         get: operations["join_search_api_v1_join_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hottest-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Home's Hottest groups
+         * @description Up to **six** of the groups with the most going on, **whether the caller is in them or not** — every group with 3 or more players, player and official alike, the caller's own included — by **heat**: 2 × games this week + 3 × new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.
+         */
+        get: operations["hottest_groups_api_v1_hottest_groups_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5570,6 +5610,11 @@ export interface components {
              */
             group_ids: string[];
         };
+        /**
+         * HeatTag
+         * @enum {string}
+         */
+        HeatTag: "HOTTEST" | "GROWING";
         /** HomeClubPageResponse */
         HomeClubPageResponse: {
             /**
@@ -5879,6 +5924,86 @@ export interface components {
          * @enum {string}
          */
         HomeStatus: "WAITING_FOR_A_PAYMENT" | "BOOKED" | "SEAT_OPEN" | "NEEDS_RESULT" | "CONFIRM_THE_RESULT" | "COUNTED" | "UNCOUNTED" | "PLAYED_NO_SCORE" | "CALLED_OFF";
+        /**
+         * HottestGroupSchema
+         * @description One card of Home's *Hottest groups* — and **everything its group sheet
+         *     shows**, so tapping the card needs no second read (`docs/adr/0204` §3,
+         *     §11). Drawn for any player, **whether they are in the group or not**; the
+         *     group page itself stays members-only.
+         */
+        HottestGroupSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** @description `PLAYER` — a player's own group, with an Owner. `OFFICIAL` — a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares. */
+            kind: components["schemas"]["GroupKind"];
+            /** Name */
+            name: string;
+            monogram: components["schemas"]["MonogramSchema"];
+            /**
+             * Sports
+             * @description The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read — a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares.
+             */
+            sports: components["schemas"]["Sport"][];
+            /**
+             * Member Count
+             * @description Every Group member — a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader.
+             */
+            member_count: number;
+            /** @description `ANYONE` — *Open group*, and the chip is **Join**; `PEOPLE_I_APPROVE` — *Closed group*, and the chip is **Ask to join**. Read `relation` and `is_administrator` first. */
+            join_policy: components["schemas"]["JoinPolicy"];
+            /**
+             * Run By
+             * @description The sheet's *run by*: **an official group's club**, by its name — whoever runs it, and while nobody does, since the club answers its requests — and **a player group's Owner**, by their whole nickname, never cut and never with an @. `null` only for an Owner who can no longer be named.
+             */
+            run_by: string | null;
+            /** @description The club it plays at. */
+            club: components["schemas"]["ClubNameSchema"];
+            /**
+             * Games This Week
+             * @description Games booked in the group whose court time falls in **the last 7 days**, to the minute — none called off, scored or not, a friends game booked in the group included.
+             */
+            games_this_week: number;
+            /**
+             * New This Month
+             * @description Members who joined in **the last 30 days** and are still in it: the green *+3 this month*, drawn only when above nought. Somebody who left and came back counts by the join that stands.
+             */
+            new_this_month: number;
+            /**
+             * Heat Share
+             * @description The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full — or, with no HOTTEST, over the highest heat in the row, so no bar is more than full. Heat is 2 × games this week + 3 × new this month + players counted up to 20.
+             */
+            heat_share: number;
+            /** @description `HOTTEST` on exactly one card — the highest heat, and only if it had a game this week; `GROWING` on any other with **+4 or more** new this month **and** new making up at least a quarter of today's players; `null` on the rest. The row is in order already: HOTTEST, then GROWING by heat, then untagged by heat. */
+            tag: components["schemas"]["HeatTag"] | null;
+            /**
+             * Faces
+             * @description **Up to six member faces** — the sheet's six; the card draws the first four. The reader's friends first, then the longest-standing members; **never the reader's own face**. Not a way to anybody: a face here is not tapped.
+             */
+            faces: components["schemas"]["GroupPersonSchema"][];
+            /**
+             * Friends Count
+             * @description How many of the reader's friends are members now: *7 of your friends play here*. At 0 the sheet says `member_count` players instead.
+             */
+            friends_count: number;
+            /** @description `MEMBER` — **You're in** on the card, **Open group** on the sheet, both opening the group page; `REQUESTED` — **Asked**, which opens *Withdraw request*; `NONE` — **Join** or **Ask to join**, by `join_policy`. */
+            relation: components["schemas"]["GroupRelation"];
+            /**
+             * Is Administrator
+             * @description Whether **the reader** runs this official group: their chip is **Join**, whatever `join_policy` says, and it admits them at once. Always `false` on a player group.
+             */
+            is_administrator: boolean;
+        };
+        /** HottestGroupsResponse */
+        HottestGroupsResponse: {
+            /**
+             * Groups
+             * @description **Up to six**, in the row's order — every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row.
+             */
+            groups: components["schemas"]["HottestGroupSchema"][];
+        };
         /**
          * InProgressAssessmentResponse
          * @description One unfinished run: which assessment, and which sport it is for.
@@ -12787,6 +12912,35 @@ export interface operations {
             };
         };
     };
+    withdraw_join_request_api_v1_groups__group_id__join_request_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     group_members_api_v1_groups__group_id__members_get: {
         parameters: {
             query: {
@@ -13039,6 +13193,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hottest_groups_api_v1_hottest_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HottestGroupsResponse"];
                 };
             };
         };

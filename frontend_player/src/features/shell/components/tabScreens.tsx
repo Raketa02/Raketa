@@ -13,7 +13,13 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { FriendRequestsRow, LevelAsksRow } from '@/features/friends/types';
-import { HomeLevelCard } from '@/features/groups/types';
+import {
+  GROUPS_COPY,
+  HomeLevelCard,
+  HottestGroupsRow,
+  rereadHomeGroups,
+  useInNoGroup,
+} from '@/features/groups/types';
 import { NoticeBell, OPEN_NOTICE_WORDS, rereadNotices } from '@/features/notifications/types';
 import { PlayerRecordSheet, PlayerScoreTag } from '@/features/player_record/types';
 import {
@@ -69,9 +75,17 @@ import { HOME_COPY } from './shellCopy';
  * **The trophy stands just left of the bell** (`rankings`' `RankingTrophy`, [#775](https://github.com/Raketa02/Raketa/issues/775);
  * the rankings screens §1; Q13): the reader's General place in the sport of their latest result, and
  * the way to Rankings — the bell keeps the corner.
+ *
+ * **The five Home rows stand below *Your games*** (ADR-0204; the Home rows screens §1), each reading on
+ * its own so a slow or failed one holds up nothing — **HOTTEST GROUPS** first (`groups`' row,
+ * [#800](https://github.com/Raketa02/Raketa/issues/800)). The pull re-reads them with Home's own.
+ * **A reader in no group** reads *Join a group to get games — the hottest ones are just below.* where
+ * *Play finds you one.* stood (§31.1): the line points at the row under it, and whether the reader is
+ * in a group is `groups`' answer, its words `groups`' too.
  */
 export function HomeScreen() {
   const client = useQueryClient();
+  const inNoGroup = useInNoGroup();
   return (
     <ShellScreen
       title={HOME_COPY.title}
@@ -81,13 +95,18 @@ export function HomeScreen() {
           <NoticeBell />
         </View>
       }
-      onRefresh={() => rereadHome(client)}
+      onRefresh={() => Promise.all([rereadHome(client), rereadHomeGroups(client)])}
     >
       <HomeLevelCard />
       <FriendsGamesRow onAnswered={() => rereadNotices(client)} />
       <PaymentsToConfirm />
       <HomeFriendRows />
-      <HomeRail empty={HOME_COPY.empty} />
+      <HomeRail
+        empty={
+          inNoGroup ? { ...HOME_COPY.empty, act: GROUPS_COPY.hottest.groupless } : HOME_COPY.empty
+        }
+      />
+      <HottestGroupsRow />
     </ShellScreen>
   );
 }

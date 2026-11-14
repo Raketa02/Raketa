@@ -8,14 +8,28 @@
  * relation on it — so it is written into every cached search that holds that group (a club can be
  * in the home-club answer and the join answer at once), and the button turns into *you're in* or
  * *requested · waiting* without a second read. A join that made the reader a member also
- * invalidates the Groups list, which now has one more card. Neither is optimistic: whether a tap
- * admits or asks is the group's policy **on the server**, and a client that guessed would draw
- * *you're in* over a group that has just switched to *People I approve*.
+ * invalidates the Groups list, which now has one more card. A search row is not optimistic:
+ * whether a tap admits or asks is the group's policy **on the server**, and a client that guessed
+ * would draw *you're in* over a group that has just switched to *People I approve*.
+ *
+ * **Home's Hottest groups card is** ([#800](https://github.com/Raketa02/Raketa/issues/800); the
+ * Home rows screens §3.4: *Join turns the chip to You're in at once*). Its chip turns on the tap, to
+ * what the card's own policy says — *You're in* or *Asked* — and **the answer's relation lands over
+ * the guess**, so a group that switched policy meanwhile reads what the server did. A refusal puts
+ * the one card's relation back, whatever else is in flight. Every read that could show the group is
+ * then read again — the row, the Groups list, Home's own read (*Your games*) — and the searches are
+ * written, as above, never re-read.
  *
  * A failed join is said in a toast, because the row it was pressed on has no line to say it in;
  * the row goes back to its button. Joining twice changes nothing on the server, so a second tap
  * after a failure is safe — but it is the player's tap, never a retry (mutations are never
  * retried globally).
+ *
+ * ## A withdraw takes the request back at once
+ *
+ * **Withdraw request** (#800, the mechanics §5.8) turns the card back to *Join* or *Ask to join* on
+ * the tap: the route refuses nothing — an approval a moment earlier leaves the reader a member, and
+ * the re-read says so — so the only failure is the network's, said in a toast with the card put back.
  *
  * ## A create seeds the page it lands on
  *
@@ -45,7 +59,8 @@
  * ## Leaving and deleting take the group off the list
  *
  * The card is dropped from the Groups list on the answer and the list re-read, and every search
- * is re-read — the relation is *none* now, or the group is gone. What is read about the group
+ * is re-read — the relation is *none* now, or the group is gone — and Home's Hottest groups with
+ * them, whose card would otherwise still say *You're in*. What is read about the group
  * itself is **marked stale and not re-read**: the page that reads it is still on its way out, and a
  * re-read now would draw *not one of yours* over it as it leaves. A refusal that says the count
  * moved — `lone_owner_cannot_leave`, `group_has_other_members` — re-reads the group, so the door
@@ -54,6 +69,7 @@
 
 import {
   useMutation,
+  useMutationState,
   useQueryClient,
   type InfiniteData,
   type QueryClient,
@@ -62,30 +78,37 @@ import {
 import { recoveryMessage, type AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 
+import { proposalKeys } from '@/features/proposals/types';
+
 import type {
   ClubSearch,
   EditedGroup,
   Group,
   GroupAtClub,
   GroupDetails,
+  HottestGroup,
   JoinRequest,
   MyGroup,
   NewGroup,
 } from '../domain/group';
 import { countMoved, type GroupExit } from '../domain/groupInfo';
+import { groupAction } from '../domain/groupRules';
+import { withRelation } from '../domain/hottest';
+import type { GroupRelation } from '../domain/vocabulary';
 import {
   answerRequest,
   createGroup,
   editGroup,
   exitGroup,
   joinGroup,
+  withdrawJoinRequest,
   type RequestAnswer,
 } from '../use-cases/groupWrites';
 
 import { groupKeys } from './groupKeys';
 
-/** The same group, wherever a cached search holds it, with the answer's relation on it. */
-function writeRow(client: QueryClient, answer: GroupAtClub): void {
+/** Every cached search's rows, each passed through `row` — the one place a search is rewritten. */
+function rewriteSearches(client: QueryClient, row: (group: GroupAtClub) => GroupAtClub): void {
   client.setQueriesData<InfiniteData<ClubSearch, number>>(
     { queryKey: groupKeys.searches() },
     (data) =>
@@ -95,28 +118,119 @@ function writeRow(client: QueryClient, answer: GroupAtClub): void {
             ...data,
             pages: data.pages.map((page) => ({
               ...page,
-              clubs: page.clubs.map((club) => ({
-                ...club,
-                groups: club.groups.map((group) => (group.id === answer.id ? answer : group)),
-              })),
+              clubs: page.clubs.map((club) => ({ ...club, groups: club.groups.map(row) })),
             })),
           },
   );
 }
 
+/** The same group, wherever a cached search holds it, with the answer's relation on it. */
+function writeRow(client: QueryClient, answer: GroupAtClub): void {
+  rewriteSearches(client, (group) => (group.id === answer.id ? answer : group));
+}
+
+/** The relation a Hottest groups card stood at before a tap moved it — what a refusal puts back. */
+interface HeldRelation {
+  readonly relation?: GroupRelation;
+}
+
+/** One Hottest groups card's relation, moved — nothing when the row holds no such card. */
+function moveCard(client: QueryClient, groupId: string, relation: GroupRelation): void {
+  client.setQueryData<readonly HottestGroup[]>(groupKeys.hottest(), (row) =>
+    row === undefined ? row : withRelation(row, groupId, relation),
+  );
+}
+
+/**
+ * **The card's relation drawn at once**, from what its own policy says the tap does — or nothing,
+ * for a tap from a row the Hottest groups read does not hold.
+ */
+async function guessCard(
+  client: QueryClient,
+  groupId: string,
+  guess: (card: HottestGroup) => GroupRelation,
+): Promise<HeldRelation> {
+  const card = client
+    .getQueryData<readonly HottestGroup[]>(groupKeys.hottest())
+    ?.find((held) => held.id === groupId);
+  if (card === undefined) return {};
+  // A read in flight would land the old relation over the guess.
+  await client.cancelQueries({ queryKey: groupKeys.hottest() });
+  moveCard(client, groupId, guess(card));
+  return { relation: card.relation };
+}
+
+/** A refusal: the one card back where it stood, and the write's own error said. */
+function refused(
+  client: QueryClient,
+  groupId: string,
+  held: HeldRelation | undefined,
+  error: AppError,
+): void {
+  if (held?.relation !== undefined) moveCard(client, groupId, held.relation);
+  showToast({ message: recoveryMessage(error), tone: 'bad' });
+}
+
+/**
+ * **Every read that could show a group the reader's relation to just moved** (the Home rows mechanics
+ * §13): Home's Hottest groups, the Groups list, and Home's own read — *Your games* and the groupless
+ * line. **The searches are written, never re-read**: the write's answer is the row, and a search
+ * read again could land an older relation over it.
+ */
+function rereadWhereTheGroupShows(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: groupKeys.hottest() });
+  void client.invalidateQueries({ queryKey: groupKeys.mine() });
+  void client.invalidateQueries({ queryKey: proposalKeys.home() });
+}
+
 export function useJoinGroup() {
   const client = useQueryClient();
 
-  return useMutation<GroupAtClub, AppError, string>({
+  return useMutation<GroupAtClub, AppError, string, HeldRelation>({
+    mutationKey: groupKeys.joins(),
     mutationFn: joinGroup,
+    onMutate: (groupId) =>
+      guessCard(client, groupId, (card) => (groupAction(card) === 'join' ? 'MEMBER' : 'REQUESTED')),
     onSuccess: (answer) => {
       writeRow(client, answer);
-      if (answer.relation === 'MEMBER') {
-        void client.invalidateQueries({ queryKey: groupKeys.mine() });
-      }
+      moveCard(client, answer.id, answer.relation);
+      rereadWhereTheGroupShows(client);
     },
-    onError: (error) => showToast({ message: recoveryMessage(error), tone: 'bad' }),
+    onError: (error, groupId, held) => refused(client, groupId, held, error),
   });
+}
+
+/** **Withdraw request** (#800) — the card reads *Join* or *Ask to join* again on the tap. */
+export function useWithdrawJoinRequest() {
+  const client = useQueryClient();
+
+  return useMutation<void, AppError, string, HeldRelation>({
+    mutationKey: groupKeys.withdrawals(),
+    mutationFn: withdrawJoinRequest,
+    onMutate: (groupId) => guessCard(client, groupId, () => 'NONE'),
+    onSuccess: (_nothing, groupId) => {
+      // A search row still saying *requested · waiting* reads as nothing asked; an approval a moment
+      // earlier is the Groups list's re-read to say.
+      rewriteSearches(client, (group) =>
+        group.id === groupId && group.relation === 'REQUESTED'
+          ? { ...group, relation: 'NONE' }
+          : group,
+      );
+      rereadWhereTheGroupShows(client);
+    },
+    onError: (error, groupId, held) => refused(client, groupId, held, error),
+  });
+}
+
+/**
+ * **The groups whose join, ask or withdraw is still in flight** — any card's, from any screen, so
+ * Home's row lets go of a second tap on that card while the first is unanswered (#800).
+ */
+export function useRelationWritesInFlight(): readonly string[] {
+  return useMutationState({
+    filters: { mutationKey: groupKeys.relationWrites(), status: 'pending' },
+    select: (mutation) => mutation.state.variables,
+  }).filter((groupId): groupId is string => typeof groupId === 'string');
 }
 
 export function useCreateGroup() {
@@ -230,6 +344,8 @@ export function useExitGroup(groupId: string) {
       );
       void client.invalidateQueries({ queryKey: groupKeys.mine() });
       void client.invalidateQueries({ queryKey: groupKeys.searches() });
+      // Home's row reads *You're in* on it until it is read again (#800).
+      void client.invalidateQueries({ queryKey: groupKeys.hottest() });
       void client.invalidateQueries({
         queryKey: groupKeys.detail(groupId),
         refetchType: 'none',

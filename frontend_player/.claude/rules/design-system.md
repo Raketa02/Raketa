@@ -99,8 +99,8 @@ licence for a second dark surface.
   Part 16). A word that wants to be that
   large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`.
 - **The pill is the chip's**, and _It's a game!_'s two buttons and the friend pills — Members'
-  (#753), the Friends page's (#754) and the picker's ask (#758) — through `Button`'s `shape`: exceptions, each fenced by a
-  Part 16 row. Everywhere else a button is 10pt.
+  (#753), the Friends page's (#754) and the picker's ask (#758) — and Home's Hottest groups chips (#800), through
+  `Button`'s `shape`: exceptions, each fenced by a Part 16 row. Everywhere else a button is 10pt.
 
 This design system covers `frontend_player/` **only.** The club app has its own; the palettes
 converge because it is one brand, but the values are never shared.

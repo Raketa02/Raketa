@@ -83,6 +83,26 @@ describe('the arranging button (6.1)', () => {
   });
 });
 
+/**
+ * **`waiting` is a request waiting on somebody else** — the group sheet's *Asked* (#800, home rows
+ * 6): amber's soft bed and its ink, the warn tag's two colours, as a control. Amber on `amberSoft`
+ * is 5,06:1, and it presses into `amberLine`, its own fold, rather than a hex invented for a press.
+ */
+describe('the waiting button (6.1)', () => {
+  it('fills with amber’s soft bed and labels in amber', () => {
+    render(<Button label="Asked" variant="waiting" onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.amberSoft);
+    expect(label().color).toBe(theme.color.amber);
+  });
+
+  it('presses into amber’s line', () => {
+    render(<Button label="Asked" variant="waiting" onPress={jest.fn()} />);
+
+    expect(drawn(true).backgroundColor).toBe(theme.color.amberLine);
+  });
+});
+
 describe('the on-dark button (6.1)', () => {
   it('takes the two tokens the theme names the on-dark button', () => {
     render(<Button label="Competitive" variant="onDark" onPress={jest.fn()} />);

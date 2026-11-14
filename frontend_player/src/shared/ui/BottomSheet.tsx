@@ -93,6 +93,12 @@ export interface BottomSheetProps {
    */
   readonly mark?: ReactNode;
   /**
+   * **One act on the title row**, between the title and the close — the group sheet's one button
+   * (#800, home rows 6; 9.1 as amended 2026-11-14). Fixed with the head, never scrolled away from
+   * the title it acts on. Not drawn on a sheet with a `mark`, whose close stands alone on its row.
+   */
+  readonly action?: ReactNode;
+  /**
    * Whether a tap in the sheet keeps the keyboard up — **forwarded, not designed**, as
    * `ShellScreen`'s is. By default a tap on the body outside a field takes the focus back, and
    * React Native does that with a native blur; on iOS, under the New Architecture, Stripe's card
@@ -116,6 +122,7 @@ export function BottomSheet({
   closeLabel,
   returnFocusTo,
   mark,
+  action,
   keepsKeyboardOnTap = false,
   scrollsItself = false,
   children,
@@ -175,6 +182,7 @@ export function BottomSheet({
               <View ref={heading} accessible accessibilityRole="header" style={s.titleBox}>
                 <Text style={s.title}>{title}</Text>
               </View>
+              {action}
               <CloseControl onPress={dismiss} accessibilityLabel={closeLabel} />
             </View>
           ) : (

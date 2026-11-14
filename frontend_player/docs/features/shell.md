@@ -255,3 +255,12 @@ Rankings back on it with Home beneath (`useShellLanding`), as it lands a group w
 **_Show me to new people_ closes _On your card_** ([#799](https://github.com/Raketa02/Raketa/issues/799)):
 `player_profile`'s `ShowMeToNewPeopleRow`, in the place `ShowMeInGeneralRow` stood — the paragraph
 above's row, renamed with its switch. The record is [`player_profile.md`](player_profile.md).
+
+**The five Home rows begin below _Your games_, HOTTEST GROUPS first**
+([#800](https://github.com/Raketa02/Raketa/issues/800); ADR-0204; the Home rows screens §1).
+`HomeScreen` draws `groups`' `HottestGroupsRow` after `HomeRail`, and the pull re-reads it beside
+Home's own reads (`rereadHomeGroups`, the row and the Groups list) — each row reads on its own, so a slow or failed one holds up
+nothing. **A reader in no group** reads _Join a group to get games — the hottest ones are just below._
+where _Play finds you one._ stood (§31.1): the first empty line is the tab's and stands, the second is
+handed to `HomeRail` from `groups`' answer (`useInNoGroup`) and its words (`GROUPS_COPY.hottest`), as
+the empty sentences have always been handed down. The walk is `groups`' `hottestGroups.test.tsx`.
