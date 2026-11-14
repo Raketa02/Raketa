@@ -197,6 +197,7 @@ from app.modules.proposals.domain.ports import (
     SeatRefunds,
     UndecidedCharges,
     ClubNames as ProposalClubNames,
+    TagsInCommon as ProposalsTagsInCommon,
     ClubTerms,
     CourtHours,
     CourtKinds,
@@ -410,6 +411,7 @@ from app.modules.notifications.domain.ports import (
     PushNotifications,
     RatedAccounts,
     SeatOffers,
+    TagsInCommon as NoticeTagsInCommon,
 )
 from app.modules.notifications.infrastructure.event_sourced_notification_repositories import (  # noqa: E501
     EventSourcedBellRepository,
@@ -423,6 +425,7 @@ from app.modules.notifications.infrastructure.told_by import (
     BookedHours,
     DirectoryGroupJoiners,
     ForecastPercentsEven,
+    ProfileTagsInCommon as NoticeProfileTagsInCommon,
     FriendsOfTheReader,
     GameStreamCourts,
     PlatformNames,
@@ -546,6 +549,9 @@ from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
 from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
     SqlAlchemyLevelAskDirectory,
 )
+from app.modules.proposals.infrastructure.tags_in_common import (
+    ProfileTagsInCommon,
+)
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
     FriendsReaderRelations,
@@ -567,6 +573,10 @@ from app.modules.discovery.application.new_in_raketa import (
 from app.modules.discovery.application.same_level import (
     ReadSameLevel,
     ReadSameLevelPage,
+)
+from app.modules.discovery.application.same_vibe import (
+    ReadSameVibe,
+    ReadSameVibePage,
 )
 from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
@@ -3320,6 +3330,20 @@ def build_friend_requests_on_home(
             session, settings=settings, clock=clock, runtime=runtime
         ),
         forecasts=build_balance_forecasts(session, runtime=runtime),
+        tags=build_home_tags_in_common(session, runtime=runtime),
+    )
+
+
+def build_home_tags_in_common(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ProposalsTagsInCommon:
+    """How many tags two players hold today, off the Player profile — a
+    request from *Same vibe players*' line on Home (#795)."""
+    return ProfileTagsInCommon(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
     )
 
 
@@ -4430,6 +4454,36 @@ def build_read_same_level_page(
     return ReadSameLevelPage(
         levels=build_player_levels(session),
         even=build_how_even(),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_read_same_vibe(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameVibe:
+    """``GET /same-vibe``: Home's row of ten (#795)."""
+    return ReadSameVibe(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_read_same_vibe_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameVibePage:
+    """``GET /same-vibe/all``: See all, in pages of 20 (#795)."""
+    return ReadSameVibePage(
+        directory=build_player_directory(session),
         blocks=build_blocks_either_way(session, runtime=runtime),
         relations=build_readers_relations(session, runtime=runtime),
         faces=build_directory_faces(settings),
@@ -5641,9 +5695,24 @@ def build_notice_names(session: AsyncSession) -> Names:
     )
 
 
+def build_notice_tags_in_common(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> NoticeTagsInCommon:
+    """How many tags two players hold today, off the Player profile — a
+    request from *Same vibe players*' notice (#795)."""
+    return NoticeProfileTagsInCommon(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
 def build_notice_words(session: AsyncSession) -> NoticeWords:
     return NoticeWords(
-        names=build_notice_names(session), evens=build_percents_even(session)
+        names=build_notice_names(session),
+        evens=build_percents_even(session),
+        tags=build_notice_tags_in_common(session),
     )
 
 

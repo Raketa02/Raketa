@@ -221,6 +221,9 @@ class SaidOfNoGame:
     #: reader and the requester in ``sport`` (#794), ``None`` once either holds
     #: no level there.
     percent_even: int | None = None
+    #: A request from *Same vibe*: how many Social tags the reader and the
+    #: requester hold today (#795) — ``0`` or ``None`` once they share none.
+    in_common: int | None = None
 
 
 def words_about_no_game(said: SaidOfNoGame) -> Words:
@@ -277,8 +280,10 @@ def _asked_from(said: SaidOfNoGame) -> str:
     in the padel ranking* for the ranking's (#773), *Found you among new
     players* for New in Raketa's (#793), or *Your level in padel · 91% even* —
     *Found you at your padel level* once either holds no level there — for
-    Same competitive level's (#794; the words §31.10). The card on Home adds
-    the Level and the reliability chip, which are live (a call)."""
+    Same competitive level's (#794), or *6 things in common* — *1 thing in
+    common*, or *Found you through your tags* once none is shared — for Same
+    vibe's (#795; the words §31.10). The card on Home adds the Level and the
+    reliability chip, which are live (a call)."""
 
     if said.reason == NoticeReason.BY_LINK:
         return "Invited you to Raketa"
@@ -291,6 +296,12 @@ def _asked_from(said: SaidOfNoGame) -> str:
         if said.percent_even is None:
             return f"Found you at your {sport_word} level"
         return f"Your level in {sport_word} · {said.percent_even}% even"
+    if said.reason == NoticeReason.FROM_SAME_VIBE:
+        if not said.in_common:
+            return "Found you through your tags"
+        if said.in_common == 1:
+            return "1 thing in common"
+        return f"{said.in_common} things in common"
     sport = None if said.sport is None else _SPORT_WORDS[said.sport]
     if said.group is not None:
         return f"With you in {said.group}" + ("" if sport is None else f" · {sport}")

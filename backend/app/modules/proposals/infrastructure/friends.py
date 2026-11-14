@@ -8,7 +8,9 @@ requests on Home (``docs/adr/0202`` §1–§2), and the asks for a level on Home
 ``docs/adr/0204`` §9, call 6): the reader and the requester, one a side, through
 ``BalanceForecasts`` — the deck's own forecast port, the one forecast function
 — so the card says *91% even* as the row did, and nothing when either no
-longer holds a level in the sport."""
+longer holds a level in the sport. **And a request from *Same vibe* counts
+today's tags in common** (#795), through ``TagsInCommon``: *6 things in
+common*, or none once they share none."""
 
 from __future__ import annotations
 
@@ -30,6 +32,7 @@ from app.modules.proposals.domain.ports import (
     HomeFriendRequest,
     HomeLevelAsk,
     HomeLevelAsker,
+    TagsInCommon,
 )
 
 
@@ -52,14 +55,27 @@ class FriendsReaderRelations:
 @final
 class FriendsRequestsOnHome:
     def __init__(
-        self, requests: ReadRequestsOnHome, *, forecasts: BalanceForecasts
+        self,
+        requests: ReadRequestsOnHome,
+        *,
+        forecasts: BalanceForecasts,
+        tags: TagsInCommon,
     ) -> None:
         self._requests = requests
         self._forecasts = forecasts
+        self._tags = tags
 
     async def of(self, reader: UUID) -> tuple[HomeFriendRequest, ...]:
         cards = await self._requests.execute(reader)
         evens = await self._evens(reader, cards)
+        in_common = await self._tags.in_common(
+            reader,
+            [
+                card.requester_id
+                for card in cards
+                if card.where.made_from is RequestOrigin.SAME_VIBE
+            ],
+        )
         return tuple(
             HomeFriendRequest(
                 requester_id=card.requester_id,
@@ -71,6 +87,7 @@ class FriendsRequestsOnHome:
                 from_ranking=card.where.made_from is RequestOrigin.RANKING,
                 from_new_players=card.where.made_from is RequestOrigin.NEW_PLAYERS,
                 from_same_level=card.where.made_from is RequestOrigin.SAME_LEVEL,
+                from_same_vibe=card.where.made_from is RequestOrigin.SAME_VIBE,
                 group_id=None if card.group is None else card.group.group_id,
                 group_name=None if card.group is None else card.group.name,
                 sport=card.where.sport,
@@ -78,6 +95,7 @@ class FriendsRequestsOnHome:
                 reliability_points=card.reliability.points,
                 reliability_band=card.reliability.band,
                 percent_even=evens.get(card.requester_id),
+                in_common=in_common.get(card.requester_id),
             )
             for card in cards
         )

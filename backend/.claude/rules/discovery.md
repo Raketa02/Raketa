@@ -4,22 +4,23 @@ paths:
   - "app/bootstrap/discovery_demands.py"
   - "app/seeds/new_in_raketa.py"
   - "app/seeds/same_level.py"
+  - "app/seeds/same_vibe.py"
   - "migrations/versions/0073_player_directory.py"
   - "migrations/versions/0074_discovery_levels.py"
 ---
 
 # Discovery
 
-Decisions that are load-bearing and not obvious from the code (#793, #794;
+Decisions that are load-bearing and not obvious from the code (#793, #794, #795;
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-§4, §5, §7, §9, §10; `docs/specs/home-rows/` §4.6, §6, §7, §9, §12, §16). The words are root
-`CONTEXT.md`'s *Discovery* section and the words §31.5–§31.7, §31.10.
+§4–§7, §9, §10; `docs/specs/home-rows/` §4.6, §6–§9, §12, §16). The words are root
+`CONTEXT.md`'s *Discovery* section and the words §31.5–§31.8, §31.10.
 
 - **The people rows' context, with no aggregate and no event of its own** — it registers nothing
   in the catalog. It owns *Same competitive level players*, *New in Raketa* and *Same vibe
-  players*, their See all reads and the copies they read. **New in Raketa** (#793) and **Same
-  competitive level** (#794, with the current levels) are built; Same vibe (#795) and the rest
-  count (#796) read the same directory.
+  players*, their See all reads and the copies they read. **New in Raketa** (#793), **Same
+  competitive level** (#794, with the current levels) and **Same vibe** (#795) are built; the
+  rest count (#796) is the next.
 - **The player directory, a stated exception to *derived, never stored*** (ADR-0204 §10;
   `backend/CLAUDE.md`): `discovery_players` (migration 0073) — **one row per account**: the
   nickname (`users`), and, once it holds a Player profile, `plays` with the profile's *joined*
@@ -198,3 +199,67 @@ Decisions that are load-bearing and not obvious from the code (#793, #794;
   (*Found you at your padel level*); its notice `reason` `FROM_SAME_LEVEL` says *Your level
   in padel · 91% even* through Notifications' own `PercentsEven` (`ForecastPercentsEven`),
   drawn for the notice's reader at push time and on every read.
+- **Keeping a row alive is one rule for both rows** (`domain/fresh_then_gaps.py`, #795; the
+  mechanics §9.1): `FreshThenGaps` takes the cards best first and is full once ten are fresh
+  or once a card that is no good match has come with ten taken; it is built with the row's own
+  **good match** (`good`). Each row's `RowOfTen` is it with its line — Same competitive
+  level's `is_good_match` (≥ 70%), Same vibe's (≥ 2 shared tags) — and each row's `is_fresh`
+  asks the same rule with that line; everything else is §9's.
+- **Same vibe players** (#795; `domain/same_vibe.py`, `application/same_vibe.py`):
+  `GET /same-vibe` and `GET /same-vibe/all?sport&after` (player surface). **Anyone sharing a
+  Social tag with the reader**; every tag counts the same and **skill plays no part**, so a
+  reader with no level sees it too (Q14) and no level is read but See all's sport. **The vibe
+  %** is 1 − ½ⁿ for n shared tags, **a half rounded up** (`vibe_percent`: 87,5 reads 88): 50,
+  75, 88, 94, 97, 98. **The order** (`VibeKey`) is more shared first, then **fewer of their
+  tags the reader doesn't hold**, then the player id. A person on the row is a `VibePlayer` —
+  never a *match* (the glossary's _Avoid_ for the % is *match %*). **The row**: §9's rule, a
+  good match **two shared tags or more** (`GOOD_MATCH`), nobody rested until #796; it reads
+  the order **twenty at a time** (`A_BATCH`), asking Friends once per batch, and stops once
+  the row is full — a reader whose friends crowd the top reads a batch more, nobody reads the
+  crowd. **See all** is the plain order in pages of 20, the cursor the last card's `VibeKey`
+  (in common, not shared, the id, base64url; `400 not_a_same_vibe_page` otherwise, nought in
+  common included); with `sport`, only players holding a level in it (an `EXISTS` on the
+  current levels); `sports` is every sport somebody listed holds a level in, whatever the
+  filter (`sports_alike`, one `DISTINCT`).
+- **Shared tags are counted portably in SQL** (`PlayerDirectory.alike`): **one pass over the tag
+  rows**, grouped by player — `sum(CASE tag IN the reader's)` *in common*, `count(*)` *held* —
+  then ordered and keyset-paged in a derived table **joined back to its players' tags, one
+  statement**, so a card's count and its chips come from one snapshot. A scan, not the tag
+  index: nearly everybody shares a tag with a reader holding six, and probing the index then
+  joining a second count back measured 151 ms against the pass's 62. **The chips are in the
+  vocabulary's order**, put there by the adapter, which may read `SOCIAL_TAG_VOCABULARY` (a
+  tag it no longer lists stands last); the domain's tags are the directory's sets. **The
+  reader's own tags are the directory's too** (`tags_of`), so a tag change — theirs or the
+  reader's — reads into the read after its delivery, as every field the follower writes.
+- **Measured at 50,000** (#795; Postgres 17 in Docker on the laptop, the real adapters, the
+  seeded store plus 50,000 synthetic players written straight into the directory's two tables,
+  2–6 tags each at random, 40% with a padel level; her six tags): **the row 53 ms** (5
+  statements, one batch), See all's first page 78 ms (6, with the pill), the page after 500
+  70 ms, padel alone 69 ms. **No cache** (call 11).
+- **Its card on the wire** (`SameVibePlayerSchema`): `vibe_percent`, `in_common`, `shared_tags`
+  (the green chips, in the vocabulary's order) and `relation`, **no request id**, as #793's
+  call has it. **The vibe sheet reads the record** (all photos, the intro, the distance, every
+  tag with *· you too*), which #791 opened to everyone — no route of its own.
+- **A request from the row is `made_from` `SAME_VIBE`**, naming **no group and no sport**
+  (`Where`'s invariant; `pressed_on` drops either sent). **Its line is counted when read**
+  (call 6): the receiver's Home card carries `from_same_vibe` and `in_common` — today's,
+  through Proposals' `TagsInCommon` (`ProfileTagsInCommon`, over the Player profile, the tags'
+  one owner, live), `0` once nothing is shared (*Found you through your tags*) and `null` on
+  every other card; its notice `reason` `FROM_SAME_VIBE` says *6 things in common* (*1 thing in
+  common*) through Notifications' own `TagsInCommon` (`ProfileTagsInCommon` in
+  `told_by.py`), counted for the notice's reader at push time and on every read. Both ports
+  have rows in their context's register.
+- **Seeded by `app/seeds/same_vibe.py`**, after Same competitive level: **no player of its
+  own** — she holds six tags (`catalog.HER_TAGS`, the protagonists' three and three more where
+  the cohort's own draws meet hers at every count: `cohort-d-01` all six, `cohort-a-13` and
+  `cohort-a-16` five), the ranking's crowd shares two and the New in Raketa joiners one — and
+  **a request each way from the row**, each pair read first: she asks `cohort-a-13`
+  (`SHE_ASKS`, five in common) and `cohort-d-01` (`ASKS_HER`, six) asks her. **A store seeded
+  before #795** committed her three, and the commit is idempotent, so the layer gives her the
+  six through *Edit tags*' own `ChangeSocialTags`, which records nothing once they are hers.
+  `assert_same_vibe` reads her row and every See all page among the screens and fails the run
+  by name unless the row holds `min(10, See all)`, sits inside See all in the rule's order,
+  **every count from one to six is in See all**, a friend shares two tags or more, and — **on
+  the run that asked** — the two relations stand. **Her row is all fresh**: far more than ten
+  unconnected players share two tags with her, so her friends and her request wait in See all
+  and the run says so as a cost; gaps are walked in the API tests.

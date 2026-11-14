@@ -1,4 +1,4 @@
-"""Wire schemas for the people rows (#793, #794; ``docs/adr/0204`` §12).
+"""Wire schemas for the people rows (#793, #794, #795; ``docs/adr/0204`` §12).
 
 **The reader is never in a body**, and every relation is the reader's own —
 the one wire vocabulary every face carries, Friends' ``FriendRelation``. What a
@@ -25,9 +25,15 @@ from app.modules.discovery.application.same_level import (
     SameLevelCard,
     SameLevelPage,
 )
-from app.modules.discovery.domain.errors import NotANewInRaketaPage, NotASameLevelPage
+from app.modules.discovery.application.same_vibe import SameVibeCard, SameVibePage
+from app.modules.discovery.domain.errors import (
+    NotANewInRaketaPage,
+    NotASameLevelPage,
+    NotASameVibePage,
+)
 from app.modules.discovery.domain.new_in_raketa import JoinerKey
 from app.modules.discovery.domain.same_level import Comparison, SameLevelKey
+from app.modules.discovery.domain.same_vibe import VibeKey
 from app.modules.friends.domain.relation import FriendRelation
 
 _EPOCH = instant(datetime(1970, 1, 1, tzinfo=timezone.utc))
@@ -328,5 +334,137 @@ class SameLevelPageResponse(BaseModel):
         return cls(
             players=[SameLevelPlayerSchema.of(card) for card in page.cards],
             next=None if page.next is None else same_level_cursor_of(page.next),
+            sports=list(page.sports),
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Same vibe players (#795)
+# --------------------------------------------------------------------------- #
+
+
+def same_vibe_cursor_of(key: VibeKey) -> str:
+    """A card's key as a cursor: the tags in common, theirs not shared and the
+    id, colon-separated, base64url — opaque to the phone."""
+
+    written = f"{key.in_common}:{key.not_shared}:{key.player_id.hex}"
+    return base64.urlsafe_b64encode(written.encode()).decode().rstrip("=")
+
+
+def same_vibe_key_of(cursor: str) -> VibeKey:
+    """The key a cursor names — :class:`NotASameVibePage` for one this server
+    never wrote."""
+
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        in_common, not_shared, player = (
+            base64.urlsafe_b64decode(padded.encode()).decode().split(":")
+        )
+        key = VibeKey(
+            in_common=int(in_common),
+            not_shared=int(not_shared),
+            player_id=UUID(hex=player),
+        )
+        if key.in_common < 1 or key.not_shared < 0:
+            raise ValueError(f"no card stands at {key!r}")
+        return key
+    except (ValueError, UnicodeDecodeError, binascii.Error) as error:
+        raise NotASameVibePage() from error
+
+
+class SameVibePlayerSchema(BaseModel):
+    """One *Same vibe players* tile."""
+
+    player_id: UUID
+    nickname: str = Field(description="Whole, never with an @ (docs/adr/0199 §1).")
+    photo_id: UUID | None = Field(
+        description="Their first photograph; `null` draws their court poster."
+    )
+    photo_url: str | None = Field(
+        description="A short-lived signed link to it, minted for this response."
+    )
+    vibe_percent: int = Field(
+        ge=50,
+        le=100,
+        description=(
+            "The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, "
+            "97, 98 for 1–6 — the white circle, *98%*. Every tag counts the "
+            "same, and skill plays no part."
+        ),
+    )
+    in_common: int = Field(
+        ge=1,
+        description=(
+            "How many tags you both hold — *6 things in common*, *1 thing in common*."
+        ),
+    )
+    shared_tags: list[str] = Field(
+        description=(
+            "The Social tag ids you both hold, in the vocabulary's own order — "
+            "the green chips, as many whole as fit in three lines, then *+2 "
+            "more*. The vibe sheet reads the player's record for all their "
+            "tags, photos, intro and distance."
+        )
+    )
+    relation: FriendRelation = Field(
+        description=(
+            "Your relation to them — the round friend button: `NONE` **+**, "
+            "`SENT` **…**, `FRIEND` **✓**, `ASKED_YOU` the envelope. A request "
+            "is named by their `player_id` on every friends route. Send one "
+            "from this row with `made_from` `SAME_VIBE`."
+        )
+    )
+
+    @classmethod
+    def of(cls, card: SameVibeCard) -> "SameVibePlayerSchema":
+        return cls(
+            player_id=card.player_id,
+            nickname=card.nickname,
+            photo_id=card.photo_id,
+            photo_url=card.photo_url,
+            vibe_percent=card.vibe_percent,
+            in_common=card.in_common,
+            shared_tags=list(card.shared_tags),
+            relation=FriendRelation(card.relation.value),
+        )
+
+
+class SameVibeResponse(BaseModel):
+    players: list[SameVibePlayerSchema] = Field(
+        description=(
+            "Up to 10: **fresh** good matches first — 2 shared tags or more, "
+            "neither your friend nor somebody you asked; somebody who asked "
+            "you counts — most in common first; then the **gaps** at the right "
+            "— your friends, those you asked and 1-tag matches — in the same "
+            "order. Worked out on every read, so a new fresh player takes the "
+            "weakest gap's place. **Empty hides the row.**"
+        )
+    )
+
+
+class SameVibePageResponse(BaseModel):
+    players: list[SameVibePlayerSchema] = Field(
+        description=(
+            "Up to 20 who share a tag with you, most in common first, friends "
+            "where they fall — with `sport`, only those holding a level in it."
+        )
+    )
+    next: str | None = Field(
+        description=(
+            "The cursor the next page is read `after`; `null` on the last page."
+        )
+    )
+    sports: list[Sport] = Field(
+        description=(
+            "Every sport at least one of them holds a level in, in the sports' "
+            "own order — the pill's chips beside *All*."
+        )
+    )
+
+    @classmethod
+    def of(cls, page: SameVibePage) -> "SameVibePageResponse":
+        return cls(
+            players=[SameVibePlayerSchema.of(card) for card in page.cards],
+            next=None if page.next is None else same_vibe_cursor_of(page.next),
             sports=list(page.sports),
         )

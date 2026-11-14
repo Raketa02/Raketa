@@ -21,6 +21,8 @@ what the neighbour publishes, wired by the composition root, each with a row in
   function's: *Same competitive level*'s % even (#794).
 
 The current levels (``PlayerLevels``, #794) are the context's own storage too.
+*Same vibe players* (#795) reads the directory alone: its tags, one row each,
+are counted against the reader's in SQL.
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ from app.modules.discovery.domain.directory import DirectoryEntry
 from app.modules.discovery.domain.levels import CurrentLevel, Estimate
 from app.modules.discovery.domain.new_in_raketa import Joiner
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer
 
 
 @runtime_checkable
@@ -65,6 +68,35 @@ class PlayerDirectory(Protocol):
         ``joined_after``, newest first: named, playing, *Show me to new people*
         on, and none of ``leaving_out`` (the reader and every block either
         way). At most ``limit``, when one is given."""
+        ...
+
+    async def tags_of(self, player_id: UUID) -> frozenset[str]:
+        """Every social tag the player holds — none for an account the
+        directory has no entry for (#795)."""
+        ...
+
+    async def alike(
+        self,
+        mine: frozenset[str],
+        *,
+        leaving_out: Collection[UUID],
+        sport: Sport | None,
+        after: VibeKey | None,
+        limit: int,
+    ) -> tuple[VibePlayer, ...]:
+        """Everybody who may be on a people row — as ``who_joined`` reads it —
+        sharing **at least one** of ``mine``, **most in common first** (more
+        shared, then fewer of theirs not shared, then the player id), strictly
+        behind ``after`` when one is given, at most ``limit`` (#795). With
+        ``sport``, only those holding a level in it. Each card's shared tags in
+        the vocabulary's order."""
+        ...
+
+    async def sports_alike(
+        self, mine: frozenset[str], *, leaving_out: Collection[UUID]
+    ) -> tuple[Sport, ...]:
+        """Every sport at least one player ``alike`` would list holds a level
+        in, in the sports' own order — See all's pill (#795)."""
         ...
 
 

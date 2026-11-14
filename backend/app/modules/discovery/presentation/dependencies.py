@@ -16,6 +16,8 @@ from app.bootstrap.composition import (
     build_read_new_in_raketa_page,
     build_read_same_level,
     build_read_same_level_page,
+    build_read_same_vibe,
+    build_read_same_vibe_page,
 )
 from app.modules.discovery.application.new_in_raketa import (
     ReadNewInRaketaPage,
@@ -24,6 +26,10 @@ from app.modules.discovery.application.new_in_raketa import (
 from app.modules.discovery.application.same_level import (
     ReadSameLevel,
     ReadSameLevelPage,
+)
+from app.modules.discovery.application.same_vibe import (
+    ReadSameVibe,
+    ReadSameVibePage,
 )
 
 
@@ -59,3 +65,17 @@ def get_read_same_level_page(db: DbSession, settings: SettingsDep) -> ReadSameLe
 
 
 ReadSameLevelPageDep = Annotated[ReadSameLevelPage, Depends(get_read_same_level_page)]
+
+
+def get_read_same_vibe(db: DbSession, settings: SettingsDep) -> ReadSameVibe:
+    return build_read_same_vibe(db, settings=settings)
+
+
+ReadSameVibeDep = Annotated[ReadSameVibe, Depends(get_read_same_vibe)]
+
+
+def get_read_same_vibe_page(db: DbSession, settings: SettingsDep) -> ReadSameVibePage:
+    return build_read_same_vibe_page(db, settings=settings)
+
+
+ReadSameVibePageDep = Annotated[ReadSameVibePage, Depends(get_read_same_vibe_page)]

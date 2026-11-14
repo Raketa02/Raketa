@@ -154,6 +154,20 @@ def test_a_links_request_names_no_group_or_sport():
         Where(made_from=RequestOrigin.LINK, sport=Sport.PADEL)
 
 
+def test_a_same_vibe_request_names_no_group_or_sport():
+    """*6 things in common* names neither (#795): a screen sending either has
+    both dropped where the request is read, never refused."""
+
+    with pytest.raises(InvariantViolated):
+        Where(made_from=RequestOrigin.SAME_VIBE, sport=Sport.PADEL)
+    with pytest.raises(InvariantViolated):
+        Where(made_from=RequestOrigin.SAME_VIBE, group_id=new_uuid())
+
+    assert Where.pressed_on(
+        RequestOrigin.SAME_VIBE, group_id=new_uuid(), sport=Sport.PADEL
+    ) == Where(made_from=RequestOrigin.SAME_VIBE)
+
+
 # --------------------------------------------------------------------------- #
 # From the ranking, and the daily limit (#773; docs/adr/0203 §9)
 # --------------------------------------------------------------------------- #

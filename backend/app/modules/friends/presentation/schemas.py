@@ -37,6 +37,7 @@ class AskedFrom(StrEnum):
     RANKING = RequestOrigin.RANKING.value
     NEW_PLAYERS = RequestOrigin.NEW_PLAYERS.value
     SAME_LEVEL = RequestOrigin.SAME_LEVEL.value
+    SAME_VIBE = RequestOrigin.SAME_VIBE.value
 
 
 class AskToBeFriendsRequest(BaseModel):
@@ -54,7 +55,11 @@ class AskToBeFriendsRequest(BaseModel):
             "competitive level players** row, or a record opened from it — "
             "`SAME_LEVEL`, with the card's `sport` (#794): their card and notice "
             "read *Your level in padel · 91% even*, today's %, or *Found you at "
-            "your padel level* once either of you holds no level there."
+            "your padel level* once either of you holds no level there. From "
+            "Home's **Same vibe players** row, or a record opened from it — "
+            "`SAME_VIBE` (#795): their card and notice read *6 things in common* "
+            "(*1 thing in common*), counted when read, or *Found you through your "
+            "tags* once you share none."
         )
     )
     group_id: UUID | None = Field(
@@ -63,8 +68,8 @@ class AskToBeFriendsRequest(BaseModel):
             "The group the screen showed — Members' group, or the game's — which "
             "their Home card names (*With you in Kazimierz crew*) while you are "
             "both in it. Omit it where the screen showed none; it is ignored "
-            "with `RANKING`, `NEW_PLAYERS` and `SAME_LEVEL`, whose screens show "
-            "no group."
+            "with `RANKING`, `NEW_PLAYERS`, `SAME_LEVEL` and `SAME_VIBE`, whose "
+            "screens show no group."
         ),
     )
     sport: Sport | None = Field(
@@ -72,7 +77,8 @@ class AskToBeFriendsRequest(BaseModel):
         description=(
             "The sport the screen showed, whose Level the card prints beside your "
             "nickname (*Padel 3,40*). Omit it where the screen showed none; "
-            "it is ignored with `NEW_PLAYERS`, whose line names no sport. "
+            "it is ignored with `NEW_PLAYERS` and `SAME_VIBE`, whose lines name "
+            "no sport. "
             "**Required with `RANKING`** — it is the ranking the card names — "
             "**and with `SAME_LEVEL`**: it is the sport their line compares."
         ),

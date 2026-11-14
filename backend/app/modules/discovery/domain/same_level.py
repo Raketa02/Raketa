@@ -27,6 +27,8 @@ from typing import Final, final
 from uuid import UUID
 
 from app.kernel import Sport
+from app.modules.discovery.domain import fresh_then_gaps
+from app.modules.discovery.domain.fresh_then_gaps import FreshThenGaps
 from app.modules.discovery.domain.levels import (
     Band,
     CurrentLevel,
@@ -37,8 +39,8 @@ from app.modules.discovery.domain.relation import Relation
 
 #: A good match: the % even at or above it (Q33; green on a game card).
 GOOD_MATCH: Final = 70
-#: Cards on Home's row.
-ON_THE_ROW: Final = 10
+#: Cards on Home's row — §9's, which both rows keep.
+ON_THE_ROW: Final = fresh_then_gaps.ON_THE_ROW
 #: Cards in a See all page (a call made while writing PRD #789).
 A_PAGE: Final = 20
 
@@ -179,46 +181,22 @@ class Reach:
         )
 
 
+def is_good_match(player: SameLevelPlayer) -> bool:
+    """70% even or more, in the sport the card shows."""
+
+    return player.shown.percent_even >= GOOD_MATCH
+
+
 def is_fresh(player: SameLevelPlayer, relation: Relation, *, rested: bool) -> bool:
     """A good match the reader is not connected with, who hasn't rested."""
 
-    return (
-        player.shown.percent_even >= GOOD_MATCH
-        and relation in (Relation.NONE, Relation.ASKED_YOU)
-        and not rested
+    return fresh_then_gaps.is_fresh(
+        good=is_good_match(player), relation=relation, rested=rested
     )
 
 
-@final
-class RowOfTen:
-    """The row, filled from the cards **best first**: fresh good matches, then
-    the gaps at the right.
-
-    **Full** once ten fresh are taken, or once a card below a good match has
-    come — after it no card can be fresh — with ten taken in all. Until then a
-    later fresh match would still take a gap's place."""
+class RowOfTen(FreshThenGaps[SameLevelPlayer]):
+    """§9's row (``fresh_then_gaps``), a good match being 70% even or more."""
 
     def __init__(self) -> None:
-        self._fresh: list[SameLevelPlayer] = []
-        self._gaps: list[SameLevelPlayer] = []
-        self._no_more_fresh = False
-
-    def take(
-        self, player: SameLevelPlayer, *, relation: Relation, rested: bool
-    ) -> None:
-        if player.shown.percent_even < GOOD_MATCH:
-            self._no_more_fresh = True
-        if is_fresh(player, relation, rested=rested):
-            self._fresh.append(player)
-        else:
-            self._gaps.append(player)
-
-    @property
-    def full(self) -> bool:
-        return len(self._fresh) >= ON_THE_ROW or (
-            self._no_more_fresh and len(self._fresh) + len(self._gaps) >= ON_THE_ROW
-        )
-
-    def row(self) -> tuple[SameLevelPlayer, ...]:
-        fresh = self._fresh[:ON_THE_ROW]
-        return (*fresh, *self._gaps[: ON_THE_ROW - len(fresh)])
+        super().__init__(good=is_good_match)

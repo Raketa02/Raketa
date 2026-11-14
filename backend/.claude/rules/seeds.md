@@ -189,6 +189,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   padel, after New in Raketa, drained by the layer itself; `assert_same_level` reads her row
   and See all among the screens. **Nobody on the seed reads 70%** — five results leave a Level
   as unsure as hers — so her row is all gaps, and the run says so as a cost.
+- **Same vibe writes no player, gives her six tags, and a request each way** (#795,
+  `app/seeds/same_vibe.py`; `discovery.md`): she holds six (`catalog.HER_TAGS` — the other
+  protagonists keep three), where the cohort's draws meet hers at every count from one to six,
+  so she asks `cohort-a-13` (five) from the row and `cohort-d-01` (six) asks her, after Same
+  competitive level, drained by the layer itself; a store seeded before #795 is given her six
+  through *Edit tags*' own use case. `assert_same_vibe` reads her row and See all among the
+  screens and fails by name if a count from one to six goes missing. **Her row is all fresh**
+  — the crowd sharing two tags with her is far more than ten — and the run says so as a cost.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

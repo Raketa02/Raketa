@@ -1564,6 +1564,14 @@ class HomeFriendRequestSchema(BaseModel):
             "at your padel level* when `percent_even` is `null`."
         )
     )
+    from_same_vibe: bool = Field(
+        description=(
+            "Made from Home's *Same vibe players* row, or a record opened from "
+            "it (#795): draw *6 things in common* — `in_common`; *1 thing in "
+            "common* for one — in place of the group line, or *Found you through "
+            "your tags* when `in_common` is `0`."
+        )
+    )
     group: HomeFriendRequestGroupSchema | None = Field(
         description=(
             "The group they asked from — *With you in Kazimierz crew* — **while "
@@ -1598,6 +1606,14 @@ class HomeFriendRequestSchema(BaseModel):
             "every other card."
         ),
     )
+    in_common: int | None = Field(
+        ge=0,
+        description=(
+            "With `from_same_vibe`: how many Social tags you two hold **today**, "
+            "counted on this read — `0` once you share none. `null` on every "
+            "other card."
+        ),
+    )
 
     @classmethod
     def of(cls, request: HomeFriendRequest) -> "HomeFriendRequestSchema":
@@ -1611,6 +1627,7 @@ class HomeFriendRequestSchema(BaseModel):
             from_ranking=request.from_ranking,
             from_new_players=request.from_new_players,
             from_same_level=request.from_same_level,
+            from_same_vibe=request.from_same_vibe,
             group=None
             if request.group_id is None or request.group_name is None
             else HomeFriendRequestGroupSchema(
@@ -1621,6 +1638,7 @@ class HomeFriendRequestSchema(BaseModel):
             player_score=request.reliability_points,
             reliability_band=request.reliability_band,
             percent_even=request.percent_even,
+            in_common=request.in_common,
         )
 
 

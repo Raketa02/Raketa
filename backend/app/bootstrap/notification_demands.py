@@ -17,8 +17,9 @@ and what a person and a club are called (``Names``) — and, for *Get your level
 the groups' own directory) and who holds a rating (``RatedAccounts``: rating's
 published read) — and, for a friend request from *Same competitive level*
 (#794), today's % even between two players (``PercentsEven``: the matcher's own
-forecast over rating's estimates). Each is signed in
-``notifications/infrastructure/told_by.py``.
+forecast over rating's estimates) — and, for one from *Same vibe* (#795), how
+many Social tags two players hold today (``TagsInCommon``: the Player
+profile's own). Each is signed in ``notifications/infrastructure/told_by.py``.
 
 **The deck behind** ``Decks.showing`` **and the offer behind**
 ``SeatOffers.offered_among`` **are Proposals' own** — ``ReadGroupDeck`` and
@@ -40,6 +41,7 @@ from app.bootstrap.composition import (
     build_group_joiners,
     build_notice_names,
     build_paid_shares,
+    build_notice_tags_in_common,
     build_percents_even,
     build_rated_accounts,
     build_seat_offers,
@@ -58,6 +60,7 @@ from app.modules.notifications.domain.ports import (
     PercentsEven,
     RatedAccounts,
     SeatOffers,
+    TagsInCommon,
 )
 
 P = TypeVar("P")
@@ -76,6 +79,7 @@ NOTIFICATION_DEMANDS: tuple[type, ...] = (
     RatedAccounts,
     Friendships,
     PercentsEven,
+    TagsInCommon,
 )
 
 
@@ -116,6 +120,11 @@ NOTIFICATION_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=PercentsEven, name="ForecastPercentsEven", build=build_percents_even
+    ),
+    RegisteredImplementation(
+        port=TagsInCommon,
+        name="ProfileTagsInCommon",
+        build=build_notice_tags_in_common,
     ),
 )
 

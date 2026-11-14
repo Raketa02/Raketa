@@ -262,7 +262,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `from_same_level` with `percent_even` (*Your level in padel · 91% even*: **today's** %
   between the reader and the requester in `sport`, read in `FriendsRequestsOnHome` through
   the deck's own `BalanceForecasts`, one forecast per sport, `null` once either holds no level
-  there — *Found you at your padel level*) — saying what stands in place of the group line. **And `level_asks`**
+  there — *Found you at your padel level*) — and since #795 `from_same_vibe` with `in_common`
+  (*6 things in common*: how many Social tags the two hold **today**, read in
+  `FriendsRequestsOnHome` through `TagsInCommon` — `ProfileTagsInCommon`
+  (`infrastructure/tags_in_common.py`), over the Player profile, with its row in
+  `proposal_demands.py` — `0` once none is shared, *Found you through your tags*, `null` on
+  every other card) — saying what stands in place of the group line. **And `level_asks`**
   (#764; ADR-0202 §4's 2026-11-07 amendment): *ASKED FOR A LEVEL*, between the friend requests
   and the reader's games — one card per sport, the sport with the newest ask first, each naming
   its askers newest first (`HomeLevelAsk`, `HomeLevelAsker`: id, nickname, photo) and no group,

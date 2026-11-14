@@ -52,8 +52,22 @@ class StandInEvens:
         return {one: 91 for one in others if one[1] is Sport.PADEL}
 
 
+class StandInTags:
+    """Ola shares three tags with the reader, Kuba one, anybody else none."""
+
+    def __init__(self, *, ola: UUID | None = None, kuba: UUID | None = None) -> None:
+        self._shared = {one: n for one, n in ((ola, 3), (kuba, 1)) if one is not None}
+        self.asked: list[tuple[UUID, set[UUID]]] = []
+
+    async def in_common(
+        self, reader: UUID, others: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        self.asked.append((reader, set(others)))
+        return {one: self._shared.get(one, 0) for one in others}
+
+
 def words_of() -> NoticeWords:
-    return NoticeWords(names=StandInNames(), evens=StandInEvens())
+    return NoticeWords(names=StandInNames(), evens=StandInEvens(), tags=StandInTags())
 
 
 def a_card_that_needs_only_you(*, gathered: int) -> RecordedNotice:
@@ -147,7 +161,7 @@ async def test_a_same_level_request_says_today_s_percent_between_the_two() -> No
     squash = a_same_level_request(Sport.SQUASH)
 
     pushed = await NoticePushes(
-        words=NoticeWords(names=StandInNames(), evens=evens)
+        words=NoticeWords(names=StandInNames(), evens=evens, tags=StandInTags())
     ).of([padel, squash], reader=READER)
 
     assert [(one.title, one.body) for one in pushed if one is not None] == [
@@ -164,9 +178,44 @@ async def test_a_same_level_request_says_today_s_percent_between_the_two() -> No
 
 async def test_no_percent_is_asked_for_a_list_without_a_same_level_request() -> None:
     evens = StandInEvens()
+    tags = StandInTags()
 
-    await NoticeWords(names=StandInNames(), evens=evens).of(
+    await NoticeWords(names=StandInNames(), evens=evens, tags=tags).of(
         [a_card_that_needs_only_you(gathered=0)], reader=READER
     )
 
     assert evens.asked == []
+    assert tags.asked == []
+
+
+def a_same_vibe_request(requester: UUID) -> RecordedNotice:
+    return replace(
+        a_same_level_request(Sport.PADEL),
+        notice_id=uuid4(),
+        sport=None,
+        people=(requester,),
+        reason=NoticeReason.FROM_SAME_VIBE.value,
+    )
+
+
+async def test_a_same_vibe_request_counts_today_s_tags_in_common() -> None:
+    """The words §31.10: *3 things in common*, *1 thing in common*, or *Found
+    you through your tags* once none is shared — counted for the notice's own
+    reader, once for the whole list (#795)."""
+
+    ola, kuba, ewa = uuid4(), uuid4(), uuid4()
+    tags = StandInTags(ola=ola, kuba=kuba)
+
+    pushed = await NoticePushes(
+        words=NoticeWords(names=StandInNames(), evens=StandInEvens(), tags=tags)
+    ).of(
+        [a_same_vibe_request(one) for one in (ola, kuba, ewa)],
+        reader=READER,
+    )
+
+    assert [one.body for one in pushed if one is not None] == [
+        "3 things in common",
+        "1 thing in common",
+        "Found you through your tags",
+    ]
+    assert tags.asked == [(READER, {ola, kuba, ewa})]

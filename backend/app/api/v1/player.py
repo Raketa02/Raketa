@@ -22,6 +22,7 @@ from app.modules.conversations.presentation.routes import (
 from app.modules.discovery.presentation.routes import (
     new_in_raketa_router,
     same_level_router,
+    same_vibe_router,
 )
 from app.modules.friends.presentation.link_routes import (
     router as friend_link_router,
@@ -109,6 +110,7 @@ player_api_router.include_router(join_search_router)
 player_api_router.include_router(hottest_groups_router)
 player_api_router.include_router(new_in_raketa_router)
 player_api_router.include_router(same_level_router)
+player_api_router.include_router(same_vibe_router)
 player_api_router.include_router(invitations_router)
 player_api_router.include_router(administrator_router)
 player_api_router.include_router(administrator_groups_router)

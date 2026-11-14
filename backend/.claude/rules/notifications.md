@@ -335,7 +335,12 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   (`ForecastPercentsEven`: the matcher's `forecast_the_sides` over rating's estimates, one a
   side; `notification_demands.py`'s eleventh row), asked once for every such row by
   `NoticeWords.of(…, reader=)` at push time and on every read — or *Found you at your padel
-  level* once either holds no level there, #794), and the person is `people[0]`
+  level* once either holds no level there, #794; one from Same vibe names neither, `reason`
+  `FROM_SAME_VIBE`, and reads *6 things in common* — *1 thing in common* — today's count
+  through Notifications' own **`TagsInCommon`** (`ProfileTagsInCommon`: the Player profile's
+  tags, live; `notification_demands.py`'s twelfth row), asked once for every such row the same
+  way, or *Found you through your tags* once none is shared, #795), and the person is
+  `people[0]`
   — `player_id` on the wire (`NoticeSchema.player_id`) and in the push data. Words from
   `words.py`'s `words_about_no_game(SaidOfNoGame)`, the group's name read through
   `Names.of_groups`. `FRIEND_REQUEST` is told **once per request, only while its card is on the

@@ -52,6 +52,10 @@ class RequestOrigin(StrEnum):
     #: padel · 91% even* on their Home, worked out when it is read. Names no
     #: group.
     SAME_LEVEL = "SAME_LEVEL"
+    #: Home's *Same vibe players* row, or a record opened from it (#795;
+    #: ``docs/adr/0204`` §9) — *6 things in common* on their Home, counted when
+    #: it is read. Names no group and no sport.
+    SAME_VIBE = "SAME_VIBE"
 
 
 class HowFriendsWereMade(StrEnum):

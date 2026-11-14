@@ -5245,6 +5245,138 @@
         }
       }
     },
+    "/api/v1/same-vibe": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Home's Same vibe players row",
+        "description": "The players whose Social tags overlap yours, most in common first \u2014 ties to fewer of their tags you don't hold, then the player id \u2014 each with the vibe %, 1 \u2212 \u00bd\u207f for n shared tags. Every tag counts the same, and skill plays no part, so a player with no level sees it too. Ten: fresh good matches first (2 shared tags or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, 1-tag matches \u2014 in the same order. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_vibe_api_v1_same_vibe_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameVibeResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/same-vibe/all": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Same vibe's See all",
+        "description": "Everybody who shares a Social tag with you, most in common first, friends where they fall, in pages of 20 \u2014 with `sport`, only those holding a level in it \u2014 and the sports at least one of them holds a level in. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_vibe_page_api_v1_same_vibe_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep only the players holding a level in this sport.",
+              "title": "Sport"
+            },
+            "description": "Keep only the players holding a level in this sport."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 players behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 players behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameVibePageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_same_vibe_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invitations/claim": {
       "post": {
         "tags": [
@@ -9243,7 +9375,7 @@
           },
           "made_from": {
             "$ref": "#/components/schemas/AskedFrom",
-            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it \u2014 `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it \u2014 `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel \u00b7 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there."
+            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it \u2014 `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it \u2014 `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel \u00b7 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there. From Home's **Same vibe players** row, or a record opened from it \u2014 `SAME_VIBE` (#795): their card and notice read *6 things in common* (*1 thing in common*), counted when read, or *Found you through your tags* once you share none."
           },
           "group_id": {
             "anyOf": [
@@ -9256,7 +9388,7 @@
               }
             ],
             "title": "Group Id",
-            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, `NEW_PLAYERS` and `SAME_LEVEL`, whose screens show no group."
+            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, `NEW_PLAYERS`, `SAME_LEVEL` and `SAME_VIBE`, whose screens show no group."
           },
           "sport": {
             "anyOf": [
@@ -9267,7 +9399,7 @@
                 "type": "null"
               }
             ],
-            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS`, whose line names no sport. **Required with `RANKING`** \u2014 it is the ranking the card names \u2014 **and with `SAME_LEVEL`**: it is the sport their line compares."
+            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS` and `SAME_VIBE`, whose lines name no sport. **Required with `RANKING`** \u2014 it is the ranking the card names \u2014 **and with `SAME_LEVEL`**: it is the sport their line compares."
           }
         },
         "type": "object",
@@ -9285,7 +9417,8 @@
           "RESULT",
           "RANKING",
           "NEW_PLAYERS",
-          "SAME_LEVEL"
+          "SAME_LEVEL",
+          "SAME_VIBE"
         ],
         "title": "AskedFrom",
         "description": "The screen a request is asked from. **Not a link**: a request by link is\nmade by opening the link, never sent here."
@@ -13636,6 +13769,11 @@
             "title": "From Same Level",
             "description": "Made from Home's *Same competitive level players* row, or a record opened from it, in `sport` (#794): draw *Your level in padel \u00b7 91% even* \u2014 `percent_even` \u2014 in place of the group line, or *Found you at your padel level* when `percent_even` is `null`."
           },
+          "from_same_vibe": {
+            "type": "boolean",
+            "title": "From Same Vibe",
+            "description": "Made from Home's *Same vibe players* row, or a record opened from it (#795): draw *6 things in common* \u2014 `in_common`; *1 thing in common* for one \u2014 in place of the group line, or *Found you through your tags* when `in_common` is `0`."
+          },
           "group": {
             "anyOf": [
               {
@@ -13694,6 +13832,19 @@
             ],
             "title": "Percent Even",
             "description": "With `from_same_level`: **today's** % even between you two in `sport` \u2014 the app's Forecast with one player a side, worked out on this read. `null` once either of you holds no level there, and on every other card."
+          },
+          "in_common": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Common",
+            "description": "With `from_same_vibe`: how many Social tags you two hold **today**, counted on this read \u2014 `0` once you share none. `null` on every other card."
           }
         },
         "type": "object",
@@ -13707,12 +13858,14 @@
           "from_ranking",
           "from_new_players",
           "from_same_level",
+          "from_same_vibe",
           "group",
           "sport",
           "level",
           "player_score",
           "reliability_band",
-          "percent_even"
+          "percent_even",
+          "in_common"
         ],
         "title": "HomeFriendRequestSchema",
         "description": "One card in *FRIEND REQUESTS* \u2014 *In\u00e9s wants to be your friend \u00b7 With you\nin Kazimierz crew \u00b7 Padel 3,40 \u00b7 \u2726 98*, **Not now** and **Accept**."
@@ -18113,6 +18266,139 @@
         ],
         "title": "SameLevelSportSchema",
         "description": "You and them in one sport you both hold a level in."
+      },
+      "SameVibePageResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameVibePlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 20 who share a tag with you, most in common first, friends where they fall \u2014 with `sport`, only those holding a level in it."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport at least one of them holds a level in, in the sports' own order \u2014 the pill's chips beside *All*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "next",
+          "sports"
+        ],
+        "title": "SameVibePageResponse"
+      },
+      "SameVibePlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` draws their court poster."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "vibe_percent": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 50.0,
+            "title": "Vibe Percent",
+            "description": "The **vibe %**, 1 \u2212 \u00bd\u207f for n shared tags, rounded: 50, 75, 88, 94, 97, 98 for 1\u20136 \u2014 the white circle, *98%*. Every tag counts the same, and skill plays no part."
+          },
+          "in_common": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "In Common",
+            "description": "How many tags you both hold \u2014 *6 things in common*, *1 thing in common*."
+          },
+          "shared_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shared Tags",
+            "description": "The Social tag ids you both hold, in the vocabulary's own order \u2014 the green chips, as many whole as fit in three lines, then *+2 more*. The vibe sheet reads the player's record for all their tags, photos, intro and distance."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them \u2014 the round friend button: `NONE` **+**, `SENT` **\u2026**, `FRIEND` **\u2713**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `SAME_VIBE`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "vibe_percent",
+          "in_common",
+          "shared_tags",
+          "relation"
+        ],
+        "title": "SameVibePlayerSchema",
+        "description": "One *Same vibe players* tile."
+      },
+      "SameVibeResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameVibePlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 10: **fresh** good matches first \u2014 2 shared tags or more, neither your friend nor somebody you asked; somebody who asked you counts \u2014 most in common first; then the **gaps** at the right \u2014 your friends, those you asked and 1-tag matches \u2014 in the same order. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "SameVibeResponse"
       },
       "SavedMethodSchema": {
         "properties": {

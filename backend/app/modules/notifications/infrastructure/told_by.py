@@ -18,7 +18,9 @@ own figures, never an estimate (#641). ``PlatformNames`` is a person's nickname
 (``docs/adr/0199`` §1) and a club's name. ``DirectoryGroupJoiners`` is when each
 account first joined a group it is in now, asked of the groups' own published
 directory, and ``RatingsRatedAccounts`` who holds a rating, asked of rating's
-published read — *Get your level*'s two questions (#727).
+published read — *Get your level*'s two questions (#727). ``ProfileTagsInCommon``
+is how many Social tags two players hold today, asked of the Player profile —
+a *Same vibe* request's line (#795).
 """
 
 from __future__ import annotations
@@ -67,6 +69,7 @@ from app.modules.proposals.domain.ports import (
 from app.modules.proposals.domain.proposal import Standing
 from app.modules.proposals.domain.rescues import rescuable
 from app.modules.matchmaking.domain.balance import forecast_the_sides
+from app.modules.player_profile.domain.ports import PlayerProfileRepository
 from app.modules.rating.domain.ports import RatedPlayerQuery
 from app.modules.users.domain.ports import UserRepository
 
@@ -506,3 +509,25 @@ class ForecastPercentsEven:
                 if sides is not None:
                     evens[(other, sport)] = sides[0].pct
         return evens
+
+
+@final
+class ProfileTagsInCommon:
+    """``TagsInCommon`` over the Player profile, the tags' one owner, live —
+    the notice of a request from *Same vibe* says what the two share when it is
+    read (#795)."""
+
+    def __init__(self, profiles: PlayerProfileRepository) -> None:
+        self._profiles = profiles
+
+    async def in_common(
+        self, reader: UUID, others: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        if not others:
+            return {}
+        mine = await self._tags_of(reader)
+        return {other: len(mine & await self._tags_of(other)) for other in others}
+
+    async def _tags_of(self, player_id: UUID) -> frozenset[str]:
+        profile = await self._profiles.load(player_id)
+        return frozenset(()) if profile is None else frozenset(profile.social_tags.ids)

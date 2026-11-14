@@ -34,6 +34,7 @@ from app.modules.notifications.domain.ports import (
     NoticeDirectory,
     PercentsEven,
     RecordedNotice,
+    TagsInCommon,
 )
 
 #: The longest list a phone is handed.
@@ -73,11 +74,15 @@ def recorded(given: NoticeGiven) -> RecordedNotice:
 class NoticeWords:
     """Every notice's words, the names read once for all of them — and, for a
     friend request from *Same competitive level*, today's % even between the
-    reader and the requester (#794), read once for all of those."""
+    reader and the requester (#794), and from *Same vibe*, today's tags in
+    common (#795), each read once for all of those."""
 
-    def __init__(self, *, names: Names, evens: PercentsEven) -> None:
+    def __init__(
+        self, *, names: Names, evens: PercentsEven, tags: TagsInCommon
+    ) -> None:
         self._names = names
         self._evens = evens
+        self._tags = tags
 
     async def of(
         self, notices: Sequence[RecordedNotice], *, reader: UUID
@@ -107,8 +112,22 @@ class NoticeWords:
             and (person := notice.person_named) is not None
         }
         evens = await self._evens.between(reader, compared) if compared else {}
+        alike = {
+            person
+            for notice in notices
+            if notice.reason == NoticeReason.FROM_SAME_VIBE
+            and (person := notice.person_named) is not None
+        }
+        in_common = await self._tags.in_common(reader, alike) if alike else {}
         return [
-            _drawn(notice, people=people, clubs=clubs, groups=groups, evens=evens)
+            _drawn(
+                notice,
+                people=people,
+                clubs=clubs,
+                groups=groups,
+                evens=evens,
+                in_common=in_common,
+            )
             for notice in notices
         ]
 
@@ -120,6 +139,7 @@ def _drawn(
     clubs: Mapping[UUID, str],
     groups: Mapping[UUID, str],
     evens: Mapping[tuple[UUID, Sport], int],
+    in_common: Mapping[UUID, int],
 ) -> Words:
     """One notice's words — from its kind and the person it names when it is
     about no game (*Get your level*, #727; a friend's two, #745), else from the
@@ -140,6 +160,11 @@ def _drawn(
                     None
                     if notice.person_named is None or notice.sport is None
                     else evens.get((notice.person_named, notice.sport))
+                ),
+                in_common=(
+                    None
+                    if notice.person_named is None
+                    else in_common.get(notice.person_named)
                 ),
             )
         )

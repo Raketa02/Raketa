@@ -243,6 +243,13 @@ from app.seeds.same_level import (
     same_level_lines,
     write_same_level,
 )
+from app.seeds.same_vibe import (
+    ON_THE_ROW as VIBE_ROW,
+    SeededSameVibe,
+    assert_same_vibe,
+    same_vibe_lines,
+    write_same_vibe,
+)
 from app.seeds.new_in_raketa import (
     SeededJoiners,
     assert_new_in_raketa,
@@ -1249,6 +1256,9 @@ class SeedReport:
     #: Same competitive level's two requests, and how many fresh good matches
     #: her row held (#794). ``None`` on the same callers.
     same_level: SeededSameLevel | None = None
+    #: Same vibe's two requests, whether her six tags were set, and how many
+    #: fresh good matches her row held (#795). ``None`` on the same callers.
+    same_vibe: SeededSameVibe | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1498,6 +1508,10 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         # or befriends** (#794): she asks one player from her row and another
         # asks her from theirs. Drained by the layer itself.
         same_level = await write_same_level(session_factory, now=now, money=money)
+        # **Same vibe's two requests, and her six tags on a store from before
+        # them** (#795): she asks one player from her row and another asks her
+        # from theirs. Drained by the layer itself.
+        same_vibe = await write_same_vibe(session_factory, now=now, money=money)
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1529,11 +1543,14 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         same_level_screen, same_level = await assert_same_level(
             session_factory, settings=settings, seeded=same_level
         )
+        same_vibe_screen, same_vibe = await assert_same_vibe(
+            session_factory, settings=settings, seeded=same_vibe
+        )
         return SeedReport(
             accounts=accounts,
             members=members,
             now=now,
-            screens=(*screens, same_level_screen),
+            screens=(*screens, same_level_screen, same_vibe_screen),
             rooms=rooms,
             opinions=opinions,
             clubs=clubs,
@@ -1553,6 +1570,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             hottest_groups=hottest_groups,
             new_in_raketa=new_in_raketa,
             same_level=same_level,
+            same_vibe=same_vibe,
             photographs=photographs,
         )
     finally:
@@ -1668,6 +1686,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *new_in_raketa_lines(run_report.new_in_raketa)])
     if run_report.same_level is not None:
         lines.extend(["", *same_level_lines(run_report.same_level)])
+    if run_report.same_vibe is not None:
+        lines.extend(["", *same_vibe_lines(run_report.same_vibe)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
@@ -1701,6 +1721,17 @@ def report(run_report: SeedReport) -> list[str]:
             "as five results leave anybody, and the engine needs far more "
             "results than the seed plays to make a level sure. Fresh before "
             "gaps is walked in the API tests, not on this store."
+        )
+    if (
+        run_report.same_vibe is not None
+        and run_report.same_vibe.fresh is not None
+        and run_report.same_vibe.fresh >= VIBE_ROW
+    ):
+        costs.append(
+            "her Same vibe row is all fresh: far more than ten unconnected "
+            "players share two tags with her or more, so her friends and her "
+            "request wait in See all, where they fall, and never reach a gap. "
+            "Gaps on the row are walked in the API tests, not on this store."
         )
     if costs:
         lines.append("")

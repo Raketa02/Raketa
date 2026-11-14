@@ -31,6 +31,9 @@ from app.modules.discovery.domain.ports import Candidate
 from app.modules.discovery.infrastructure.dialect_insert import insert_into
 from app.modules.discovery.infrastructure.directory_model import DirectoryPlayerORM
 from app.modules.discovery.infrastructure.levels_model import DiscoveryLevelORM
+from app.modules.discovery.infrastructure.sqlalchemy_player_directory import (
+    may_be_on_a_row,
+)
 
 _KEPT = ("mu", "sigma", "band_name", "band_lower", "band_upper", "results")
 
@@ -94,7 +97,7 @@ class SqlAlchemyPlayerLevels:
                 DiscoveryLevelORM.player_id == DirectoryPlayerORM.player_id,
             )
             .where(
-                _may_be_on_a_row(leaving_out),
+                may_be_on_a_row(leaving_out),
                 DirectoryPlayerORM.player_id.in_(found),
                 DiscoveryLevelORM.sport.in_(sorted(one.value for one in compared_in)),
             )
@@ -129,7 +132,7 @@ class SqlAlchemyPlayerLevels:
                 exists().where(
                     DiscoveryLevelORM.sport == sport.value,
                     DiscoveryLevelORM.player_id == DirectoryPlayerORM.player_id,
-                    _may_be_on_a_row(leaving_out),
+                    may_be_on_a_row(leaving_out),
                 )
             )
             if await self._session.scalar(anybody):
@@ -173,21 +176,6 @@ def _ring(sport: Sport, mu: float, within: float | None, beyond: float | None) -
     if beyond is not None:
         conditions.append(
             or_(DiscoveryLevelORM.mu < mu - beyond, DiscoveryLevelORM.mu > mu + beyond)
-        )
-    return and_(*conditions)
-
-
-def _may_be_on_a_row(leaving_out: Collection[UUID]) -> Any:
-    """The directory's own rule, as New in Raketa's ``who_joined`` holds it."""
-
-    conditions: list[Any] = [
-        DirectoryPlayerORM.plays.is_(True),
-        DirectoryPlayerORM.open_to_new_people.is_(True),
-        DirectoryPlayerORM.nickname.is_not(None),
-    ]
-    if leaving_out:
-        conditions.append(
-            DirectoryPlayerORM.player_id.not_in(sorted(leaving_out, key=str))
         )
     return and_(*conditions)
 

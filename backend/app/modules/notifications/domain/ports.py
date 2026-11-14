@@ -406,6 +406,17 @@ class PercentsEven(Protocol):
         ...
 
 
+class TagsInCommon(Protocol):
+    async def in_common(
+        self, reader: UUID, others: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        """How many Social tags the reader and each of these hold **today** —
+        the Player profile's own, the figure *Same vibe players* counts (#795).
+        Everybody asked is answered: ``0`` once nothing is shared, and the line
+        falls back to *Found you through your tags*."""
+        ...
+
+
 class EndedHours(Protocol):
     async def ended(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
         """Every booked game, whole, whose hour ended after ``after`` and by

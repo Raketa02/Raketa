@@ -152,6 +152,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   and the Player profile), the reader's relations (`ReadersRelations`, over Friends' own read),
   blocks either way (`BlocksEitherWay`), the levels held (`LevelsHeld`, over rating's published
   read) and a face's link (`DirectoryFaces`, over the photo store — built over the settings).
+  **A request from *Same vibe* has a row in two registers** (#795): Proposals'
+  `TagsInCommon` and Notifications' `TagsInCommon` — each context's own port, each signed over
+  the Player profile (`ProfileTagsInCommon`) — how many Social tags two players hold today.
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
   `general_order_demands.py`'s over a Redis client.

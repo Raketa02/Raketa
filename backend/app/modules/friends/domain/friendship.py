@@ -81,7 +81,8 @@ class Where:
     you in the padel ranking*. **New in Raketa's names neither** (#793): its
     card reads *Found you among new players* and nothing more. **Same
     competitive level's names its sport and no group** (#794): the card reads
-    *Your level in padel · 91% even*."""
+    *Your level in padel · 91% even*. **Same vibe's names neither** (#795):
+    the card reads *6 things in common*."""
 
     made_from: RequestOrigin
     group_id: UUID | None = None
@@ -108,6 +109,11 @@ class Where:
             or (self.group_id is None and self.sport is not None),
             f"a same level request names a group, or no sport: {self!r}",
         )
+        invariant(
+            self.made_from is not RequestOrigin.SAME_VIBE
+            or (self.group_id is None and self.sport is None),
+            f"a same vibe request names a group or a sport: {self!r}",
+        )
 
     @classmethod
     def pressed_on(
@@ -116,16 +122,18 @@ class Where:
         """Where a client says a request was pressed — **the ranking's group
         dropped**, since the Rankings page shows none (#773), **New in
         Raketa's group and sport** both, since its line names neither (#793),
-        and **Same competitive level's group**, since its row shows none
-        (#794)."""
+        **Same competitive level's group**, since its row shows none (#794),
+        and **Same vibe's group and sport**, since its line names neither
+        (#795)."""
 
         if made_from in (
             RequestOrigin.RANKING,
             RequestOrigin.NEW_PLAYERS,
             RequestOrigin.SAME_LEVEL,
+            RequestOrigin.SAME_VIBE,
         ):
             group_id = None
-        if made_from is RequestOrigin.NEW_PLAYERS:
+        if made_from in (RequestOrigin.NEW_PLAYERS, RequestOrigin.SAME_VIBE):
             sport = None
         return cls(made_from=made_from, group_id=group_id, sport=sport)
 

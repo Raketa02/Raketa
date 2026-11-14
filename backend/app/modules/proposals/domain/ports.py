@@ -468,8 +468,8 @@ class HomeFriendRequest:
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
     you to Raketa* for a link's, *Found you in the padel ranking* for the
     ranking's (#773), *Found you among new players* for New in Raketa's
-    (#793), or *Your level in padel · 91% even* for Same competitive level's
-    (#794)."""
+    (#793), *Your level in padel · 91% even* for Same competitive level's
+    (#794), or *6 things in common* for Same vibe's (#795)."""
 
     requester_id: UUID
     nickname: str
@@ -486,6 +486,9 @@ class HomeFriendRequest:
     #: Made from Home's *Same competitive level players* row, or a record
     #: opened from it, in ``sport`` (#794).
     from_same_level: bool
+    #: Made from Home's *Same vibe players* row, or a record opened from it
+    #: (#795): *6 things in common*.
+    from_same_vibe: bool
     #: The group it was asked from, **while both are in it**.
     group_id: UUID | None
     group_name: str | None
@@ -500,6 +503,24 @@ class HomeFriendRequest:
     #: player a side, worked out on this read — ``None`` once either holds no
     #: level there (*Found you at your padel level*), and for any other.
     percent_even: int | None = None
+    #: For a request from *Same vibe*: how many Social tags the two hold
+    #: **today** — ``0`` once they share none (*Found you through your tags*)
+    #: — and ``None`` for any other.
+    in_common: int | None = None
+
+
+@runtime_checkable
+class TagsInCommon(Protocol):
+    """How many Social tags the reader and each of these hold **now** — the
+    Player profile's own, the tags' one owner — for a request from *Same vibe
+    players*, whose line is counted when its card is read (#795)."""
+
+    async def in_common(
+        self, reader: UUID, others: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        """Everybody asked is answered: ``0`` where nothing is shared any more,
+        or where either holds no profile."""
+        ...
 
 
 @runtime_checkable
