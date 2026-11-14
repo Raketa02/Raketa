@@ -19,6 +19,12 @@ export function pageSport(choice: SeeAllSport): Sport | undefined {
   return choice === 'all' ? undefined : choice;
 }
 
+/** **Which page of See all to read** — a sport, or every one, and the cursor it is read after. */
+export interface SeeAllAsk {
+  readonly sport: Sport | undefined;
+  readonly after: string | undefined;
+}
+
 /** **One page of See all** — up to 20 people, the cursor behind them, and the pill's sports. */
 export interface SeeAllPage<Person> {
   readonly people: readonly Person[];

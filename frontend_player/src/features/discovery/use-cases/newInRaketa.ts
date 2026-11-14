@@ -4,12 +4,10 @@
  * how many are the server's (the Home rows mechanics §7), and nothing here judges them again.
  */
 
-import { toWireSport } from '@/features/onboarding/types';
-import type { Sport } from '@/shared/vocabulary/sport';
-
 import { getNewInRaketa, getNewInRaketaPage, type Cancellable } from '../api/discoveryApi';
 import type { Joiner, JoinerPage } from '../domain/joiner';
-import { toJoiner, toJoinerPage } from '../mappers/discoveryMappers';
+import type { SeeAllAsk } from '../domain/seeAll';
+import { toJoiner, toJoinerPage, toPageAsked } from '../mappers/discoveryMappers';
 
 /** Home's row — up to 10, in the server's order. */
 export function readNewInRaketa(options: Cancellable = {}): Promise<readonly Joiner[]> {
@@ -18,14 +16,8 @@ export function readNewInRaketa(options: Cancellable = {}): Promise<readonly Joi
 
 /** One page of See all — with a sport, only those holding a level in it. */
 export function readNewInRaketaPage(
-  page: { readonly sport: Sport | undefined; readonly after: string | undefined },
+  page: SeeAllAsk,
   options: Cancellable = {},
 ): Promise<JoinerPage> {
-  return getNewInRaketaPage(
-    {
-      ...(page.sport === undefined ? {} : { sport: toWireSport(page.sport) }),
-      ...(page.after === undefined ? {} : { after: page.after }),
-    },
-    options,
-  ).then(toJoinerPage);
+  return getNewInRaketaPage(toPageAsked(page), options).then(toJoinerPage);
 }

@@ -75,12 +75,14 @@ const tomeksRequest: Wire['HomeFriendRequestSchema'] = {
   from_ranking: false,
   from_new_players: false,
   from_same_level: false,
+  from_same_vibe: false,
   group: null,
   sport: null,
   level: null,
   player_score: 96,
   reliability_band: 'VERY_HIGH',
   percent_even: null,
+  in_common: null,
 };
 
 /**

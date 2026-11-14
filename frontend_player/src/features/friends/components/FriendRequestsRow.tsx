@@ -78,6 +78,7 @@ function whereFound(request: HomeFriendRequest): WhereFound | undefined {
   switch (found.kind) {
     case 'link':
     case 'newInRaketa':
+    case 'sameVibe':
       return found;
     case 'ranking':
       return request.sport === undefined

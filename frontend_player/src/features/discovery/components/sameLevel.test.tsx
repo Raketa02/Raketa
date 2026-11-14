@@ -482,12 +482,14 @@ describe('Home’s request card', () => {
     from_ranking: false,
     from_new_players: false,
     from_same_level: true,
+    from_same_vibe: false,
     group: null,
     sport: 'PADEL',
     level: 2.44,
     player_score: 100,
     reliability_band: 'VERY_HIGH',
     percent_even: 91,
+    in_common: null,
     ...over,
   });
 

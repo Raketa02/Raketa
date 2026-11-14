@@ -61,6 +61,8 @@ const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   'new-in-raketa': 'home',
   // Same competitive level's See all (#802; the Home rows screens §1).
   'same-level': 'home',
+  // Same vibe's See all (#803).
+  'same-vibe': 'home',
 };
 
 /**

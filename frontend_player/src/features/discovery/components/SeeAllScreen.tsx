@@ -19,7 +19,15 @@
 
 import { router } from 'expo-router';
 import { useState, type ReactElement, type ReactNode } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import { ReadFailure } from '@/features/groups/types';
 import { offlineMessage } from '@/shared/errors';
@@ -40,6 +48,9 @@ import type { SeeAllList } from '../hooks/useSeeAllPages';
 /** How near the end the next page is asked for — half a screen of cards. */
 const NEAR_THE_END = 0.5;
 
+/** 9 between cards and tiles, both ways (Appendix B). */
+const COLUMN_GAP = theme.space.sm;
+
 export interface SeeAllScreenProps<Person extends { readonly playerId: string }> {
   readonly title: string;
   readonly backLabel: string;
@@ -47,8 +58,8 @@ export interface SeeAllScreenProps<Person extends { readonly playerId: string }>
   readonly choice: SeeAllSport;
   readonly onPick: (choice: SeeAllSport) => void;
   readonly list: SeeAllList<Person>;
-  /** One person, as the row draws them here. */
-  readonly renderPerson: (person: Person) => ReactElement;
+  /** One person, as the row draws them here, at the width of one column. */
+  readonly renderPerson: (person: Person, width: number) => ReactElement;
   /** How many to a line — one, or the grid's columns. */
   readonly columns?: number;
   /** The empty list's line — for *All*, or the chosen sport. */
@@ -120,6 +131,9 @@ function Body<Person extends { readonly playerId: string }>({
 }: BodyProps<Person>) {
   // A pull is the pull's own state, never the query's: a background read spins nothing.
   const [pulling, setPulling] = useState(false);
+  // One column of the content width, the gap between columns taken out first.
+  const { width: screen } = useWindowDimensions();
+  const column = (screen - 2 * theme.size.gutter - COLUMN_GAP * (columns - 1)) / columns;
 
   if (list.people === undefined) {
     return (
@@ -149,7 +163,7 @@ function Body<Person extends { readonly playerId: string }>({
       numColumns={columns}
       {...(columns > 1 ? { columnWrapperStyle: s.columns } : {})}
       contentContainerStyle={s.content}
-      renderItem={({ item }) => renderPerson(item)}
+      renderItem={({ item }) => renderPerson(item, column)}
       ListEmptyComponent={
         <Text testID={`${testID}-empty`} style={s.empty}>
           {emptyLine}
@@ -180,11 +194,11 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   standing: { paddingHorizontal: theme.size.gutter, paddingTop: theme.space.lg },
   // 9 between cards and tiles, both ways; 15 at the gutter (Appendix B).
-  columns: { gap: theme.space.sm },
+  columns: { gap: COLUMN_GAP },
   content: {
     paddingHorizontal: theme.size.gutter,
     paddingBottom: theme.space.xxl,
-    gap: theme.space.sm,
+    gap: COLUMN_GAP,
   },
   empty: {
     ...theme.type.rlLabel,

@@ -37,6 +37,7 @@ import NoticesRoute from '@/app/(app)/(tabs)/notices';
 import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
 import SameLevelRoute from '@/app/(app)/(tabs)/same-level';
+import SameVibeRoute from '@/app/(app)/(tabs)/same-vibe';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
@@ -168,6 +169,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/rankings': RankingsRoute,
   '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
   '(app)/(tabs)/same-level': SameLevelRoute,
+  '(app)/(tabs)/same-vibe': SameVibeRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -845,6 +847,20 @@ export function stubSameLevel(
   );
 }
 
+/** Home's Same vibe (#803) — nobody unless the suite says, so the row is hidden. */
+export const SAME_VIBE_PATH = '/api/v1/same-vibe';
+/** Same vibe's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const SAME_VIBE_ALL_PATH = '/api/v1/same-vibe/all';
+
+export function stubSameVibe(
+  transport: Transport,
+  players: readonly Wire['SameVibePlayerSchema'][] = [],
+) {
+  transport.on('GET', SAME_VIBE_PATH, () =>
+    json<Wire['SameVibeResponse']>({ players: [...players] }),
+  );
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -1034,6 +1050,7 @@ export function stubGate(
   stubHottestGroups(transport);
   stubNewInRaketa(transport);
   stubSameLevel(transport);
+  stubSameVibe(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);

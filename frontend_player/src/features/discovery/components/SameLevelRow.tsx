@@ -19,12 +19,13 @@ import { useState } from 'react';
 import { HomeRow, HomeRowRail } from '@/shared/ui';
 
 import { foundAtSameLevel, type SameLevelPlayer } from '../domain/sameLevel';
+import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useReaderFace } from '../hooks/useReaderFace';
 import { useSameLevel } from '../hooks/useSameLevel';
 
 import { DISCOVERY_COPY } from './discoveryCopy';
 import { SAME_LEVEL_ROUTE } from './discoveryRoutes';
-import { ComparingSheet, useComparing } from './ComparingSheet';
+import { ComparingSheet } from './ComparingSheet';
 import { RowRecord, type RecordOpened } from './RowRecord';
 import { SameLevelCard } from './SameLevelCard';
 
@@ -37,7 +38,7 @@ export function SameLevelRow() {
 function SameLevel({ players }: { readonly players: readonly SameLevelPlayer[] }) {
   const COPY = DISCOVERY_COPY.sameLevel;
   const you = useReaderFace();
-  const comparing = useComparing(players);
+  const comparing = usePersonSheet(players);
   const [reading, setReading] = useState<RecordOpened>();
 
   return (

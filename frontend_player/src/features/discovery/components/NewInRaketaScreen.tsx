@@ -19,9 +19,6 @@
  */
 
 import { useState } from 'react';
-import { useWindowDimensions } from 'react-native';
-
-import { theme } from '@/shared/ui';
 
 import { FOUND_AMONG_NEW_PLAYERS, type Joiner } from '../domain/joiner';
 import type { SeeAllSport } from '../domain/seeAll';
@@ -40,8 +37,6 @@ export function NewInRaketaScreen() {
   const [choice, setChoice] = useState<SeeAllSport>('all');
   const [reading, setReading] = useState<RecordOpened>();
   const grid = useNewInRaketaPage(choice);
-  const { width: screen } = useWindowDimensions();
-  const tile = (screen - 2 * theme.size.gutter - theme.space.sm * (COLUMNS - 1)) / COLUMNS;
 
   return (
     <SeeAllScreen<Joiner>
@@ -52,10 +47,10 @@ export function NewInRaketaScreen() {
       onPick={setChoice}
       list={grid}
       columns={COLUMNS}
-      renderPerson={(joiner) => (
+      renderPerson={(joiner, width) => (
         <JoinerTile
           joiner={joiner}
-          width={tile}
+          width={width}
           layout="grid"
           onOpen={() => setReading({ playerId: joiner.playerId, foundIn: FOUND_AMONG_NEW_PLAYERS })}
         />

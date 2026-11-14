@@ -38,12 +38,13 @@ export type AskedWhere =
  * - **New in Raketa** names nothing else: *Found you among new players*, whatever group or sport the
  *   two share;
  * - **Same competitive level** (#802) names **the card's sport**, the one its line compares — *Your
- *   level in padel · 91% even* — and the server refuses one without it, so the type carries it.
- *
- * Same vibe (#803) adds its own here.
+ *   level in padel · 91% even* — and the server refuses one without it, so the type carries it;
+ * - **Same vibe** (#803) names nothing else: *6 things in common*, counted when their card is read.
  */
 export type FoundIn =
-  { readonly from: 'NEW_PLAYERS' } | { readonly from: 'SAME_LEVEL'; readonly sport: Sport };
+  | { readonly from: 'NEW_PLAYERS' }
+  | { readonly from: 'SAME_LEVEL'; readonly sport: Sport }
+  | { readonly from: 'SAME_VIBE' };
 
 /**
  * **The right-hand end of a Members row** (the screens §1; friends 1, 2): a pill that acts, or a tag

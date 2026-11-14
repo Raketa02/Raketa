@@ -435,6 +435,16 @@ module imports no feature). `FriendRequestsRow`'s `whereFound` names the sport; 
 sport this build cannot name draws the chip alone, as the ranking's did. A fifth origin (#803's Same
 vibe) is one arm in each and a `switch` that fails to compile without its words.
 
+**A request found through the tags** ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
+§31.10) — that fifth origin. `AskedFrom` gained `SAME_VIBE` and `FoundIn` the arm `{ from: 'SAME_VIBE'
+}`, naming **neither a group nor a sport** (`toAskRequest` sends neither, as New in Raketa's): the
+tile's round button, the vibe sheet's worded one and the record the sheet's face opens all send it.
+`proposals`' mapper reads the wire's fifth flag, `from_same_vibe`, with `in_common` — **today's** count,
+counted on the read — into `foundBy` `{ kind: 'sameVibe', inCommon }`, and the card reads _6 things in
+common_, _1 thing in common_, or _Found you through your tags_ at nought. The count's words are
+`shared/vocabulary`'s `thingsInCommon`, which the tile and the sheet say too — one spelling for two
+features, beside the tag row's own _you too_.
+
 **Every friends write re-reads every read that lists people** (#801; `rereadPeopleLists`, the Home
 rows mechanics §13). Home's people rows, their See all and Hottest groups declare `LISTS_PEOPLE`, and
 `settle`, `rereadHomeToo` and `rereadIfMoved` re-read whatever did — from any surface, a record Rankings

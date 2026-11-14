@@ -62,6 +62,16 @@ describe('the request card’s words (§29.2)', () => {
     );
   });
 
+  it('reads today’s things in common for a request from Same vibe, or its fallback once none is shared (#803; §31.10)', () => {
+    expect(
+      whereLine({ foundBy: { kind: 'sameVibe', inCommon: 6 }, group: { name: 'Kazimierz crew' } }),
+    ).toBe('6 things in common');
+    expect(whereLine({ foundBy: { kind: 'sameVibe', inCommon: 1 } })).toBe('1 thing in common');
+    expect(whereLine({ foundBy: { kind: 'sameVibe', inCommon: 0 } })).toBe(
+      'Found you through your tags',
+    );
+  });
+
   it('says only what the wire named — a group they left, a sport they hold no Level in', () => {
     expect(whereLine({ sportName: 'Padel' })).toBe('Padel ·');
     expect(whereLine({ group: { name: 'Kazimierz crew' } })).toBe('With you in Kazimierz crew ·');

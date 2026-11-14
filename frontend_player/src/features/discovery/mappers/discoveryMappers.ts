@@ -1,21 +1,25 @@
 /**
  * **Discovery's wire, read** — New in Raketa ([#801](https://github.com/Raketa02/Raketa/issues/801);
- * #793's `NewInRaketaPlayerSchema`) and Same competitive level
- * ([#802](https://github.com/Raketa02/Raketa/issues/802); #794's `SameLevelPlayerSchema`). The wire
- * boundary: the generated types stop here and in `api/`.
+ * #793's `NewInRaketaPlayerSchema`), Same competitive level
+ * ([#802](https://github.com/Raketa02/Raketa/issues/802); #794's `SameLevelPlayerSchema`) and Same
+ * vibe ([#803](https://github.com/Raketa02/Raketa/issues/803); #795's `SameVibePlayerSchema`). The
+ * wire boundary: the generated types stop here and in `api/`.
  *
  * **A sport this build cannot name is left off with its level**, as every list of sports in the app
  * leaves one off: the tile still says who joined and when. The relation is `friends`' own four, held
  * equal to the wire's in that feature's `wireVocabulary.ts`.
  */
 
-import { toSport } from '@/features/onboarding/types';
+import { toSport, toWireSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
+import { toSocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Joiner, JoinerPage, JoinerSport } from '../domain/joiner';
 import type { LevelComparison, SameLevelPlayer } from '../domain/sameLevel';
-import type { SeeAllPage } from '../domain/seeAll';
+import type { SameVibePlayer } from '../domain/sameVibe';
+import type { PageAsked } from '../api/discoveryApi';
+import type { SeeAllAsk, SeeAllPage } from '../domain/seeAll';
 
 type Schemas = components['schemas'];
 
@@ -94,6 +98,39 @@ function toComparison(wire: Schemas['SameLevelSportSchema']): LevelComparison | 
     percentEven: wire.percent_even,
     levelGap: wire.level_gap,
     yourBand: wire.your_band.name,
+  };
+}
+
+/**
+ * **A Same vibe tile** (#803; #795's `SameVibePlayerSchema`). **A shared tag this build cannot name is
+ * left off the chips** — a chip with no words is no chip — and the count stays the server's: *3 things
+ * in common* is still true of the two of them.
+ */
+export function toSameVibePlayer(wire: Schemas['SameVibePlayerSchema']): SameVibePlayer {
+  return {
+    playerId: wire.player_id,
+    nickname: wire.nickname,
+    ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
+    vibePercent: wire.vibe_percent,
+    inCommon: wire.in_common,
+    sharedTags: wire.shared_tags.flatMap((served) => toSocialTagId(served) ?? []),
+    relation: wire.relation,
+  };
+}
+
+export function toSameVibePage(wire: Schemas['SameVibePageResponse']): SeeAllPage<SameVibePlayer> {
+  return {
+    people: wire.players.map(toSameVibePlayer),
+    ...(wire.next === null ? {} : { next: wire.next }),
+    sports: toSports(wire.sports),
+  };
+}
+
+/** **A See all page, as the route asks for it** — `sport` and `after` only where there is one. */
+export function toPageAsked(page: SeeAllAsk): PageAsked {
+  return {
+    ...(page.sport === undefined ? {} : { sport: toWireSport(page.sport) }),
+    ...(page.after === undefined ? {} : { after: page.after }),
   };
 }
 

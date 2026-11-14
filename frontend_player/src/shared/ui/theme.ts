@@ -1494,6 +1494,11 @@ const size = {
   /** THE SAME LEVEL CARD (#802; home rows 7, 8, 10.3; 7.34) — a face 44 on either side, MEASURED (120
    *  pixels at 2,75); the % between them at `num.xl`, the game card's figure. */
   sameLevel: { face: 44 },
+  /** THE SAME VIBE TILE (#803; home rows 20, 22–22.3, 24; 7.35) — its face and the vibe %'s white
+   *  circle, MEASURED off the mocks at 1×: on Home's row 120 and 95 pixels at 2,92 to the point (41
+   *  and 33), in See all's two columns 60 and 48 at 1,74 (34 and 28), onto the 3pt grid. The vibe
+   *  sheet's face is the row's. */
+  sameVibe: { face: { row: 42, grid: 36 }, percent: { row: 33, grid: 30 } },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it

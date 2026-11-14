@@ -11,6 +11,10 @@ import {
   sportLevelLine,
   sportsCount,
   tileLabel,
+  moreTags,
+  nobodySharesYourTagsIn,
+  vibeTileLabel,
+  vibeTitle,
 } from './discoveryCopy';
 
 describe('the Joined ladder’s words (§31.7)', () => {
@@ -84,5 +88,33 @@ describe('Same competitive level’s words (§31.5, §31.6)', () => {
     expect(pairingLabel(PADEL, 'zofia.b')).toBe(
       '91% even in padel, You 2,71, zofia.b 2,69, 0,02 below you',
     );
+  });
+});
+
+describe('Same vibe’s words (§31.8)', () => {
+  it('counts the tags a tile had no room for', () => {
+    expect(moreTags(2)).toBe('+2 more');
+    expect(moreTags(1)).toBe('+1 more');
+  });
+
+  it('titles the sheet You and the nickname', () => {
+    expect(vibeTitle('karol.t')).toBe('You and karol.t');
+  });
+
+  it('speaks a tile in the order drawn: who, the %, the count, the tags they share (a call)', () => {
+    expect(
+      vibeTileLabel({
+        playerId: 'p-1',
+        nickname: 'karol.t',
+        vibePercent: 75,
+        inCommon: 2,
+        sharedTags: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+        relation: 'NONE',
+      }),
+    ).toBe('karol.t, 75%, 2 things in common: Plays to win, Here to improve');
+  });
+
+  it('says a See all sport that leaves nobody (a call)', () => {
+    expect(nobodySharesYourTagsIn('squash')).toBe('Nobody who shares your tags plays squash yet');
   });
 });

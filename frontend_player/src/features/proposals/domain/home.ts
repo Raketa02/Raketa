@@ -223,6 +223,7 @@ export function withoutLevelAsksIn(home: Home, sports: readonly Sport[]): Home {
  * | `ranking` | *Found you in the padel ranking* — the reader's record on the Rankings page, `sport`'s (#779) |
  * | `newInRaketa` | *Found you among new players* — Home's New in Raketa, or a record it opened (#801) |
  * | `sameLevel` | *Your level in padel · 91% even* — Home's Same competitive level, or a record it opened, in `sport` (#802): **today's** %, absent once either holds no level there — *Found you at your padel level* |
+ * | `sameVibe` | *6 things in common* — Home's Same vibe, or a record or vibe sheet it opened (#803): **today's** count, `0` once they share none — *Found you through your tags* |
  *
  * Absent for a request asked from a group's Members, a record or a result: the group line.
  */
@@ -230,7 +231,8 @@ export type RequestFoundBy =
   | { readonly kind: 'link' }
   | { readonly kind: 'ranking' }
   | { readonly kind: 'newInRaketa' }
-  | { readonly kind: 'sameLevel'; readonly percentEven?: number };
+  | { readonly kind: 'sameLevel'; readonly percentEven?: number }
+  | { readonly kind: 'sameVibe'; readonly inCommon: number };
 
 /**
  * **One friend request on Home** (friends 5; the words §29.2): *Inés wants to be your friend · With

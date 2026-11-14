@@ -8,6 +8,15 @@
  * A long tag truncates rather than breaking the row it sits in, because a row that reflows
  * because of a status is a row whose layout depends on server copy.
  *
+ * ## `more` is the eighth, and it is a **count**, not a state
+ *
+ * *+2 more* on a Same vibe tile ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows
+ * screens §6.2): the tags a tile had no room for, drawn in the last place its lines leave. **A dashed
+ * `line` border on no bed, its words `muted`** — the mocks' (home rows 20, 22.3): it says *there is
+ * more of the same*, so it takes none of the six tones, and the dash is what tells it from the tags
+ * beside it. Its border stands **in** the padding's first point, so it is exactly as tall and as
+ * inset as every tag — a line of chips stays one height, and a width measured is a width drawn.
+ *
  * ## `volt` is the seventh, and it is a **fill** rather than a soft
  *
  * The other six are the palette's soft/ink pairs, computed against each other. Volt has no
@@ -30,7 +39,17 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from './theme';
 
-export type TagVariant = 'base' | 'ok' | 'hot' | 'warn' | 'bad' | 'volt' | 'onDark';
+/** The *more* tag's dash — `line`'s width on a card, taken out of the padding so the box keeps its size. */
+const DASH = 1;
+
+/**
+ * **One tag's height** — its line and its padding, every variant alike (`more`'s dash stands inside
+ * the padding). For a surface that keeps room for lines of tags before it has laid any out: Same vibe's
+ * three lines of chips (#803).
+ */
+export const TAG_HEIGHT = theme.type.tag.lineHeight + 2 * theme.space.xxs;
+
+export type TagVariant = 'base' | 'ok' | 'hot' | 'warn' | 'bad' | 'volt' | 'onDark' | 'more';
 
 export interface TagProps {
   readonly label: string;
@@ -101,6 +120,14 @@ const SURFACE = StyleSheet.create({
   // The one background that is a base rather than a soft — see the module note.
   volt: { backgroundColor: theme.color.volt },
   onDark: { backgroundColor: theme.color.onDarkTag },
+  // No bed: a dash in `line`, inside the padding's first point (see the module note).
+  more: {
+    borderWidth: DASH,
+    borderStyle: 'dashed',
+    borderColor: theme.color.line,
+    paddingVertical: theme.space.xxs - DASH,
+    paddingHorizontal: theme.space.xs - DASH,
+  },
 });
 
 const LABEL = StyleSheet.create({
@@ -112,4 +139,5 @@ const LABEL = StyleSheet.create({
   // `ink` and never white: Rule C's arithmetic on volt runs the other way round (13.96:1).
   volt: { color: theme.color.ink },
   onDark: { color: theme.color.surface },
+  more: { color: theme.color.muted },
 });

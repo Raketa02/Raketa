@@ -467,6 +467,26 @@ header, the bleed to the sheet's edge and the snap.
 
 **A record a Home row opened keeps the row** ([#801](https://github.com/Raketa02/Raketa/issues/801);
 the Home rows mechanics §12). **`foundIn`** is the row — a request asked at the foot is then _found
-among new players_, or _at the same level_ in the card's sport (#802; `friends`' `recordAskedWhere`);
+among new players_, _at the same level_ in the card's sport (#802), or _through the tags_ (#803, from
+the vibe sheet's face; `friends`' `recordAskedWhere`);
 the people rows' faces hand it (`discovery`'s `RowRecord`). The row under the sheet moves on its own: a friend act or a block at the foot
 re-reads every read that lists people (`LISTS_PEOPLE`).
+
+**The vibe sheet reads the record through three of this feature's own parts** ([#803](https://github.com/Raketa02/Raketa/issues/803);
+the Home rows screens §6.3, the mechanics §8.5). Discovery's vibe sheet _reads the record_ and shows
+what it shows — every photo, the intro, every tag — so it opens only where the record would and is
+current as the record is. Rather than a second spelling of any of it, the record's own drawing crosses
+`types.ts`: **`RecordRead`** — the read in every state, the skeleton, _This record isn't available_
+(winning over a record already drawn) and the recovery sentence with _Try again_, handing the caller
+the record; **`RecordTags`** — the tag row as one element, `recordTagRow` in the caller's overlap and
+`socialTagsLabel` its name, so the sheet's shared tags read _· you too_ as the record's do; and
+**`RecordIntro`** — the intro in the drawing's marks, upright (no italic Archivo is loaded, and a
+`fontStyle` would be synthesised on iOS and dropped on Android; the ticket's _italics_ meets the
+screens' _as the record draws it_, and the record's decision stands — a call for the product owner).
+The sheet itself draws `RecordStanding` and `RecordTags` through the same two files, and the header
+`RecordIntro`, so the refactor moved code and changed nothing on the record (`recordCard`,
+`recordDetails` and the sheet's suites stand as they were). **The record carries no distance**: its
+wire has no `distance_km`, so a record opened from a Home row writes no identity line, and the sheet's
+row reads _6 things in common_ alone, never _· In your area · 0,6 km_. The reader's own area is known
+(their own record's `area_code`), but no form of the line writes _In your area_ without the kilometres.
+#795's contract says the sheet reads the distance off the record: a backend ask, for the product owner.

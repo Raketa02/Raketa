@@ -16,6 +16,18 @@
 export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/PlayerRecordSheet';
 
 /**
+ * **The record, read by a surface that is not the record sheet** — Discovery's **vibe sheet**
+ * ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens §6.3), which *reads
+ * the record* and shows what it shows: the read in every state, refusal included (`RecordRead`); the
+ * tag row with the shared ones green and *· you too* (`RecordTags`); and the intro in its marks
+ * (`RecordIntro`). Each is the record's own drawing, so the sheet and the record never say one thing
+ * two ways.
+ */
+export { RecordRead, type RecordReadProps } from './components/RecordRead';
+export { RecordTags, type RecordTagsProps } from './components/RecordTags';
+export { RecordIntro } from './components/RecordIntro';
+
+/**
  * **Player reliability drawn as a tag**, for Members' rows in `groups` — the one surface that
  * tints the figure itself. The tint is the **served band**'s (#660, ADR-0195 §1), and so are the
  * band's words and the one narrowing of its code: a group's list and the record it opens read one

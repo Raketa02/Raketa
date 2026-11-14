@@ -18,6 +18,7 @@ import {
   socialTagGroupHeading,
   socialTagLabel,
   socialTagName,
+  thingsInCommon,
 } from './socialTagPresentation';
 import { SOCIAL_TAG_GROUP_IDS, SOCIAL_TAG_IDS } from './socialTags';
 
@@ -63,5 +64,13 @@ describe('the social tag row’s words', () => {
     // Amber's register: *watch this, reversible, not yet wrong*. Nobody has done anything
     // wrong by having different tags, so the sentence names the absence and stops there.
     expect(NO_TAGS_IN_COMMON).toBe('No tags in common');
+  });
+});
+
+describe('how many tags two players share (§31.8, §31.10)', () => {
+  it('counts things in common, one in the singular', () => {
+    expect(thingsInCommon(6)).toBe('6 things in common');
+    expect(thingsInCommon(2)).toBe('2 things in common');
+    expect(thingsInCommon(1)).toBe('1 thing in common');
   });
 });

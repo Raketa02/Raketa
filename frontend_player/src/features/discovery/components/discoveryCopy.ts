@@ -3,14 +3,30 @@
  * ([#801](https://github.com/Raketa02/Raketa/issues/801); the words
  * [§31.1 and §31.7](../../../../../docs/specs/matchmaking/the-words.md#317-new-in-raketa)): the row's
  * heading and its *See all ›*, the tile's tag, sports and *Joined …*, and See all's title, pill and
- * empty line; and Same competitive level ([#802](https://github.com/Raketa02/Raketa/issues/802); the
+ * empty line; Same competitive level ([#802](https://github.com/Raketa02/Raketa/issues/802); the
  * words [§31.5 and §31.6](../../../../../docs/specs/matchmaking/the-words.md#315-same-competitive-level--the-card)):
- * the card's pairing, *EVEN*, the bar's *YOU*, the gap, *N sports ›*, and the comparison sheet. The
- * round button's words are `friends'`, the bands' names onboarding's (`BAND_NAMES`).
+ * the card's pairing, *EVEN*, the bar's *YOU*, the gap, *N sports ›*, and the comparison sheet; and
+ * Same vibe ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
+ * [§31.8](../../../../../docs/specs/matchmaking/the-words.md#318-same-vibe)): the tile's %, *+N more*,
+ * the sheet's title and identity row. The round button's words are `friends'`, the bands' names
+ * onboarding's (`BAND_NAMES`), *6 things in common* and the tags' own `shared/vocabulary`'s — the
+ * request card says the count too, and one spelling serves both.
  *
  * ## Calls, for the product owner to overrule
  *
- * §31 gives every drawn word here but these, written in by #802:
+ * §31 gives every drawn word here but these, written in by #803:
+ *
+ * - **See all's spoken name**, *See all same vibe players*, for #801's reason below.
+ * - **A tile's spoken name** reads it in the order drawn — *karol.t, 98%, 6 things in common* — and
+ *   then **every tag they share**, *: Stays for a drink, Plays to win, …*, the ones under *+N more*
+ *   too: a tag the tile draws is a clause in its name (the tag row's rule), and which ones are drawn
+ *   is the screen's width, not a fact about the two of them.
+ * - **See all with nobody**, *Nobody who shares your tags plays squash yet*, and with nobody at all,
+ *   *Nobody shares your tags right now* — §31 words neither.
+ * - **The pill's hint**, *Shows who shares your tags in another sport*.
+ * - **The sheet's close**, *Close You and karol.t*, as the comparison sheet's.
+ *
+ * And these, written in by #802:
  *
  * - **See all's spoken name**, *See all players at your level*, for #801's reason below.
  * - ***N sports ›*'s spoken name**, *Compare with zofia.b in 2 sports* — it opens the comparison.
@@ -43,10 +59,12 @@
 import { sportInLine, sportLabel } from '@/features/onboarding/types';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import type { SportPillWords } from '@/shared/ui';
+import { socialTagName, thingsInCommon } from '@/shared/vocabulary/socialTagPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { JoinedAgo, Joiner } from '../domain/joiner';
 import { levelGapOf, type LevelComparison, type LevelGap } from '../domain/sameLevel';
+import type { SameVibePlayer } from '../domain/sameVibe';
 import type { SeeAllSport } from '../domain/seeAll';
 
 export const DISCOVERY_COPY = {
@@ -87,6 +105,18 @@ export const DISCOVERY_COPY = {
     pillHint: 'Compares everybody in another sport',
     nobodyAtAll: 'Nobody to compare with right now',
     reading: 'Reading players at your level…',
+  },
+  sameVibe: {
+    /** Drawn uppercase by the row frame: *SAME VIBE PLAYERS*. */
+    heading: 'Same vibe players',
+    seeAll: 'See all',
+    seeAllLabel: 'See all same vibe players',
+    /** See all's title. */
+    title: 'Same vibe players',
+    back: 'Back to Home',
+    pillHint: 'Shows who shares your tags in another sport',
+    nobodyAtAll: 'Nobody shares your tags right now',
+    reading: 'Reading same vibe players…',
   },
 } as const;
 
@@ -188,6 +218,37 @@ export function nobodyToCompareIn(sport: Sport): string {
   return `Nobody to compare in ${sportInLine(sport)} yet`;
 }
 
+/** *+2 more* — the dashed tag in a tile's last place, for the tags it had no room for (§31.8). */
+export function moreTags(count: number): string {
+  return `+${count} more`;
+}
+
+/** A Same vibe tile, spoken in the order drawn, then every tag the two share (a call). */
+export function vibeTileLabel(player: SameVibePlayer): string {
+  const said = [
+    player.nickname,
+    formatPercent(player.vibePercent),
+    thingsInCommon(player.inCommon),
+  ];
+  const tags = player.sharedTags.map(socialTagName);
+  return tags.length === 0 ? said.join(', ') : `${said.join(', ')}: ${tags.join(', ')}`;
+}
+
+/** *You and karol.t* — the vibe sheet's title (§31.8). */
+export function vibeTitle(nickname: string): string {
+  return `You and ${nickname}`;
+}
+
+/** The vibe sheet's close — named for the sheet, never just *Close* (`CloseControl`). */
+export function closeVibeLabel(nickname: string): string {
+  return `Close ${vibeTitle(nickname)}`;
+}
+
+/** *Nobody who shares your tags plays squash yet* — See all, a sport that leaves nobody (a call). */
+export function nobodySharesYourTagsIn(sport: Sport): string {
+  return `Nobody who shares your tags plays ${sportInLine(sport)} yet`;
+}
+
 /** A choice's name on the pill — *All*, or the sport's. */
 function choiceName(choice: SeeAllSport): string {
   return choice === 'all' ? DISCOVERY_COPY.all : sportLabel(choice);
@@ -204,3 +265,4 @@ function pillWords(pillHint: string): SportPillWords<SeeAllSport> {
 
 export const NEW_IN_RAKETA_PILL_WORDS = pillWords(DISCOVERY_COPY.newInRaketa.pillHint);
 export const SAME_LEVEL_PILL_WORDS = pillWords(DISCOVERY_COPY.sameLevel.pillHint);
+export const SAME_VIBE_PILL_WORDS = pillWords(DISCOVERY_COPY.sameVibe.pillHint);

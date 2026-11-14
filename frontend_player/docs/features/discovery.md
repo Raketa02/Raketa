@@ -1,7 +1,7 @@
 # discovery
 
 **Home's people rows and their See all screens** — who is around the reader: new to Raketa (#801), at
-their level (#802), like them (#803). [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md);
+their level (#802), sharing their tags (#803). [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md);
 the spec set is [`docs/specs/home-rows/`](../../../docs/specs/home-rows/README.md), the words §31.
 The backend context of the same name (#793) owns the rows' rules; this feature draws its answers.
 
@@ -94,5 +94,70 @@ now_ on _All_ (calls: §31 words neither). `sameLevel.test.tsx` walks the row's 
 card's fields, colours, gap words and _N sports ›_, the face and the button's origin, the sheet's
 blocks and tags, See all's pill, re-compare, paging and empty line, and the request card's line.
 
+**Same vibe is the fourth row** ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows
+screens §6; the mechanics §8, §9; home rows 2, 20–24). `SameVibeRow` reads `GET /same-vibe`
+(`useSameVibe`, keyed `discoveryKeys.sameVibe()`, `LISTS_PEOPLE`, re-read on return as the others are)
+and draws up to ten **pale tiles** on a peeking `HomeRowRail`, in the read's order — fresh good matches
+(two shared tags or more) first, then the gaps, the server's. **Hidden with its heading** while the
+read is empty, in flight or failed. The shell draws it after New in Raketa; Top 10 (#805) comes after
+it. A person on it is a **`SameVibePlayer`**: the vibe % (the server's, 1 − ½ⁿ — nothing here
+computes it), how many tags the two share (`inCommon`, the server's count), the shared tags in the
+vocabulary's order — one this build cannot name left off the chips, the count kept — and the
+relation. **Skill plays no part**, so a reader with no level sees it.
+
+**The tile** (`SameVibeTile` on `shared/ui`'s `TintedTile`, design-system 7.35) is a light card
+**washed from its top-left in the colour of their court poster** — `courtPosterFor`'s hue, so the same
+person is the same colour everywhere — with the face, the nickname, the vibe % in a white circle, _6
+things in common_ (`shared/vocabulary`'s `thingsInCommon`, which the request card says too), the
+shared tags as 6.4's green `ok` tags, and the round button bottom-right. **The chips are fitted to
+three lines by measurement** (`SharedTags`, `tagFit.ts`): every chip and every _+N more_ the tile
+could say is laid out once, unseen, at the line's width, and `tagsThatFit` answers from those widths
+— every chip when they all fit, else the most that leave _+N more_ (for the count it would then say)
+room in the third line. Nothing is drawn until every width is in, and the three lines' room is kept
+from the first frame (`shared/ui`'s `TAG_HEIGHT`), so a tile neither flashes a chip nor grows; a chip
+is never wider than the line, cut by its own ellipsis at the width it was measured. _+N more_ is 6.4's new `more` tag,
+dashed. **Two doors**: the button acts, asking from _same vibe_ (`FOUND_THROUGH_TAGS`, no group and no
+sport); a tap anywhere else opens the vibe sheet. The tile's spoken name reads who, the %, the count
+and every tag shared — including those under _+N more_, since which are drawn is the screen's width
+(a call).
+
+**The vibe sheet** (`VibeSheet`, handed the row's or See all's `usePersonSheet`) is _You and
+karol.t_ with `friends`' worded button on the title row, then the face, the nickname and _6 things in
+common_, every photo on the record's carousel, the intro in its marks, and every tag — the shared ones
+green and reading _· you too_. **It reads the record** (§8.5) through `player_record`'s own parts
+(`RecordRead`, `RecordTags`, `RecordIntro`), so it opens only where the record would and says _This
+record isn't available_ where the record does. **The face opens the full record over the sheet**,
+drawn inside it as the worded button's own sheets are — iOS drops a second native window opened while
+the first is closing (#800) — and its requests are found through _same vibe_. **That record belongs
+to one open of one person**: when a write in it moves them out of the row, the sheet closes under it
+and takes it along, and the next tile opens its own sheet, never the record (the spec review's walk
+found the first version reopening it). Which tile's sheet is up is **`usePersonSheet`**, #802's
+comparing state made generic — the sheet follows the person's latest read, closes drawn as they were
+when a write moves them out of the list, and never reopens by itself — and the comparison sheet now
+takes it whole too (`useComparing`, a pass-through, went).
+
+**Two calls against the ticket's words, for the product owner.** **No distance follows the count**:
+§6.3's _· In your area · 0,6 km_ is _as the record writes it_, and the record's wire has no
+`distance_km` — a record opened from Home writes no identity line — so the row takes §6.3's third
+form, nothing. The reader's own area is known (their own record's `area_code`), but _In your area_
+without the kilometres is none of §6.3's three forms, so it is not written either. #795's contract
+says the sheet reads the distance off the record, which has none: **a backend ask**. **The intro is
+upright**, as the record draws it — this app loads no italic Archivo, and a `fontStyle` on it is
+synthesised on iOS and dropped on Android (two surfaces already accept that slant; the record chose
+the marks), so §6.3's _in italic … as the record draws it_ contradicts itself and the record wins.
+
+**See all** (`SameVibeScreen`, `/same-vibe`, pushed over Home with the tab lit) is the people rows'
+frame with the tiles in **two columns**, most in common first, friends where they fall, 20 to a page
+(`useSameVibePage`; See all's frame hands each item its column's width, and the three See alls ask
+for a page through one `toPageAsked`); the pill offers _All_ and the sports somebody listed holds a level in, and a sport
+keeps only them. _Nobody who shares your tags plays squash yet_, or _Nobody shares your tags right
+now_ on _All_ (calls: §31 words neither). `sameVibe.test.tsx` walks the row's place and absence, the
+tile's fields, the three-line fit with _+N more_ by laid-out widths, the button's origin, the sheet's
+fields, carousel, intro, _· you too_, the face's record and its origin, the record going with a
+sheet that closes under it, the refusal, See all's
+columns, pill, filter, paging and empty line, and the request card's three lines.
+
 **Not seen on a device**: the tile, the wash, the grid and the pill's _All_ against home rows 17–19;
-the Same level card, its bar, the comparison sheet and See all against home rows 7–16.
+the Same level card, its bar, the comparison sheet and See all against home rows 7–16; the Same vibe
+tile, its tint over each poster hue, the chips' fit and _+N more_, the vibe sheet and See all against
+home rows 20–24.

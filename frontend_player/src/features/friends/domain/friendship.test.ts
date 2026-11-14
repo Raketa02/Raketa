@@ -90,6 +90,17 @@ describe('recordAskedWhere — where a request asked from the record is asked fr
     ).toEqual({ from: 'NEW_PLAYERS' });
   });
 
+  it('keeps Same vibe over the record’s own group and sport (#803)', () => {
+    expect(
+      recordAskedWhere({
+        rankingSport: undefined,
+        groupId: 'g-1',
+        sport: 'padel',
+        foundIn: { from: 'SAME_VIBE' },
+      }),
+    ).toEqual({ from: 'SAME_VIBE' });
+  });
+
   it('keeps Same competitive level’s sport, the card’s, over the record’s own (#802)', () => {
     expect(
       recordAskedWhere({

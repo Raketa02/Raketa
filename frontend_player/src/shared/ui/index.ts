@@ -111,6 +111,7 @@ export { PagerDots, type PagerDotsProps } from './PagerDots';
 export { MARK_TOP, PhotoPanel, type PhotoPanelProps } from './PhotoPanel';
 export { PhotoCarousel, type CarouselPhoto, type PhotoCarouselProps } from './PhotoCarousel';
 export { PortraitTile, type PortraitTileProps } from './PortraitTile';
+export { TINTED_TILE, TintedTile, type TintedTileProps } from './TintedTile';
 export {
   PHOTO_PANEL,
   POSTER_LABEL,
@@ -163,7 +164,7 @@ export {
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';
-export { Tag, type TagProps, type TagVariant } from './Tag';
+export { TAG_HEIGHT, Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
 export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';
 export { Dash, Plus, PlusOnMedia, PlusOnSurface, Tick, TICK_PATH, TICK_SPACE } from './Tick';

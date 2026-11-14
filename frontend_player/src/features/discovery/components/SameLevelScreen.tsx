@@ -24,10 +24,11 @@ import { useState } from 'react';
 
 import { foundAtSameLevel, type SameLevelPlayer } from '../domain/sameLevel';
 import type { SeeAllSport } from '../domain/seeAll';
+import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useReaderFace } from '../hooks/useReaderFace';
 import { useSameLevelPage } from '../hooks/useSameLevel';
 
-import { ComparingSheet, useComparing } from './ComparingSheet';
+import { ComparingSheet } from './ComparingSheet';
 import { DISCOVERY_COPY, SAME_LEVEL_PILL_WORDS, nobodyToCompareIn } from './discoveryCopy';
 import { RowRecord, type RecordOpened } from './RowRecord';
 import { SameLevelCard } from './SameLevelCard';
@@ -38,7 +39,7 @@ export function SameLevelScreen() {
   const [choice, setChoice] = useState<SeeAllSport>('all');
   const [reading, setReading] = useState<RecordOpened>();
   const list = useSameLevelPage(choice);
-  const comparing = useComparing(list.people ?? []);
+  const comparing = usePersonSheet(list.people ?? []);
   const you = useReaderFace();
 
   return (

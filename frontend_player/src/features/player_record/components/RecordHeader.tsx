@@ -77,6 +77,7 @@ import { PhotoPanel, theme } from '@/shared/ui';
 
 import type { PlayerRecord } from '../domain/playerRecord';
 
+import { RecordIntro } from './RecordIntro';
 import { SportPills } from './SportPills';
 import {
   identityLine,
@@ -152,7 +153,7 @@ export function RecordHeader({
       <View style={s.column}>
         <Text style={s.name}>{name}</Text>
 
-        {intro === undefined ? null : <Text style={s.intro}>{intro}</Text>}
+        {record.intro === undefined ? null : <RecordIntro intro={record.intro} />}
 
         {identity === '' ? null : <Text style={s.identity}>{identity}</Text>}
 
@@ -172,9 +173,5 @@ const s = StyleSheet.create({
   // rather than pushing the panel off the sheet.
   column: { flex: 1, gap: theme.space.xs },
   name: { ...theme.type.h1, color: theme.color.ink },
-  // The deck card's role for the same line, on paper instead of over a photograph: a
-  // sentence to read rather than small print, and in `muted` because it is what they said
-  // and not what the platform measured.
-  intro: { ...theme.type.rlLabel, color: theme.color.muted },
   identity: { ...theme.type.tiny, color: theme.color.muted },
 });

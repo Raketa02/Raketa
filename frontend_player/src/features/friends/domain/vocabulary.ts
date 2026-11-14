@@ -28,9 +28,11 @@ export type FriendRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
  * record opened from it (#801; the Home rows mechanics §12): their card reads *Found you among new
  * players*, and the request names neither a group nor a sport. `SAME_LEVEL` is Home's Same
  * competitive level row, or a record opened from it (#802), sent with the card's sport: their card
- * reads *Your level in padel · 91% even*.
+ * reads *Your level in padel · 91% even*. `SAME_VIBE` is Home's Same vibe row, or a record or vibe sheet
+ * opened from it (#803), naming neither a group nor a sport: their card reads *6 things in common*.
  */
-export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING' | 'NEW_PLAYERS' | 'SAME_LEVEL';
+export type AskedFrom =
+  'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING' | 'NEW_PLAYERS' | 'SAME_LEVEL' | 'SAME_VIBE';
 
 /**
  * **Which way an open request points** (#754) — the Friends page's two request tabs, each its own

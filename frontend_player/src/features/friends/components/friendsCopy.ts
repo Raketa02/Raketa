@@ -94,6 +94,7 @@ _Found you in the padel ranking_ replaces the where-line whole — no sport and 
 import { codeMessage, type AppError } from '@/shared/errors';
 import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
+import { thingsInCommon } from '@/shared/vocabulary/socialTagPresentation';
 
 import type { FriendsTab } from '../domain/friendList';
 import { askersFormOf, type AskersForm } from '../domain/levelAsk';
@@ -149,6 +150,8 @@ export const FRIENDS_COPY = {
     byLink: 'Invited you to Raketa',
     /** A request from New in Raketa, or a record it opened, in place of the group line (§31.10). */
     newPlayers: 'Found you among new players',
+    /** A request from Same vibe once the two share no tag any more (§31.10). */
+    throughYourTags: 'Found you through your tags',
   },
   /** **You › Friends** (the screens §4.1): the header, the three tabs, their rows and empty lines. */
   page: {
@@ -325,7 +328,8 @@ export type WhereFound =
   | { readonly kind: 'link' }
   | { readonly kind: 'ranking'; readonly sport: string }
   | { readonly kind: 'newInRaketa' }
-  | { readonly kind: 'sameLevel'; readonly sport: string; readonly percentEven?: number };
+  | { readonly kind: 'sameLevel'; readonly sport: string; readonly percentEven?: number }
+  | { readonly kind: 'sameVibe'; readonly inCommon: number };
 
 /**
  * **The card's where-line, before the reliability chip** (the words §29.2) — *With you in Kazimierz
@@ -336,7 +340,8 @@ export type WhereFound =
  * **A request found by a link, the ranking or a Home row says where in the group line's place**, and
  * nothing else: *Invited you to Raketa*, *Found you in the padel ranking*, *Found you among new
  * players*, *Your level in padel · 91% even* — today's %, or *Found you at your padel level* once
- * either holds no level there (§31.10).
+ * either holds no level there — and *6 things in common* — today's count, or *Found you through your
+ * tags* once they share none (§31.10).
  *
  * The sport arrives named (`sportLabel`'s *Padel*, `sportInLine`'s *padel*), so this module imports
  * no feature: it is read at module load by every component here, and a feature's barrel would close
@@ -379,6 +384,10 @@ function foundLine(found: WhereFound): string {
       return found.percentEven === undefined
         ? `Found you at your ${found.sport} level`
         : `Your level in ${found.sport} · ${formatPercent(found.percentEven)} even`;
+    case 'sameVibe':
+      return found.inCommon === 0
+        ? FRIENDS_COPY.home.throughYourTags
+        : thingsInCommon(found.inCommon);
   }
 }
 

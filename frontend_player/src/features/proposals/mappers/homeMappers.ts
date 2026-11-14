@@ -315,7 +315,7 @@ function toHomeFriendRequest(wire: Schemas['HomeFriendRequestSchema']): HomeFrie
 }
 
 /**
- * **The wire's four flags as the one place they name** — the server sets one at most, so the order
+ * **The wire's five flags as the one place they name** — the server sets one at most, so the order
  * here decides nothing it could disagree with; nothing set is a group or a screen's request.
  */
 function foundByOf(wire: Schemas['HomeFriendRequestSchema']): {
@@ -332,6 +332,9 @@ function foundByOf(wire: Schemas['HomeFriendRequestSchema']): {
       },
     };
   }
+  // Today's count, counted on this read — nought once they share none, and nought too for a wire
+  // that left it out, which says the fallback rather than a count nobody made.
+  if (wire.from_same_vibe) return { foundBy: { kind: 'sameVibe', inCommon: wire.in_common ?? 0 } };
   return {};
 }
 

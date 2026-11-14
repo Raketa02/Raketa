@@ -170,3 +170,12 @@ const YOU_TOO_MARKER = 'you too';
  * in full on the surface that draws tags as tags, and the row's job here is the comparison.
  */
 export const NO_TAGS_IN_COMMON = 'No tags in common';
+
+/**
+ * **How many tags two players share** — *6 things in common*, *1 thing in common* (the words §31.8,
+ * §31.10): on a Same vibe tile and its sheet, and on the request card of someone found there. One
+ * spelling for both features, beside the row's own *you too*, for the reason the marker has one.
+ */
+export function thingsInCommon(count: number): string {
+  return count === 1 ? '1 thing in common' : `${count} things in common`;
+}

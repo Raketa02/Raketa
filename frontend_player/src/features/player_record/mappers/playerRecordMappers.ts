@@ -55,7 +55,7 @@
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 import { GAME_RESULTS, type GameResult } from '@/shared/vocabulary/gameResult';
-import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
+import { toSocialTagId } from '@/shared/vocabulary/socialTags';
 
 import {
   RELIABILITY_BANDS,
@@ -223,16 +223,11 @@ function lastFive(served: readonly string[]): { readonly lastFive?: readonly Gam
 }
 
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
-const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
 const KNOWN_BANDS = new Set<string>(RELIABILITY_BANDS);
 const KNOWN_MINIMUMS = new Set<string>(RELIABILITY_MINIMUMS);
 
 function toGameResult(served: string): GameResult | undefined {
   return KNOWN_RESULTS.has(served) ? (served as GameResult) : undefined;
-}
-
-function toSocialTagId(served: string): SocialTagId | undefined {
-  return KNOWN_TAGS.has(served) ? (served as SocialTagId) : undefined;
 }
 
 /**

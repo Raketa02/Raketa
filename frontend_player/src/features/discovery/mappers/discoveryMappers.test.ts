@@ -1,6 +1,13 @@
 import type { components } from '@/generated/schema';
 
-import { toJoiner, toJoinerPage, toSameLevelPage, toSameLevelPlayer } from './discoveryMappers';
+import {
+  toJoiner,
+  toJoinerPage,
+  toSameLevelPage,
+  toSameLevelPlayer,
+  toSameVibePage,
+  toSameVibePlayer,
+} from './discoveryMappers';
 
 type Wire = components['schemas'];
 
@@ -143,5 +150,59 @@ describe('toSameLevelPage (#802)', () => {
 
   it('has no cursor on the last page', () => {
     expect(toSameLevelPage({ players: [], next: null, sports: [] })).not.toHaveProperty('next');
+  });
+});
+
+const KAROL: Wire['SameVibePlayerSchema'] = {
+  player_id: 'p-karol',
+  nickname: 'karol.t',
+  photo_id: 'f-3',
+  photo_url: 'https://photos.example/karol.jpg',
+  vibe_percent: 88,
+  in_common: 3,
+  shared_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+  relation: 'ASKED_YOU',
+};
+
+describe('toSameVibePlayer (#803)', () => {
+  it('reads the face, the vibe %, the count in common, the shared tags in order, and the relation', () => {
+    expect(toSameVibePlayer(KAROL)).toEqual({
+      playerId: 'p-karol',
+      nickname: 'karol.t',
+      photoUrl: 'https://photos.example/karol.jpg',
+      vibePercent: 88,
+      inCommon: 3,
+      sharedTags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+      relation: 'ASKED_YOU',
+    });
+  });
+
+  it('draws the poster with no photo', () => {
+    expect(toSameVibePlayer({ ...KAROL, photo_id: null, photo_url: null })).not.toHaveProperty(
+      'photoUrl',
+    );
+  });
+
+  it('leaves off a tag this build cannot name, and keeps the server’s count', () => {
+    const vibe = toSameVibePlayer({
+      ...KAROL,
+      shared_tags: ['PLAYS_TO_WIN', 'KEEPS_A_SPARE_BALL'],
+    });
+    expect(vibe.sharedTags).toEqual(['PLAYS_TO_WIN']);
+    expect(vibe.inCommon).toBe(3);
+  });
+});
+
+describe('toSameVibePage (#803)', () => {
+  it('reads the page, its cursor and the pill’s sports', () => {
+    expect(toSameVibePage({ players: [KAROL], next: 'c-2', sports: ['TENNIS'] })).toEqual({
+      people: [expect.objectContaining({ playerId: 'p-karol' })],
+      next: 'c-2',
+      sports: ['tennis'],
+    });
+  });
+
+  it('has no cursor on the last page', () => {
+    expect(toSameVibePage({ players: [], next: null, sports: [] })).not.toHaveProperty('next');
   });
 });

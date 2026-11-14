@@ -62,8 +62,8 @@ describe('which tab a route is inside', () => {
     expect(barStandsDown('/rankings')).toBe(false);
   });
 
-  it('keeps Home lit on the people rows’ See all (#801, #802), and the bar up', () => {
-    for (const seeAll of ['/new-in-raketa', '/same-level']) {
+  it('keeps Home lit on the people rows’ See all (#801, #802, #803), and the bar up', () => {
+    for (const seeAll of ['/new-in-raketa', '/same-level', '/same-vibe']) {
       expect(tabForPathname(seeAll)).toBe('home');
       expect(barStandsDown(seeAll)).toBe(false);
     }

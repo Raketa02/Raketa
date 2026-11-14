@@ -1,6 +1,7 @@
 /**
  * **Discovery's routes** ([#801](https://github.com/Raketa02/Raketa/issues/801), the backend's #793;
- * [#802](https://github.com/Raketa02/Raketa/issues/802), the backend's #794).
+ * [#802](https://github.com/Raketa02/Raketa/issues/802), the backend's #794;
+ * [#803](https://github.com/Raketa02/Raketa/issues/803), the backend's #795).
  *
  * | Route | |
  * | --- | --- |
@@ -8,10 +9,13 @@
  * | `GET /new-in-raketa/all?sport&after` | See all: 20 to a page, newest first, `next` behind them |
  * | `GET /same-level` | Home's row: up to 10, fresh good matches first, then the gaps |
  * | `GET /same-level/all?sport&after` | See all: 20 to a page, best % first; a sport re-compares everybody in it |
+ * | `GET /same-vibe` | Home's row: up to 10, fresh good matches first, then the gaps |
+ * | `GET /same-vibe/all?sport&after` | See all: 20 to a page, most in common first; a sport keeps who holds a level in it |
  *
  * Every one refuses `block_state_unavailable` (503) — the blocks could not be read, so no row is
  * drawn rather than one that might suggest a blocked person — and each See all its own code for a
- * cursor the server never wrote (`not_a_new_in_raketa_page`, `not_a_same_level_page`, 400). None is
+ * cursor the server never wrote (`not_a_new_in_raketa_page`, `not_a_same_level_page`,
+ * `not_a_same_vibe_page`, 400). None is
  * said: the row is left out, and See all says the failure's recovery sentence with *Try again*.
  */
 
@@ -22,6 +26,7 @@ type Schemas = components['schemas'];
 
 const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
 const SAME_LEVEL_PATH = '/api/v1/same-level';
+const SAME_VIBE_PATH = '/api/v1/same-vibe';
 
 export interface Cancellable {
   readonly signal?: AbortSignal;
@@ -72,6 +77,27 @@ export function getSameLevelPage(
   return httpRequest<Schemas['SameLevelPageResponse']>({
     method: 'GET',
     path: seeAllPath(SAME_LEVEL_PATH, page),
+    authenticated: true,
+    signal,
+  });
+}
+
+export function getSameVibe({ signal }: Cancellable = {}): Promise<Schemas['SameVibeResponse']> {
+  return httpRequest<Schemas['SameVibeResponse']>({
+    method: 'GET',
+    path: SAME_VIBE_PATH,
+    authenticated: true,
+    signal,
+  });
+}
+
+export function getSameVibePage(
+  page: PageAsked,
+  { signal }: Cancellable = {},
+): Promise<Schemas['SameVibePageResponse']> {
+  return httpRequest<Schemas['SameVibePageResponse']>({
+    method: 'GET',
+    path: seeAllPath(SAME_VIBE_PATH, page),
     authenticated: true,
     signal,
   });

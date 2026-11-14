@@ -132,7 +132,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { BlockRow } from '@/features/blocks/types';
 import {
@@ -142,34 +142,21 @@ import {
   type AskedWhere,
   type FoundIn,
 } from '@/features/friends/types';
-import { codeMessage, type AppError } from '@/shared/errors';
-import { BottomSheet, Note, Button, PhotoCarousel, SocialTagRow, theme } from '@/shared/ui';
+import { BottomSheet, PhotoCarousel, theme } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
-import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
 import { RecordBlocks } from './RecordBlocks';
 import { RecordCard } from './RecordCard';
 import { RecordDetails } from './RecordDetails';
 import { RecordHeader } from './RecordHeader';
+import { RecordStanding, isRecordRefusal } from './RecordRead';
+import { RecordTags } from './RecordTags';
 import { SkillCard } from './SkillCard';
-import {
-  READING_RECORD_LABEL,
-  RECORD_UNAVAILABLE,
-  RECORD_UNAVAILABLE_CODE,
-  RETRY_RECORD_LABEL,
-  recordCloseLabel,
-  recordTitle,
-  socialTagsLabel,
-} from './recordPresentation';
-
-/** The one code, for all four causes — and the one sentence this client draws from it. */
-const RECORD_FAILURES: Readonly<Record<string, string>> = {
-  [RECORD_UNAVAILABLE_CODE]: RECORD_UNAVAILABLE,
-};
+import { recordCloseLabel, recordTitle } from './recordPresentation';
 
 /**
  * How tall the sheet stands before it knows anything.
@@ -276,7 +263,7 @@ export function PlayerRecordSheet({
     >
       <View style={s.body}>
         {record.data === undefined || isRecordRefusal(record.error) ? (
-          <Standing error={record.error} onRetry={() => void record.refetch()} />
+          <RecordStanding error={record.error} onRetry={() => void record.refetch()} />
         ) : (
           <Filled
             record={record.data}
@@ -293,44 +280,6 @@ export function PlayerRecordSheet({
         )}
       </View>
     </BottomSheet>
-  );
-}
-
-/** **The record's one refusal** — it closes the sheet's record, drawn or not (see the module note). */
-function isRecordRefusal(error: AppError | null): boolean {
-  return error?.code === RECORD_UNAVAILABLE_CODE;
-}
-
-/**
- * The two states that are not a record: still reading, and could not.
- *
- * A refusal is **one line and no control**. Everything else is the recovery sentence with the
- * control the failure belongs to, which is this read and nothing else on the screen underneath.
- */
-function Standing({
-  error,
-  onRetry,
-}: {
-  readonly error: AppError | null;
-  readonly onRetry: () => void;
-}) {
-  if (error === null) {
-    return (
-      <ActivityIndicator accessibilityLabel={READING_RECORD_LABEL} color={theme.color.muted} />
-    );
-  }
-
-  if (isRecordRefusal(error)) {
-    return <Text style={s.refusal}>{RECORD_UNAVAILABLE}</Text>;
-  }
-
-  return (
-    <View style={s.failure}>
-      <Note variant="coral" accessibilityRole="alert">
-        {codeMessage(RECORD_FAILURES, error)}
-      </Note>
-      <Button label={RETRY_RECORD_LABEL} variant="secondary" onPress={onRetry} />
-    </View>
   );
 }
 
@@ -358,11 +307,6 @@ function Filled({
   PlayerRecordSheetProps,
   'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing' | 'foot'
 >) {
-  // Their live tags, in whichever register the pairing licenses. The claim about nothing is the
-  // engine's and is kept; every other silence draws the tags and says nothing.
-  const tags = recordTagRow(record.socialTags, tagOverlap);
-  const tagsLabel = socialTagsLabel(tags);
-
   return (
     <>
       <RecordHeader
@@ -404,11 +348,12 @@ function Filled({
           {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
         />
 
-        {tagsLabel === '' ? null : (
-          <View accessible accessibilityLabel={tagsLabel}>
-            <SocialTagRow row={tags} />
-          </View>
-        )}
+        {/* Their live tags, in whichever register the pairing licenses. The claim about nothing is
+            the engine's and is kept; every other silence draws the tags and says nothing. */}
+        <RecordTags
+          tags={record.socialTags}
+          {...(tagOverlap === undefined ? {} : { overlap: tagOverlap })}
+        />
       </RecordDetails>
 
       {/* The foot, last, where the surface filled it. A sheet reads statement first and answer
@@ -493,6 +438,4 @@ const s = StyleSheet.create({
   half: { flex: 1 },
   // Block alone takes the row whole.
   whole: { flex: 1 },
-  refusal: { ...theme.type.tiny, color: theme.color.muted },
-  failure: { gap: theme.space.sm },
 });

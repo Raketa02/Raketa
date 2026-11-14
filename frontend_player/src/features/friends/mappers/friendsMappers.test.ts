@@ -38,6 +38,13 @@ describe('toAskRequest', () => {
     });
   });
 
+  it('sends a request from Same vibe naming neither a group nor a sport (#803)', () => {
+    expect(toAskRequest('p-1', { from: 'SAME_VIBE' })).toEqual({
+      player_id: 'p-1',
+      made_from: 'SAME_VIBE',
+    });
+  });
+
   it('sends a request from Same competitive level with the card’s sport, and no group (#802)', () => {
     expect(toAskRequest('p-1', { from: 'SAME_LEVEL', sport: 'squash' })).toEqual({
       player_id: 'p-1',

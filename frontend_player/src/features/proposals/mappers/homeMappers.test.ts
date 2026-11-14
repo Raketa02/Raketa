@@ -385,12 +385,14 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     from_ranking: false,
     from_new_players: false,
     from_same_level: false,
+    from_same_vibe: false,
     group: { id: 'group-1', name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,
     player_score: 98,
     reliability_band: 'VERY_HIGH',
     percent_even: null,
+    in_common: null,
     ...extra,
   });
   const home = (requests: Wire['HomeFriendRequestSchema'][]) =>
@@ -464,6 +466,16 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     expect(home([request({ from_same_level: true, group: null })]).friendRequests).toEqual([
       expect.objectContaining({ foundBy: { kind: 'sameLevel' } }),
     ]);
+  });
+
+  it('reads a request from Same vibe with today’s count of tags in common, nought included (#803)', () => {
+    expect(
+      home([request({ from_same_vibe: true, group: null, sport: null, level: null, in_common: 6 })])
+        .friendRequests,
+    ).toEqual([expect.objectContaining({ foundBy: { kind: 'sameVibe', inCommon: 6 } })]);
+    expect(
+      home([request({ from_same_vibe: true, group: null, in_common: 0 })]).friendRequests,
+    ).toEqual([expect.objectContaining({ foundBy: { kind: 'sameVibe', inCommon: 0 } })]);
   });
 });
 

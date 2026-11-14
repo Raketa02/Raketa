@@ -30,7 +30,7 @@ import {
   type Rgb,
 } from '@/test-support/contrast';
 
-import { Tag } from './Tag';
+import { TAG_HEIGHT, Tag } from './Tag';
 import { theme } from './theme';
 
 const ratio = (a: string, b: string) => contrast(parse(a).rgb, parse(b).rgb);
@@ -181,5 +181,50 @@ describe('the arranging dot on night', () => {
     expect(hueDistance(hue(theme.color.arranging), hue(theme.color.coral))).toBeGreaterThan(25);
     expect(hueDistance(hue(theme.color.arranging), hue(theme.color.volt))).toBeGreaterThan(25);
     expect(hueDistance(hue(theme.color.arranging), hue(theme.color.mint))).toBeGreaterThan(25);
+  });
+});
+
+describe('the more tag (#803)', () => {
+  const boxOf = (variant: 'ok' | 'more') => {
+    render(<Tag label="+2 more" variant={variant} />);
+    const box = StyleSheet.flatten(
+      screen.getByText('+2 more').parent?.parent?.props.style as ViewStyle,
+    );
+    screen.unmount();
+    return box;
+  };
+  const edge = (box: ViewStyle, padding: 'paddingVertical' | 'paddingHorizontal') =>
+    Number(box[padding] ?? 0) + Number(box.borderWidth ?? 0);
+
+  it('is dashed in line, its words muted, on no bed of its own', () => {
+    const more = boxOf('more');
+    expect(more.borderStyle).toBe('dashed');
+    expect(more.borderColor).toBe(theme.color.line);
+    expect(more.backgroundColor).toBeUndefined();
+    render(<Tag label="+2 more" variant="more" />);
+    expect(StyleSheet.flatten(screen.getByText('+2 more').props.style as TextStyle).color).toBe(
+      theme.color.muted,
+    );
+  });
+
+  it('keeps every tag’s box: its border stands in the padding’s first point, so a line of chips stays one height', () => {
+    const more = boxOf('more');
+    const ok = boxOf('ok');
+    expect(edge(more, 'paddingVertical')).toBe(edge(ok, 'paddingVertical'));
+    expect(edge(more, 'paddingHorizontal')).toBe(edge(ok, 'paddingHorizontal'));
+  });
+});
+
+describe('TAG_HEIGHT (#803)', () => {
+  it('is the box every variant draws: the label’s line and the padding either side', () => {
+    for (const variant of ['ok', 'more'] as const) {
+      render(<Tag label="+2 more" variant={variant} />);
+      const box = StyleSheet.flatten(
+        screen.getByText('+2 more').parent?.parent?.props.style as ViewStyle,
+      );
+      const edge = Number(box.paddingVertical ?? 0) + Number(box.borderWidth ?? 0);
+      expect(theme.type.tag.lineHeight + 2 * edge).toBe(TAG_HEIGHT);
+      screen.unmount();
+    }
   });
 });
