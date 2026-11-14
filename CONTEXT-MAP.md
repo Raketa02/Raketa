@@ -62,7 +62,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Friends comes without a new app either**
 > ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md),
-> PRD [#743](https://github.com/Raketa02/Raketa/issues/743); decided, not yet built). The backend
+> PRD [#743](https://github.com/Raketa02/Raketa/issues/743); built). The backend
 > grows a **Friends** context, a friends game is a further birth in Bookings and its Cover a Seat
 > charge in Payments; the player app grows a friends feature; the public site grows a page for
 > `/f/<code>` beside its group, invitation and password-reset pages; and the club website only reads its
@@ -71,7 +71,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Rankings comes without a new app either**
 > ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md),
-> PRD [#766](https://github.com/Raketa02/Raketa/issues/766); decided, not yet built). The backend
+> PRD [#766](https://github.com/Raketa02/Raketa/issues/766); built). The backend
 > grows a **Rankings** context: a stored projection of every player's level per sport and its
 > history, fed by the rating's events through the outbox, and reaching Friends, Blocks, Users and
 > the Player profile only through ports it declares. The record gains a strand and a block gate,
@@ -79,6 +79,23 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > a switch on You. The club website and the public site don't change. The terms are in `CONTEXT.md`
 > under **Rankings**, **Player record**, **Blocks** and **Friends**; the spec set is
 > `docs/specs/rankings/`.
+>
+> **Discovery comes without a new app either**
+> ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
+> PRD [#789](https://github.com/Raketa02/Raketa/issues/789); decided, not yet built). Home gains five
+> rows below *Your games*. The backend grows a **Discovery** context for the three people rows — *Same
+> competitive level*, *New in Raketa* and *Same vibe* — with three stored tables, the stated exceptions
+> to *derived, never stored*: a player directory fed by the profile's and the user's events, every
+> player's current level per sport fed by the rating's, and a per-viewer rest count, reaching Friends,
+> Blocks, the Forecast, the profile, the user
+> and the rating only through ports it declares. **Groups** gains the Hottest groups read and Withdraw
+> on a Join request, **Rankings** the Top 10 read, and loses its switch and its block filtering; the
+> record opens to any reader but across a block or *Show me to new people*'s rule, and a friend
+> request loses its daily limit. The player app grows a discovery feature, a Hottest groups row in
+> groups, a Top 10 row in rankings and the round friend button in friends. The club website only drops
+> a withdrawn request from its list; the public site doesn't change. The terms are in `CONTEXT.md`
+> under **Discovery**, **Groups**, **Rankings**, **Player profile**, **Player record**, **Blocks** and
+> **Friends**; the spec set is `docs/specs/home-rows/`.
 >
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
@@ -108,7 +125,7 @@ own **technical** vocabulary:
 
 | File | Scope | Owns |
 | --- | --- | --- |
-| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Weekly hours, Gender preference, Play intent, Block, Mode, Ruleset, Level window, Newcomer window, Forecast, Split, Game, Line-up, Departure, Result, Score, Played · no score, Disputed, Isn't here yet, Arrival, On time · Came late · Didn't come, I was there, Standing, Counted game, Conversation, Member, System line, Typing, Player Score, Points, Played through, Reliability band, New, Results left in dispute, Reliability filter, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Club courts, Court, Kind of court, Raketa hours, Exception, Price, Share, Court hour, Only Raketa, Raketa settings, Cut-off, Book-by, Paused, Setup checklist, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Booking, Leaver, Rescue, Fill in, Move by cancel, Payment method, Setup, Payment terms, Payment provider, Seat charge, Pool, Proposal, Version, Yes, In, Withdraw, Live yes, Post, Fills, Group deck, Owed card, Games & money, Home, It's a game!, Ranking, General, Friends (the view), Place, Listed, the chip, Show me in General, Ranking visibility… |
+| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Weekly hours, Gender preference, Play intent, Block, Mode, Ruleset, Level window, Newcomer window, Forecast, Split, Game, Line-up, Departure, Result, Score, Played · no score, Disputed, Isn't here yet, Arrival, On time · Came late · Didn't come, I was there, Standing, Counted game, Conversation, Member, System line, Typing, Player Score, Points, Played through, Reliability band, New, Results left in dispute, Reliability filter, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Club courts, Court, Kind of court, Raketa hours, Exception, Price, Share, Court hour, Only Raketa, Raketa settings, Cut-off, Book-by, Paused, Setup checklist, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Booking, Leaver, Rescue, Fill in, Move by cancel, Payment method, Setup, Payment terms, Payment provider, Seat charge, Pool, Proposal, Version, Yes, In, Withdraw, Live yes, Post, Fills, Group deck, Owed card, Games & money, Home, It's a game!, Ranking, General, Friends (the view), Place, Listed, the chip, Top 10, Show me to new people, Hottest groups, Heat, HOTTEST, GROWING, People rows, Same competitive level players, % even, New in Raketa, Same vibe players, Vibe %, Good match, Fresh, Gap, Rest, On screen… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 | **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |
@@ -225,6 +242,9 @@ else lives one layer down. See
 │   ├── specs/games-and-fill-in/ ← a group's Games deck and Fill in, courts and money (ADR-0189):
 │   │                            the mechanics, the screens and the mocks — the one way a game is made
 │   ├── specs/rankings/       ← a ranking per sport, sorted by the level (ADR-0203): the mechanics,
+│   │                            the screens, the brief and its mocks
+│   ├── specs/friends/        ← friends, the friend link and friends games (ADR-0202)
+│   ├── specs/home-rows/      ← Home's five rows and who sees whom (ADR-0204): the mechanics,
 │   │                            the screens, the brief and its mocks
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)

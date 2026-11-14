@@ -31,6 +31,14 @@ rather than an unbuilt feature. They are argued in §2 and summarised in §2.6:
 > from 100, with a band, *New*, and four counts — *Shows up*, *Keeps plans*, *Being late* and
 > *Results left in dispute*. Silence on a score costs nothing.
 
+> **2026-11-14, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+> §2 (Q131):** **a record opens for any reader**, except across a block made by either side, or when
+> the subject has *Show me to new people* off and shares no group, no game and no friendship with the
+> reader; both read the one *This record isn't available*. The disclosure strands this set describes
+> are now the exceptions under that switch, not the only way in. **An admitted reader sees all of the
+> subject's photos**, in their order, where the record showed only the first. It opens from any face in
+> Home's rows, and the vibe sheet reads it.
+
 **Everything else ships**, and one item the design asks for comes *back* from a withdrawal:
 **opponent variety** returns as this context's own demand, which is what ADR-0098's amendment
 said would happen when a consumer finally arrived.

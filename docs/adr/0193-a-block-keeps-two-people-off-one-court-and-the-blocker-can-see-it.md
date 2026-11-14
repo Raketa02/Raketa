@@ -1,7 +1,10 @@
 # ADR-0193 — A block keeps two people off one court, and the blocker can see it
 
 - **Status:** Accepted — **§2 superseded for the record, and §3's record read retired, on 2026-11-07
-  by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130)
+  by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **ADR-0203's *disappear from each other's … rankings holds
+  again* reversed for the ranking 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): a blocked pair sees each other
+  in the ranking, Top 10 and group sheets, and is kept out of each other's people rows on Home; the
+  record stays closed both ways
 - **Date:** 2026-10-06
 - **§1 extended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)**
   §6: the pair rule gains one more clause, the **reliability filter**, asked exactly where a block

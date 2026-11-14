@@ -5,6 +5,9 @@
   optional and the contact fence stand. The step's paragraph of rules goes, and the contact rule is
   said only when broken.
 - **Date:** 2026-09-14
+- **§3 and §4 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** §6: the intro is also drawn on the **vibe sheet**
+  of Home's *Same vibe players*, which reads the record. It is a place a person speaks, not one where
+  they are merely named, so §3's line holds. It is still never scored.
 - **§5's *not editable yet* ended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §6** — the You tab is the surface that
   edits the intro, the tags and the photos as one piece of work; `IntroChanged` joins the stream.
 - **Amends** [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md) §2's closed
@@ -109,6 +112,9 @@ stood at the deal; the record sheet reads the current one. Today they cannot dif
 
 **The deck card** draws it as the mock does — quoted, italic, between the meta line and the tags
 — and closes the gap when there is none. **The record sheet** draws it under the person's name.
+
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §6.** **The vibe sheet** draws it too, quoted and italic, under
+> the photos and above the tags, and leaves it out when there is none.
 **Find a game's shortlist and pool cards do not**: those cards are about the game, and the line
 is about the person — the same split ADR-0169 §8 draws between the two surfaces. The line is
 never spoken as the player's name and never truncated: at 100 characters it fits the card's two

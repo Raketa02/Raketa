@@ -17,6 +17,16 @@
 >
 > **Calls marked *(a call)*** were made while specifying PRD #766 or writing this document, and are
 > open for the product owner to overrule ([§17](#17-calls-made-without-a-ruling)).
+>
+> **Amended 2026-11-14** by the Home rows grilling, PRD [#789](https://github.com/Raketa02/Raketa/issues/789),
+> logged as **Q131** and recorded by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2: **the ranking is the real ranking**. *Show me in
+> General* is replaced by *Show me to new people*, which closes nothing here ([§10](#10-show-me-in-general));
+> **blocked rows are shown**, and the record across a block is refused ([§11](#11-blocks)); every place,
+> *of N*, the podium and the gap line count everyone ([§5](#5-order-and-places), [§7.3](#73-whom-it-names));
+> records and requests follow one rule with **no daily limit** ([§12](#12-records-q12), [§13](#13-friend-requests)).
+> Home gains **Top 10**, places 1–10 of General
+> ([the home rows mechanics §10](../home-rows/the-mechanics.md#10-top-10)). Dated notes mark each
+> section; the rest stands.
 
 ---
 
@@ -43,7 +53,8 @@ group with Tomek, and Tomek blocked Marek.
    ranking*.
 6. **Ola opens the same record**, with no level at all, and can ask too.
 7. **Zofia turns *Show me in General* off** in You. Zofia's row leaves everybody's General list but
-   Zofia's own; the others read #7, then #9. Tomek still sees Zofia in Friends.
+   Zofia's own; the others read #7, then #9. Tomek still sees Zofia in Friends. *(Retired 2026-11-14,
+   [§10](#10-show-me-in-general): no switch hides a row; Zofia is 8th for everybody.)*
 8. **Inés stops playing in August.** Ninety days after the last result, Inés is off both
    lists. The first result back puts Inés straight back on, with a real chip: *▲ 3*.
 
@@ -120,6 +131,9 @@ They move no level, so they can't move a place.
 - **Places never renumber** around a row the reader can't see, whether hidden or blocked: the
   reader sees #6, then #8.
 
+> **Amended 2026-11-14** (ADR-0204 §2, Q131). **Every row is shown to every reader**, so there is no
+> row the reader can't see: *of N* counts every listed player, and the reader sees #6, #7, #8.
+
 ---
 
 ## 6. Places moved in 7 days — the chip
@@ -179,6 +193,10 @@ from General, or blocked either way, is skipped, and the line reads against the 
 reader can see. Closing that gap passes the hidden player too, so the count stays true, and nobody
 the reader can't see is named or measured.
 
+> **Amended 2026-11-14** (ADR-0204 §2, Q131). No row is hidden, so the line always names the true
+> neighbours above and below, a blocked player included. The call made while writing #767 behind
+> this section has nothing left to decide.
+
 ---
 
 ## 8. Home's trophy
@@ -231,6 +249,13 @@ the reader can't see is named or measured.
 - **Turning it is an event on the Player profile's stream.** The profile read returns it, and the
   ranking follows through the outbox.
 
+> **Retired 2026-11-14** (ADR-0204 §2, Q131). ***Show me to new people*** replaces this switch on You
+> ([the home rows mechanics §4.3](../home-rows/the-mechanics.md#43-show-me-to-new-people-q18)). It
+> takes a player out of Home's people rows and closes their record and requests to strangers, and
+> **closes nothing in the ranking**: every row is shown, with its true place, in General, Friends and
+> Top 10. *Hidden from General*, the hidden player's missing *You · 212th* button and the skipped
+> podium and gap-line rows go with it. A player who had this off starts with the new one off.
+
 ---
 
 ## 11. Blocks
@@ -250,6 +275,12 @@ reaches the ranking and the record (Q9, Q12, agreed call 1):
 - **Nothing else moves.** Members lists both, a booked game keeps both, a shared chat keeps working,
   the pair is kept off one court, and a block ends a friendship (ADR-0202 §2).
 
+> **Amended 2026-11-14** (ADR-0204 §2, Q131). **Rows no longer hide**: Tomek and Marek see each
+> other's rows at their true places, in both views and in Top 10, because the ranking is the true
+> ranking (the Home rows grilling's Q17). **The record still closes both ways**: a tap on the other's
+> row reads *This record isn't available*. A block keeps the pair out of each other's people rows on
+> Home instead.
+
 ---
 
 ## 12. Records (Q12)
@@ -266,6 +297,11 @@ reaches the ranking and the record (Q9, Q12, agreed call 1):
   row opens their own record.
 - **The record says whether *Add friend* may be offered** under [§13](#13-friend-requests)'s rule.
 
+> **Amended 2026-11-14** (ADR-0204 §2, Q131). **A record opens for any reader**, listed or not,
+> except across a block or when the subject's *Show me to new people* is off and they share no group,
+> game or friendship with the reader ([the home rows mechanics §4.1](../home-rows/the-mechanics.md#41-records-q18-q27)).
+> The strand above folds into that rule, and an admitted reader sees all of the subject's photos.
+
 ---
 
 ## 13. Friend requests
@@ -277,6 +313,10 @@ reaches the ranking and the record (Q9, Q12, agreed call 1):
   [§3.1](../friends/the-mechanics.md#31-who-can-be-a-friend)'s *a friend is someone from your groups*.
 - **A link still asks as before.** Opening a friend link puts its owner's request on the opener's
   Home whatever the ranking says ([the friends mechanics §4](../friends/the-mechanics.md#4-the-friend-link)).
+
+> **Amended 2026-11-14** (ADR-0204 §2, Q131). **Anyone may be asked**, under §12's one rule; the
+> ranking is no longer needed. A request from a record opened on Rankings or Top 10 still records the
+> ranking and reads *Found you in the padel ranking*.
 
 ### 13.2 Where it was made (Q21)
 
@@ -296,6 +336,9 @@ reaches the ranking and the record (Q9, Q12, agreed call 1):
 - **A link's request never counts** *(a call)*: its owner pressed nothing, and the opener asked for it
   by opening the link.
 - **Accepting is never limited**: an answer is not a request sent.
+
+> **Retired 2026-11-14** (ADR-0204 §2, Q131). **There is no daily limit.** Its check, its stored
+> counts and `daily_request_limit` go.
 
 ---
 
@@ -319,7 +362,7 @@ from the ranking is an ordinary friend request, and its notice is the friends me
 | The gap line's count | one win · about 2–5 wins · left out above 5 |
 | A page of General | 50 rows |
 | The podium | the first 3 rows the reader sees; none below 3 |
-| Requests to people outside your groups | at most 10 a Warsaw day |
+| Requests to people outside your groups | ~~at most 10 a Warsaw day~~ no limit since 2026-11-14 (Q131) |
 | A sport's General order, cached | at most 1 minute |
 | Sports | 4, one ranking each |
 
@@ -339,6 +382,7 @@ The proposed shapes; the tickets settle them.
 | **Friends** | the widened admission, *made from* the ranking with its sport, `daily_request_limit` ([#773](https://github.com/Raketa02/Raketa/issues/773)) |
 | **Player routes** | `GET /rankings/{sport}?view=general\|friends` (the card, the podium, General's first page or the whole of Friends); `GET /rankings/{sport}/general/rows` (pages of 50, after or before a cursor, or around the reader); `GET /home` gains `ranking`; `PUT /players/me/ranking-visibility` |
 | **Migrations** | the next numbers after the level-ask one (`0067`) |
+| **Since 2026-11-14** | ADR-0204 §2 takes *Show me in General*, the hidden flag, the lists' block filtering and `daily_request_limit` out of these shapes ([#791](https://github.com/Raketa02/Raketa/issues/791)), and adds the Top 10 read ([#797](https://github.com/Raketa02/Raketa/issues/797)) |
 | **Seed** | through the use cases: a padel list longer than 50 with the protagonist below the first page; three or more friends listed in padel Friends; one account with 2–4 padel results; nobody listed in badminton. A second run changes nothing |
 
 **The card**, on `GET /rankings/{sport}`: a state — *listed*, *needs results* (with the count),

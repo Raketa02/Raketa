@@ -11,6 +11,12 @@
 > note; `player_record/application/admission.py`). Everything below about the Play tab, the
 > builder, the pool header, `SH.whyfit`, the Fit breakdown, a `search_id` citation, the player
 > card and search economics describes the removed loop and is kept as the plan's history.
+>
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+> §2 (Q131): a record opens for **any reader**, except across a block either way or when the subject
+> has *Show me to new people* off and shares no group, game or friendship with the reader, and it
+> carries **all of the subject's photos**, where §§ below plan for the first alone. It opens from any
+> face in Home's rows too ([the home rows mechanics §4.1](../home-rows/the-mechanics.md#41-records-q18-q27)).
 
 **What replaces `SH.whyfit` when you tap a face on the forecast card, and everything the
 backend has to grow for it to be drawable.**

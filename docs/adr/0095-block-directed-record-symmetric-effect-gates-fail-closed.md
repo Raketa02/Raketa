@@ -13,6 +13,11 @@
   row in either view; neither opens the other's record, anywhere. The prototype's *"you disappear
   from each other's … rankings"*, which ADR-0193 called false, holds of the ranking. A dated note
   marks §7.
+- **§7 narrowed for the ranking 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** §2: the ranking, Top 10 and a group
+  sheet show a blocked pair to each other, because each is a fact about everybody, not a suggestion;
+  a tap on the other reads *This record isn't available*. **Home's people rows** — the surfaces that
+  suggest one player to another — keep the pair out of each other's view, and there the promise
+  holds. A dated note marks §7.
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the deck and the candidate index are gone (#579, #580), so §4's two enforcement points — the block set carried in the `SearchContext`, and the re-verify before a search response leaves — and §5's and §6's refusals at the search entry no longer exist. A block is now asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`, over `blocked_pairs_among`). *A gate that cannot be evaluated excludes* holds there, and in the account gates the player record runs, where `NoHoldsExist` still answers the hold. §1–§3 and §8 stand as ADR-0193 amended them.
 
@@ -169,6 +174,11 @@ they will.
 > **Note — 2026-11-07, [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md) §8.** Rankings
 > arrived and inherited it: a blocked pair never sees each other's row, in General or Friends, and
 > places don't renumber.
+
+> **Note — 2026-11-14, [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** The ranking stops inheriting it: the ranking is the true
+> ranking, and a blocked pair sees each other's rows, with each other's record refused. Home's three
+> people rows inherit it instead — a blocked pair never appears in each other's — and so do their See
+> all screens.
 
 **Backwards — not at all.** A block is forward-looking. It does not reach into a game already
 agreed or a chat already open, because `matches` does not exist to define what cancelling one

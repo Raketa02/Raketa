@@ -15,6 +15,13 @@ screen is open, and logs every request the screen would send.
 > **ON YOUR CARD** gains ***Show me in General***, a switch, [§3.14](#314-show-me-in-general). §4's
 > *Rankings* line is retired: Raketa ranks players, by the level.
 
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 and §6
+> (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
+> [§3.14](#314-show-me-in-general)'s switch is now ***Show me to new people***, which takes a player
+> out of Home's people rows and closes their record to strangers, and closes nothing in the ranking.
+> [§3.11](#311-tags)'s *a tag is shown, never scored* now reads: **tags order one row**, Home's *Same
+> vibe players*, and score nothing else.
+
 ## 0. The one sentence
 
 **You is where a player reads what the platform holds about them and changes the facts they
@@ -101,7 +108,7 @@ ScreenHeader      eyebrow PLAYER PROFILE · h1 You
 
   PLAYING         Skill passport · Player reliability · What kind of game
   YOUR GAMES      Your week · Where you play · Who you play with
-  ON YOUR CARD    How others see you · Photos · Tags · Intro · Nickname · Show me in General
+  ON YOUR CARD    How others see you · Photos · Tags · Intro · Nickname · Show me to new people
 
   Sign out        AccountPanel's button, at the foot — as today
 ```
@@ -132,7 +139,7 @@ were on the first draft and are out — §4 says why and what each would need.
 | Tags | `4 of 6 · Stays for a drink, Plays to win, +2` | the tags step as it is, with *Save* | `PUT /players/me/social-tags` | needs a route and the read |
 | Intro | `“Will travel for a hard game.”` | the intro step's box with its counter and fence, *Save* / *Remove intro* | `PUT /players/me/intro` | needs an aggregate change + route, ADR-0170 §5 |
 | Nickname | `tomek.k` | the naming screen's one field, pre-filled | `PUT /users/me/name`, a nickname alone | route exists, screen exists (`NamingScreen`), needs a door; was *Name* until ADR-0199 |
-| Show me in General | *the switch, and its sentence under the title* | nothing: the switch is in the row | `PUT /players/me/ranking-visibility` at once | added 2026-11-07 by ADR-0203 §7, §3.14; the route is [#772](https://github.com/Raketa02/Raketa/issues/772)'s, the row [#778](https://github.com/Raketa02/Raketa/issues/778)'s |
+| Show me to new people | *the switch, and its sentence under the title* | nothing: the switch is in the row | the switch's route at once | added 2026-11-07 by ADR-0203 §7 as *Show me in General* (`PUT /players/me/ranking-visibility`, [#772](https://github.com/Raketa02/Raketa/issues/772), [#778](https://github.com/Raketa02/Raketa/issues/778)); replaced 2026-11-14 by ADR-0204 §2, §3.14; the route is [#791](https://github.com/Raketa02/Raketa/issues/791)'s, the row [#799](https://github.com/Raketa02/Raketa/issues/799)'s |
 
 ## 3. Each row
 
@@ -473,6 +480,12 @@ re-validates against the same vocabulary and bounds the picker read. No route ye
 scored**, and no proposal reads one. **A tag is not an intent**: `HERE_TO_COMPETE` and a
 `FOR_FUN` declaration coexist and nothing overrules either.
 
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §6. **Tags order one row**: Home's *Same vibe players* lists
+> anyone sharing a tag with the player, more shared first, every tag counting the same, with the
+> vibe % 1 − ½ⁿ ([the home rows mechanics §8](../home-rows/the-mechanics.md#8-same-vibe-players)).
+> They still score nothing else: no proposal, card, forecast or level reads one. So the tags a player
+> picks here also decide who sees them in that row.
+
 ### 3.12 Intro
 
 **What it is.** One line, at most **250** code points (100 until
@@ -525,6 +538,24 @@ this player, from the next read, and the two initials over a generated poster.
 > Added 2026-11-07 by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7. The
 > rules are [the rankings mechanics §10](../rankings/the-mechanics.md#10-show-me-in-general)'s, and its
 > words are [the words §30.8](../matchmaking/the-words.md#308-strangers-requests-and-the-switch)'s.
+
+> **Replaced 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2: the row is ***Show me to new people***, and the text
+> below it in this section describes the switch it replaced. The rules are
+> [the home rows mechanics §4.3](../home-rows/the-mechanics.md#43-show-me-to-new-people-q18), and its
+> words are [the words §31.12](../matchmaking/the-words.md#3112-the-switch).
+>
+> - **What it is.** Whether players who share no group, no game and no friendship with this player
+>   may meet them. **On by default**; a player who had *Show me in General* off starts with it off.
+> - **What opens.** Nothing. The row is the switch, ***Show me to new people***, with *Players you
+>   don't share a group or a game with can find you on Home, open your record and send you a
+>   request.* under the title, the design system's switch (6.12) on the right.
+> - **How the update happens.** At once, with no *Save*, as a new event on the Player profile's
+>   stream; `GET /players/me/profile` returns it. A failed write puts the switch back and says so.
+> - **What changes.** Turned off, the player leaves Home's *Same competitive level*, *New in Raketa*
+>   and *Same vibe* rows on everybody else's Home, and their See all screens; anyone who shares no
+>   group, game or friendship with them reads *This record isn't available* and can't send a request.
+>   **The ranking is untouched**: they keep their true place in General, Friends and Top 10, and their
+>   face in group sheets. They still see the rows and send requests themselves.
 
 **What it is.** Whether strangers find this player in the ranking. **On by default.** It is the one
 fact on the tab that says who may read the rest of *On your card*, which is why it is the group's last
