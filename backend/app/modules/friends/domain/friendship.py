@@ -78,7 +78,8 @@ class Where:
     when it showed one. **A link's names neither**: it was opened, not pressed
     on a group's screen. **The ranking's names its sport and no group** (#773):
     the Rankings page is one sport's and no group's, and the card reads *Found
-    you in the padel ranking*."""
+    you in the padel ranking*. **New in Raketa's names neither** (#793): its
+    card reads *Found you among new players* and nothing more."""
 
     made_from: RequestOrigin
     group_id: UUID | None = None
@@ -95,16 +96,24 @@ class Where:
             or (self.group_id is None and self.sport is not None),
             f"a ranking's request names a group, or no sport: {self!r}",
         )
+        invariant(
+            self.made_from is not RequestOrigin.NEW_PLAYERS
+            or (self.group_id is None and self.sport is None),
+            f"a new player's request names a group or a sport: {self!r}",
+        )
 
     @classmethod
     def pressed_on(
         cls, made_from: RequestOrigin, *, group_id: UUID | None, sport: Sport | None
     ) -> "Where":
         """Where a client says a request was pressed — **the ranking's group
-        dropped**, since the Rankings page shows none (#773)."""
+        dropped**, since the Rankings page shows none (#773), and **New in
+        Raketa's group and sport** both, since its line names neither (#793)."""
 
-        if made_from is RequestOrigin.RANKING:
+        if made_from in (RequestOrigin.RANKING, RequestOrigin.NEW_PLAYERS):
             group_id = None
+        if made_from is RequestOrigin.NEW_PLAYERS:
+            sport = None
         return cls(made_from=made_from, group_id=group_id, sport=sport)
 
     def without_the_group(self) -> "Where":

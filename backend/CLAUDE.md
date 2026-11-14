@@ -83,14 +83,19 @@ Rules to preserve:
 - **Derived, never stored.** A standing, a room's membership and end, what a club can sell,
   who runs a group, a Player Score — each is folded from the record and the clock on every
   read. A stored copy is a second place for a fact to be true, and it is the one that gets
-  believed. **One stated exception: the ranking projection**
+  believed. **Two stated exceptions.** **The ranking projection**
   ([ADR-0203](../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §10) — a page of
   General is a slice of an order over every listed player, so `ranking_rows` stores a fold
   of each rating stream, and the chip needs a Level as it stood 7 days ago, so
   `ranking_level_history` keeps a point per move — both written only from the rating's own
   events and held equal to a rebuild by a test (`rankings.md`). Nobody is hidden from it
   since [ADR-0204](../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-  §2, so `ranking_visibility` went with *Show me in General* (#791).
+  §2, so `ranking_visibility` went with *Show me in General* (#791). **And the people rows'
+  copies** (ADR-0204 §10) — a Home read can't replay every player's streams, so
+  `discovery_players` and `discovery_player_tags` (#793) hold each account's nickname, first
+  photo, area cell, *joined*, tags, *Show me to new people* and whether it plays, written
+  only from the users' and the profiles' events and held equal to a rebuild by a test
+  (`discovery.md`); the level per sport (#794) and the rest count (#796) are the next two.
 - **Contexts meet through ports the consumer declares in its own words.** The adapter
   lives wherever the import arrow allows, `.importlinter` holds each arrow, and every
   outward port is contracted in a `tests/demands/` register.
@@ -145,8 +150,9 @@ changing code that calls into another context, read its rule.**
 | `conversations.md` | rooms, their end and the live channel |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record: open to any reader unless *Show me to new people* is off and nothing is shared (the four strands), the gates (a block either way among them), all photos, *Add friend* |
 | `rankings.md` | the ranking: one row per player per sport folded from the rating stream on every `rating.moved_on_result`, the level history keyed by the event, the rebuild, who is listed on General (5 results, 90 days), the order, the place card, the chip (7 days, rolling, *New*), the gap line and its wins, the podium, Home's trophy and its two places; the Friends view (the reader and their friends from the first result, worked out on each read, whole, *just you* and *no friend listed*); a sport's General order worked out in one pass and kept a minute (Redis, forgotten on every write), pages of 50 by cursor and around the reader, the 50,000-player measurement; the real ranking — nobody hidden, a blocked pair on each other's lists at true places, *of N* counting everyone (#791) |
+| `discovery.md` | the people rows' context: the player directory (one entry per account, written whole from what `users` and the profile hold on every delivered event that moves it, the rebuild, a gone account forgotten), who is never on a people row (the reader, a block either way, the switch off, an account that doesn't play), New in Raketa (30 days strictly, the 10 newest then unconnected · sent · friends, Warsaw days, See all in pages of 20 by cursor, the sport pill read off the rating live), the `NEW_PLAYERS` origin; its ports and their register |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
-| `friends.md` | friendships: a request, *Not now*, crossing, cancel and remove; a block ends one and hides a blocked player's request, live; the reader's relation lent to every face; Home's friend requests and the two notices; the link; asking a friend for a level, once per sport, answered by the rating's first level, and waiting on their Home until they have it or say *Not now*; who may be asked — anybody but a switched-off stranger, the record's rule (b), with no daily limit — and a request from the ranking (*Found you in the padel ranking*) |
+| `friends.md` | friendships: a request, *Not now*, crossing, cancel and remove; a block ends one and hides a blocked player's request, live; the reader's relation lent to every face; Home's friend requests and the two notices; the link; asking a friend for a level, once per sport, answered by the rating's first level, and waiting on their Home until they have it or say *Not now*; who may be asked — anybody but a switched-off stranger, the record's rule (b), with no daily limit — and a request from the ranking (*Found you in the padel ranking*) or from New in Raketa (*Found you among new players*) |
 | `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; the Cover a friends game's sender holds; proposals and the group deck; sending, answering and calling off a friends game; its empty seats — invited into, opened to the group, opened at the cut-off — the cover warning and leaving it |
 | `bookings.md` | the fill: all-or-nothing seat charges, the booking, its game and chat; a Card check far ahead and the holding four days before the cut-off; time to pay — a refused share holds its seat; no club confirms a game (On request removed); leaving, refunds, the cut-off and the record of who kept a booked game; rescues — seats to fill, the first join wins, a refused rescuer keeps a seat 30 minutes; the club's bookings — by day, Move, Cancel; desk check-in removed, its events decode-only; no-shows on the Game; the club's Money page and its daily summary of new bookings |
 | `accounts-and-mail.md` | the mail queue, administrators, signing out everywhere |

@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Eighteen registers, and they are eighteen on purpose — one per kind of claim.**
+  **Nineteen registers, and they are nineteen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -147,6 +147,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the composition root wraps it, over the suite's fake server, and the in-memory equivalent
   every test, a seed run and the rebuild read through — so an in-memory store that drifts
   from Redis's goes red.
+  **The nineteenth, `discovery_demands.py`, is Discovery's consumer register** (#793;
+  `discovery.md`): what the owners hold about an account now (`DirectorySources`, over `users`
+  and the Player profile), the reader's relations (`ReadersRelations`, over Friends' own read),
+  blocks either way (`BlocksEitherWay`), the levels held (`LevelsHeld`, over rating's published
+  read) and a face's link (`DirectoryFaces`, over the photo store — built over the settings).
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
   `general_order_demands.py`'s over a Redis client.

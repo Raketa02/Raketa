@@ -237,6 +237,12 @@ from app.seeds.hottest_groups import (
     hottest_group_lines,
     write_the_hottest_groups,
 )
+from app.seeds.new_in_raketa import (
+    SeededJoiners,
+    assert_new_in_raketa,
+    new_in_raketa_lines,
+    write_new_in_raketa,
+)
 from app.seeds.full_hour import (
     SeededFullHour,
     assert_the_full_hour,
@@ -1231,6 +1237,9 @@ class SeedReport:
     #: The HOTTEST group and her request waiting on it (#792). ``None`` on the
     #: same callers.
     hottest_groups: SeededHottestGroups | None = None
+    #: New in Raketa's joiners and her three relations among them (#793).
+    #: ``None`` on the same callers.
+    new_in_raketa: SeededJoiners | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1465,6 +1474,17 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             crowd=[(member.member.handle, member.player_id) for member in crowd],
             money=money,
         )
+        # **New in Raketa's joiners after her friends layers** (#793): eight
+        # players outside the cohort across the 30 days and one past them, and
+        # her three relations among them. Drained by the layer itself.
+        new_in_raketa = await write_new_in_raketa(
+            session_factory,
+            settings=settings,
+            now=now,
+            photos=photos,
+            photographs=photographs,
+            money=money,
+        )
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1489,6 +1509,9 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             await assert_the_hottest_groups(
                 session_factory, settings=settings, now=now, seeded=hottest_groups
             ),
+            await assert_new_in_raketa(
+                session_factory, settings=settings, now=now, seeded=new_in_raketa
+            ),
         )
         return SeedReport(
             accounts=accounts,
@@ -1512,6 +1535,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             friends_games=friends_games,
             full_hour=full_hour,
             hottest_groups=hottest_groups,
+            new_in_raketa=new_in_raketa,
             photographs=photographs,
         )
     finally:
@@ -1623,6 +1647,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *friends_game_lines(run_report.friends_games)])
     if run_report.hottest_groups is not None:
         lines.extend(["", *hottest_group_lines(run_report.hottest_groups)])
+    if run_report.new_in_raketa is not None:
+        lines.extend(["", *new_in_raketa_lines(run_report.new_in_raketa)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])

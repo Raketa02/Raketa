@@ -175,6 +175,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   that created the group**, a GROWING and an untagged card too: those are other layers'
   groups, which age with the store. Proven on a fresh Postgres 17, run twice: no group or
   booking event the second time.
+- **New in Raketa needs newcomers in relations to her, so eight are written for it**
+  (#793, `app/seeds/new_in_raketa.py`; `discovery.md`): `NEWCOMERS`, outside the cohort, by
+  `seed_the_cohort` on the clock their row names — today (no level), yesterday (she asked them
+  from the row), 2 days (they asked her), 4 days (her friend, no level), 9, 16, 23 days, and 35
+  days, out — in no group. After the Hottest groups layer, drained by the layer itself;
+  `assert_new_in_raketa` reads her row and See all among the screens, the relations held only
+  on the run that wrote them (their ages are that run's). The friends layer's Home claim reads
+  the named accounts alone, since the newcomer who asked her is on her Home too.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

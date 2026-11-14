@@ -118,7 +118,7 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
     every friend of the reader's at once, from the reader's side and reading no block, as
     `friends_among` does (`rankings.md`).
 - **Where a request was made** is the request's: `RequestOrigin` `MEMBERS · RECORD · RESULT ·
-  LINK · RANKING`, and the screen's `group_id` and `sport` when it showed them (`Where`; a
+  LINK · RANKING · NEW_PLAYERS`, and the screen's `group_id` and `sport` when it showed them (`Where`; a
   link's names neither; **the ranking's names its sport and no group**, an invariant). The phone
   sends all but `LINK` (`AskedFrom`, `POST /friends/requests`) — `RANKING` from a record opened
   on the Rankings page, with that page's sport, required (`422` without), its `group_id`
@@ -127,7 +127,10 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
   card names it only while both are still in it. **A ranking's request reads *Found you in
   the padel ranking*** on the Home card (`from_ranking`, Proposals' `HomeFriendRequest`) and in
   its notice (`reason` `FROM_THE_RANKING`), in place of the group line, as a link's *Invited you
-  to Raketa* stands — a group-mate's from the ranking too. **A request to a player who then
+  to Raketa* stands — a group-mate's from the ranking too. **New in Raketa's** (#793,
+  `NEW_PLAYERS`, its row or a record opened from it) **names no group and no sport** —
+  `pressed_on` drops either sent — and reads *Found you among new players* (`from_new_players`, `reason`
+  `FROM_NEW_PLAYERS`; `discovery.md`). **A request to a player who then
   turns *Show me to new people* off stays open** (the home-rows mechanics §4.3, call 12): the
   switch stops new requests, never old ones.
 - **The routes** (player surface, `presentation/routes.py`): `POST /friends/requests` (answers

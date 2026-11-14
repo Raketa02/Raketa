@@ -60,5 +60,8 @@ name, is what history is recorded under.
   fold kept point by point, keyed by the stored event (#772's `ranking_visibility` was
   dropped in #791 with the switch it copied). They record no fact the rating stream does
   not, so there is no event to emit; ADR-0203 §10 is where the stored copy is argued
-  (`rankings.md`).
+  (`rankings.md`). **And `discovery_players` with `discovery_player_tags`** (#793; ADR-0204
+  §10): the player directory, written whole from what `users` and the Player profile hold when
+  one of their events is delivered, and by the rebuild — no fact their streams don't hold
+  (`discovery.md`).
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

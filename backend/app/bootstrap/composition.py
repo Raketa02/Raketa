@@ -550,6 +550,40 @@ from app.modules.proposals.infrastructure.friends import (
     FriendsRequestsOnHome,
 )
 from app.modules.proposals.infrastructure.rankings import RankingsOnHome
+from app.modules.discovery.application.directory import (
+    FollowTheDirectory,
+    RebuildTheDirectory,
+)
+from app.modules.discovery.application.new_in_raketa import (
+    ReadNewInRaketaPage,
+    ReadNewInRaketa,
+)
+from app.modules.discovery.domain.ports import (
+    BlocksEitherWay,
+    DirectoryFaces,
+    DirectorySources,
+    LevelsHeld,
+    PlayerDirectory,
+    ReadersRelations,
+)
+from app.modules.discovery.infrastructure.account_directory_sources import (
+    AccountDirectorySources,
+)
+from app.modules.discovery.infrastructure.blocks_either_way import (
+    QueriedBlocksEitherWay,
+)
+from app.modules.discovery.infrastructure.friends_readers_relations import (
+    FriendsReadersRelations,
+)
+from app.modules.discovery.infrastructure.presigned_directory_faces import (
+    PresignedDirectoryFaces,
+)
+from app.modules.discovery.infrastructure.published_levels_held import (
+    PublishedLevelsHeld,
+)
+from app.modules.discovery.infrastructure.sqlalchemy_player_directory import (
+    SqlAlchemyPlayerDirectory,
+)
 from app.modules.rankings.application.projection import (
     MoveTheRanking,
     RebuildTheRankings,
@@ -4188,6 +4222,122 @@ def build_member_relations(
 ) -> MemberRelations:
     """Members' pills, **signed in ``groups/infrastructure/``** over Friends' read."""
     return FriendsMemberRelations(build_read_relations(session, runtime=runtime))
+
+
+# --------------------------------------------------------------------------
+# Discovery (#793; ``docs/adr/0204`` §10)
+# --------------------------------------------------------------------------
+
+
+def build_player_directory(session: AsyncSession) -> PlayerDirectory:
+    """The player directory, ``discovery_players`` and its tags (#793)."""
+    return SqlAlchemyPlayerDirectory(session)
+
+
+def build_directory_sources(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> DirectorySources:
+    """What ``users`` and the Player profile hold about one account now —
+    every directory entry is written from it."""
+    event_store = build_domain_event_store(session, runtime=runtime)
+    return AccountDirectorySources(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=event_store,
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        event_store=event_store,
+    )
+
+
+def build_follow_the_directory(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FollowTheDirectory:
+    """An owner's event writes its account's entry — built per delivery run,
+    over the session the delivery commits in (#793)."""
+    return FollowTheDirectory(
+        sources=build_directory_sources(session, runtime=runtime),
+        directory=build_player_directory(session),
+    )
+
+
+def build_rebuild_the_directory(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RebuildTheDirectory:
+    """Every entry written from every account — ``make discovery-rebuild``."""
+    return RebuildTheDirectory(
+        sources=build_directory_sources(session, runtime=runtime),
+        directory=build_player_directory(session),
+        uow=build_unit_of_work(session),
+    )
+
+
+def build_readers_relations(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadersRelations:
+    """The round friend button's state, **signed in
+    ``discovery/infrastructure/``** over Friends' own read, so the arrow runs
+    ``discovery → friends``."""
+    return FriendsReadersRelations(build_read_relations(session, runtime=runtime))
+
+
+def build_blocks_either_way(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BlocksEitherWay:
+    """Everybody a people row may not show the reader, over the one place a
+    block is read."""
+    return QueriedBlocksEitherWay(build_block_query(session, runtime=runtime))
+
+
+def build_levels_held(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> LevelsHeld:
+    """Every sport a person holds a level in, off rating's published read."""
+    return PublishedLevelsHeld(build_rated_player_query(session, runtime=runtime))
+
+
+def build_directory_faces(settings: Settings) -> DirectoryFaces:
+    """A link to a face the directory names, signed over the photo store."""
+    return PresignedDirectoryFaces(
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_read_new_in_raketa(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadNewInRaketa:
+    """``GET /new-in-raketa``: Home's row of the 10 newest (#793)."""
+    return ReadNewInRaketa(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        levels=build_levels_held(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+        clock=clock,
+    )
+
+
+def build_read_new_in_raketa_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadNewInRaketaPage:
+    """``GET /new-in-raketa/all``: See all, in pages of 20 (#793)."""
+    return ReadNewInRaketaPage(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        levels=build_levels_held(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+        clock=clock,
+    )
 
 
 # --------------------------------------------------------------------------

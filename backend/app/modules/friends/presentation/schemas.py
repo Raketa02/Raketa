@@ -35,6 +35,7 @@ class AskedFrom(StrEnum):
     RECORD = RequestOrigin.RECORD.value
     RESULT = RequestOrigin.RESULT.value
     RANKING = RequestOrigin.RANKING.value
+    NEW_PLAYERS = RequestOrigin.NEW_PLAYERS.value
 
 
 class AskToBeFriendsRequest(BaseModel):
@@ -46,7 +47,9 @@ class AskToBeFriendsRequest(BaseModel):
             "screen's *PLAYED WITH* card, or **the record opened from the "
             "Rankings page** — `RANKING`, with that page's `sport` (#773). Their "
             "Home card and notice then read *Found you in the padel ranking*, "
-            "whether or not you share a group."
+            "whether or not you share a group. From Home's **New in Raketa** "
+            "row, or a record opened from it — `NEW_PLAYERS` (#793): their card "
+            "and notice read *Found you among new players*."
         )
     )
     group_id: UUID | None = Field(
@@ -55,14 +58,15 @@ class AskToBeFriendsRequest(BaseModel):
             "The group the screen showed — Members' group, or the game's — which "
             "their Home card names (*With you in Kazimierz crew*) while you are "
             "both in it. Omit it where the screen showed none; it is ignored "
-            "with `RANKING`, whose page shows no group."
+            "with `RANKING` and `NEW_PLAYERS`, whose screens show no group."
         ),
     )
     sport: Sport | None = Field(
         default=None,
         description=(
             "The sport the screen showed, whose Level the card prints beside your "
-            "nickname (*Padel 3,40*). Omit it where the screen showed none. "
+            "nickname (*Padel 3,40*). Omit it where the screen showed none; "
+            "it is ignored with `NEW_PLAYERS`, whose line names no sport. "
             "**Required with `RANKING`**: it is the ranking the card names."
         ),
     )

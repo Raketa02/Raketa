@@ -468,6 +468,7 @@ source_modules =
     app.modules.bookings
     app.modules.clubs
     app.modules.conversations
+    app.modules.discovery
     app.modules.games
     app.modules.groups
     app.modules.matchmaking
@@ -680,6 +681,7 @@ forbidden_modules =
     app.modules.bookings
     app.modules.clubs
     app.modules.conversations
+    app.modules.discovery
     app.modules.friends
     app.modules.games
     app.modules.groups
@@ -697,10 +699,11 @@ allow_indirect_imports = false
 
 # Friends lends the reader's relations to every face, and knows none of the
 # faces (docs/adr/0202 §8, #745). Members, the record, the deck, Home, the bell
-# and the Rankings' Friends view (#771) each declare the port they read it
-# through, **signed on their own side** — `groups/infrastructure/`,
-# `player_record/infrastructure/`, `proposals/infrastructure/`,
-# `notifications/infrastructure/`, `rankings/infrastructure/` — and the two
+# and the Rankings' Friends view (#771) — and Home's people rows (#793) — each
+# declare the port they read it through, **signed on their own side** —
+# `groups/infrastructure/`, `player_record/infrastructure/`,
+# `proposals/infrastructure/`, `notifications/infrastructure/`,
+# `rankings/infrastructure/`, `discovery/infrastructure/` — and the two
 # things Friends asks of its readers are ports in Friends' words signed on
 # their side too: the reader's groups and their members in
 # `groups/infrastructure/`, and who may be asked — the record's rule (b),
@@ -714,6 +717,7 @@ type = forbidden
 source_modules =
     app.modules.friends
 forbidden_modules =
+    app.modules.discovery
     app.modules.groups
     app.modules.notifications
     app.modules.player_record
@@ -741,3 +745,43 @@ forbidden_modules =
     app.modules.player_record
     app.modules.proposals
 allow_indirect_imports = true
+
+# The people rows reach every neighbour through a port in their own words
+# (docs/adr/0204 §10, #793). Discovery's domain and application layers borrow
+# no other context's type — not a relation, not an event, not a level — so each
+# neighbour is met at a port declared in `discovery/domain/ports.py` and signed
+# in `discovery/infrastructure/`, where the owners' events are read as *this
+# account changed* too. The record holds itself to the same fence
+# (`the-player-record-declares-its-own-ports`).
+#
+# `allow_indirect_imports = false`, as the record's: an application module that
+# imported an adapter which imports Friends would have borrowed Friends' types
+# exactly as completely as one importing them itself.
+[importlinter:contract:the-discovery-context-declares-its-own-ports]
+name = Discovery's domain and application layers borrow no other context's types
+type = forbidden
+source_modules =
+    app.modules.discovery.domain
+    app.modules.discovery.application
+forbidden_modules =
+    app.modules.administrators
+    app.modules.auth
+    app.modules.blocks
+    app.modules.bookings
+    app.modules.clubs
+    app.modules.conversations
+    app.modules.friends
+    app.modules.games
+    app.modules.groups
+    app.modules.matchmaking
+    app.modules.notifications
+    app.modules.payments
+    app.modules.player_profile
+    app.modules.player_record
+    app.modules.player_score
+    app.modules.proposals
+    app.modules.rankings
+    app.modules.rating
+    app.modules.sportsmanship
+    app.modules.users
+allow_indirect_imports = false

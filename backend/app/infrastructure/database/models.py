@@ -25,6 +25,10 @@ from app.modules.clubs.infrastructure.club_model import (
 from app.modules.conversations.infrastructure.conversation_model import (
     ConversationORM,
 )
+from app.modules.discovery.infrastructure.directory_model import (
+    DirectoryPlayerORM,
+    DirectoryTagORM,
+)
 from app.modules.friends.infrastructure.friend_link_model import FriendLinkCodeORM
 from app.modules.friends.infrastructure.friendship_model import (
     FriendLevelAskORM,
@@ -65,6 +69,8 @@ __all__ = [
     "ClubORM",
     "ClubPaymentsAccountORM",
     "ConversationORM",
+    "DirectoryPlayerORM",
+    "DirectoryTagORM",
     "EventOutboxORM",
     "EventStoreORM",
     "FriendLevelAskORM",

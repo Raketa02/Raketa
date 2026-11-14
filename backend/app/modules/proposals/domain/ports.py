@@ -466,8 +466,9 @@ class ReaderRelations(Protocol):
 class HomeFriendRequest:
     """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
-    you to Raketa* for a link's, or *Found you in the padel ranking* for the
-    ranking's (#773)."""
+    you to Raketa* for a link's, *Found you in the padel ranking* for the
+    ranking's (#773), or *Found you among new players* for New in Raketa's
+    (#793)."""
 
     requester_id: UUID
     nickname: str
@@ -478,6 +479,9 @@ class HomeFriendRequest:
     by_link: bool
     #: Made from a record opened on the Rankings page, in ``sport`` (#773).
     from_ranking: bool
+    #: Made from Home's *New in Raketa* row, or a record opened from it (#793):
+    #: *Found you among new players*.
+    from_new_players: bool
     #: The group it was asked from, **while both are in it**.
     group_id: UUID | None
     group_name: str | None

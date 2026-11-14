@@ -4981,6 +4981,138 @@
         ]
       }
     },
+    "/api/v1/new-in-raketa": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Home's New in Raketa row",
+        "description": "The players who finished sign-up in the **last 30 days**, strictly \u2014 the 10 newest, unrated ones included \u2014 those you aren't connected with first, then those you sent a request to, then your friends, newest first within each. An 11th sign-up pushes the oldest off the row; they stay in See all until their 30 days end. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_new_in_raketa_api_v1_new_in_raketa_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewInRaketaResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/new-in-raketa/all": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "New in Raketa's See all",
+        "description": "Every player who joined in the last 30 days, newest first, friends where they fall, in pages of 20 \u2014 with `sport`, only those holding a level in it \u2014 and the sports at least one of them holds a level in. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_new_in_raketa_page_api_v1_new_in_raketa_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep only the players holding a level in this sport.",
+              "title": "Sport"
+            },
+            "description": "Keep only the players holding a level in this sport."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 players behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 players behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewInRaketaPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_new_in_raketa_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invitations/claim": {
       "post": {
         "tags": [
@@ -8979,7 +9111,7 @@
           },
           "made_from": {
             "$ref": "#/components/schemas/AskedFrom",
-            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group."
+            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it \u2014 `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*."
           },
           "group_id": {
             "anyOf": [
@@ -8992,7 +9124,7 @@
               }
             ],
             "title": "Group Id",
-            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, whose page shows no group."
+            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING` and `NEW_PLAYERS`, whose screens show no group."
           },
           "sport": {
             "anyOf": [
@@ -9003,7 +9135,7 @@
                 "type": "null"
               }
             ],
-            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none. **Required with `RANKING`**: it is the ranking the card names."
+            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS`, whose line names no sport. **Required with `RANKING`**: it is the ranking the card names."
           }
         },
         "type": "object",
@@ -9019,7 +9151,8 @@
           "MEMBERS",
           "RECORD",
           "RESULT",
-          "RANKING"
+          "RANKING",
+          "NEW_PLAYERS"
         ],
         "title": "AskedFrom",
         "description": "The screen a request is asked from. **Not a link**: a request by link is\nmade by opening the link, never sent here."
@@ -13360,6 +13493,11 @@
             "title": "From Ranking",
             "description": "Made from your record on the Rankings page: draw *Found you in the padel ranking* \u2014 `sport`'s ranking \u2014 in place of the group line, whether or not you share a group (#773)."
           },
+          "from_new_players": {
+            "type": "boolean",
+            "title": "From New Players",
+            "description": "Made from Home's *New in Raketa* row, or a record opened from it: draw *Found you among new players* in place of the group line (#793)."
+          },
           "group": {
             "anyOf": [
               {
@@ -13415,6 +13553,7 @@
           "asked_at",
           "by_link",
           "from_ranking",
+          "from_new_players",
           "group",
           "sport",
           "level",
@@ -14861,6 +15000,156 @@
         ],
         "title": "NamingResponse",
         "description": "What the naming recorded: the nickname as it now stands.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on; this is what lets it show the nickname back at once."
+      },
+      "NewInRaketaPageResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/NewInRaketaPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 20 players who joined in the last 30 days, newest first, friends where they fall \u2014 with `sport`, only those holding a level in it. Empty with a sport: *Nobody new plays squash yet*."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport at least one of them holds a level in, in the sports' own order \u2014 the pill's chips beside *All*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "next",
+          "sports"
+        ],
+        "title": "NewInRaketaPageResponse"
+      },
+      "NewInRaketaPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` draws their court poster."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At",
+            "description": "When they finished sign-up \u2014 the profile commit."
+          },
+          "days_since_joined": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Days Since Joined",
+            "description": "Warsaw days since they joined: `0` is *Joined today*, `1` *Joined yesterday*, 2\u20136 *Joined {n} days ago*, 7\u201313 *Joined last week*, then *Joined {n} weeks ago* (days \u00f7 7, at most 4)."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/NewInRaketaSportSchema"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport they hold a level in, in the sports' own order \u2014 **empty** for a player with no level, whose tile shows no sport line."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them \u2014 the round friend button: `NONE` **+**, `SENT` **\u2026**, `FRIEND` **\u2713**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `NEW_PLAYERS`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "joined_at",
+          "days_since_joined",
+          "sports",
+          "relation"
+        ],
+        "title": "NewInRaketaPlayerSchema",
+        "description": "One New in Raketa tile."
+      },
+      "NewInRaketaResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/NewInRaketaPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 10: the 10 newest of the last 30 days, those you aren't connected with first (someone who asked you among them), then those you sent a request to, then your friends \u2014 newest first within each. **Empty hides the row.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "NewInRaketaResponse"
+      },
+      "NewInRaketaSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their published Level in the sport \u2014 *Padel 2,35*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "NewInRaketaSportSchema"
       },
       "NewPasswordRequest": {
         "properties": {

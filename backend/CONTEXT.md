@@ -689,6 +689,15 @@ there; they are not repeated here.
   which reads no block (a block ends a friendship); a pill asks `relations_of`. _Avoid_: a
   `friend` flag on a shared person type that knows no reader.
 
+- **Directory entry** — one row of `discovery_players` (and its tags, one row each in
+  `discovery_player_tags`), the player directory the people rows read (#793,
+  [ADR-0204](../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+  §10): **one per account**, written whole from what `users` and the Player profile hold now
+  whenever one of their events is delivered, and by the rebuild. *Plays* once it holds a Player
+  profile, and its *joined* is that profile's commit. **A copy, never the record**, and a stated
+  exception to *derived, never stored*. _Avoid_: "user index", "candidate index" (the matcher's,
+  gone with Classic play), "search table".
+
 - **Court source** — where a pool's court hours come from, **answered per hour** (#746,
   [ADR-0202](../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
   §7): `WherePoolsPlay.of` reads the clubs (`GroupClubs` — the switch and distance off the

@@ -336,7 +336,11 @@ async def write_the_friends(
             session, settings=settings
         ).execute(ids[her.slug])
     slug_of = {player_id: slug for slug, player_id in ids.items()}
-    on_home = tuple(slug_of[card.requester_id] for card in home)
+    # The named accounts alone: a later layer's people ask her too — New in
+    # Raketa's newcomer (#793) — and this layer's claim is about its own.
+    on_home = tuple(
+        slug_of[card.requester_id] for card in home if card.requester_id in slug_of
+    )
     seeded = SeededFriends(
         friends=_with(relations, FriendRelation.FRIEND, slug_of),
         on_her_home=on_home,
