@@ -24,9 +24,11 @@ export type FriendRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
  * **The screen a request is asked from** — which the request keeps, and which its card on the other
  * person's Home names through the group the screen showed. A link's request (#748) is never sent:
  * opening the link makes it. `RANKING` is a record opened from the Rankings page (#773, #779), sent
- * with that page's sport (`recordAskedWhere`).
+ * with that page's sport (`recordAskedWhere`). `NEW_PLAYERS` is Home's New in Raketa row, or a
+ * record opened from it (#801; the Home rows mechanics §12): their card reads *Found you among new
+ * players*, and the request names neither a group nor a sport.
  */
-export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING';
+export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING' | 'NEW_PLAYERS';
 
 /**
  * **Which way an open request points** (#754) — the Friends page's two request tabs, each its own

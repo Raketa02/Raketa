@@ -57,6 +57,8 @@ const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   notices: 'home',
   // Rankings, behind the trophy left of the bell (#775; Q11: the Home tab stays lit).
   rankings: 'home',
+  // New in Raketa's See all, behind its row's *See all ›* (#801; the Home rows screens §1).
+  'new-in-raketa': 'home',
 };
 
 /**

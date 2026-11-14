@@ -34,6 +34,7 @@ import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
 import SeatInviteRoute from '@/app/(app)/(tabs)/booking/[bookingId]/invite';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
+import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
@@ -164,6 +165,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/notices': NoticesRoute,
   // Rankings, behind the trophy left of Home's bell (#775).
   '(app)/(tabs)/rankings': RankingsRoute,
+  '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -813,6 +815,20 @@ export function stubHottestGroups(
   );
 }
 
+/** Home's New in Raketa (#801) — nobody unless the suite says, so the row is hidden. */
+export const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
+/** New in Raketa's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const NEW_IN_RAKETA_ALL_PATH = '/api/v1/new-in-raketa/all';
+
+export function stubNewInRaketa(
+  transport: Transport,
+  players: readonly Wire['NewInRaketaPlayerSchema'][] = [],
+) {
+  transport.on('GET', NEW_IN_RAKETA_PATH, () =>
+    json<Wire['NewInRaketaResponse']>({ players: [...players] }),
+  );
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -1000,6 +1016,7 @@ export function stubGate(
   stubSportsmanship(transport);
   stubMyGroups(transport);
   stubHottestGroups(transport);
+  stubNewInRaketa(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);

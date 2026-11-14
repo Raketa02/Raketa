@@ -95,7 +95,9 @@
  * one. A request asked here says where it was asked from (`friends`'
  * `recordAskedWhere`): the record, with the group and the sport the caller opened it from (`groupId`,
  * `sport`), which the other person's Home card names — or **the ranking**, with the page's sport,
- * where the Rankings page opened it (`rankingSport`), so the card reads *Found you in the padel ranking*.
+ * where the Rankings page opened it (`rankingSport`), so the card reads *Found you in the padel ranking*
+ * — or **the Home row** that opened it (`foundIn`, #801), so it reads *Found you among new players*.
+ * The row itself moves on its own: a friend act or a block re-reads every read that lists people.
  *
  * ## All their photos, under the header
  *
@@ -138,6 +140,7 @@ import {
   recordAskedWhere,
   recordFootOf,
   type AskedWhere,
+  type FoundIn,
 } from '@/features/friends/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { BottomSheet, Note, Button, PhotoCarousel, SocialTagRow, theme } from '@/shared/ui';
@@ -232,6 +235,11 @@ export interface PlayerRecordSheetProps {
    * ranking*. Absent everywhere else.
    */
   readonly rankingSport?: Sport;
+  /**
+   * **The Home row that opened the record** (#801; the Home rows mechanics §12): a request asked here
+   * keeps the row — *Found you among new players* on the other person's Home. Absent everywhere else.
+   */
+  readonly foundIn?: FoundIn;
 }
 
 export function PlayerRecordSheet({
@@ -246,6 +254,7 @@ export function PlayerRecordSheet({
   foot,
   groupId,
   rankingSport,
+  foundIn,
 }: PlayerRecordSheetProps) {
   const record = usePlayerRecord({
     subject,
@@ -277,7 +286,7 @@ export function PlayerRecordSheet({
             {...(tagOverlap === undefined ? {} : { tagOverlap })}
             {...(pairing === undefined ? {} : { pairing })}
             {...(foot === undefined ? {} : { foot })}
-            where={recordAskedWhere({ rankingSport, groupId, sport })}
+            where={recordAskedWhere({ rankingSport, groupId, sport, foundIn })}
             rereadRecord={() => record.refetch()}
             onBlocked={onClose}
           />

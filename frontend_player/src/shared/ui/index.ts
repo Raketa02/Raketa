@@ -108,6 +108,7 @@ export {
 export { PagerDots, type PagerDotsProps } from './PagerDots';
 export { MARK_TOP, PhotoPanel, type PhotoPanelProps } from './PhotoPanel';
 export { PhotoCarousel, type CarouselPhoto, type PhotoCarouselProps } from './PhotoCarousel';
+export { PortraitTile, type PortraitTileProps } from './PortraitTile';
 export {
   PHOTO_PANEL,
   POSTER_LABEL,
@@ -136,8 +137,10 @@ export {
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
 export {
+  ALL_SPORTS,
   SportPillFrame,
   type AnotherSport,
+  type SportChoice,
   type SportPillFrameProps,
   type SportPillWords,
 } from './SportPillFrame';
@@ -161,7 +164,7 @@ export {
 export { Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
 export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';
-export { Dash, Plus, PlusOnMedia, Tick, TICK_PATH, TICK_SPACE } from './Tick';
+export { Dash, Plus, PlusOnMedia, PlusOnSurface, Tick, TICK_PATH, TICK_SPACE } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
 export { UndoToast, type UndoToastProps } from './UndoToast';

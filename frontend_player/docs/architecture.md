@@ -592,6 +592,17 @@ join match succeeds
 **Prefer response-driven updates.** If the mutation returns the updated entity, write it
 into the cache; don't immediately refetch what you were just handed.
 
+### A write some other feature's reads depend on
+
+A mutation re-reads its own feature's keys, and a surface that draws another feature's control
+hands its own read in (`friends`' `reread`). **Where the reads that depend on a write belong to a
+feature that imports the writer** — Home's people rows draw `friends`' button, so `friends` naming
+their keys would run the import both ways — the read **declares a tag** in its `meta` and the write
+re-reads whatever carries it: `LISTS_PEOPLE` and `rereadPeopleLists` in `shared/lib/query-client`
+(#801), called by every friend write and every block. A tag says what a read **is** (it lists people
+with the reader's relation to them), never who wrote it; one tag per such dependency, and none for a
+dependency an import can already express.
+
 ### Optimistic updates are not the default
 
 Use them when latency is perceptible, rollback is deterministic, conflicts are

@@ -73,6 +73,7 @@ const tomeksRequest: Wire['HomeFriendRequestSchema'] = {
   asked_at: '2026-10-01T07:59:00Z',
   by_link: true,
   from_ranking: false,
+  from_new_players: false,
   group: null,
   sport: null,
   level: null,

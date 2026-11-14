@@ -44,6 +44,12 @@ describe('the request card’s words (§29.2)', () => {
     );
   });
 
+  it('reads Found you among new players for a request from New in Raketa, in the group line’s place (#801)', () => {
+    expect(whereLine({ byLink: false, newPlayers: true, group: { name: 'Kazimierz crew' } })).toBe(
+      'Found you among new players',
+    );
+  });
+
   it('says only what the wire named — a group they left, a sport they hold no Level in', () => {
     expect(whereLine({ byLink: false, sportName: 'Padel' })).toBe('Padel ·');
     expect(whereLine({ byLink: false, group: { name: 'Kazimierz crew' } })).toBe(

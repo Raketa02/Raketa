@@ -23,11 +23,20 @@ import type { AskedFrom, FriendRelation } from './vocabulary';
  */
 export type AskedWhere =
   | {
-      readonly from: Exclude<AskedFrom, 'RANKING'>;
+      readonly from: Exclude<AskedFrom, 'RANKING' | 'NEW_PLAYERS'>;
       readonly groupId?: string;
       readonly sport?: Sport;
     }
-  | { readonly from: 'RANKING'; readonly sport: Sport };
+  | { readonly from: 'RANKING'; readonly sport: Sport }
+  | FoundIn;
+
+/**
+ * **A Home row a request was found in** (#801; the Home rows mechanics §12) — sent from the row's
+ * round button, or from a record the row opened, so the other person's card says where they were
+ * found. New in Raketa names nothing else: *Found you among new players*, whatever group or sport
+ * the two share. The rows still to come (#802, #803) add theirs here.
+ */
+export type FoundIn = { readonly from: 'NEW_PLAYERS' };
 
 /**
  * **The right-hand end of a Members row** (the screens §1; friends 1, 2): a pill that acts, or a tag
@@ -92,14 +101,19 @@ export function recordFootOf(record: {
  * **Where a request asked from the record is asked from** — the record, with the group and the sport
  * the caller opened it on; or **the ranking**, with the page's sport, where the caller is the Rankings
  * page (#779; the rankings screens §6, the mechanics §13.2). The page shows no group, so none is named
- * with it, and the sport is the ranking's, whatever sport the record is about.
+ * with it, and the sport is the ranking's, whatever sport the record is about. **A record a Home row
+ * opened keeps the row** (#801; the Home rows mechanics §12): *a request sent from a record keeps the
+ * row the record was opened from*.
  */
 export function recordAskedWhere(opened: {
   /** The sport of the Rankings page the record was opened on — `undefined` everywhere else. */
   readonly rankingSport: Sport | undefined;
   readonly groupId: string | undefined;
   readonly sport: Sport | undefined;
+  /** The Home row the record was opened from — absent everywhere else. */
+  readonly foundIn?: FoundIn | undefined;
 }): AskedWhere {
+  if (opened.foundIn !== undefined) return opened.foundIn;
   if (opened.rankingSport !== undefined) return { from: 'RANKING', sport: opened.rankingSport };
   return {
     from: 'RECORD',
@@ -114,4 +128,49 @@ export function recordAskedWhere(opened: {
  */
 export function movesTheFaces(before: FriendRelation, after: FriendRelation): boolean {
   return (before === 'FRIEND') !== (after === 'FRIEND');
+}
+
+/**
+ * **What a tap on the round friend button does** (#801; the Home rows mechanics §11; Q29) — on every
+ * card of the people rows, keyed by where the reader stands with the person:
+ *
+ * | Relation | Mark | A tap |
+ * | --- | --- | --- |
+ * | `NONE` | **+**, white | `ask` — a request at once |
+ * | `SENT` | **…**, brown | `requestSent` — the *Request sent* sheet, with *Cancel request* |
+ * | `FRIEND` | **✓**, green | `remove` — *Remove … as a friend?* |
+ * | `ASKED_YOU` | the envelope, volt | `accept` — at once |
+ */
+export type RoundPress = 'ask' | 'requestSent' | 'remove' | 'accept';
+
+const ROUND_PRESS: Readonly<Record<FriendRelation, RoundPress>> = {
+  NONE: 'ask',
+  SENT: 'requestSent',
+  FRIEND: 'remove',
+  ASKED_YOU: 'accept',
+};
+
+export function roundPressOf(relation: FriendRelation): RoundPress {
+  return ROUND_PRESS[relation];
+}
+
+/** The two presses that write at once — each the step its button draws before the answer lands. */
+export type ImmediatePress = Extract<RoundPress, 'ask' | 'accept'>;
+
+const GUESSED: Readonly<Record<ImmediatePress, FriendRelation>> = {
+  ask: 'SENT',
+  accept: 'FRIEND',
+};
+
+/**
+ * **The relation the button draws** (the Home rows screens §8.1): **+** turns to **…** and the
+ * envelope to **✓** the moment it is pressed, while the write is out — and once it has settled, the
+ * read under it says what the server did. A failed write is no longer out, so the read's own relation
+ * is drawn again: *a failed write puts it back*.
+ */
+export function shownWhilePressed(
+  relation: FriendRelation,
+  out: ImmediatePress | undefined,
+): FriendRelation {
+  return out === undefined ? relation : GUESSED[out];
 }

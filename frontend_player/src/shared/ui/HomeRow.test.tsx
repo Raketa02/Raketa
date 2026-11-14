@@ -193,6 +193,24 @@ describe('the Home row frame', () => {
     });
   });
 
+  /** New in Raketa's portrait tiles (#801; home rows 17): narrow, several on screen, the last cut. */
+  describe('the tiles rail', () => {
+    it('draws each tile at its share of the content width — a lone one too', () => {
+      render(<Row count={3} geometry="tiles" />);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+
+      screen.rerender(<Row count={1} geometry="tiles" />);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+    });
+
+    it('scrolls freely and draws no dots', () => {
+      render(<Row count={4} geometry="tiles" />);
+
+      expect(rail().props.snapToInterval).toBeUndefined();
+      expect(screen.queryByTestId('pager-dots', { includeHiddenElements: true })).toBeNull();
+    });
+  });
+
   describe('the paging rail', () => {
     /** 7.7: a card that needs the width takes it, and takes the dots always. */
     it('draws every card at the content width and snaps one at a time', () => {

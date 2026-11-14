@@ -464,3 +464,9 @@ shared — the refusal now wins: the sheet draws its one line and no foot. That 
 unnamed `player_unavailable` quiet: the friend button re-reads, and the record says _This record isn't
 available_ ([`friends.md`](friends.md)). **Not seen on a device**: the carousel's two cards under the
 header, the bleed to the sheet's edge and the snap.
+
+**A record a Home row opened keeps the row** ([#801](https://github.com/Raketa02/Raketa/issues/801);
+the Home rows mechanics §12). **`foundIn`** is the row — a request asked at the foot is then _found
+among new players_ (`friends`' `recordAskedWhere`); New in Raketa's tiles hand it (`discovery`'s
+`JoinerRecord`). The row under the sheet moves on its own: a friend act or a block at the foot
+re-reads every read that lists people (`LISTS_PEOPLE`).

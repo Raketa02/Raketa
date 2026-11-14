@@ -383,6 +383,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     asked_at: '2026-10-01T07:00:00Z',
     by_link: false,
     from_ranking: false,
+    from_new_players: false,
     group: { id: 'group-1', name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,
@@ -410,6 +411,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         photoUrl: 'https://photos.example/ines.jpg',
         byLink: false,
         fromRanking: false,
+        fromNewPlayers: false,
         group: { id: 'group-1', name: 'Kazimierz crew' },
         sport: 'padel',
         level: 3.4,
@@ -430,6 +432,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         nickname: 'ines.d',
         byLink: true,
         fromRanking: false,
+        fromNewPlayers: false,
         playerScore: 98,
         reliabilityBand: 'VERY_HIGH',
       },
@@ -446,6 +449,15 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     expect(
       home([request({ from_ranking: true, group: null })]).friendRequests[0],
     ).not.toHaveProperty('group');
+  });
+
+  it('reads a request from New in Raketa (#801)', () => {
+    expect(home([request({ from_new_players: true })]).friendRequests).toEqual([
+      expect.objectContaining({ fromNewPlayers: true, fromRanking: false }),
+    ]);
+    expect(home([request()]).friendRequests).toEqual([
+      expect.objectContaining({ fromNewPlayers: false }),
+    ]);
   });
 });
 

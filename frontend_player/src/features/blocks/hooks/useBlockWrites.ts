@@ -44,6 +44,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
+import { rereadPeopleLists } from '@/shared/lib/query-client';
 
 import type { BlockedPlayer } from '../domain/blockedPlayer';
 import { block, unblock } from '../use-cases/blocks';
@@ -94,6 +95,8 @@ export function useUnblock(playerId: string) {
 function rereadAfterUnblocking(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: blockKeys.list() }),
+    // Home's people rows keep a blocked pair apart (#801): every read that lists people, again.
+    rereadPeopleLists(client),
     // Every group's deck, and the Fill in and posting reads under each group's root.
     client.invalidateQueries({ queryKey: proposalKeys.decks() }),
   ]);

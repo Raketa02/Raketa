@@ -297,6 +297,7 @@ describe('ASKED FOR A LEVEL on Home', () => {
           asked_at: '2026-11-07T07:00:00Z',
           by_link: false,
           from_ranking: false,
+          from_new_players: false,
           group: null,
           sport: null,
           level: null,

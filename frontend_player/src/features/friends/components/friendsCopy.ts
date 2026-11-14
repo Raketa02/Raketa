@@ -75,7 +75,14 @@
  * unnamed `player_unavailable` is the state moving, the record is read again, and it reads _This
  * record isn't available_.
  *
- * _Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
+ * And these, written in by #801 (the round friend button; the words §31.9–§31.10):
+
+- **The round button's spoken names** are §31.9's own calls; **its busy words** are none — it draws
+  the next mark at once instead.
+- **The *Request sent* sheet's busy word** is the record's *Cancelling…*.
+- **A refusal on the round button is a toast**: there is no room under a 24pt mark for a note.
+
+_Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
  * chip beside it — which is §29.2's own: the group line is the whole line, and a link's replaces it.
  *
  * ## The whole nickname, and no pronoun
@@ -90,6 +97,7 @@ import { formatLevel } from '@/shared/formatting/ratingFormat';
 
 import type { FriendsTab } from '../domain/friendList';
 import { askersFormOf, type AskersForm } from '../domain/levelAsk';
+import type { FriendRelation } from '../domain/vocabulary';
 
 export const FRIENDS_COPY = {
   members: {
@@ -139,6 +147,8 @@ export const FRIENDS_COPY = {
     accepting: 'Accepting…',
     /** A link's request, in place of the group line. */
     byLink: 'Invited you to Raketa',
+    /** A request from New in Raketa, or a record it opened, in place of the group line (§31.10). */
+    newPlayers: 'Found you among new players',
   },
   /** **You › Friends** (the screens §4.1): the header, the three tabs, their rows and empty lines. */
   page: {
@@ -228,6 +238,21 @@ export const FRIENDS_COPY = {
     /** A greyed no-Level row, once you asked (§29.3) — you ask once per sport, ever. */
     asked: 'Asked',
   },
+  /**
+   * **The round friend button** (#801; the Home rows screens §8; the words §31.9) — no words of its
+   * own, a drawn mark per relation; its spoken names are `roundLabel`. **Its worded twin** on a
+   * sheet says these, the + and the ✓ drawn before them.
+   */
+  round: {
+    worded: {
+      NONE: 'Add friend',
+      SENT: 'Request sent',
+      FRIEND: 'Friends',
+      ASKED_YOU: 'Accept',
+    } satisfies Readonly<Record<FriendRelation, string>>,
+    /** From **…**: what stands, and the one act under it — no question, so no *Keep* (§31.9). */
+    requestSent: { title: 'Request sent', act: 'Cancel request', busy: 'Cancelling…' },
+  },
   /** Said where a write was pressed, when the server refused it for a reason that is not the state moving. */
   refused: {
     /**
@@ -239,6 +264,22 @@ export const FRIENDS_COPY = {
     not_one_of_your_groups: 'You’re not in this group any more.',
   } as Readonly<Record<string, string>>,
 } as const;
+
+/**
+ * **The round friend button's spoken name** (the words §31.9, each a call) — the button's whole name,
+ * kept for tests (ADR-0198): a row of marks names nobody, so each says whom and where the reader
+ * stands. Keyed by the relation, so one with no name fails to compile.
+ */
+const ROUND_LABEL: Readonly<Record<FriendRelation, (nickname: string) => string>> = {
+  NONE: (nickname) => `Add ${nickname} as a friend`,
+  SENT: (nickname) => `Request sent to ${nickname}`,
+  FRIEND: (nickname) => `Friends with ${nickname}`,
+  ASKED_YOU: (nickname) => `Accept ${nickname}'s request`,
+};
+
+export function roundLabel(relation: FriendRelation, nickname: string): string {
+  return ROUND_LABEL[relation](nickname);
+}
 
 /** The spoken name of a Members row's **+ Add** — the person it asks, since a column names nobody. */
 export function addLabel(nickname: string): string {
@@ -292,11 +333,17 @@ export function whereLine(request: {
    * *Invited you to Raketa* does.
    */
   readonly ranking?: string;
+  /**
+   * **A request from New in Raketa** (#801; the words §31.10): *Found you among new players* stands
+   * in place of the group line, whatever group the two share.
+   */
+  readonly newPlayers?: boolean;
   readonly group?: { readonly name: string };
   readonly sportName?: string;
   readonly level?: number;
 }): string {
   if (request.byLink) return FRIENDS_COPY.home.byLink;
+  if (request.newPlayers === true) return FRIENDS_COPY.home.newPlayers;
   if (request.ranking !== undefined) return foundYouInTheRanking(request.ranking);
   const sport =
     request.sportName === undefined

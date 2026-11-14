@@ -17,6 +17,7 @@ import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-quer
 
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
+import { LISTS_PEOPLE } from '@/shared/lib/query-client';
 
 import type { HottestGroup } from '../domain/group';
 import { readHottestGroups } from '../use-cases/groupReads';
@@ -33,6 +34,8 @@ export function useHottestGroups() {
   return useQuery<readonly HottestGroup[], AppError>({
     queryKey: groupKeys.hottest(),
     queryFn: ({ signal }) => readHottestGroups({ signal }),
+    // Its faces are friends first, and the sheet counts them: a friend write re-reads it (#801).
+    meta: LISTS_PEOPLE,
   });
 }
 

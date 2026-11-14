@@ -210,6 +210,31 @@ describe('the marks after the label (6.1, amended)', () => {
 });
 
 /**
+ * **A mark before the words, and the soft settled bed** (6.1, amended 2026-11-14, #801): a sheet's
+ * worded friend button reads *+ Add friend* and *✓ Friends*, and Archivo ships no ✓ — so the plus
+ * and the tick are drawn before the label and never spoken; *✓ Friends* is mint's soft bed with its
+ * ink, as home rows 9 draws it.
+ */
+describe('the mark before the label and settledSoft (6.1, amended)', () => {
+  it('draws a plus or a tick before the words, in the label’s own ink, and speaks the words alone', () => {
+    render(<Button label="Friends" variant="settledSoft" lead="tick" onPress={() => {}} />);
+
+    const [mark] = screen.UNSAFE_getAllByType(Feather);
+    expect(mark?.props.name).toBe('check');
+    expect(mark?.props.color).toBe(theme.color.mintInk);
+    const button = screen.getByRole('button', { name: 'Friends' });
+    expect(StyleSheet.flatten(button.props.style)).toMatchObject({
+      backgroundColor: theme.color.mintSoft,
+    });
+  });
+
+  it('draws the plus for Add friend', () => {
+    render(<Button label="Add friend" variant="dark" lead="plus" onPress={() => {}} />);
+    expect(screen.UNSAFE_getAllByType(Feather).map((mark) => mark.props.name)).toEqual(['plus']);
+  });
+});
+
+/**
  * **A button that opens a screen is announced as a link** (6.1, amended 2026-11-08, #784): the
  * sign-in stage's *I have an invitation code* is 6.1 `secondary` in look and a link in what it
  * does — it opens a screen carrying what was typed — and a screen reader meets it among the

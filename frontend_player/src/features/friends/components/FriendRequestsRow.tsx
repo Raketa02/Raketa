@@ -120,6 +120,7 @@ function RequestCard({ request, width, scoreTag, onFace, onAnswered }: RequestCa
     request.fromRanking && request.sport !== undefined ? sportInLine(request.sport) : undefined;
   const where = whereLine({
     byLink: request.byLink,
+    newPlayers: request.fromNewPlayers,
     ...(ranking === undefined ? {} : { ranking }),
     ...(request.group === undefined ? {} : { group: request.group }),
     ...(request.sport === undefined ? {} : { sportName: sportLabel(request.sport) }),

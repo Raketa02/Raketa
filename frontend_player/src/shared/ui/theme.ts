@@ -197,22 +197,21 @@ const color = {
   yesGroundCentre: '#203C48',
   yesGroundEdge: '#14252C',
 
-  /** THE DECK CARD'S WASH — the app's SECOND dark surface, and it is a surface and not a screen
-   *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
-   *  §7, docs/design-system.md Part 16 2026-09-15). One gradient over the lower part of the
-   *  card, from nothing to this: `ink` at .94, so the card's foot is the app's own text colour
-   *  over whatever photograph or poster is under it, and the name, the tags and the tiles sit on
-   *  `surface` and the on-dark tokens as they would on a dark card.
+  /** THE PORTRAIT TILE'S WASH — what was the deck card's, and the one card that wears a wash
+   *  ([#801](https://github.com/Raketa02/Raketa/issues/801); home rows 17–19; docs/design-system.md
+   *  7.31, Part 16 2026-11-14). The deck card it was fenced to (ADR-0169 §7, Part 16 2026-09-15) left
+   *  with Classic play (#576), so the value moved here whole rather than standing twice: New in
+   *  Raketa's tile — and Top 10's portrait after it (#805) — is a face edge to edge with a name, a
+   *  Level and a line over its foot, which is the deck card's own problem.
    *
-   *  NOT `photoScrim`, deliberately. The panel's scrim is a flat tint pinned so that white over
-   *  the worst photograph is computable (5,24 at .70); this is a scrim over a picture a player
-   *  decides about, and a face wants the whole card — so the wash RAMPS, and its worst case is
-   *  stated at the name's own top edge rather than over the whole box (`DeckCard.tsx` holds the
-   *  ramp; the row in Part 16 holds the arithmetic). The value is the foot's; the ramp's stops
-   *  are the drawing's own, as the yes screen's glow keeps its centre and reach in `YesGround`.
-   *  Nothing else may draw it: the day a second card wears a wash, ADR-0169 §7's fence has
-   *  become the rule. */
-  deckWash: 'rgba(16,27,32,0.94)',
+   *  One gradient over the lower part of the tile, from nothing to this: `ink` at .94, so the foot
+   *  is the app's own text colour over whatever photograph or poster is under it, and the words sit
+   *  on `surface` and the on-dark tokens as they would on a dark card. NOT `photoScrim`,
+   *  deliberately: the panel's scrim is a flat tint pinned so that white over the worst photograph is
+   *  computable (5,24 at .70), and a face wants the whole tile — so the wash RAMPS, and its worst case
+   *  is stated at the name's own top edge rather than over the whole box (`PortraitTile.tsx` holds
+   *  the ramp and the arithmetic). Nothing else may draw it. */
+  portraitWash: 'rgba(16,27,32,0.94)',
 
   /** THE RADAR'S GROUND — the app's THIRD dark surface, and a field rather than a card or a
    *  screen ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
@@ -1447,6 +1446,19 @@ const size = {
    *  edge is the affordance. Its height is the photo panel's 4:5, read off `PHOTO_PANEL` — one owner
    *  of the shape. */
   photoCarouselRatio: 0.5,
+  /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
+   *  wash. `railRatio` is a tile's share of the content width on a Home row, for `railCardRatio`'s
+   *  reason — a ratio, never a point value: home rows 17 draws two whole and the third cut at two
+   *  thirds (0,355 × 360 = 128pt, the third showing 84). `railAspect` and `gridAspect` are its height
+   *  over its width — 11:8 standing on a row, 9:8 in See all's two columns (home rows 19), MEASURED
+   *  off the mocks at 1× (384 × 528 and 266 × 297 pixels). */
+  portraitTile: { railRatio: 0.355, railAspect: 1.375, gridAspect: 1.125 },
+  /** THE ROUND FRIEND BUTTON (#801; home rows 8, 10.3, 17, 18–18.3; 7.32) — MEASURED off the tiles at
+   *  1× (72 pixels on a 384-pixel tile): a 24pt circle centred in its own 44pt press (`minTouch`) —
+   *  a box, not a hitSlop, because a touch never lands past its parent on Android and a tile clips.
+   *  `halo` is the envelope's paler ring outside it; `dot` and `dotGap` the **…**'s three dots;
+   *  `glyph` the envelope's Feather size, the plus and the tick being 6.8's own 12pt box. */
+  roundFriend: { face: 24, halo: 3, dot: 3, dotGap: 2, glyph: 12 },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it

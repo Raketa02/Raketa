@@ -1638,6 +1638,7 @@ describe('a friend’s notices', () => {
     asked_at: '2026-10-02T12:00:00Z',
     by_link: false,
     from_ranking: false,
+    from_new_players: false,
     group: { id: CREW_ID, name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,

@@ -48,10 +48,14 @@
  * bar opens that much further and covers it whole (`BarCover`, which the frame measures). Where they
  * stop short of the tile, the bar ends where they do. A page with nothing to cover hands nothing.
  *
+ * **It can offer *All*** (#801): a page that lists people from every sport — New in Raketa's See all —
+ * hands `ALL_SPORTS` among its choices, and the pill draws it as a sport with a two-toned dot. Which
+ * choices it offers, and in what order, stays the page's.
+ *
  * Never a `Modal`, and nothing here is one: the bar is a layer of the page (ADR-0178).
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -62,6 +66,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -78,12 +83,23 @@ const PAD = theme.size.groupPage.filterPad;
 const UNFOLD = '‹';
 const FOLD = '›';
 
+/**
+ * ***All*** — **every sport at once**, a choice beside the sports where a page lists people from all of
+ * them (#801: New in Raketa's See all; the Home rows screens §5.3, home rows 12, 19). Drawn with a
+ * two-toned dot, padel's into tennis's, as home rows 12 and 19 draw it: no sport's colour alone, since
+ * it is none of them.
+ */
+export const ALL_SPORTS = 'all';
+
+/** A choice the pill offers: a sport, or *All* where the page offers it. */
+export type SportChoice = Sport | typeof ALL_SPORTS;
+
 /** **What the pill says**, in the page's words — nothing here is the control's own. */
-export interface SportPillWords {
+export interface SportPillWords<S extends SportChoice = Sport> {
   /** A sport's name: drawn beside its dot, and what its pill in the bar is called. */
-  readonly sportName: (sport: Sport) => string;
+  readonly sportName: (sport: S) => string;
   /** The pill, spoken — *Sport: Padel* — and the plain label's name for one sport. */
-  readonly pillLabel: (sport: Sport) => string;
+  readonly pillLabel: (sport: S) => string;
   /** What pressing the pill does, where there is another sport to switch to. */
   readonly pillHint: string;
 }
@@ -129,20 +145,48 @@ function SportName({
   onInk = false,
 }: {
   readonly name: string;
-  readonly sport: Sport;
+  readonly sport: SportChoice;
   readonly onInk?: boolean;
 }) {
   return (
     <>
-      <View
-        style={[s.dot, { backgroundColor: theme.sport[sport] }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-      />
+      {sport === ALL_SPORTS ? (
+        <AllSportsDot />
+      ) : (
+        <View
+          style={[s.dot, { backgroundColor: theme.sport[sport] }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+      )}
       <Text style={[s.label, onInk ? s.labelOnInk : undefined]} numberOfLines={1}>
         {name}
       </Text>
     </>
+  );
+}
+
+/** *All*'s dot — padel's colour running into tennis's, corner to corner (home rows 12, 19). */
+function AllSportsDot() {
+  const gradient = useId();
+  const r = theme.size.sportDot / 2;
+  return (
+    <View
+      testID="all-sports-dot"
+      style={s.dotBox}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Svg width={theme.size.sportDot} height={theme.size.sportDot}>
+        <Defs>
+          <LinearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset={0} stopColor={theme.sport.padel} />
+            <Stop offset={1} stopColor={theme.sport.tennis} />
+          </LinearGradient>
+        </Defs>
+        <Circle cx={r} cy={r} r={r} fill={`url(#${gradient})`} />
+      </Svg>
+    </View>
   );
 }
 
@@ -159,17 +203,23 @@ function Chevron({ mark, onInk = false }: { readonly mark: string; readonly onIn
   );
 }
 
-export interface SportPillProps {
+export interface SportPillProps<S extends SportChoice = Sport> {
   /** The sports it switches between. One is a plain label, unless there is another sport to offer. */
-  readonly sports: readonly Sport[];
-  readonly sport: Sport;
-  readonly words: SportPillWords;
+  readonly sports: readonly S[];
+  readonly sport: S;
+  readonly words: SportPillWords<S>;
   /** The bar ends with *+ Another sport* — so even one sport unfolds (#731). */
   readonly another?: AnotherSport;
   readonly onUnfold: () => void;
 }
 
-export function SportPill({ sports, sport, words, another, onUnfold }: SportPillProps) {
+export function SportPill<S extends SportChoice = Sport>({
+  sports,
+  sport,
+  words,
+  another,
+  onUnfold,
+}: SportPillProps<S>) {
   const switches = sports.length > 1;
   const name = words.sportName(sport);
   if (!switches && another === undefined) {
@@ -204,14 +254,14 @@ export interface BarCover {
   readonly whole: number;
 }
 
-export interface SportBarProps {
+export interface SportBarProps<S extends SportChoice = Sport> {
   /** Every sport the pill lists, in the order the page hands them. */
-  readonly sports: readonly Sport[];
+  readonly sports: readonly S[];
   /** The one the page is on — drawn last, dark. */
-  readonly sport: Sport;
-  readonly words: SportPillWords;
+  readonly sport: S;
+  readonly words: SportPillWords<S>;
   /** A sport was tapped: another one picks it, the current one only folds. */
-  readonly onChoose: (sport: Sport) => void;
+  readonly onChoose: (sport: S) => void;
   /** What the open bar covers whole rather than ending across — absent where nothing is. */
   readonly cover?: BarCover;
   /** *+ Another sport* — absent where there is none to offer (#731). */
@@ -223,7 +273,14 @@ function openWidth(sports: number, cover: BarCover | undefined): number {
   return cover !== undefined && sports > cover.reaches ? Math.max(sports, cover.whole) : sports;
 }
 
-export function SportBar({ sports, sport, words, onChoose, cover, another }: SportBarProps) {
+export function SportBar<S extends SportChoice = Sport>({
+  sports,
+  sport,
+  words,
+  onChoose,
+  cover,
+  another,
+}: SportBarProps<S>) {
   const reduced = useReducedMotion();
   const others = sports.filter((other) => other !== sport);
   // Everything that slides out from under the current sport: *+ Another sport*, the farthest, first.
@@ -363,6 +420,7 @@ const s = StyleSheet.create({
     height: theme.size.sportDot,
     borderRadius: theme.radius.dot,
   },
+  dotBox: { width: theme.size.sportDot, height: theme.size.sportDot },
   label: { ...theme.type.chip, color: theme.color.ink },
   labelOnInk: { color: theme.color.surface },
   chevron: { ...theme.type.chip, color: theme.color.muted },

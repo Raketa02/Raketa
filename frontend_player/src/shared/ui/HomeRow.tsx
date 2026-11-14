@@ -26,6 +26,9 @@
  *   peek at. It scrolls freely unless the row asks it to **snap** a card at a time.
  * - **Paging**: every card the content width, snapping one at a time, and 7.18's dots under it,
  *   tracking the scroll — a paging rail takes the dots always.
+ * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
+ *   content width — two whole and the third cut, the cut the affordance. **A lone tile keeps its
+ *   width**: a portrait the width of the screen would be a poster, not a tile. It scrolls freely.
  *
  * The rail hands each card its width; the cards are the row's.
  *
@@ -119,8 +122,8 @@ function RowLink({ link }: { readonly link: HomeRowLink }) {
   );
 }
 
-/** 7.7's two geometries. */
-export type HomeRowRailGeometry = 'peeking' | 'paging';
+/** 7.7's two geometries, and New in Raketa's portrait tiles (7.31). */
+export type HomeRowRailGeometry = 'peeking' | 'paging' | 'tiles';
 
 export interface HomeRowRailProps<Card> {
   /** **The cards' data**, in the order drawn — a peeking rail draws a lone one at the content width. */
@@ -145,7 +148,12 @@ export function HomeRowRail<Card>({
 
   const paging = geometry === 'paging';
   const content = screen - 2 * theme.size.gutter;
-  const cardWidth = paging || cards.length === 1 ? content : content * theme.size.railCardRatio;
+  const cardWidth =
+    geometry === 'tiles'
+      ? content * theme.size.portraitTile.railRatio
+      : paging || cards.length === 1
+        ? content
+        : content * theme.size.railCardRatio;
   const step = cardWidth + STRIP_GAP;
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

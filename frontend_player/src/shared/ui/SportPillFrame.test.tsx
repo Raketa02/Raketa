@@ -20,7 +20,13 @@ import {
 } from '@/test-support/hardwareBack';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { SportPillFrame, type AnotherSport, type SportPillWords } from './SportPillFrame';
+import {
+  ALL_SPORTS,
+  SportPillFrame,
+  type AnotherSport,
+  type SportChoice,
+  type SportPillWords,
+} from './SportPillFrame';
 import { theme } from './theme';
 
 const NAMES: Readonly<Record<Sport, string>> = {
@@ -227,6 +233,44 @@ describe('the sport pill', () => {
       expect(onAnother).toHaveBeenCalledTimes(1);
       expect(onPick).not.toHaveBeenCalled();
       expect(bar()).toBeNull();
+    });
+  });
+
+  /** New in Raketa's See all (#801; home rows 12, 19): *All* beside the sports, a choice like them. */
+  describe('offering All', () => {
+    const ALL_WORDS: SportPillWords<SportChoice> = {
+      sportName: (choice) => (choice === ALL_SPORTS ? 'All' : NAMES[choice]),
+      pillLabel: (choice) => `Shown for ${choice === ALL_SPORTS ? 'All' : NAMES[choice]}`,
+      pillHint: 'Shows the page for another sport',
+    };
+
+    function AllPage() {
+      return (
+        <SportPillFrame<SportChoice>
+          sports={[ALL_SPORTS, 'padel', 'tennis']}
+          sport={ALL_SPORTS}
+          onPick={onPick}
+          words={ALL_WORDS}
+          header={(shown) => <View testID="page-header">{shown}</View>}
+        >
+          <Text>the page</Text>
+        </SportPillFrame>
+      );
+    }
+
+    it('draws All with its two-toned dot, and picks a sport from it', async () => {
+      renderRouter({ _layout: Root, index: AllPage }, { initialUrl: '/' });
+      await screen.findByText('the page');
+
+      expect(pill().props.accessibilityLabel).toBe('Shown for All');
+      expect(screen.getByTestId('all-sports-dot', { includeHiddenElements: true })).toBeTruthy();
+      unfold();
+
+      expect(barOptions()).toEqual(['Padel', 'Tennis', 'All']);
+      fireEvent.press(
+        within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Tennis' }),
+      );
+      expect(onPick).toHaveBeenCalledWith('tennis');
     });
   });
 });

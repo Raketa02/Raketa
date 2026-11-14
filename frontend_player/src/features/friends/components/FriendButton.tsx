@@ -33,9 +33,9 @@
  */
 
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { behindOverlay, BottomSheet, Button, theme, type FocusTarget } from '@/shared/ui';
+import { behindOverlay, Button, theme } from '@/shared/ui';
 
 import type { AskedWhere, FriendButton as Shown } from '../domain/friendship';
 import {
@@ -47,7 +47,8 @@ import {
 } from '../hooks/useFriendWrites';
 
 import { FRIENDS_COPY, cancelTitle, removeTitle } from './friendsCopy';
-import { WriteNote, type WriteState } from './WriteNote';
+import { TakeBackSheet } from './TakeBackSheet';
+import { WriteNote } from './WriteNote';
 
 const COPY = FRIENDS_COPY.record;
 
@@ -146,58 +147,6 @@ export function FriendButton({
   );
 }
 
-interface TakeBackSheetProps {
-  readonly visible: boolean;
-  readonly title: string;
-  readonly body: string;
-  readonly act: string;
-  readonly busyLabel: string;
-  readonly write: WriteState & { readonly isPending: boolean };
-  readonly onAct: () => void;
-  readonly onClose: () => void;
-  readonly returnFocusTo: FocusTarget;
-}
-
-/** *Remove kuba.w as a friend?* — what it does, then the act and **Keep**. */
-function TakeBackSheet({
-  visible,
-  title,
-  body,
-  act,
-  busyLabel,
-  write,
-  onAct,
-  onClose,
-  returnFocusTo,
-}: TakeBackSheetProps) {
-  return (
-    <BottomSheet
-      visible={visible}
-      onClose={onClose}
-      title={title}
-      closeLabel={COPY.close}
-      returnFocusTo={returnFocusTo}
-    >
-      <Text style={s.body}>{body}</Text>
-
-      <WriteNote writes={[write]} />
-
-      <View style={s.actions}>
-        <Button
-          label={act}
-          size="lg"
-          busy={write.isPending}
-          busyLabel={busyLabel}
-          onPress={onAct}
-        />
-        <Button label={COPY.keep} variant="secondary" size="lg" onPress={onClose} />
-      </View>
-    </BottomSheet>
-  );
-}
-
 const s = StyleSheet.create({
   self: { gap: theme.space.xs },
-  body: { ...theme.type.tiny, color: theme.color.ink, paddingTop: theme.space.sm },
-  actions: { gap: theme.space.sm, paddingTop: theme.space.xs },
 });

@@ -20,6 +20,12 @@
  * opened from the sheet is on *You asked* when the player comes back, and an accept on Home is off
  * *Asked you*.
  *
+ * **And every read that lists people** (#801, `rereadPeopleLists`): Home's people rows and their See
+ * all, and Hottest groups' friends, declare `LISTS_PEOPLE`, so one tap — from a tile, a record
+ * Rankings opened, a notice, Members — moves that person on every one of them (the Home rows
+ * mechanics §13). The tag, not their keys: `discovery` draws this feature's round button, and naming
+ * its keys here would be a dependency both ways.
+ *
  * ## The surface hands its own read in
  *
  * **Members and the record each re-read themselves** — they hand `reread` down, because the reads
@@ -83,7 +89,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
-import { shouldRetryQuery } from '@/shared/lib/query-client';
+import { rereadPeopleLists, shouldRetryQuery } from '@/shared/lib/query-client';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { movesTheFaces, type AskedWhere } from '../domain/friendship';
@@ -125,7 +131,7 @@ export function stateMoved(error: AppError | null | undefined): boolean {
   return error?.code !== undefined && MOVED.has(error.code);
 }
 
-export function useAskToBeFriends(playerId: string, where: AskedWhere, reread: Reread) {
+export function useAskToBeFriends(playerId: string, where: AskedWhere, reread?: Reread) {
   const client = useQueryClient();
   return useMutation<FriendRelation, AppError, void>({
     mutationFn: () => askToBeFriends(playerId, where),
@@ -153,7 +159,7 @@ export function useSetAsideFriendRequest(playerId: string, reread?: Reread) {
   });
 }
 
-export function useCancelFriendRequest(playerId: string, reread: Reread) {
+export function useCancelFriendRequest(playerId: string, reread?: Reread) {
   const client = useQueryClient();
   return useMutation<void, AppError, void>({
     mutationFn: () => cancelFriendRequest(playerId),
@@ -161,7 +167,7 @@ export function useCancelFriendRequest(playerId: string, reread: Reread) {
   });
 }
 
-export function useRemoveFriend(playerId: string, reread: Reread) {
+export function useRemoveFriend(playerId: string, reread?: Reread) {
   const client = useQueryClient();
   return useMutation<void, AppError, void>({
     mutationFn: () => removeFriend(playerId),
@@ -234,23 +240,30 @@ export function useOpenFriendLink(rereadBell: Reread) {
 }
 
 function rereadIfMoved(client: QueryClient, error: AppError, reread?: Reread) {
-  return stateMoved(error) ? Promise.all([reread?.(), rereadTheLists(client)]) : undefined;
+  return stateMoved(error)
+    ? Promise.all([reread?.(), rereadTheLists(client), rereadPeopleLists(client)])
+    : undefined;
 }
 
-/** The surface's own read, this feature's lists, and every face where the friendship turned. */
+/**
+ * The surface's own read, this feature's lists, every read that lists people (`rereadPeopleLists`),
+ * and every face where the friendship turned.
+ */
 function settle(client: QueryClient, reread: Reread | undefined, faces: boolean) {
   return Promise.all([
     reread?.(),
     rereadTheLists(client),
+    rereadPeopleLists(client),
     ...(faces ? rereadEveryFace(client) : []),
   ]);
 }
 
-/** The surface's own read, this feature's lists, and Home — where a request's card stood. */
+/** The surface's own read, this feature's lists, the people lists, and Home — where a request's card stood. */
 function rereadHomeToo(client: QueryClient, reread?: Reread) {
   return Promise.all([
     reread?.(),
     rereadTheLists(client),
+    rereadPeopleLists(client),
     client.invalidateQueries({ queryKey: proposalKeys.home() }),
   ]);
 }

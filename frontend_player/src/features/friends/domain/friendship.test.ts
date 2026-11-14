@@ -1,4 +1,11 @@
-import { movesTheFaces, recordAskedWhere, recordFootOf, rowEndOf } from './friendship';
+import {
+  movesTheFaces,
+  recordAskedWhere,
+  recordFootOf,
+  roundPressOf,
+  rowEndOf,
+  shownWhilePressed,
+} from './friendship';
 import type { FriendRelation } from './vocabulary';
 
 describe('rowEndOf — the right-hand end of a Members row', () => {
@@ -70,6 +77,40 @@ describe('recordAskedWhere — where a request asked from the record is asked fr
       from: 'RANKING',
       sport: 'padel',
     });
+  });
+
+  it('is the row the record was opened from, with nothing else, where a Home row opened it (#801)', () => {
+    expect(
+      recordAskedWhere({
+        rankingSport: undefined,
+        groupId: undefined,
+        sport: 'padel',
+        foundIn: { from: 'NEW_PLAYERS' },
+      }),
+    ).toEqual({ from: 'NEW_PLAYERS' });
+  });
+});
+
+describe('roundPressOf — what a tap on the round friend button does (#801)', () => {
+  it.each<[FriendRelation, ReturnType<typeof roundPressOf>]>([
+    ['NONE', 'ask'],
+    ['SENT', 'requestSent'],
+    ['FRIEND', 'remove'],
+    ['ASKED_YOU', 'accept'],
+  ])('%s', (relation, press) => {
+    expect(roundPressOf(relation)).toBe(press);
+  });
+});
+
+describe('shownWhilePressed — the relation the button draws while its write is out (#801)', () => {
+  it('turns + to … and the envelope to ✓ at once', () => {
+    expect(shownWhilePressed('NONE', 'ask')).toBe('SENT');
+    expect(shownWhilePressed('ASKED_YOU', 'accept')).toBe('FRIEND');
+  });
+
+  it('keeps what the read said with nothing out', () => {
+    expect(shownWhilePressed('SENT', undefined)).toBe('SENT');
+    expect(shownWhilePressed('FRIEND', undefined)).toBe('FRIEND');
   });
 });
 

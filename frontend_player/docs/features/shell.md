@@ -264,3 +264,12 @@ nothing. **A reader in no group** reads _Join a group to get games — the hotte
 where _Play finds you one._ stood (§31.1): the first empty line is the tab's and stands, the second is
 handed to `HomeRail` from `groups`' answer (`useInNoGroup`) and its words (`GROUPS_COPY.hottest`), as
 the empty sentences have always been handed down. The walk is `groups`' `hottestGroups.test.tsx`.
+
+**NEW IN RAKETA follows HOTTEST GROUPS, and See all is pushed over Home**
+([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §1, §5). `HomeScreen`
+draws `discovery`'s `NewInRaketaRow` after `HottestGroupsRow` — Same competitive level (#802) will
+stand between them — and the pull re-reads it (`rereadDiscovery`). **The shell hands it nothing
+else**: accepting a request on FRIEND REQUESTS turns that person's envelope to ✓ on the row because the
+row's reads list people (`LISTS_PEOPLE`) and every friend write re-reads those. See all is
+`/new-in-raketa`, in `PUSHED_SCREENS` and `INSIDE_A_TAB` (Home stays lit). The record is
+[`discovery.md`](discovery.md).

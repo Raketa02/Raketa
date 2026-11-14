@@ -173,6 +173,7 @@ describe('FRIENDS GAME · n on Home (friends 12)', () => {
           asked_at: '2026-09-30T10:00:00Z',
           by_link: true,
           from_ranking: false,
+          from_new_players: false,
           group: null,
           sport: null,
           level: null,

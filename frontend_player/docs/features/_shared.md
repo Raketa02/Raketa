@@ -423,3 +423,20 @@ corner, the Strip and the absence.
 hidden from General, which went with _Show me in General_ (ADR-0204 §2). 6.12 keeps them specified,
 as it kept the switch itself while it was unbuilt; the dark-card tests and the two contrast figures
 they derived went with the code.
+
+**`PortraitTile`, a third rail geometry, the sport pill's _All_, and two `Button` additions**
+([#801](https://github.com/Raketa02/Raketa/issues/801); design-system 7.31, 7.32, Part 16 2026-11-14).
+**`PortraitTile`** is a face edge to edge with the wash rising over its foot (`portraitWash`, the deck
+card's value moved whole since that card is gone), a tag top-left that lets touches through, a control
+top-right beside the tile's own press, and the words over the wash; its width and aspect are the
+caller's (`size.portraitTile`). Top 10's portrait (#805) is to draw it too. **`HomeRowRail`'s `tiles`**
+draws each at 0,355 of the content width, a lone one too. **The sport pill is generic over its
+choices** (`SportPillFrame<S>`, `SportPillWords<S>`) and may offer **`ALL_SPORTS`**, drawn with a
+two-toned dot; existing callers infer `Sport` and changed nothing. **`Button`** gained **`lead`**, a
+Feather plus or check before the words, never spoken, and **`settledSoft`**, mint's soft bed in its
+ink. `PlusOnSurface` is exported. **`shared/lib/query-client`'s `LISTS_PEOPLE`** is a query `meta`
+a read declares when it lists people with the reader's relation to them (Home's people rows, Hottest
+groups), and **`rereadPeopleLists`** re-reads every such read — what every friend write and every block
+calls, so a write made anywhere moves the person on every row without naming a feature's keys
+(architecture Part 7). Each has its suite: `HomeRow.test.tsx`, `SportPillFrame.test.tsx`,
+`Button.test.tsx`; the tile is walked through New in Raketa.

@@ -24,7 +24,9 @@ export function toAskRequest(
   playerId: string,
   where: AskedWhere,
 ): Schemas['AskToBeFriendsRequest'] {
-  // A request from the ranking names no group: its page shows none, and the server ignores one.
+  // A request from the ranking names no group: its page shows none, and the server ignores one. One
+  // from New in Raketa names neither — its line names no sport (#801).
+  if (where.from === 'NEW_PLAYERS') return { player_id: playerId, made_from: where.from };
   const groupId = where.from === 'RANKING' ? undefined : where.groupId;
   return {
     player_id: playerId,

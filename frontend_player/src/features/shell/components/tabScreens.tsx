@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { NewInRaketaRow, rereadDiscovery } from '@/features/discovery/types';
 import { FriendRequestsRow, LevelAsksRow } from '@/features/friends/types';
 import {
   GROUPS_COPY,
@@ -82,6 +83,12 @@ import { HOME_COPY } from './shellCopy';
  * **A reader in no group** reads *Join a group to get games — the hottest ones are just below.* where
  * *Play finds you one.* stood (§31.1): the line points at the row under it, and whether the reader is
  * in a group is `groups`' answer, its words `groups`' too.
+ *
+ * **NEW IN RAKETA follows it** (`discovery`'s row, [#801](https://github.com/Raketa02/Raketa/issues/801)),
+ * the third of the five: Same competitive level (#802) will stand between them. The pull re-reads it
+ * with the rest. **A friend act anywhere moves a person on it** — an answer on FRIEND REQUESTS, the
+ * record a face opens — because its reads list people (`LISTS_PEOPLE`) and every friend write re-reads
+ * those; the shell hands it nothing for that.
  */
 export function HomeScreen() {
   const client = useQueryClient();
@@ -95,7 +102,9 @@ export function HomeScreen() {
           <NoticeBell />
         </View>
       }
-      onRefresh={() => Promise.all([rereadHome(client), rereadHomeGroups(client)])}
+      onRefresh={() =>
+        Promise.all([rereadHome(client), rereadHomeGroups(client), rereadDiscovery(client)])
+      }
     >
       <HomeLevelCard />
       <FriendsGamesRow onAnswered={() => rereadNotices(client)} />
@@ -107,6 +116,7 @@ export function HomeScreen() {
         }
       />
       <HottestGroupsRow />
+      <NewInRaketaRow />
     </ShellScreen>
   );
 }
