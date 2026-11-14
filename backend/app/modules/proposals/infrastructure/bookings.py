@@ -19,10 +19,10 @@ court to move one to, the move and the cancel.
 ``BookingsFriendsGameBookings`` is a friends game's (#751): booked at send,
 its invited seats answered, the sender's call-off, and where the invitations
 are.
-``BookingsGroupBornGames`` is the club's *Games* figure, which
-``groups`` asks in its own words: **a group's pool is filed under the group's own
-id**, which is this context's fact, so the games booked in a group are the
-bookings in its pool.
+``BookingsGroupBornGames`` is the club's *Games* figure, and Hottest groups'
+*games this week* (#792), which ``groups`` asks in its own words: **a group's
+pool is filed under the group's own id**, which is this context's fact, so the
+games booked in a group are the bookings in its pool.
 """
 
 from __future__ import annotations
@@ -608,3 +608,8 @@ class BookingsGroupBornGames:
 
     async def born_in(self, group_ids: Collection[UUID]) -> Mapping[UUID, int]:
         return await self._directory.counted_in(group_ids)
+
+    async def born_between(
+        self, group_ids: Collection[UUID], *, after: Instant, by: Instant
+    ) -> Mapping[UUID, int]:
+        return await self._directory.counted_starting(group_ids, after=after, by=by)

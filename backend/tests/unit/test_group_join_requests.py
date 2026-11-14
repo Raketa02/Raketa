@@ -18,6 +18,7 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    JoinRequestWithdrawn,
 )
 from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
@@ -170,3 +171,82 @@ def test_a_request_s_life_replays_to_the_group_it_left():
     assert replayed.waiting == {}
     assert list(replayed.members) == [KAROL, KASIA]
     assert replayed.version == 5
+
+
+# --------------------------------------------------------------------------- #
+# Withdrawing one (#792, docs/adr/0204 §11)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_asker_withdraws_and_nothing_waits_any_more():
+    group = a_group()
+    group.join(KASIA, occurred_at=NOW)
+    group.pull_events()
+
+    group.withdraw_request(KASIA, occurred_at=NOW + timedelta(minutes=2))
+
+    [withdrawn] = group.pull_events()
+    assert withdrawn == JoinRequestWithdrawn(
+        group_id=group.id, player_id=KASIA, occurred_at=NOW + timedelta(minutes=2)
+    )
+    assert not group.is_waiting(KASIA)
+    assert not group.is_member(KASIA)
+
+
+def test_withdrawing_again_records_nothing():
+    group = a_group()
+    group.join(KASIA, occurred_at=NOW)
+    group.withdraw_request(KASIA, occurred_at=NOW)
+    group.pull_events()
+
+    group.withdraw_request(KASIA, occurred_at=NOW)
+
+    assert group.pull_events() == []
+
+
+def test_withdrawing_a_request_approved_a_moment_earlier_leaves_her_a_member():
+    group = a_group()
+    group.join(KASIA, occurred_at=NOW)
+    group.approve(KASIA, by=KAROL, occurred_at=NOW)
+    group.pull_events()
+
+    group.withdraw_request(KASIA, occurred_at=NOW + timedelta(seconds=5))
+
+    assert group.pull_events() == []
+    assert group.is_member(KASIA)
+
+
+def test_withdrawing_a_declined_request_records_nothing():
+    group = a_group()
+    group.join(KASIA, occurred_at=NOW)
+    group.decline(KASIA, by=KAROL, occurred_at=NOW)
+    group.pull_events()
+
+    group.withdraw_request(KASIA, occurred_at=NOW)
+
+    assert group.pull_events() == []
+
+
+def test_after_withdrawing_she_may_ask_again_and_the_stream_replays():
+    group = a_group()
+    group.join(KASIA, occurred_at=NOW)
+    group.withdraw_request(KASIA, occurred_at=NOW)
+    group.join(KASIA, occurred_at=NOW + timedelta(days=1))
+
+    assert group.is_waiting(KASIA)
+    replayed = Group.from_history(
+        [
+            *Group.create_player_group(
+                group_id=group.id,
+                name=GroupName("Ogrody wieczorem"),
+                home_club_id=group.home_club_id,
+                join_policy=JoinPolicy.PEOPLE_I_APPROVE,
+                owner_id=KAROL,
+                code=GroupCode("ab3de7fg"),
+                occurred_at=NOW,
+            ).pull_events(),
+            *group.pull_events(),
+        ]
+    )
+    assert list(replayed.waiting) == [KASIA]
+    assert replayed.version == 4

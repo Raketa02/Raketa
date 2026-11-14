@@ -12,6 +12,7 @@ from app.modules.groups.application.handlers import (
     LogJoinRequestApproved,
     LogJoinRequestDeclined,
     LogJoinRequested,
+    LogJoinRequestWithdrawn,
     LogOfficialGroupCreated,
     LogOwnershipPassed,
     LogPlayerGroupCreated,
@@ -29,6 +30,7 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    JoinRequestWithdrawn,
     OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
@@ -61,6 +63,9 @@ def register_group_events(catalog: EventCatalog) -> None:
         AdministratorAssigned, name="groups.administrator_assigned", version=1
     )
     catalog.register(HandoverSeen, name="groups.handover_seen", version=1)
+    catalog.register(
+        JoinRequestWithdrawn, name="groups.join_request_withdrawn", version=1
+    )
 
 
 def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
@@ -79,3 +84,4 @@ def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(SportsDeclared, LogSportsDeclared())
     dispatcher.subscribe(AdministratorAssigned, LogAdministratorAssigned())
     dispatcher.subscribe(HandoverSeen, LogHandoverSeen())
+    dispatcher.subscribe(JoinRequestWithdrawn, LogJoinRequestWithdrawn())

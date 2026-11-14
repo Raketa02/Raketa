@@ -157,6 +157,24 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Advanced — and the module says why. `assert_the_ranking` reads the
   page's own use case among the screens and fails the run by name; proven twice over on a
   fresh Postgres, the rebuild equal to live delivery row for row.
+- **Hottest groups needs a group that played this week, so one is written for it**
+  (#792, `app/seeds/hottest_groups.py`): nothing else the seed books is sure to fall in the
+  last 7 days (the history is placed before her week; her games and the rescues are still
+  to come), and *Padel po pracy*, joined on the run's instant, is the busiest group by heat
+  with no game — GROWING, and nobody HOTTEST. So the ranking's crowd's first player owns
+  **Wieczorny Kazimierz** at Kazimierz Padel (*People I approve*), twenty-three more of the
+  crowd let in ten days ago, and **three unscored games** among four of them two, three and
+  four days ago — made two days ahead and filled by four yeses, the cut-off job run at each
+  cut-off — and the protagonist's **Join request waits on it**, asked again on a run that
+  finds it withdrawn. The crowd because nobody deals them (their week is cleared), unscored
+  because a result would move the ranking's promised places. **A game is looked for in
+  the last seven days**, so a run days later books the same fours again where they now
+  fall. After the friends layers, drained by the layer itself; `assert_the_hottest_groups`
+  reads her row among the screens and fails the run by name unless it opens on that group,
+  HOTTEST and *Asked*, with *Błonia po pracy* (two players) left out — and, **on the run
+  that created the group**, a GROWING and an untagged card too: those are other layers'
+  groups, which age with the store. Proven on a fresh Postgres 17, run twice: no group or
+  booking event the second time.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

@@ -312,6 +312,7 @@ def test_the_walk_has_something_to_walk():
         "full_hour.py",
         "groups.py",
         "guard.py",
+        "hottest_groups.py",
         "money.py",
         "official_groups.py",
         "payments.py",

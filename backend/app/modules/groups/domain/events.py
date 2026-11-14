@@ -8,8 +8,9 @@ the longest-standing member, the Owner **renames** it, **changes who can join**
 and, alone in it, **deletes** it (#506); and an Administrator **creates an
 official group**, **sets its WhatsApp size** and **declares its sports** again
 (#509) — answering, renaming and changing who can join with the events a player
-group's Owner already writes; and the club **hands an official group over** to
-another of its Administrators (#510).
+group's Owner already writes; the club **hands an official group over** to
+another of its Administrators (#510); and the player who asked **withdraws** a
+Join request still waiting (#792, ``docs/adr/0204`` §11).
 
 **Each kind is created by its own event**, because every rule that differs by
 kind has to say so in its own words and none may be inferred from a null
@@ -186,6 +187,20 @@ class JoinRequestDeclined:
     group_id: UUID
     player_id: UUID
     declined_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class JoinRequestWithdrawn:
+    """The player who asked to join withdrew their Join request while it waited
+    (``docs/adr/0204`` §3, §11). **Silent**, as a decline is: the request
+    leaves every list that answers it — the Owner's, the Administrator's and the
+    club's — nothing tells anybody, and the player may ask again
+    (``docs/adr/0183`` §7). Recorded only while a request waits, so a request
+    already answered, or withdrawn already, records nothing."""
+
+    group_id: UUID
+    player_id: UUID
     occurred_at: datetime
 
 

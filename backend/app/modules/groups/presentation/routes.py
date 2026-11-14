@@ -1,7 +1,8 @@
 """The player surface's group routes: create one, list yours, open one, join
-one or ask to, answer the requests waiting on yours, see who in it plays a
-sport, edit yours, leave one or delete yours — and the two searches, for a home
-club and for a group to join.
+one or ask to, withdraw a request you made, answer the requests waiting on
+yours, see who in it plays a sport, edit yours, leave one or delete yours — the
+two searches, for a home club and for a group to join — and Home's *Hottest
+groups*.
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token. **The backend guards no flag** (``docs/adr/0183`` §12): these
@@ -12,7 +13,8 @@ to call.
 ``/api/v1/club`` is the club website's surface, and a player path that merely
 began with those letters would read as one of its paths (``docs/adr/0187`` §5).
 **Join search is ``/join-search``** and not ``/groups/search``, which the path
-``/groups/{group_id}`` would read as a group id.
+``/groups/{group_id}`` would read as a group id — and **Hottest groups is
+``/hottest-groups``** for the same reason.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from app.modules.groups.application.commands import (
     LeaveGroupCommand,
     SearchGroupsToJoinCommand,
     SearchHomeClubsCommand,
+    WithdrawJoinRequestCommand,
 )
 from app.modules.groups.presentation.dependencies import (
     ApproveJoinRequestDep,
@@ -46,9 +49,11 @@ from app.modules.groups.presentation.dependencies import (
     ReadGroupDep,
     ReadGroupMembersDep,
     ReadJoinRequestsDep,
+    ReadHottestGroupsDep,
     ReadMyGroupsDep,
     SearchGroupsToJoinDep,
     SearchHomeClubsDep,
+    WithdrawJoinRequestDep,
 )
 from app.modules.groups.presentation.schemas import (
     CreatePlayerGroupRequest,
@@ -59,6 +64,8 @@ from app.modules.groups.presentation.schemas import (
     GroupMembersResponse,
     GroupResponse,
     HomeClubPageResponse,
+    HottestGroupSchema,
+    HottestGroupsResponse,
     JoinRequestSchema,
     JoinRequestsResponse,
     JoinSearchResponse,
@@ -70,6 +77,7 @@ from app.modules.users.presentation.dependencies import CurrentUserDep
 router = APIRouter(prefix="/groups", tags=["groups"])
 home_clubs_router = APIRouter(prefix="/home-clubs", tags=["groups"])
 join_search_router = APIRouter(prefix="/join-search", tags=["groups"])
+hottest_groups_router = APIRouter(prefix="/hottest-groups", tags=["groups"])
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
@@ -329,6 +337,29 @@ async def leave_group(
     await leave.execute(LeaveGroupCommand(group_id=group_id, player_id=user.id))
 
 
+@router.delete(
+    "/{group_id}/join-request",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Withdraw a Join request",
+    description=(
+        "The *Asked* sheet's **Withdraw request**: the caller's request leaves "
+        "the Owner's, the Administrator's and the club's lists **at once**, and "
+        "**nobody is told** — no notice, no line, no email. The caller's "
+        "`relation` to the group reads `NONE` again, and they may ask again. "
+        "**A request already answered or gone changes nothing and still "
+        "answers 204**: one approved a moment earlier leaves the caller a "
+        "member, and a group deleted meanwhile took its requests with it — "
+        "**this route refuses nothing**."
+    ),
+)
+async def withdraw_join_request(
+    group_id: UUID, user: CurrentUserDep, withdraw: WithdrawJoinRequestDep
+) -> None:
+    await withdraw.execute(
+        WithdrawJoinRequestCommand(group_id=group_id, player_id=user.id)
+    )
+
+
 @router.get(
     "/{group_id}/members",
     response_model=GroupMembersResponse,
@@ -497,3 +528,30 @@ async def join_search(
         SearchGroupsToJoinCommand(reader_id=user.id, text=q, page=page)
     )
     return JoinSearchResponse.from_view(results)
+
+
+@hottest_groups_router.get(
+    "",
+    response_model=HottestGroupsResponse,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    summary="Home's Hottest groups",
+    description=(
+        "Up to **six** of the groups with the most going on, **whether the "
+        "caller is in them or not** — every group with 3 or more players, "
+        "player and official alike, the caller's own included — by **heat**: "
+        "2 × games this week + 3 × new this month + players, counted up to "
+        "20. One **HOTTEST**, any number of **GROWING**, in the row's order. "
+        "Each card carries everything its group sheet shows, and the caller's "
+        "relation to it. Worked out on every read; nothing is recorded. **The "
+        "group page stays members-only**: a non-member still meets "
+        "`group_not_found` there."
+    ),
+)
+async def hottest_groups(
+    user: CurrentUserDep, read: ReadHottestGroupsDep
+) -> HottestGroupsResponse:
+    cards = await read.execute(user.id)
+    return HottestGroupsResponse(
+        groups=[HottestGroupSchema.from_view(card) for card in cards]
+    )

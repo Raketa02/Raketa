@@ -34,6 +34,7 @@ NAMES_OF_THINGS = {
     "GroupResponse": "a group",
     "GroupToAddFromSchema": "a group",
     "HomeFriendRequestGroupSchema": "a group",
+    "HottestGroupSchema": "a group",
     "InvitationByTokenResponse": "an Administrator, as the club typed it",
     "LiveYesClubSchema": "a club",
     "MyGroupSchema": "a group",

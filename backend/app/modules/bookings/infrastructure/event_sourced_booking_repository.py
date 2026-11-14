@@ -26,7 +26,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql import Executable
+from sqlalchemy.sql import ColumnElement, Executable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
@@ -507,6 +507,21 @@ class SqlAlchemyBookingDirectory:
         return {game_id: booking_id for game_id, booking_id in rows.all()}
 
     async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:
+        return await self._counted(pool_ids)
+
+    async def counted_starting(
+        self, pool_ids: Collection[UUID], *, after: Instant, by: Instant
+    ) -> Mapping[UUID, int]:
+        return await self._counted(
+            pool_ids, BookingORM.start > after, BookingORM.start <= by
+        )
+
+    async def _counted(
+        self, pool_ids: Collection[UUID], *within: ColumnElement[bool]
+    ) -> Mapping[UUID, int]:
+        """The booked games in each pool — booked, whole or with a seat open —
+        and only those ``within`` holds for: one count both reads share."""
+
         if not pool_ids:
             return {}
         rows = await self._session.execute(
@@ -514,6 +529,7 @@ class SqlAlchemyBookingDirectory:
             .where(
                 BookingORM.pool_id.in_(sorted(set(pool_ids))),
                 BookingORM.state.in_(_BOOKED),
+                *within,
             )
             .group_by(BookingORM.pool_id)
         )

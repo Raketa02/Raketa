@@ -32,6 +32,7 @@ from app.modules.groups.presentation.administrator_routes import (
 )
 from app.modules.groups.presentation.routes import (
     home_clubs_router,
+    hottest_groups_router,
     join_search_router,
     router as groups_router,
 )
@@ -101,6 +102,7 @@ player_api_router.include_router(rankings_router)
 player_api_router.include_router(groups_router)
 player_api_router.include_router(home_clubs_router)
 player_api_router.include_router(join_search_router)
+player_api_router.include_router(hottest_groups_router)
 player_api_router.include_router(invitations_router)
 player_api_router.include_router(administrator_router)
 player_api_router.include_router(administrator_groups_router)

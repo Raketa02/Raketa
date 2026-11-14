@@ -231,6 +231,12 @@ from app.seeds.friends_games import (
     friends_game_lines,
     write_the_friends_games,
 )
+from app.seeds.hottest_groups import (
+    SeededHottestGroups,
+    assert_the_hottest_groups,
+    hottest_group_lines,
+    write_the_hottest_groups,
+)
 from app.seeds.full_hour import (
     SeededFullHour,
     assert_the_full_hour,
@@ -1222,6 +1228,9 @@ class SeedReport:
     #: The hour Ogrody 33 is full, which its official groups play elsewhere at
     #: (#746). ``None`` on the same callers.
     full_hour: SeededFullHour | None = None
+    #: The HOTTEST group and her request waiting on it (#792). ``None`` on the
+    #: same callers.
+    hottest_groups: SeededHottestGroups | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1446,6 +1455,16 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         # the layers whose friends her other screens count on. Drained by the
         # layer itself.
         await write_her_ranked_friends(session_factory, now=now, money=money)
+        # **Hottest groups' one HOTTEST group after every layer that books or
+        # joins** (#792): the ranking's crowd's own, its games among them, and
+        # her request waiting on it. Drained by the layer itself.
+        hottest_groups = await write_the_hottest_groups(
+            session_factory,
+            settings=settings,
+            now=now,
+            crowd=[(member.member.handle, member.player_id) for member in crowd],
+            money=money,
+        )
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1467,6 +1486,9 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 session_factory, settings=settings, now=now, full=full_hour
             ),
             await assert_the_ranking(session_factory, settings=settings, now=now),
+            await assert_the_hottest_groups(
+                session_factory, settings=settings, now=now, seeded=hottest_groups
+            ),
         )
         return SeedReport(
             accounts=accounts,
@@ -1489,6 +1511,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             friends=friends,
             friends_games=friends_games,
             full_hour=full_hour,
+            hottest_groups=hottest_groups,
             photographs=photographs,
         )
     finally:
@@ -1598,6 +1621,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *friend_lines(run_report.friends)])
     if run_report.friends_games is not None:
         lines.extend(["", *friends_game_lines(run_report.friends_games)])
+    if run_report.hottest_groups is not None:
+        lines.extend(["", *hottest_group_lines(run_report.hottest_groups)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])

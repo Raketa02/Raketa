@@ -4504,6 +4504,48 @@
         }
       }
     },
+    "/api/v1/groups/{group_id}/join-request": {
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Withdraw a Join request",
+        "description": "The *Asked* sheet's **Withdraw request**: the caller's request leaves the Owner's, the Administrator's and the club's lists **at once**, and **nobody is told** \u2014 no notice, no line, no email. The caller's `relation` to the group reads `NONE` again, and they may ask again. **A request already answered or gone changes nothing and still answers 204**: one approved a moment earlier leaves the caller a member, and a group deleted meanwhile took its requests with it \u2014 **this route refuses nothing**.",
+        "operationId": "withdraw_join_request_api_v1_groups__group_id__join_request_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups/{group_id}/members": {
       "get": {
         "tags": [
@@ -4910,6 +4952,33 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/hottest-groups": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Home's Hottest groups",
+        "description": "Up to **six** of the groups with the most going on, **whether the caller is in them or not** \u2014 every group with 3 or more players, player and official alike, the caller's own included \u2014 by **heat**: 2 \u00d7 games this week + 3 \u00d7 new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.",
+        "operationId": "hottest_groups_api_v1_hottest_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HottestGroupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/invitations/claim": {
@@ -13182,6 +13251,14 @@
         "title": "HandoversSeenRequest",
         "description": "The groups the sheet told the Administrator about (``docs/adr/0192``)."
       },
+      "HeatTag": {
+        "type": "string",
+        "enum": [
+          "HOTTEST",
+          "GROWING"
+        ],
+        "title": "HeatTag"
+      },
       "HomeClubPageResponse": {
         "properties": {
           "clubs": {
@@ -13812,6 +13889,148 @@
         ],
         "title": "HomeStatus",
         "description": "What a game on Home is, right now (the mechanics \u00a714.1)."
+      },
+      "HottestGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` \u2014 *Open group*, and the chip is **Join**; `PEOPLE_I_APPROVE` \u2014 *Closed group*, and the chip is **Ask to join**. Read `relation` and `is_administrator` first."
+          },
+          "run_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run By",
+            "description": "The sheet's *run by*: **an official group's club**, by its name \u2014 whoever runs it, and while nobody does, since the club answers its requests \u2014 and **a player group's Owner**, by their whole nickname, never cut and never with an @. `null` only for an Owner who can no longer be named."
+          },
+          "club": {
+            "$ref": "#/components/schemas/ClubNameSchema",
+            "description": "The club it plays at."
+          },
+          "games_this_week": {
+            "type": "integer",
+            "title": "Games This Week",
+            "description": "Games booked in the group whose court time falls in **the last 7 days**, to the minute \u2014 none called off, scored or not, a friends game booked in the group included."
+          },
+          "new_this_month": {
+            "type": "integer",
+            "title": "New This Month",
+            "description": "Members who joined in **the last 30 days** and are still in it: the green *+3 this month*, drawn only when above nought. Somebody who left and came back counts by the join that stands."
+          },
+          "heat_share": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Heat Share",
+            "description": "The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full \u2014 or, with no HOTTEST, over the highest heat in the row, so no bar is more than full. Heat is 2 \u00d7 games this week + 3 \u00d7 new this month + players counted up to 20."
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeatTag"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`HOTTEST` on exactly one card \u2014 the highest heat, and only if it had a game this week; `GROWING` on any other with **+4 or more** new this month **and** new making up at least a quarter of today's players; `null` on the rest. The row is in order already: HOTTEST, then GROWING by heat, then untagged by heat."
+          },
+          "faces": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Faces",
+            "description": "**Up to six member faces** \u2014 the sheet's six; the card draws the first four. The reader's friends first, then the longest-standing members; **never the reader's own face**. Not a way to anybody: a face here is not tapped."
+          },
+          "friends_count": {
+            "type": "integer",
+            "title": "Friends Count",
+            "description": "How many of the reader's friends are members now: *7 of your friends play here*. At 0 the sheet says `member_count` players instead."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/GroupRelation",
+            "description": "`MEMBER` \u2014 **You're in** on the card, **Open group** on the sheet, both opening the group page; `REQUESTED` \u2014 **Asked**, which opens *Withdraw request*; `NONE` \u2014 **Join** or **Ask to join**, by `join_policy`."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether **the reader** runs this official group: their chip is **Join**, whatever `join_policy` says, and it admits them at once. Always `false` on a player group."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "join_policy",
+          "run_by",
+          "club",
+          "games_this_week",
+          "new_this_month",
+          "heat_share",
+          "tag",
+          "faces",
+          "friends_count",
+          "relation",
+          "is_administrator"
+        ],
+        "title": "HottestGroupSchema",
+        "description": "One card of Home's *Hottest groups* \u2014 and **everything its group sheet\nshows**, so tapping the card needs no second read (`docs/adr/0204` \u00a73,\n\u00a711). Drawn for any player, **whether they are in the group or not**; the\ngroup page itself stays members-only."
+      },
+      "HottestGroupsResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/HottestGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "**Up to six**, in the row's order \u2014 every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "HottestGroupsResponse"
       },
       "InProgressAssessmentResponse": {
         "properties": {

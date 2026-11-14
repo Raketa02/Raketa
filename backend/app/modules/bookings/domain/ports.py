@@ -154,6 +154,16 @@ class BookingDirectory(Protocol):
         called off is not a game anybody will play there."""
         ...
 
+    async def counted_starting(
+        self, pool_ids: Collection[UUID], *, after: Instant, by: Instant
+    ) -> Mapping[UUID, int]:
+        """How many games booked in each of these pools **start after ``after``
+        and by ``by``** — one question about the set, a pool absent from the
+        answer having none then (#792). **The same games ``counted_in``
+        counts**: booked, whole or with a seat open, whatever came of them at
+        the court — never one called off — and a friends game as any other."""
+        ...
+
     async def ever_seated(
         self, player_ids: Collection[UUID]
     ) -> Sequence[tuple[UUID, UUID]]:

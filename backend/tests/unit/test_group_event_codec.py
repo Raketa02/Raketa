@@ -27,6 +27,7 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    JoinRequestWithdrawn,
     OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
@@ -85,6 +86,7 @@ EVENTS = [
     AdministratorAssigned(
         group_id=GROUP, administrator_id=uuid4(), assigned_by=uuid4(), occurred_at=NOW
     ),
+    JoinRequestWithdrawn(group_id=GROUP, player_id=ASKER, occurred_at=NOW),
 ]
 
 
@@ -130,4 +132,5 @@ def test_each_event_is_filed_under_its_own_name_in_the_groups_namespace():
         ("groups.whatsapp_size_set", 1),
         ("groups.sports_declared", 1),
         ("groups.administrator_assigned", 1),
+        ("groups.join_request_withdrawn", 1),
     ]
