@@ -387,3 +387,24 @@ segment's, and it never carries `disabled`, because a door that reads as shut is
 Its press is reported like any other, and the caller decides what a door opens — the Games switch's
 other kind, recorded in `proposals.md`. The dim stops at 3,17:1 on `line2`, under 1.4.3 and past
 3:1, and the words say the state as well: a door carries no number. `Segment.test.tsx` holds all three.
+
+**Every row on Home sits on one frame** ([#798](https://github.com/Raketa02/Raketa/issues/798), the
+Home rows screens §2, Part 16 2026-11-14). `HomeRow` is the section — `space.lg` under the row above,
+the eyebrow heading, and on its line an optional **control** (Top 10's sport pill, #805) and an
+optional **link** (_See all ›_, _Rankings ›_) — with whatever the row draws under it. `HomeRowRail` is
+the rail, in 7.7's two geometries over Part 8's Strip: **peeking** (a lone card at the content width,
+more at `railCardRatio`, free scroll unless the row asks to `snap`) and **paging** (the content
+width, snapping, 7.18's dots tracking the scroll). **They are two parts, not one**, because a row
+says something in place of a rail — _Your games_' empty sentences and failure, Top 10's _Nobody
+ranked in squash yet_ — and a frame that owned its rail would grow a slot per sentence. FRIENDS
+GAME, FRIEND REQUESTS, ASKED FOR A LEVEL and _Your games_ moved onto it with nothing on screen
+changing; _TO CONFIRM_ stays as it is, a list in one card and not a rail. **The rail is never
+remounted** — one `ScrollView` at one place in the tree whatever its count, width or heading — so it
+keeps its scroll position across a re-render, as Part 8 asks. **The link is the row's words and
+name**, nothing the frame's own: the words drawn with a hidden chevron, the name naming what it
+opens, a `link` role, ink `rlValue` like sign-in's link, its 16pt line overhanging the heading's
+12 so a row with a link stands where one without does, reached by `hit.rowLink` — 36 tall, under 44
+on purpose, and 3 to the left so a control beside it keeps its own target (6.5). **The rail takes the
+row's cards**, not their count, and hands each back with its width, so the lone-card width and the
+dots can never disagree with what is drawn. `HomeRow.test.tsx` walks the link, the slot, both geometries and the rail's
+identity across re-renders.

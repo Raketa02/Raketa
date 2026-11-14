@@ -109,7 +109,12 @@ takes the sports to offer, the one the page is on and the page's words, and repo
 another sport; which sports, which one, and what pressing the pill does are the page's. **It came
 down ahead of its second caller**, which `docs/architecture.md`'s fourth non-negotiable would
 refuse: PRD #766 call 13 decided that Rankings draws the deck's own pill, so the promotion is the
-prefactor that keeps it one control rather than a copy made later. Import them from `@/shared/ui`.
+prefactor that keeps it one control rather than a copy made later. And by Home's rows, ahead of
+the five PRD #789 adds ([#798](https://github.com/Raketa02/Raketa/issues/798)): `HomeRow` — a
+row's section, its eyebrow heading and, on the heading's line, an optional control and an optional
+link (_See all ›_) — and `HomeRowRail`, 7.7's peeking or paging rail over Part 8's Strip, never
+remounted. Every row on Home draws them; the words, the presses and the cards are the row's.
+Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

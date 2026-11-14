@@ -67,6 +67,14 @@ export { DoorRow, doorRowLabel, type DoorRowGlyph, type DoorRowProps } from './D
 export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';
 export { Guide, type GuideProps, type GuideStep } from './Guide';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
+export {
+  HomeRow,
+  HomeRowRail,
+  type HomeRowLink,
+  type HomeRowProps,
+  type HomeRowRailGeometry,
+  type HomeRowRailProps,
+} from './HomeRow';
 export { InfoGlyph, type InfoGlyphProps } from './InfoGlyph';
 export {
   LevelBar,

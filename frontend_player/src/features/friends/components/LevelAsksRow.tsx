@@ -20,8 +20,9 @@
  * (outline) and the coral button, bounded in `ink` — a card waiting on the reader. It is not the
  * dark *Get your level*, which it stands in place of for a player rated in nothing (`groups`' rule
  * leaves that one out while this row has a card). **No group is named.** One card takes the content
- * width; two or more are the peeking rail, as FRIEND REQUESTS'. The row and its title are there only
- * while Home's read holds a card: nothing while it is in flight, refused or empty. The read is
+ * width; two or more are the peeking rail, as FRIEND REQUESTS' — both on Home's row frame (`HomeRow`,
+ * #798). The row and its title are there only while Home's read holds a card: nothing while it is
+ * in flight, refused or empty. The read is
  * Home's (`proposals`' `useHomeLevelAsks`), the sport with the newest ask first, and nothing
  * re-sorts it.
  *
@@ -58,13 +59,21 @@
  * `onAnswered`), as it does to FRIEND REQUESTS, and the notice's toast words with them.
  */
 
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { STARTING_LABEL, sportInLine, useQuestionLeftAt } from '@/features/onboarding/types';
 import { useHomeLevelAsks, type HomeLevelAsk } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
 import { showToast, type ToastRequest } from '@/shared/store/toast.store';
-import { Button, Card, PlayerPhoto, playerPhotoRadius, theme } from '@/shared/ui';
+import {
+  Button,
+  Card,
+  HomeRow,
+  HomeRowRail,
+  PlayerPhoto,
+  playerPhotoRadius,
+  theme,
+} from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { facesOnTheCard } from '../domain/levelAsk';
@@ -97,26 +106,14 @@ export interface LevelAsksRowProps {
 
 export function LevelAsksRow({ onFace, onAnswered, unstarted }: LevelAsksRowProps) {
   const asks = useHomeLevelAsks();
-  const { width: screen } = useWindowDimensions();
   const start = useGetAskedLevel(onAnswered);
 
   if (asks === undefined || asks.length === 0) return null;
 
-  const content = screen - 2 * theme.size.gutter;
-  const width = asks.length === 1 ? content : content * theme.size.railCardRatio;
-
   return (
-    <View style={s.section} testID="level-asks">
-      <Text style={s.heading} accessibilityRole="header">
-        {levelAsksHeading(asks.length)}
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.strip}
-        contentContainerStyle={s.stripContent}
-      >
-        {asks.map((ask) => (
+    <HomeRow heading={levelAsksHeading(asks.length)} testID="level-asks">
+      <HomeRowRail cards={asks}>
+        {(ask, width) => (
           <LevelAskCard
             key={ask.sport}
             ask={ask}
@@ -126,9 +123,9 @@ export function LevelAsksRow({ onFace, onAnswered, unstarted }: LevelAsksRowProp
             onFace={onFace}
             onAnswered={onAnswered}
           />
-        ))}
-      </ScrollView>
-    </View>
+        )}
+      </HomeRowRail>
+    </HomeRow>
   );
 }
 
@@ -215,17 +212,10 @@ function LevelAskCard({ ask, width, start, onStart, onFace, onAnswered }: LevelA
   );
 }
 
-/** Part 8's Strip gap. */
-const STRIP_GAP = theme.space.sm;
 /** The card-coloured ring round each face — `FaceStack`'s, so an overlapping face reads in front. */
 const RING = theme.size.groupPage.stackRing;
 
 const s = StyleSheet.create({
-  section: { gap: theme.space.sm, marginTop: theme.space.lg },
-  // 3.3 as amended: a section heading is `eyebrow` / `muted` / uppercase, as Your games' is.
-  heading: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  strip: { marginHorizontal: -theme.size.gutter },
-  stripContent: { paddingHorizontal: theme.size.gutter, gap: STRIP_GAP },
   // Friends 5's request card, bounded in ink: something waiting on the reader.
   card: { borderColor: theme.color.ink, gap: theme.space.md },
   top: { flexDirection: 'row', gap: theme.space.sm, alignItems: 'flex-start' },

@@ -54,7 +54,12 @@ export function PagerDots({ count, current }: PagerDotsProps) {
   if (count < 1) return null;
 
   return (
-    <View style={s.row} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View
+      style={s.row}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      testID="pager-dots"
+    >
       {Array.from({ length: count }, (_, at) => (
         <View key={at} style={[s.dot, at === current ? s.current : undefined]} />
       ))}

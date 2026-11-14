@@ -1497,6 +1497,13 @@ const hit = {
   peopleRow: { top: 3, bottom: 3 },
   /** Home's trophy pill (#775): 30 tall, lifted to 44. */
   trophy: { top: 7, bottom: 7 },
+  /** A Home row's link — *See all ›*, Top 10's *Rankings ›* (#798; 6.5). Its 16pt line overhangs
+   *  the heading's 12 by 2 each way, `space.lg` under the row above and `space.sm` over its own
+   *  rail — so 13 above and 7 below are the whole of both gaps, and it stops at the rail, whose
+   *  cards keep their own targets: 36 tall, under 44 on purpose. Sideways it reaches the screen
+   *  edge on the right, and 3 on the left, as a chip's slop does (`chip`): of the `space.sm`
+   *  between a control and the link, the two take 3 each and leave 3 between their targets. */
+  rowLink: { top: 13, bottom: 7, left: 3, right: 15 },
   /** The week grid's hour cell (6.8): half the 4pt gap on every side, which is all the
    *  neighbour rule allows and exactly enough that the reachable areas tile the grid with no
    *  dead point between two cells. It does not reach 44 — see `size.availability`. */

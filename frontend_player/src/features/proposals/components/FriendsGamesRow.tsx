@@ -25,7 +25,8 @@
  * ## A horizontal row
  *
  * One card takes the content width; two or more are 7.7's peeking rail — the friend requests row's
- * own geometry, so the two rows under one another read as one kind of thing.
+ * own geometry, so the two rows under one another read as one kind of thing: both are Home's row
+ * frame (`HomeRow`, #798).
  *
  * ## Each card answers itself
  *
@@ -48,12 +49,12 @@
 
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { usePaymentSetupNeeded } from '@/features/payments/types';
 import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
-import { Button, Card, Note, Tick, theme } from '@/shared/ui';
+import { Button, Card, HomeRow, HomeRowRail, Note, Tick, theme } from '@/shared/ui';
 
 import type { YourPayment } from '../domain/fill';
 import {
@@ -102,28 +103,16 @@ export interface FriendsGamesRowProps {
 
 export function FriendsGamesRow({ onAnswered }: FriendsGamesRowProps) {
   const { invitations, readAt, receivedAt } = useHomeFriendsGames();
-  const { width: screen } = useWindowDimensions();
   // The clocks tick while an invitation waits: *1 h 35* counts down, and a card leaves at its end.
   const now = useReadClock(readAt, receivedAt, (invitations?.length ?? 0) > 0);
 
   const waiting = (invitations ?? []).filter((one) => invitationWaits(one.friendsGame, now));
   if (waiting.length === 0) return null;
 
-  const content = screen - 2 * theme.size.gutter;
-  const width = waiting.length === 1 ? content : content * theme.size.railCardRatio;
-
   return (
-    <View style={s.section} testID="friends-games">
-      <Text style={s.heading} accessibilityRole="header">
-        {friendsGamesHeading(waiting.length)}
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.strip}
-        contentContainerStyle={s.stripContent}
-      >
-        {waiting.map((invitation) => (
+    <HomeRow heading={friendsGamesHeading(waiting.length)} testID="friends-games">
+      <HomeRowRail cards={waiting}>
+        {(invitation, width) => (
           <InvitationCard
             key={invitation.bookingId}
             invitation={invitation}
@@ -131,9 +120,9 @@ export function FriendsGamesRow({ onAnswered }: FriendsGamesRowProps) {
             width={width}
             onAnswered={onAnswered}
           />
-        ))}
-      </ScrollView>
-    </View>
+        )}
+      </HomeRowRail>
+    </HomeRow>
   );
 }
 
@@ -349,18 +338,10 @@ function Face({ face }: { readonly face: InvitationFace }) {
   );
 }
 
-/** Part 8's Strip gap — the friend requests row's. */
-const STRIP_GAP = theme.space.sm;
-
 /** The ✓ disc at the face's corner — 6.9's remove square's size, the seat-clear badge's own. */
 const IN_MARK = theme.size.photoTile.remove;
 
 const s = StyleSheet.create({
-  section: { gap: theme.space.sm, marginTop: theme.space.lg },
-  // 3.3 as amended: a section heading is `eyebrow` / `muted` / uppercase, as Your games' is.
-  heading: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  strip: { marginHorizontal: -theme.size.gutter },
-  stripContent: { paddingHorizontal: theme.size.gutter, gap: STRIP_GAP },
   // A card waiting on the reader: 5.1's selected border, as the friend requests row's.
   card: { borderColor: theme.color.ink, gap: theme.space.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
