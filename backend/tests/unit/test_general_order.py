@@ -79,9 +79,7 @@ def place_of(read) -> int | None:
 
 
 def listed(*hundredths: int) -> list[ListedAndThen]:
-    return [
-        ListedAndThen(row=a_row(level), then=None, hidden=False) for level in hundredths
-    ]
+    return [ListedAndThen(row=a_row(level), then=None) for level in hundredths]
 
 
 # --------------------------------------------------------------------------- #
@@ -99,10 +97,7 @@ def test_the_order_places_every_row_and_works_its_chips_out_with_it():
 
     order = work_out(
         Sport.PADEL,
-        [
-            ListedAndThen(row=row, then=then[row.player_id], hidden=False)
-            for row in (karol, tomek)
-        ],
+        [ListedAndThen(row=row, then=then[row.player_id]) for row in (karol, tomek)],
         now=NOW,
     )
 
@@ -188,9 +183,7 @@ class Rows:
         among: Collection[UUID] | None = None,
     ) -> tuple[ListedAndThen, ...]:
         self.passes += 1
-        return tuple(
-            ListedAndThen(row=row, then=None, hidden=False) for row in self.listed_rows
-        )
+        return tuple(ListedAndThen(row=row, then=None) for row in self.listed_rows)
 
 
 async def test_a_fresh_order_is_read_where_it_is_kept_and_a_stale_one_again():
@@ -324,11 +317,6 @@ class Rated:
         return True
 
 
-class NoBlocks:
-    async def blocked_either_way(self, reader: UUID) -> frozenset[UUID]:
-        return frozenset()
-
-
 class NoFriends:
     async def friends_of(self, reader: UUID) -> frozenset[UUID]:
         return frozenset()
@@ -352,7 +340,6 @@ async def test_a_card_read_across_a_lost_order_is_the_new_orders_whole():
         friends=TheFriendsTable(rows=rows, friends=NoFriends()),
         faces=Named(),
         levels=Rated(),
-        blocks=NoBlocks(),
         clock=MovableClock(NOW),
     ).execute(tomek.player_id, Sport.PADEL)
 

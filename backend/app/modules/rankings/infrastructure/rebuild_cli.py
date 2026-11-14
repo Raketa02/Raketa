@@ -3,9 +3,7 @@
 What ``make rankings-rebuild`` runs: every ranking row and every level-history
 point folded from every rating stream the event store holds (#768, #769;
 ``docs/adr/0203`` §10), so the players who played before the ranking shipped
-are on it, with a real week behind their chips — and every rated player's
-*Show me in General* read off their profile (#772), so a projection rebuilt
-from nothing lists no hidden player. **The same fold the delivery
+are on it, with a real week behind their chips. **The same fold the delivery
 runs**, so a rebuild writes what live delivery wrote, and running it twice
 changes nothing.
 
@@ -55,8 +53,7 @@ def main() -> int:
     print(
         f"Rankings rebuilt: {rebuilt.rows} row(s) folded from "
         f"{rebuilt.ratings} rating stream(s), {rebuilt.points} new "
-        f"level-history point(s), {rebuilt.switches} player(s)' Show me in "
-        f"General followed."
+        f"level-history point(s)."
     )
     return 0
 

@@ -9,11 +9,9 @@ from datetime import datetime, timezone
 import pytest
 
 from app.kernel import InvariantViolated, Sport, instant
-from app.modules.friends.domain.daily_limit import DAILY_REQUEST_LIMIT
 from app.modules.friends.domain.errors import (
     AlreadyFriends,
     CannotBefriendYourself,
-    DailyRequestLimit,
     FriendRequestAlreadySent,
     FriendRequestNotFound,
 )
@@ -171,80 +169,39 @@ def test_a_rankings_request_names_its_sport_and_no_group():
         Where(made_from=RequestOrigin.RANKING, group_id=new_uuid(), sport=Sport.PADEL)
 
 
-def test_a_request_outside_the_requesters_groups_is_recorded_counted():
-    friendship = Friendship.between(INES, TOMEK)
-    friendship.ask(requester=INES, where=RANKING, at=AT, counted=True, sent_today=9)
+def test_a_request_is_never_counted_and_nothing_limits_how_many():
+    """``docs/adr/0204`` §2: the daily limit went, so a request records no
+    count — the field is decoded from older rows and never written true."""
 
-    (requested,) = friendship.pull_events()
-    assert isinstance(requested, FriendRequested)
-    assert requested.counted is True
-    assert requested.made_from == "RANKING"
-    assert requested.sport == "PADEL"
+    for addressee in (new_uuid() for _ in range(50)):
+        friendship = Friendship.between(INES, addressee)
+        friendship.ask(requester=INES, where=RANKING, at=AT)
 
-
-def test_a_group_mates_request_is_never_counted_whatever_was_sent_today():
-    friendship = Friendship.between(INES, TOMEK)
-    friendship.ask(requester=INES, where=RANKING, at=AT, sent_today=40)
-
-    (requested,) = friendship.pull_events()
-    assert isinstance(requested, FriendRequested)
-    assert requested.counted is False
+        (requested,) = friendship.pull_events()
+        assert isinstance(requested, FriendRequested)
+        assert requested.counted is False
+        assert requested.made_from == "RANKING"
 
 
-def test_the_eleventh_counted_request_of_a_day_is_refused_and_records_nothing():
-    friendship = Friendship.between(INES, TOMEK)
-    with pytest.raises(DailyRequestLimit) as refused:
-        friendship.ask(
-            requester=INES,
-            where=RANKING,
-            at=AT,
-            counted=True,
-            sent_today=DAILY_REQUEST_LIMIT,
-        )
+def test_a_request_once_counted_replays_as_any_request():
+    """A stored ``friend_requested`` from before #791 may carry ``counted``
+    true; it folds as any request."""
 
-    assert refused.value.code == "daily_request_limit"
-    assert refused.value.status_code == 429
-    assert friendship.pull_events() == []
-    assert friendship.relation_of(INES) is FriendRelation.NONE
-
-
-def test_a_request_that_crosses_one_made_of_you_is_an_answer_and_never_limited():
-    """An answer is not a request sent (the mechanics §13.3): asking somebody
-    who asked you first crosses it, whatever you sent today."""
-
-    friendship = asked()
-    friendship.pull_events()
-    friendship.ask(requester=TOMEK, where=RANKING, at=AT, counted=True, sent_today=10)
-
-    events = friendship.pull_events()
-    assert [type(event) for event in events] == [FriendRequestCrossed, FriendsMade]
-
-
-def test_the_aggregates_own_refusals_come_before_the_limit():
-    friendship = asked()
-    with pytest.raises(FriendRequestAlreadySent):
-        friendship.ask(
-            requester=INES,
-            where=RANKING,
-            at=AT,
-            counted=True,
-            sent_today=DAILY_REQUEST_LIMIT,
-        )
-    friendship.accept(by=TOMEK, at=AT)
-    with pytest.raises(AlreadyFriends):
-        friendship.ask(
-            requester=INES,
-            where=RANKING,
-            at=AT,
-            counted=True,
-            sent_today=DAILY_REQUEST_LIMIT,
-        )
-
-
-def test_a_counted_request_replays_as_any_request():
-    friendship = Friendship.between(INES, TOMEK)
-    friendship.ask(requester=INES, where=RANKING, at=AT, counted=True)
-    friendship = replayed(friendship)
+    friendship = Friendship.from_history(
+        INES,
+        TOMEK,
+        [
+            FriendRequested(
+                requester_id=INES,
+                addressee_id=TOMEK,
+                made_from="RANKING",
+                group_id=None,
+                sport="PADEL",
+                occurred_at=AT,
+                counted=True,
+            )
+        ],
+    )
 
     assert friendship.relation_of(TOMEK) is FriendRelation.ASKED_YOU
     assert friendship.request is not None

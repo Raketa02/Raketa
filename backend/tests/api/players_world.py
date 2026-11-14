@@ -112,6 +112,21 @@ def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+async def closed_to_new_people(client, *tokens: str) -> None:
+    """*Show me to new people* off (``docs/adr/0204`` §2): their record opens
+    only to people they share a group, a game or a friendship with, and to
+    whoever runs a group they are in — the strands, which is what a test of a
+    strand needs to see."""
+
+    for token in tokens:
+        turned = await client.put(
+            "/api/v1/players/me/show-me-to-new-people",
+            json={"on": False},
+            headers=auth(token),
+        )
+        assert turned.status_code == 204, turned.text
+
+
 async def commit_profile(client, token: str, **overrides) -> None:
     """The player's own profile, through the route the client uses."""
 

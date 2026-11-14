@@ -13,7 +13,6 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
     PlayIntentSurface,
 )
-from app.modules.player_profile.domain.ranking_visibility import RankingVisibility
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,9 +250,8 @@ class SetReliabilityMinimumCommand:
 
 
 @dataclass(frozen=True, slots=True)
-class SetRankingVisibilityCommand:
-    """*Show me in General* on (``SHOWN``) or off (``HIDDEN``) —
-    ``docs/adr/0203`` §7, #772."""
+class SetShowMeToNewPeopleCommand:
+    """*Show me to new people* on or off — ``docs/adr/0204`` §2, #791."""
 
     player_id: UUID
-    visibility: RankingVisibility
+    on: bool

@@ -28,16 +28,15 @@ arrived from and what the subject is rated in, and the run of form is asked for
 in it. That sport never reaches the admission: what a sheet is about and who may
 be seen are two questions, and the second one is not the client's to influence.
 
-**The disclosure port is the interesting one, and its shape is almost the whole
-admission rule.** It does not answer *may this reader see this person* — that is
-this context's decision and it is made in ``application/admission.py``. It
-answers *has this reader already been shown this person*, as a yes or a no, and
-three providers answer it: a court they shared, a group they are both in, and a
-group the reader runs that the subject is in (#575). **The fourth strand is a
-port of its own** (#773; ``docs/adr/0203`` §9): ``ShownToEverybody`` asks no
-question about the reader at all — *does the Ranking show this person to
-everybody* — so it is not a disclosure *to* anybody, and it takes the
-response's one instant, since a listing ends when a clock passes.
+**Two ports carry the admission rule** (``docs/adr/0204`` §2, #791), and neither
+answers *may this reader see this person* — that is this context's decision,
+made in ``application/admission.py``. ``OpenToNewPeople`` asks about the
+subject alone: is *Show me to new people* on. ``PriorDisclosure`` answers *do
+these two already share something*, as a yes or a no, and five providers answer
+it: a court they shared, a group they are both in, a group the reader runs that
+the subject is in (#575), a friendship, and a request the subject sent the
+reader (a call made by #791). It is asked only of a subject with the switch
+off.
 """
 
 from __future__ import annotations
@@ -112,10 +111,13 @@ class PriorDisclosure(Protocol):
     id is a player-enumeration endpoint, and a UUID being hard to guess is not an
     authorization model.
 
-    **Three implementations, one question**, which is what lets an entry point
+    **Five implementations, one question**, which is what lets an entry point
     satisfy the same demand without this context learning what it is: a court
-    the pair were both on, a group they are both in, and a group the reader runs
-    that the subject is in (#575).
+    the pair were both on, a group they are both in, a group the reader runs
+    that the subject is in (#575), a friendship (``docs/adr/0204`` §2), and a
+    request the subject sent the reader (a call made by #791).
+    **Asked only of a subject with *Show me to new people* off**: anybody else
+    is open to every reader.
 
     **A boolean, and nothing about where.** The gates that re-run on every open
     are about accounts and read no partition, so a disclosure has nothing to
@@ -133,21 +135,16 @@ class PriorDisclosure(Protocol):
 
 
 @runtime_checkable
-class ShownToEverybody(Protocol):
-    """*Does the Ranking show this person to everybody?* — the record's fourth
-    strand (``docs/adr/0203`` §9, #773).
+class OpenToNewPeople(Protocol):
+    """*Is this person open to new people?* — *Show me to new people*
+    (``docs/adr/0204`` §2), lent by the Player profile and **read live**, so a
+    player who turns it off is closed to strangers on the next tap. It asks
+    nothing about the reader."""
 
-    **Listed on General in at least one sport, and *Show me in General* on.**
-    Lent by the Rankings context, read live: a player whose 90 days ran out, or
-    who turned the switch off, opens to no stranger on the next tap. **It asks
-    nothing about the reader**: General is a page anybody can read, with or
-    without a level, so General discloses whom it shows to everybody at once.
-    The gates still run after it, a block among them.
-    """
-
-    async def shows(self, subject_id: UUID, *, now: Instant) -> bool:
-        """Whether this person is listed on General in a sport at ``now`` and
-        not hidden from it. ``False`` for an id nobody holds."""
+    async def open_to_new_people(self, subject_id: UUID) -> bool:
+        """Whether the switch is on — every profile starts with it on.
+        ``False`` for an id with no profile: nothing answers *yes* about
+        somebody this platform cannot describe."""
         ...
 
 
@@ -171,9 +168,8 @@ class RecordGates(Protocol):
     about a person, so the route answers 503 rather than the refusal.
 
     **No preference** (#575). The mutual gender preference says who a player is
-    willing to be *matched* with, and every strand here is a court shared or a
-    group shared or run — the pair have already been put in front of each
-    other.
+    willing to be *matched* with, and opening a record matches nobody with
+    anybody.
 
     **A hold points both ways.** The subject's is one of the three; the
     reader's own is this surface's entry rule, and it is here rather than in
@@ -195,16 +191,6 @@ class RelationsOfTheReader(Protocol):
     async def relation_to(self, *, reader_id: UUID, subject_id: UUID) -> RecordRelation:
         """The reader's relation to the subject: ``NONE`` where nothing stands,
         and on the reader's own record."""
-        ...
-
-    async def may_ask(self, *, reader_id: UUID, subject_id: UUID, now: Instant) -> bool:
-        """Whether a friend request from the reader to the subject would be
-        admitted at ``now`` (``docs/adr/0203`` §9, #773): they share a group, or
-        the subject is listed on General and not hidden — **Friends' own rule**,
-        the one the ask is admitted by, so *Add friend* is offered exactly where
-        a press would go through. It says nothing of the daily limit, which
-        refuses the press itself, nor of a block, which never reaches an open
-        record."""
         ...
 
 
@@ -412,8 +398,8 @@ class SubjectSportsmanship(Protocol):
 PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     SubjectIdentitySource,
     RecordPhotoLink,
+    OpenToNewPeople,
     PriorDisclosure,
-    ShownToEverybody,
     RecordGates,
     RelationsOfTheReader,
     SubjectRatings,
@@ -426,7 +412,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
 
 
 __all__ = [
-    "ShownToEverybody",
+    "OpenToNewPeople",
     "PLAYER_RECORD_DEMANDS",
     "PriorDisclosure",
     "RecordGates",

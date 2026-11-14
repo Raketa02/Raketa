@@ -41,12 +41,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   rule being followed rather than restated: the sportsmanship figure could have been a row
   on the record's consumer list, and a provider's publication on a consumer's register is
   exactly what makes an exhaustiveness assertion a claim about something else. One port on
-  the record's list has **three** implementations, which is what the suite has to be
-  parameterised over: *where has this reader been shown this person* is a question three
-  contexts each answer about themselves. **Since #773 the record's list lost
-  `BlocksByTheReader`** (a block is a record gate now, so `LiveRecordGates`' row holds a block
-  either way) **and gained `ShownToEverybody`** (`RankingsShownToEverybody`: the Ranking shows a
-  player to everybody), its players listed through `tests/api/rankings_world.py`'s crowd.
+  the record's list has **five** implementations, which is what the suite has to be
+  parameterised over: *do these two already share something* is a question each provider
+  answers about itself — a court, a group, a group run, and since #791 a friendship
+  (`FriendsTheyAre`) and a request the subject sent the reader (`TheyAskedYou`). **Since #773 the record's list lost `BlocksByTheReader`** (a block is a
+  record gate now, so `LiveRecordGates`' row holds a block either way); #773's
+  `ShownToEverybody` was replaced in #791 by **`OpenToNewPeople`** (`ProfileOpenToNewPeople`:
+  *Show me to new people*, read live, turned through `PUT /players/me/show-me-to-new-people`).
   **The ninth, `payments_demands.py`, is a kind of its own**: the two adapters of one port
   onto the outside world — the fake and Stripe — so a fake that drifts from the provider goes red.
   Its rows build over the **settings**, not a session, and one may be absent: Stripe runs only
@@ -117,8 +118,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   holds a rating, off rating's published read (`RatedAccounts`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
   **Friends' lent relations are rows in three registers** (#745; `friends.md`): the record's
-  twelfth demand `RelationsOfTheReader` (since #773 with `may_ask`, Friends' own rule of who
-  may be asked, arranged through a group's aggregate and the ranking's crowd); Proposals' `ReaderRelations` (the faces' *friend* tag and
+  twelfth demand `RelationsOfTheReader` (#773's `may_ask` went with #791: *Add friend* is
+  read off the relation) and, since #791, two more `PriorDisclosure`s, `FriendsTheyAre` and
+  `TheyAskedYou` (a friendship, or their request to the reader, keeps a switched-off player's
+  record open); Proposals' `ReaderRelations` (the faces' *friend* tag and
   the result's *PLAYED WITH*), `FriendRequestsOnHome` (Home's row, whose cards are driven over
   HTTP — a card needs a named account) and, since #764, `LevelAsksOnHome` (Home's asks for a
   level, its accounts registered over the suite's `client`); and Notifications' `Friendships`
@@ -135,11 +138,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `rankings.md`): the rating's record every row is folded from (`RatingHistories`, over the
   rating's own streams), the faces (`RankedFaces`), a level held, read live
   (`SportLevels`), since #771 the reader's friends (`ReadersFriends`, over Friends'
-  own read, its friendships arranged through `tests/demands/friends_world.py`), and since
-  #772 the reader's blocks both ways (`BlocksEitherWay`, over `BlockQuery.exclusions_for`,
-  each block made through `POST /blocks`) and a player's *Show me in General*
-  (`GeneralSwitches`, over the profile repository, turned through
-  `PUT /players/me/ranking-visibility`). Home's trophy is a row in Proposals' register,
+  own read, its friendships arranged through `tests/demands/friends_world.py`). #772's
+  `BlocksEitherWay` and `GeneralSwitches` went in #791: the ranking hides nobody. Home's
+  trophy is a row in Proposals' register,
   `RankingOnHome` (the tenth's twenty-fourth).
   **The eighteenth, `general_order_demands.py`, is the third of `payments_demands.py`'s
   kind** (#770; `rankings.md`): the two adapters of the kept General orders — Redis's, as

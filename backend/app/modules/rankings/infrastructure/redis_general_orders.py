@@ -11,8 +11,7 @@ order whatever was kept after it:
 - ``…:{generation}:order`` — a sorted set, every score ``0``, so its members
   sort **by their bytes**: each is a row's key written to sort exactly as
   General's order does (``_sortable``), then ``|`` and what else the row
-  draws — and whether it is hidden from General (#772), which every reader's
-  slice asks. A page is ``ZRANGE`` by index, and a cursor's position one
+  draws. A page is ``ZRANGE`` by index, and a cursor's position one
   ``ZLEXCOUNT`` — so a page read moves 50 rows and never the order;
 - ``…:{generation}:places`` — a hash, player id to place.
 
@@ -79,9 +78,6 @@ _MICRO_DIGITS: Final = len(str(MOST_MICROS))
 #: so ``[key~`` is past every member at that key and before every one after it.
 _SEPARATOR: Final = "|"
 _PAST_THE_KEY: Final = "~"
-#: A member's last field: *Show me in General* off, or on.
-_HIDDEN: Final = "H"
-_SHOWN: Final = "S"
 
 
 def _sortable(key: OrderKey) -> str:
@@ -111,14 +107,15 @@ def _unsortable(text: str) -> tuple[int, int, Instant, UUID]:
 
 def _member(row: ListedRow) -> str:
     chip = f"{row.chip.kind.value}{row.chip.places}"
-    visibility = _HIDDEN if row.hidden else _SHOWN
     return _SEPARATOR.join(
-        (_sortable(row.key), repr(row.sigma), marks_of(row.form), chip, visibility)
+        (_sortable(row.key), repr(row.sigma), marks_of(row.form), chip)
     )
 
 
 def _listed_row(member: str, *, place: int, sport: Sport) -> ListedRow:
-    key, sigma, form, chip, visibility = member.split(_SEPARATOR)
+    # A generation kept before #791 carries a fifth field, *Show me in
+    # General*: read past it until the generation expires on its own.
+    key, sigma, form, chip, *_ = member.split(_SEPARATOR)
     hundredths, results, reached, player_id = _unsortable(key)
     kind = next(kind for kind in ChipKind if chip.startswith(kind.value))
     return ListedRow(
@@ -131,7 +128,6 @@ def _listed_row(member: str, *, place: int, sport: Sport) -> ListedRow:
         level_reached_at=reached,
         form=Outcome.of_marks(form),
         chip=Chip(kind, int(chip[len(kind.value) :])),
-        hidden=visibility == _HIDDEN,
     )
 
 

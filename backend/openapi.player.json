@@ -1604,19 +1604,19 @@
         ]
       }
     },
-    "/api/v1/players/me/ranking-visibility": {
+    "/api/v1/players/me/show-me-to-new-people": {
       "put": {
         "tags": [
           "player-profile"
         ],
-        "summary": "Show me in General",
-        "description": "The switch on *On your card* (`docs/adr/0203` \u00a77, #772): *Players who don't know you can see your place, open your record and send you a request.* `SHOWN` \u2014 on, which every profile starts with \u2014 or `HIDDEN`. Written at once, with no Save; an unchanged value records nothing.\n\n**`HIDDEN`**: your row leaves everybody else's General, in every sport, and **places never renumber** \u2014 the others read #6, then #8, and *of 13* still counts you. You still see your own place, on Rankings (the card's state `HIDDEN`) and on Home's trophy. Friends ignores the switch: your friends still see you there. It reaches the ranking through the outbox, so the next read after it is delivered follows it.\n\n**`204` and no body**: the switch is read back on `GET /players/me/profile`, as `ranking_visibility`.",
-        "operationId": "set_ranking_visibility_api_v1_players_me_ranking_visibility_put",
+        "summary": "Show me to new people",
+        "description": "The switch on *On your card* (`docs/adr/0204` \u00a72): *Players you don't share a group or a game with can find you on Home, open your record and send you a request.* On by default; written at once, with no Save; an unchanged value records nothing.\n\n**Off**: anybody you share no group, no game and no friendship with reads your record as *not available* and can't send you a request \u2014 from the next tap, with nothing to wait for. Your place in the ranking never moves, a request already sent stays open, and you still see everybody and may ask anybody yourself.\n\n**`204` and no body**: the switch is read back on `GET /players/me/profile`, as `show_me_to_new_people`.",
+        "operationId": "set_show_me_to_new_people_api_v1_players_me_show_me_to_new_people_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetRankingVisibilityRequest"
+                "$ref": "#/components/schemas/SetShowMeToNewPeopleRequest"
               }
             }
           },
@@ -1879,7 +1879,7 @@
           "blocks"
         ],
         "summary": "Block a player",
-        "description": "**Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.\n\n**It closes the record and the ranking both ways** (`docs/adr/0203` \u00a78): neither of you can open the other's record, anywhere, group-mates included \u2014 each reads *This record isn't available* \u2014 and neither sees the other's row in the Ranking.\n\n**It reaches nothing else.** You both stay in your groups and see each other in their Members lists, and a chat you already share keeps working.\n\n**Your yeses where they are In are taken back** \u2014 on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified.** You can read your own blocks \u2014 `GET /blocks`, the one read that carries them, and where Unblock lives \u2014 and nothing in this API tells anybody they were blocked.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.",
+        "description": "**Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.\n\n**It closes the record both ways** (`docs/adr/0203` \u00a78): neither of you can open the other's record, anywhere, group-mates included \u2014 each reads *This record isn't available*. **The ranking still shows you both** at your true places (`docs/adr/0204` \u00a72): it is the real ranking, and a tap on the other's row reads the same refusal.\n\n**It reaches nothing else.** You both stay in your groups and see each other in their Members lists, and a chat you already share keeps working.\n\n**Your yeses where they are In are taken back** \u2014 on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified.** You can read your own blocks \u2014 `GET /blocks`, the one read that carries them, and where Unblock lives \u2014 and nothing in this API tells anybody they were blocked.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.",
         "operationId": "block_player_api_v1_blocks_post",
         "requestBody": {
           "content": {
@@ -2123,7 +2123,7 @@
           "friends"
         ],
         "summary": "Ask to be friends",
-        "description": "**+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it \u2014 or *Found you in the padel ranking* for a request made from the ranking \u2014 and they are told once.\n\n**Who may be asked** (`docs/adr/0203` \u00a79): somebody you share a group with now, or anybody listed on General in a sport who hasn't turned *Show me in General* off \u2014 the record's `can_add_friend` says which. **At most 10 a Warsaw day to people you share no group with**; a request to a group-mate is never counted, wherever it is made, and neither is accepting one or asking somebody who asked you first.\n\n**If they had already asked you, the requests cross**: you are friends at once, both are told, and the answer is `FRIEND`.\n\n**Otherwise `SENT`, for as long as the request is open.** Nothing ever tells you whether they set it aside: *request sent* is all you read, and a request never expires. Cancel it with `DELETE /friends/requests/{player_id}`.",
+        "description": "**+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it \u2014 or *Found you in the padel ranking* for a request made from the ranking \u2014 and they are told once.\n\n**Anybody may be asked, as many as you like** (`docs/adr/0204` \u00a72), except somebody who turned *Show me to new people* off and shares no group, game or friendship with you, and hasn't asked you \u2014 exactly the people whose record opens for you, so the record's `can_add_friend` says it. Somebody who blocked you reads *request sent* and never sees it.\n\n**If they had already asked you, the requests cross**: you are friends at once, both are told, and the answer is `FRIEND`.\n\n**Otherwise `SENT`, for as long as the request is open.** Nothing ever tells you whether they set it aside: *request sent* is all you read, and a request never expires. Cancel it with `DELETE /friends/requests/{player_id}`.",
         "operationId": "ask_to_be_friends_api_v1_friends_requests_post",
         "security": [
           {
@@ -2162,7 +2162,7 @@
             }
           },
           "404": {
-            "description": "`player_not_in_your_groups` \u2014 they are in none of your groups, and not listed on General in any sport, or hidden from it. Somebody else can be asked only through your link. One answer for all of them, and for an id nobody holds.",
+            "description": "`player_unavailable` \u2014 they can't be asked: one answer, naming nothing, for somebody who turned *Show me to new people* off and shares no group, game or friendship with you, and for an id nobody holds. Their record reads *not available* too.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2173,16 +2173,6 @@
           },
           "409": {
             "description": "`already_friends`; `friend_request_already_sent` \u2014 your request to them is still open, set aside or not, and nobody asks twice; `unblock_them_first` \u2014 you blocked them; `concurrent_modification` \u2014 two acts on the two of you raced: retry.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "`daily_request_limit` \u2014 you have sent 10 requests today to people you share no group with: *You've sent 10 requests to new people today. Try again tomorrow.* Nothing was sent. A request to somebody in one of your groups still goes through, and the count starts again at midnight, Warsaw time.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3852,7 +3842,7 @@
           "player-record"
         ],
         "summary": "One player's record",
-        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, **anybody listed on General in a sport who hasn't turned *Show me in General* off** \u2014 whether or not you have a level \u2014 and yourself, and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires but a group and a listing.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now \u2014 and while you run a group they are in. General opens it while it lists them: ninety days after their last result, or once they turn the switch off, it opens for strangers no more.\n\n**The gates are live.** A hold, an account that may not be shown and **a block made by either of you** are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered. A block closes the record both ways, group-mates included, with the one refusal: whoever blocked whom reads only *This record isn't available.* Unblock lives in You \u203a Blocked players.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Any player's record opens for any player** (`docs/adr/0204` \u00a72), with or without a level, and with **all** their photos \u2014 except across a block, and when they turned *Show me to new people* off: then only people they share a group, a game or a friendship with, somebody they asked to be friends, and whoever runs a group they are in, may open it. A game you were both on counts for as long as you are both on it; a group while you are both in it, or while you run it. The switch is read live, so it closes the record on the next open.\n\n**The gates are live.** A hold, an account that may not be shown and **a block made by either of you** are re-evaluated on every open. A block \u2014 the ranking still shows a blocked pair each other \u2014 closes the record both ways, group-mates included, with the one refusal: whoever blocked whom reads only *This record isn't available.* Unblock lives in You \u203a Blocked players.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
         "operationId": "read_player_record_api_v1_players__player_id__record_get",
         "security": [
           {
@@ -3901,7 +3891,7 @@
             }
           },
           "404": {
-            "description": "`record_unavailable` \u2014 **one code for every cause, and the body is identical in all of them.** You were never shown this person and they are not listed on General, or hidden from it; the account is held or in a state that may not be shown; one of you blocked the other; or there is no such player.\n\n**The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger, and one that named a block would tell the blocked person. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
+            "description": "`record_unavailable` \u2014 **one code for every cause, and the body is identical in all of them.** They turned *Show me to new people* off and share no group, game or friendship with you; the account is held or in a state that may not be shown; one of you blocked the other; or there is no such player.\n\n**The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger, and one that named a block would tell the blocked person. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3939,7 +3929,7 @@
           "rankings"
         ],
         "summary": "A sport's ranking",
-        "description": "Your place card, the podium and the list, in one sport and view \u2014 sorted by the Level itself, competitive games only: General's first page, or the whole of Friends. An unknown sport is refused.",
+        "description": "Your place card, the podium and the list, in one sport and view \u2014 sorted by the Level itself, competitive games only: General's first page, or the whole of Friends. An unknown sport is refused.\n\n**The real ranking** (`docs/adr/0204` \u00a72): everybody is listed at their true place, a player you blocked or who blocked you included, and *of N* counts everyone. Their record stays closed to you.",
         "operationId": "read_ranking_api_v1_rankings__sport__get",
         "security": [
           {
@@ -3974,16 +3964,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RankingResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 your blocks could not be read, so no list is drawn. Retry the same request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4085,16 +4065,6 @@
           },
           "400": {
             "description": "`not_a_ranking_page` \u2014 a cursor this server never wrote, or a page asked for in two places at once.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 your blocks could not be read, so no list is drawn. Retry the same request.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9829,8 +9799,7 @@
           "NO_LEVEL",
           "OFF_THE_LIST",
           "JUST_YOU",
-          "NO_FRIEND_LISTED",
-          "HIDDEN"
+          "NO_FRIEND_LISTED"
         ],
         "title": "CardState",
         "description": "What the reader's place card says (the screens \u00a74.1, \u00a74.3, \u00a74.4, \u00a74.6)."
@@ -12563,7 +12532,7 @@
             },
             "type": "array",
             "title": "Rows",
-            "description": "The page's rows, best first, each with its true place \u2014 the same rows the main read draws. **50 places**: a row you can't see leaves its gap, so a page may hold fewer."
+            "description": "The page's rows, best first, each with its true place \u2014 the same rows the main read draws, 50 places."
           },
           "previous": {
             "anyOf": [
@@ -15430,7 +15399,7 @@
         "properties": {
           "state": {
             "$ref": "#/components/schemas/CardState",
-            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table. **General only**: `HIDDEN` \u2014 you are listed and turned *Show me in General* off: *YOUR PLACE \u00b7 7th \u00b7 of 13*, your Level and your chip, with *Hidden from General* and the switch where the gap line was; others don't see your row. Friends ignores the switch, so there you read `LISTED`; not listed, you read your not-listed card."
+            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table."
           },
           "results": {
             "type": "integer",
@@ -15454,7 +15423,7 @@
               }
             ],
             "title": "Place",
-            "description": "With `LISTED` and `HIDDEN` only: your place \u2014 *7th*."
+            "description": "With `LISTED` only: your place \u2014 *7th*."
           },
           "of": {
             "anyOf": [
@@ -15467,7 +15436,7 @@
               }
             ],
             "title": "Of",
-            "description": "With `LISTED` and `HIDDEN` only: how many are listed \u2014 *of 13* \u2014 hidden players and rows you can't see included."
+            "description": "With `LISTED` only: how many are listed \u2014 *of 13* \u2014 everyone, whoever blocked whom."
           },
           "level": {
             "anyOf": [
@@ -15479,7 +15448,7 @@
               }
             ],
             "title": "Level",
-            "description": "With `LISTED` and `HIDDEN` only: your Level, two decimals \u2014 *2,71*."
+            "description": "With `LISTED` only: your Level, two decimals \u2014 *2,71*."
           },
           "chip": {
             "anyOf": [
@@ -15490,7 +15459,7 @@
                 "type": "null"
               }
             ],
-            "description": "With `LISTED` and `HIDDEN` only: your places moved this week, under the Level."
+            "description": "With `LISTED` only: your places moved this week, under the Level."
           },
           "gap_line": {
             "anyOf": [
@@ -15501,7 +15470,7 @@
                 "type": "null"
               }
             ],
-            "description": "With `LISTED` only: the line under the fold. `null` with `HIDDEN`, where *Hidden from General* and the switch stand in its place."
+            "description": "With `LISTED` only: the line under the fold \u2014 the true neighbours above and below you, whoever they are."
           }
         },
         "type": "object",
@@ -15712,9 +15681,10 @@
             "$ref": "#/components/schemas/GenderPreference",
             "description": "Who the owner is willing to be matched with \u2014 their own setting, served here and on no other response shape (`docs/adr/0179` \u00a74). Always present: it defaults to `ANY` at commit, so there is nothing for its absence to mean."
           },
-          "ranking_visibility": {
-            "$ref": "#/components/schemas/RankingVisibility",
-            "description": "*Show me in General* (`docs/adr/0203` \u00a77): `SHOWN`, on \u2014 every profile starts with it, one committed before the switch existed included \u2014 or `HIDDEN`. Always present. Written by `PUT /players/me/ranking-visibility`."
+          "show_me_to_new_people": {
+            "type": "boolean",
+            "title": "Show Me To New People",
+            "description": "*Show me to new people* (`docs/adr/0204` \u00a72): `true`, on \u2014 every profile starts with it \u2014 or `false`. A player who had turned *Show me in General* off starts with it off. Always present. Written by `PUT /players/me/show-me-to-new-people`."
           }
         },
         "type": "object",
@@ -15724,7 +15694,7 @@
           "social_tags",
           "photos",
           "gender_preference",
-          "ranking_visibility"
+          "show_me_to_new_people"
         ],
         "title": "PlayerProfileReadResponse",
         "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), and\n``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each\nmade while no build had shipped anywhere but ``local``."
@@ -15799,12 +15769,20 @@
           "can_add_friend": {
             "type": "boolean",
             "title": "Can Add Friend",
-            "description": "Whether to offer **Add friend** (`docs/adr/0203` \u00a79): `relation` is `NONE` and a request from you would be admitted \u2014 you share a group now, or they are listed on General and haven't turned *Show me in General* off. `false` otherwise, and on your own record.\n\n**The daily limit is not in it.** Ten requests a Warsaw day may go to people you share no group with, and the eleventh press is refused `daily_request_limit` \u2014 show *You've sent 10 requests to new people today. Try again tomorrow.* under the buttons then. Send a request made from a record opened on the Rankings page with `made_from` `RANKING` and that page's sport."
+            "description": "Whether to offer **Add friend** (`docs/adr/0204` \u00a72): `relation` is `NONE` and this is not your own record. A request is admitted by the rule this record opened by, so a record you can read is somebody you can ask \u2014 as many as you like, with no daily limit. Send a request made from a record opened on the Rankings page with `made_from` `RANKING` and that page's sport."
           },
           "nickname": {
             "type": "string",
             "title": "Nickname",
             "description": "Their handle, unique across the platform, and the title of the sheet \u2014 drawn large, with nothing under it, and never with an @. **Nothing may derive a familiar form from it**: every sentence naming somebody uses the whole nickname or names nobody (``docs/adr/0199`` \u00a71)."
+          },
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/RecordPhotoSchema"
+            },
+            "type": "array",
+            "title": "Photos",
+            "description": "**Every** photo, in their own order \u2014 the first is `photo_id`'s \u2014 each with a short-lived signed URL minted for this response (`docs/adr/0204` \u00a72). Empty when they have none. Always present."
           },
           "photo_id": {
             "type": "string",
@@ -15870,13 +15848,14 @@
           "relation",
           "can_add_friend",
           "nickname",
+          "photos",
           "area_code",
           "social_tags",
           "sports",
           "reliability"
         ],
         "title": "PlayerRecordResponse",
-        "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody you were on a game with, somebody you share a\ngroup with, somebody in a group you run, somebody listed on General who\nhasn't turned *Show me in General* off, and yourself. Anybody else \u2014 and\nanybody a live gate no longer admits, a block either way among them \u2014 is\n`404`, in one shape that names nothing."
+        "description": "Everything the platform will say about one person, to this reader.\n\n**Open to any reader** (``docs/adr/0204`` \u00a72), except somebody who turned\n*Show me to new people* off and shares no group, game or friendship with\nyou, nor is in a group you run \u2014 and anybody a live gate no longer admits,\na block either way among them. Those are `404`, in one shape that names\nnothing."
       },
       "PostRequest": {
         "properties": {
@@ -16611,7 +16590,7 @@
             "type": "integer",
             "minimum": 1.0,
             "title": "Place",
-            "description": "Their true place \u2014 coral for 1\u20133, grey after. A row you can't see leaves a gap, so places may skip a number."
+            "description": "Their true place \u2014 coral for 1\u20133, grey after. A blocked player is here too; a tap on them reads *This record isn't available*."
           },
           "player_id": {
             "type": "string",
@@ -16709,7 +16688,7 @@
             },
             "type": "array",
             "title": "Podium",
-            "description": "The first three rows you see, each with its true place \u2014 first in the middle, second left, third right; with second hidden from you, the steps read 1, 3 and 4. **Empty with fewer than three rows you see**, and the list shows alone."
+            "description": "The first three rows, each with its true place \u2014 first in the middle, second left, third right. **Empty with fewer than three listed**, and the list shows alone."
           },
           "rows": {
             "items": {
@@ -16753,14 +16732,6 @@
         ],
         "title": "RankingView",
         "description": "Which list a ranking is read in (``docs/adr/0203`` \u00a73). **General** is\neverybody in Raketa listed in the sport; **Friends** is the reader and their\nfriends, worked out on each read (#771). Both drop a player 90 days after\ntheir last result, and both order and place them alike."
-      },
-      "RankingVisibility": {
-        "type": "string",
-        "enum": [
-          "SHOWN",
-          "HIDDEN"
-        ],
-        "title": "RankingVisibility"
       },
       "RatingResponse": {
         "properties": {
@@ -16991,6 +16962,27 @@
         ],
         "title": "RecordLikelyRangeSchema",
         "description": "The **likely range** a Level sits in \u2014 \u03bc \u00b1 \u03c3, clamped to the scale.\n\n**Named for its surface, because the contract is one namespace and this\narrived second.** ``matchmaking`` already publishes a ``LikelyRangeSchema``\non the player card; a second class of that name does not shadow it, it\n*renames* it \u2014 the emitted document qualifies both by module and every\ngenerated type a shipped app already holds moves. It is ``games``' rule for\n``GameStanding``, applied to the wire: the cost of a shared word is paid by\nwhoever arrives second.\n\nThe shape is deliberately identical to the card's. Two edges of one value,\nboth rounded by the engine, and a client computes neither."
+      },
+      "RecordPhotoSchema": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "Short-lived signed URL that draws this photo, minted per response and stored nowhere."
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id",
+          "photo_url"
+        ],
+        "title": "RecordPhotoSchema",
+        "description": "One of a player's photos on their record (``docs/adr/0204`` \u00a72)."
       },
       "RecordSportsmanshipSchema": {
         "properties": {
@@ -17748,20 +17740,6 @@
         "title": "SendMessageRequest",
         "description": "One player's own words."
       },
-      "SetRankingVisibilityRequest": {
-        "properties": {
-          "visibility": {
-            "$ref": "#/components/schemas/RankingVisibility",
-            "description": "`SHOWN` \u2014 on, which every profile starts with: you are listed in General for everybody. `HIDDEN` \u2014 your row leaves everybody else's General, your place kept and still counted in *of N*; you still see it, and your friends still see you in Friends."
-          }
-        },
-        "type": "object",
-        "required": [
-          "visibility"
-        ],
-        "title": "SetRankingVisibilityRequest",
-        "description": "*Show me in General*, on or off (``docs/adr/0203`` \u00a77, #772)."
-      },
       "SetReliabilityFilterRequest": {
         "properties": {
           "minimum": {
@@ -17812,6 +17790,21 @@
         ],
         "title": "SetScoreSchema",
         "description": "One set, **absolute**: what side A took, and what side B took.\n\nNever relative to the reader. A score stored from one point of view has to be\nflipped by whoever reads it next, and the first reader to forget publishes a\nloss as a win."
+      },
+      "SetShowMeToNewPeopleRequest": {
+        "properties": {
+          "on": {
+            "type": "boolean",
+            "title": "On",
+            "description": "`true` \u2014 on, which every profile starts with: anybody may open your record and send you a request. `false` \u2014 only people you share a group, a game or a friendship with may."
+          }
+        },
+        "type": "object",
+        "required": [
+          "on"
+        ],
+        "title": "SetShowMeToNewPeopleRequest",
+        "description": "*Show me to new people*, on or off (``docs/adr/0204`` \u00a72, #791)."
       },
       "SetWeeklyHoursRequest": {
         "properties": {

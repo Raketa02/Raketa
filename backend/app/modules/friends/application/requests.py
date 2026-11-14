@@ -5,25 +5,13 @@
 *friends made* to whoever asked — Notifications hears both events after the
 commit. *Not now*, a cancel and a removal append events nobody is told about.
 
-**A request is open to people from your groups, and to anybody the Ranking
-shows everybody** (the mechanics §3.1, widened by ``docs/adr/0203`` §9, #773):
-the two share a group now, **or** the addressee is listed on General in a sport
-and hasn't turned *Show me in General* off — ``WhoMayBeAsked``, the one rule,
-which the record asks too, so *Add friend* is offered exactly where it would be
-admitted. Anybody else is refused ``player_not_in_your_groups``, one answer for
-a stranger, a hidden player and an id nobody holds. A request made by the
-requester's link (#748) is the one way in besides, and skips both.
-
-**At most ten a Warsaw day to people you share no group with** (§9, Q21): a
-request the rule admitted through the Ranking alone **counts**, and the
-eleventh of the requester's day is refused ``daily_request_limit``. A request
-to a group-mate never counts, wherever it was made — the Ranking's included —
-nor does a link's, nor a crossing, which is an answer. The count is read
-**only for a request that would count**, and decided by the aggregate after its
-own refusals, so a request to a friend still reads ``already_friends``. **Two
-requests racing from one requester** to two people are on two streams, so both
-may read nine and the day end at eleven: a limit against spam, not a ledger
-(a call).
+**Anyone may be asked, with no daily limit** (``docs/adr/0204`` §2): the one
+exception is a player who turned *Show me to new people* off, whom only people
+they share a group, a game or a friendship with may ask — the record's rule (b),
+asked through ``OpenToTheRequester``, so *Add friend* is offered exactly where
+it would be admitted. Anybody else is refused ``player_unavailable``, one answer
+for a switched-off stranger and an id nobody holds. A request made by the
+requester's link (#748) is the one way in besides, and skips it.
 
 **A request from a player the reader blocked is never shown to the reader**: one
 asked while the block stands is recorded **unseen** — the requester reads
@@ -50,26 +38,24 @@ from typing import final
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
-from app.kernel import Clock, Instant, instant
+from app.kernel import Clock, instant
 from app.modules.friends.application.commands import (
     AnswerCommand,
     AskCommand,
     TakeBackCommand,
 )
-from app.modules.friends.domain.daily_limit import day_began
 from app.modules.friends.domain.friendship import Friendship
 from app.modules.friends.domain.errors import (
     CannotBefriendYourself,
     FriendRequestNotFound,
-    NotInYourGroups,
+    PlayerUnavailable,
     UnblockThemFirst,
 )
 from app.modules.friends.domain.ports import (
     FriendshipRepository,
-    ShownToStrangers,
+    OpenToTheRequester,
     ReadersBlocks,
     ReadersGroups,
-    RequestsCounted,
 )
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
 
@@ -77,48 +63,39 @@ from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
 @final
 @dataclass(frozen=True, slots=True)
 class Admitted:
-    """A request the rule lets through: the groups the two share now — none
-    when the Ranking alone admitted it, which is a request that **counts**."""
+    """A request the rule lets through, and the groups the two share now —
+    the only group a card may name."""
 
     shared: frozenset[UUID]
-
-    @property
-    def counted(self) -> bool:
-        return not self.shared
 
 
 @final
 class WhoMayBeAsked:
-    """**Who may be asked to be friends** (the mechanics §3.1; ``docs/adr/0203``
-    §9, #773): somebody the requester shares a group with now, or somebody the
-    Ranking shows everybody — listed on General in a sport, *Show me in General*
-    on. **The one rule**: the ask is admitted by it, and the record offers *Add
-    friend* by it.
+    """**Who may be asked to be friends** (``docs/adr/0204`` §2): anybody the
+    record would reach — *Show me to new people* on, or a group, a game or a
+    friendship shared. **The one rule**, the record's own, asked through
+    ``OpenToTheRequester``.
 
-    It reads **the requester's groups first**, since a group-mate is admitted
-    whatever the Ranking says — a hidden one too, uncounted (the mechanics §18)
-    — and the Ranking only for somebody they share none with. It knows nothing
-    of blocks: the ask refuses its own (``unblock_them_first``), and the record
-    never opens across one."""
+    It reads **the requester's groups first**, because the card names a group
+    only while the two share it, and a group-mate is admitted whatever the
+    switch says. It knows nothing of blocks: the ask refuses its own
+    (``unblock_them_first``), and swallows the other's."""
 
-    def __init__(self, *, groups: ReadersGroups, shown: ShownToStrangers) -> None:
+    def __init__(self, *, groups: ReadersGroups, reach: OpenToTheRequester) -> None:
         self._groups = groups
-        self._shown = shown
+        self._reach = reach
 
-    async def admits(
-        self, requester: UUID, addressee: UUID, *, now: Instant
-    ) -> Admitted | None:
-        """The request admitted, and how — or ``None``: nothing admits it."""
+    async def admits(self, requester: UUID, addressee: UUID) -> Admitted | None:
+        """The request admitted, and the groups the two share — or ``None``:
+        the addressee is out of the requester's reach."""
 
         shared = frozenset(
             group.group_id
             for group in await self._groups.groups_of(requester)
             if addressee in group.members
         )
-        if shared:
+        if shared or await self._reach.open_to(addressee, requester=requester):
             return Admitted(shared=shared)
-        if await self._shown.shown(addressee, now=now):
-            return Admitted(shared=frozenset())
         return None
 
 
@@ -130,14 +107,12 @@ class AskToBeFriends:
         friendships: FriendshipRepository,
         blocks: ReadersBlocks,
         who: WhoMayBeAsked,
-        counted: RequestsCounted,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._friendships = friendships
         self._blocks = blocks
         self._who = who
-        self._counted = counted
         self._uow = uow
         self._clock = clock
 
@@ -150,16 +125,14 @@ class AskToBeFriends:
             raise CannotBefriendYourself()
         now = instant(self._clock.now())
         where = command.where
-        counted = False
         if where.made_from is not RequestOrigin.LINK:
-            admitted = await self._who.admits(requester, addressee, now=now)
+            admitted = await self._who.admits(requester, addressee)
             if admitted is None:
-                raise NotInYourGroups()
+                raise PlayerUnavailable()
             if where.group_id not in admitted.shared:
                 # The screen's group, kept only if the two share it: a card or a
                 # notice never names a group the client merely sent.
                 where = where.without_the_group()
-            counted = admitted.counted
         if addressee in await self._blocks.blocked_by(requester):
             raise UnblockThemFirst()
 
@@ -172,14 +145,6 @@ class AskToBeFriends:
             # to the requester, and never shown to them (`docs/adr/0202` §2).
             # Their own blocks, read to decide and never answered.
             unseen=requester in await self._blocks.blocked_by(addressee),
-            counted=counted,
-            # Read only for a request that would count: the requester's own
-            # requests since their Warsaw midnight (#773).
-            sent_today=(
-                await self._counted.counted_since(requester, day_began(now))
-                if counted
-                else 0
-            ),
         )
         await self._friendships.save(friendship)
         await self._uow.commit()

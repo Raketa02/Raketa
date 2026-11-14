@@ -78,7 +78,7 @@ INTRO_URL = "/api/v1/players/me/intro"
 GENDER_URL = "/api/v1/players/me/gender"
 PREFERENCE_URL = "/api/v1/players/me/gender-preference"
 RELIABILITY_FILTER_URL = "/api/v1/players/me/reliability-filter"
-RANKING_VISIBILITY_URL = "/api/v1/players/me/ranking-visibility"
+SHOW_ME_URL = "/api/v1/players/me/show-me-to-new-people"
 OPT_IN_URL = "/api/v1/players/me/proposals-opt-in"
 
 #: The fix `a_player` commits with.
@@ -1250,74 +1250,79 @@ async def test_a_filter_left_out_is_refused_at_the_boundary(client):
     assert missing.status_code == 422
 
 
-async def test_show_me_in_general_is_on_by_default_and_read_back(client):
-    """*Show me in General* is on for every profile, one committed before the
-    switch existed included — the profile read says so (#772)."""
+async def test_show_me_to_new_people_is_on_by_default_and_read_back(client):
+    """*Show me to new people* is on for every profile — the profile read says
+    so (#791; ``docs/adr/0204`` §2)."""
 
     _, headers = await a_player(client)
 
     body = (await client.get(PROFILE_URL, headers=headers)).json()
 
-    assert body["ranking_visibility"] == "SHOWN"
+    assert body["show_me_to_new_people"] is True
+    assert "ranking_visibility" not in body
 
 
-async def test_show_me_in_general_is_turned_off_and_on_with_a_204(
+async def test_show_me_to_new_people_is_turned_off_and_on_with_a_204(
     client, session_factory
 ):
     """Off, then off again, then on — each change its own event on the
     profile's stream, the same value again recording nothing, and the read
-    following every one (#772; ``docs/adr/0203`` §7)."""
+    following every one (#791; ``docs/adr/0204`` §2)."""
 
     player_id, headers = await a_player(client)
     before = await stream_length(session_factory, player_id)
 
-    off = await client.put(
-        RANKING_VISIBILITY_URL, json={"visibility": "HIDDEN"}, headers=headers
-    )
+    off = await client.put(SHOW_ME_URL, json={"on": False}, headers=headers)
     hidden = (await client.get(PROFILE_URL, headers=headers)).json()
-    again = await client.put(
-        RANKING_VISIBILITY_URL, json={"visibility": "HIDDEN"}, headers=headers
-    )
-    on = await client.put(
-        RANKING_VISIBILITY_URL, json={"visibility": "SHOWN"}, headers=headers
-    )
+    again = await client.put(SHOW_ME_URL, json={"on": False}, headers=headers)
+    on = await client.put(SHOW_ME_URL, json={"on": True}, headers=headers)
     shown = (await client.get(PROFILE_URL, headers=headers)).json()
 
     assert [off.status_code, again.status_code, on.status_code] == [204, 204, 204]
     assert off.content == b""
-    assert (hidden["ranking_visibility"], shown["ranking_visibility"]) == (
-        "HIDDEN",
-        "SHOWN",
+    assert (hidden["show_me_to_new_people"], shown["show_me_to_new_people"]) == (
+        False,
+        True,
     )
     stream = await stream_of(session_factory, player_id)
     assert len(stream) == before + 2
     assert [row.event_type for row in stream[-2:]] == [
-        "player_profile.ranking_visibility_set",
-        "player_profile.ranking_visibility_set",
+        "player_profile.show_me_to_new_people_set",
+        "player_profile.show_me_to_new_people_set",
     ]
     assert [row.schema_version for row in stream[-2:]] == [1, 1]
+
+
+async def test_the_ranking_visibility_route_is_gone(client):
+    _, headers = await a_player(client)
+
+    gone = await client.put(
+        "/api/v1/players/me/ranking-visibility",
+        json={"visibility": "HIDDEN"},
+        headers=headers,
+    )
+
+    assert gone.status_code in (404, 405)
 
 
 async def test_showing_a_player_already_shown_appends_no_event(client, session_factory):
     player_id, headers = await a_player(client)
     before = await stream_length(session_factory, player_id)
 
-    response = await client.put(
-        RANKING_VISIBILITY_URL, json={"visibility": "SHOWN"}, headers=headers
-    )
+    response = await client.put(SHOW_ME_URL, json={"on": True}, headers=headers)
 
     assert response.status_code == 204, response.text
     assert await stream_length(session_factory, player_id) == before
 
 
-@pytest.mark.parametrize("body", [{}, {"visibility": "PRIVATE"}, {"visibility": None}])
-async def test_a_visibility_that_is_not_shown_or_hidden_is_refused_at_the_boundary(
+@pytest.mark.parametrize("body", [{}, {"on": "maybe"}, {"on": None}])
+async def test_a_switch_that_is_not_on_or_off_is_refused_at_the_boundary(
     client, session_factory, body
 ):
     player_id, headers = await a_player(client)
     before = await stream_length(session_factory, player_id)
 
-    response = await client.put(RANKING_VISIBILITY_URL, json=body, headers=headers)
+    response = await client.put(SHOW_ME_URL, json=body, headers=headers)
 
     assert response.status_code == 422, response.text
     assert await stream_length(session_factory, player_id) == before
@@ -1332,7 +1337,7 @@ async def test_a_visibility_that_is_not_shown_or_hidden_is_refused_at_the_bounda
         (GENDER_URL, {"gender": "MAN"}),
         (PREFERENCE_URL, {"gender_preference": "ANY"}),
         (RELIABILITY_FILTER_URL, {"minimum": "HIGH"}),
-        (RANKING_VISIBILITY_URL, {"visibility": "HIDDEN"}),
+        (SHOW_ME_URL, {"on": False}),
     ],
     ids=[
         "tags",
@@ -1341,7 +1346,7 @@ async def test_a_visibility_that_is_not_shown_or_hidden_is_refused_at_the_bounda
         "gender",
         "preference",
         "reliability-filter",
-        "ranking-visibility",
+        "show-me-to-new-people",
     ],
 )
 async def test_each_of_the_seven_refuses_an_uncommitted_profile_and_needs_a_token(
@@ -1383,7 +1388,7 @@ def test_the_surface_is_a_read_and_the_nine_writes_and_nothing_else():
         ("/players/me/gender", ("PUT",)),
         ("/players/me/gender-preference", ("PUT",)),
         ("/players/me/reliability-filter", ("PUT",)),
-        ("/players/me/ranking-visibility", ("PUT",)),
+        ("/players/me/show-me-to-new-people", ("PUT",)),
     }
 
 

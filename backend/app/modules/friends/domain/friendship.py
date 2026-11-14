@@ -41,11 +41,9 @@ from typing import Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
-from app.modules.friends.domain.daily_limit import DAILY_REQUEST_LIMIT
 from app.modules.friends.domain.errors import (
     AlreadyFriends,
     CannotBefriendYourself,
-    DailyRequestLimit,
     FriendNotFound,
     FriendRequestAlreadySent,
     FriendRequestNotFound,
@@ -210,22 +208,13 @@ class Friendship:
         where: Where,
         at: Instant,
         unseen: bool = False,
-        counted: bool = False,
-        sent_today: int = 0,
     ) -> FriendRelation:
         """The requester asks the other. Answers the requester's relation now:
         *sent*, or *friend* when the request crossed one made of them.
 
         ``unseen`` — the other had blocked the requester — records a request the
-        other never sees; **the requester's answer is the same**.
-
-        ``counted`` — the two share no group (#773) — records a request that
-        counts towards the requester's daily limit, and ``sent_today`` is how
-        many such the requester has sent this Warsaw day already: **the
-        eleventh is refused** (``daily_request_limit``). Both read by the use
-        case, the rule decided here. **A crossing is never limited**: asking
-        somebody who asked you first is an answer, and an answer is not a
-        request sent (the mechanics §13.3)."""
+        other never sees; **the requester's answer is the same**. **Nothing
+        limits how many a requester sends** (``docs/adr/0204`` §2)."""
 
         addressee = self._other_than(requester)
         if self.are_friends:
@@ -254,8 +243,6 @@ class Friendship:
                 )
             )
             return FriendRelation.FRIEND
-        if counted and sent_today >= DAILY_REQUEST_LIMIT:
-            raise DailyRequestLimit()
         self._record_that(
             FriendRequested(
                 requester_id=requester,
@@ -265,7 +252,6 @@ class Friendship:
                 sport=None if where.sport is None else where.sport.value,
                 occurred_at=at,
                 unseen=unseen,
-                counted=counted,
             )
         )
         return FriendRelation.SENT

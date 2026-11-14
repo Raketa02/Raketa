@@ -260,6 +260,8 @@ async def test_marta_opens_the_record_of_anybody_in_the_group_she_runs(
 
     group = await an_official_group(client, marta, ogrody["id"], join_policy="ANYONE")
     ewa = await a_member(client, session_factory, "ewa")
+    # Switched off, so only running her group opens it (`docs/adr/0204` §2).
+    await players.closed_to_new_people(client, ewa["token"])
     before = await record(client, marta, ewa["id"])
 
     await join(client, ewa, group)
@@ -276,6 +278,7 @@ async def test_the_record_closes_when_she_stops_running_it(
 ):
     group = await an_official_group(client, marta, ogrody["id"], join_policy="ANYONE")
     ewa = await a_member(client, session_factory, "ewa")
+    await players.closed_to_new_people(client, ewa["token"])
     await join(client, ewa, group)
     tomek = await an_administrator_who_plays(client, ogrody, "tomek")
     assert (await record(client, marta, ewa["id"])).status_code == 200

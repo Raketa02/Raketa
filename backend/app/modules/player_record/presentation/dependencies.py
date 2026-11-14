@@ -33,16 +33,13 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_account_gates,
-    build_shown_to_everybody,
     build_relations_of_the_reader,
-    build_game_disclosure,
-    build_group_disclosure,
     build_record_gates,
     build_record_photo_link,
     build_reliability_filters,
-    build_runner_disclosure,
     build_subject_form,
     build_subject_identity_source,
+    build_within_reach,
     build_subject_ratings,
     build_subject_reliability,
     build_subject_sportsmanship,
@@ -151,24 +148,13 @@ def get_record_admission(
     blocks: BlockQueryDep,
     runtime: EventRuntimeDep,
 ) -> RecordAdmission:
-    """The four strands and the gates, assembled per request.
-
-    The three disclosures are listed **cheapest first**, which is the order they
-    are read in and the first yes ends the walk: a group the pair share is two
-    indexed reads, a court they shared folds the reader's games, and a group the
-    reader runs reads the subject's groups and who runs each. **The Ranking is
-    asked after them** (#773). It changes no answer — every strand is admitted
-    under the same gates (#575), a block either way among them, read over the
-    request's ``BlockQuery`` so a block taken a moment ago closes the next open.
-    """
+    """Rule (b) and the gates, assembled per request (``docs/adr/0204`` §2):
+    the switch, then the strands for a switched-off subject, then a block
+    either way and the account gates, read over the request's ``BlockQuery``
+    so a block taken a moment ago closes the next open."""
 
     return RecordAdmission(
-        disclosures=(
-            build_group_disclosure(db),
-            build_game_disclosure(db),
-            build_runner_disclosure(db),
-        ),
-        everybody=build_shown_to_everybody(db, runtime=runtime),
+        reach=build_within_reach(db, runtime=runtime),
         gates=build_record_gates(
             accounts=build_account_gates(holds=holds, account_status=account_status),
             holds=holds,

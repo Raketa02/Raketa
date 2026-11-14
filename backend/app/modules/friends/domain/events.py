@@ -45,10 +45,9 @@ class FriendRequested:
     #: not after an unblock either (``docs/adr/0202`` §2: *Tomek never sees
     #: it*). Defaulted, so the field adds nothing a row must carry.
     unseen: bool = False
-    #: Asked of somebody the requester shared no group with at asking (#773;
-    #: ``docs/adr/0203`` §9): it counts towards the requester's daily limit.
-    #: Decided at asking, because a group joined later must not uncount it.
-    #: Defaulted, so every older row reads as uncounted — none could be.
+    #: **Decode-only since #791**: whether the request counted towards the
+    #: daily limit (#773), which went with ``docs/adr/0204`` §2. Stored
+    #: requests carry it and nothing reads it; a new one is never counted.
     counted: bool = False
 
 

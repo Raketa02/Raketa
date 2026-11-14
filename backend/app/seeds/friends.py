@@ -62,7 +62,6 @@ from app.bootstrap.composition import (
     build_read_your_friend_link,
     build_readers_blocks,
     build_readers_groups,
-    build_requests_counted,
     build_unit_of_work,
     build_who_may_be_asked,
     build_user_repository,
@@ -176,7 +175,6 @@ class FriendActs:
                 friendships=_friendships(session),
                 blocks=build_readers_blocks(session),
                 who=build_who_may_be_asked(session),
-                counted=build_requests_counted(session),
                 uow=build_unit_of_work(session),
                 clock=hours_before(self._now, hours),
             ).execute(

@@ -67,9 +67,7 @@ class Rows:
         then: Instant,
         among: Collection[UUID] | None = None,
     ) -> tuple[ListedAndThen, ...]:
-        return tuple(
-            ListedAndThen(row=row, then=None, hidden=False) for row in self._listed
-        )
+        return tuple(ListedAndThen(row=row, then=None) for row in self._listed)
 
 
 class Faces:
@@ -95,11 +93,6 @@ class Rated:
         return True
 
 
-class NoBlocks:
-    async def blocked_either_way(self, reader: UUID) -> frozenset[UUID]:
-        return frozenset()
-
-
 class NoFriends:
     async def friends_of(self, reader: UUID) -> frozenset[UUID]:
         return frozenset()
@@ -112,7 +105,6 @@ def a_read(listed: Sequence[RankingRow], faces: Faces) -> ReadRanking:
         friends=TheFriendsTable(rows=rows, friends=NoFriends()),
         faces=faces,
         levels=Rated(),
-        blocks=NoBlocks(),
         clock=MovableClock(NOW),
     )
 

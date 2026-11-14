@@ -66,8 +66,6 @@ def an_order(size: int, *, sport: Sport = Sport.PADEL, at: Instant = NOW):
                 player_id=_id(index),
                 form=FORM[: 5 - index % 2],
                 chip=CHIPS[index % len(CHIPS)],
-                # *Show me in General* off kept row for row (#772).
-                hidden=index % 5 == 0,
             )
         )
     rows.sort(

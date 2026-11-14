@@ -58,8 +58,10 @@ from app.modules.player_profile.domain.events import (
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
+    HIDDEN_FROM_GENERAL,
     RankingVisibilitySet,
     ReliabilityMinimumSet,
+    ShowMeToNewPeopleSet,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -70,10 +72,6 @@ from app.modules.player_profile.domain.gender import (
 )
 from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
-from app.modules.player_profile.domain.ranking_visibility import (
-    DEFAULT_RANKING_VISIBILITY,
-    RankingVisibility,
-)
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.shared.domain import DomainEvent
@@ -144,10 +142,11 @@ class PlayerProfile:
     #: ``None``, the filter off, which every profile starts with. A clause of
     #: the pair rule, asked both ways like the gender preference beside it.
     reliability_minimum: ReliabilityBand | None = None
-    #: *Show me in General* (``docs/adr/0203`` §7, #772): ``SHOWN`` — on, which
-    #: every profile starts with — or ``HIDDEN``. Whether strangers find the
-    #: player in the ranking; the Rankings context follows it.
-    ranking_visibility: RankingVisibility = DEFAULT_RANKING_VISIBILITY
+    #: *Show me to new people* (``docs/adr/0204`` §2): on, which every profile
+    #: starts with, or off. Off, the player is out of the people rows and their
+    #: record and requests close to anyone they share no group, game or
+    #: friendship with. Their ranking place never moves.
+    show_me_to_new_people: bool = True
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -175,7 +174,7 @@ class PlayerProfile:
         profile.version = 0
         profile.intro = None
         profile.reliability_minimum = None
-        profile.ranking_visibility = DEFAULT_RANKING_VISIBILITY
+        profile.show_me_to_new_people = True
         profile._events = EventRecorder()
         return profile
 
@@ -390,19 +389,15 @@ class PlayerProfile:
             )
         )
 
-    def set_ranking_visibility(
-        self, visibility: RankingVisibility, *, occurred_at: Instant
-    ) -> None:
-        """Turn *Show me in General* on or off (``docs/adr/0203`` §7). The value
-        already held records nothing."""
+    def set_show_me_to_new_people(self, on: bool, *, occurred_at: Instant) -> None:
+        """Turn *Show me to new people* on or off (``docs/adr/0204`` §2). The
+        value already held records nothing."""
 
-        if visibility == self.ranking_visibility:
+        if on == self.show_me_to_new_people:
             return
         self._record_that(
-            RankingVisibilitySet(
-                player_id=self.player_id,
-                visibility=visibility.value,
-                occurred_at=occurred_at,
+            ShowMeToNewPeopleSet(
+                player_id=self.player_id, on=on, occurred_at=occurred_at
             )
         )
 
@@ -464,8 +459,15 @@ class PlayerProfile:
             )
             self._touch(event.occurred_at)
             return
+        if isinstance(event, ShowMeToNewPeopleSet):
+            self.show_me_to_new_people = event.on
+            self._touch(event.occurred_at)
+            return
         if isinstance(event, RankingVisibilitySet):
-            self.ranking_visibility = RankingVisibility(event.visibility)
+            # *Show me in General*, decode-only since #791: its switch folds
+            # into *Show me to new people*, so a player who had hidden from
+            # General starts with this off (``docs/adr/0204`` §2).
+            self.show_me_to_new_people = event.visibility != HIDDEN_FROM_GENERAL
             self._touch(event.occurred_at)
             return
         if isinstance(event, IntroWritten):

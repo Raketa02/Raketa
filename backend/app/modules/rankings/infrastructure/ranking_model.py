@@ -14,13 +14,6 @@ rows are read in place order off the index.
 rating's opening, and every ``rating.moved_on_result``. Each is written once,
 so a redelivery changes nothing; ``ix_ranking_level_history_points`` serves
 *each player's point in a sport at an instant* (#769).
-
-**And ``ranking_visibility``, the rows' *Show me in General*** (#772): one row
-per player who has had it read — never per sport, because the switch is a
-fact about the player and holds before their first result makes a row —
-written from the profile's ``player_profile.ranking_visibility_set`` through
-the outbox, and by the rebuild, each at the profile version it was read at. A
-player with no row here is shown, as every player starts.
 """
 
 from __future__ import annotations
@@ -28,7 +21,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String
+from sqlalchemy import DateTime, Float, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -95,14 +88,3 @@ Index(
     LevelPointORM.player_id,
     LevelPointORM.at,
 )
-
-
-class RankingVisibilityORM(Base):
-    __tablename__ = "ranking_visibility"
-
-    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
-    #: *Show me in General* off.
-    hidden: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    #: The profile stream's version the switch was read at: a write at an
-    #: older one never replaces it.
-    profile_version: Mapped[int] = mapped_column(Integer, nullable=False)

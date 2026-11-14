@@ -1,17 +1,18 @@
 """``GET /api/v1/players/{id}/record`` and ``/players/me/record``.
 
-A player taps a face and is told who that person is. The rule the route runs on
-(``docs/adr/0159``): **a record is read through a prior disclosure, never about a
-person** — the pair played together, share a group, or the reader runs a group
-the subject is in (#575), or the Ranking lists them for everybody (#773,
-``tests/api/test_ranking_strangers.py``) — and the gates are re-evaluated live
-on every open, so a disclosure entitles a reader to ask and never to be
-answered.
+A player taps a face and is told who that person is. **Any record opens for
+any reader** (``docs/adr/0204`` §2; ``tests/api/test_who_sees_whom.py``)
+unless a block stands between them or the subject turned *Show me to new
+people* off — and then only the strands open it: the pair played together,
+share a group, are friends, or the reader runs a group the subject is in
+(#575). **The strands are tested here with the switch off**, which is the only
+time they decide anything. The gates are re-evaluated live on every open.
 
 **The refusal is the thing most worth testing here**, and it is tested as a
-*sameness* rather than as three statuses: never disclosed, held and no such
-player produce the same bytes, because a response separating *never disclosed*
-from *no such player* would answer *is this id real* about a stranger.
+*sameness* rather than as four statuses: closed to new people, held, blocked
+and no such player produce the same bytes, because a response separating a
+closed record from *no such player* would answer *is this id real* about a
+stranger.
 
 **A block made by either side is a gate again** (``docs/adr/0203`` §8, #773,
 superseding ``docs/adr/0193`` §2 for the record): neither of a blocked pair
@@ -286,6 +287,7 @@ async def test_a_group_you_share_opens_their_record(
         "can_add_friend": True,
         # The nickname and no name (``docs/adr/0199`` §6).
         "nickname": "subject",
+        "photos": [],
         "area_code": "A+05151-000013",
         "social_tags": list(players.COMPETITIVE_TAGS),
         "sports": [
@@ -386,6 +388,7 @@ async def test_a_game_you_are_both_on_opens_the_record_both_ways(
     subject, token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
+    await players.closed_to_new_people(client, token, searcher["token"])
     assert (await record_of(client, searcher["token"], subject)).status_code == 404
 
     await players.a_booked_game(
@@ -430,6 +433,7 @@ async def test_a_group_you_are_both_in_opens_the_record_both_ways(
     subject_id, subject_token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
+    await players.closed_to_new_people(client, subject_token, searcher["token"])
     assert (await record_of(client, searcher["token"], subject_id)).status_code == 404
 
     group, _ = await their_group(client, searcher)
@@ -457,6 +461,7 @@ async def test_leaving_the_group_closes_the_record_it_opened(
     group, owner, member = await two_strangers_in_one_group(
         client, session_factory, searcher
     )
+    await players.closed_to_new_people(client, owner["token"], member["token"])
     assert (await record_of(client, owner["token"], member["id"])).status_code == 200
 
     left = await client.delete(
@@ -605,17 +610,14 @@ async def test_an_unreadable_block_state_never_reaches_your_own_record(
 # ---------------------------------------------------------------------------
 
 
-async def test_a_person_you_have_never_been_shown_is_refused(
-    client, session_factory, searcher
-):
-    """Without this the route is a player-enumeration endpoint, and a UUID being
-    hard to guess is not an authorization model. **A search is no disclosure any
-    more** (#575): nothing a reader looked for opens a record — only a court, a
-    group or a group they run."""
+async def test_a_switched_off_stranger_is_refused(client, session_factory, searcher):
+    """*Show me to new people* off, and nothing shared: only a court, a group,
+    a friendship or a group the reader runs opens it (``docs/adr/0204`` §2)."""
 
-    stranger, _ = await players.a_player_on_the_log(
+    stranger, token = await players.a_player_on_the_log(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
+    await players.closed_to_new_people(client, token)
 
     response = await record_of(client, searcher["token"], stranger)
 
@@ -628,16 +630,17 @@ async def test_the_three_refusals_are_byte_identical(
 ):
     """**Asserted as a sameness, not as four statuses.**
 
-    Never disclosed, held, blocked and no such player. A payload separating
-    *never disclosed* from *no such player* would answer *is this id real*
-    about a stranger, and one naming a block would tell the blocked person. A
-    block is among them since ``docs/adr/0203`` §8, either way round.
+    Closed to new people, held, blocked and no such player. A payload
+    separating a closed record from *no such player* would answer *is this id
+    real* about a stranger, and one naming a block would tell the blocked
+    person. A block is among them since ``docs/adr/0203`` §8, either way round.
     """
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
-    stranger, _ = await players.a_player_on_the_log(
+    stranger, token = await players.a_player_on_the_log(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
+    await players.closed_to_new_people(client, token)
 
     never_disclosed = await record_of(client, searcher["token"], stranger)
     no_such_player = await record_of(client, searcher["token"], uuid4())

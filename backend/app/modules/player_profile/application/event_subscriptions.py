@@ -31,8 +31,10 @@ name is a decoding error, like a version 2 creation.
 **The v1 registrations beside it are none of them an edit.**
 ``gender_changed``, ``gender_preference_changed``, ``play_intent_declared``,
 ``intro_written``, ``intro_changed``, ``weekly_hours_set``,
-``reliability_minimum_set`` (#661) and ``ranking_visibility_set`` (#772) are
-new contracts;
+``reliability_minimum_set`` (#661), ``ranking_visibility_set`` (#772) and
+``show_me_to_new_people_set`` (#791) are new contracts —
+``ranking_visibility_set`` decode-only since #791, its switch folded into the
+new one;
 ``player_profile.created`` gained two fields while it was still v1, which was
 legitimate only because both were appended with defaults and every row then in
 the store still decoded into the class (``domain/events.py`` says what each
@@ -59,6 +61,7 @@ from app.modules.player_profile.domain.events import (
     PlayIntentDeclared,
     RankingVisibilitySet,
     ReliabilityMinimumSet,
+    ShowMeToNewPeopleSet,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -81,6 +84,7 @@ _CONTRACTS = (
     (IntroChanged, "player_profile.intro_changed", 1),
     (ReliabilityMinimumSet, "player_profile.reliability_minimum_set", 1),
     (RankingVisibilitySet, "player_profile.ranking_visibility_set", 1),
+    (ShowMeToNewPeopleSet, "player_profile.show_me_to_new_people_set", 1),
     (PlayIntentDeclared, "player_profile.play_intent_declared", 1),
 )
 

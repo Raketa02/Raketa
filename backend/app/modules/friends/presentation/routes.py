@@ -81,10 +81,10 @@ _NO_REQUEST: dict[int | str, dict[str, Any]] = {
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": (
-                "`player_not_in_your_groups` — they are in none of your groups, "
-                "and not listed on General in any sport, or hidden from it. "
-                "Somebody else can be asked only through your link. One answer "
-                "for all of them, and for an id nobody holds."
+                "`player_unavailable` — they can't be asked: one answer, naming "
+                "nothing, for somebody who turned *Show me to new people* off "
+                "and shares no group, game or friendship with you, and for an "
+                "id nobody holds. Their record reads *not available* too."
             ),
         },
         status.HTTP_409_CONFLICT: {
@@ -97,16 +97,6 @@ _NO_REQUEST: dict[int | str, dict[str, Any]] = {
                 "retry."
             ),
         },
-        status.HTTP_429_TOO_MANY_REQUESTS: {
-            "model": ErrorResponse,
-            "description": (
-                "`daily_request_limit` — you have sent 10 requests today to "
-                "people you share no group with: *You've sent 10 requests to new "
-                "people today. Try again tomorrow.* Nothing was sent. A request "
-                "to somebody in one of your groups still goes through, and the "
-                "count starts again at midnight, Warsaw time."
-            ),
-        },
     },
     summary="Ask to be friends",
     description=(
@@ -114,12 +104,12 @@ _NO_REQUEST: dict[int | str, dict[str, Any]] = {
         "on the record. Their Home gets a card naming the group you asked from "
         "while you are both in it — or *Found you in the padel ranking* for a "
         "request made from the ranking — and they are told once.\n\n"
-        "**Who may be asked** (`docs/adr/0203` §9): somebody you share a group "
-        "with now, or anybody listed on General in a sport who hasn't turned "
-        "*Show me in General* off — the record's `can_add_friend` says which. "
-        "**At most 10 a Warsaw day to people you share no group with**; a "
-        "request to a group-mate is never counted, wherever it is made, and "
-        "neither is accepting one or asking somebody who asked you first.\n\n"
+        "**Anybody may be asked, as many as you like** (`docs/adr/0204` §2), "
+        "except somebody who turned *Show me to new people* off and shares no "
+        "group, game or friendship with you, and hasn't asked you — exactly "
+        "the people whose record opens for you, so the record's "
+        "`can_add_friend` says it. Somebody "
+        "who blocked you reads *request sent* and never sees it.\n\n"
         "**If they had already asked you, the requests cross**: you are friends "
         "at once, both are told, and the answer is `FRIEND`.\n\n"
         "**Otherwise `SENT`, for as long as the request is open.** Nothing ever "

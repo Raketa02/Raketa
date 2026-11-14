@@ -519,10 +519,9 @@ from app.modules.friends.domain.ports import (
     AsksWaitingOnALevel,
     LevelAsksOfTheReader,
     LevelsAskedByTheReader,
-    ShownToStrangers,
+    OpenToTheRequester,
     ReadersBlocks,
     ReadersGroups,
-    RequestsCounted,
 )
 from app.modules.friends.infrastructure.event_sourced_friend_link_repository import (
     EventSourcedFriendLinkRepository,
@@ -545,9 +544,6 @@ from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
 from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
     SqlAlchemyLevelAskDirectory,
 )
-from app.modules.friends.infrastructure.sqlalchemy_requests_counted import (
-    SqlAlchemyRequestsCounted,
-)
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
     FriendsReaderRelations,
@@ -555,7 +551,6 @@ from app.modules.proposals.infrastructure.friends import (
 )
 from app.modules.proposals.infrastructure.rankings import RankingsOnHome
 from app.modules.rankings.application.projection import (
-    FollowTheSwitch,
     MoveTheRanking,
     RebuildTheRankings,
 )
@@ -566,11 +561,8 @@ from app.modules.rankings.application.reads import (
     ReadHomeRanking,
     ReadRanking,
 )
-from app.modules.rankings.application.shown_on_general import ShownOnGeneral
 from app.modules.rankings.domain.ports import (
-    BlocksEitherWay,
     GeneralOrders,
-    GeneralSwitches,
     LevelHistory,
     RankedFaces,
     RankingRows,
@@ -578,20 +570,11 @@ from app.modules.rankings.domain.ports import (
     ReadersFriends,
     SportLevels,
 )
-from app.modules.rankings.infrastructure.blocks_either_way import (
-    QueriedBlocksEitherWay,
-)
-from app.modules.rankings.infrastructure.friends_shown_to_strangers import (
-    RankingsShownToStrangers,
-)
 from app.modules.rankings.infrastructure.friends_readers_friends import (
     FriendsReadersFriends,
 )
 from app.modules.rankings.infrastructure.in_memory_general_orders import (
     InMemoryGeneralOrders,
-)
-from app.modules.rankings.infrastructure.profile_general_switches import (
-    ProfileGeneralSwitches,
 )
 from app.modules.rankings.infrastructure.profile_ranked_faces import (
     ProfileRankedFaces,
@@ -799,7 +782,7 @@ from app.modules.player_record.infrastructure.score_subject_reliability import (
     ScoreSubjectReliability,
 )
 from app.modules.player_record.domain.ports import (
-    ShownToEverybody,
+    OpenToNewPeople,
     RelationsOfTheReader,
     PriorDisclosure,
     RecordGates,
@@ -820,11 +803,17 @@ from app.modules.player_record.infrastructure.disclosures import (
 from app.modules.player_record.infrastructure.live_record_gates import (
     LiveRecordGates,
 )
+from app.modules.player_record.application.admission import WithinReach
+from app.modules.player_record.infrastructure.friends_open_to_the_requester import (
+    RecordOpenToTheRequester,
+)
 from app.modules.player_record.infrastructure.friends_relations import (
     FriendsRelationsOfTheReader,
+    FriendsTheyAre,
+    TheyAskedYou,
 )
-from app.modules.player_record.infrastructure.rankings_shown_to_everybody import (
-    RankingsShownToEverybody,
+from app.modules.player_record.infrastructure.profile_open_to_new_people import (
+    ProfileOpenToNewPeople,
 )
 from app.modules.player_record.infrastructure.presigned_record_photo import (
     PresignedRecordPhoto,
@@ -3811,30 +3800,23 @@ def build_read_relations(
     )
 
 
-def build_shown_to_strangers(
+def build_open_to_the_requester(
     session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ShownToStrangers:
-    """Whether the Ranking shows a player to everybody — what admits a request
-    from outside their groups — **signed in ``rankings/infrastructure/``** over
-    the Ranking's own read, so the arrow runs ``rankings → friends`` (#773)."""
-    return RankingsShownToStrangers(build_shown_on_general(session, runtime=runtime))
-
-
-def build_requests_counted(session: AsyncSession) -> RequestsCounted:
-    """The requests that count towards the daily limit,
-    ``friend_requests_counted`` (#773)."""
-    return SqlAlchemyRequestsCounted(session)
+) -> OpenToTheRequester:
+    """Whether a player may be asked by this requester — **the record's rule
+    (b)**, signed in ``player_record/infrastructure/``, so the arrow runs
+    ``player_record → friends`` (``docs/adr/0204`` §2, #791)."""
+    return RecordOpenToTheRequester(build_within_reach(session, runtime=runtime))
 
 
 def build_who_may_be_asked(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> WhoMayBeAsked:
-    """**Who may be asked to be friends** — a group-mate, or anybody the Ranking
-    shows everybody (#773). The rule the ask is admitted by, lent to the record
-    so *Add friend* is offered by it too."""
+    """**Who may be asked to be friends** — anybody the record would reach
+    (``docs/adr/0204`` §2)."""
     return WhoMayBeAsked(
         groups=build_readers_groups(session),
-        shown=build_shown_to_strangers(session, runtime=runtime),
+        reach=build_open_to_the_requester(session, runtime=runtime),
     )
 
 
@@ -3851,7 +3833,6 @@ def build_ask_to_be_friends(
         ),
         blocks=build_readers_blocks(session, runtime=runtime),
         who=build_who_may_be_asked(session, runtime=runtime),
-        counted=build_requests_counted(session),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -4108,70 +4089,15 @@ def build_rebuild_the_rankings(
     orders: GeneralOrders,
     runtime: EventRuntime | None = None,
 ) -> RebuildTheRankings:
-    """Every row and level-history point folded from every rating stream, and
-    every rated player's *Show me in General* followed — ``make
-    rankings-rebuild``."""
+    """Every row and level-history point folded from every rating stream —
+    ``make rankings-rebuild``."""
     return RebuildTheRankings(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
         level_history=build_level_history(session),
-        switches=build_general_switches(session, runtime=runtime),
         orders=orders,
         uow=build_unit_of_work(session),
     )
-
-
-def build_general_switches(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> GeneralSwitches:
-    """A player's *Show me in General*, off their profile — **signed in
-    ``rankings/infrastructure/``**, so the arrow runs ``rankings →
-    player_profile`` (#772)."""
-    event_store = build_domain_event_store(session, runtime=runtime)
-    return ProfileGeneralSwitches(
-        profiles=build_player_profile_repository(
-            event_store=event_store,
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-        event_store=event_store,
-    )
-
-
-def build_follow_the_switch(
-    session: AsyncSession,
-    *,
-    orders: GeneralOrders,
-    runtime: EventRuntime | None = None,
-) -> FollowTheSwitch:
-    """*Show me in General* turned, followed by the rows — built per delivery
-    run, over the session the delivery commits in — and the kept order of
-    every sport the player has a row in forgotten (#772)."""
-    return FollowTheSwitch(
-        switches=build_general_switches(session, runtime=runtime),
-        rows=build_ranking_rows(session),
-        orders=orders,
-    )
-
-
-def build_shown_on_general(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ShownOnGeneral:
-    """Whether the Ranking shows a player to everybody: listed on General in a
-    sport, *Show me in General* on, read live (#773) — the record's fourth
-    strand and what admits a stranger's friend request."""
-    return ShownOnGeneral(
-        rows=build_ranking_rows(session),
-        switches=build_general_switches(session, runtime=runtime),
-    )
-
-
-def build_blocks_either_way(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> BlocksEitherWay:
-    """Everybody a block stands between the reader and, either way — **signed
-    in ``rankings/infrastructure/``** over the blocks' one query, so the arrow
-    runs ``rankings → blocks`` (#772)."""
-    return QueriedBlocksEitherWay(build_block_query(session, runtime=runtime))
 
 
 def build_readers_friends(
@@ -4216,7 +4142,6 @@ def build_read_ranking(
         friends=build_the_friends_table(session, runtime=runtime),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         levels=build_sport_levels(session, runtime=runtime),
-        blocks=build_blocks_either_way(session, runtime=runtime),
         clock=clock,
     )
 
@@ -4233,7 +4158,6 @@ def build_read_general_page(
     return ReadGeneralPage(
         general=build_the_general_order(session, orders=orders),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
-        blocks=build_blocks_either_way(session, runtime=runtime),
         clock=clock,
     )
 
@@ -4897,26 +4821,67 @@ def build_record_gates(
     return LiveRecordGates(accounts=accounts, holds=holds, blocks=blocks)
 
 
-def build_shown_to_everybody(
+def build_friends_disclosure(
     session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ShownToEverybody:
-    """The record's fourth strand — the Ranking shows them to everybody — over
-    the Ranking's own read (``docs/adr/0203`` §9, #773)."""
+) -> PriorDisclosure:
+    """*We are friends* — over Friends' own friend list (``docs/adr/0204``
+    §2)."""
 
-    return RankingsShownToEverybody(build_shown_on_general(session, runtime=runtime))
+    return FriendsTheyAre(build_read_relations(session, runtime=runtime))
+
+
+def build_asked_you_disclosure(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PriorDisclosure:
+    """*They asked me to be friends* — over Friends' relations, from the
+    reader's side (a call made by #791)."""
+
+    return TheyAskedYou(build_read_relations(session, runtime=runtime))
+
+
+def build_open_to_new_people(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> OpenToNewPeople:
+    """*Show me to new people*, read live off the profile (``docs/adr/0204``
+    §2, #791)."""
+
+    return ProfileOpenToNewPeople(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_within_reach(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> WithinReach:
+    """**Rule (b)**, the record's and the ask's (``docs/adr/0204`` §2): the
+    switch, then — only for a subject with it off — the strands, **cheapest
+    first**, the first yes ending the walk: a group the pair share is two
+    indexed reads, a friendship one, a request they sent the reader one (a call
+    made by #791), a court they shared folds the reader's games, and a group the
+    reader runs reads the subject's groups and who runs each."""
+
+    return WithinReach(
+        new_people=build_open_to_new_people(session, runtime=runtime),
+        disclosures=(
+            build_group_disclosure(session),
+            build_friends_disclosure(session, runtime=runtime),
+            build_asked_you_disclosure(session, runtime=runtime),
+            build_game_disclosure(session),
+            build_runner_disclosure(session),
+        ),
+    )
 
 
 def build_relations_of_the_reader(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> RelationsOfTheReader:
     """The record's left button — the reader's own relation to the person on it,
-    over Friends' read (``docs/adr/0202`` §1) — and whether **Add friend** may
-    be offered, by Friends' own rule (``docs/adr/0203`` §9, #773)."""
+    over Friends' read (``docs/adr/0202`` §1)."""
 
-    return FriendsRelationsOfTheReader(
-        build_read_relations(session, runtime=runtime),
-        build_who_may_be_asked(session, runtime=runtime),
-    )
+    return FriendsRelationsOfTheReader(build_read_relations(session, runtime=runtime))
 
 
 # --------------------------------------------------------------------------

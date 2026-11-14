@@ -68,7 +68,6 @@ from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
     PlayerProfile,
 )
-from app.modules.player_profile.domain.ranking_visibility import RankingVisibility
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
@@ -708,13 +707,13 @@ class PlayerProfileReadResponse(BaseModel):
             "nothing for its absence to mean."
         ),
     )
-    ranking_visibility: RankingVisibility = Field(
+    show_me_to_new_people: bool = Field(
         ...,
         description=(
-            "*Show me in General* (`docs/adr/0203` §7): `SHOWN`, on — every "
-            "profile starts with it, one committed before the switch existed "
-            "included — or `HIDDEN`. Always present. Written by "
-            "`PUT /players/me/ranking-visibility`."
+            "*Show me to new people* (`docs/adr/0204` §2): `true`, on — every "
+            "profile starts with it — or `false`. A player who had turned *Show "
+            "me in General* off starts with it off. Always present. Written by "
+            "`PUT /players/me/show-me-to-new-people`."
         ),
     )
 
@@ -730,7 +729,7 @@ class PlayerProfileReadResponse(BaseModel):
                 for photo_id in profile.photo_ids
             ],
             "gender_preference": profile.gender_preference,
-            "ranking_visibility": profile.ranking_visibility,
+            "show_me_to_new_people": profile.show_me_to_new_people,
         }
         if profile.intro is not None:
             # Omitted where nothing was written, never `""` (`docs/adr/0170`).
@@ -1016,15 +1015,14 @@ class SetReliabilityFilterRequest(BaseModel):
     )
 
 
-class SetRankingVisibilityRequest(BaseModel):
-    """*Show me in General*, on or off (``docs/adr/0203`` §7, #772)."""
+class SetShowMeToNewPeopleRequest(BaseModel):
+    """*Show me to new people*, on or off (``docs/adr/0204`` §2, #791)."""
 
-    visibility: RankingVisibility = Field(
+    on: bool = Field(
         ...,
         description=(
-            "`SHOWN` — on, which every profile starts with: you are listed in "
-            "General for everybody. `HIDDEN` — your row leaves everybody else's "
-            "General, your place kept and still counted in *of N*; you still "
-            "see it, and your friends still see you in Friends."
+            "`true` — on, which every profile starts with: anybody may open "
+            "your record and send you a request. `false` — only people you "
+            "share a group, a game or a friendship with may."
         ),
     )

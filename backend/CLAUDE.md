@@ -88,9 +88,9 @@ Rules to preserve:
   General is a slice of an order over every listed player, so `ranking_rows` stores a fold
   of each rating stream, and the chip needs a Level as it stood 7 days ago, so
   `ranking_level_history` keeps a point per move — both written only from the rating's own
-  events and held equal to a rebuild by a test — and beside them `ranking_visibility`, each
-  player's *Show me in General* followed from the profile's event, so a hidden row is left
-  out of a kept order's slice (`rankings.md`).
+  events and held equal to a rebuild by a test (`rankings.md`). Nobody is hidden from it
+  since [ADR-0204](../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+  §2, so `ranking_visibility` went with *Show me in General* (#791).
 - **Contexts meet through ports the consumer declares in its own words.** The adapter
   lives wherever the import arrow allows, `.importlinter` holds each arrow, and every
   outward port is contracted in a `tests/demands/` register.
@@ -139,14 +139,14 @@ changing code that calls into another context, read its rule.**
 | `surfaces.md` | route surfaces, the dev console, the four OpenAPI documents |
 | `kernel-and-engines.md` | the purity gates and the kernel's surface |
 | `demands.md` | the demand registers and which one a new port belongs in |
-| `player-profile-and-photos.md` | photo storage, the on-court check, profile reads and writes |
+| `player-profile-and-photos.md` | photo storage, the on-court check, profile reads and writes, *Show me to new people* |
 | `matchmaking.md` | what the new games kept (the balance forecast, the level window, the overlap), the engine and ruleset that are left, the three outward demands |
 | `games.md` | the booked game: opening, a seat left and taken, call-offs, results, the pairing |
 | `conversations.md` | rooms, their end and the live channel |
-| `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record: its four strands, the gates (a block either way among them), *Add friend* |
-| `rankings.md` | the ranking: one row per player per sport folded from the rating stream on every `rating.moved_on_result`, the level history keyed by the event, the rebuild, who is listed on General (5 results, 90 days), the order, the place card, the chip (7 days, rolling, *New*), the gap line and its wins, the podium, Home's trophy and its two places; the Friends view (the reader and their friends from the first result, worked out on each read, whole, *just you* and *no friend listed*); a sport's General order worked out in one pass and kept a minute (Redis, forgotten on every write), pages of 50 by cursor and around the reader, the 50,000-player measurement; *Show me in General* (the rows follow the profile's switch through the outbox, *hidden* with a place) and blocks both ways in both views, filtered on each reader's slice with places kept; who the Ranking shows to everybody (listed, switch on, read live), the record's fourth strand and what admits a stranger's friend request |
+| `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record: open to any reader unless *Show me to new people* is off and nothing is shared (the four strands), the gates (a block either way among them), all photos, *Add friend* |
+| `rankings.md` | the ranking: one row per player per sport folded from the rating stream on every `rating.moved_on_result`, the level history keyed by the event, the rebuild, who is listed on General (5 results, 90 days), the order, the place card, the chip (7 days, rolling, *New*), the gap line and its wins, the podium, Home's trophy and its two places; the Friends view (the reader and their friends from the first result, worked out on each read, whole, *just you* and *no friend listed*); a sport's General order worked out in one pass and kept a minute (Redis, forgotten on every write), pages of 50 by cursor and around the reader, the 50,000-player measurement; the real ranking — nobody hidden, a blocked pair on each other's lists at true places, *of N* counting everyone (#791) |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
-| `friends.md` | friendships: a request, *Not now*, crossing, cancel and remove; a block ends one and hides a blocked player's request, live; the reader's relation lent to every face; Home's friend requests and the two notices; the link; asking a friend for a level, once per sport, answered by the rating's first level, and waiting on their Home until they have it or say *Not now*; who may be asked — a group-mate, or anybody listed on General and not hidden — a request from the ranking (*Found you in the padel ranking*) and at most ten a Warsaw day to people outside your groups |
+| `friends.md` | friendships: a request, *Not now*, crossing, cancel and remove; a block ends one and hides a blocked player's request, live; the reader's relation lent to every face; Home's friend requests and the two notices; the link; asking a friend for a level, once per sport, answered by the rating's first level, and waiting on their Home until they have it or say *Not now*; who may be asked — anybody but a switched-off stranger, the record's rule (b), with no daily limit — and a request from the ranking (*Found you in the padel ranking*) |
 | `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; the Cover a friends game's sender holds; proposals and the group deck; sending, answering and calling off a friends game; its empty seats — invited into, opened to the group, opened at the cut-off — the cover warning and leaving it |
 | `bookings.md` | the fill: all-or-nothing seat charges, the booking, its game and chat; a Card check far ahead and the holding four days before the cut-off; time to pay — a refused share holds its seat; no club confirms a game (On request removed); leaving, refunds, the cut-off and the record of who kept a booked game; rescues — seats to fill, the first join wins, a refused rescuer keeps a seat 30 minutes; the club's bookings — by day, Move, Cancel; desk check-in removed, its events decode-only; no-shows on the Game; the club's Money page and its daily summary of new bookings |
 | `accounts-and-mail.md` | the mail queue, administrators, signing out everywhere |

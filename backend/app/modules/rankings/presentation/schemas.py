@@ -2,10 +2,9 @@
 screens §4–§5).
 
 **Every Level is the two-decimal number the passport prints**, and so is every
-gap; the client draws both with the decimal comma. Places are true places: a
-row the reader can't see — a player hidden from General, in General; anybody a
-block stands between the reader and, either way, in either view (#772) —
-leaves a gap, and `of` still counts it. **The backend
+gap; the client draws both with the decimal comma. **Everybody is on every
+list at their true place** (``docs/adr/0204`` §2): no switch and no block hides
+a row, and `of` counts everyone. **The backend
 counts the wins and the client draws them**: the count reads the rating
 engine's update rule, which nobody else may compute.
 
@@ -214,12 +213,7 @@ class PlaceCardSchema(BaseModel):
             "with **Add friends**, whatever your own state. With either, the card "
             "is the whole page: nothing is drawn below it. In Friends, "
             "`NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your "
-            "friends' podium and table. **General only**: `HIDDEN` — you are "
-            "listed and turned *Show me in General* off: *YOUR PLACE · 7th · of "
-            "13*, your Level and your chip, with *Hidden from General* and the "
-            "switch where the gap line was; others don't see your row. Friends "
-            "ignores the switch, so there you read `LISTED`; not listed, you "
-            "read your not-listed card."
+            "friends' podium and table."
         )
     )
     results: int = Field(
@@ -236,30 +230,27 @@ class PlaceCardSchema(BaseModel):
         )
     )
     place: int | None = Field(
-        ge=1, description="With `LISTED` and `HIDDEN` only: your place — *7th*."
+        ge=1, description="With `LISTED` only: your place — *7th*."
     )
     of: int | None = Field(
         ge=1,
         description=(
-            "With `LISTED` and `HIDDEN` only: how many are listed — *of 13* — "
-            "hidden players and rows you can't see included."
+            "With `LISTED` only: how many are listed — *of 13* — everyone, "
+            "whoever blocked whom."
         ),
     )
     level: float | None = Field(
-        description=(
-            "With `LISTED` and `HIDDEN` only: your Level, two decimals — *2,71*."
-        )
+        description=("With `LISTED` only: your Level, two decimals — *2,71*.")
     )
     chip: ChipSchema | None = Field(
         description=(
-            "With `LISTED` and `HIDDEN` only: your places moved this week, "
-            "under the Level."
+            "With `LISTED` only: your places moved this week, under the Level."
         )
     )
     gap_line: GapLineSchema | None = Field(
         description=(
-            "With `LISTED` only: the line under the fold. `null` with `HIDDEN`, "
-            "where *Hidden from General* and the switch stand in its place."
+            "With `LISTED` only: the line under the fold — the true neighbours "
+            "above and below you, whoever they are."
         )
     )
 
@@ -286,8 +277,8 @@ class RankedRowSchema(BaseModel):
     place: int = Field(
         ge=1,
         description=(
-            "Their true place — coral for 1–3, grey after. A row you can't see "
-            "leaves a gap, so places may skip a number."
+            "Their true place — coral for 1–3, grey after. A blocked player is "
+            "here too; a tap on them reads *This record isn't available*."
         ),
     )
     player_id: UUID
@@ -344,10 +335,9 @@ class RankingResponse(BaseModel):
     )
     podium: list[RankedRowSchema] = Field(
         description=(
-            "The first three rows you see, each with its true place — first in "
-            "the middle, second left, third right; with second hidden from "
-            "you, the steps read 1, 3 and 4. **Empty with fewer than three "
-            "rows you see**, and the list shows alone."
+            "The first three rows, each with its true place — first in the "
+            "middle, second left, third right. **Empty with fewer than three "
+            "listed**, and the list shows alone."
         )
     )
     rows: list[RankedRowSchema] = Field(
@@ -397,8 +387,7 @@ class GeneralPageResponse(BaseModel):
     rows: list[RankedRowSchema] = Field(
         description=(
             "The page's rows, best first, each with its true place — the same "
-            "rows the main read draws. **50 places**: a row you can't see "
-            "leaves its gap, so a page may hold fewer."
+            "rows the main read draws, 50 places."
         )
     )
     previous: str | None = Field(

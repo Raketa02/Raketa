@@ -79,13 +79,6 @@ class RankingView(StrEnum):
 
         return GENERAL_ENTRY if self is RankingView.GENERAL else FRIENDS_ENTRY
 
-    @property
-    def leaves_out_the_hidden(self) -> bool:
-        """Whether *Show me in General* off keeps a row out of this view —
-        General's; Friends ignores the switch (#772)."""
-
-        return self is RankingView.GENERAL
-
 
 def hundredths_of(mu: float) -> int:
     """A Level in whole hundredths, the resolution the ranking compares at."""
@@ -236,24 +229,6 @@ class RankingRow:
         if view is RankingView.GENERAL:
             return self.general_entered_at
         return self.friends_entered_at
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class GeneralSwitch:
-    """A player's *Show me in General*, as their profile stood at ``version``
-    (``docs/adr/0203`` §7, #772) — **a fact about the player, never about a
-    row**: it holds in every sport, one they have no result in yet included.
-
-    The projection keeps it beside the rows, and **a switch read at an older
-    version never replaces a newer one**, so the outbox delivering two turns
-    in either order leaves the latest."""
-
-    player_id: UUID
-    #: *Show me in General* off: left out of everybody's General but their own.
-    hidden: bool
-    #: The profile stream's version it was read at.
-    version: int
 
 
 def listed_since(now: Instant) -> Instant:
@@ -579,12 +554,6 @@ class CardState(StrEnum):
     #: friends is ranked in padel yet*, with **Add friends**, in the card's
     #: place, and nothing below it.
     NO_FRIEND_LISTED = "NO_FRIEND_LISTED"
-    #: General only: the reader is listed and turned *Show me in General* off
-    #: (#772) — the dark card with the place, the Level and the chip, and
-    #: *Hidden from General* with the switch where the gap line was (the
-    #: screens §4.5). A hidden reader who isn't listed reads their not-listed
-    #: card: there is no place to show.
-    HIDDEN = "HIDDEN"
 
 
 @final
@@ -593,17 +562,16 @@ class PlaceCard:
     state: CardState
     #: How many results the reader has in the sport.
     results: int
-    #: With ``LISTED`` and ``HIDDEN`` only.
+    #: With ``LISTED`` only.
     place: int | None = None
     of: int | None = None
     hundredths: int | None = None
     chip: Chip | None = None
-    #: With ``LISTED`` only: a hidden reader's card has *Hidden from General*
-    #: in its place.
+    #: With ``LISTED`` only.
     gap_line: GapLine | None = None
 
     def __post_init__(self) -> None:
-        placed = self.state in (CardState.LISTED, CardState.HIDDEN)
+        placed = self.state is CardState.LISTED
         place = (self.place, self.of, self.hundredths, self.chip)
         invariant(
             (
@@ -631,9 +599,6 @@ class Placed(Protocol):
     def place(self) -> int: ...
 
     @property
-    def hidden(self) -> bool: ...
-
-    @property
     def hundredths(self) -> int: ...
 
     @property
@@ -658,9 +623,7 @@ def card_of(
     rating in the sport has no row either. Then **a place in the order** — the
     order read decides who is listed, at the instant it was worked out, so the
     card and the rows never disagree (#770): the place, the Level, the count
-    and the chip are the order's row's — ***hidden*** in General when the
-    reader turned *Show me in General* off (#772), with no gap line, and
-    listed otherwise: Friends ignores the switch. Then **fewer results than
+    and the chip are the order's row's. Then **fewer results than
     the view's entry** (five for General, one for Friends), whatever their
     age; and otherwise **off the list**, enough of them with none in the
     order's 90 days.
@@ -669,15 +632,14 @@ def card_of(
     if not holds_a_level:
         return PlaceCard(state=CardState.NO_LEVEL, results=0)
     if placed is not None:
-        hidden = view.leaves_out_the_hidden and placed.hidden
         return PlaceCard(
-            state=CardState.HIDDEN if hidden else CardState.LISTED,
+            state=CardState.LISTED,
             results=placed.results,
             place=placed.place,
             of=of,
             hundredths=placed.hundredths,
             chip=placed.chip,
-            gap_line=None if hidden else gap_line,
+            gap_line=gap_line,
         )
     if row is None or row.results < view.entry:
         return PlaceCard(
