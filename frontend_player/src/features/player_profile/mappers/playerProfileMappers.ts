@@ -57,7 +57,6 @@ type WireSocialTagGroup = components['schemas']['SocialTagGroup'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
-type WireRankingVisibility = components['schemas']['RankingVisibility'];
 type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
 type ProfilePhotoResource = components['schemas']['ProfilePhotoResource'];
 type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
@@ -290,7 +289,7 @@ export function toPlayerProfileSurface(response: PlayerProfileReadResponse): Pla
     ...(response.intro === undefined ? {} : { intro: response.intro }),
     ...(response.gender === undefined ? {} : { gender: GENDER[response.gender] }),
     genderPreference: GENDER_PREFERENCE[response.gender_preference],
-    showMeInGeneral: SHOWN_IN_GENERAL[response.ranking_visibility],
+    showMeToNewPeople: response.show_me_to_new_people,
   };
 }
 
@@ -347,21 +346,6 @@ export function toWireGender(gender: Gender): WireGender {
 
 export function toWireGenderPreference(preference: GenderPreference): WireGenderPreference {
   return WIRE_GENDER_PREFERENCE[preference];
-}
-
-/**
- * ***Show me in General*, in the wire's two words** (ADR-0203 §7, #778): the switch on is `SHOWN`,
- * off is `HIDDEN`. The inbound half is a table, for the genders' reason: a third value stops this
- * file compiling rather than reading as either. The outbound half is the write's — two values, so a
- * boolean says which.
- */
-const SHOWN_IN_GENERAL: Readonly<Record<WireRankingVisibility, boolean>> = {
-  SHOWN: true,
-  HIDDEN: false,
-};
-
-export function toWireRankingVisibility(showMeInGeneral: boolean): WireRankingVisibility {
-  return showMeInGeneral ? 'SHOWN' : 'HIDDEN';
 }
 
 /**

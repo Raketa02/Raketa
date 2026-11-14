@@ -19,7 +19,6 @@ import {
   toUploadedPhoto,
   toWeeklyHours,
   toWireLocation,
-  toWireRankingVisibility,
   toWireWeeklyHours,
 } from './playerProfileMappers';
 
@@ -318,10 +317,10 @@ describe('the profile surface You reads', () => {
     intro: 'Will travel for a hard game.',
     gender: 'MAN',
     gender_preference: 'ANY',
-    ranking_visibility: 'SHOWN',
+    show_me_to_new_people: true,
   };
 
-  it('carries every fact the tab draws — the week and the declarations, the three social ones, the two that gate the matcher, and Show me in General', () => {
+  it('carries every fact the tab draws — the week and the declarations, the three social ones, the two that gate the matcher, and Show me to new people', () => {
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
       week: [{ day: 2, hour: 19 }],
       playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
@@ -330,19 +329,14 @@ describe('the profile surface You reads', () => {
       intro: 'Will travel for a hard game.',
       gender: 'man',
       genderPreference: 'any',
-      showMeInGeneral: true,
+      showMeToNewPeople: true,
     });
   });
 
-  it('sends Show me in General in the wire’s two words — on is SHOWN, off is HIDDEN', () => {
-    expect(toWireRankingVisibility(true)).toBe('SHOWN');
-    expect(toWireRankingVisibility(false)).toBe('HIDDEN');
-  });
-
-  it('reads a profile hidden from General as Show me in General off', () => {
-    // ADR-0203 §7: the switch on is SHOWN; HIDDEN is the player's row gone from General.
+  it('reads a profile switched off as Show me to new people off', () => {
+    // ADR-0204 §2: on by default; off closes the record to strangers.
     expect(
-      toPlayerProfileSurface({ ...SERVED_SURFACE, ranking_visibility: 'HIDDEN' }).showMeInGeneral,
+      toPlayerProfileSurface({ ...SERVED_SURFACE, show_me_to_new_people: false }).showMeToNewPeople,
     ).toBe(false);
   });
 

@@ -57,11 +57,12 @@ describe('the request card’s words (§29.2)', () => {
   });
 });
 
-describe('a request refused (§30.8)', () => {
-  it('says the daily limit, and that nothing was sent', () => {
-    expect(FRIENDS_COPY.refused['daily_request_limit']).toBe(
-      "You've sent 10 requests to new people today. Try again tomorrow.",
-    );
+describe('a request refused (§30.8, §31.13)', () => {
+  it('has no sentence for a daily limit, nor for the code the new rule renamed — there is neither (#799)', () => {
+    expect(FRIENDS_COPY.refused['daily_request_limit']).toBeUndefined();
+    expect(FRIENDS_COPY.refused['player_not_in_your_groups']).toBeUndefined();
+    // The unnamed refusal says nothing: it is the state moving, and the record read again answers.
+    expect(FRIENDS_COPY.refused['player_unavailable']).toBeUndefined();
   });
 
   it('sends a player who blocked somebody to You › Blocked players, where Unblock is now', () => {

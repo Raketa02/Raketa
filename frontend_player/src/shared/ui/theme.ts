@@ -1404,6 +1404,14 @@ const size = {
    *  There is a second rail and it has no ratio, because its card is the content width
    *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
+  /** THE PHOTO CAROUSEL's card — all of a player's photos, sideways, on the record
+   *  ([#799](https://github.com/Raketa02/Raketa/issues/799)) and the vibe sheet (home rows 23, #803),
+   *  over Part 8's Strip (Part 16 2026-11-14). A card's share of the content width, for
+   *  `railCardRatio`'s reason — a ratio, never a point value. **Half**: home rows 23 draws two photos
+   *  side by side, the second running into the sheet's edge, so two stand on screen and a third's
+   *  edge is the affordance. Its height is the photo panel's 4:5, read off `PHOTO_PANEL` — one owner
+   *  of the shape. */
+  photoCarouselRatio: 0.5,
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it

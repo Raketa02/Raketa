@@ -114,6 +114,11 @@ the five PRD #789 adds ([#798](https://github.com/Raketa02/Raketa/issues/798)): 
 row's section, its eyebrow heading and, on the heading's line, an optional control and an optional
 link (_See all ›_) — and `HomeRowRail`, 7.7's peeking or paging rail over Part 8's Strip, never
 remounted. Every row on Home draws them; the words, the presses and the cards are the row's.
+And by the record's photos ([#799](https://github.com/Raketa02/Raketa/issues/799)):
+`PhotoCarousel` — every photo a player has, sideways, a 4:5 card at `photoCarouselRatio` of the
+content width over Part 8's Strip, nothing with no photo. **It came down ahead of its second
+caller** too: the Home rows screens §9.3 decided that the record and the vibe sheet (#803) draw one
+carousel, so it is built where both can reach it rather than copied out of `player_record` later.
 Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result

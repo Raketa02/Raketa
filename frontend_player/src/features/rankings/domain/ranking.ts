@@ -26,9 +26,12 @@ export type Chip =
   | { readonly kind: 'SAME' }
   | { readonly kind: 'NEW' };
 
-/** **One listed player the reader can see** (the screens §5.2). */
+/** **One listed player** (the screens §5.2) — everybody is, a player the reader blocked included. */
 export interface RankedRow {
-  /** The true place — a hidden or blocked row leaves a gap, so places may skip a number. */
+  /**
+   * The true place. **Nobody is left out** (ADR-0204 §2, #799): a blocked player stands at theirs,
+   * so places run without a gap.
+   */
   readonly place: number;
   readonly playerId: string;
   /** Whole, never with an @ (ADR-0199 §1). */
@@ -44,7 +47,7 @@ export interface RankedRow {
   readonly isYou: boolean;
 }
 
-/** **The player just above the reader**, among the rows the reader can see (the mechanics §7). */
+/** **The player just above the reader** — the true neighbour, whoever they are (the mechanics §7). */
 export interface PlayerAbove {
   readonly nickname: string;
   /** How far behind them the reader is, two decimals; `0` when tied. */
@@ -67,7 +70,7 @@ export interface PlayerBelow {
 /**
  * **The line under the fold** (the mechanics §7.1): *Top of the list* in first place, which is the
  * whole line; otherwise the part about the player above, then the part about the player below —
- * either absent where there is nobody the reader can see that way.
+ * either absent at that end of the list.
  */
 export type GapLine =
   | { readonly kind: 'top' }
@@ -76,7 +79,7 @@ export type GapLine =
 /** **A place to show** — the card's left and right halves. */
 export interface Placed {
   readonly place: number;
-  /** How many are listed, hidden players and rows the reader can't see included. */
+  /** How many are listed — everyone, whoever blocked whom. */
   readonly of: number;
   readonly level: number;
   /** Absent only where the server sent one this build cannot read — nothing drawn, not a guess. */
@@ -84,12 +87,12 @@ export interface Placed {
 }
 
 /**
- * **The reader's place card** (the screens §4) — a place with its gap line, a place hidden from
- * General, or one of the not-listed cards in its stead.
+ * **The reader's place card** (the screens §4) — a place with its gap line, or one of the not-listed
+ * cards in its stead. Nobody is hidden from the ranking any more (ADR-0204 §2, #799), so there is no
+ * hidden card.
  */
 export type PlaceCard =
   | ({ readonly state: 'LISTED'; readonly gapLine: GapLine } & Placed)
-  | ({ readonly state: 'HIDDEN' } & Placed)
   | {
       readonly state: 'NEEDS_RESULTS';
       /** The reader's results in the sport — the *2* of *2 of 5 games*. */
@@ -116,7 +119,7 @@ export interface Ranking {
   readonly card?: PlaceCard;
   /** How many are listed in the view and sport, the reader included — `0` is *Nobody ranked*. */
   readonly listed: number;
-  /** The first three rows the reader sees — empty with fewer than three. */
+  /** The first three rows — empty with fewer than three. */
   readonly podium: readonly RankedRow[];
   /** General's first page of 50, best first; Friends whole. */
   readonly rows: readonly RankedRow[];
@@ -128,9 +131,9 @@ export interface Ranking {
 }
 
 /**
- * **A page of General** (#776; the screens §5.3) — 50 places of the list, the rows of them the reader
- * sees, best first, and the cursors either side: `previous` to read the page above, `next` the page
- * below, each absent at that end of the list. A page with rows the reader can't see holds fewer.
+ * **A page of General** (#776; the screens §5.3) — 50 places of the list, best first, and the cursors
+ * either side: `previous` to read the page above, `next` the page below, each absent at that end of
+ * the list.
  */
 export interface GeneralPage {
   readonly rows: readonly RankedRow[];
@@ -173,30 +176,11 @@ export function joinPages(
 
 /**
  * **The place the floating *You · 212th* button names** (the screens §5.3): the reader's, while they
- * are listed. **None when they are hidden from General** (the mechanics §10) or not listed, and none
- * where the card could not be read — no button.
+ * are listed. **None when they are not listed**, and none where the card could not be read — no
+ * button.
  */
 export function jumpPlace(card: PlaceCard | undefined): number | undefined {
   return card?.state === 'LISTED' ? card.place : undefined;
-}
-
-/**
- * **A card behind the switch** ([#778](https://github.com/Raketa02/Raketa/issues/778); the mechanics
- * §10) — the reader's card says hidden while *Show me in General* is on, or listed while it is off.
- *
- * The ranking follows the switch through the outbox, so a card read just after it turned can still
- * be the one from before, and the page reads General again until the two agree (`useGeneral`). Only
- * a placed card can disagree: a card with no place draws the same whichever way the switch is set,
- * and nothing is behind a switch or a card not yet known.
- */
-export function cardBehindTheSwitch(
-  card: PlaceCard | undefined,
-  showMeInGeneral: boolean | undefined,
-): boolean {
-  if (card === undefined || showMeInGeneral === undefined) return false;
-  if (card.state === 'HIDDEN') return showMeInGeneral;
-  if (card.state === 'LISTED') return !showMeInGeneral;
-  return false;
 }
 
 /** **The view the page opens on the first time** — General (the screens §3). */
@@ -302,9 +286,8 @@ export interface Podium {
 }
 
 /**
- * **The podium** (the screens §5.1): the first three rows the reader sees, each labelled with its
- * true place — so with second hidden from the reader the steps read 1, 3 and 4. **None with fewer
- * than three**, when the list shows alone.
+ * **The podium** (the screens §5.1): the first three rows, each labelled with its true place.
+ * **None with fewer than three**, when the list shows alone.
  */
 export function podiumOf(rows: readonly RankedRow[]): Podium | undefined {
   const [first, second, third] = rows;

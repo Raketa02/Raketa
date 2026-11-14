@@ -204,6 +204,7 @@ function friendServer(
         relation: relation(who),
         can_add_friend: true,
         nickname: who.name,
+        photos: [],
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: who.level, band: 'Established' }],

@@ -1,12 +1,12 @@
 /**
  * **The list** (rankings 5, 7–11; the screens §5.2, §5.3; [#775](https://github.com/Raketa02/Raketa/issues/775),
- * [#776](https://github.com/Raketa02/Raketa/issues/776)): one row per listed player the reader can
- * see, best first, on one white card — and the page's scroller, the card and the podium its header.
+ * [#776](https://github.com/Raketa02/Raketa/issues/776)): one row per listed player — everybody, a
+ * player the reader blocked included (ADR-0204 §2, #799) — best first, on one white card — and the page's scroller, the card and the podium its header.
  *
  * **A row:**
  *
- * - **The place** — `coralInk` for 1–3 and `muted` after (rankings 7). A true place, so a hidden or
- *   blocked row leaves a gap. Coral is §1.2's closed list's mark; drawn as a figure it is the text
+ * - **The place** — `coralInk` for 1–3 and `muted` after (rankings 7). A true place, and since
+ *   nobody is left out the places run without a gap. Coral is §1.2's closed list's mark; drawn as a figure it is the text
  *   form, `coralInk`, which keeps 4,5:1 on white where `coral` would not (Part 16, 2026-11-08).
  * - **The face and the nickname**, the reader's own reading *You* on a `coralSoft` tint (rankings 11).
  * - **The form** — the record's own *Run of form*: the last five results with a winner, oldest
@@ -57,8 +57,8 @@ import { RANKINGS_COPY, rankedRowLabel, rowName } from './rankingsCopy';
 
 /**
  * **The true places drawn in coral** (rankings 7; the screens §5.2: *coral for places 1–3*) — by the
- * place, not by the row's position: with second hidden the coral reads 1 and 3. The podium is the
- * first three rows the reader sees (`podiumOf`), a different count on purpose.
+ * place, not by the row's position. The podium is the first three rows (`podiumOf`), the same three
+ * now that nobody is left out — two counts all the same, one of places and one of rows.
  */
 const CORAL_PLACES = 3;
 
@@ -89,7 +89,7 @@ export interface RankingListProps {
   readonly onOpen: (row: RankedRow) => void;
   readonly onStartReached: () => void;
   readonly onEndReached: () => void;
-  /** Absent: no button — the reader isn't listed, or is hidden. */
+  /** Absent: no button — the reader isn't listed. */
   readonly jump: Jump | undefined;
 }
 

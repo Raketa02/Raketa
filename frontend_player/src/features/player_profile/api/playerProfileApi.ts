@@ -27,7 +27,7 @@ type ChangeGenderRequest = components['schemas']['ChangeGenderRequest'];
 type ChangeGenderPreferenceRequest = components['schemas']['ChangeGenderPreferenceRequest'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
-type SetRankingVisibilityRequest = components['schemas']['SetRankingVisibilityRequest'];
+type SetShowMeToNewPeopleRequest = components['schemas']['SetShowMeToNewPeopleRequest'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 type WireSport = components['schemas']['Sport'];
 /**
@@ -396,28 +396,22 @@ export function changeGenderPreference({
   });
 }
 
-export interface SetRankingVisibilityOptions {
-  readonly visibility: SetRankingVisibilityRequest['visibility'];
-}
-
 /**
- * Turn ***Show me in General*** on or off — `SHOWN` or `HIDDEN` ([ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
- * §7, [#778](https://github.com/Raketa02/Raketa/issues/778)). Written at once, from the You row and
- * from the hidden card on Rankings; an unchanged value records nothing.
+ * Turn ***Show me to new people*** on or off ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+ * §2, [#799](https://github.com/Raketa02/Raketa/issues/799)). Written at once, from the You row; an
+ * unchanged value records nothing.
  *
  * **`204` and no body**, for the gender write's reason: the switch is served back on the profile
- * read and on no other shape. **The ranking follows through the outbox**, so a Rankings read sent the
- * moment this answers may still say what it said before — the page follows the switch for that
- * (`rankings`' `useGeneral`). `concurrent_modification` is two writes on the profile at once; the
- * write queue (`RANKING_VISIBILITY_WRITES`) keeps this app's own from being the two.
+ * read and on no other shape. **Nothing follows it through the outbox**: the server reads it live on
+ * the next record open or request. `concurrent_modification` is two writes on the profile at once;
+ * the write queue (`SHOW_ME_TO_NEW_PEOPLE_WRITES`) keeps this app's own from being the two.
  *
  * **Unkeyed, and no `signal`**, for the week write's two reasons.
  */
-export function setRankingVisibility({ visibility }: SetRankingVisibilityOptions): Promise<void> {
-  const body: SetRankingVisibilityRequest = { visibility };
+export function setShowMeToNewPeople(body: SetShowMeToNewPeopleRequest): Promise<void> {
   return httpRequest<void>({
     method: 'PUT',
-    path: '/api/v1/players/me/ranking-visibility',
+    path: '/api/v1/players/me/show-me-to-new-people',
     body,
     authenticated: true,
   });

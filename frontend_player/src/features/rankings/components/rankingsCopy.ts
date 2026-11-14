@@ -31,8 +31,6 @@ export const RANKINGS_COPY = {
   eyebrow: 'YOUR PLACE',
   /** §30.4: the whole line, in first place. */
   topOfTheList: 'Top of the list',
-  /** §30.4: the whole line, hidden from General — the switch beside it is #778's. */
-  hidden: 'Hidden from General',
   /** §30.6: under *Just you so far* and *None of your friends is ranked…* — opens §29.3's sheet. */
   addFriends: 'Add friends',
   /** §30.7: the reader's own row, and their step on the podium. */

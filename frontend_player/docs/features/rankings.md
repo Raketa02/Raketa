@@ -212,3 +212,22 @@ level, the podium's steps, the rows and the tint, the drawn marks, and the pill 
 and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,
 the jump landing centred, and the button over the list. The suites say what the list reports (the
 rows on screen, an end reached), because a test renderer lays nothing out.
+
+**The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§2; the Home rows screens §9.2). The server lists every player at their true place — a player the
+reader blocked, or who blocked the reader, and one who turned their switch off, included — so the
+`HIDDEN` card state, the hidden card with _Hidden from General_ and You's switch under its fold, and
+the page following the switch (`cardBehindTheSwitch`, `useGeneral`'s one-second re-reads) are gone,
+with `RANKINGS_COPY.hidden` and the `rankings` → `player_profile` import they needed. `useGeneral`
+takes the sport alone. **A tap on a blocked player** — a row or a podium step — opens the record
+sheet, whose read is refused with the one code and which draws _This record isn't available_, as a
+group's Members list already did: nothing here knows about blocks. **Places run without a gap** now,
+so the notes that explained a podium reading 1, 3 and 4 and a list skipping places were rewritten;
+`podiumOf` is unchanged — it was always the first three rows. The only switch on the page is
+_General | Friends_. The paragraphs above on the hidden card, the page following the switch and #778's
+calls describe #778 and are superseded. **The record from the ranking** shows all of a stranger's
+photos and no daily-limit sentence, and a request the server refuses unnamed re-reads the record
+quietly ([`player_record.md`](player_record.md), [`friends.md`](friends.md)). Walked in
+`rankings.test.tsx`: Marek, blocked, at 4th and his row's refusal; no switch on the page; all of
+Piotr's photos with _Add friend_; no limit sentence; the quiet re-read.

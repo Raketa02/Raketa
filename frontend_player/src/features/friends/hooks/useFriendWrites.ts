@@ -67,7 +67,10 @@
  *
  * `already_friends`, `friend_request_already_sent` and `friend_request_not_found` say the surface
  * was drawn from a state that has since moved — accepted on another phone, cancelled by them — and
- * `concurrent_modification` that two acts on the pair raced. So do an ask's three (#758):
+ * `concurrent_modification` that two acts on the pair raced. **So does `player_unavailable`** (#799,
+ * ADR-0204 §2): they turned *Show me to new people* off since the surface was read, and share no
+ * group, game or friendship with the asker. It names nothing, so nothing is said: the record read
+ * again is refused with its own one line, which is the answer. So do an ask's three (#758):
  * `level_already_asked` (asked from another phone), `already_has_a_level` (they got one since the
  * picker was read — the row turns pickable) and `friend_not_found` (no longer friends — the row
  * goes). **None of them is retried**: asking and
@@ -112,6 +115,8 @@ const MOVED: ReadonlySet<string> = new Set([
   'level_already_asked',
   'already_has_a_level',
   'friend_not_found',
+  // Not askable any more — the record read again says so, with its one refusal (#799).
+  'player_unavailable',
   RACED,
 ]);
 

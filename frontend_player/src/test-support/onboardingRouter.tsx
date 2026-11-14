@@ -617,7 +617,7 @@ export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
   intro: 'Will travel for a hard game.',
   gender: 'MAN',
   gender_preference: 'ANY',
-  ranking_visibility: 'SHOWN',
+  show_me_to_new_people: true,
 };
 
 /**
@@ -822,6 +822,7 @@ export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
   // Nobody asks themself: the route answers `false` on your own record.
   can_add_friend: false,
   nickname: GATE_USER_NICKNAME,
+  photos: [],
   area_code: 'A+050612+0019938',
   social_tags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],
   intro: 'Will travel for a hard game.',

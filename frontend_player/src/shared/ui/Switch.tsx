@@ -30,22 +30,19 @@
  * the fill inversion [6.8](../../../docs/design-system.md#68-the-availability-grid) already
  * uses rather than a second on-colour.
  *
- * **Two consumers, since #778**: *Show me in General* on the You tab, and the same switch on the
- * Rankings card of a player hidden from General. Each asked for one thing the first spelling did not
- * have, and each is a prop rather than a second control:
+ * **One consumer**: *Show me to new people* on the You tab ([#799](https://github.com/Raketa02/Raketa/issues/799),
+ * which renamed #778's *Show me in General*). It asked for one thing the first spelling did not have,
+ * a prop rather than a second control:
  *
- * - **`onDark`** — 5.2's repaint read as a control, as `Segment`'s and `Button`'s `onDark` are. The
- *   inversion read from the other side: off is a quiet track (`onDarkFill`) under a `surface` knob,
- *   on is the track standing out of its ground (`surface`) under a `night` knob — as on paper, where
- *   on is the `ink` track. The words take the card's own two inks, white and `onDarkTiny`.
  * - **`door`** — a switch standing in a card of door rows (5.5 as amended, the You tab) takes the
  *   door row's lead square with its glyph, its rhythm, its title and line, and its divider from the
  *   second row on — `DOOR_ROW`, the door row's own table — so its title starts at the edge every
- *   title above it does. The track stands where a door row's chevron would. A card of door rows is
- *   paper, so `door` never meets `onDark`.
- * - **`accessibilityLabel`** — where the drawn words are not the mode's name. The hidden card draws
- *   *Hidden from General*, which is what the mode being off means there; the switch is still *Show
- *   me in General*, off, and a listener hearing *Hidden from General, off* would hear the opposite.
+ *   title above it does. The track stands where a door row's chevron would.
+ *
+ * **`onDark` and `accessibilityLabel` are unbuilt since #799** (6.12 keeps them specified): both were
+ * for the Rankings card of a player hidden from General — the dark card's repaint, and *Show me in
+ * General* named over the drawn *Hidden from General* — and that card went with the switch
+ * (ADR-0204 §2). The next switch on dark builds them again from 6.12.
  *
  * **There is no disabled switch.** Nothing asks for one, and
  * [6.1](../../../docs/design-system.md#61-button)'s rule is that this app never draws a
@@ -71,19 +68,12 @@ const INSET = (geometry.height - geometry.knob) / 2;
 const TRAVEL = geometry.track - geometry.knob - INSET * 2;
 
 export interface SwitchProps {
-  /** The mode, in the caller's words. This alone is the accessible name, unless one is given. */
+  /** The mode, in the caller's words. This alone is the accessible name. */
   readonly label: string;
   /** One line under the label, drawn and never announced separately. */
   readonly description?: string;
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
-  /**
-   * The name a listener hears, **where the drawn label is not the mode's name** — the hidden card's
-   * *Hidden from General*, on a switch that is *Show me in General*. Absent, it is the label.
-   */
-  readonly accessibilityLabel?: string;
-  /** On the dark card (5.2): the track, the knob and the words repainted for `night`. */
-  readonly onDark?: boolean;
   /**
    * In a card of door rows (5.5): the door row's lead, with this glyph, its rhythm, title and line,
    * and its divider where `divided` — 5.5's `index > 0`, the first row in a card undivided.
@@ -91,23 +81,13 @@ export interface SwitchProps {
   readonly door?: { readonly glyph: DoorRowGlyph; readonly divided: boolean };
 }
 
-export function Switch({
-  label,
-  description,
-  checked,
-  onChange,
-  accessibilityLabel,
-  onDark = false,
-  door,
-}: SwitchProps) {
-  const ground = onDark ? ON_DARK : PAPER;
-
+export function Switch({ label, description, checked, onChange, door }: SwitchProps) {
   return (
     <Pressable
       // `switch` rather than `button`, for 6.8's reason: the state is the point and the role
       // is what carries it (`the-words.md` 20.2 — *prefer the role that carries the state*).
       accessibilityRole="switch"
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={label}
       accessibilityState={{ checked }}
       onPress={() => onChange(!checked)}
       // Touch has no hover, so the pressed appearance is declared rather than inherited (6.6).
@@ -121,19 +101,19 @@ export function Switch({
       {door === undefined ? null : <RowLead glyph={door.glyph} />}
 
       <View style={s.words}>
-        <Text style={door === undefined ? [s.label, ground.label] : DOOR_ROW.title}>{label}</Text>
+        <Text style={door === undefined ? [s.label, PAPER.label] : DOOR_ROW.title}>{label}</Text>
         {description === undefined ? null : (
-          <Text style={door === undefined ? [s.description, ground.description] : DOOR_ROW.line}>
+          <Text style={door === undefined ? [s.description, PAPER.description] : DOOR_ROW.line}>
             {description}
           </Text>
         )}
       </View>
 
-      <View style={[s.track, checked ? ground.trackOn : ground.trackOff]}>
+      <View style={[s.track, checked ? PAPER.trackOn : PAPER.trackOff]}>
         <View
           style={[
             s.knob,
-            checked ? ground.knobOn : ground.knobOff,
+            checked ? PAPER.knobOn : PAPER.knobOff,
             { transform: [{ translateX: checked ? TRAVEL : 0 }] },
           ]}
         />
@@ -143,8 +123,8 @@ export function Switch({
 }
 
 /**
- * **The two grounds** — the knob takes the value that reads on the bed it is standing on, at both
- * ends, on either ground; `Switch.test.tsx` derives every ratio from these.
+ * **The ground** — the knob takes the value that reads on the bed it is standing on, at both ends;
+ * `Switch.test.tsx` derives every ratio from these. Paper only, since #799 (see the module note).
  */
 const PAPER = StyleSheet.create({
   label: { color: theme.color.ink },
@@ -153,15 +133,6 @@ const PAPER = StyleSheet.create({
   knobOff: { backgroundColor: theme.color.night },
   trackOn: { backgroundColor: theme.color.ink },
   knobOn: { backgroundColor: theme.color.surface },
-});
-
-const ON_DARK = StyleSheet.create({
-  label: { color: theme.color.surface },
-  description: { color: theme.color.onDarkTiny },
-  trackOff: { backgroundColor: theme.color.onDarkFill },
-  knobOff: { backgroundColor: theme.color.surface },
-  trackOn: { backgroundColor: theme.color.surface },
-  knobOn: { backgroundColor: theme.color.night },
 });
 
 const s = StyleSheet.create({

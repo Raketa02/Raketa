@@ -12,18 +12,12 @@
  * - `NEEDS_RESULTS` — fewer results than the view takes: *2 of 5 games — …*;
  * - `NO_LEVEL` — no level in the sport: *No squash level yet — …*, with **Get your squash level**;
  * - `OFF_THE_LIST` — no result in 90 days: *Off the list — …*;
- * - `HIDDEN` — General only: listed, and *Show me in General* turned off — the place without the gap
- *   line, *Hidden from General* in its place;
  * - `JUST_YOU` and `NO_FRIEND_LISTED` — Friends only (#777).
+ *
+ * `HIDDEN` went with *Show me in General* (ADR-0204 §2, #799): nobody is hidden from the ranking.
  */
 export type CardState =
-  | 'LISTED'
-  | 'NEEDS_RESULTS'
-  | 'NO_LEVEL'
-  | 'OFF_THE_LIST'
-  | 'JUST_YOU'
-  | 'NO_FRIEND_LISTED'
-  | 'HIDDEN';
+  'LISTED' | 'NEEDS_RESULTS' | 'NO_LEVEL' | 'OFF_THE_LIST' | 'JUST_YOU' | 'NO_FRIEND_LISTED';
 
 /** **The chip**: places moved in the last 7 days — up, down, the same, or new to the list. */
 export type ChipKind = 'UP' | 'DOWN' | 'SAME' | 'NEW';

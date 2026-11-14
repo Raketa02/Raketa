@@ -14,8 +14,8 @@
  * - **Cancelling a request asks first**, as #753 asks and §29 has no words for: *Cancel your request
  *   to kuba.w?* over *Nobody is told.*, removing's shape.
  * - **The busy words** (*Asking…*, *Accepting…*, *Cancelling…*, *Removing…*), `blocks`' *Blocking…*.
- * - **The refusals that are not the state moving** (`useFriendWrites`): asking somebody you blocked,
- *   and somebody you no longer share a group with (or who left General since, #773).
+ * - **The refusals that are not the state moving** (`useFriendWrites`): asking somebody you blocked.
+ *   Asking somebody who can no longer be asked was one, and is the state moving since #799.
  * - **The spoken names of a pill and a card's buttons**: a column of *+ Add* or two cards' *Accept*
  *   name nobody, so each says whom — *Add kuba.w*, `blocks`' *Unblock kuba.w*.
  *
@@ -65,14 +65,15 @@
  * - **The busy words** are onboarding's *Starting…* for the coral button, the start's own, and none
  *   for Not now, which the friend request card's Not now has none of either.
  *
- * And these, written in by #779 (strangers from the ranking; the words §30.8 gives the two sentences):
+ * And this, written in by #779 (strangers from the ranking; the words §30.8):
  *
- * - **The limit's sentence stands under _Add friend_**, in the friend button's half, as every friend
- *   refusal does — §30.8 says _under the buttons_.
  * - **Asking somebody you blocked** names You › Blocked players, since the record's Unblock it named
  *   is gone (ADR-0203 §8).
- * - **Asking somebody no longer askable** says _your groups or on the ranking_, the server's own
- *   widening of the code's sentence (#773).
+ *
+ * #779's two other calls went with #799 (ADR-0204 §2; the words §31.13): **there is no daily limit**,
+ * so no sentence for one, and **asking somebody no longer askable says nothing** — the server's
+ * unnamed `player_unavailable` is the state moving, the record is read again, and it reads _This
+ * record isn't available_.
  *
  * _Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
  * chip beside it — which is §29.2's own: the group line is the whole line, and a link's replaces it.
@@ -234,14 +235,6 @@ export const FRIENDS_COPY = {
      * the record's own Unblock is gone (#779, ADR-0203 §8): the way back is You › Blocked players.
      */
     unblock_them_first: 'You blocked this player. Unblock them in You › Blocked players first.',
-    /**
-     * Nobody you share a group with, nor listed on General and shown (#773): what a ranking stranger
-     * who turned *Show me in General* off between the read and the press meets — the server's own
-     * widening of the code's sentence, said the app's way (#779).
-     */
-    player_not_in_your_groups: 'You can only ask people from your groups or on the ranking.',
-    /** The eleventh request in a Warsaw day to somebody you share no group with (§30.8). Nothing was sent. */
-    daily_request_limit: "You've sent 10 requests to new people today. Try again tomorrow.",
     /** An ask for a Level (#758) from a group you have since left. */
     not_one_of_your_groups: 'You’re not in this group any more.',
   } as Readonly<Record<string, string>>,

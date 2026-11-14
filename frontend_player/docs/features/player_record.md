@@ -445,3 +445,22 @@ opened the record — goes with `groupId` and `sport` into `friends`' `recordAsk
 record's request now goes through. The paragraphs above on _Unblock_ at the foot and on blocks that
 could not be read describe #587–#775 and are superseded; since #773 those are a `503`, the recovery
 sentence with _Try again_.
+
+**All their photos, and a refusal that wins over a record already drawn** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§2; the Home rows screens §9.3). **The record carries every photo** (`photos`, the wire's
+`[{photo_id, photo_url}]`, in the player's own order, the first the header's `photoUrl`), and the sheet
+draws them under the header on `shared/ui`'s `PhotoCarousel` — whoever the record opens for, a
+stranger included, and your own _How others see you_ alike. None with no photo: the header's poster
+is the face then. **One carousel for the record and the vibe sheet** is the screens §9.3's call; #803
+draws the same one. **The header's panel stays, and the carousel repeats its photo first** — a call,
+for the product owner: §9.3 says _in the record's header_, and home rows 23 draws the vibe sheet's
+face and then a carousel that starts with the same photo, so the record does as the sheet does. The
+panel is the face that carries the Level and _ON COURT_; the carousel is the photos. It sits outside the header's one element, hidden from a listener as a face is.
+**A refusal on a read again replaces the record**: the sheet drew `Standing` only while it had no
+record, so a re-read refused `record_unavailable` left the old record on screen with its _Add friend_.
+Since the server's gates are live — a block, or _Show me to new people_ turned off with nothing
+shared — the refusal now wins: the sheet draws its one line and no foot. That is what makes the
+unnamed `player_unavailable` quiet: the friend button re-reads, and the record says _This record isn't
+available_ ([`friends.md`](friends.md)). **Not seen on a device**: the carousel's two cards under the
+header, the bleed to the sheet's edge and the snap.

@@ -107,6 +107,7 @@ export {
 } from './PhotoTile';
 export { PagerDots, type PagerDotsProps } from './PagerDots';
 export { MARK_TOP, PhotoPanel, type PhotoPanelProps } from './PhotoPanel';
+export { PhotoCarousel, type CarouselPhoto, type PhotoCarouselProps } from './PhotoCarousel';
 export {
   PHOTO_PANEL,
   POSTER_LABEL,

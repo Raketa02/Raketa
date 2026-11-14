@@ -1,9 +1,9 @@
 /**
  * **The podium** (rankings 4, 6; the screens §5.1; [#775](https://github.com/Raketa02/Raketa/issues/775)):
- * the first three rows the reader sees, on three steps — first in the middle on the tallest, volt;
+ * the first three rows, on three steps — first in the middle on the tallest, volt;
  * second on the left, white; third on the right, white and slightly lower than second. Each shows the
- * face, the nickname and the level, and its step reads the **true** place: with second hidden from
- * the reader, the steps read 1, 3 and 4.
+ * face, the nickname and the level, and its step reads the **true** place — a player the reader
+ * blocked stands on theirs, and a tap reads *This record isn't available* (ADR-0204 §2, #799).
  *
  * Drawn only with three rows (`podiumOf`); the server sends none with fewer. A step names its player
  * by nickname, the reader's own included (§30.7) — only a row reads *You*. **A tap on a step opens

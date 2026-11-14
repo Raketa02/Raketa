@@ -54,10 +54,6 @@ function toPlaceCard(wire: Schemas['PlaceCardSchema']): PlaceCard | undefined {
         ? undefined
         : { state: 'LISTED', ...placed, gapLine: toGapLine(wire.gap_line) };
     }
-    case 'HIDDEN': {
-      const placed = toPlaced(wire);
-      return placed === undefined ? undefined : { state: 'HIDDEN', ...placed };
-    }
     case 'NEEDS_RESULTS':
       return {
         state: 'NEEDS_RESULTS',

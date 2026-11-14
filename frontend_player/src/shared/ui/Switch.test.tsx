@@ -12,15 +12,14 @@
  */
 
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { StyleSheet, View, type TextStyle, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { composite, contrast, parse } from '@/test-support/contrast';
+import { contrast, parse } from '@/test-support/contrast';
 
 import { Switch } from './Switch';
 import { theme } from './theme';
 
 const flatten = (style: unknown) => StyleSheet.flatten(style as ViewStyle);
-const inkOf = (style: unknown) => StyleSheet.flatten(style as TextStyle)?.color;
 
 /** The track and the knob, in that order — the only two Views the control draws. */
 function parts() {
@@ -30,10 +29,8 @@ function parts() {
   return { track, knob };
 }
 
-function renderSwitch(checked: boolean, { onDark = false } = {}) {
-  render(
-    <Switch label="Swap players" checked={checked} onChange={() => undefined} onDark={onDark} />,
-  );
+function renderSwitch(checked: boolean) {
+  render(<Switch label="Swap players" checked={checked} onChange={() => undefined} />);
   return parts();
 }
 
@@ -74,49 +71,16 @@ describe('the knob', () => {
 });
 
 /**
- * **On the dark card** (#778, the hidden card on Rankings): 5.2's repaint read as a control. The
- * inversion read from the other side — off a quiet track under a light knob, on the track standing
- * out of its ground under a dark one.
- */
-describe('on the dark card', () => {
-  it('takes the dark ground’s values, at both ends', () => {
-    const off = renderSwitch(false, { onDark: true });
-    screen.unmount();
-    const on = renderSwitch(true, { onDark: true });
-
-    expect(off.track?.backgroundColor).toBe(theme.color.onDarkFill);
-    expect(off.knob?.backgroundColor).toBe(theme.color.surface);
-    expect(on.track?.backgroundColor).toBe(theme.color.surface);
-    expect(on.knob?.backgroundColor).toBe(theme.color.night);
-  });
-
-  it('draws its words in the dark card’s two inks', () => {
-    render(
-      <Switch
-        onDark
-        label="Hidden from General"
-        description="A line under it."
-        checked={false}
-        onChange={() => undefined}
-      />,
-    );
-
-    expect(inkOf(screen.getByText('Hidden from General').props.style)).toBe(theme.color.surface);
-    expect(inkOf(screen.getByText('A line under it.').props.style)).toBe(theme.color.onDarkTiny);
-  });
-});
-
-/**
- * **In a card of door rows** (#778, *Show me in General* on You): the door row's lead, title and
- * line, and its divider from the second row on — so the switch's title starts where every title
- * above it does.
+ * **In a card of door rows** (*Show me to new people* on You, #799; #778's *Show me in General*
+ * before it): the door row's lead, title and line, and its divider from the second row on — so the
+ * switch's title starts where every title above it does.
  */
 describe('in a card of door rows', () => {
   it('draws the door row’s lead square and title', () => {
     render(
       <Switch
         door={{ glyph: 'eye', divided: false }}
-        label="Show me in General"
+        label="Show me to new people"
         checked
         onChange={() => undefined}
       />,
@@ -127,7 +91,7 @@ describe('in a card of door rows', () => {
       .map((node) => flatten(node.props.style))
       .find((style) => style?.width === theme.size.rowLead);
     expect(lead?.backgroundColor).toBe(theme.color.paper2);
-    expect(flatten(screen.getByText('Show me in General').props.style)).toEqual(
+    expect(flatten(screen.getByText('Show me to new people').props.style)).toEqual(
       expect.objectContaining(theme.type.cardTitle),
     );
   });
@@ -136,7 +100,7 @@ describe('in a card of door rows', () => {
     render(
       <Switch
         door={{ glyph: 'eye', divided: true }}
-        label="Show me in General"
+        label="Show me to new people"
         checked
         onChange={() => undefined}
       />,
@@ -161,22 +125,6 @@ describe('the control', () => {
 
     const row = flatten(screen.getByRole('switch').props.style);
     expect(row?.minHeight).toBe(theme.size.minTouch);
-  });
-
-  it('is named for the mode where the words drawn are what the mode being off means', () => {
-    // The hidden card: *Hidden from General* drawn, and the switch is *Show me in General*, off.
-    render(
-      <Switch
-        onDark
-        label="Hidden from General"
-        accessibilityLabel="Show me in General"
-        checked={false}
-        onChange={() => undefined}
-      />,
-    );
-
-    expect(screen.getByRole('switch', { name: 'Show me in General' })).toBeTruthy();
-    expect(screen.getByText('Hidden from General')).toBeTruthy();
   });
 
   it('announces the label alone, so the mode line is not read as part of the name', async () => {
@@ -217,19 +165,6 @@ describe('what the knob is worth against its track', () => {
   it('is the two figures 6.12 prints', () => {
     expect(ratio(theme.color.night, theme.color.line2)).toBe(11.36);
     expect(ratio(theme.color.surface, theme.color.ink)).toBe(17.5);
-  });
-
-  it('clears it on the dark card too, at both ends — the two figures 6.12 prints for it', () => {
-    // The off track is white at its alpha over `night`, so the knob is measured against that.
-    const fill = parse(theme.color.onDarkFill);
-    const offTrack = composite(fill.rgb, fill.alpha, parse(theme.color.night).rgb);
-    const offKnob = contrast(parse(theme.color.surface).rgb, offTrack);
-    const onKnob = ratio(theme.color.night, theme.color.surface);
-
-    expect(offKnob).toBeGreaterThanOrEqual(GRAPHICAL);
-    expect(onKnob).toBeGreaterThanOrEqual(GRAPHICAL);
-    expect(offKnob).toBe(7.88);
-    expect(onKnob).toBe(13.29);
   });
 
   it('would not, on the white-at-both-ends the prototype drew', () => {

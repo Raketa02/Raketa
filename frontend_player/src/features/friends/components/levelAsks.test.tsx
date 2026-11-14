@@ -243,6 +243,7 @@ function askServer(
         relation: 'FRIEND',
         can_add_friend: true,
         nickname: who.nickname,
+        photos: [],
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [],

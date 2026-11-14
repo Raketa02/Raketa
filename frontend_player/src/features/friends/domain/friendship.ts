@@ -66,7 +66,9 @@ const BUTTON: Readonly<Record<FriendRelation, FriendButton>> = {
  * - `nothing` — your own record;
  * - `pair` — the friend button on the left and *Block* on the right;
  * - `block` — *Block* alone: nothing stands between you, and the record says no request may be sent
- *   (`canAddFriend`) — a stranger hidden from General, or somebody you share no group with any more.
+ *   (`canAddFriend`). Since ADR-0204 §2 (#799) a record that opens is somebody you may ask, so the
+ *   server answers `false` with `NONE` on no record it serves today; the foot still follows the
+ *   record's own flag rather than a rule spelled again here.
  *
  * **There is no *Unblock* here** (#779): a record never opens between two people either of whom
  * blocked the other (#773), so *Block* is always *Block*, and Unblock lives in You › Blocked players.

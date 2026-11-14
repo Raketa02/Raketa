@@ -86,6 +86,11 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
     // crosses is what they wrote, fenced on the way in and never on the way out.
     ...(response.intro === undefined ? {} : { intro: response.intro }),
     ...(response.photo_url === undefined ? {} : { photoUrl: response.photo_url }),
+    // Every photo, as served — the first is the one above (#799).
+    photos: response.photos.map(({ photo_id, photo_url }) => ({
+      photoId: photo_id,
+      photoUrl: photo_url,
+    })),
     // The mark is a fact about **a photograph**: a player with none is drawn the generated
     // poster, which has nothing to have passed. The pair is read together and once.
     onCourt: response.photo_url !== undefined && response.review === 'allowed',

@@ -251,3 +251,7 @@ pushed screen (`PUSHED_SCREENS`) under a segment `INSIDE_A_TAB` counts as Home's
 stays lit there, as on the notices. The trophy reads Home's own read, so it costs no request; the
 page's reads are the feature's ([`rankings.md`](rankings.md)). The entry gate lands a pass begun on
 Rankings back on it with Home beneath (`useShellLanding`), as it lands a group with Play beneath.
+
+**_Show me to new people_ closes _On your card_** ([#799](https://github.com/Raketa02/Raketa/issues/799)):
+`player_profile`'s `ShowMeToNewPeopleRow`, in the place `ShowMeInGeneralRow` stood — the paragraph
+above's row, renamed with its switch. The record is [`player_profile.md`](player_profile.md).

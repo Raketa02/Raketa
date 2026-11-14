@@ -102,16 +102,6 @@ describe('the place card', () => {
     });
   });
 
-  it('reads a hidden card with its place and no gap line', () => {
-    expect(toRanking(response({ card: card({ state: 'HIDDEN', gap_line: null }) })).card).toEqual({
-      state: 'HIDDEN',
-      place: 7,
-      of: 13,
-      level: 2.71,
-      chip: { kind: 'UP', places: 1 },
-    });
-  });
-
   it('reads the not-listed cards with only what they say', () => {
     const notListed = { place: null, of: null, level: null, chip: null, gap_line: null };
 
@@ -129,12 +119,13 @@ describe('the place card', () => {
 
   it('draws no card where a placed one comes without its place, rather than a guess', () => {
     expect(toRanking(response({ card: card({ place: null }) })).card).toBeUndefined();
-    expect(
-      toRanking(response({ card: card({ state: 'HIDDEN', level: null }) })).card,
-    ).toBeUndefined();
+    expect(toRanking(response({ card: card({ level: null }) })).card).toBeUndefined();
   });
 
-  it('draws no card in a state this build has never heard of', () => {
+  it('draws no card in a state this build has never heard of — HIDDEN, retired with its switch, among them', () => {
+    expect(
+      toRanking(response({ card: card({ state: 'HIDDEN' as Wire['CardState'] }) })).card,
+    ).toBeUndefined();
     expect(
       toRanking(response({ card: card({ state: 'RETIRED' as Wire['CardState'] }) })).card,
     ).toBeUndefined();

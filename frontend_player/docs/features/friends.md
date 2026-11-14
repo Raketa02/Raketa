@@ -381,3 +381,17 @@ backend field first, so nothing changed there.
 rather than across both buttons, as §6 of the screens writes it — every friend refusal stands there;
 the new `unblock_them_first` and `player_not_in_your_groups` sentences. **Not seen on a device**: the limit sentence wrapping in the left
 half at the narrowest width; _Block_ alone across the foot; the ranking line on Home's card.
+
+**No daily limit, and asking somebody no longer askable says nothing** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§2; the words §31.13). Anybody may be asked, as many as you like, so `daily_request_limit` and its
+sentence are gone from `FRIENDS_COPY.refused`, and with them #779's call about where the sentence
+stood. **`player_not_in_your_groups` became `player_unavailable`** on the server — one code, naming
+nothing, for somebody who turned _Show me to new people_ off and shares no group, game or friendship
+with the asker — and **it is the state moving** (`useFriendWrites`' `MOVED`): no sentence, the
+surface re-reads, and on the record that read is refused with its own one line, _This record isn't
+available_, which is the answer ([`player_record.md`](player_record.md)). The old code's sentence is
+gone. **The record's foot still follows `can_add_friend`**, which the server now reads off the
+relation alone (`NONE` and not your own record): a record that opens is somebody you may ask. The
+paragraphs above on the limit sentence and on `player_not_in_your_groups` describe #779 and are
+superseded; so is that paragraph's _listed on General and not hidden_.

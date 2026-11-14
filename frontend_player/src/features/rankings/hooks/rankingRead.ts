@@ -49,7 +49,7 @@ export interface RankingRead {
   /** The page above, and the page below, refused. */
   readonly earlierFailure: PageFailure | undefined;
   readonly laterFailure: PageFailure | undefined;
-  /** Absent while the reader isn't listed, or is hidden from General: no button. */
+  /** Absent while the reader isn't listed: no button. */
   readonly jump: Jump | undefined;
   /** A pull: everything drawn, read again. Settles once every read has landed, refused or not. */
   readonly reread: () => Promise<unknown>;

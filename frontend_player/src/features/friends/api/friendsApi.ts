@@ -53,9 +53,11 @@ export interface Cancellable {
 }
 
 /**
- * **Ask to be friends.** Refused with `cannot_befriend_yourself`, `player_not_in_your_groups`,
- * `already_friends`, `friend_request_already_sent`, `unblock_them_first` or
- * `concurrent_modification`.
+ * **Ask to be friends** — anybody, as many as you like (ADR-0204 §2, #799). Refused with
+ * `cannot_befriend_yourself`, `player_unavailable` (they turned *Show me to new people* off and share
+ * nothing with you — one answer that names nothing), `already_friends`,
+ * `friend_request_already_sent`, `unblock_them_first` or `concurrent_modification`. There is no
+ * daily limit, and so no `daily_request_limit`.
  */
 export function postFriendRequest(
   body: Schemas['AskToBeFriendsRequest'],

@@ -408,3 +408,18 @@ on purpose, and 3 to the left so a control beside it keeps its own target (6.5).
 row's cards**, not their count, and hands each back with its width, so the lone-card width and the
 dots can never disagree with what is drawn. `HomeRow.test.tsx` walks the link, the slot, both geometries and the rail's
 identity across re-renders.
+
+**`PhotoCarousel`: all of a player's photos, sideways** ([#799](https://github.com/Raketa02/Raketa/issues/799);
+the Home rows screens §6.3, §9.3; home rows 23; design-system Part 16, 2026-11-14). Every photo in the
+order handed in, each a card at `size.photoCarouselRatio` (half) of the content width and 4:5
+(`PHOTO_PANEL`'s shape, read off it rather than restated), on `radius.card`, over Part 8's Strip — gap 9, bleeding past the
+gutter, snapping a card at a time. **Nothing with no photo**, and **a lone photo keeps the card's
+size**, since a 4:5 card the content's width would stand taller than the sheet's first screen. It
+announces nothing, as `PlayerPhoto` does, and imports no feature. The record draws it first, and the
+vibe sheet (#803) is to draw the same one. `PhotoCarousel.test.tsx` holds the order, the size, the
+corner, the Strip and the absence.
+
+**`Switch` lost `onDark` and `accessibilityLabel`** (#799): both were for the Rankings card of a player
+hidden from General, which went with _Show me in General_ (ADR-0204 §2). 6.12 keeps them specified,
+as it kept the switch itself while it was unbuilt; the dark-card tests and the two contrast figures
+they derived went with the code.

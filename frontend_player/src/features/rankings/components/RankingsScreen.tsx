@@ -12,7 +12,7 @@
  * read for that view: everything below the switch is the view's own.
  *
  * **Then the view** (§4, §5): the reader's place card — or the not-listed card in its place — then
- * the podium with three rows the reader sees, then the list on one white card, with the floating
+ * the podium with the first three rows, then the list on one white card, with the floating
  * *You · 212th* (#776, `RankingList`); *Nobody ranked in badminton yet* where nobody is listed.
  * **General** is read in pages of 50 (`useGeneral`); **Friends** whole (`useFriendsTable`), and where
  * no friend is listed its card is the page — *Just you so far*, or *None of your friends is ranked…*,
@@ -29,7 +29,11 @@
  * so. **Another sport is another page**, read from its top.
  *
  * **Any face, row or podium step opens the full record**, a stranger's too; the reader's own opens
- * their own (§6). **A request asked from it is the ranking's** (#779), in the page's sport, so the
+ * their own (§6). **Everybody is listed** (ADR-0204 §2, [#799](https://github.com/Raketa02/Raketa/issues/799)),
+ * a player the reader blocked or who blocked them included, at their true place: a tap on them opens
+ * the record sheet, which reads *This record isn't available* — the server's one refusal, the sheet's
+ * own drawing of it. **The page draws no switch but General | Friends**: *Show me in General* and its
+ * hidden card are gone. **A request asked from it is the ranking's** (#779), in the page's sport, so the
  * other person's Home reads *Found you in the padel ranking*; *Add friend* is offered where the record
  * says a request may be sent. Whose record is up is this screen's state — route-local, as Members holds it — and
  * so is the Add friends sheet; both are drawn beside the screen's root, which is hidden from a
@@ -44,7 +48,6 @@ import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { AddFriendsSheet } from '@/features/friends/types';
 import { MyGroupMonogram, ReadFailure, groupMembersRoute } from '@/features/groups/types';
-import { useShownInGeneral } from '@/features/player_profile/types';
 import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
 import { offlineMessage } from '@/shared/errors';
 import {
@@ -172,12 +175,9 @@ interface ViewPageProps {
   readonly onAddFriends: () => void;
 }
 
-/**
- * General, for one sport: the list in pages — from the top, or around the reader after a jump —
- * followed to *Show me in General* while the card is behind it (#778).
- */
+/** General, for one sport: the list in pages — from the top, or around the reader after a jump. */
 function GeneralView(props: ViewPageProps) {
-  return <ViewPage {...props} read={useGeneral(props.sport, useShownInGeneral())} />;
+  return <ViewPage {...props} read={useGeneral(props.sport)} />;
 }
 
 /** Friends, for one sport: the whole table, read at once. */

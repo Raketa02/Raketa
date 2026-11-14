@@ -28,11 +28,12 @@
  * | Photos | `GET /players/me/profile`.photos — the count, and the profile photo's verdict |
  * | Tags | `GET /players/me/profile`.social_tags ∩ `GET /player-profile/options`.social_tag_selection — the ceiling is served |
  * | Intro | `GET /players/me/profile`.intro |
- * | Show me in General | `GET /players/me/profile`.ranking_visibility — **the row is the switch** |
+ * | Show me to new people | `GET /players/me/profile`.show_me_to_new_people — **the row is the switch** |
  *
  * ## The one row that is not a door
  *
- * *Show me in General* (#778; the You spec §3.14) opens nothing: the row is the design system's
+ * *Show me to new people* (#799, which renamed #778's *Show me in General*; the Home rows screens
+ * §9.1) opens nothing: the row is the design system's
  * switch, in the door rows' lead and type so it lines up under them, and it **writes at once**, with
  * no *Save*. A refused write puts it back and says why, in a coral note under the row. It is drawn
  * once the profile read has landed, and not at all while it has not — there is no switch to draw on
@@ -50,7 +51,7 @@ import { DoorRow, Note, Switch, theme, type DoorRowProps } from '@/shared/ui';
 import { playIntentRows } from '../domain/playIntentRows';
 import { useProfileOptions } from '../hooks/useProfileOptions';
 import { useProfileSurface } from '../hooks/useProfileSurface';
-import { useShowMeInGeneral } from '../hooks/useShowMeInGeneral';
+import { useShowMeToNewPeople } from '../hooks/useShowMeToNewPeople';
 
 import {
   YOU_AREA_ROUTE,
@@ -65,8 +66,8 @@ import {
   AREA_LINE,
   INTRO_TITLE,
   PHOTOS_TITLE,
-  SHOW_ME_IN_GENERAL_LINE,
-  SHOW_ME_IN_GENERAL_TITLE,
+  SHOW_ME_TO_NEW_PEOPLE_LINE,
+  SHOW_ME_TO_NEW_PEOPLE_TITLE,
   TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
@@ -210,16 +211,16 @@ export function IntroRow({ divided }: YouRowProps) {
   );
 }
 
-export function ShowMeInGeneralRow({ divided }: YouRowProps) {
-  const showMe = useShowMeInGeneral();
+export function ShowMeToNewPeopleRow({ divided }: YouRowProps) {
+  const showMe = useShowMeToNewPeople();
   if (showMe.checked === undefined) return null;
 
   return (
     <View>
       <Switch
         door={{ glyph: 'eye', divided: divided ?? false }}
-        label={SHOW_ME_IN_GENERAL_TITLE}
-        description={SHOW_ME_IN_GENERAL_LINE}
+        label={SHOW_ME_TO_NEW_PEOPLE_TITLE}
+        description={SHOW_ME_TO_NEW_PEOPLE_LINE}
         checked={showMe.checked}
         onChange={showMe.change}
       />
