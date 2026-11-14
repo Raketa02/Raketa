@@ -59,11 +59,40 @@ import {
   requestsHeading,
   wantsToBeYourFriend,
   whereLine,
+  type WhereFound,
 } from './friendsCopy';
 import { ROW_FACE } from './PersonRow';
 import { WriteNote } from './WriteNote';
 
 const COPY = FRIENDS_COPY.home;
+
+/**
+ * **Where they found the reader, named for the where-line** — the ranking's and Same competitive
+ * level's lines name a sport inside a sentence. **One whose sport this build cannot name says
+ * whatever else the wire named** — no group, since neither screen shows one — so the chip stands
+ * alone.
+ */
+function whereFound(request: HomeFriendRequest): WhereFound | undefined {
+  const found = request.foundBy;
+  if (found === undefined) return undefined;
+  switch (found.kind) {
+    case 'link':
+    case 'newInRaketa':
+      return found;
+    case 'ranking':
+      return request.sport === undefined
+        ? undefined
+        : { kind: 'ranking', sport: sportInLine(request.sport) };
+    case 'sameLevel':
+      return request.sport === undefined
+        ? undefined
+        : {
+            kind: 'sameLevel',
+            sport: sportInLine(request.sport),
+            ...(found.percentEven === undefined ? {} : { percentEven: found.percentEven }),
+          };
+  }
+}
 
 export interface FriendRequestsRowProps {
   /** The requester's reliability chip — `player_record`'s, handed in by the shell. */
@@ -113,15 +142,9 @@ function RequestCard({ request, width, scoreTag, onFace, onAnswered }: RequestCa
   // a press's own callbacks would go with it.
   const accepting = useAcceptFriendRequest(request.playerId, onAnswered);
   const settingAside = useSetAsideFriendRequest(request.playerId, onAnswered);
-  // A request from the ranking names its sport's ranking. One whose sport this build cannot name says
-  // whatever else the wire named — no group, since the ranking's page shows none — so the chip stands
-  // alone.
-  const ranking =
-    request.fromRanking && request.sport !== undefined ? sportInLine(request.sport) : undefined;
+  const found = whereFound(request);
   const where = whereLine({
-    byLink: request.byLink,
-    newPlayers: request.fromNewPlayers,
-    ...(ranking === undefined ? {} : { ranking }),
+    ...(found === undefined ? {} : { foundBy: found }),
     ...(request.group === undefined ? {} : { group: request.group }),
     ...(request.sport === undefined ? {} : { sportName: sportLabel(request.sport) }),
     ...(request.level === undefined ? {} : { level: request.level }),

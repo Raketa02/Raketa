@@ -37,6 +37,14 @@ describe('toAskRequest', () => {
       made_from: 'NEW_PLAYERS',
     });
   });
+
+  it('sends a request from Same competitive level with the card’s sport, and no group (#802)', () => {
+    expect(toAskRequest('p-1', { from: 'SAME_LEVEL', sport: 'squash' })).toEqual({
+      player_id: 'p-1',
+      made_from: 'SAME_LEVEL',
+      sport: 'SQUASH',
+    });
+  });
 });
 
 describe('toFriend', () => {

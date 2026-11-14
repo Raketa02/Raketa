@@ -24,6 +24,7 @@ import type {
   BookedMoney,
   Home,
   HomeFriendRequest,
+  RequestFoundBy,
   HomeGame,
   HomeLevelAsk,
   HomeRanking,
@@ -304,15 +305,34 @@ function toHomeFriendRequest(wire: Schemas['HomeFriendRequestSchema']): HomeFrie
     playerId: wire.player_id,
     nickname: wire.nickname,
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
-    byLink: wire.by_link,
-    fromRanking: wire.from_ranking,
-    fromNewPlayers: wire.from_new_players,
+    ...foundByOf(wire),
     ...(wire.group === null ? {} : { group: { id: wire.group.id, name: wire.group.name } }),
     ...(sport === undefined ? {} : { sport }),
     ...(sport === undefined || wire.level === null ? {} : { level: wire.level }),
     playerScore: wire.player_score,
     ...(band === undefined ? {} : { reliabilityBand: band }),
   };
+}
+
+/**
+ * **The wire's four flags as the one place they name** — the server sets one at most, so the order
+ * here decides nothing it could disagree with; nothing set is a group or a screen's request.
+ */
+function foundByOf(wire: Schemas['HomeFriendRequestSchema']): {
+  readonly foundBy?: RequestFoundBy;
+} {
+  if (wire.by_link) return { foundBy: { kind: 'link' } };
+  if (wire.from_ranking) return { foundBy: { kind: 'ranking' } };
+  if (wire.from_new_players) return { foundBy: { kind: 'newInRaketa' } };
+  if (wire.from_same_level) {
+    return {
+      foundBy: {
+        kind: 'sameLevel',
+        ...(wire.percent_even === null ? {} : { percentEven: wire.percent_even }),
+      },
+    };
+  }
+  return {};
 }
 
 export function toBookedGame(wire: Schemas['BookingDetailsResponse']): BookedGame | undefined {

@@ -93,7 +93,7 @@ _Found you in the padel ranking_ replaces the where-line whole — no sport and 
 
 import { codeMessage, type AppError } from '@/shared/errors';
 import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
-import { formatLevel } from '@/shared/formatting/ratingFormat';
+import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 
 import type { FriendsTab } from '../domain/friendList';
 import { askersFormOf, type AskersForm } from '../domain/levelAsk';
@@ -317,34 +317,39 @@ export function wantsToBeYourFriend(nickname: string): string {
 }
 
 /**
+ * **Where they found the reader, as the where-line says it** (§29.2, §30.8, §31.10) — the request
+ * card's `foundBy`, with the sport named inside a sentence (*padel*, `sportInLine`) where the line
+ * names one. Spelled here rather than imported, so this module imports no feature (see below).
+ */
+export type WhereFound =
+  | { readonly kind: 'link' }
+  | { readonly kind: 'ranking'; readonly sport: string }
+  | { readonly kind: 'newInRaketa' }
+  | { readonly kind: 'sameLevel'; readonly sport: string; readonly percentEven?: number };
+
+/**
  * **The card's where-line, before the reliability chip** (the words §29.2) — *With you in Kazimierz
- * crew · Padel 3,40 ·*, or *Invited you to Raketa* for a link's request. Each part only where the
- * wire named it: the group while both are still in it, the sport and the Level where the screen
- * showed one. The trailing ` ·` stands before the chip the card draws after it; with nothing to say
- * the line is empty and the chip stands alone. The sport arrives named (`sportLabel`'s *Padel*), so
- * this module imports no feature: it is read at module load by every component here, and a feature's
- * barrel would close a loop back into them.
+ * crew · Padel 3,40 ·*. Each part only where the wire named it: the group while both are still in it,
+ * the sport and the Level where the screen showed one. The trailing ` ·` stands before the chip the
+ * card draws after it; with nothing to say the line is empty and the chip stands alone.
+ *
+ * **A request found by a link, the ranking or a Home row says where in the group line's place**, and
+ * nothing else: *Invited you to Raketa*, *Found you in the padel ranking*, *Found you among new
+ * players*, *Your level in padel · 91% even* — today's %, or *Found you at your padel level* once
+ * either holds no level there (§31.10).
+ *
+ * The sport arrives named (`sportLabel`'s *Padel*, `sportInLine`'s *padel*), so this module imports
+ * no feature: it is read at module load by every component here, and a feature's barrel would close
+ * a loop back into them.
  */
 export function whereLine(request: {
-  readonly byLink: boolean;
-  /**
-   * **A request from the ranking** (#779; §30.8): the ranking's sport inside a sentence (*padel*,
-   * `sportInLine`). *Found you in the padel ranking* stands in place of the group line, as a link's
-   * *Invited you to Raketa* does.
-   */
-  readonly ranking?: string;
-  /**
-   * **A request from New in Raketa** (#801; the words §31.10): *Found you among new players* stands
-   * in place of the group line, whatever group the two share.
-   */
-  readonly newPlayers?: boolean;
+  readonly foundBy?: WhereFound;
   readonly group?: { readonly name: string };
   readonly sportName?: string;
   readonly level?: number;
 }): string {
-  if (request.byLink) return FRIENDS_COPY.home.byLink;
-  if (request.newPlayers === true) return FRIENDS_COPY.home.newPlayers;
-  if (request.ranking !== undefined) return foundYouInTheRanking(request.ranking);
+  const found = request.foundBy;
+  if (found !== undefined) return foundLine(found);
   const sport =
     request.sportName === undefined
       ? []
@@ -359,6 +364,22 @@ export function whereLine(request: {
     ...sport,
   ];
   return parts.length === 0 ? '' : `${parts.join(' · ')} ·`;
+}
+
+/** The line a found request says in the group line's place — a switch, so a kind with no words fails to compile. */
+function foundLine(found: WhereFound): string {
+  switch (found.kind) {
+    case 'link':
+      return FRIENDS_COPY.home.byLink;
+    case 'ranking':
+      return foundYouInTheRanking(found.sport);
+    case 'newInRaketa':
+      return FRIENDS_COPY.home.newPlayers;
+    case 'sameLevel':
+      return found.percentEven === undefined
+        ? `Found you at your ${found.sport} level`
+        : `Your level in ${found.sport} · ${formatPercent(found.percentEven)} even`;
+  }
 }
 
 /** *Found you in the padel ranking* — a request from the ranking's where-line (§30.8). */

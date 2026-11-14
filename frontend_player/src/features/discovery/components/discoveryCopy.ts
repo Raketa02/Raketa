@@ -1,12 +1,27 @@
 /**
- * **Every sentence New in Raketa says** ([#801](https://github.com/Raketa02/Raketa/issues/801); the
- * words [§31.1 and §31.7](../../../../../docs/specs/matchmaking/the-words.md#317-new-in-raketa)) —
- * the row's heading and its *See all ›*, the tile's tag, sports and *Joined …*, and See all's title,
- * pill and empty line. The round button's words are `friends`'.
+ * **Every sentence Discovery's rows say** — New in Raketa
+ * ([#801](https://github.com/Raketa02/Raketa/issues/801); the words
+ * [§31.1 and §31.7](../../../../../docs/specs/matchmaking/the-words.md#317-new-in-raketa)): the row's
+ * heading and its *See all ›*, the tile's tag, sports and *Joined …*, and See all's title, pill and
+ * empty line; and Same competitive level ([#802](https://github.com/Raketa02/Raketa/issues/802); the
+ * words [§31.5 and §31.6](../../../../../docs/specs/matchmaking/the-words.md#315-same-competitive-level--the-card)):
+ * the card's pairing, *EVEN*, the bar's *YOU*, the gap, *N sports ›*, and the comparison sheet. The
+ * round button's words are `friends'`, the bands' names onboarding's (`BAND_NAMES`).
  *
  * ## Calls, for the product owner to overrule
  *
- * §31 gives every drawn word here but these, written in by #801:
+ * §31 gives every drawn word here but these, written in by #802:
+ *
+ * - **See all's spoken name**, *See all players at your level*, for #801's reason below.
+ * - ***N sports ›*'s spoken name**, *Compare with zofia.b in 2 sports* — it opens the comparison.
+ * - **The pairing's spoken name**, *91% even in padel, You 2,71, zofia.b 2,69, 0,02 below you*, read
+ *   in the order drawn; the bar's, *You 2,71 · zofia.b 2,69*, the sheet's own line.
+ * - **See all with nobody to compare**, *Nobody to compare in squash yet*, and with nobody at all,
+ *   *Nobody to compare with right now* — §31 words neither: a sport the read offered can leave nobody
+ *   by the time it is read.
+ * - **The pill's hint**, *Compares everybody in another sport* (the mechanics §6.7's *re-compares*).
+ *
+ * And these, written in by #801:
  *
  * - **See all's spoken name**, *See all new players* — three *See all*s on Home would otherwise be one
  *   name for three places (the row frame's rule).
@@ -26,13 +41,17 @@
  */
 
 import { sportInLine, sportLabel } from '@/features/onboarding/types';
-import { formatLevel } from '@/shared/formatting/ratingFormat';
+import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import type { SportPillWords } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { JoinedAgo, Joiner, SeeAllSport } from '../domain/joiner';
+import type { JoinedAgo, Joiner } from '../domain/joiner';
+import { levelGapOf, type LevelComparison, type LevelGap } from '../domain/sameLevel';
+import type { SeeAllSport } from '../domain/seeAll';
 
 export const DISCOVERY_COPY = {
+  /** Every See all pill's first choice. */
+  all: 'All',
   newInRaketa: {
     /** Drawn uppercase by the row frame: *NEW IN RAKETA* — never *Rakieta*. */
     heading: 'New in Raketa',
@@ -43,10 +62,31 @@ export const DISCOVERY_COPY = {
     /** See all's title. */
     title: 'New in Raketa',
     back: 'Back to Home',
-    all: 'All',
     pillHint: 'Shows new players in another sport',
     nobodyAtAll: 'Nobody new right now',
     reading: 'Reading new players…',
+  },
+  sameLevel: {
+    /** Drawn uppercase by the row frame: *SAME COMPETITIVE LEVEL PLAYERS*. */
+    heading: 'Same competitive level players',
+    seeAll: 'See all',
+    seeAllLabel: 'See all players at your level',
+    /** See all's title — bold, two lines where it wraps (home rows 12). */
+    title: 'Same competitive level players',
+    back: 'Back to Home',
+    /** The reader's side of the pairing. */
+    you: 'You',
+    /** Under the %, grey caps — always this word, whatever the % (§31.5). */
+    even: 'EVEN',
+    /** The bar's tall mark. */
+    youMark: 'YOU',
+    /** The gap when it rounds to 0,00. */
+    sameLevel: 'Same level',
+    /** Between the gap and *N sports ›* on the card's footer — §31's separator. */
+    between: ' · ',
+    pillHint: 'Compares everybody in another sport',
+    nobodyAtAll: 'Nobody to compare with right now',
+    reading: 'Reading players at your level…',
   },
 } as const;
 
@@ -88,14 +128,79 @@ export function nobodyNewPlays(sport: Sport): string {
   return `Nobody new plays ${sportInLine(sport)} yet`;
 }
 
-/** A choice's name on the pill — *All*, or the sport's. */
-function choiceName(choice: SeeAllSport): string {
-  return choice === 'all' ? DISCOVERY_COPY.newInRaketa.all : sportLabel(choice);
+/**
+ * **The gap in words** (§31.5) — *0,02 below you*, *0,09 above you*, *Same level*. A switch over the
+ * kind, so a gap with no words fails to compile.
+ */
+export function gapLine(gap: LevelGap): string {
+  switch (gap.kind) {
+    case 'below':
+      return `${formatLevel(gap.gap)} below you`;
+    case 'above':
+      return `${formatLevel(gap.gap)} above you`;
+    case 'same':
+      return DISCOVERY_COPY.sameLevel.sameLevel;
+  }
 }
 
-/** The pill's words — *All* and each sport by its name. */
-export const SEE_ALL_PILL_WORDS: SportPillWords<SeeAllSport> = {
-  sportName: choiceName,
-  pillLabel: (choice) => `Sport: ${choiceName(choice)}`,
-  pillHint: DISCOVERY_COPY.newInRaketa.pillHint,
-};
+/** *2 sports* — the card's way to the comparison, its chevron drawn after it (§31.5). */
+export function sportsCount(count: number): string {
+  return `${count} sports`;
+}
+
+/** *Compare with zofia.b in 2 sports* — *N sports ›*'s spoken name (a call). */
+export function compareLabel(nickname: string, count: number): string {
+  return `Compare with ${nickname} in ${count} sports`;
+}
+
+/** *You vs zofia.b* — the comparison sheet's title (§31.6). */
+export function comparisonTitle(nickname: string): string {
+  return `You vs ${nickname}`;
+}
+
+/** The comparison sheet's close — named for the sheet, never just *Close* (`CloseControl`). */
+export function closeComparisonLabel(nickname: string): string {
+  return `Close ${comparisonTitle(nickname)}`;
+}
+
+/** *You 2,71 · zofia.b 2,69* — a block's levels (§31.6), and the bar's spoken name. */
+export function levelsLine(comparison: LevelComparison, nickname: string): string {
+  return `You ${formatLevel(comparison.yourLevel)} · ${nickname} ${formatLevel(comparison.theirLevel)}`;
+}
+
+/** *91% even* — a block's tag (§31.6). */
+export function evenTag(percentEven: number): string {
+  return `${formatPercent(percentEven)} even`;
+}
+
+/** The pairing, spoken in the order drawn (a call) — see the module note. */
+export function pairingLabel(comparison: LevelComparison, nickname: string): string {
+  return [
+    `${evenTag(comparison.percentEven)} in ${sportInLine(comparison.sport)}`,
+    `You ${formatLevel(comparison.yourLevel)}`,
+    `${nickname} ${formatLevel(comparison.theirLevel)}`,
+    gapLine(levelGapOf(comparison.levelGap)),
+  ].join(', ');
+}
+
+/** *Nobody to compare in squash yet* — See all, a sport that leaves nobody (a call). */
+export function nobodyToCompareIn(sport: Sport): string {
+  return `Nobody to compare in ${sportInLine(sport)} yet`;
+}
+
+/** A choice's name on the pill — *All*, or the sport's. */
+function choiceName(choice: SeeAllSport): string {
+  return choice === 'all' ? DISCOVERY_COPY.all : sportLabel(choice);
+}
+
+/** A See all pill's words — *All* and each sport by its name — with the row's own hint. */
+function pillWords(pillHint: string): SportPillWords<SeeAllSport> {
+  return {
+    sportName: choiceName,
+    pillLabel: (choice) => `Sport: ${choiceName(choice)}`,
+    pillHint,
+  };
+}
+
+export const NEW_IN_RAKETA_PILL_WORDS = pillWords(DISCOVERY_COPY.newInRaketa.pillHint);
+export const SAME_LEVEL_PILL_WORDS = pillWords(DISCOVERY_COPY.sameLevel.pillHint);

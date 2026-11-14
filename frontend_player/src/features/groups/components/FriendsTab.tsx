@@ -46,6 +46,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useReaderId } from '@/features/auth/types';
 import { levelIn, type Friend } from '@/features/friends/types';
 import { useSkillRatings } from '@/features/onboarding/types';
 import { useOwnFace } from '@/features/player_record/types';
@@ -69,7 +70,6 @@ import type { Group } from '../domain/group';
 import { openSeatsOf, seatedOf, type FriendSeat } from '../domain/friendsLineUp';
 import { faceIn, rosterFor, type GameIntent } from '../domain/groupPage';
 import { useFriendsGameOn } from '../hooks/useFriendsGame';
-import { useReaderId } from '../hooks/useReaderId';
 
 import { groupFriendsRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';

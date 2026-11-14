@@ -31,6 +31,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
+import { useReaderId } from '@/features/auth/types';
 import { useSkillRatings } from '@/features/onboarding/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -43,8 +44,6 @@ import {
   sportsToOffer,
 } from '../domain/groupPage';
 import { keepLastSport, readLastSport } from '../use-cases/lastSport';
-
-import { useReaderId } from './useReaderId';
 
 export interface GroupSport {
   /** The filter's sports, in the registry's order — `undefined` while either read is out. */

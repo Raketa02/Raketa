@@ -384,11 +384,13 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     by_link: false,
     from_ranking: false,
     from_new_players: false,
+    from_same_level: false,
     group: { id: 'group-1', name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,
     player_score: 98,
     reliability_band: 'VERY_HIGH',
+    percent_even: null,
     ...extra,
   });
   const home = (requests: Wire['HomeFriendRequestSchema'][]) =>
@@ -409,9 +411,6 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         playerId: 'p-ines',
         nickname: 'ines.d',
         photoUrl: 'https://photos.example/ines.jpg',
-        byLink: false,
-        fromRanking: false,
-        fromNewPlayers: false,
         group: { id: 'group-1', name: 'Kazimierz crew' },
         sport: 'padel',
         level: 3.4,
@@ -430,9 +429,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
       {
         playerId: 'p-ines',
         nickname: 'ines.d',
-        byLink: true,
-        fromRanking: false,
-        fromNewPlayers: false,
+        foundBy: { kind: 'link' },
         playerScore: 98,
         reliabilityBand: 'VERY_HIGH',
       },
@@ -444,7 +441,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
       home([request({ from_ranking: true, group: null, sport: 'SQUASH', level: 2.4 })])
         .friendRequests,
     ).toEqual([
-      expect.objectContaining({ fromRanking: true, byLink: false, sport: 'squash', level: 2.4 }),
+      expect.objectContaining({ foundBy: { kind: 'ranking' }, sport: 'squash', level: 2.4 }),
     ]);
     expect(
       home([request({ from_ranking: true, group: null })]).friendRequests[0],
@@ -453,10 +450,19 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
 
   it('reads a request from New in Raketa (#801)', () => {
     expect(home([request({ from_new_players: true })]).friendRequests).toEqual([
-      expect.objectContaining({ fromNewPlayers: true, fromRanking: false }),
+      expect.objectContaining({ foundBy: { kind: 'newInRaketa' } }),
     ]);
-    expect(home([request()]).friendRequests).toEqual([
-      expect.objectContaining({ fromNewPlayers: false }),
+    expect(home([request()]).friendRequests[0]).not.toHaveProperty('foundBy');
+  });
+
+  it('reads a request from Same competitive level with today’s % even, or none once a level is gone (#802)', () => {
+    expect(
+      home([request({ from_same_level: true, group: null, percent_even: 91 })]).friendRequests,
+    ).toEqual([
+      expect.objectContaining({ foundBy: { kind: 'sameLevel', percentEven: 91 }, sport: 'padel' }),
+    ]);
+    expect(home([request({ from_same_level: true, group: null })]).friendRequests).toEqual([
+      expect.objectContaining({ foundBy: { kind: 'sameLevel' } }),
     ]);
   });
 });

@@ -10,9 +10,9 @@
  */
 
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
-import { currentUserQuery } from '@/features/auth/types';
+import { useReaderId } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -211,9 +211,8 @@ export function useOpenedGames(): {
   readonly open: (bookingId: string) => void;
 } {
   const client = useQueryClient();
-  // Whose phone memory this is — read from the cache once, as the Play segment reads it: the
-  // entry gate has read the player before a tab can mount, and a sign-out tears the tree down.
-  const [account] = useState(() => client.getQueryData(currentUserQuery().queryKey)?.id);
+  // Whose phone memory this is — read from the cache once, and never observed (`useReaderId`).
+  const account = useReaderId();
 
   const read = useQuery({
     queryKey: phonePreferenceKeys.one(account ?? '', 'openedGames'),
@@ -281,7 +280,7 @@ export function useDismissedGames(): {
   readonly dismiss: (bookingId: string) => void;
 } {
   const client = useQueryClient();
-  const [account] = useState(() => client.getQueryData(currentUserQuery().queryKey)?.id);
+  const account = useReaderId();
 
   const read = useQuery({
     queryKey: phonePreferenceKeys.one(account ?? '', 'dismissedGames'),

@@ -89,6 +89,17 @@ describe('recordAskedWhere — where a request asked from the record is asked fr
       }),
     ).toEqual({ from: 'NEW_PLAYERS' });
   });
+
+  it('keeps Same competitive level’s sport, the card’s, over the record’s own (#802)', () => {
+    expect(
+      recordAskedWhere({
+        rankingSport: undefined,
+        groupId: undefined,
+        sport: 'padel',
+        foundIn: { from: 'SAME_LEVEL', sport: 'squash' },
+      }),
+    ).toEqual({ from: 'SAME_LEVEL', sport: 'squash' });
+  });
 });
 
 describe('roundPressOf — what a tap on the round friend button does (#801)', () => {

@@ -46,7 +46,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { theme, type BandKey } from './theme';
 
-const BANDS: readonly BandKey[] = ['new', 'developing', 'established', 'advanced'];
+/** The four bands, low to high — the comparison bar (7.33) draws the same four. */
+export const LEVEL_BANDS: readonly BandKey[] = ['new', 'developing', 'established', 'advanced'];
+const BANDS = LEVEL_BANDS;
 
 /** The drawn scale, and the only place it is written down. */
 const SCALE_LOW = 1;
@@ -101,8 +103,8 @@ export function LevelBar({
               style={[
                 s.segment,
                 {
-                  left: percent(fraction(draw.lo)),
-                  width: percent(fraction(draw.hi) - fraction(draw.lo)),
+                  left: percent(levelScaleFraction(draw.lo)),
+                  width: percent(levelScaleFraction(draw.hi) - levelScaleFraction(draw.lo)),
                   backgroundColor: current ? draw.deep : draw.tint,
                   opacity: current ? 1 : bar.inactiveOpacity,
                   // The separator: the surface, showing through between two segments.
@@ -115,7 +117,7 @@ export function LevelBar({
         })}
 
         <View
-          style={[s.mark, { left: percent(fraction(level)), borderColor: paint.surface }]}
+          style={[s.mark, { left: percent(levelScaleFraction(level)), borderColor: paint.surface }]}
           accessibilityElementsHidden
           importantForAccessibility="no"
         />
@@ -126,8 +128,8 @@ export function LevelBar({
           style={[
             s.bracketLine,
             {
-              left: percent(fraction(range.low)),
-              width: percent(fraction(range.high) - fraction(range.low)),
+              left: percent(levelScaleFraction(range.low)),
+              width: percent(levelScaleFraction(range.high) - levelScaleFraction(range.low)),
               backgroundColor: paint.bracket,
             },
           ]}
@@ -135,13 +137,13 @@ export function LevelBar({
         <View
           style={[
             s.bracketCap,
-            { left: percent(fraction(range.low)), backgroundColor: paint.bracket },
+            { left: percent(levelScaleFraction(range.low)), backgroundColor: paint.bracket },
           ]}
         />
         <View
           style={[
             s.bracketCap,
-            { left: percent(fraction(range.high)), backgroundColor: paint.bracket },
+            { left: percent(levelScaleFraction(range.high)), backgroundColor: paint.bracket },
           ]}
         />
       </View>
@@ -194,8 +196,11 @@ export function LevelBar({
   );
 }
 
-/** Where a level sits on the drawn scale, as a fraction of the bar's width. */
-function fraction(value: number): number {
+/**
+ * Where a level sits on the drawn scale, as a fraction of the bar's width — exported for the
+ * comparison bar (7.33), which reads the Skill passport's scale and never a second one.
+ */
+export function levelScaleFraction(value: number): number {
   const held = Math.min(Math.max(value, SCALE_LOW), SCALE_HIGH);
   return (held - SCALE_LOW) / (SCALE_HIGH - SCALE_LOW);
 }

@@ -1639,11 +1639,13 @@ describe('a friend’s notices', () => {
     by_link: false,
     from_ranking: false,
     from_new_players: false,
+    from_same_level: false,
     group: { id: CREW_ID, name: 'Kazimierz crew' },
     sport: 'PADEL',
     level: 3.4,
     player_score: 98,
     reliability_band: 'VERY_HIGH',
+    percent_even: null,
   };
   const REQUEST = notice({
     kind: 'FRIEND_REQUEST',

@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { NewInRaketaRow, rereadDiscovery } from '@/features/discovery/types';
+import { NewInRaketaRow, SameLevelRow, rereadDiscovery } from '@/features/discovery/types';
 import { FriendRequestsRow, LevelAsksRow } from '@/features/friends/types';
 import {
   GROUPS_COPY,
@@ -116,6 +116,7 @@ export function HomeScreen() {
         }
       />
       <HottestGroupsRow />
+      <SameLevelRow />
       <NewInRaketaRow />
     </ShellScreen>
   );

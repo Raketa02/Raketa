@@ -1865,6 +1865,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/same-level": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Home's Same competitive level players row
+         * @description The players a competitive game with would be most even — each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps — friends, those you asked, weaker matches — best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
+         */
+        get: operations["read_same_level_api_v1_same_level_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/same-level/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Same competitive level's See all
+         * @description Everybody who shares a sport with you, best % first, friends where they fall, in pages of 20 — each in your evenest shared sport, or with `sport` everybody holding a level in it, compared there — and the sports you share with somebody. Empty while you hold no level. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
+         */
+        get: operations["read_same_level_page_api_v1_same_level_all_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invitations/claim": {
         parameters: {
             query?: never;
@@ -3091,14 +3131,14 @@ export interface components {
              * @description Who to ask. You are never sent.
              */
             player_id: string;
-            /** @description Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** — `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it — `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. */
+            /** @description Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** — `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it — `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it — `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel · 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there. */
             made_from: components["schemas"]["AskedFrom"];
             /**
              * Group Id
-             * @description The group the screen showed — Members' group, or the game's — which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING` and `NEW_PLAYERS`, whose screens show no group.
+             * @description The group the screen showed — Members' group, or the game's — which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, `NEW_PLAYERS` and `SAME_LEVEL`, whose screens show no group.
              */
             group_id?: string | null;
-            /** @description The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS`, whose line names no sport. **Required with `RANKING`**: it is the ranking the card names. */
+            /** @description The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS`, whose line names no sport. **Required with `RANKING`** — it is the ranking the card names — **and with `SAME_LEVEL`**: it is the sport their line compares. */
             sport?: components["schemas"]["Sport"] | null;
         };
         /**
@@ -3107,7 +3147,7 @@ export interface components {
          *     made by opening the link, never sent here.
          * @enum {string}
          */
-        AskedFrom: "MEMBERS" | "RECORD" | "RESULT" | "RANKING" | "NEW_PLAYERS";
+        AskedFrom: "MEMBERS" | "RECORD" | "RESULT" | "RANKING" | "NEW_PLAYERS" | "SAME_LEVEL";
         /**
          * AssessmentStepResponse
          * @description The server-driven step: at most one of `question` / `result` is set, and
@@ -5722,6 +5762,11 @@ export interface components {
              * @description Made from Home's *New in Raketa* row, or a record opened from it: draw *Found you among new players* in place of the group line (#793).
              */
             from_new_players: boolean;
+            /**
+             * From Same Level
+             * @description Made from Home's *Same competitive level players* row, or a record opened from it, in `sport` (#794): draw *Your level in padel · 91% even* — `percent_even` — in place of the group line, or *Found you at your padel level* when `percent_even` is `null`.
+             */
+            from_same_level: boolean;
             /** @description The group they asked from — *With you in Kazimierz crew* — **while you are both in it**. `null` for a link's request, for one asked from a screen that showed no group, and once either of you left. */
             group: components["schemas"]["HomeFriendRequestGroupSchema"] | null;
             /** @description The sport of the screen they asked from, if it showed one. */
@@ -5738,6 +5783,11 @@ export interface components {
             player_score: number;
             /** @description The band of that figure, the code their record serves. */
             reliability_band: components["schemas"]["ReliabilityBand"];
+            /**
+             * Percent Even
+             * @description With `from_same_level`: **today's** % even between you two in `sport` — the app's Forecast with one player a side, worked out on this read. `null` once either of you holds no level there, and on every other card.
+             */
+            percent_even: number | null;
         };
         /**
          * HomeFriendsGameSchema
@@ -6221,6 +6271,22 @@ export interface components {
              * @description After the cut-off, exactly what was kept on the reader's payment — *1,76 zł* on a 40 zł share paid by a business card — the provider's own figure, as the refund's receipt will say it. `null` wherever `refund_grosze` is.
              */
             card_fee_grosze: number | null;
+        };
+        /**
+         * LevelBandSchema
+         * @description A band as the rating published it with the Level — the comparison
+         *     bar's bold name. Its edges travel with it; never derived from a level.
+         */
+        LevelBandSchema: {
+            /**
+             * Name
+             * @description *Established* — RacketSkill's own word.
+             */
+            name: string;
+            /** Lower */
+            lower: number;
+            /** Upper */
+            upper: number;
         };
         /**
          * LevelRangeSchema
@@ -8559,6 +8625,96 @@ export interface components {
             factors?: components["schemas"]["FactorResponse"][];
             /** Uncertainty Factors */
             uncertainty_factors?: components["schemas"]["UncertaintyFactorResponse"][];
+        };
+        /** SameLevelPageResponse */
+        SameLevelPageResponse: {
+            /**
+             * Players
+             * @description Up to 20, best % first, friends where they fall — with `sport`, everybody holding a level in it, compared there.
+             */
+            players: components["schemas"]["SameLevelPlayerSchema"][];
+            /**
+             * Next
+             * @description The cursor the next page is read `after`; `null` on the last page.
+             */
+            next: string | null;
+            /**
+             * Sports
+             * @description Every sport you share with somebody, in the sports' own order — the pill's chips beside *All*.
+             */
+            sports: components["schemas"]["Sport"][];
+        };
+        /**
+         * SameLevelPlayerSchema
+         * @description One *Same competitive level* card.
+         */
+        SameLevelPlayerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Nickname
+             * @description Whole, never with an @ (docs/adr/0199 §1).
+             */
+            nickname: string;
+            /**
+             * Photo Id
+             * @description Their first photograph; `null` draws their court poster.
+             */
+            photo_id: string | null;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to it, minted for this response.
+             */
+            photo_url: string | null;
+            /** @description The sport the card shows: the one where you two are evenest — or, on a See all page asked for a sport, that one. */
+            shown: components["schemas"]["SameLevelSportSchema"];
+            /**
+             * Sports
+             * @description **Every** sport you share, most even first — the comparison sheet's blocks, so it needs no read. *N sports ›* when there is more than one.
+             */
+            sports: components["schemas"]["SameLevelSportSchema"][];
+            /** @description Your relation to them — the round friend button: `NONE` **+**, `SENT` **…**, `FRIEND` **✓**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `SAME_LEVEL` and the card's sport. */
+            relation: components["schemas"]["FriendRelation"];
+        };
+        /** SameLevelResponse */
+        SameLevelResponse: {
+            /**
+             * Players
+             * @description Up to 10: **fresh** good matches first — 70% even or more, neither your friend nor somebody you asked — best % first; then the **gaps** at the right — your friends, those you asked and weaker matches — best % first. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row**: you hold no level anywhere, or nobody shares a sport with you.
+             */
+            players: components["schemas"]["SameLevelPlayerSchema"][];
+        };
+        /**
+         * SameLevelSportSchema
+         * @description You and them in one sport you both hold a level in.
+         */
+        SameLevelSportSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Your Level
+             * @description Your Level in the sport — *You 2,71*.
+             */
+            your_level: number;
+            /**
+             * Their Level
+             * @description Theirs — *zofia.b 2,69*.
+             */
+            their_level: number;
+            /**
+             * Percent Even
+             * @description How even a game between you two would be — the app's Forecast with one player a side, the figure a game card prints: green at 70 and above, amber 55–69, red below 55; the word under it is always *EVEN*. It falls with the gap and with how unsure the app is of either level, and tops out at 96.
+             */
+            percent_even: number;
+            /**
+             * Level Gap
+             * @description Their level less yours, to the hundredth, signed: `-0.02` is *0,02 below you*, `0.09` *0,09 above you*, `0` *Same level*. A level gap, never a row's **gap** (a place after the fresh good matches).
+             */
+            level_gap: number;
+            /** @description Your band in the sport — the bar's name in bold. */
+            your_band: components["schemas"]["LevelBandSchema"];
         };
         /** SavedMethodSchema */
         SavedMethodSchema: {
@@ -13394,6 +13550,87 @@ export interface operations {
                 };
             };
             /** @description `not_a_new_in_raketa_page` — a cursor this server never wrote. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_same_level_api_v1_same_level_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SameLevelResponse"];
+                };
+            };
+            /** @description `block_state_unavailable` — the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_same_level_page_api_v1_same_level_all_get: {
+        parameters: {
+            query?: {
+                /** @description Compare everybody in this sport, and keep only them. */
+                sport?: components["schemas"]["Sport"] | null;
+                /** @description A `next` cursor: the 20 players behind it. */
+                after?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SameLevelPageResponse"];
+                };
+            };
+            /** @description `not_a_same_level_page` — a cursor this server never wrote. */
             400: {
                 headers: {
                     [name: string]: unknown;

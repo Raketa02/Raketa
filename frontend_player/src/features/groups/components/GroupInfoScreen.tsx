@@ -35,6 +35,7 @@ import { router } from 'expo-router';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useReaderId } from '@/features/auth/types';
 import { codeMessage } from '@/shared/errors';
 import { Card, DarkCard, DoorRow, PressableCard, theme } from '@/shared/ui';
 
@@ -42,7 +43,6 @@ import type { Group } from '../domain/group';
 import { membersRow, readerFace } from '../domain/groupInfo';
 import { useGroupInfo } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
-import { useReaderId } from '../hooks/useReaderId';
 
 import { ExitDoor } from './ExitDoor';
 import { FaceStack } from './FaceStack';

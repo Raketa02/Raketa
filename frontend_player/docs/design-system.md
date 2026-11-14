@@ -269,6 +269,11 @@ own two-part layout, drawn on the phone, and not a harness around it.
 > at 0,12, the paler stripes over a Hottest groups card's band in the group's own `MONOGRAM_HUES`
 > colour (#800, [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet)).
 > Nothing is written on it, and it is drawn on that band alone.
+>
+> **Amended 2026-11-14** — a sixth ground: the Same level card's (`levelCardGround`, flat, #802,
+> [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet)), the mocks' measured value,
+> which the stage's happens to equal and is not, fenced to that card. It exists to carry the game
+> cards' three forecast inks at large text's 3:1, which `night` cannot (`gameGreen` 2,88 there).
 
 > `line` **bounds a thing**; `line2` is a **fold inside one thing**. The hairline uses
 > `line2` precisely so a card with two sections reads as one object, not two.
@@ -2943,6 +2948,12 @@ stops a panel four lines under the bar picking a different amber from it. **The 
 deliberately not a pair**: the bar paints _yours_ `night` and only _theirs_ carries a tone, so
 a panel over the same split takes `line2` on your half and the tone's soft on theirs.
 
+**And a third, for a large figure on a dark card** (#802). `BALANCE_FIGURE` is the same three tones
+in the game cards' own inks — `gameGreen`, `gameAmber`, `gameRed` — for the figure the game card,
+the friends card, sign-in's miniature and the Same level card print on their dark grounds, where
+`BALANCE_INK`'s `mintInk` would sit at 2,67. It stood as three copies in three features until the
+fourth caller, and came here.
+
 **One thing recorded rather than fixed.** §B9's word breaks at 85 / 70 / 55 and its colour
 breaks at 70 / 55, so _Very even_ and _Fairly even_ share one green. That is **correct**: Part
 13 is satisfied by the word, and a fourth tone would need a fourth _meaning_, which
@@ -4116,6 +4127,69 @@ friend_ is the black pill home rows 11 draws, fenced beside Members' friend pill
 `waiting` — the screens say _outlined, brown text_, and the system's request-waiting control is the
 warn tag's soft bed; _✓ Friends_ is the new `settledSoft` (home rows 9). **Not seen on a device**: the
 four marks, the halo, the worded twin (no sheet draws it until #802, #803).
+
+## 7.33 The comparison bar
+
+```
+label       YOU · tag type at 800 · centred over the mark, size.comparisonBar.labelGap (3) above
+row         size.comparisonBar.markHeight (22) · the track centred in it
+track       trackHeight (8), pill, clipped · four band segments on theme.band's drawing values,
+            each its tint — onDark at onDarkBand (0,28) over levelCardGround, base at 7.5's
+            inactiveOpacity (0,38) over surface — with 7.5's 1pt separators in the surface
+fill        from the left to THEIR level, pill · onDark volt · base mint
+mark        at YOURS · markWidth (6) × markHeight (22), pill, a markRing (2) of the surface ·
+            onDark surface (white) · base ink
+names       namesTop (6) under the row · the four band names uppercase in tag type, each as wide as
+            its band, shrinking to nameMinScale (0,75) to stay on a line · the reader's band at 800 (onDark
+            surface · base ink), the rest at 600 (onDark onDarkTiny · base muted)
+```
+
+**Two players' levels in one sport on the Skill passport's scale**
+([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.2–§4.3, §11; home
+rows 7–16). **It reads 7.5's scale and bands, never new ones** — `LevelBar` exports the scale
+(`levelScaleFraction`) and the four bands (`LEVEL_BANDS`) rather than either being written twice —
+and which band is the reader's arrives as a key from the band the rating published, 7.5's correction
+#4. **The fill is the other player, the mark the reader**: a fill short of the mark means they are
+below, one past it above (home rows 7, 8). **Dark and light are two paints of one object**: on the
+Same level card the bands are their tints at a quarter over the ground — #344B5A, #31514E and #534541
+measured, each its tint at 0,26–0,31 — with a volt fill (a fill, which volt may be anywhere) and a
+white mark; on the comparison sheet 7.5's own inactive tints, the theme's `mint` fill (the screens'
+_mid green_) and an `ink` mark. One element to a screen reader, named by the caller. **Not seen on a
+device**: either paint, the names' shrink at a Home row card's width.
+
+## 7.34 Same competitive level: the card and the comparison sheet
+
+```
+card        5.2's dark card — radius.cardDark, lg padding (xs at the foot) — on levelCardGround,
+            no shadow · a peeking rail card on Home's row (7.7), the content width in See all
+pairing     a row: the reader | the % | them · each side a face (size.sameLevel.face, 44,
+            PlayerPhoto's face box) over h2 surface "You" / the nickname and num.s tabular
+            onDarkTiny level · the middle: the % at num.xl tabular in the game cards' ink by
+            balanceTone (gameGreen ≥ 70 · gameAmber 55–69 · gameRed < 55), EVEN in eyebrow
+            onDarkTiny, the sport's 6pt dot and its name in rlLabel onDarkTiny
+bar         7.33 onDark, md under the pairing
+foot        minTouch (44) high · the gap in rlLabel onDarkTiny · " · " · "2 sports" rlValue at
+            700 in volt with Feather's chevron-right, reached by hit.sportsLink · the round
+            friend button (7.32) at the right
+press       the other's side and "N sports" dim to .7 (6.6)
+sheet       9.1's sheet · the title row's act: 7.32's worded twin · one block per shared sport,
+            each after the first under a Hairline (md above): the dot and the sport h2 ink, the
+            levels num.xs tabular ink · 7.33 base · the gap rlLabel muted · 6.4's tag in its
+            tone (ok · warn · bad) — the light version of the card's colour
+```
+
+**A card whose one figure is a forecast** ([#802](https://github.com/Raketa02/Raketa/issues/802);
+the Home rows screens §4.2–§4.4; home rows 7, 8, 9, 10–10.3, 11–16). **It stands on its own ground**:
+the ticket names the game cards' forecast tokens for the %, and on `night` `gameGreen` is 2,88 — under
+large text's 3:1 — so the card takes the value the mocks draw, `#15252C`, as `levelCardGround`, fenced
+as each dark ground before it is; the three inks are 3,41, 8,94 and 3,48 on it at `num.xl`, large
+text (`levelCardGround.test.ts`). **Three doors and nothing else**: the other's side opens the record,
+_N sports ›_ the sheet, the round button acts; the reader's side and the % are not buttons (a call).
+_2 sports_ is volt as text on the dark ground (12,57) — a word, with a drawn chevron, never a
+character. **The sheet's tag is 6.4's**, whose `ok`, `warn` and `bad` already pair `BALANCE_SOFT`'s
+beds with `BALANCE_INK`'s inks — exactly _the light version of its colour_ — rather than a second
+pill. **Not seen on a device**: the card on a row and in See all, the % in each ink, the footer's
+reach beside the button, the sheet's blocks and tags.
 
 # Part 8 — Scrolling patterns
 
@@ -5359,6 +5433,19 @@ every `Ink` would need a second computed value.
 > contract or cross-app effect — and it is fenced in [Part 16](#part-16--amendments-after-locking)
 > _for sign-in's and sign-up's hero only_. `#15252C` is the yes ground's edge a step off and is not
 > that token. Five exceptions, each named for the thing it is, and still no dark mode.
+>
+> **Amended 2026-11-14** — **and the Same competitive level card is the app's sixth dark surface,
+> and it is a card** ([#802](https://github.com/Raketa02/Raketa/issues/802),
+> [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet)). One flat value of its own
+> (`levelCardGround`, measured off home rows 7, 8, 10.3 and 15 and held by
+> `levelCardGround.test.ts`) under the pairing, the comparison bar's dark paint and the footer, on a
+> Home row and in See all; the page behind it is paper and the tab bar stands. It exists for one
+> figure: the ticket prints the % in the game cards' forecast inks (`BALANCE_FIGURE`), and on
+> `night` the green is 2,88 — under large text's 3:1. **Its record is the ticket and PRD
+> [#789](https://github.com/Raketa02/Raketa/issues/789)'s mocks, not an ADR** — the first dark
+> surface argued for without one, which is a call for the product owner to confirm or send back to
+> `night`. Fenced in [Part 16](#part-16--amendments-after-locking) _for this card only_. Six
+> exceptions, each named for the thing it is, and still no dark mode.
 
 ---
 
@@ -5705,6 +5792,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-14 | [Part 8](#part-8--scrolling-patterns) · [7.16](#716-the-photo-panel) · [`PhotoCarousel.tsx`](../src/shared/ui/PhotoCarousel.tsx) `PhotoCarousel` · [`theme.ts`](../src/shared/ui/theme.ts) `size.photoCarouselRatio` · Part 8's Strip note · Appendix B                                                                                                                                  | The record drew one photo, the panel's, and nothing drew a player's others                                                                                                                                                                                                                                                                                   | **The photo carousel** ([#799](https://github.com/Raketa02/Raketa/issues/799); the Home rows screens §6.3, §9.3; home rows 23): every photo in the player's order, a card `size.photoCarouselRatio` (0,5) of the content width and 4:5 tall — `PHOTO_PANEL`'s shape, read off it — `radius.card`, over Part 8's Strip — gap 9, bleeding past the gutter, `snapToInterval` a card and the gap, `decelerationRate` fast. **Nothing with no photo**; **a lone photo keeps the card's size**. Hidden from a listener, as `PlayerPhoto` is. Drawn on the record sheet under the header; the vibe sheet (#803) draws the same one                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | ADR-0204 §2: any record opens with all of a player's photos. **Half the width** because home rows 23 draws two side by side, the second running to the sheet's edge — a ratio, for `railCardRatio`'s reason. **4:5** is the photo panel's own shape, so a photo crops alike on the panel and in the carousel. **One carousel for two sheets** is the screens §9.3's call. **A lone photo at the content width** would be a 4:5 card taller than the sheet's first screen. **Not seen on a device**: the two cards, the bleed and the snap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-14 | [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet) · 7.20 · 6.1 · 9.1 · `Button` `waiting` · `BottomSheet` `action` · `theme.ts` `color.groupBandStripe` `size.hottest` `size.monogram.shield` `.sheet` · `GroupMonogram` `shape`                                                                                                                         | No card drew a group to a reader outside it; a sheet's title row held the title and the close; a waiting request was a tag, never pressed                                                                                                                                                                                                                    | **Home's Hottest groups card and its two sheets** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home rows screens §3; home rows 3–6, 21): the striped band in the group's `MONOGRAM_HUES` colour (stripes `groupBandStripe`, white 0,12), the tile as a **shield** over band and body (45, square top, lower corners 0,4 × side, a 3pt surface ring), the tag on an `ink` pill with its mark in volt, mono figures with the growth in `mintInk`, the **heat bar** amber → coral to the served share, four faces, the chip a `sm` pill (`dark` to ask, `secondary` once asked or in). **The group sheet** puts its one button on the title row (`BottomSheet`'s `action`), _Asked_ there a new **`waiting`** button — `amberSoft` / `amber` (5,06:1), pressed `amberLine` — the tile at 48 and two outlined stat cards. **The withdraw sheet** is the same sheet, its title and body swapped; _Withdraw request_ is `secondary` at `lg`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Every look is the mocks' (home rows 3–6, 21), read off them at 1× onto the 3pt grid. **Stripes in one white over the hue**, not a second palette: the band says _this group's colour_. **The heat bar's coral end** is 1.2's _hot tag_ meaning — heat — not a seventh coral; its amber start is _not yet_. **`waiting`** because _Asked_ on the sheet is pressed (it opens Withdraw), so it cannot be 6.4's tag, whose colours it takes. **One sheet for two faces**: iOS drops a second native window opened as the first closes. **`secondary` for Withdraw request**: the screens' _destructive-outline_ button does not exist here. **Not seen on a device**: all of it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-11-14 | [7.31](#731-the-portrait-tile) · [7.32](#732-the-round-friend-button) · [7.7](#77-the-card-rail) · [6.1](#61-button) · [`theme.ts`](../src/shared/ui/theme.ts) `color.portraitWash` (was `deckWash`) `size.portraitTile` `size.roundFriend` · `PortraitTile` · `HomeRowRail` `tiles` · `Button` `lead` `settledSoft` · `SportPill` `ALL_SPORTS` · Appendix B                             | The deck card's wash was fenced to a card that left with Classic play (#576); a Home rail was peeking or paging; a button's marks stood after its words, and `settled` was the one mint button; the sport pill offered sports only                                                                                                                           | **New in Raketa's portrait tile and the round friend button** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §5, §8, §11; home rows 8, 9, 11, 17–19): the **portrait tile** — a face edge to edge, the deck's wash moved whole to it as `portraitWash`, a corner tag and a corner control beside the tile's own press, the words over the wash — on a **third rail geometry**, `tiles` (0,355 × content, a lone tile keeping its width), at 11:8 on Home and 9:8 in See all's two columns. The **round friend button**: a 24pt circle centred in its own 44pt press, **+** white with `PlusOnSurface`, **…** `amber` with three dots, **✓** `mintInk` with `Tick`, the envelope `volt` with Feather `mail` and a volt-fill halo at .5. Its worded twin is 6.1: **`lead`** draws a Feather plus or check before the words (never spoken), and **`settledSoft`** — `mintSoft` / `mintInk` (5,08:1), pressed `mintLine` — is _✓ Friends_; _+ Add friend_ is the `dark` pill (fenced with the friend pills), _Request sent_ `waiting`, _Accept_ `primary`. **The sport pill offers _All_** (`ALL_SPORTS`), drawn with a two-toned dot, padel's coral into tennis's mint                                                                                                                                                                                                                                                                                                                                                              | Every look is the mocks', read off them at 1× onto the 3pt grid (tile 384 × 528 and 266 × 297 pixels; the button 72 of 384). **The wash moved rather than doubled**: the deck card is gone, and a second token of one value is two values the day either moves. **…'s brown is `amber`**, 1.3's _reversible_ — a request is; **✓ is `mintInk`** for Rule C. **The halo is a fill**, since volt draws no stroke on paper and a tile's top is a photograph's. **`waiting` for _Request sent_**: the screens' _outlined, brown text_ has no button here, and the warn tag's bed is the request-waiting control #800 already made. **Not seen on a device**: all of it — the tile and grid against home rows 17–19, the wash over a pale photograph, the four marks, the halo, the _All_ dot                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-11-14 | [7.33](#733-the-comparison-bar) · [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet) · [2.1](#21-surfaces-and-structure) · [`theme.ts`](../src/shared/ui/theme.ts) `color.levelCardGround` `size.comparisonBar` `size.sameLevel` `hit.sportsLink` · `ComparisonBar` · `LevelBar` `levelScaleFraction` `LEVEL_BANDS`                                                   | Five fenced dark grounds; 7.5's level bar drew one player's level, its scale and bands private to it                                                                                                                                                                                                                                                         | **Same competitive level's card, its bar and the comparison sheet** ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4, §11; home rows 7–16): the **comparison bar** — 7.5's scale and four bands, a fill to the other's level and a tall mark labelled _YOU_ at the reader's, the reader's band bold — in two paints, `onDark` (bands at 0,28 over the ground, volt fill, white mark) and `base` (7.5's inactive tints, `mint` fill, `ink` mark); `LevelBar` exports its scale and bands for it. The **Same level card** on a **sixth dark ground**, `levelCardGround` (`#15252C`): the two faces at 44, the % at `num.xl` in the game cards' inks by `balanceTone`, _EVEN_, the sport, the bar, the gap, _2 sports ›_ in volt reached by `hit.sportsLink`, the round button. The **comparison sheet**: the worded friend button on the title row, a block per sport under hairlines, 6.4's tag in the tone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | The ticket names the game cards' forecast tokens for the %, and `gameGreen` on `night` is 2,88 — under large text's 3:1 — so the card takes the mocks' measured value, fenced, where the three inks are 3,41 / 8,94 / 3,48 (`levelCardGround.test.ts`); it equals the stage's value and is not that token, a value being written for what was drawn. **The bar reads 7.5's scale rather than restating it**: two copies of 1,00–5,00 are two answers the day either moves. The dark bands are their tints at a quarter, measured off home rows 8 and 10.3; the light ones 7.5's own. **The tag is 6.4's**, whose three tones are already `BALANCE_SOFT` over `BALANCE_INK`. **Not seen on a device**: the card, both bar paints, the names' shrink, the sheet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 # Part 17 — What the reset removed
 

@@ -415,14 +415,30 @@ read when they turned _Show me to new people_ off); any other is a toast — no 
 `AskedWhere` a `FoundIn` — a Home row a request was found in, `{ from: 'NEW_PLAYERS' }`, naming
 neither a group nor a sport (`toAskRequest` sends neither). **A record a Home row opened keeps the
 row** (`recordAskedWhere`'s `foundIn`, ahead of the ranking). Home's request card reads _Found you
-among new players_ (`whereLine`'s `newPlayers`, from `proposals`' `fromNewPlayers`) in place of the
+among new players_ (`whereLine`'s `newInRaketa`, from `proposals`' `foundBy` since #802) in place of the
 whole where-line, as a link's and the ranking's do. #802 and #803 add their rows to `FoundIn`.
+
+**A request found at the same level** (#802; the words §31.10). `AskedFrom` gained `SAME_LEVEL`, and
+`FoundIn` its arm `{ from: 'SAME_LEVEL', sport }` — **the card's sport**, the one the other person's
+line compares, which the server refuses a request without, so the type carries it (`toAskRequest`
+sends it and no group). The card's round button, the comparison sheet's worded one and the record a
+face opens all send it. Home's request card reads _Your level in padel · 91% even_ — **today's** %,
+which the server works out on the read — or _Found you at your padel level_ once either holds no
+level there.
+
+**The request card's origin is one discriminant now** (#802, #801's finding). `proposals`' mapper
+folds the wire's four exclusive flags (`by_link`, `from_ranking`, `from_new_players`,
+`from_same_level`) into `HomeFriendRequest.foundBy` — `link`, `ranking`, `newInRaketa`, or `sameLevel`
+with its %, absent for a group's or a screen's request — and `whereLine` takes the same shape
+(`WhereFound`, spelled in `friendsCopy` with each sport already named inside a sentence, so the copy
+module imports no feature). `FriendRequestsRow`'s `whereFound` names the sport; a found request whose
+sport this build cannot name draws the chip alone, as the ranking's did. A fifth origin (#803's Same
+vibe) is one arm in each and a `switch` that fails to compile without its words.
 
 **Every friends write re-reads every read that lists people** (#801; `rereadPeopleLists`, the Home
 rows mechanics §13). Home's people rows, their See all and Hottest groups declare `LISTS_PEOPLE`, and
 `settle`, `rereadHomeToo` and `rereadIfMoved` re-read whatever did — from any surface, a record Rankings
 or a notice opened included. A tag, not their keys: `discovery` draws this feature's button. So
 `reread` is now optional on the ask, cancel and remove hooks, and the round button takes none where
-its surface is a people list. A finding for #802/#803: the request card's `byLink`, `fromRanking` and
-`fromNewPlayers` are three exclusive booleans (the wire's), and two more rows would add two more — a
-single discriminant in `proposals`' mapper would be the place to fold them.
+its surface is a people list. The request card's three exclusive booleans this paragraph flagged for
+#802/#803 were folded into one discriminant by #802 (above).

@@ -62,6 +62,13 @@ describe('which tab a route is inside', () => {
     expect(barStandsDown('/rankings')).toBe(false);
   });
 
+  it('keeps Home lit on the people rows’ See all (#801, #802), and the bar up', () => {
+    for (const seeAll of ['/new-in-raketa', '/same-level']) {
+      expect(tabForPathname(seeAll)).toBe('home');
+      expect(barStandsDown(seeAll)).toBe(false);
+    }
+  });
+
   it('answers the root for a path the shell does not own', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
     // that is never asked rather than a claim that /sign-in is the Home tab — and it is the

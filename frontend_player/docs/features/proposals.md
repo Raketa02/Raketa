@@ -1249,8 +1249,10 @@ details it opens say it. The test that asserted no friend tag on a deck tile (`g
 was turned round.
 
 **Home's read carries the friend requests** (#753): `GET /home`'s `friend_requests` are mapped into
-`Home.friendRequests` (`HomeFriendRequest` — the face, the nickname, `byLink`, the group while both
-are in it, the sport and the Level, the reliability and its band) and crossed by
+`Home.friendRequests` (`HomeFriendRequest` — the face, the nickname, where they found the reader
+(`foundBy`: a link, the ranking, New in Raketa, or Same competitive level with today's % — one
+discriminant over the wire's four exclusive flags since #802), the group while both are in it, the
+sport and the Level, the reliability and its band) and crossed by
 `useHomeFriendRequests`. `friends` draws and answers them; the read is this feature's because it is
 Home's. They are not counted in `needingYou`.
 

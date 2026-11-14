@@ -174,11 +174,13 @@ describe('FRIENDS GAME · n on Home (friends 12)', () => {
           by_link: true,
           from_ranking: false,
           from_new_players: false,
+          from_same_level: false,
           group: null,
           sport: null,
           level: null,
           player_score: 98,
           reliability_band: 'VERY_HIGH',
+          percent_even: null,
         },
       ],
     });

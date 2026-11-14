@@ -23,7 +23,7 @@ import type { AskedFrom, FriendRelation } from './vocabulary';
  */
 export type AskedWhere =
   | {
-      readonly from: Exclude<AskedFrom, 'RANKING' | 'NEW_PLAYERS'>;
+      readonly from: Exclude<AskedFrom, 'RANKING' | FoundIn['from']>;
       readonly groupId?: string;
       readonly sport?: Sport;
     }
@@ -33,10 +33,17 @@ export type AskedWhere =
 /**
  * **A Home row a request was found in** (#801; the Home rows mechanics §12) — sent from the row's
  * round button, or from a record the row opened, so the other person's card says where they were
- * found. New in Raketa names nothing else: *Found you among new players*, whatever group or sport
- * the two share. The rows still to come (#802, #803) add theirs here.
+ * found:
+ *
+ * - **New in Raketa** names nothing else: *Found you among new players*, whatever group or sport the
+ *   two share;
+ * - **Same competitive level** (#802) names **the card's sport**, the one its line compares — *Your
+ *   level in padel · 91% even* — and the server refuses one without it, so the type carries it.
+ *
+ * Same vibe (#803) adds its own here.
  */
-export type FoundIn = { readonly from: 'NEW_PLAYERS' };
+export type FoundIn =
+  { readonly from: 'NEW_PLAYERS' } | { readonly from: 'SAME_LEVEL'; readonly sport: Sport };
 
 /**
  * **The right-hand end of a Members row** (the screens §1; friends 1, 2): a pill that acts, or a tag

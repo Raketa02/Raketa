@@ -467,6 +467,6 @@ header, the bleed to the sheet's edge and the snap.
 
 **A record a Home row opened keeps the row** ([#801](https://github.com/Raketa02/Raketa/issues/801);
 the Home rows mechanics §12). **`foundIn`** is the row — a request asked at the foot is then _found
-among new players_ (`friends`' `recordAskedWhere`); New in Raketa's tiles hand it (`discovery`'s
-`JoinerRecord`). The row under the sheet moves on its own: a friend act or a block at the foot
+among new players_, or _at the same level_ in the card's sport (#802; `friends`' `recordAskedWhere`);
+the people rows' faces hand it (`discovery`'s `RowRecord`). The row under the sheet moves on its own: a friend act or a block at the foot
 re-reads every read that lists people (`LISTS_PEOPLE`).

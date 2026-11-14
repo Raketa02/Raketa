@@ -17,12 +17,12 @@ import { useState } from 'react';
 
 import { HomeRow, HomeRowRail } from '@/shared/ui';
 
-import type { Joiner } from '../domain/joiner';
+import { FOUND_AMONG_NEW_PLAYERS, type Joiner } from '../domain/joiner';
 import { useNewInRaketa } from '../hooks/useNewInRaketa';
 
 import { DISCOVERY_COPY } from './discoveryCopy';
 import { NEW_IN_RAKETA_ROUTE } from './discoveryRoutes';
-import { JoinerRecord } from './JoinerRecord';
+import { RowRecord, type RecordOpened } from './RowRecord';
 import { JoinerTile } from './JoinerTile';
 
 export function NewInRaketaRow() {
@@ -32,7 +32,7 @@ export function NewInRaketaRow() {
 }
 
 function NewInRaketa({ joiners }: { readonly joiners: readonly Joiner[] }) {
-  const [reading, setReading] = useState<string>();
+  const [reading, setReading] = useState<RecordOpened>();
 
   return (
     <HomeRow
@@ -51,11 +51,13 @@ function NewInRaketa({ joiners }: { readonly joiners: readonly Joiner[] }) {
             joiner={joiner}
             width={width}
             layout="row"
-            onOpen={() => setReading(joiner.playerId)}
+            onOpen={() =>
+              setReading({ playerId: joiner.playerId, foundIn: FOUND_AMONG_NEW_PLAYERS })
+            }
           />
         )}
       </HomeRowRail>
-      <JoinerRecord playerId={reading} onClose={() => setReading(undefined)} />
+      <RowRecord opened={reading} onClose={() => setReading(undefined)} />
     </HomeRow>
   );
 }

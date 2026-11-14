@@ -59,6 +59,8 @@ const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   rankings: 'home',
   // New in Raketa's See all, behind its row's *See all ›* (#801; the Home rows screens §1).
   'new-in-raketa': 'home',
+  // Same competitive level's See all (#802; the Home rows screens §1).
+  'same-level': 'home',
 };
 
 /**

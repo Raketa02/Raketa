@@ -67,6 +67,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useReaderId } from '@/features/auth/types';
 import { LevelDoor, fromAGroup, sportColour } from '@/features/onboarding/types';
 import { RowWithFriendEnd } from '@/features/friends/types';
 import {
@@ -83,7 +84,6 @@ import { OPENING_TAB } from '../domain/groupPage';
 import { adminTagged, runnerApart, type GroupRunner } from '../domain/groupInfo';
 import { useDeclaredSport } from '../hooks/useGroupSport';
 import { useGroup, useGroupMembers } from '../hooks/useGroups';
-import { useReaderId } from '../hooks/useReaderId';
 import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';

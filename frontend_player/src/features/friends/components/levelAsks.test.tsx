@@ -298,11 +298,13 @@ describe('ASKED FOR A LEVEL on Home', () => {
           by_link: false,
           from_ranking: false,
           from_new_players: false,
+          from_same_level: false,
           group: null,
           sport: null,
           level: null,
           player_score: 96,
           reliability_band: 'VERY_HIGH',
+          percent_even: null,
         },
       ],
     });

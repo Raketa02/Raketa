@@ -332,6 +332,21 @@ const color = {
    *  a mark). Derived in stageGround.test.ts. Nothing else may draw it. */
   stageGround: '#15252C',
 
+  /** THE SAME LEVEL CARD'S GROUND — Home's *Same competitive level players* card, the app's SIXTH
+   *  dark surface ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.2;
+   *  design-system 7.34, Part 16 2026-11-14). A card whose one figure is a forecast, drawn in the
+   *  game cards' three inks (`gameGreen`, `gameAmber`, `gameRed` — the ticket's *existing forecast
+   *  tokens*), which `night` cannot carry: `gameGreen` on it is 2,88, under large text's 3:1.
+   *
+   *  MEASURED off home rows 7, 8, 10.3 and 15 at 1x: one flat `#15252C` at every corner — the stage's
+   *  value, and NOT that token, for the reason each ground before it gave: a value is written for what
+   *  was drawn, and the stage is sign-in's alone. Hue 198°, `night`'s family. What sits on it,
+   *  computed: white 15,76 (You, the nickname, the mark); `volt` 12,57 (the fill, *2 sports*);
+   *  `gameGreen` 3,41, `gameAmber` 8,94, `gameRed` 3,48 (the figure, large only); `onDarkTiny` over it
+   *  7,97 (the levels, the gap, the sport, the bands). Derived in levelCardGround.test.ts. Nothing
+   *  else may draw it. */
+  levelCardGround: '#15252C',
+
   /** THE STAGE'S FOOT GLOW — a flat ellipse of light where the sheet meets the hero, brightest at
    *  the sheet's edge under the middle of the screen and gone a tenth of the hero above it.
    *  MEASURED off mock 1 three pixels above the sheet; hue 160°, a green the ground falls into
@@ -1459,6 +1474,26 @@ const size = {
    *  `halo` is the envelope's paler ring outside it; `dot` and `dotGap` the **…**'s three dots;
    *  `glyph` the envelope's Feather size, the plus and the tick being 6.8's own 12pt box. */
   roundFriend: { face: 24, halo: 3, dot: 3, dotGap: 2, glyph: 12 },
+  /** THE COMPARISON BAR (#802; home rows 7–16; 7.33) — the Skill passport's 1,00–5,00 and its four
+   *  bands, a fill to the other player's level and a tall mark at the reader's. MEASURED off home rows
+   *  8 at 1× (2,75 pixels to the point): an 8pt track, a 6pt mark 22 tall in a 2pt ring of the ground,
+   *  its YOU 3 above. `onDarkBand` is a band's `tint` over the card's ground — #344B5A, #31514E and
+   *  #534541 measured, each its tint at 0,26–0,31 — where the light bar takes 7.5's `inactiveOpacity`.
+   *  `nameMinScale` is how far a band's name may shrink to stay on one line under its band on a Home
+   *  row's card, where _ESTABLISHED_ has 30 % of 0,74 × content less the padding. */
+  comparisonBar: {
+    trackHeight: 8,
+    markWidth: 6,
+    markHeight: 22,
+    markRing: 2,
+    labelGap: 3,
+    namesTop: 6,
+    onDarkBand: 0.28,
+    nameMinScale: 0.75,
+  },
+  /** THE SAME LEVEL CARD (#802; home rows 7, 8, 10.3; 7.34) — a face 44 on either side, MEASURED (120
+   *  pixels at 2,75); the % between them at `num.xl`, the game card's figure. */
+  sameLevel: { face: 44 },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it
@@ -1559,6 +1594,10 @@ const hit = {
    *  edge on the right, and 3 on the left, as a chip's slop does (`chip`): of the `space.sm`
    *  between a control and the link, the two take 3 each and leave 3 between their targets. */
   rowLink: { top: 13, bottom: 7, left: 3, right: 15 },
+  /** *2 sports ›* on the Same level card's footer (#802; 7.34): a 16pt line in the footer's 44pt
+   *  row, beside the round friend button's own 44 box — 14 above and below reach exactly the row's
+   *  edges, so no touch lands past its parent on Android; 6 sideways keeps clear of the gap's words. */
+  sportsLink: { top: 14, bottom: 14, left: 6, right: 6 },
   /** The week grid's hour cell (6.8): half the 4pt gap on every side, which is all the
    *  neighbour rule allows and exactly enough that the reachable areas tile the grid with no
    *  dead point between two cells. It does not reach 44 — see `size.availability`. */

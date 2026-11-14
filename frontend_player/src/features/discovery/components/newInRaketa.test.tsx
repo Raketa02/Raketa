@@ -528,11 +528,13 @@ describe('Home’s request card', () => {
           by_link: false,
           from_ranking: false,
           from_new_players: true,
+          from_same_level: false,
           group: null,
           sport: null,
           level: null,
           player_score: 100,
           reliability_band: 'VERY_HIGH',
+          percent_even: null,
         },
       ],
     });

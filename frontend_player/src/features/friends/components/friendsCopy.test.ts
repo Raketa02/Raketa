@@ -26,7 +26,6 @@ describe('the request card’s words (§29.2)', () => {
   it('says where, the sport and the Level, before the chip', () => {
     expect(
       whereLine({
-        byLink: false,
         group: { name: 'Kazimierz crew' },
         sportName: 'Padel',
         level: 3.4,
@@ -35,27 +34,38 @@ describe('the request card’s words (§29.2)', () => {
   });
 
   it('reads Invited you to Raketa for a link’s request', () => {
-    expect(whereLine({ byLink: true })).toBe('Invited you to Raketa');
+    expect(whereLine({ foundBy: { kind: 'link' } })).toBe('Invited you to Raketa');
   });
 
   it('reads Found you in the padel ranking for a request from the ranking, in the group line’s place', () => {
-    expect(whereLine({ byLink: false, ranking: 'padel', sportName: 'Padel', level: 3.4 })).toBe(
-      'Found you in the padel ranking',
-    );
+    expect(
+      whereLine({ foundBy: { kind: 'ranking', sport: 'padel' }, sportName: 'Padel', level: 3.4 }),
+    ).toBe('Found you in the padel ranking');
   });
 
   it('reads Found you among new players for a request from New in Raketa, in the group line’s place (#801)', () => {
-    expect(whereLine({ byLink: false, newPlayers: true, group: { name: 'Kazimierz crew' } })).toBe(
+    expect(whereLine({ foundBy: { kind: 'newInRaketa' }, group: { name: 'Kazimierz crew' } })).toBe(
       'Found you among new players',
     );
   });
 
-  it('says only what the wire named — a group they left, a sport they hold no Level in', () => {
-    expect(whereLine({ byLink: false, sportName: 'Padel' })).toBe('Padel ·');
-    expect(whereLine({ byLink: false, group: { name: 'Kazimierz crew' } })).toBe(
-      'With you in Kazimierz crew ·',
+  it('reads today’s % even for a request from Same competitive level, or its fallback once a level is gone (#802; §31.10)', () => {
+    expect(
+      whereLine({
+        foundBy: { kind: 'sameLevel', sport: 'padel', percentEven: 91 },
+        sportName: 'Padel',
+        level: 2.69,
+      }),
+    ).toBe('Your level in padel · 91% even');
+    expect(whereLine({ foundBy: { kind: 'sameLevel', sport: 'squash' } })).toBe(
+      'Found you at your squash level',
     );
-    expect(whereLine({ byLink: false })).toBe('');
+  });
+
+  it('says only what the wire named — a group they left, a sport they hold no Level in', () => {
+    expect(whereLine({ sportName: 'Padel' })).toBe('Padel ·');
+    expect(whereLine({ group: { name: 'Kazimierz crew' } })).toBe('With you in Kazimierz crew ·');
+    expect(whereLine({})).toBe('');
   });
 
   it('counts the row’s title', () => {

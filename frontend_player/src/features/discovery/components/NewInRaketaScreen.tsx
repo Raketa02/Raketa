@@ -14,163 +14,57 @@
  *   and the pull, which reads every page again.
  *
  * A tile opens the record and its round button acts, as on Home's row; **every friend write re-reads
- * every people list** (`LISTS_PEOPLE`), so this grid and the row under the screen both move.
+ * every people list** (`LISTS_PEOPLE`), so this grid and the row under the screen both move. The
+ * frame, the paging and every state are every people row's (`SeeAllScreen`).
  */
 
-import { router } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { useWindowDimensions } from 'react-native';
 
-import { ReadFailure } from '@/features/groups/types';
-import { offlineMessage } from '@/shared/errors';
-import { Note, ScreenHeader, SportPillFrame, TopSafeArea, behindOverlay, theme } from '@/shared/ui';
+import { theme } from '@/shared/ui';
 
-import type { Sport } from '@/shared/vocabulary/sport';
+import { FOUND_AMONG_NEW_PLAYERS, type Joiner } from '../domain/joiner';
+import type { SeeAllSport } from '../domain/seeAll';
+import { useNewInRaketaPage } from '../hooks/useNewInRaketa';
 
-import { pillChoices, type Joiner, type SeeAllSport } from '../domain/joiner';
-import { useNewInRaketaPage, type JoinerGrid } from '../hooks/useNewInRaketa';
-
-import { DISCOVERY_COPY, SEE_ALL_PILL_WORDS, nobodyNewPlays } from './discoveryCopy';
-import { JoinerRecord } from './JoinerRecord';
+import { DISCOVERY_COPY, NEW_IN_RAKETA_PILL_WORDS, nobodyNewPlays } from './discoveryCopy';
 import { JoinerTile } from './JoinerTile';
+import { RowRecord, type RecordOpened } from './RowRecord';
+import { SeeAllScreen } from './SeeAllScreen';
 
 /** See all's two columns (home rows 19). */
 const COLUMNS = 2;
 
-/** How near the end the next page is asked for — half a screen of tiles. */
-const NEAR_THE_END = 0.5;
-
 export function NewInRaketaScreen() {
+  const COPY = DISCOVERY_COPY.newInRaketa;
   const [choice, setChoice] = useState<SeeAllSport>('all');
-  const [reading, setReading] = useState<string>();
+  const [reading, setReading] = useState<RecordOpened>();
   const grid = useNewInRaketaPage(choice);
-  // The last sports a read offered: a sport whose read is still out, or failed, keeps the pill —
-  // and the way back to *All* with it.
-  const [offered, setOffered] = useState<readonly Sport[]>();
-  if (grid.sports !== undefined && grid.sports !== offered) setOffered(grid.sports);
-
-  return (
-    <>
-      <View style={s.root} {...behindOverlay(reading !== undefined)}>
-        <TopSafeArea style={s.screen}>
-          <SportPillFrame<SeeAllSport>
-            sports={offered === undefined ? undefined : pillChoices(offered, choice)}
-            sport={choice}
-            onPick={setChoice}
-            words={SEE_ALL_PILL_WORDS}
-            header={(pill) => (
-              <ScreenHeader
-                onBack={() => router.back()}
-                backLabel={DISCOVERY_COPY.newInRaketa.back}
-                title={DISCOVERY_COPY.newInRaketa.title}
-                right={pill}
-              />
-            )}
-          >
-            <Grid choice={choice} grid={grid} onOpen={setReading} />
-          </SportPillFrame>
-        </TopSafeArea>
-      </View>
-
-      <JoinerRecord playerId={reading} onClose={() => setReading(undefined)} />
-    </>
-  );
-}
-
-interface GridProps {
-  readonly choice: SeeAllSport;
-  readonly grid: JoinerGrid;
-  readonly onOpen: (playerId: string) => void;
-}
-
-function Grid({ choice, grid, onOpen }: GridProps) {
   const { width: screen } = useWindowDimensions();
-  // A pull is the pull's own state, never the query's: a background read spins nothing.
-  const [pulling, setPulling] = useState(false);
   const tile = (screen - 2 * theme.size.gutter - theme.space.sm * (COLUMNS - 1)) / COLUMNS;
 
-  if (grid.joiners === undefined) {
-    return (
-      <View style={s.standing}>
-        {grid.error !== null ? (
-          <ReadFailure error={grid.error} onRetry={grid.retry} />
-        ) : grid.paused ? (
-          <Note variant="amber">{offlineMessage('resumes')}</Note>
-        ) : (
-          <ActivityIndicator
-            accessibilityLabel={DISCOVERY_COPY.newInRaketa.reading}
-            color={theme.color.muted}
-          />
-        )}
-      </View>
-    );
-  }
-
-  const pull = () => {
-    if (pulling) return;
-    setPulling(true);
-    void grid.reread().finally(() => setPulling(false));
-  };
-
   return (
-    <FlatList<Joiner>
-      testID="new-in-raketa-grid"
-      data={grid.joiners}
-      keyExtractor={(joiner) => joiner.playerId}
-      numColumns={COLUMNS}
-      columnWrapperStyle={s.columns}
-      contentContainerStyle={s.content}
-      renderItem={({ item }) => (
-        <JoinerTile joiner={item} width={tile} layout="grid" onOpen={() => onOpen(item.playerId)} />
-      )}
-      ListEmptyComponent={
-        <Text testID="nobody-new" style={s.nobody}>
-          {choice === 'all' ? DISCOVERY_COPY.newInRaketa.nobodyAtAll : nobodyNewPlays(choice)}
-        </Text>
-      }
-      ListFooterComponent={
-        grid.moreFailure === undefined ? null : (
-          <ReadFailure error={grid.moreFailure.error} onRetry={grid.moreFailure.retry} />
-        )
-      }
-      onEndReached={grid.loadMore}
-      onEndReachedThreshold={NEAR_THE_END}
-      refreshControl={
-        <RefreshControl
-          refreshing={pulling}
-          onRefresh={pull}
-          tintColor={theme.color.muted}
-          colors={[theme.color.muted]}
-          progressBackgroundColor={theme.color.paper}
+    <SeeAllScreen<Joiner>
+      title={COPY.title}
+      backLabel={COPY.back}
+      pillWords={NEW_IN_RAKETA_PILL_WORDS}
+      choice={choice}
+      onPick={setChoice}
+      list={grid}
+      columns={COLUMNS}
+      renderPerson={(joiner) => (
+        <JoinerTile
+          joiner={joiner}
+          width={tile}
+          layout="grid"
+          onOpen={() => setReading({ playerId: joiner.playerId, foundIn: FOUND_AMONG_NEW_PLAYERS })}
         />
-      }
+      )}
+      emptyLine={choice === 'all' ? COPY.nobodyAtAll : nobodyNewPlays(choice)}
+      readingLabel={COPY.reading}
+      testID="new-in-raketa-grid"
+      overlayUp={reading !== undefined}
+      overlays={<RowRecord opened={reading} onClose={() => setReading(undefined)} />}
     />
   );
 }
-
-const s = StyleSheet.create({
-  root: { flex: 1 },
-  screen: { flex: 1, backgroundColor: theme.color.paper },
-  standing: { paddingHorizontal: theme.size.gutter, paddingTop: theme.space.lg },
-  // 9 between tiles, both ways; 15 at the gutter (Appendix B).
-  columns: { gap: theme.space.sm },
-  content: {
-    paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.xxl,
-    gap: theme.space.sm,
-  },
-  nobody: {
-    ...theme.type.rlLabel,
-    color: theme.color.muted,
-    textAlign: 'center',
-    paddingVertical: theme.space.xl,
-  },
-});

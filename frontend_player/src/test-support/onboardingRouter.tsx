@@ -36,6 +36,7 @@ import SeatInviteRoute from '@/app/(app)/(tabs)/booking/[bookingId]/invite';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
 import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
+import SameLevelRoute from '@/app/(app)/(tabs)/same-level';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
@@ -166,6 +167,7 @@ export const ONBOARDING_ROUTES = {
   // Rankings, behind the trophy left of Home's bell (#775).
   '(app)/(tabs)/rankings': RankingsRoute,
   '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
+  '(app)/(tabs)/same-level': SameLevelRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -829,6 +831,20 @@ export function stubNewInRaketa(
   );
 }
 
+/** Home's Same competitive level (#802) — nobody unless the suite says, so the row is hidden. */
+export const SAME_LEVEL_PATH = '/api/v1/same-level';
+/** Same level's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const SAME_LEVEL_ALL_PATH = '/api/v1/same-level/all';
+
+export function stubSameLevel(
+  transport: Transport,
+  players: readonly Wire['SameLevelPlayerSchema'][] = [],
+) {
+  transport.on('GET', SAME_LEVEL_PATH, () =>
+    json<Wire['SameLevelResponse']>({ players: [...players] }),
+  );
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -1017,6 +1033,7 @@ export function stubGate(
   stubMyGroups(transport);
   stubHottestGroups(transport);
   stubNewInRaketa(transport);
+  stubSameLevel(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);

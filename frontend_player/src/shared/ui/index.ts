@@ -18,6 +18,7 @@ export {
   type AvailabilityGridRow,
 } from './AvailabilityGrid';
 export {
+  BALANCE_FIGURE,
   BALANCE_INK,
   BALANCE_SCALE,
   BALANCE_SOFT,
@@ -40,6 +41,7 @@ export {
 } from './Button';
 export { Card, PressableCard, type CardProps, type PressableCardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
+export { ComparisonBar, type ComparisonBarProps, type ComparisonBarVariant } from './ComparisonBar';
 export { CloseControl, type CloseControlProps } from './CloseControl';
 export { CornerBadge, type CornerBadgeProps } from './CornerBadge';
 export { CountBadge, type CountBadgeProps, type CountBadgeTone } from './CountBadge';

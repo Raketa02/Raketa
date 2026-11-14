@@ -1,6 +1,17 @@
 import { joinedAgo } from '../domain/joiner';
 
-import { joinedLine, nobodyNewPlays, sportLevelLine, tileLabel } from './discoveryCopy';
+import {
+  comparisonTitle,
+  evenTag,
+  gapLine,
+  joinedLine,
+  levelsLine,
+  nobodyNewPlays,
+  pairingLabel,
+  sportLevelLine,
+  sportsCount,
+  tileLabel,
+} from './discoveryCopy';
 
 describe('the Joined ladder’s words (§31.7)', () => {
   it.each<[number, string]>([
@@ -44,4 +55,34 @@ describe('a tile’s words', () => {
 
 it('says a sport that leaves nobody inside the sentence', () => {
   expect(nobodyNewPlays('squash')).toBe('Nobody new plays squash yet');
+});
+
+describe('Same competitive level’s words (§31.5, §31.6)', () => {
+  const PADEL = {
+    sport: 'padel',
+    yourLevel: 2.71,
+    theirLevel: 2.69,
+    percentEven: 91,
+    levelGap: -0.02,
+    yourBand: 'Established',
+  } as const;
+
+  it('says the gap below, above, or the same level', () => {
+    expect(gapLine({ kind: 'below', gap: 0.02 })).toBe('0,02 below you');
+    expect(gapLine({ kind: 'above', gap: 0.09 })).toBe('0,09 above you');
+    expect(gapLine({ kind: 'same' })).toBe('Same level');
+  });
+
+  it('counts the sports, titles the sheet and words a block', () => {
+    expect(sportsCount(2)).toBe('2 sports');
+    expect(comparisonTitle('zofia.b')).toBe('You vs zofia.b');
+    expect(levelsLine(PADEL, 'zofia.b')).toBe('You 2,71 · zofia.b 2,69');
+    expect(evenTag(91)).toBe('91% even');
+  });
+
+  it('speaks the pairing in the order drawn', () => {
+    expect(pairingLabel(PADEL, 'zofia.b')).toBe(
+      '91% even in padel, You 2,71, zofia.b 2,69, 0,02 below you',
+    );
+  });
 });

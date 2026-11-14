@@ -26,9 +26,11 @@ export type FriendRelation = 'NONE' | 'SENT' | 'ASKED_YOU' | 'FRIEND';
  * opening the link makes it. `RANKING` is a record opened from the Rankings page (#773, #779), sent
  * with that page's sport (`recordAskedWhere`). `NEW_PLAYERS` is Home's New in Raketa row, or a
  * record opened from it (#801; the Home rows mechanics §12): their card reads *Found you among new
- * players*, and the request names neither a group nor a sport.
+ * players*, and the request names neither a group nor a sport. `SAME_LEVEL` is Home's Same
+ * competitive level row, or a record opened from it (#802), sent with the card's sport: their card
+ * reads *Your level in padel · 91% even*.
  */
-export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING' | 'NEW_PLAYERS';
+export type AskedFrom = 'MEMBERS' | 'RECORD' | 'RESULT' | 'RANKING' | 'NEW_PLAYERS' | 'SAME_LEVEL';
 
 /**
  * **Which way an open request points** (#754) — the Friends page's two request tabs, each its own
