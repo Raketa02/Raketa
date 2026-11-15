@@ -163,14 +163,15 @@ describe('one cycle, drawn on its own', () => {
     drawSignIn();
 
     // The swipe follows the pick-up at once, slow at first, so the card is read at the moment it is
-    // up — within a point and a degree of where the pick-up puts it.
+    // up — within a point and a degree of where the pick-up puts it, and the stamp within the last
+    // frame of its coming up: frames are a screen's 16 ms apart (`test-support/animationFrames`).
     clockTo(PICKED_AT);
 
     const front = cardOf('front');
     expect(Math.abs(front.x - theme.size.stage.swipe.across)).toBeLessThan(1);
     expect(Math.abs(front.turn - theme.size.stage.swipe.turn)).toBeLessThan(1);
     expect(front.opacity).toBe(1);
-    expect(stampShows()).toBe(1);
+    expect(stampShows()).toBeCloseTo(1, 3);
     // The stamp is the deck's words, uppercased by its style, and carries no price.
     const stamp = within(screen.getByTestId('stage-stamp', HIDDEN_TOO));
     expect(stamp.getByText('I’m in', HIDDEN_TOO)).toBeTruthy();
