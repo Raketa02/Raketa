@@ -400,7 +400,15 @@ ranked in squash yet_ — and a frame that owned its rail would grow a slot per 
 GAME, FRIEND REQUESTS, ASKED FOR A LEVEL and _Your games_ moved onto it with nothing on screen
 changing; _TO CONFIRM_ stays as it is, a list in one card and not a rail. **The rail is never
 remounted** — one `ScrollView` at one place in the tree whatever its count, width or heading — so it
-keeps its scroll position across a re-render, as Part 8 asks. **The link is the row's words and
+keeps its scroll position across a re-render, as Part 8 asks. **Its first frame draws only the
+cards that can be seen** (2026-11-15): `cardsDrawnFirst` — every card the screen can hold and the
+one past its edge — with a same-width stand-in for each of the rest, and a second pass right after
+draws them. Home's six rails of up to ten cards, a generated poster or four per card, were most of
+the seconds a device spent drawing Home; the content is its full width from the first frame, so the
+step, the snap, the dots and #804's on-screen sums are untouched, and every row test that counts its
+cards still finds them all. **The poster dropped its group** in the same change: each mark carries
+its own ink and the two arms are one path, nine native views where there were eleven, drawn the
+same (`CourtPoster`; ADR-0134's composition untouched). **The link is the row's words and
 name**, nothing the frame's own: the words drawn with a hidden chevron, the name naming what it
 opens, a `link` role, ink `rlValue` like sign-in's link, its 16pt line overhanging the heading's
 12 so a row with a link stands where one without does, reached by `hit.rowLink` — 36 tall, under 44

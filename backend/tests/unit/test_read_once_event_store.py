@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Iterable, Mapping
+from typing import Collection, Iterable, Mapping
 from uuid import UUID, uuid4
 
 import pytest
@@ -55,6 +55,7 @@ class CountingStore:
         self.streams: dict[tuple[str, UUID], list[StoredDomainEvent]] = {}
         self.loads: list[tuple[str, UUID]] = []
         self.searches: list[tuple[str, tuple[tuple[str, str], ...]]] = []
+        self.presences: list[tuple[str, frozenset[UUID]]] = []
         self.hold: asyncio.Event | None = None
         self.fail_next = False
 
@@ -84,6 +85,16 @@ class CountingStore:
             self.fail_next = False
             raise RuntimeError("the store is down")
         return list(self.streams.get((aggregate_type, aggregate_id), []))
+
+    async def streams_present(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        self.presences.append((aggregate_type, frozenset(aggregate_ids)))
+        return frozenset(
+            aggregate_id
+            for aggregate_id in aggregate_ids
+            if self.streams.get((aggregate_type, aggregate_id))
+        )
 
     async def find_aggregate_ids_by_first_event(
         self, *, aggregate_type: str, payload_equals: Mapping[str, str]
@@ -241,3 +252,29 @@ async def test_a_search_by_first_event_is_handed_straight_to_the_store(
 
     assert found == [ALICE]
     assert len(inner.searches) == 2
+
+
+async def test_which_streams_exist_is_asked_of_the_store_and_sees_an_append(
+    inner: CountingStore,
+) -> None:
+    """Only streams are remembered. *Which of these exist* is a batch question,
+    asked of the store every time — so a stream remembered as absent and then
+    appended to through the wrapper is present in the next answer."""
+
+    once = ReadOnceEventStore(inner)
+    assert await once.load_stream(aggregate_type=RATING, aggregate_id=BOB) == []
+    await once.append(
+        aggregate_type=RATING,
+        aggregate_id=BOB,
+        expected_version=0,
+        events=[Happened()],
+    )
+
+    first = await once.streams_present(
+        aggregate_type=RATING, aggregate_ids=[ALICE, BOB, uuid4()]
+    )
+    second = await once.streams_present(aggregate_type=PROFILE, aggregate_ids=[BOB])
+
+    assert first == {ALICE, BOB}
+    assert second == frozenset()
+    assert [kind for kind, _ in inner.presences] == [RATING, PROFILE]

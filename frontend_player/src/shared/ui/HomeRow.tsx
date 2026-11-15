@@ -41,6 +41,17 @@
  * `ScrollView` the same one. It stands at one place in the tree whatever the count, the geometry's
  * width or the heading's line hold, so a row whose cards come and go stays where the finger left it.
  *
+ * ## What is drawn first
+ *
+ * **The cards that can be seen, and the rest a moment later.** Home stands six rails, up to ten cards
+ * each, and a card is a face or four — a generated poster each, a dozen native views apiece — so
+ * drawing every card at once is most of what Home costs: a device spent seconds creating views a
+ * finger had not reached. So the rail's first frame draws only the cards that can be on screen
+ * (`cardsDrawnFirst`, one past the screen's edge), and a stand-in of the same width for each of the
+ * rest; right after it, a second pass draws the rest, once the first is on its way to the screen.
+ * The content is its full width from the first frame, so the step, the snap, the dots and what is on
+ * screen are measured exactly as before.
+ *
  * ## What is on screen
  *
  * **A rail handed `onScreen` is told which of its cards are at least half on screen** (#804;
@@ -72,7 +83,7 @@
  * **It never imports a feature.** Every word, every press and every card is handed in.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -198,6 +209,20 @@ export function HomeRowRail<Card>({
   const watching = onScreen !== undefined;
   const seen = useCardsOnScreen({ cards, lead: STRIP_LEAD, cardWidth, step, onScreen });
 
+  /**
+   * Whether the cards past the screen's edge are drawn yet — once the rail has had cards for a frame.
+   * Keyed on *having* cards rather than on mounting, because a row's rail can stand empty while its
+   * read is in flight, and the cards arriving are the moment that costs.
+   */
+  const [allDrawn, setAllDrawn] = useState(false);
+  const hasCards = cards.length > 0;
+  useEffect(() => {
+    // A plain update from the effect, never `startTransition`: React Native 0.76's renderer threw
+    // on a transition started here (`Cannot read property 'add' of undefined`) and took Home down.
+    if (hasCards && !allDrawn) setAllDrawn(true);
+  }, [hasCards, allDrawn]);
+  const drawn = allDrawn ? cards.length : cardsDrawnFirst({ count: cards.length, screen, step });
+
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (paging) setCurrent(Math.round(event.nativeEvent.contentOffset.x / step));
     seen.scrolled(event);
@@ -225,12 +250,38 @@ export function HomeRowRail<Card>({
         style={s.strip}
         contentContainerStyle={s.stripContent}
       >
-        {cards.map((card) => children(card, cardWidth))}
+        {cards.map((card, at) =>
+          at < drawn ? (
+            children(card, cardWidth)
+          ) : (
+            <View key={`${STAND_IN_KEY}${at}`} style={{ width: cardWidth }} />
+          ),
+        )}
       </ScrollView>
       {paging ? <PagerDots count={cards.length} current={current} /> : null}
     </>
   );
 }
+
+/**
+ * **How many of a rail's cards its first frame draws** — every card that can be on screen, and the
+ * one past the screen's edge, so the first a finger drags in is already there. A rail of fewer draws
+ * them all.
+ */
+export function cardsDrawnFirst({
+  count,
+  screen,
+  step,
+}: {
+  readonly count: number;
+  readonly screen: number;
+  readonly step: number;
+}): number {
+  return Math.min(count, Math.ceil(screen / step) + 1);
+}
+
+/** A stand-in's key, which no row's own key can be: a row keys its cards by their ids. */
+const STAND_IN_KEY = 'drawn-in-a-moment-';
 
 /** The link's chevron — `SportPill`'s fold mark, pointing to where it goes. */
 const CHEVRON = '›';

@@ -79,6 +79,13 @@ class _Ratings:
             if one in LEVELS
         }
 
+    async def rated_in(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[Sport, frozenset[UUID]]:
+        # Every sport, as the two reads above answer whatever sport is asked.
+        rated = frozenset(one for one in player_ids if one in LEVELS)
+        return {sport: rated for sport in Sport}
+
 
 async def _the_pairing() -> dict:
     line_up = LineUp.of(

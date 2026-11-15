@@ -152,6 +152,84 @@ async def test_events_appended_in_one_call_get_distinct_positions(session_factor
 
 
 @pytest.mark.asyncio
+async def test_which_addressed_streams_hold_an_event_is_answered_about_them_alone(
+    session_factory,
+):
+    """**Addressed, never searched**: the streams named, each answered once
+    however many events it holds, a stream of another aggregate type under the
+    same id never counted, and a stream nobody asked about never answered."""
+
+    held = UUID(int=71)
+    twice = UUID(int=72)
+    other_type = UUID(int=73)
+    not_asked = UUID(int=74)
+    never_written = UUID(int=75)
+    async with session_factory() as session:
+        store = SqlAlchemyEventStore(session, build_event_runtime().codec)
+        for aggregate_type, aggregate_id, events in (
+            ("user", held, [_event(held)]),
+            ("user", twice, [_event(twice), _event(twice)]),
+            ("someone_else", other_type, [_event(other_type)]),
+            ("user", not_asked, [_event(not_asked)]),
+        ):
+            await store.append(
+                aggregate_type=aggregate_type,
+                aggregate_id=aggregate_id,
+                expected_version=0,
+                events=events,
+            )
+        await session.commit()
+
+        present = await store.streams_present(
+            aggregate_type="user",
+            aggregate_ids=[held, twice, other_type, never_written],
+        )
+
+    assert present == frozenset({held, twice})
+
+
+@pytest.mark.asyncio
+async def test_a_stream_appended_in_this_transaction_is_present_before_commit(
+    session_factory,
+):
+    """The same session as the write: an append a moment ago is visible to the
+    question that follows it, as ``load_stream`` would show it."""
+
+    user_id = UUID(int=76)
+    async with session_factory() as session:
+        store = SqlAlchemyEventStore(session, build_event_runtime().codec)
+        await store.append(
+            aggregate_type="user",
+            aggregate_id=user_id,
+            expected_version=0,
+            events=[_event(user_id)],
+        )
+
+        present = await store.streams_present(
+            aggregate_type="user", aggregate_ids=[user_id]
+        )
+
+    assert present == frozenset({user_id})
+
+
+@pytest.mark.asyncio
+async def test_asking_which_of_no_streams_exist_answers_nothing_and_asks_nothing(
+    session_factory, monkeypatch
+):
+    async with session_factory() as session:
+        store = SqlAlchemyEventStore(session, build_event_runtime().codec)
+
+        async def no_statement(*args, **kwargs):
+            raise AssertionError("an empty question is not sent to the database")
+
+        monkeypatch.setattr(session, "execute", no_statement)
+
+        present = await store.streams_present(aggregate_type="user", aggregate_ids=[])
+
+    assert present == frozenset()
+
+
+@pytest.mark.asyncio
 async def test_cross_stream_finder_reads_append_order_not_domain_time(session_factory):
     """The finder is ordered by when the row was written, not what it claims.
 

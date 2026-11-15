@@ -13,9 +13,23 @@ it: built that way, a player who leaves a screen and comes back lands on it, and
 where I came from_ fails with **no symptom** — nothing throws and nothing looks wrong
 ([#227](https://github.com/Raketa02/Raketa/issues/227)). So switching tabs **replaces**, and
 entering Play lays down `[Home, Play]` — two screens, which is the whole of _back from Play
-leaves Play_. Both go through **one function**, `resetShellStack`: a flanking tab lays down one
-screen, ⚡Play lays down two, and _It's a game!_'s _Open game_ lays down `[Home]` before pushing
-the booked game's details. **A press that would land where the player already is does nothing at
+leaves Play_. Both go through **one function**, `resetShellStack`, reading **one table**,
+`TAB_STACK`: Home lays down nothing over itself, You and ⚡Play each lay their root over Home, and
+_It's a game!_'s _Open game_ lands on `[Home]` before pushing the booked game's details. **Home is
+the bottom of every stack and is kept, never laid down again** (2026-11-15): a press pops back to
+the Home already there (`dismissTo`) and pushes only the tab's own screens. It used to be
+replaced by every press of every tab — ⚡Play's included, since its stack starts with Home — and
+Home is the heaviest screen in the app: a Galaxy A55 measured about four seconds of a frozen bar
+per Home or Play press, all of it Home being rebuilt. Two things follow. **You is `[Home, You]`**,
+as Play is `[Home, Play]`, so _back_ from You's root is Home rather than out of the app — Android's
+own rule for a top-level screen that is not the start. And **a press that lands on Home shows its
+top** (`homeStart`, Home's `ShellScreen` scrolls its page back, unanimated), because a kept page
+keeps its scroll and _a tab press goes to that tab's start_; _back_ to Home from a screen pushed
+over it is a return, not a landing, and keeps the scroll. And **`HomeScreen` is memoised**: the
+route that draws it is drawn again on every move the navigator makes, so a kept, unmemoised Home
+re-rendered every row, card and poster on every press — most of a second on the same device. You
+and Play are still laid down fresh on every press, so _the shell keeps no per-tab history_ is
+exactly as true as it was. **A press that would land where the player already is does nothing at
 all** — `openTab` takes the pathname the bar's own lit column is drawn from and declines that
 one case: every press ran the reset until 2026-09-10, so tapping Play on Play's root rebuilt the
 screen underneath the player — a reload with no cause, on the gesture people press twice when

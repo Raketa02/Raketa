@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -84,6 +84,27 @@ class SqlAlchemyEventStore:
             .order_by(EventStoreORM.version)
         )
         return [_to_stored(row, self._codec) for row in result.scalars().all()]
+
+    async def streams_present(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        # Deduplicated in the caller's order, so a caller's declared walk is the
+        # order the statement binds its ids in.
+        wanted = list(dict.fromkeys(aggregate_ids))
+        if not wanted:
+            return frozenset()
+        # The leading two columns of `ix_event_store_stream`, so each id is an
+        # index probe — the read `load_stream` makes, once for the batch, with
+        # no row decoded.
+        result = await self._session.execute(
+            select(EventStoreORM.aggregate_id)
+            .where(
+                EventStoreORM.aggregate_type == aggregate_type,
+                EventStoreORM.aggregate_id.in_(wanted),
+            )
+            .distinct()
+        )
+        return frozenset(result.scalars().all())
 
     async def find_aggregate_ids_by_first_event(
         self, *, aggregate_type: str, payload_equals: Mapping[str, str]

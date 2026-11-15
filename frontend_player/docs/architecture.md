@@ -152,9 +152,11 @@ Route groups exist so the **authorization boundary is visible in the file tree**
 
 Every tab's depth is thrown away when a player leaves it. `<Tabs>` keeps a history per tab and
 restores it on return — so built out of the box, a player who leaves a group's page and comes back
-lands on it, and the rule fails with **no symptom at all**. Switching tabs **replaces**; entering
-Play lays down `[Home, Play's root]`; and both go through one function, `resetShellStack`
-([#227](https://github.com/Raketa02/Raketa/issues/227)).
+lands on it, and the rule fails with **no symptom at all**. Switching tabs **replaces** everything
+above Home; You and Play lay down `[Home, their root]`; Home itself is the bottom of every stack and
+is **kept**, never rebuilt by a press (it is the costliest screen to draw); and all of it goes
+through one function, `resetShellStack`, over one table, `TAB_STACK`
+([#227](https://github.com/Raketa02/Raketa/issues/227); `docs/features/shell.md`).
 
 A route file may own: the route declaration, its params, a layout, a redirect, navigation
 options, route-scoped provider composition, and a very small adapter. That is the entire

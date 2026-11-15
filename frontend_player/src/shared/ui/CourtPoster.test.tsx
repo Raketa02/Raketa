@@ -13,7 +13,7 @@
  */
 
 import { render, screen } from '@testing-library/react-native';
-import { Circle, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { Circle, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { CourtPoster, type CourtPosterPose } from './CourtPoster';
 import { POSTER_HUES, theme, type PosterHue } from './theme';
@@ -31,7 +31,6 @@ const paints = () =>
   new Set(
     [
       ...screen.UNSAFE_queryAllByType(Rect),
-      ...screen.UNSAFE_queryAllByType(G),
       ...screen.UNSAFE_queryAllByType(Path),
       ...screen.UNSAFE_queryAllByType(Circle),
       ...screen.UNSAFE_queryAllByType(Ellipse),

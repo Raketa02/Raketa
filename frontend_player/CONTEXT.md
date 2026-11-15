@@ -173,8 +173,9 @@ review comment and a test description all use the same word.
 - **The shell** — the tabs a signed-in player is inside, and the **one stack** under them:
   `Home · ⚡Play · You`, three fixed columns drawn by `TabBar` and mounted once by `TabShell`.
   Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
-  whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the
-  tab navigator" — there isn't one.
+  whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. Home is the
+  bottom of the stack and is kept; You and Play are laid over it fresh by every press. _Avoid_:
+  "the tab navigator" — there isn't one.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —
   `features/proposals`' `HomeRail` over `GET /home`, with the payments to confirm above it. It
   was **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is

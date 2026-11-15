@@ -26,7 +26,7 @@ load-bearing, so three rules are deliberate rather than convenient:
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
@@ -149,6 +149,17 @@ class InMemoryEventStore:
     ) -> list[StoredDomainEvent]:
         stream = self._streams.get((aggregate_type, aggregate_id), [])
         return [self._to_stored(row) for row in stream]
+
+    async def streams_present(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        # Keyed on type *and* id, as the real query's WHERE is: a stream of
+        # another aggregate type under the same id is not this one.
+        return frozenset(
+            aggregate_id
+            for aggregate_id in aggregate_ids
+            if self._streams.get((aggregate_type, aggregate_id))
+        )
 
     async def find_aggregate_ids_by_first_event(
         self, *, aggregate_type: str, payload_equals: Mapping[str, str]
