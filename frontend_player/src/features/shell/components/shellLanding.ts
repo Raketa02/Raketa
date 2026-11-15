@@ -26,7 +26,7 @@ import { useCallback } from 'react';
 
 import type { TabBarKey } from '@/shared/ui';
 
-import { PLAY_STACK, SHELL_TAB_ROOT } from '../domain/shellTabs';
+import { TAB_STACK } from '../domain/shellTabs';
 
 import { PUSHED_SCREENS } from './pushedScreens';
 
@@ -37,12 +37,11 @@ const TABS_GROUP = '(tabs)';
 /** Every screen the shell's stack holds, by its state name: the pushed ones and the two unpushed roots. */
 const SHELL_SCREENS: readonly string[] = ['index', 'you/index', ...PUSHED_SCREENS];
 
-/** What a tab press lays down beneath anything pushed over the tab, by pathname. */
-const TAB_START: Readonly<Record<TabBarKey, readonly string[]>> = {
-  home: [SHELL_TAB_ROOT.home],
-  play: PLAY_STACK,
-  you: [SHELL_TAB_ROOT.you],
-};
+/**
+ * What a tab press lays down beneath anything pushed over the tab, by pathname — the press's own
+ * table, so a landing leaves exactly the stack a press would, Home at its bottom.
+ */
+const TAB_START: Readonly<Record<TabBarKey, readonly string[]>> = TAB_STACK;
 
 /** A screen inside the shell, as a route: its pathname pattern and its params, an absent one left out. */
 export interface ShellPlace {

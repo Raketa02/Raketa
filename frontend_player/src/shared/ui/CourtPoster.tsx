@@ -41,7 +41,7 @@
 
 import { useId } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { theme, type PosterHue } from './theme';
 
@@ -106,6 +106,14 @@ const SPACE = 100;
  */
 const FIGURE = { headRadius: 7.5, body: 6, arm: 5.4, racket: 3.6 } as const;
 
+/** How the figure's lines are drawn: `ink`, unfilled, round at the ends and the joins. */
+const INK_LINE = {
+  fill: 'none',
+  stroke: theme.color.ink,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const;
+
 /** One mark, and the one hue a poster can never be — which is why it can be the mark. */
 const BALL = { x: 88, y: 68, r: 3.4 } as const;
 
@@ -126,8 +134,9 @@ interface Pose {
 /**
  * The three poses, drawn to 6.9's clause rather than copied from the specification.
  *
- * Each is a head, a torso-and-legs path, two arms and a racket — five marks in one value,
- * with no facial feature to omit because there is no face to draw one on. The racket is a
+ * Each is a head, a torso-and-legs path, two arms and a racket — five marks in one value, the
+ * two arms drawn as one path as the legs are one with the torso, and no facial feature to omit
+ * because there is no face to draw one on. The racket is a
  * stroked ellipse rather than a filled one: a filled oval at the end of an arm reads as a
  * paddle, and the strings are the thing that says racket at any size.
  */
@@ -187,29 +196,28 @@ export function CourtPoster({ hue, pose, accessibilityLabel, style }: CourtPoste
         </Defs>
         <Rect x={0} y={0} width={SPACE} height={SPACE} fill={`url(#${ground})`} />
 
-        <G fill="none" stroke={theme.color.ink} strokeLinecap="round" strokeLinejoin="round">
-          <Circle
-            cx={figure.head.x}
-            cy={figure.head.y}
-            r={FIGURE.headRadius}
-            fill={theme.color.ink}
-            stroke="none"
-          />
-          <Path d={figure.body} strokeWidth={FIGURE.body} />
-          {figure.arms.map((arm) => (
-            <Path key={arm} d={arm} strokeWidth={FIGURE.arm} />
-          ))}
-          <Ellipse
-            cx={figure.racket.x}
-            cy={figure.racket.y}
-            rx={figure.racket.rx}
-            ry={figure.racket.ry}
-            rotation={figure.racket.rotation}
-            originX={figure.racket.x}
-            originY={figure.racket.y}
-            strokeWidth={FIGURE.racket}
-          />
-        </G>
+        {/* The figure, in one value. **No group around it**: every mark carries its own ink, and
+            the arms are one path as the torso is one with the legs — every native view a poster
+            holds is one more for every face on Home, and the drawing is the same either way. */}
+        <Circle
+          cx={figure.head.x}
+          cy={figure.head.y}
+          r={FIGURE.headRadius}
+          fill={theme.color.ink}
+        />
+        <Path d={figure.body} strokeWidth={FIGURE.body} {...INK_LINE} />
+        <Path d={figure.arms.join(' ')} strokeWidth={FIGURE.arm} {...INK_LINE} />
+        <Ellipse
+          cx={figure.racket.x}
+          cy={figure.racket.y}
+          rx={figure.racket.rx}
+          ry={figure.racket.ry}
+          rotation={figure.racket.rotation}
+          originX={figure.racket.x}
+          originY={figure.racket.y}
+          strokeWidth={FIGURE.racket}
+          {...INK_LINE}
+        />
 
         <Circle cx={BALL.x} cy={BALL.y} r={BALL.r} fill={theme.color.volt} />
       </Svg>

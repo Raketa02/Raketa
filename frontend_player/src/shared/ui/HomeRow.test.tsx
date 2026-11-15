@@ -21,7 +21,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { HomeRow, HomeRowRail, type HomeRowProps, type HomeRowRailProps } from './HomeRow';
+import {
+  HomeRow,
+  HomeRowRail,
+  cardsDrawnFirst,
+  type HomeRowProps,
+  type HomeRowRailProps,
+} from './HomeRow';
 import { PageOnScreen, followable, type Span } from './onScreen';
 import { theme } from './theme';
 
@@ -379,5 +385,47 @@ describe('a rail told what is on screen', () => {
     scrollRail(2 * (content() + theme.space.sm));
     expect(current()).toBe(2);
     expect(told.at(-1)).toEqual([2]);
+  });
+});
+
+/**
+ * **The first frame draws what can be seen, and the rest a moment later** — Home stands six rails of
+ * up to ten cards, and drawing every card at once was most of what Home cost on a device.
+ */
+describe('what a rail draws first', () => {
+  const screenWidth = () => Dimensions.get('window').width;
+  const peekingStep = () => content() * theme.size.railCardRatio + theme.space.sm;
+
+  it('is every card that can be on screen and the one past its edge', () => {
+    // A peeking card is under three quarters of the content: one whole, the next peeking, one more.
+    expect(cardsDrawnFirst({ count: 10, screen: 390, step: 0.74 * 360 + 9 })).toBe(3);
+    // Top 10's narrow cards: four can stand on the screen at once.
+    expect(cardsDrawnFirst({ count: 10, screen: 390, step: 0.29 * 360 + 9 })).toBe(5);
+  });
+
+  it('is all of them on a rail of fewer', () => {
+    expect(cardsDrawnFirst({ count: 2, screen: 390, step: 0.74 * 360 + 9 })).toBe(2);
+    expect(cardsDrawnFirst({ count: 0, screen: 390, step: 0.74 * 360 + 9 })).toBe(0);
+  });
+
+  it('draws those first, then every card — at the width it hands, in its place', () => {
+    const drawing: number[] = [];
+    const first = cardsDrawnFirst({ count: 10, screen: screenWidth(), step: peekingStep() });
+    render(
+      <HomeRowRail cards={Array.from({ length: 10 }, (_, at) => at)}>
+        {(at, width) => {
+          drawing.push(at);
+          return <View key={at} testID={`card-${at}`} style={{ width }} />;
+        }}
+      </HomeRowRail>,
+    );
+
+    expect(first).toBeLessThan(10);
+    // The first frame stops at the screen's edge; the next starts over from the first card.
+    expect(drawing.slice(0, first)).toEqual(Array.from({ length: first }, (_, at) => at));
+    expect(drawing[first]).toBe(0);
+    for (let at = 0; at < 10; at += 1) {
+      expect(widthOf(`card-${at}`)).toBeCloseTo(content() * theme.size.railCardRatio);
+    }
   });
 });

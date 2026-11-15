@@ -9,7 +9,7 @@
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
@@ -37,6 +37,7 @@ import {
 import { RankingTrophy, TopTenRow, rereadTopTen } from '@/features/rankings/types';
 import { theme } from '@/shared/ui';
 
+import { whenHomeStartsOver } from './homeStart';
 import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
 
@@ -98,14 +99,20 @@ import { HOME_COPY } from './shellCopy';
  * **TOP 10 is the last** (`rankings`' row, [#805](https://github.com/Raketa02/Raketa/issues/805)), after
  * Same vibe: General's first ten in one sport, with its own sport pill and *Rankings ›*. A pick there
  * re-reads that row alone; the pull re-reads it with the rest (`rereadTopTen`).
+ *
+ * **Memoised, because it is kept** (`TAB_STACK`): Home stays mounted under every tab, and the route
+ * that draws it is drawn again on every move the navigator makes — so without `memo` every press of
+ * every tab re-rendered every row, card and poster on Home, nothing having changed, and a device
+ * spent most of a second on it. It takes no props; what it reads, it reads for itself.
  */
-export function HomeScreen() {
+export const HomeScreen = memo(function HomeScreen() {
   const client = useQueryClient();
   const inNoGroup = useInNoGroup();
   return (
     <ShellScreen
       title={HOME_COPY.title}
       watchesOnScreen
+      startsOverWhen={whenHomeStartsOver}
       right={
         <View style={s.headerRight}>
           <RankingTrophy />
@@ -137,7 +144,7 @@ export function HomeScreen() {
       <TopTenRow />
     </ShellScreen>
   );
-}
+});
 
 /** *FRIEND REQUESTS · n* and *ASKED FOR A LEVEL · n*, and the record a face on either opens. */
 function HomeFriendRows() {

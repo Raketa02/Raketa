@@ -128,6 +128,14 @@ export interface ShellScreenProps {
    * everywhere else, where the scroller says nothing of where it is and the band stays empty.
    */
   readonly watchesOnScreen?: boolean;
+  /**
+   * **What sends the page back to its top** — forwarded, not designed. Home is laid down once and
+   * kept under every tab (`TAB_STACK`), so a press that lands on it pops back to a page that kept its
+   * scroll; the shell's landing moves say so (`homeStart`) and the page shows its start, unanimated,
+   * as a page drawn fresh would. Absent everywhere else: a screen every press lays down anew already
+   * opens at its top, and *back* to a page never asks.
+   */
+  readonly startsOverWhen?: (startOver: () => void) => () => void;
   readonly children: ReactNode;
 }
 
@@ -151,9 +159,15 @@ export function ShellScreen({
   avoidsKeyboard = false,
   keepsKeyboardOnTap = false,
   watchesOnScreen = false,
+  startsOverWhen,
   children,
 }: ShellScreenProps) {
   const watched = useWatchedPage();
+  const scroller = useRef<ScrollView>(null);
+  useEffect(
+    () => startsOverWhen?.(() => scroller.current?.scrollTo({ y: 0, animated: false })),
+    [startsOverWhen],
+  );
   /**
    * Whether a pull is in flight — the pull's own state, never the queries': a background refetch
    * must not spin the control, and a pull must spin it until everything it asked for has landed,
@@ -181,6 +195,7 @@ export function ShellScreen({
 
   const page = (
     <ScrollView
+      ref={scroller}
       {...(watchesOnScreen ? watched.scroller : {})}
       contentContainerStyle={[s.content, fill ? s.fill : undefined]}
       keyboardShouldPersistTaps={

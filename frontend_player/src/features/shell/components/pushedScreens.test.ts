@@ -16,10 +16,11 @@ import { PUSHED_SCREENS } from './pushedScreens';
 const TAB_TREE = join(__dirname, '..', '..', '..', 'app', '(app)', '(tabs)');
 
 /**
- * The two roots a tab press **replaces** onto, which take the shell's `none`. ⚡Play's root is not
- * one of them: it is pushed over Home (`PLAY_STACK`), so it takes the push.
+ * The two roots a tab press **lands** on, which take the shell's `none`: Home, kept at the bottom,
+ * and You's root, laid over it by the press (`TAB_STACK`). ⚡Play's root is not one of them: it takes
+ * the push, so back from it reads as leaving Play.
  */
-const REPLACED_ROOTS = ['index', 'you/index'];
+const TAB_ROOTS = ['index', 'you/index'];
 
 /** Every route in the tab tree as `Stack.Screen` names it: the path, no extension, no layout. */
 function routesUnder(dir: string): string[] {
@@ -36,15 +37,15 @@ const pushed: readonly string[] = PUSHED_SCREENS;
 
 it('reads the tab tree, roots and pushed screens both', () => {
   // A path that resolved to nothing would pass both checks below on an empty list.
-  expect(routes).toEqual(expect.arrayContaining([...REPLACED_ROOTS, 'play/group/[groupId]/info']));
+  expect(routes).toEqual(expect.arrayContaining([...TAB_ROOTS, 'play/group/[groupId]/info']));
 });
 
-it('gives every route but the two replaced roots the push transition', () => {
-  const missing = routes.filter((r) => !REPLACED_ROOTS.includes(r) && !pushed.includes(r));
+it('gives every route but the two tab roots the push transition', () => {
+  const missing = routes.filter((r) => !TAB_ROOTS.includes(r) && !pushed.includes(r));
   expect(missing).toEqual([]);
 });
 
 it('names no screen the tree does not have, and neither root', () => {
-  const stray = pushed.filter((name) => !routes.includes(name) || REPLACED_ROOTS.includes(name));
+  const stray = pushed.filter((name) => !routes.includes(name) || TAB_ROOTS.includes(name));
   expect(stray).toEqual([]);
 });

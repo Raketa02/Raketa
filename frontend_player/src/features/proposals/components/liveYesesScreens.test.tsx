@@ -201,9 +201,10 @@ describe('the section offline', () => {
     try {
       fireEvent.press(row);
 
-      // TO CONFIRM above it and RECEIPTS under it say the same of their own reads (#555): one note
-      // per section.
-      expect(await screen.findAllByText(offlineMessage('resumes'))).toHaveLength(3);
+      // RECEIPTS under it says the same of its own read (#555): one note per section whose first
+      // read is held. TO CONFIRM above it is not one: Home, kept under You, read it at launch —
+      // nothing to confirm — so it draws nothing rather than claiming to wait.
+      expect(await screen.findAllByText(offlineMessage('resumes'))).toHaveLength(2);
       expect(screen.getByText(LIVE_YESES_TITLE)).toBeTruthy();
       expect(transport.requestsTo('GET', LIVE_YESES_PATH)).toHaveLength(0);
     } finally {

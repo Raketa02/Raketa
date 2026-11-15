@@ -14,6 +14,7 @@
 
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import type { ScrollView } from 'react-native';
 
 import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
@@ -498,13 +499,17 @@ describe('⚡Play', () => {
 });
 
 describe('the shell keeps no per-tab history', () => {
-  it('leaves nothing behind a flanking tab', async () => {
+  it('lays You over Home, so back from You is Home and nothing more', async () => {
     await launchIntoTheApp();
 
     pressTab('You');
-
     await waitFor(() => expect(screen).toHavePathname('/you'));
-    // Not `[Home, You]`: switching tabs replaces, so there is no cross-tab back to walk.
+
+    // `[Home, You]`, as Play is `[Home, Play]`: back from a tab that is not the start goes to the
+    // start, and the start is the last thing there is.
+    act(() => router.back());
+    expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
+    expect(screen).toHavePathname('/');
     expect(router.canGoBack()).toBe(false);
   });
 
@@ -516,7 +521,10 @@ describe('the shell keeps no per-tab history', () => {
 
     pressTab('You');
     await waitFor(() => expect(screen).toHavePathname('/you'));
-    // Play's two screens went with it. This is the assertion `<Tabs>` fails silently.
+    // Play's screen went with it: only Home is underneath You. This is the assertion `<Tabs>` fails
+    // silently — it would walk back into Play.
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/'));
     expect(router.canGoBack()).toBe(false);
 
     pressTab('Play');
@@ -524,6 +532,66 @@ describe('the shell keeps no per-tab history', () => {
     await waitFor(() => expect(screen).toHavePathname('/play'));
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
+  });
+});
+
+/**
+ * **Home is drawn once and kept under every tab** — it is the heaviest screen in the app, and a
+ * device spent four seconds rebuilding it on every press of every tab. The same Home is what comes
+ * back, and a press that lands on it still lands at its start.
+ */
+describe('Home, kept', () => {
+  it('is the same Home after You and after Play, never one drawn again', async () => {
+    await launchIntoTheApp();
+    const home = screen.getByText(HOME_COPY.empty.line);
+
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    pressTab('Home');
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(screen.getByText(HOME_COPY.empty.line)).toBe(home);
+
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    pressTab('Home');
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(screen.getByText(HOME_COPY.empty.line)).toBe(home);
+  });
+
+  it('keeps it under ⚡Play pressed from Home, rather than laying a second one down', async () => {
+    await launchIntoTheApp();
+    const home = screen.getByText(HOME_COPY.empty.line);
+
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    act(() => router.back());
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(screen.getByText(HOME_COPY.empty.line)).toBe(home);
+  });
+
+  it('shows its top when a press lands on it, and not when the player comes back to it', async () => {
+    await launchIntoTheApp();
+    // The page's scroller, as the test instance holds it (`scrollerOf` reads only the way up).
+    const page = scrollerOf(screen.getByText(HOME_COPY.empty.line)) as unknown as {
+      readonly instance: ScrollView;
+    };
+    // The harness's `ScrollView` shares one mock `scrollTo` across instances, so it starts clean.
+    const scrollTo = jest.spyOn(page.instance, 'scrollTo');
+    scrollTo.mockClear();
+
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    // Back goes where the player was, scroll and all.
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    pressTab('Home');
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
   });
 });
 

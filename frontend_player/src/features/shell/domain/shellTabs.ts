@@ -2,9 +2,10 @@
  * Which route each of the three tabs is, and which tab a route is inside.
  *
  * **The shell keeps no per-tab history**, so this table is not "each tab's last position" —
- * it is each tab's *only* position. Home and You are single-screen roots with screens pushed over
- * them; Play is the one whose depth is thrown away every time a player leaves it
- * ([#227](https://github.com/Raketa02/Raketa/issues/227) — one stack, not three).
+ * it is each tab's *only* position. Home is the shell's root and is never laid down again once it
+ * is up; You and Play are laid down over it, fresh, on every press, and their depth is thrown away
+ * every time a player leaves them ([#227](https://github.com/Raketa02/Raketa/issues/227) — one
+ * stack, not three).
  *
  * Pure on purpose: the rule below is what draws the bar's active column on every screen in
  * the app, and it is worth being able to state a route and read back a tab without a
@@ -39,6 +40,29 @@ export type ShellRoute = (typeof SHELL_TAB_ROOT)[TabBarKey];
  * than pushed at a call site.
  */
 export const PLAY_STACK = [SHELL_TAB_ROOT.home, SHELL_TAB_ROOT.play] as const;
+
+/**
+ * The stack You lays down: **Home underneath, You on top** — Play's arrangement, for the same
+ * reason: *back* from a tab that is not Home goes to Home, the start of the app, and never out of
+ * it from a screen that is not the start.
+ */
+export const YOU_STACK = [SHELL_TAB_ROOT.home, SHELL_TAB_ROOT.you] as const;
+
+/**
+ * **What a press of each tab lays down, bottom first — and the bottom is always Home.**
+ *
+ * That is what lets a press **keep** Home rather than build it again. Home is the heaviest screen
+ * in the app — every row's cards, every face — and it was rebuilt from nothing on every press of
+ * every tab, ⚡Play included, because Play's stack starts with it: a device measured four seconds
+ * of a frozen bar for each. With Home the bottom of every stack, a press pops back to the Home that
+ * is already there and lays only the tab's own screens over it, so *pressing a tab goes to its
+ * start* is still exactly what happens, and Home is drawn once.
+ */
+export const TAB_STACK = {
+  home: [SHELL_TAB_ROOT.home],
+  play: PLAY_STACK,
+  you: YOU_STACK,
+} as const satisfies Record<TabBarKey, readonly [typeof SHELL_TAB_ROOT.home, ...ShellRoute[]]>;
 
 /**
  * The segments that are **inside** a tab without being its root.

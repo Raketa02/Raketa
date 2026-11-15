@@ -1,8 +1,8 @@
 /**
  * **The screens pushed over a tab** — every route in the tab tree but Home's and You's roots, each
- * named for the push transition `TabShell` gives it. The stack's default is `none`, for a replace;
- * a pushed screen keeps what it arrived on underneath, and leaving it should read as coming back
- * out.
+ * named for the push transition `TabShell` gives it. The stack's default is `none`, for a tab press
+ * — You's root is laid over Home by one (`TAB_STACK`) and must not read as going deeper; a pushed
+ * screen keeps what it arrived on underneath, and leaving it should read as coming back out.
  *
  * **A route missing from this list is not an error anywhere but here.** It still opens, with no
  * transition at all: the page it was opened from is swapped for it in one frame, and a screen whose
