@@ -21,6 +21,15 @@ import { releaseCardFocus } from './payments';
 export const KEYBOARD_AVOIDANCE = Platform.OS === 'ios' ? ('padding' as const) : undefined;
 
 /**
+ * Whether the window shrinks for the keyboard and grows back when it goes — Android's way. On iOS
+ * the keyboard is drawn over the window and a scroll takes it as an inset. Read at the call, not at
+ * import, so a suite can ask it as either phone.
+ */
+export function windowResizesForKeyboard(): boolean {
+  return Platform.OS === 'android';
+}
+
+/**
  * **Hide the keyboard without sending a native blur to Stripe's card field.** Every sheet closes
  * through this, and a sheet holding the card field is where the crash came from: `Keyboard.dismiss()`
  * blurs whatever React Native records as focused, and on iOS, under the New Architecture, a blur

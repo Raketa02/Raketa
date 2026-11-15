@@ -32,28 +32,75 @@
  * the form and a drag puts the keyboard away.
  */
 
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollViewProps,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { windowResizesForKeyboard } from '@/shared/lib/platform';
 import { theme } from '@/shared/ui';
 
 import { AUTH_EYEBROW } from './authPresentation';
 
 /**
- * **The scroll a form lives in, on both auth frames** — #529's three props, here once so the stage
- * (`AuthStage`) and this frame cannot drift apart on the keyboard. iOS: the keyboard is an inset on
- * the scroll, set natively, so the form never moves when the keyboard's height does; Android's
- * window resizes for it and ignores the inset. A tap on a control lands while the keyboard is up,
- * and a drag puts it away — the form must stay reachable when large text makes it taller than the
- * screen.
+ * #529's three props, here once so the stage (`AuthStage`) and this frame cannot drift apart on the
+ * keyboard. iOS: the keyboard is an inset on the scroll, set natively, so the form never moves when
+ * the keyboard's height does; Android's window resizes for it and ignores the inset. A tap on a
+ * control lands while the keyboard is up, and a drag puts it away — the form must stay reachable
+ * when large text makes it taller than the screen.
  */
-export const FORM_SCROLL = {
+const FORM_SCROLL = {
   testID: 'auth-frame',
   automaticallyAdjustKeyboardInsets: true,
   keyboardShouldPersistTaps: 'handled',
   keyboardDismissMode: 'on-drag',
 } as const;
+
+export type FormScrollProps = Pick<
+  ScrollViewProps,
+  'contentContainerStyle' | 'bounces' | 'overScrollMode' | 'children'
+>;
+
+/**
+ * **The scroll a form lives in, on both auth frames** — `FORM_SCROLL`'s props, and one repair.
+ *
+ * **On Android it is mounted afresh when the keyboard's going puts its offset back.** The window
+ * shrinks for the keyboard, so with the keyboard up the form can scroll; a drag scrolls it and puts
+ * the keyboard away, the window grows back, and Android puts the offset back to the top itself. Under
+ * the New Architecture (React Native 0.76) the shadow tree keeps the offset the drag left, so every
+ * control in the form is *measured* that far above where it is drawn — and a press is measured: a
+ * finger that trembles while it is down reads as sliding off the button, and the press is cancelled.
+ * *Sign in* took several taps on an Android phone and one on an iPhone. Asking the scroll to go where
+ * it already is does not mend it — React Native has already sent that offset once and will not send
+ * it again — so the scroll is mounted afresh, which starts it from a true nought.
+ *
+ * **A scroll event while the form fits is that putting-back**, since nothing that fits can be
+ * scrolled, and it is the one moment this acts. What it costs is a field's own state: a password
+ * shown with *Show* is hidden again. Form values are the screens', above this, and stay.
+ */
+export function FormScroll({ children, ...props }: FormScrollProps) {
+  const [mount, setMount] = useState(0);
+
+  const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!windowResizesForKeyboard()) return;
+    if (nativeEvent.contentSize.height <= nativeEvent.layoutMeasurement.height) {
+      setMount((n) => n + 1);
+    }
+  };
+
+  return (
+    <ScrollView key={mount} {...FORM_SCROLL} {...props} onScroll={onScroll}>
+      {children}
+    </ScrollView>
+  );
+}
 
 export interface AuthFrameProps {
   readonly title: string;
@@ -65,7 +112,7 @@ export interface AuthFrameProps {
 export function AuthFrame({ title, lead, children }: AuthFrameProps) {
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <ScrollView {...FORM_SCROLL} contentContainerStyle={s.content}>
+      <FormScroll contentContainerStyle={s.content}>
         <View style={s.intro}>
           <View style={s.header}>
             <Text style={s.eyebrow}>{AUTH_EYEBROW}</Text>
@@ -77,7 +124,7 @@ export function AuthFrame({ title, lead, children }: AuthFrameProps) {
         </View>
 
         {children}
-      </ScrollView>
+      </FormScroll>
     </SafeAreaView>
   );
 }

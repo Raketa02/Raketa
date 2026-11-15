@@ -41,12 +41,12 @@
 
 import { StatusBar } from 'expo-status-bar';
 import { useContext, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaInsetsContext, type EdgeInsets } from 'react-native-safe-area-context';
 
 import { theme } from '@/shared/ui';
 
-import { FORM_SCROLL } from './AuthFrame';
+import { FormScroll } from './AuthFrame';
 import { StageHero } from './StageHero';
 
 export interface AuthStageProps {
@@ -96,8 +96,7 @@ export function AuthStage({
         picture={picture}
         cover={cover}
       />
-      <ScrollView
-        {...FORM_SCROLL}
+      <FormScroll
         contentContainerStyle={[s.content, { paddingTop: heroHeight }]}
         bounces={false}
         overScrollMode="never"
@@ -109,7 +108,7 @@ export function AuthStage({
           {children}
           <View style={s.footer}>{footer}</View>
         </View>
-      </ScrollView>
+      </FormScroll>
       {/* Over the scroll, so a sheet scrolled all the way up passes under the light status bar's
           night rather than putting paper under it. See the module note. */}
       <View style={[s.statusBand, { height: top }]} pointerEvents="none" />
