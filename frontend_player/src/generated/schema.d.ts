@@ -1945,6 +1945,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/top-10": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Home's Top 10 row
+         * @description The first ten rows of General in one sport — the true top of the Rankings page, everybody at their true place, whoever blocked whom. Name the sport **exactly** with `sport` (the pill), or **prefer** one with `prefer` (the trophy's sport, on opening): with nobody listed in it, the row shows the next sport in the app's order where somebody is, going round from the last to the first. One of the two, never both. `anyone_listed` says whether the row shows at all.
+         */
+        get: operations["read_top_ten_api_v1_top_10_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/on-screen": {
         parameters: {
             query?: never;
@@ -9604,6 +9624,87 @@ export interface components {
             expires_in: number;
         };
         /**
+         * TopTenChipSchema
+         * @description **The week's move on a Top 10 card**, drawn — a triangle and a bold
+         *     italic number, *▲ 2* in volt, *▼ 1* in coral. The Rankings page's chip for
+         *     the same row; a card draws none for no change or *New*.
+         */
+        TopTenChipSchema: {
+            /**
+             * Kind
+             * @description `UP` — *▲ 2*. `DOWN` — *▼ 1*.
+             * @enum {string}
+             */
+            kind: "UP" | "DOWN";
+            /**
+             * Places
+             * @description How many places — the *2* of *▲ 2*.
+             */
+            places: number;
+        };
+        /**
+         * TopTenPlayerSchema
+         * @description One Top 10 card: the numeral, the portrait, the nickname, the Level and
+         *     the week's move. **A tap opens their record**; across a block it reads
+         *     *This record isn't available*.
+         */
+        TopTenPlayerSchema: {
+            /**
+             * Place
+             * @description Their true place in General — the huge numeral, 1 to 10.
+             */
+            place: number;
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Nickname
+             * @description Whole, never with an @ (docs/adr/0199 §1).
+             */
+            nickname: string;
+            /** Photo Id */
+            photo_id: string | null;
+            /**
+             * Photo Url
+             * @description A short-lived link to their first photograph; `null` with `photo_id` draws the court picture.
+             */
+            photo_url: string | null;
+            /**
+             * Level
+             * @description Their Level, two decimals — *3,40*.
+             */
+            level: number;
+            /** @description Their places moved this week, rolling — as the Rankings page's row reads them. `null` for no change and for *New*: no chip is drawn. */
+            chip: components["schemas"]["TopTenChipSchema"] | null;
+            /**
+             * Is You
+             * @description Your own card — it reads *You*, its numeral volt and the card ringed in volt.
+             */
+            is_you: boolean;
+        };
+        /**
+         * TopTenResponse
+         * @description **Top 10 on Home**: places 1 to 10 of General in one sport, the true
+         *     top of the Rankings page — everybody at their true place, whoever blocked
+         *     whom.
+         */
+        TopTenResponse: {
+            /** @description The sport the row shows: the one asked for, or the one a preference fell through to — the pill's chosen sport, and the one *Rankings ›* opens on. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Anyone Listed
+             * @description Whether anybody is listed in General **in any sport**. While nobody is, the row is hidden.
+             */
+            anyone_listed: boolean;
+            /**
+             * Players
+             * @description Places 1 to 10 of General in `sport`, best first — fewer while fewer are listed, one or two included. **Empty while nobody is ranked in `sport`**: *Nobody ranked in squash yet*.
+             */
+            players: components["schemas"]["TopTenPlayerSchema"][];
+        };
+        /**
          * TranscriptEntryResponse
          * @description One answered question: the question as it was asked, and what was chosen.
          */
@@ -13894,6 +13995,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_top_ten_api_v1_top_10_get: {
+        parameters: {
+            query?: {
+                /** @description This sport exactly — empty when nobody is listed in it. */
+                sport?: components["schemas"]["Sport"] | null;
+                /** @description This sport, or, with nobody listed in it, the next in the app's order where somebody is. */
+                prefer?: components["schemas"]["Sport"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopTenResponse"];
+                };
+            };
+            /** @description `not_one_sport` — neither `sport` nor `prefer`, or both at once. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

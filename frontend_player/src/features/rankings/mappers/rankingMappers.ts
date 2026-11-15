@@ -9,6 +9,7 @@
  * sentence about the reader that the server never said.
  */
 
+import { toSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
 
 import type {
@@ -22,6 +23,7 @@ import type {
   RankedRow,
   Ranking,
 } from '../domain/ranking';
+import type { Moved, TopTen, TopTenPlayer } from '../domain/topTen';
 
 type Schemas = components['schemas'];
 
@@ -133,4 +135,43 @@ function toRankedRow(wire: Schemas['RankedRowSchema']): RankedRow {
     level: wire.level,
     isYou: wire.is_you,
   };
+}
+
+/**
+ * **Top 10** (#805) — `GET /top-10`'s answer. **A sport this build has never heard of reads nothing**:
+ * the row would be drawing a sport it has no name or colour for, so it is hidden as an unanswered
+ * read is.
+ */
+export function toTopTen(wire: Schemas['TopTenResponse']): TopTen | undefined {
+  const sport = toSport(wire.sport);
+  if (sport === undefined) return undefined;
+  return {
+    sport,
+    anyoneListed: wire.anyone_listed,
+    players: wire.players.map(toTopTenPlayer),
+  };
+}
+
+function toTopTenPlayer(wire: Schemas['TopTenPlayerSchema']): TopTenPlayer {
+  const chip = wire.chip === null ? undefined : toMoved(wire.chip);
+  return {
+    place: wire.place,
+    playerId: wire.player_id,
+    nickname: wire.nickname,
+    ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
+    level: wire.level,
+    ...(chip === undefined ? {} : { chip }),
+    isYou: wire.is_you,
+  };
+}
+
+/** *▲ 2* or *▼ 1*; anything else this build cannot read draws no chip rather than a guess. */
+function toMoved(wire: Schemas['TopTenChipSchema']): Moved | undefined {
+  switch (wire.kind) {
+    case 'UP':
+    case 'DOWN':
+      return { kind: wire.kind, places: wire.places };
+    default:
+      return undefined;
+  }
 }

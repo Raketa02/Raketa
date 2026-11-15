@@ -198,7 +198,7 @@ function coverOf(headerWidth: number | undefined, covered: Box | undefined): Bar
  * folds it: the shell's tab bar is outside the page and the backdrop cannot cover it, so a tap
  * there leaves the page with the bar open, and it must not be open when the player comes back.
  */
-function FoldAway({ onFold }: { readonly onFold: () => void }) {
+export function FoldAway({ onFold }: { readonly onFold: () => void }) {
   useHardwareBack(onFold);
 
   // Through a ref, so the blur subscription is made once rather than on every render of a parent

@@ -440,3 +440,19 @@ groups), and **`rereadPeopleLists`** re-reads every such read — what every fri
 calls, so a write made anywhere moves the person on every row without naming a feature's keys
 (architecture Part 7). Each has its suite: `HomeRow.test.tsx`, `SportPillFrame.test.tsx`,
 `Button.test.tsx`; the tile is walked through New in Raketa.
+
+**`RowSportPill`, `HomeRow`'s `over`, and a `numbered` rail** ([#805](https://github.com/Raketa02/Raketa/issues/805);
+the Home rows screens §7; home rows 25–27; design-system 7.36, Part 16 2026-11-15). Top 10 puts the
+deck's sport pill on a row's heading line, beside _Rankings ›_, and its bar slides over the heading
+while the link stays put (home rows 27) — so the bar must end where **the pill** ends, which
+`SportPillFrame`, a page's, does not know: its bar ends at the page's edge. **`RowSportPill`** measures
+the pill where it stands on the heading's line and hands the row two things: the pill, for `HomeRow`'s
+`control`, and — while open — a layer for **`HomeRow`'s new `over`**, which the frame draws last over
+the whole section: a backdrop that folds the bar, and the bar on the pill's own line, from the row's
+left edge to the pill's right end and the bar's inset past it. What folds it is the frame's —
+`FoldAway`, now exported from `SportPillFrame.tsx` for this: the current sport, the backdrop,
+Android's back and the screen losing focus. **The backdrop is the row's**, so a tap elsewhere on Home
+leaves the bar open (a call: a backdrop over Home would need a layer above the page). **`HomeRowRail`'s
+`numbered`** hands each card `size.topTen.railRatio` of the content width — the card's width; the
+numeral beside it is the row's own, so its items are wider than the width it hands. Each has its
+suite: `RowSportPill.test.tsx`, `HomeRow.test.tsx`; the row is walked in `rankings`' `topTen.test.tsx`.

@@ -15,7 +15,7 @@
  * **`HomeRow`** is the section: `space.lg` under the row above, the heading, and on the heading's
  * line an optional **control** (Top 10's sport pill) and an optional **link** (*See all ›*, Top 10's
  * *Rankings ›*). Under it, whatever the row draws — almost always **`HomeRowRail`**, but *Your games*
- * says its empty sentences or its failure there instead, and Top 10 will say *Nobody ranked in
+ * says its empty sentences or its failure there instead, and Top 10 says *Nobody ranked in
  * squash yet*. A frame that owned the rail outright would have to grow a slot for each of those.
  *
  * **`HomeRowRail`** is the rail, in 7.7's two geometries over Part 8's Strip — neither restated
@@ -29,6 +29,9 @@
  * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
  *   content width — two whole and the third cut, the cut the affordance. **A lone tile keeps its
  *   width**: a portrait the width of the screen would be a poster, not a tile. It scrolls freely.
+ * - **Numbered** (#805; 7.36): Top 10's cards, each `topTen.railRatio` of the content width — the
+ *   width handed is the card's, and the numeral the row stands beside it is the row's own, so the
+ *   rail's items are wider than the width it hands. A lone card keeps its width. It scrolls freely.
  *
  * The rail hands each card its width; the cards are the row's.
  *
@@ -58,6 +61,13 @@
  * **It stands on the heading's line without making it taller.** Its 16pt line overhangs the
  * eyebrow's 12 by 2 above and 2 below, so a row with a link stands exactly where a row without one
  * does — as the mocks draw them, one under another at the same spacing.
+ *
+ * ## Over the row
+ *
+ * **A row can hand in a layer to lie over the whole of it** (`over`, #805): Top 10's open sport bar
+ * and the backdrop that folds it (`RowSportPill`). It is drawn last in the section, so it stands on
+ * top, and the section is its box — the heading's line at its top-left, which is what lets the bar
+ * stand exactly where the pill does.
  *
  * **It never imports a feature.** Every word, every press and every card is handed in.
  */
@@ -94,12 +104,14 @@ export interface HomeRowProps {
   readonly control?: ReactNode;
   /** **The link at the heading's right end** — *See all ›*. */
   readonly link?: HomeRowLink;
+  /** **A layer over the whole row**, drawn last — Top 10's open sport bar and its backdrop. */
+  readonly over?: ReactNode;
   readonly testID?: string;
   /** Under the heading: the rail, or what the row says instead of one. */
   readonly children: ReactNode;
 }
 
-export function HomeRow({ heading, control, link, testID, children }: HomeRowProps) {
+export function HomeRow({ heading, control, link, over, testID, children }: HomeRowProps) {
   /** Where the section stands on its page — what a watching rail in it is measured from. */
   const [top] = useState(() => followable<number>());
   return (
@@ -117,6 +129,7 @@ export function HomeRow({ heading, control, link, testID, children }: HomeRowPro
           {link === undefined ? null : <RowLink link={link} />}
         </View>
         {children}
+        {over}
       </SectionOnPage.Provider>
     </View>
   );
@@ -139,8 +152,8 @@ function RowLink({ link }: { readonly link: HomeRowLink }) {
   );
 }
 
-/** 7.7's two geometries, and New in Raketa's portrait tiles (7.31). */
-export type HomeRowRailGeometry = 'peeking' | 'paging' | 'tiles';
+/** 7.7's two geometries, New in Raketa's portrait tiles (7.31) and Top 10's numbered cards (7.36). */
+export type HomeRowRailGeometry = 'peeking' | 'paging' | 'tiles' | 'numbered';
 
 export interface HomeRowRailProps<Card> {
   /** **The cards' data**, in the order drawn — a peeking rail draws a lone one at the content width. */
@@ -176,9 +189,11 @@ export function HomeRowRail<Card>({
   const cardWidth =
     geometry === 'tiles'
       ? content * theme.size.portraitTile.railRatio
-      : paging || cards.length === 1
-        ? content
-        : content * theme.size.railCardRatio;
+      : geometry === 'numbered'
+        ? content * theme.size.topTen.railRatio
+        : paging || cards.length === 1
+          ? content
+          : content * theme.size.railCardRatio;
   const step = cardWidth + STRIP_GAP;
   const watching = onScreen !== undefined;
   const seen = useCardsOnScreen({ cards, lead: STRIP_LEAD, cardWidth, step, onScreen });

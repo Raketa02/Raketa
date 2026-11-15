@@ -2,7 +2,7 @@
  * The rankings feature's only public surface ([#775](https://github.com/Raketa02/Raketa/issues/775);
  * [ADR-0203](../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)).
  *
- * A ranking per sport, sorted by the level: Home's trophy and the Rankings page. Every place, chip and
+ * A ranking per sport, sorted by the level: Home's trophy, Home's Top 10 and the Rankings page. Every place, chip and
  * gap is the server's; what this feature owns is the page — which sport it is on, its words, and how
  * the card, the podium and the list are drawn.
  */
@@ -12,6 +12,13 @@ export { RankingsScreen, type RankingsScreenProps } from './components/RankingsS
 
 /** **The trophy left of Home's bell** — the shell places it. */
 export { RankingTrophy } from './components/RankingTrophy';
+
+/**
+ * **TOP 10, the last of Home's rows** (#805) — the shell places it under Same vibe, and reads it again
+ * on Home's pull (`rereadTopTen`).
+ */
+export { TopTenRow } from './components/TopTenRow';
+export { rereadTopTen } from './hooks/useTopTen';
 
 /**
  * **Where Rankings is** — for the trophy, and for the entry gate landing a pass that began on

@@ -861,6 +861,20 @@ export function stubSameVibe(
   );
 }
 
+/** Home's Top 10 (#805) — the transport drops `?sport|prefer`, so one responder answers each read. */
+export const TOP_TEN_PATH = '/api/v1/top-10';
+
+/**
+ * **Home's Top 10** (#805) — nobody ranked anywhere unless the suite says, so the row is hidden. A
+ * suite about the row answers by the sport asked (`topTen.test.tsx`).
+ */
+export function stubTopTen(
+  transport: Transport,
+  read: Wire['TopTenResponse'] = { sport: 'PADEL', anyone_listed: false, players: [] },
+) {
+  transport.on('GET', TOP_TEN_PATH, () => json<Wire['TopTenResponse']>(read));
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -1051,6 +1065,7 @@ export function stubGate(
   stubNewInRaketa(transport);
   stubSameLevel(transport);
   stubSameVibe(transport);
+  stubTopTen(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);

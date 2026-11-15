@@ -126,6 +126,7 @@ export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popo
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
+export { RowSportPill, type RowSportPillProps } from './RowSportPill';
 export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export {

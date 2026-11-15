@@ -7,7 +7,7 @@
 
 import type { components } from '@/generated/schema';
 
-import { toGeneralPage, toRanking } from './rankingMappers';
+import { toGeneralPage, toRanking, toTopTen } from './rankingMappers';
 
 type Wire = components['schemas'];
 
@@ -217,5 +217,84 @@ describe('the cursors (#776)', () => {
     const ends = toGeneralPage({ sport: 'PADEL', listed: 3, rows: [], previous: null, next: null });
     expect('previous' in ends).toBe(false);
     expect('next' in ends).toBe(false);
+  });
+});
+
+describe('Top 10 (#805)', () => {
+  function card(over: Partial<Wire['TopTenPlayerSchema']> = {}): Wire['TopTenPlayerSchema'] {
+    return {
+      place: 1,
+      player_id: 'p-ines',
+      nickname: 'ines.d',
+      photo_id: 'f-1',
+      photo_url: 'https://photos.example/ines.jpg',
+      level: 3.4,
+      chip: { kind: 'DOWN', places: 1 },
+      is_you: false,
+      ...over,
+    };
+  }
+
+  it('reads the sport, whether anybody is ranked anywhere, and every card in order', () => {
+    const topTen = toTopTen({
+      sport: 'SQUASH',
+      anyone_listed: true,
+      players: [
+        card(),
+        card({ place: 2, player_id: 'p-me', chip: { kind: 'UP', places: 2 }, is_you: true }),
+      ],
+    });
+
+    expect(topTen).toEqual({
+      sport: 'squash',
+      anyoneListed: true,
+      players: [
+        {
+          place: 1,
+          playerId: 'p-ines',
+          nickname: 'ines.d',
+          photoUrl: 'https://photos.example/ines.jpg',
+          level: 3.4,
+          chip: { kind: 'DOWN', places: 1 },
+          isYou: false,
+        },
+        {
+          place: 2,
+          playerId: 'p-me',
+          nickname: 'ines.d',
+          photoUrl: 'https://photos.example/ines.jpg',
+          level: 3.4,
+          chip: { kind: 'UP', places: 2 },
+          isYou: true,
+        },
+      ],
+    });
+  });
+
+  it('leaves out a photograph and a chip the server sends none of — the poster, and no chip', () => {
+    const [player] = toTopTen({
+      sport: 'PADEL',
+      anyone_listed: true,
+      players: [card({ photo_id: null, photo_url: null, chip: null })],
+    })!.players;
+
+    expect('photoUrl' in player!).toBe(false);
+    expect('chip' in player!).toBe(false);
+  });
+
+  it('draws no chip for a move this build cannot read', () => {
+    const [player] = toTopTen({
+      sport: 'PADEL',
+      anyone_listed: true,
+      players: [card({ chip: { kind: 'SIDEWAYS' as 'UP', places: 1 } })],
+    })!.players;
+
+    expect('chip' in player!).toBe(false);
+  });
+
+  it('reads nothing at all from a sport this build has never heard of', () => {
+    expect(
+      toTopTen({ sport: 'PICKLEBALL' as 'PADEL', anyone_listed: true, players: [card()] }),
+    ).toBeUndefined();
   });
 });

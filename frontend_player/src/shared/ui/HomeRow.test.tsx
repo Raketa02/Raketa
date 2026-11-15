@@ -149,6 +149,18 @@ describe('the Home row frame', () => {
     expect(screen.getByRole('link', { name: 'Rankings' })).toBeTruthy();
   });
 
+  /** Top 10's open sport bar and its backdrop lie over the whole row (#805). */
+  it('lays what a row hands in over the whole row, last, so it stands on top', () => {
+    render(<Row count={2} over={<View testID="over" />} />);
+
+    // In the row, after the heading and every card of the rail.
+    const named = screen
+      .UNSAFE_getAllByType(View)
+      .map((node) => node.props.testID as string | undefined)
+      .filter((testID) => testID !== undefined);
+    expect(named).toEqual(['row', 'card-0', 'card-1', 'over']);
+  });
+
   describe('the peeking rail', () => {
     /** 7.7: the next card showing by about a quarter is the whole affordance. */
     it('draws each card at 0.74 of the content width, so the next one peeks', () => {
@@ -206,6 +218,24 @@ describe('the Home row frame', () => {
 
     it('scrolls freely and draws no dots', () => {
       render(<Row count={4} geometry="tiles" />);
+
+      expect(rail().props.snapToInterval).toBeUndefined();
+      expect(screen.queryByTestId('pager-dots', { includeHiddenElements: true })).toBeNull();
+    });
+  });
+
+  describe('the numbered rail', () => {
+    /** Top 10 (#805): each card narrower than a tile, its numeral standing beside it. */
+    it('hands each card its share of the content width — a lone one too', () => {
+      render(<Row count={3} geometry="numbered" />);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.topTen.railRatio);
+
+      screen.rerender(<Row count={1} geometry="numbered" />);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.topTen.railRatio);
+    });
+
+    it('scrolls freely and draws no dots', () => {
+      render(<Row count={4} geometry="numbered" />);
 
       expect(rail().props.snapToInterval).toBeUndefined();
       expect(screen.queryByTestId('pager-dots', { includeHiddenElements: true })).toBeNull();

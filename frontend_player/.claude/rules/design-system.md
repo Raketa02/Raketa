@@ -97,7 +97,9 @@ licence for a second dark surface.
   card's weekday figure and retired with it (#413, Part 16); `yesWord` (32/800) exists for
   _It's a game!_'s one word — the yes screen's, which it inherited — and nothing else (ADR-0167,
   Part 16). A word that wants to be that
-  large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`.
+  large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`. `numeral`
+  (108/800) is no exception to reach for: it is Top 10's place, a picture of a number behind each
+  card and hidden from a listener (#805, 3.3, 7.36) — one use.
 - **The pill is the chip's**, and _It's a game!_'s two buttons and the friend pills — Members'
   (#753), the Friends page's (#754), the picker's ask (#758) and the worded friend button's _+ Add
   friend_ (#801) — and Home's Hottest groups chips (#800), through

@@ -125,7 +125,13 @@ And by the record's photos ([#799](https://github.com/Raketa02/Raketa/issues/799
 content width over Part 8's Strip, nothing with no photo. **It came down ahead of its second
 caller** too: the Home rows screens §9.3 decided that the record and the vibe sheet (#803) draw one
 carousel, so it is built where both can reach it rather than copied out of `player_record` later.
-Import them from `@/shared/ui`.
+And by Top 10 ([#805](https://github.com/Raketa02/Raketa/issues/805)): `RowSportPill` — the deck's
+pill on a Home row's heading line, its bar ending where the pill ends rather than at the page's edge,
+laid over the row through `HomeRow`'s **`over`** — and `HomeRowRail`'s **`numbered`** geometry. **It
+has one caller and stands here anyway**, against the fourth non-negotiable, because it is not code
+moved out of a feature: it is a second holder of the one sport pill (`SportPill`, `SportBar`,
+`FoldAway`), whose parts are this folder's own and unexported, and written in `rankings` it would
+have to export them — making the pill's internals the surface instead. Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

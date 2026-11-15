@@ -34,7 +34,7 @@ import {
   PaymentsToConfirm,
   rereadHome,
 } from '@/features/proposals/types';
-import { RankingTrophy } from '@/features/rankings/types';
+import { RankingTrophy, TopTenRow, rereadTopTen } from '@/features/rankings/types';
 import { theme } from '@/shared/ui';
 
 import { ShellScreen } from './ShellScreen';
@@ -94,6 +94,10 @@ import { HOME_COPY } from './shellCopy';
  * with the rest. **A friend act anywhere moves a person on it** — an answer on FRIEND REQUESTS, the
  * record a face opens — because its reads list people (`LISTS_PEOPLE`) and every friend write re-reads
  * those; the shell hands it nothing for that.
+ *
+ * **TOP 10 is the last** (`rankings`' row, [#805](https://github.com/Raketa02/Raketa/issues/805)), after
+ * Same vibe: General's first ten in one sport, with its own sport pill and *Rankings ›*. A pick there
+ * re-reads that row alone; the pull re-reads it with the rest (`rereadTopTen`).
  */
 export function HomeScreen() {
   const client = useQueryClient();
@@ -109,7 +113,12 @@ export function HomeScreen() {
         </View>
       }
       onRefresh={() =>
-        Promise.all([rereadHome(client), rereadHomeGroups(client), rereadDiscovery(client)])
+        Promise.all([
+          rereadHome(client),
+          rereadHomeGroups(client),
+          rereadDiscovery(client),
+          rereadTopTen(client),
+        ])
       }
     >
       <HomeLevelCard />
@@ -125,6 +134,7 @@ export function HomeScreen() {
       <SameLevelRow />
       <NewInRaketaRow />
       <SameVibeRow />
+      <TopTenRow />
     </ShellScreen>
   );
 }

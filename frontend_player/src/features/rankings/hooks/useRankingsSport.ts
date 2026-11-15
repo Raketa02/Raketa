@@ -32,22 +32,38 @@ export interface RankingsSport {
 }
 
 export function useRankingsSport(asked: Sport | undefined): RankingsSport {
+  const { sports, opening } = useOpeningSport(asked);
+  const [picked, setPicked] = useState<Sport>();
+
+  return { sports, sport: picked ?? opening, pick: setPicked };
+}
+
+/** **The pill's sports, and the sport a ranking opens on** — before anything is picked. */
+export interface OpeningSport {
+  /** All four, rated first — `undefined` while the ratings are read. */
+  readonly sports: readonly Sport[] | undefined;
+  /** The sport asked for, else the trophy's, else the deck's, else padel — `undefined` until known. */
+  readonly opening: Sport | undefined;
+}
+
+/**
+ * **The reads behind the opening sport and the pill** — the page's, and Home's Top 10 row's
+ * ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows mechanics §10.3), which opens
+ * on the same sport the trophy would and offers the same four, asking for none in particular.
+ */
+export function useOpeningSport(asked?: Sport): OpeningSport {
   const ratings = useSkillRatings();
   const deck = useDeckSport();
   const trophy = useHomeRanking();
-  const [picked, setPicked] = useState<Sport>();
 
   const unrated = ratings.isError;
   const rated = unrated ? [] : ratings.data?.map((rating) => rating.sport);
 
   return {
     sports: rated === undefined ? undefined : pillSports(rated),
-    sport:
-      picked ??
-      openingSport(asked, {
-        trophy: trophy === undefined ? undefined : (trophy?.sport ?? null),
-        deck: unrated && deck === undefined ? null : deck,
-      }),
-    pick: setPicked,
+    opening: openingSport(asked, {
+      trophy: trophy === undefined ? undefined : (trophy?.sport ?? null),
+      deck: unrated && deck === undefined ? null : deck,
+    }),
   };
 }

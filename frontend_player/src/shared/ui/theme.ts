@@ -213,6 +213,17 @@ const color = {
    *  the ramp and the arithmetic). Nothing else may draw it. */
   portraitWash: 'rgba(16,27,32,0.94)',
 
+  /** THE TOP 10 NUMERAL'S GRADIENT ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows
+   *  25–26; docs/design-system.md 7.36, Part 16 2026-11-15) — the huge place standing behind each
+   *  card, filled from `numeralTop` at its figures' top to `numeralFoot` at its baseline, inside a
+   *  paper outline: the screens' *night-to-teal*. MEASURED off home rows 25 at 1×, down the figure
+   *  *2*: #29444F at its top and #15252C at its foot, hue 197–199° — `night`'s family, as every dark
+   *  ground here is. It is a picture of a number, not text: the card it stands behind names the place
+   *  (`topTenCardLabel`), so no contrast is claimed for it. The reader's own numeral is `volt`.
+   *  Nothing else may draw these. */
+  numeralTop: '#29444F',
+  numeralFoot: '#15252C',
+
   /** THE RADAR'S GROUND — the app's THIRD dark surface, and a field rather than a card or a
    *  screen ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
    *  §7, docs/design-system.md Part 16 2026-09-16). One radial glow from the centre value out
@@ -554,6 +565,14 @@ const type = {
    *  ascenders. `surface` over the wash, with the on-media shadow. A second surface that wants a
    *  name this size reopens ADR-0169 §7 rather than reaching for this role. */
   deckName: { fontFamily: font.sans[700], fontSize: 24, letterSpacing: -0.84, lineHeight: 28 },
+  /** THE TOP 10 NUMERAL — 1 to 10, huge, tucked behind each card of Home's Top 10
+   *  ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 25–26; 7.36, Part 16
+   *  2026-11-15). Archivo at its heaviest loaded weight, whose figures stand 0,699 em over the
+   *  baseline: at 108 that is 75pt, where home rows 25 and 26 MEASURE 70–79 at 1× beside a 154pt
+   *  card. Tracked −16 (−0,15 em) so *10*'s two figures touch, the *0* over the *1*'s foot, as home
+   *  rows 25.3 draws them. Drawn as SVG text — no line box — so it carries no `lineHeight`. ONE USE:
+   *  a second surface that wants a figure this size reopens the Top 10 row in Part 16. */
+  numeral: { fontFamily: font.sans[800], fontSize: 108, letterSpacing: -16 },
   /** THE DECK'S TWO STAMPS — *LET'S PLAY* and *NOT TODAY*, outlined words rotated over the card
    *  under the thumb, invisible at rest (ADR-0169 §3, §7). The heaviest weight the app loads at
    *  22, TRACKED WIDE rather than tight — +0,05em, 1,1 — because a rubber stamp is set spaced
@@ -1499,6 +1518,34 @@ const size = {
    *  and 33), in See all's two columns 60 and 48 at 1,74 (34 and 28), onto the 3pt grid. The vibe
    *  sheet's face is the row's. */
   sameVibe: { face: { row: 42, grid: 36 }, percent: { row: 33, grid: 30 } },
+  /** TOP 10'S CARD ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 2, 25–27; 7.36)
+   *  — MEASURED off home rows 2 at 1,5 to the point and 25–26 at 3:
+   *
+   *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason: 104pt of 360
+   *    in both mocks, narrower than New in Raketa's tile, because the numeral stands beside each one.
+   *  - `aspect` — its height over its width: 154 over 104.
+   *  - `overlap` — how much of the numeral's box the card covers, from the right: home rows 26 shows
+   *    32pt of the *1*'s ink and 25 39pt of the *2*'s, which at `type.numeral` leaves 24 under the card.
+   *  - `ring` — the reader's own card's volt ring, outside the card: 7 pixels at 3 (home rows 26.1).
+   *  - `outline` and `edge` — the numeral's paper outline, and the hairline of `line` that lets it
+   *    be seen on paper (home rows 25.3: about four pixels of paper and one of grey at 2).
+   *  - `chipMark` — the drawn ▲ / ▼ beside a card's level, the level's own size; `lean` the slant, in
+   *    degrees, the mark and its count take together as an italic would (no italic face is loaded).
+   *  - `figure` — `type.numeral`'s face's own metrics, in ems, READ OFF `Archivo_800ExtraBold.ttf`: a
+   *    figure's advance (tabular — every figure 625 of 1000 units), how far the figures stand over
+   *    the baseline, and the deepest under it (the *9*'s tail). The numeral's box is worked out from
+   *    them, so they change with the role's face or not at all. */
+  topTen: {
+    railRatio: 0.29,
+    aspect: 1.48,
+    overlap: 24,
+    ring: 2.5,
+    outline: 1.5,
+    edge: 0.75,
+    chipMark: 8,
+    lean: -12,
+    figure: { advance: 0.625, top: 0.699, foot: 0.012 },
+  },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it
