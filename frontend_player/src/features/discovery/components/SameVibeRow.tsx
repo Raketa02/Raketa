@@ -12,6 +12,10 @@
  * **A tile opens the vibe sheet**; its round button acts, asking from *same vibe*. The row's reads
  * list people (`LISTS_PEOPLE`), so any friend write or block — from a tile, the sheet, the record its
  * face opens, or anywhere else — reads the row again (§13).
+ *
+ * **Every tile that comes at least half on screen is reported**, once that Warsaw day
+ * ([#804](https://github.com/Raketa02/Raketa/issues/804); §9.2), its count this row's own. See all
+ * reports nothing.
  */
 
 import { router } from 'expo-router';
@@ -19,6 +23,7 @@ import { router } from 'expo-router';
 import { HomeRow, HomeRowRail } from '@/shared/ui';
 
 import type { SameVibePlayer } from '../domain/sameVibe';
+import { useOnScreenReports } from '../hooks/useOnScreenReports';
 import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useSameVibe } from '../hooks/useSameVibe';
 
@@ -29,11 +34,18 @@ import { VibeSheet } from './VibeSheet';
 
 export function SameVibeRow() {
   const players = useSameVibe().data;
+  const onScreen = useOnScreenReports('SAME_VIBE');
   if (players === undefined || players.length === 0) return null;
-  return <SameVibe players={players} />;
+  return <SameVibe players={players} onScreen={onScreen} />;
 }
 
-function SameVibe({ players }: { readonly players: readonly SameVibePlayer[] }) {
+function SameVibe({
+  players,
+  onScreen,
+}: {
+  readonly players: readonly SameVibePlayer[];
+  readonly onScreen: (players: readonly SameVibePlayer[]) => void;
+}) {
   const COPY = DISCOVERY_COPY.sameVibe;
   const vibing = usePersonSheet(players);
 
@@ -47,7 +59,7 @@ function SameVibe({ players }: { readonly players: readonly SameVibePlayer[] }) 
       }}
       testID="same-vibe"
     >
-      <HomeRowRail cards={players}>
+      <HomeRowRail cards={players} onScreen={onScreen}>
         {(player, width) => (
           <SameVibeTile
             key={player.playerId}

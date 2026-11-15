@@ -95,6 +95,7 @@ export {
   type OnCourtMarkProps,
 } from './OnCourtMark';
 export { Note, type NoteProps, type NoteVariant } from './Note';
+export { PageOnScreen, useWatchedPage, type WatchedPage } from './onScreen';
 export {
   PhotoAddTile,
   PhotoPosterTile,

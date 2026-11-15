@@ -38,6 +38,14 @@
  * `ScrollView` the same one. It stands at one place in the tree whatever the count, the geometry's
  * width or the heading's line hold, so a row whose cards come and go stays where the finger left it.
  *
+ * ## What is on screen
+ *
+ * **A rail handed `onScreen` is told which of its cards are at least half on screen** (#804;
+ * `onScreen.ts`), on a page that watches. The section says where it stands on the page **from its
+ * own layout, in its parent's coordinates** — so on such a page a `HomeRow` stands directly in the
+ * page's column, as Home's rows do; wrapped in another view, it would be measured from that view.
+ * The rail stands directly in the section, which is what lets the two tops add up.
+ *
  * ## The link
  *
  * **The row hands in its words and its name**, as the sport pill takes its words — nothing here is
@@ -66,6 +74,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
+import { ON_SCREEN_SAMPLE_MS, SectionOnPage, followable, useCardsOnScreen } from './onScreen';
 import { PagerDots } from './PagerDots';
 import { theme } from './theme';
 
@@ -91,16 +100,24 @@ export interface HomeRowProps {
 }
 
 export function HomeRow({ heading, control, link, testID, children }: HomeRowProps) {
+  /** Where the section stands on its page — what a watching rail in it is measured from. */
+  const [top] = useState(() => followable<number>());
   return (
-    <View style={s.section} {...(testID === undefined ? {} : { testID })}>
-      <View style={s.head}>
-        <Text style={s.heading} accessibilityRole="header">
-          {heading}
-        </Text>
-        {control}
-        {link === undefined ? null : <RowLink link={link} />}
-      </View>
-      {children}
+    <View
+      style={s.section}
+      onLayout={({ nativeEvent }) => top.set(nativeEvent.layout.y)}
+      {...(testID === undefined ? {} : { testID })}
+    >
+      <SectionOnPage.Provider value={top}>
+        <View style={s.head}>
+          <Text style={s.heading} accessibilityRole="header">
+            {heading}
+          </Text>
+          {control}
+          {link === undefined ? null : <RowLink link={link} />}
+        </View>
+        {children}
+      </SectionOnPage.Provider>
     </View>
   );
 }
@@ -132,6 +149,13 @@ export interface HomeRowRailProps<Card> {
   readonly geometry?: HomeRowRailGeometry;
   /** A peeking rail that snaps a card at a time. A paging rail always does. */
   readonly snap?: boolean;
+  /**
+   * **Told which cards are on screen** — at least half of each visible, across the page's scroll and
+   * the rail's (#804) — whenever either moves, the rail is laid out, the cards change, or the page
+   * comes back into view. Only on a page that watches (`PageOnScreen`); a row that does not ask is
+   * never measured.
+   */
+  readonly onScreen?: (cards: readonly Card[]) => void;
   /** **One card**, drawn at the width handed in — keyed by the row, as any list's element is. */
   readonly children: (card: Card, cardWidth: number) => ReactNode;
 }
@@ -140,6 +164,7 @@ export function HomeRowRail<Card>({
   cards,
   geometry = 'peeking',
   snap = false,
+  onScreen,
   children,
 }: HomeRowRailProps<Card>) {
   const { width: screen } = useWindowDimensions();
@@ -155,9 +180,12 @@ export function HomeRowRail<Card>({
         ? content
         : content * theme.size.railCardRatio;
   const step = cardWidth + STRIP_GAP;
+  const watching = onScreen !== undefined;
+  const seen = useCardsOnScreen({ cards, lead: STRIP_LEAD, cardWidth, step, onScreen });
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setCurrent(Math.round(event.nativeEvent.contentOffset.x / step));
+    if (paging) setCurrent(Math.round(event.nativeEvent.contentOffset.x / step));
+    seen.scrolled(event);
   };
 
   return (
@@ -166,7 +194,19 @@ export function HomeRowRail<Card>({
         horizontal
         showsHorizontalScrollIndicator={false}
         {...(paging || snap ? { snapToInterval: step, decelerationRate: 'fast' as const } : {})}
-        {...(paging ? { onScroll, scrollEventThrottle: SCROLL_THROTTLE_MS } : {})}
+        {...(paging || watching
+          ? {
+              onScroll,
+              scrollEventThrottle: paging ? SCROLL_THROTTLE_MS : ON_SCREEN_SAMPLE_MS,
+            }
+          : {})}
+        {...(watching
+          ? {
+              onLayout: seen.laidOut,
+              onScrollEndDrag: seen.scrolled,
+              onMomentumScrollEnd: seen.scrolled,
+            }
+          : {})}
         style={s.strip}
         contentContainerStyle={s.stripContent}
       >
@@ -185,6 +225,9 @@ const LINK_OVERHANG = (theme.type.rlValue.lineHeight - theme.type.eyebrow.lineHe
 
 /** Part 8's Strip gap. */
 const STRIP_GAP = theme.space.sm;
+
+/** Where the rail's first card starts — the content padded by the gutter it bleeds through. */
+const STRIP_LEAD = theme.size.gutter;
 
 /** One frame at 60 Hz. The dots track the scroll, so they are told about every frame of it. */
 const SCROLL_THROTTLE_MS = 16;
@@ -207,5 +250,5 @@ const s = StyleSheet.create({
   // Part 8: the negative margin is what lets the strip bleed to the screen edge while its content
   // still aligns to the gutter.
   strip: { marginHorizontal: -theme.size.gutter },
-  stripContent: { paddingHorizontal: theme.size.gutter, gap: STRIP_GAP },
+  stripContent: { paddingHorizontal: STRIP_LEAD, gap: STRIP_GAP },
 });

@@ -116,6 +116,7 @@ nothing in `shared/` may import a feature.
 | Navigation state              | expo-router                                                                            |
 | Build/environment config      | `src/shared/config/env.ts`                                                             |
 | A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188) |
+| What of a page is on screen   | `src/shared/ui/onScreen.ts`: followed values, read when wanted — never state           |
 
 Never represent the same state in two of these at once. In particular: **never copy
 Query data into Zustand**, **never put a token in Zustand**, and **never use a navigation

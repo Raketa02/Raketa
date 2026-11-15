@@ -11,6 +11,10 @@
  * **A face opens the record**, its requests sent from *same level* in the card's sport; *N sports ›*
  * opens the comparison sheet. The row's reads list people (`LISTS_PEOPLE`), so any friend write or
  * block — from a card, the sheet, the record, or anywhere else — reads the row again (§13).
+ *
+ * **Every card that comes at least half on screen is reported**, once that Warsaw day
+ * ([#804](https://github.com/Raketa02/Raketa/issues/804); §9.2), so a card seen on five days without
+ * an add gives its place to a fresh match. See all reports nothing.
  */
 
 import { router } from 'expo-router';
@@ -19,6 +23,7 @@ import { useState } from 'react';
 import { HomeRow, HomeRowRail } from '@/shared/ui';
 
 import { foundAtSameLevel, type SameLevelPlayer } from '../domain/sameLevel';
+import { useOnScreenReports } from '../hooks/useOnScreenReports';
 import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useReaderFace } from '../hooks/useReaderFace';
 import { useSameLevel } from '../hooks/useSameLevel';
@@ -31,11 +36,18 @@ import { SameLevelCard } from './SameLevelCard';
 
 export function SameLevelRow() {
   const players = useSameLevel().data;
+  const onScreen = useOnScreenReports('SAME_LEVEL');
   if (players === undefined || players.length === 0) return null;
-  return <SameLevel players={players} />;
+  return <SameLevel players={players} onScreen={onScreen} />;
 }
 
-function SameLevel({ players }: { readonly players: readonly SameLevelPlayer[] }) {
+function SameLevel({
+  players,
+  onScreen,
+}: {
+  readonly players: readonly SameLevelPlayer[];
+  readonly onScreen: (players: readonly SameLevelPlayer[]) => void;
+}) {
   const COPY = DISCOVERY_COPY.sameLevel;
   const you = useReaderFace();
   const comparing = usePersonSheet(players);
@@ -51,7 +63,7 @@ function SameLevel({ players }: { readonly players: readonly SameLevelPlayer[] }
       }}
       testID="same-level"
     >
-      <HomeRowRail cards={players}>
+      <HomeRowRail cards={players} onScreen={onScreen}>
         {(player, width) => (
           <SameLevelCard
             key={player.playerId}

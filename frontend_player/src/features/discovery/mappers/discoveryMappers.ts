@@ -16,6 +16,7 @@ import { toSocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Joiner, JoinerPage, JoinerSport } from '../domain/joiner';
+import type { RestingRow } from '../domain/onScreen';
 import type { LevelComparison, SameLevelPlayer } from '../domain/sameLevel';
 import type { SameVibePlayer } from '../domain/sameVibe';
 import type { PageAsked } from '../api/discoveryApi';
@@ -140,4 +141,16 @@ function toSports(served: readonly Schemas['Sport'][]): Sport[] {
     const sport = toSport(each);
     return sport === undefined ? [] : [sport];
   });
+}
+
+/**
+ * **A report of the cards on screen** in one row (#804; #796's `OnScreenRequest`). The wire's
+ * `OnScreenRow` holds this feature's `RestingRow` by this return type: a row the wire drops fails to
+ * compile here, and one it adds is a row this build never reports.
+ */
+export function toOnScreenReport(
+  row: RestingRow,
+  playerIds: readonly string[],
+): Schemas['OnScreenRequest'] {
+  return { row, player_ids: [...playerIds] };
 }

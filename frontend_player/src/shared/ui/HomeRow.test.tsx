@@ -10,7 +10,7 @@
  * position. That nothing moved on a device is a look, owed.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import {
   Dimensions,
   ScrollView,
@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 
 import { HomeRow, HomeRowRail, type HomeRowProps, type HomeRowRailProps } from './HomeRow';
+import { PageOnScreen, followable, type Span } from './onScreen';
 import { theme } from './theme';
 
 const SEE_ALL = {
@@ -255,5 +256,98 @@ describe('the Home row frame', () => {
       <Row count={1} heading="Friend requests · 1" link={{ ...SEE_ALL, onPress: jest.fn() }} />,
     );
     expect(rail()).toBe(first);
+  });
+});
+
+/**
+ * **A rail that watches what is on screen** (#804) — the page's band handed in as a page would, the
+ * section and the rail laid out as a device reports them: the section 1000 down the page, the rail 30
+ * into it and 240 tall, the phone's width wide.
+ */
+describe('a rail told what is on screen', () => {
+  const width = () => Dimensions.get('window').width;
+  const step = () => content() * theme.size.railCardRatio + theme.space.sm;
+  const layout = (y: number, height: number) => ({
+    nativeEvent: { layout: { x: 0, y, width: width(), height } },
+  });
+
+  function watching(page: ReturnType<typeof followable<Span>> | undefined, geometry?: 'paging') {
+    const told: number[][] = [];
+    const row = (
+      <HomeRow heading="Same competitive level players" testID="row">
+        <HomeRowRail
+          cards={[0, 1, 2, 3]}
+          {...(geometry === undefined ? {} : { geometry })}
+          onScreen={(cards) => told.push([...cards])}
+        >
+          {(at, cardWidth) => <View key={at} testID={`card-${at}`} style={{ width: cardWidth }} />}
+        </HomeRowRail>
+      </HomeRow>
+    );
+    render(
+      page === undefined ? row : <PageOnScreen.Provider value={page}>{row}</PageOnScreen.Provider>,
+    );
+    act(() => {
+      fireEvent(screen.getByTestId('row'), 'layout', layout(1000, 300));
+      fireEvent(rail(), 'layout', layout(30, 240));
+    });
+    return told;
+  }
+
+  const scrollRail = (x: number) =>
+    act(() => {
+      fireEvent.scroll(rail(), { nativeEvent: { contentOffset: { x, y: 0 } } });
+    });
+
+  it('says nothing while the page is below the row, and the cards in view once it reaches it', () => {
+    const page = followable<Span>();
+    const told = watching(page);
+    act(() => page.set({ from: 0, size: 700 }));
+    expect(told).toEqual([]);
+
+    act(() => page.set({ from: 1030, size: 700 }));
+    expect(told).toEqual([[0]]);
+  });
+
+  it('says the card the rail is scrolled to, with the page where it was', () => {
+    const page = followable<Span>();
+    const told = watching(page);
+    act(() => page.set({ from: 1030, size: 700 }));
+
+    scrollRail(2 * step());
+    expect(told.at(-1)).toEqual([2]);
+  });
+
+  it('says nothing while the page is out of view, and what is in view when it is back', () => {
+    const page = followable<Span>();
+    const told = watching(page);
+    scrollRail(step());
+    expect(told).toEqual([]);
+
+    act(() => page.set({ from: 1030, size: 700 }));
+    expect(told).toEqual([[1]]);
+  });
+
+  it('is never measured on a page that does not watch', () => {
+    const told = watching(undefined);
+    scrollRail(step());
+
+    expect(told).toEqual([]);
+  });
+
+  it('still moves a paging rail’s dots', () => {
+    const page = followable<Span>();
+    const told = watching(page, 'paging');
+    act(() => page.set({ from: 1030, size: 700 }));
+    const dots = () =>
+      screen.getByTestId('pager-dots', { includeHiddenElements: true }).children as {
+        props: { style: unknown };
+      }[];
+    const current = () =>
+      dots().findIndex((dot) => flat(dot.props.style).width === theme.size.pagerDotActive);
+
+    scrollRail(2 * (content() + theme.space.sm));
+    expect(current()).toBe(2);
+    expect(told.at(-1)).toEqual([2]);
   });
 });

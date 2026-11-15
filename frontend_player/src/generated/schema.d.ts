@@ -1874,7 +1874,7 @@ export interface paths {
         };
         /**
          * Home's Same competitive level players row
-         * @description The players a competitive game with would be most even — each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps — friends, those you asked, weaker matches — best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
+         * @description The players a competitive game with would be most even — each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you, not rested; somebody who asked you counts as fresh), then the gaps — friends, those you asked, rested players, weaker matches — best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
          */
         get: operations["read_same_level_api_v1_same_level_get"];
         put?: never;
@@ -1914,7 +1914,7 @@ export interface paths {
         };
         /**
          * Home's Same vibe players row
-         * @description The players whose Social tags overlap yours, most in common first — ties to fewer of their tags you don't hold, then the player id — each with the vibe %, 1 − ½ⁿ for n shared tags. Every tag counts the same, and skill plays no part, so a player with no level sees it too. Ten: fresh good matches first (2 shared tags or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps — friends, those you asked, 1-tag matches — in the same order. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
+         * @description The players whose Social tags overlap yours, most in common first — ties to fewer of their tags you don't hold, then the player id — each with the vibe %, 1 − ½ⁿ for n shared tags. Every tag counts the same, and skill plays no part, so a player with no level sees it too. Ten: fresh good matches first (2 shared tags or more, not your friend, not asked by you, not rested; somebody who asked you counts as fresh), then the gaps — friends, those you asked, rested players, 1-tag matches — in the same order. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
          */
         get: operations["read_same_vibe_api_v1_same_vibe_get"];
         put?: never;
@@ -1939,6 +1939,26 @@ export interface paths {
         get: operations["read_same_vibe_page_api_v1_same_vibe_all_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/on-screen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cards that came on screen in a row
+         * @description The phone's word that these cards were at least half visible in Home's *Same competitive level* or *Same vibe* row. **Each counts once per card, row and Warsaw day**, and only while you and they are unconnected — no friendship, no request of yours open; somebody who asked you counts. **On the fifth different day a player rests in that row**: a gap, never hidden, behind every fresh match — for good, even once you add them. Each row keeps its own count, and a day never reported counts nothing. **Ignored**: an id nobody holds, yours, and anybody never on a people row — blocked either way, *Show me to new people* off, an account that doesn't play.
+         */
+        post: operations["report_on_screen_api_v1_on_screen_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6988,6 +7008,25 @@ export interface components {
          * @enum {string}
          */
         OnCourtVerdict: "allowed" | "flagged";
+        /**
+         * OnScreenRequest
+         * @description The cards that came on screen in one row (#796).
+         */
+        OnScreenRequest: {
+            /** @description The row they came on screen in — `SAME_LEVEL` or `SAME_VIBE`, each with its own count. New in Raketa and See all rest nobody, so are never reported. */
+            row: components["schemas"]["OnScreenRow"];
+            /**
+             * Player Ids
+             * @description Each card at least half visible — the card's `player_id`. A card named twice, or reported again the same Warsaw day, counts once.
+             */
+            player_ids: string[];
+        };
+        /**
+         * OnScreenRow
+         * @description A row whose cards rest — each with its own count.
+         * @enum {string}
+         */
+        OnScreenRow: "SAME_LEVEL" | "SAME_VIBE";
         /**
          * OpenCardSchema
          * @description One court still waiting for this player's stars.
@@ -13849,6 +13888,46 @@ export interface operations {
                 };
             };
             /** @description `block_state_unavailable` — the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    report_on_screen_api_v1_on_screen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnScreenRequest"];
+            };
+        };
+        responses: {
+            /** @description Counted — also when nothing was: every id that counts nothing is ignored, with the same answer. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — the blocks couldn't be read, so nothing is counted rather than a day for somebody never on your rows. Safe to send again. */
             503: {
                 headers: {
                     [name: string]: unknown;

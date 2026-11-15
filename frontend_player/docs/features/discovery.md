@@ -161,3 +161,42 @@ columns, pill, filter, paging and empty line, and the request card's three lines
 the Same level card, its bar, the comparison sheet and See all against home rows 7–16; the Same vibe
 tile, its tint over each poster hue, the chips' fit and _+N more_, the vibe sheet and See all against
 home rows 20–24.
+
+**Rows stay alive: the cards that came on screen are reported**
+([#804](https://github.com/Raketa02/Raketa/issues/804); the Home rows mechanics §9.2, call 2; the
+backend's #796, `POST /on-screen`). On Home — never See all — every card of _Same competitive level_
+and every tile of _Same vibe_ that comes **at least half on screen** is told to the server, which
+rests a player in that row on the fifth different day without an add. **At least half is of the
+card's area**: the share of its height inside Home's band times the share of its width inside the
+rail's view, so a card wholly along the rail but half up the screen counts, and so does one wholly
+up but half along; the one peeking at a rail's edge never does. The geometry is `shared/ui`'s
+(`onScreen.ts`, which `HomeRowRail` asks through `onScreen` and `HomeRow` feeds with where its
+section stands), the page's band the shell's (`ShellScreen`'s `watchesOnScreen`); the rows only hand
+the rail `useOnScreenReports(row)`. **Once per card, row and Warsaw day** (`domain/onScreen.ts`): a
+card seen again that day is not told again, each row keeps its own count, and the day is the
+platform's (`shared/date`) — ten past midnight in Warsaw is a new day while it is still yesterday in
+UTC. **Batched** (`use-cases/onScreen.ts`): the first owed card opens a two-second window and one
+report tells everything owed when it closes, at most the route's fifty in the order seen. **A report
+that fails is never said**, and its cards stay owed, ahead of the rest: the next card seen that is
+still owed — a new one, or one of them coming back on screen — opens the next window, which carries
+them. There is no retry on a timer of its own; what a failed report left owed is dropped at a new
+day's first card rather than counted as that day, and the window open at Warsaw's midnight is still
+told as it closes — a report answered after the day turned changes nothing on the new day's ledger.
+**The ledger lives as long as the row's place on Home** (a ref in the outer row, before it knows
+whether it draws anybody): Home stays mounted under every pushed screen and tab and goes at
+sign-out, so what was told today is one account's; a Home drawn again starts afresh and may tell a
+card the server already counted, which counts it once. The reporter is made at the first card seen
+(the rail's effects run before its row's), and the row going closes an open window and calls off a
+report on its way. **A card coming into a row while Home is covered** — a friend write on See all
+re-reading the row — counts nothing until Home is back in view, when what stands there is told; so
+does a re-read landing while the app is in the background, where Android's JavaScript runs on.
+**Calls for the product owner**: no time on screen is asked — a card a fling carries past at half
+visible between two of the page's samples (ten a second) is seen; a sheet open over Home does not
+hide the row from the count; and the phone's clock decides when its own day turns, so a phone set
+wrong tells a day late or twice, which the server's own day absorbs. `onScreen.test.tsx` walks it
+through the route tree on the fake clock — a card scrolled into view reported once, scrolled out and
+in again the same day nothing more, the next day and Warsaw's midnight again, the peeking card and a
+card never shown never, the batch, each row's own count, a refused report carried into the next with
+nothing said, See all nothing, and a row read under See all or behind the home screen counted only
+on the way back; `use-cases/onScreen.test.ts` holds the reporter to its window, the midnight window,
+a late answer and its stop on a hand-turned clock.

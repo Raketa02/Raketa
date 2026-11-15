@@ -113,7 +113,13 @@ prefactor that keeps it one control rather than a copy made later. And by Home's
 the five PRD #789 adds ([#798](https://github.com/Raketa02/Raketa/issues/798)): `HomeRow` — a
 row's section, its eyebrow heading and, on the heading's line, an optional control and an optional
 link (_See all ›_) — and `HomeRowRail`, 7.7's peeking or paging rail over Part 8's Strip, never
-remounted. Every row on Home draws them; the words, the presses and the cards are the row's.
+remounted. Every row on Home draws them; the words, the presses and the cards are the row's. A
+rail handed **`onScreen`** is told which of its cards are at least half on screen
+([#804](https://github.com/Raketa02/Raketa/issues/804)), from `onScreen.ts`: the page's band
+(`PageOnScreen`, which a page that watches feeds through `useWatchedPage`), where `HomeRow`'s
+section stands on it (its own layout, so on such a page it stands directly in the page's column),
+and the rail's own frame and scroll (`useCardsOnScreen`). They are followed values, never state, so
+nothing re-renders as the page moves.
 And by the record's photos ([#799](https://github.com/Raketa02/Raketa/issues/799)):
 `PhotoCarousel` — every photo a player has, sideways, a 4:5 card at `photoCarouselRatio` of the
 content width over Part 8's Strip, nothing with no photo. **It came down ahead of its second

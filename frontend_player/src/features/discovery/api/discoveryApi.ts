@@ -11,12 +11,14 @@
  * | `GET /same-level/all?sport&after` | See all: 20 to a page, best % first; a sport re-compares everybody in it |
  * | `GET /same-vibe` | Home's row: up to 10, fresh good matches first, then the gaps |
  * | `GET /same-vibe/all?sport&after` | See all: 20 to a page, most in common first; a sport keeps who holds a level in it |
+ * | `POST /on-screen` | The cards that came on screen in one row ([#804](https://github.com/Raketa02/Raketa/issues/804), the backend's #796): 204 always, an id that counts nothing ignored |
  *
  * Every one refuses `block_state_unavailable` (503) — the blocks could not be read, so no row is
  * drawn rather than one that might suggest a blocked person — and each See all its own code for a
  * cursor the server never wrote (`not_a_new_in_raketa_page`, `not_a_same_level_page`,
  * `not_a_same_vibe_page`, 400). None is
- * said: the row is left out, and See all says the failure's recovery sentence with *Try again*.
+ * said: the row is left out, and See all says the failure's recovery sentence with *Try again*. A
+ * refused report is not said either: its cards go with the next one.
  */
 
 import type { components } from '@/generated/schema';
@@ -27,6 +29,7 @@ type Schemas = components['schemas'];
 const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
 const SAME_LEVEL_PATH = '/api/v1/same-level';
 const SAME_VIBE_PATH = '/api/v1/same-vibe';
+const ON_SCREEN_PATH = '/api/v1/on-screen';
 
 export interface Cancellable {
   readonly signal?: AbortSignal;
@@ -98,6 +101,20 @@ export function getSameVibePage(
   return httpRequest<Schemas['SameVibePageResponse']>({
     method: 'GET',
     path: seeAllPath(SAME_VIBE_PATH, page),
+    authenticated: true,
+    signal,
+  });
+}
+
+/** **The cards that came on screen** in one row — each counted once per card, row and Warsaw day. */
+export function postOnScreen(
+  report: Schemas['OnScreenRequest'],
+  { signal }: Cancellable = {},
+): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: ON_SCREEN_PATH,
+    body: report,
     authenticated: true,
     signal,
   });

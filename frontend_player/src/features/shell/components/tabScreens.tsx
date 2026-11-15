@@ -101,6 +101,7 @@ export function HomeScreen() {
   return (
     <ShellScreen
       title={HOME_COPY.title}
+      watchesOnScreen
       right={
         <View style={s.headerRight}>
           <RankingTrophy />

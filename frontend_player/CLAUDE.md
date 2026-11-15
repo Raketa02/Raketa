@@ -176,6 +176,7 @@ src/
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Anything from the backend | **TanStack Query** — never mirrored into a store                                                                                 |
 | A live frame's roster     | React state in the hook that follows the channel — not a query, not a store: it is the frame, and it is dropped with the channel |
+| A page's band on screen   | `shared/ui`'s `onScreen.ts`: followed values a page and its rows feed and a rail reads — never state, nothing redrawn            |
 | Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)                                                                     |
 | Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated`                                                             |
 | Local component state     | `useState` / `useReducer`                                                                                                        |
