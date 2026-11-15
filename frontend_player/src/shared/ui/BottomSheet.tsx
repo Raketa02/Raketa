@@ -65,10 +65,21 @@
  * defeat. So the sheet draws no scroll around such a body, and the list lays itself out with
  * `SHEET_LIST`: the same shrink, so the cap still bounds it, and the same bottom padding on its
  * content.
+ *
+ * ## A body that changes height can bring the sheet with it (`layoutTransition`)
+ *
+ * The sheet sits on the bottom edge, so a body that grows moves the sheet's top edge up. A caller
+ * that animates such a change — the record's *Full record* fold — hands its Reanimated layout
+ * transition here, and the sheet and its scroll move with the body rather than jumping to the
+ * new height. **A transition, never a height animated frame by frame**: under the New
+ * Architecture Reanimated commits a layout prop to the shadow tree and skips that commit while
+ * React commits anywhere in the app, so a per-frame height froze and jumped (`RecordDetails`).
+ * Absent, the sheet takes its new height at once, as every other sheet does, and draws plain views.
  */
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { KEYBOARD_AVOIDANCE, dismissKeyboard } from '@/shared/lib/platform/keyboard';
 
@@ -112,8 +123,17 @@ export interface BottomSheetProps {
    * `SHEET_LIST`'s `style` and `contentContainerStyle`.
    */
   readonly scrollsItself?: boolean;
+  /**
+   * How the sheet and its scroll follow a body that changes height — a Reanimated layout
+   * transition, forwarded, not designed (see the module note). Not applied to a body that
+   * scrolls itself.
+   */
+  readonly layoutTransition?: SheetLayoutTransition;
   readonly children: ReactNode;
 }
+
+/** What `BottomSheet`'s `layoutTransition` takes: Reanimated's own `layout`. */
+export type SheetLayoutTransition = ComponentProps<typeof Animated.View>['layout'];
 
 export function BottomSheet({
   visible,
@@ -125,9 +145,15 @@ export function BottomSheet({
   action,
   keepsKeyboardOnTap = false,
   scrollsItself = false,
+  layoutTransition,
   children,
 }: BottomSheetProps) {
   const reducedMotion = useReducedMotion();
+  // Reanimated's views only where a caller moves the sheet; every other sheet keeps plain ones.
+  const moves = layoutTransition !== undefined;
+  const Sheet = moves ? Animated.View : View;
+  const Body = moves ? Animated.ScrollView : ScrollView;
+  const moving = moves ? { layout: layoutTransition } : {};
   const heading = useRef<View | null>(null);
   const wasVisible = useRef(visible);
 
@@ -171,7 +197,7 @@ export function BottomSheet({
           importantForAccessibility="no-hide-descendants"
         />
 
-        <View style={s.sheet} accessibilityViewIsModal testID="bottom-sheet">
+        <Sheet style={s.sheet} accessibilityViewIsModal testID="bottom-sheet" {...moving}>
           <View style={s.grab} />
 
           {mark === undefined ? (
@@ -207,17 +233,18 @@ export function BottomSheet({
           {scrollsItself ? (
             children
           ) : (
-            <ScrollView
+            <Body
               style={s.body}
               contentContainerStyle={s.bodyContent}
               // A tap on a field or a button while the keyboard is up reaches it, not the keyboard —
               // and a sheet with the card field keeps the keyboard on every tap (the prop's note).
               keyboardShouldPersistTaps={keepsKeyboardOnTap ? 'always' : 'handled'}
+              {...moving}
             >
               {children}
-            </ScrollView>
+            </Body>
           )}
-        </View>
+        </Sheet>
       </KeyboardAvoidingView>
     </ModalStage>
   );

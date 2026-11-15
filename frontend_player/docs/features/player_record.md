@@ -314,6 +314,21 @@ the one ladder and never a second one, held to it at every score in `scoreTone.t
 cannot turn amber where a meter stays neutral. Not seen on a device: the fold's pace, and the sheet
 growing under it on both platforms.
 
+**The fold's height moves by a layout transition, never frame by frame** (2026-11-15, seen
+stuttering on an iPhone 15 Pro Max). The first build ran a shared value into the fold's `height`.
+Under the New Architecture, Reanimated 3.16 cannot write a layout prop onto the native view: it
+commits it to the shadow tree, and it **skips that commit while React commits anywhere in the
+app** — the Home header behind the sheet re-rendering was enough. Filmed over USB, the sheet's top
+edge held still for up to three frames and then jumped 100 pt, and the fade and the chevron held
+with it, because one layout prop in a frame's batch sends the whole batch through that commit. Now
+a press changes the fold's height once — nought, or the content's measured height — and
+`useFoldTransition` (`LinearTransition`, `motion.disclose`, `easeDecel`) moves the native frames:
+the fold's, and the sheet's and the foot's, which `PlayerRecordSheet` hands the same transition
+(`BottomSheet`'s `layoutTransition`, opt-in, so every other sheet draws plain views as before). The
+fade, the slide and the chevron stay on one shared value, opacity and transform only. Under the
+same forced commits every transition filmed followed `easeDecel` with no frame held. Seen on iOS
+only; Android owes a look.
+
 **The sheet ends in Block or Unblock, and a block is no longer one of its refusals**
 ([#587](https://github.com/Raketa02/Raketa/issues/587),
 [ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)

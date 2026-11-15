@@ -224,6 +224,12 @@ asymmetry with a proxy or a cookie session.
   provider below the root, no navigation hook inside a sheet. And never scale a layer to move
   things on the UI thread — iOS rasterises it blurred; translate a point per tile, as the radar
   does.
+- **Never animate a layout prop frame by frame with Reanimated** (`height`, `width`, a margin,
+  `top`…). Under the New Architecture, Reanimated 3.16 commits it to the shadow tree and skips that
+  commit while React commits anywhere in the app, so the motion freezes and then jumps — and
+  everything else animated in that frame freezes with it. Per frame, move only `transform` and
+  `opacity`; change a size once and let a layout transition (`layout=`) move the frames
+  (`RecordDetails`).
 
 ## Git & domain language
 

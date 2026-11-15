@@ -3157,7 +3157,8 @@ width, a `line2` fold above it — over the counted card and the tags, shut each
 opens. _Full record_ is the row's spoken name, never drawn. It moves
 both ways over `motion.disclose` (280, `easeDecel`, UI thread): the fold's **height** runs to the
 content's measured height, the content fades in from a `space.md` above, and the chevron turns half
-a turn. Never a scale. Shut, the fold is hidden from assistive technology. Under reduced motion it
+a turn. Never a scale, and never a height animated frame by frame: the height changes once and a
+layout transition moves it, the sheet and the foot with it (`RecordDetails`). Shut, the fold is hidden from assistive technology. Under reduced motion it
 is simply open or shut.
 
 **On the record sheet the row is a sibling of the skill card and never a footer on it**, and the

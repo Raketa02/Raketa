@@ -133,6 +133,7 @@
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { BlockRow } from '@/features/blocks/types';
 import {
@@ -151,7 +152,7 @@ import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
 import { RecordBlocks } from './RecordBlocks';
 import { RecordCard } from './RecordCard';
-import { RecordDetails } from './RecordDetails';
+import { RecordDetails, useFoldTransition } from './RecordDetails';
 import { RecordHeader } from './RecordHeader';
 import { RecordStanding, isRecordRefusal } from './RecordRead';
 import { RecordTags } from './RecordTags';
@@ -253,6 +254,9 @@ export function PlayerRecordSheet({
   // default until it lands. A sheet opened from your own face is `kind: 'me'`, which is what
   // the caller knows rather than what it compared.
   const isSelf = record.data?.isSelf ?? subject.kind === 'me';
+  // The sheet stands on the bottom edge, so *Full record* opening moves its top: the fold's own
+  // transition brings it along (`RecordDetails`).
+  const fold = useFoldTransition();
 
   return (
     <BottomSheet
@@ -260,6 +264,7 @@ export function PlayerRecordSheet({
       onClose={onClose}
       title={recordTitle(isSelf)}
       closeLabel={recordCloseLabel(isSelf)}
+      layoutTransition={fold}
     >
       <View style={s.body}>
         {record.data === undefined || isRecordRefusal(record.error) ? (
@@ -307,6 +312,7 @@ function Filled({
   PlayerRecordSheetProps,
   'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing' | 'foot'
 >) {
+  const fold = useFoldTransition();
   return (
     <>
       <RecordHeader
@@ -357,8 +363,13 @@ function Filled({
       </RecordDetails>
 
       {/* The foot, last, where the surface filled it. A sheet reads statement first and answer
-          last, which is the whole reason it is at the end and inside the scroll (9.1). */}
-      {foot === undefined ? null : <View style={s.foot}>{foot}</View>}
+          last, which is the whole reason it is at the end and inside the scroll (9.1). It moves
+          down with the fold's own transition, so it keeps its place on screen as the sheet grows. */}
+      {foot === undefined ? null : (
+        <Animated.View layout={fold} style={s.foot}>
+          {foot}
+        </Animated.View>
+      )}
 
       {/* **Add friend beside Block, last** (#753, #587, #779): on every record but your own, from
           the record's own answers. The acts are `friends'` and `blocks'`; where the reader stands
@@ -393,19 +404,21 @@ function RecordFoot({
   readonly onBlocked: () => void;
 }) {
   const foot = recordFootOf(record);
+  // Under the fold, so it moves with the fold's transition and keeps its place on screen.
+  const fold = useFoldTransition();
   const block = <BlockRow playerId={playerId} name={record.nickname} onBlocked={onBlocked} />;
   switch (foot.kind) {
     case 'nothing':
       return null;
     case 'block':
       return (
-        <View style={s.footRow} testID="record-foot">
+        <Animated.View layout={fold} style={s.footRow} testID="record-foot">
           <View style={s.whole}>{block}</View>
-        </View>
+        </Animated.View>
       );
     case 'pair':
       return (
-        <View style={s.footRow} testID="record-foot">
+        <Animated.View layout={fold} style={s.footRow} testID="record-foot">
           <View style={s.half}>
             <FriendButton
               playerId={playerId}
@@ -416,7 +429,7 @@ function RecordFoot({
             />
           </View>
           <View style={s.half}>{block}</View>
-        </View>
+        </Animated.View>
       );
   }
 }
