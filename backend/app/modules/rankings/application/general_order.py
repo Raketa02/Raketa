@@ -25,7 +25,7 @@ one, the reader's row included.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import TypeVar, final
 from uuid import UUID
@@ -76,10 +76,31 @@ class TheGeneralOrder:
         """The sport's order for a read at ``now``, and ``reader``'s row of
         it."""
 
-        own = next(
-            (row for row in await self._rows.of_player(reader) if row.sport is sport),
-            None,
+        return await self._read(
+            sport, now=now, reader=reader, owned=await self._rows.of_player(reader)
         )
+
+    async def read_each(
+        self, sports: Sequence[Sport], *, now: Instant, reader: UUID
+    ) -> AsyncGenerator[tuple[Sport, OrderRead], None]:
+        """Each of ``sports``' orders in turn, as :meth:`read` reads one —
+        **the reader's own rows asked once** for all of them, and a sport's
+        order read only when the caller asks for the next (Top 10's
+        fall-through, #797)."""
+
+        owned = await self._rows.of_player(reader)
+        for sport in sports:
+            yield sport, await self._read(sport, now=now, reader=reader, owned=owned)
+
+    async def _read(
+        self,
+        sport: Sport,
+        *,
+        now: Instant,
+        reader: UUID,
+        owned: Sequence[RankingRow],
+    ) -> OrderRead:
+        own = next((row for row in owned if row.sport is sport), None)
         held = await self._orders.held(sport)
         if held is not None and kept_fresh(held.worked_out_at, now):
             order = _Reading(held, again=lambda: self.work_out_and_keep(sport, now=now))

@@ -3,6 +3,7 @@ paths:
   - "app/modules/rankings/**"
   - "app/seeds/rankings.py"
   - "app/seeds/ranking_crowd.py"
+  - "app/seeds/top_ten.py"
   - "app/bootstrap/general_order_demands.py"
   - "app/modules/proposals/infrastructure/rankings.py"
   - "app/bootstrap/ranking_demands.py"
@@ -16,7 +17,7 @@ paths:
 # Rankings
 
 Decisions that are load-bearing and not obvious from the code (#768, #769, #770, #771, #772, #773,
-#791; [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md), amended by
+#791, #797; [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md), amended by
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §2; `docs/specs/rankings/`, `docs/specs/home-rows/` §4). The words are root `CONTEXT.md`'s *Rankings* section.
 
@@ -245,6 +246,33 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   `proposals/infrastructure/rankings.py` (`RankingsOnHome`) over `ReadHomeRanking`, with a
   row in `proposal_demands.py`; `.importlinter`'s `rankings-knows-none-of-its-readers`
   keeps every arrow running into `rankings`.
+- **Home's Top 10** (#797; ADR-0204 §8; the home-rows mechanics §10; `domain/top_ten.py`,
+  `reads.py`'s `ReadTopTen`): `GET /top-10?sport=` or `?prefer=` (player surface, its own
+  router beside the Rankings page's), **exactly one of them** — neither or both is
+  `400 not_one_sport`, an unknown sport `422`. **The first ten rows of General** in the
+  sport (`TOP_TEN`): `players` — `place`, `player_id`, `nickname`, the photo, `level`,
+  `chip` and `is_you` — the main read's own rows, so a row nobody can name is left out at
+  its place, and **everybody counts**, a blocked pair included (#791). **`sport` is the
+  pill**, read exactly: empty with nobody listed there. **`prefer` is the opening** (the
+  trophy's sport, else the deck's last, else padel — the phone's chain, since the deck's
+  sport is the phone's to remember): with nobody listed in it, **the next sport in the
+  registry's order where somebody is, going round** past the last to the first
+  (`sports_from`, the mechanics' call 10); with nobody anywhere, the preferred sport,
+  empty. **`anyone_listed`** is whether anybody is listed in General in any sport — the
+  row is hidden while nobody is. **The chip on a card is the move alone**
+  (`TopTenChipSchema`, `UP`/`DOWN` with `places`): `drawn_chip` turns the order's `SAME`
+  and `NEW` into `null`, so the wire never offers a chip the card doesn't draw. **Off each
+  sport's kept General order** (`TheGeneralOrder.read_each`: the reader's own rows asked
+  once for every sport it reads, then each sport's order only while the answer still turns
+  on it — the asked sport listing nobody, or a preference falling through), so a warm read
+  is the kept order and one face question for the ten, fewer than the first page's fifty,
+  and the row and the Rankings page never disagree. **An asked sport listing nobody reads
+  on** through the other sports' orders until one lists somebody, for `anyone_listed` alone:
+  kept orders too, so warm it is a pointer each, and cold at most one pass of the first
+  listed sport (the first page's own cost), kept for the next reader of that sport. A
+  cheaper *anybody listed* question (an `EXISTS` on the projection) is the lever if a
+  measurement asks for it; none has. Tested over HTTP in
+  `tests/api/test_top_ten.py`.
 - **Its neighbours are ports in its own words**, signed in `rankings/infrastructure/` and
   contracted in **`app/bootstrap/ranking_demands.py`** (the seventeenth register):
   `RatingHistories` (`RatingStreamHistories`, over the rating's own streams through the
@@ -294,3 +322,21 @@ Decisions that are load-bearing and not obvious from the code (#768, #769, #770,
   her, the beginner reads *needs results* with 2–4, badminton lists nobody, and her Friends
   view is `LISTED` with at least three friends and a podium. **Her
   trophy reads tennis**: her evenings are her latest results.
+- **Top 10's states are seeded** (#797, `app/seeds/top_ten.py`): padel ten cards and more,
+  badminton none, and **squash exactly two** — `SQUASH_PAIR`, two players outside the
+  cohort, rated in squash through the questionnaire beside the crowd, week cleared, a card
+  each, none of her tags and no padel or tennis level (so no row of hers reads them), with
+  five squash results between them on Prądnik Tennis's squash court, in *Squash na
+  Prądniku*, a group of two (off Hottest groups), through the played history's own path
+  (`booked_history.write_games_among`: placed, booked, played, scored and found again on a
+  re-run as every history game is). **Why Prądnik**: Ogrody 33 sells no squash, and a club
+  on the default three-day release lead gives its hours back before the two days ahead a
+  history game is made. **Her row opens on tennis, her trophy's sport** — the beginner
+  listed, and her beside them only once the API's first tick confirms the evening she left
+  unanswered, her fifth. **Padel can't also hold her among its ten**: the crowd puts her
+  56th for *You · 56th*, so her volt card is walked in tennis, two cards — and **ten cards
+  with your own among them** as the crowd player placed 7th in padel (`WALKED_AT`), a seed
+  account the screen line names to sign in as. `assert_the_top_ten` reads her row among the
+  screens and fails the run by name unless it opens with cards, holds her own card wherever
+  the trophy places her in the top ten, padel reads places 1–10, squash the pair alone,
+  badminton none with somebody listed elsewhere, and the 7th's row their own card at 7.

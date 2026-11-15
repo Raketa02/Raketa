@@ -17,12 +17,18 @@ from __future__ import annotations
 
 import base64
 import binascii
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from app.kernel import Sport
-from app.modules.rankings.application.reads import GeneralPage, RankedRow, Ranking
+from app.modules.rankings.application.reads import (
+    GeneralPage,
+    RankedRow,
+    Ranking,
+    TopTen,
+)
 from app.modules.rankings.domain.errors import NotAPage
 from app.modules.rankings.domain.general_order import (
     OrderKey,
@@ -43,6 +49,7 @@ from app.modules.rankings.domain.ranking import (
     RankingView,
     level_of,
 )
+from app.modules.rankings.domain.top_ten import TOP_TEN, drawn_chip
 
 
 def cursor_of(key: OrderKey) -> str:
@@ -371,6 +378,108 @@ class RankingResponse(BaseModel):
             podium=[RankedRowSchema.of_row(row) for row in ranking.podium],
             rows=[RankedRowSchema.of_row(row) for row in ranking.rows],
             next=None if ranking.next is None else cursor_of(ranking.next),
+        )
+
+
+class TopTenChipSchema(BaseModel):
+    """**The week's move on a Top 10 card**, drawn — a triangle and a bold
+    italic number, *▲ 2* in volt, *▼ 1* in coral. The Rankings page's chip for
+    the same row; a card draws none for no change or *New*."""
+
+    kind: Literal[ChipKind.UP, ChipKind.DOWN] = Field(
+        description="`UP` — *▲ 2*. `DOWN` — *▼ 1*."
+    )
+    places: int = Field(ge=1, description="How many places — the *2* of *▲ 2*.")
+
+
+class TopTenPlayerSchema(BaseModel):
+    """One Top 10 card: the numeral, the portrait, the nickname, the Level and
+    the week's move. **A tap opens their record**; across a block it reads
+    *This record isn't available*."""
+
+    place: int = Field(
+        ge=1,
+        le=TOP_TEN,
+        description="Their true place in General — the huge numeral, 1 to 10.",
+    )
+    player_id: UUID
+    nickname: str = Field(description="Whole, never with an @ (docs/adr/0199 §1).")
+    photo_id: UUID | None
+    photo_url: str | None = Field(
+        description=(
+            "A short-lived link to their first photograph; `null` with "
+            "`photo_id` draws the court picture."
+        )
+    )
+    level: float = Field(description="Their Level, two decimals — *3,40*.")
+    chip: TopTenChipSchema | None = Field(
+        description=(
+            "Their places moved this week, rolling — as the Rankings page's row "
+            "reads them. `null` for no change and for *New*: no chip is drawn."
+        )
+    )
+    is_you: bool = Field(
+        description=(
+            "Your own card — it reads *You*, its numeral volt and the card "
+            "ringed in volt."
+        )
+    )
+
+    @classmethod
+    def of_row(cls, row: RankedRow) -> "TopTenPlayerSchema":
+        chip = drawn_chip(row.chip)
+        return cls(
+            place=row.place,
+            player_id=row.player_id,
+            nickname=row.nickname,
+            photo_id=row.photo_id,
+            photo_url=row.photo_url,
+            level=level_of(row.hundredths),
+            chip=(
+                None
+                if chip is None
+                else TopTenChipSchema(
+                    kind=ChipKind.UP if chip.kind is ChipKind.UP else ChipKind.DOWN,
+                    places=chip.places,
+                )
+            ),
+            is_you=row.is_you,
+        )
+
+
+class TopTenResponse(BaseModel):
+    """**Top 10 on Home**: places 1 to 10 of General in one sport, the true
+    top of the Rankings page — everybody at their true place, whoever blocked
+    whom."""
+
+    sport: Sport = Field(
+        description=(
+            "The sport the row shows: the one asked for, or the one a "
+            "preference fell through to — the pill's chosen sport, and the one "
+            "*Rankings ›* opens on."
+        )
+    )
+    anyone_listed: bool = Field(
+        description=(
+            "Whether anybody is listed in General **in any sport**. While "
+            "nobody is, the row is hidden."
+        )
+    )
+    players: list[TopTenPlayerSchema] = Field(
+        max_length=TOP_TEN,
+        description=(
+            "Places 1 to 10 of General in `sport`, best first — fewer while "
+            "fewer are listed, one or two included. **Empty while nobody is "
+            "ranked in `sport`**: *Nobody ranked in squash yet*."
+        ),
+    )
+
+    @classmethod
+    def of_top_ten(cls, top: TopTen) -> "TopTenResponse":
+        return cls(
+            sport=top.sport,
+            anyone_listed=top.anyone_listed,
+            players=[TopTenPlayerSchema.of_row(row) for row in top.rows],
         )
 
 

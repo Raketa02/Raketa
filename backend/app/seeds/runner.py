@@ -256,6 +256,13 @@ from app.seeds.new_in_raketa import (
     new_in_raketa_lines,
     write_new_in_raketa,
 )
+from app.seeds.top_ten import (
+    SQUASH_PAIR,
+    SeededSquashPair,
+    assert_the_top_ten,
+    squash_pair_lines,
+    write_the_squash_pair,
+)
 from app.seeds.full_hour import (
     SeededFullHour,
     assert_the_full_hour,
@@ -1259,6 +1266,9 @@ class SeedReport:
     #: Same vibe's two requests, whether her six tags were set, and how many
     #: fresh good matches her row held (#795). ``None`` on the same callers.
     same_vibe: SeededSameVibe | None = None
+    #: Top 10's squash pair, their group and their five games (#797). ``None``
+    #: on the same callers.
+    squash_pair: SeededSquashPair | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1342,6 +1352,18 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 photographs=False,
                 clear_the_week=True,
             )
+            # **Top 10's squash pair, outside the cohort too** (#797): rated in
+            # squash through the questionnaire, their week cleared, so nobody
+            # deals them — the crowd's reasons, in a sport nobody else plays.
+            squash_players = await seed_the_cohort(
+                session,
+                cohort=SQUASH_PAIR,
+                clock=FixedClock(at=now),
+                settings=settings,
+                photos=photos,
+                photographs=False,
+                clear_the_week=True,
+            )
         # **The payment methods straight after the people**, each saved through
         # the setup a phone runs. Nothing below reads one yet and a saved card
         # changes nothing any other layer reads, so its place is free; it is
@@ -1351,7 +1373,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             now=now,
             cohort=[
                 (member.member.handle, member.player_id)
-                for member in (*members, *crowd)
+                for member in (*members, *crowd, *squash_players)
             ],
             money=money,
         )
@@ -1404,6 +1426,14 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             named=ACCOUNTS,
             crowd=RANKING_CROWD.members,
             money=money,
+        )
+        # **Top 10's squash pair's games after the played history, on its
+        # path** (#797): five results between the two at Prądnik Tennis, in a
+        # group of theirs — Ogrody 33, where the history plays, sells no squash
+        # — so the rooms layer's drain lists them both in squash. Nobody else
+        # plays squash, and nothing below deals them.
+        squash_pair = await write_the_squash_pair(
+            session_factory, settings=settings, now=now, money=money
         )
         # **After the games and before anything reads a record**, because a card
         # is drawn for a court that is over: nothing here arranges an evening,
@@ -1539,6 +1569,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             await assert_new_in_raketa(
                 session_factory, settings=settings, now=now, seeded=new_in_raketa
             ),
+            await assert_the_top_ten(session_factory, settings=settings, now=now),
         )
         same_level_screen, same_level = await assert_same_level(
             session_factory, settings=settings, seeded=same_level
@@ -1571,6 +1602,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             new_in_raketa=new_in_raketa,
             same_level=same_level,
             same_vibe=same_vibe,
+            squash_pair=squash_pair,
             photographs=photographs,
         )
     finally:
@@ -1688,6 +1720,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *same_level_lines(run_report.same_level)])
     if run_report.same_vibe is not None:
         lines.extend(["", *same_vibe_lines(run_report.same_vibe)])
+    if run_report.squash_pair is not None:
+        lines.extend(["", *squash_pair_lines(run_report.squash_pair)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])

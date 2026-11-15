@@ -1,5 +1,5 @@
 """The seeded ranking, read back the way the player app reads it (#768, #770,
-#771).
+#771), and Home's Top 10 over it (#797).
 
 ``app/seeds/rankings.py`` hands its padel games to the played history — and
 ``ranking_crowd.py`` the crowd's — so each is a past booked game filled,
@@ -12,7 +12,7 @@ asked twice would.
 
 The world is the runner's, cut to what the layer reads: the named accounts,
 everybody the games and her evenings seat out of the real cohort, the crowd,
-every card, the clubs and their courts.
+Top 10's squash pair, every card, the clubs and their courts.
 """
 
 from __future__ import annotations
@@ -47,6 +47,7 @@ from app.seeds.rankings import (
     write_her_ranked_friends,
 )
 from app.seeds.runner import seed, seed_the_cohort
+from app.seeds.top_ten import SQUASH_PAIR, assert_the_top_ten, write_the_squash_pair
 from tests.api.players_world import deliver_the_outbox
 from tests.api.rankings_world import stored_rows
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
@@ -94,11 +95,21 @@ async def ranked_world(session_factory, now):
             photographs=False,
             clear_the_week=True,
         )
+        pair = await seed_the_cohort(
+            session,
+            cohort=SQUASH_PAIR,
+            clock=FixedClock(at=now),
+            settings=settings,
+            photos=photos,
+            photographs=False,
+            clear_the_week=True,
+        )
     await write_the_payment_methods(
         session_factory,
         now=now,
         cohort=[
-            (member.member.handle, member.player_id) for member in (*members, *crowd)
+            (member.member.handle, member.player_id)
+            for member in (*members, *crowd, *pair)
         ],
     )
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
@@ -116,6 +127,7 @@ async def _the_history(session_factory, now) -> None:
         named=ACCOUNTS,
         crowd=RANKING_CROWD.members,
     )
+    await write_the_squash_pair(session_factory, settings=get_settings(), now=now)
     await deliver_the_outbox(session_factory, rounds=200)
     await write_her_ranked_friends(session_factory, now=now)
 
@@ -254,21 +266,70 @@ async def test_a_second_run_changes_nothing(client, session_factory, ranked_worl
     async with session_factory() as session:
         events = await session.scalar(select(func.count()).select_from(EventStoreORM))
 
-    # The crowd written again — registered, rated, committed and cleared —
-    # and the history after it.
+    # The crowd and the squash pair written again — registered, rated,
+    # committed and cleared — and the history after them.
     async with session_factory() as session:
-        await seed_the_cohort(
-            session,
-            cohort=RANKING_CROWD,
-            clock=FixedClock(at=now),
-            settings=get_settings(),
-            photos=InMemoryPhotoStorage(),
-            photographs=False,
-            clear_the_week=True,
-        )
+        for cohort in (RANKING_CROWD, SQUASH_PAIR):
+            await seed_the_cohort(
+                session,
+                cohort=cohort,
+                clock=FixedClock(at=now),
+                settings=get_settings(),
+                photos=InMemoryPhotoStorage(),
+                photographs=False,
+                clear_the_week=True,
+            )
     await _the_history(session_factory, now)
 
     assert await stored_rows(session_factory) == first
     async with session_factory() as session:
         again = await session.scalar(select(func.count()).select_from(EventStoreORM))
     assert again == events
+
+
+async def _top_ten(client, headers: dict, **params) -> dict:
+    read = await client.get("/api/v1/top-10", params=params, headers=headers)
+    assert read.status_code == 200, read.text
+    return read.json()
+
+
+async def test_top_ten_reads_ten_in_padel_the_pair_in_squash_and_nobody_in_badminton(  # noqa: E501
+    client, session_factory, ranked_world, now
+):
+    await _the_history(session_factory, now)
+    her = await signed_in(client, THE_POPULATED_PLAYER.email)
+    pair = sorted(
+        [await _nickname(session_factory, one.email) for one in SQUASH_PAIR.members]
+    )
+
+    padel = await _top_ten(client, her, sport="PADEL")
+    squash = await _top_ten(client, her, sport="SQUASH")
+    badminton = await _top_ten(client, her, sport="BADMINTON")
+
+    assert [one["place"] for one in padel["players"]] == list(range(1, 11))
+    assert not any(one["is_you"] for one in padel["players"])
+    assert sorted(one["nickname"] for one in squash["players"]) == pair
+    assert [one["place"] for one in squash["players"]] == [1, 2]
+    assert badminton == {"sport": "BADMINTON", "anyone_listed": True, "players": []}
+    # Nobody else plays squash, and the pair hold none of her tags: no row of
+    # hers reads them, and their group of two is left off Hottest groups.
+    for row in ("/api/v1/same-level", "/api/v1/same-vibe", "/api/v1/new-in-raketa"):
+        read = (await client.get(row, headers=her)).json()
+        assert not set(pair) & {one["nickname"] for one in read["players"]}, row
+    assert await assert_the_top_ten(session_factory, settings=get_settings(), now=now)
+
+    # Her four agreed tennis results list nobody in this world, so preferring
+    # her trophy's sport falls through to the next with anybody listed...
+    assert (await _top_ten(client, her, prefer="TENNIS"))["sport"] == "SQUASH"
+    # ...until the API's first tick confirms her silent evening, her fifth:
+    # then it opens on tennis, with her own card.
+    async with session_factory() as session:
+        await build_settle_ratings_on_results(
+            session, clock=FixedClock(at=now)
+        ).execute()
+    await deliver_the_outbox(session_factory)
+    opening = await _top_ten(client, her, prefer="TENNIS")
+
+    assert opening["sport"] == "TENNIS"
+    assert [(one["place"], one["is_you"]) for one in opening["players"]] == [(1, True)]
+    assert await assert_the_top_ten(session_factory, settings=get_settings(), now=now)

@@ -1,5 +1,6 @@
 """The Rankings page's reads (#768, #770, #771; ``docs/adr/0203`` §2–§5; the
-screens §2–§5).
+screens §2–§5), and Home's Top 10, the top of the same list (#797;
+``docs/adr/0204`` §8).
 
 **Read-only, and it tells nobody anything** (Q10): no push, bell line or email
 is about a place.
@@ -11,20 +12,23 @@ from fastapi import APIRouter, Query, status
 
 from app.core.exception_handlers import ErrorResponse
 from app.kernel import Sport
-from app.modules.rankings.domain.errors import NotAPage
+from app.modules.rankings.domain.errors import NotAPage, NotOneSport
 from app.modules.rankings.domain.ranking import RankingView
 from app.modules.rankings.presentation.dependencies import (
     ReadGeneralPageDep,
     ReadRankingDep,
+    ReadTopTenDep,
 )
 from app.modules.rankings.presentation.schemas import (
     GeneralPageResponse,
     RankingResponse,
+    TopTenResponse,
     key_of,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/rankings", tags=["rankings"])
+top_ten_router = APIRouter(prefix="/top-10", tags=["rankings"])
 
 
 @router.get(
@@ -108,3 +112,50 @@ async def read_general_page(
             around_the_reader=around_me,
         )
     )
+
+
+@top_ten_router.get(
+    "",
+    response_model=TopTenResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`not_one_sport` — neither `sport` nor `prefer`, or both at once."
+            ),
+        },
+    },
+    summary="Home's Top 10 row",
+    description=(
+        "The first ten rows of General in one sport — the true top of the "
+        "Rankings page, everybody at their true place, whoever blocked whom. "
+        "Name the sport **exactly** with `sport` (the pill), or **prefer** one "
+        "with `prefer` (the trophy's sport, on opening): with nobody listed in "
+        "it, the row shows the next sport in the app's order where somebody "
+        "is, going round from the last to the first. One of the two, never "
+        "both. `anyone_listed` says whether the row shows at all."
+    ),
+)
+async def read_top_ten(
+    user: CurrentUserDep,
+    use_case: ReadTopTenDep,
+    sport: Sport | None = Query(
+        default=None,
+        description="This sport exactly — empty when nobody is listed in it.",
+    ),
+    prefer: Sport | None = Query(
+        default=None,
+        description=(
+            "This sport, or, with nobody listed in it, the next in the app's "
+            "order where somebody is."
+        ),
+    ),
+) -> TopTenResponse:
+    if sport is not None and prefer is None:
+        top = await use_case.execute(user.id, sport)
+    elif prefer is not None and sport is None:
+        top = await use_case.execute(user.id, prefer, falls_through=True)
+    else:
+        raise NotOneSport()
+    return TopTenResponse.of_top_ten(top)

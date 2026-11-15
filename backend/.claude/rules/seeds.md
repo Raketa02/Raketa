@@ -197,6 +197,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   through *Edit tags*' own use case. `assert_same_vibe` reads her row and See all among the
   screens and fails by name if a count from one to six goes missing. **Her row is all fresh**
   — the crowd sharing two tags with her is far more than ten — and the run says so as a cost.
+- **Top 10's squash needs two listed players, so two are written for it** (#797,
+  `app/seeds/top_ten.py`; `rankings.md`): `SQUASH_PAIR`, outside the cohort, seeded beside the
+  ranking's crowd (`seed_the_cohort(…, clear_the_week=True)`) and carded by the payment layer
+  with it; after the played history, `write_the_squash_pair` makes their group of two at
+  Prądnik Tennis and plays their five squash results through
+  `booked_history.write_games_among` — the history's own placing, booking, playing and
+  finding again, for a game the history's club can't hold — so the rooms layer's drain lists
+  the two. `assert_the_top_ten` reads her row among the screens. Her own card is in tennis,
+  after the API's first tick; padel keeps her 56th, so the ten-card row with your own card is
+  the crowd's 7th, named on the screen line.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

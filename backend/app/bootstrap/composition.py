@@ -629,6 +629,7 @@ from app.modules.rankings.application.reads import (
     ReadGeneralPage,
     ReadHomeRanking,
     ReadRanking,
+    ReadTopTen,
 )
 from app.modules.rankings.domain.ports import (
     GeneralOrders,
@@ -4240,6 +4241,22 @@ def build_read_general_page(
 ) -> ReadGeneralPage:
     """``GET /rankings/{sport}/general/rows``: a page of General (#770)."""
     return ReadGeneralPage(
+        general=build_the_general_order(session, orders=orders),
+        faces=build_ranked_faces(session, settings=settings, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_top_ten(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    orders: GeneralOrders,
+    runtime: EventRuntime | None = None,
+) -> ReadTopTen:
+    """``GET /top-10``: Home's Top 10, the first ten of General (#797)."""
+    return ReadTopTen(
         general=build_the_general_order(session, orders=orders),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         clock=clock,

@@ -111,7 +111,7 @@ from app.modules.sportsmanship.domain.card import StarsGiven
 from app.seeds.bookings import all_say_yes, club_id_of, the_cut_off_came
 from app.seeds.catalog import THE_POPULATED_PLAYER, SeedAccount
 from app.seeds.clock import FixedClock, days_before
-from app.seeds.clubs import SEED_CLUBS
+from app.seeds.clubs import SEED_CLUBS, SeedClub
 from app.seeds.money import THE_FAKE, SeedMoney
 from app.seeds.cohort import (
     COHORT,
@@ -451,7 +451,12 @@ class _Planned:
     order: int
 
 
-def _plan(games: Sequence[PlayedGame], *, now: Instant) -> list[_Planned]:
+def _plan(
+    games: Sequence[PlayedGame],
+    *,
+    now: Instant,
+    evenings: Sequence[Evening] = HER_EVENINGS,
+) -> list[_Planned]:
     """Every game and where its placement starts: a declared game on its own
     day, or the last day before her week where it was declared inside it; her
     evenings one a day back from that day."""
@@ -471,8 +476,8 @@ def _plan(games: Sequence[PlayedGame], *, now: Instant) -> list[_Planned]:
                 order=len(planned),
             )
         )
-    for index, evening in enumerate(HER_EVENINGS):
-        day = anchor - timedelta(days=len(HER_EVENINGS) - 1 - index)
+    for index, evening in enumerate(evenings):
+        day = anchor - timedelta(days=len(evenings) - 1 - index)
         planned.append(
             _Planned(
                 evening.as_a_game(),
@@ -530,10 +535,7 @@ async def write_the_played_history(
         booked = await _past_bookings(
             session, [person.player_id for person in people.values()]
         )
-        busy: dict[UUID, list[Instant]] = {}
-        for _, players, start, _ in booked:
-            for player in players:
-                busy.setdefault(player, []).append(start)
+        busy = _busy(booked)
         found = _already_booked(planned, booked, groups, people)
         # Who plays a game still to be made in a sport they now play for fun.
         switched = [
@@ -556,46 +558,19 @@ async def write_the_played_history(
             now=now,
         )
 
-        written: dict[int, WrittenGame] = {}
-        game_ids: dict[int, UUID] = {}
-        for one in sorted(planned, key=lambda one: (one.day, one.order)):
-            on_it = [people[handle] for handle in one.game.players]
-            sport = Sport(one.game.sport)
-            if one.order in found:
-                start, game_ids[one.order] = found[one.order]
-                made = False
-            else:
-                start, made_at = await _a_free_hour(
-                    session, club_id, sport, one, on_it, busy, now=now
-                )
-                game_ids[one.order] = await _book(
-                    session,
-                    settings,
-                    provider=money.provider(),
-                    group_id=groups[sport][0],
-                    club_id=club_id,
-                    sport=sport,
-                    start=start,
-                    made_at=made_at,
-                    players=tuple(person.player_id for person in on_it),
-                )
-                made = True
-                for person in on_it:
-                    busy.setdefault(person.player_id, []).append(start)
-            acts = await _play(
-                session,
-                game_id=game_ids[one.order],
-                game=one.game,
-                people=people,
-                start=start,
-            )
-            written[one.order] = WrittenGame(
-                one.game,
-                start,
-                made=made,
-                acts=acts,
-                this_week=start >= hour_start(week_of(now), 0),
-            )
+        written, game_ids = await _book_and_play(
+            session,
+            settings,
+            planned,
+            found=found,
+            busy=busy,
+            people=people,
+            groups=groups,
+            club=HISTORY_CLUB,
+            club_id=club_id,
+            provider=money.provider(),
+            now=now,
+        )
         await _declare(
             session,
             switched,
@@ -625,6 +600,130 @@ async def write_the_played_history(
     )
 
 
+async def write_games_among(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    settings: Settings,
+    now: Instant,
+    games: Sequence[PlayedGame],
+    players: Sequence[CohortMember],
+    group_id: UUID,
+    club: SeedClub,
+    money: SeedMoney = THE_FAKE,
+) -> tuple[WrittenGame, ...]:
+    """Declared games among ``players`` — people outside the cohort — at
+    ``club``, in a group of theirs there: each placed, booked, played and
+    scored exactly as the played history writes every game, and **found again
+    by a run after the first** (the n-th game for the same people in the group
+    is the n-th booking they share there), oldest first.
+
+    **The group is the caller's**, and so are the players' cards — a yes holds
+    a seat through ``money``'s provider. For a game the history's own club
+    cannot hold (#797's squash: Ogrody 33 sells padel and tennis), and the
+    layer that calls it says why it is there."""
+
+    planned = _plan(games, now=now, evenings=())
+    async with session_factory() as session:
+        people = await _people(
+            session,
+            (handle for one in planned for handle in one.game.players),
+            named=(),
+            crowd=players,
+            now=now,
+        )
+        groups = {Sport(one.game.sport): (group_id, False) for one in planned}
+        booked = await _past_bookings(
+            session, [person.player_id for person in people.values()]
+        )
+        written, _ = await _book_and_play(
+            session,
+            settings,
+            planned,
+            found=_already_booked(planned, booked, groups, people),
+            busy=_busy(booked),
+            people=people,
+            groups=groups,
+            club=club,
+            club_id=await club_id_of(session, club),
+            provider=money.provider(),
+            now=now,
+        )
+    return tuple(sorted(written.values(), key=lambda game: game.start))
+
+
+def _busy(
+    booked: Sequence[tuple[UUID, frozenset[UUID], Instant, UUID]],
+) -> dict[UUID, list[Instant]]:
+    """The hours each player is already booked at."""
+
+    busy: dict[UUID, list[Instant]] = {}
+    for _, players, start, _ in booked:
+        for player in players:
+            busy.setdefault(player, []).append(start)
+    return busy
+
+
+async def _book_and_play(
+    session: AsyncSession,
+    settings: Settings,
+    planned: Sequence[_Planned],
+    *,
+    found: Mapping[int, tuple[Instant, UUID]],
+    busy: dict[UUID, list[Instant]],
+    people: Mapping[str, _Person],
+    groups: Mapping[Sport, tuple[UUID, bool]],
+    club: SeedClub,
+    club_id: UUID,
+    provider: PaymentProvider,
+    now: Instant,
+) -> tuple[dict[int, WrittenGame], dict[int, UUID]]:
+    """Every planned game, day by day: one an earlier run booked found again,
+    every other placed at a free hour and booked — then each played and
+    scored. What was written, and each game's id, by plan order."""
+
+    written: dict[int, WrittenGame] = {}
+    game_ids: dict[int, UUID] = {}
+    for one in sorted(planned, key=lambda one: (one.day, one.order)):
+        on_it = [people[handle] for handle in one.game.players]
+        sport = Sport(one.game.sport)
+        if one.order in found:
+            start, game_ids[one.order] = found[one.order]
+            made = False
+        else:
+            start, made_at = await _a_free_hour(
+                session, club, club_id, sport, one, on_it, busy, now=now
+            )
+            game_ids[one.order] = await _book(
+                session,
+                settings,
+                provider=provider,
+                group_id=groups[sport][0],
+                club_id=club_id,
+                sport=sport,
+                start=start,
+                made_at=made_at,
+                players=tuple(person.player_id for person in on_it),
+            )
+            made = True
+            for person in on_it:
+                busy.setdefault(person.player_id, []).append(start)
+        acts = await _play(
+            session,
+            game_id=game_ids[one.order],
+            game=one.game,
+            people=people,
+            start=start,
+        )
+        written[one.order] = WrittenGame(
+            one.game,
+            start,
+            made=made,
+            acts=acts,
+            this_week=start >= hour_start(week_of(now), 0),
+        )
+    return written, game_ids
+
+
 def latest_evening_ends_by(now: Instant) -> Instant:
     """The latest instant a game may end: before this week began, and long
     enough ago that every ending it can have has been reached."""
@@ -634,6 +733,7 @@ def latest_evening_ends_by(now: Instant) -> Instant:
 
 async def _a_free_hour(
     session: AsyncSession,
+    club: SeedClub,
     club_id: UUID,
     sport: Sport,
     one: _Planned,
@@ -673,7 +773,7 @@ async def _a_free_hour(
             day -= timedelta(days=1)
     names = ", ".join(person.handle for person in on_it)
     raise HistoryRefused(
-        f"{HISTORY_CLUB.name} sold no {sport.value} hour {names} could all play "
+        f"{club.name} sold no {sport.value} hour {names} could all play "
         f"between {earliest_made.astimezone(CLUB_ZONE):%a %d %b %H:%M} and "
         f"{one.declared:%a %d %b}"
     )

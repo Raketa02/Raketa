@@ -335,6 +335,7 @@ def test_the_walk_has_something_to_walk():
         "same_vibe.py",
         "screens.py",
         "sportsmanship.py",
+        "top_ten.py",
     }
 
 

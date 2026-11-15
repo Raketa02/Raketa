@@ -5377,6 +5377,91 @@
         }
       }
     },
+    "/api/v1/top-10": {
+      "get": {
+        "tags": [
+          "rankings"
+        ],
+        "summary": "Home's Top 10 row",
+        "description": "The first ten rows of General in one sport \u2014 the true top of the Rankings page, everybody at their true place, whoever blocked whom. Name the sport **exactly** with `sport` (the pill), or **prefer** one with `prefer` (the trophy's sport, on opening): with nobody listed in it, the row shows the next sport in the app's order where somebody is, going round from the last to the first. One of the two, never both. `anyone_listed` says whether the row shows at all.",
+        "operationId": "read_top_ten_api_v1_top_10_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "This sport exactly \u2014 empty when nobody is listed in it.",
+              "title": "Sport"
+            },
+            "description": "This sport exactly \u2014 empty when nobody is listed in it."
+          },
+          {
+            "name": "prefer",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "This sport, or, with nobody listed in it, the next in the app's order where somebody is.",
+              "title": "Prefer"
+            },
+            "description": "This sport, or, with nobody listed in it, the next in the app's order where somebody is."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopTenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_one_sport` \u2014 neither `sport` nor `prefer`, or both at once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/on-screen": {
       "post": {
         "tags": [
@@ -19594,6 +19679,141 @@
           "expires_in"
         ],
         "title": "TokenResponse"
+      },
+      "TopTenChipSchema": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "UP",
+              "DOWN"
+            ],
+            "title": "Kind",
+            "description": "`UP` \u2014 *\u25b2 2*. `DOWN` \u2014 *\u25bc 1*."
+          },
+          "places": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Places",
+            "description": "How many places \u2014 the *2* of *\u25b2 2*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "places"
+        ],
+        "title": "TopTenChipSchema",
+        "description": "**The week's move on a Top 10 card**, drawn \u2014 a triangle and a bold\nitalic number, *\u25b2 2* in volt, *\u25bc 1* in coral. The Rankings page's chip for\nthe same row; a card draws none for no change or *New*."
+      },
+      "TopTenPlayerSchema": {
+        "properties": {
+          "place": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Place",
+            "description": "Their true place in General \u2014 the huge numeral, 1 to 10."
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws the court picture."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level, two decimals \u2014 *3,40*."
+          },
+          "chip": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TopTenChipSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their places moved this week, rolling \u2014 as the Rankings page's row reads them. `null` for no change and for *New*: no chip is drawn."
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You",
+            "description": "Your own card \u2014 it reads *You*, its numeral volt and the card ringed in volt."
+          }
+        },
+        "type": "object",
+        "required": [
+          "place",
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "level",
+          "chip",
+          "is_you"
+        ],
+        "title": "TopTenPlayerSchema",
+        "description": "One Top 10 card: the numeral, the portrait, the nickname, the Level and\nthe week's move. **A tap opens their record**; across a block it reads\n*This record isn't available*."
+      },
+      "TopTenResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The sport the row shows: the one asked for, or the one a preference fell through to \u2014 the pill's chosen sport, and the one *Rankings \u203a* opens on."
+          },
+          "anyone_listed": {
+            "type": "boolean",
+            "title": "Anyone Listed",
+            "description": "Whether anybody is listed in General **in any sport**. While nobody is, the row is hidden."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/TopTenPlayerSchema"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Players",
+            "description": "Places 1 to 10 of General in `sport`, best first \u2014 fewer while fewer are listed, one or two included. **Empty while nobody is ranked in `sport`**: *Nobody ranked in squash yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "anyone_listed",
+          "players"
+        ],
+        "title": "TopTenResponse",
+        "description": "**Top 10 on Home**: places 1 to 10 of General in one sport, the true\ntop of the Rankings page \u2014 everybody at their true place, whoever blocked\nwhom."
       },
       "TranscriptEntryResponse": {
         "properties": {

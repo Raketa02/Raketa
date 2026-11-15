@@ -1,6 +1,6 @@
 """The ranking's reads: a sport's General list as the reader sees it, a page
-of it, the reader's Friends table, and the trophy's places on Home
-(``docs/adr/0203`` §2–§5; the screens §1, §4–§5).
+of it, the reader's Friends table, the trophy's places on Home, and Home's Top
+10 (``docs/adr/0203`` §2–§5; the screens §1, §4–§5; ``docs/adr/0204`` §8).
 
 **A read, recorded nowhere, and the clock is read once.** Who is listed — five
 results, the last within the 90 days — and every chip are decided by **the
@@ -31,6 +31,7 @@ listed* — and nothing is drawn below it.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
+from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Final, NamedTuple, final
 from uuid import UUID
@@ -67,6 +68,7 @@ from app.modules.rankings.domain.ranking import (
     player_above,
     player_below,
 )
+from app.modules.rankings.domain.top_ten import sports_from, the_top_ten
 
 #: How many rows the gap line reads off the order at a time, walking away from
 #: the reader for the nearest named one — almost always the first.
@@ -397,6 +399,68 @@ class ReadGeneralPage:
                 else last.key
             ),
         )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class TopTen:
+    """Home's Top 10: the sport it shows, whether anybody is listed in any
+    sport, and the first ten rows of General there."""
+
+    sport: Sport
+    #: While nobody is listed in any sport, the row is hidden.
+    anyone_listed: bool
+    #: Places 1–10, or fewer while fewer are listed — empty while nobody is.
+    #: Each row's chip is the Rankings page's; the card draws ``drawn_chip``.
+    rows: tuple[RankedRow, ...]
+
+
+@final
+class ReadTopTen:
+    """``GET /top-10``: the first ten of General in one sport — **a sport
+    asked for exactly**, or **a preferred one falling through** to the next
+    sport in the app's order where anybody is listed, going round (#797; the
+    home-rows mechanics §10.3).
+
+    **Off each sport's kept General order**, as the Rankings page reads it, so
+    the row and the page never disagree and a warm read is the kept order and
+    one face question for the ten. Another sport's order is read only while
+    the answer still turns on it: whether anybody is listed anywhere, when
+    the asked sport lists nobody, and where a preference falls through to."""
+
+    def __init__(
+        self,
+        *,
+        general: TheGeneralOrder,
+        faces: RankedFaces,
+        clock: Clock,
+    ) -> None:
+        self._general = general
+        self._faces = faces
+        self._clock = clock
+
+    async def execute(
+        self, reader: UUID, sport: Sport, *, falls_through: bool = False
+    ) -> TopTen:
+        """``sport``'s first ten — or, ``falls_through`` and nobody listed in
+        it, the first ten of the next sport after it where anybody is."""
+
+        now = instant(self._clock.now())
+        async with aclosing(
+            self._general.read_each(sports_from(sport), now=now, reader=reader)
+        ) as reads:
+            shown, read = await anext(reads)
+            anyone_listed = read.order.listed > 0
+            if not anyone_listed:
+                async for next_sport, next_read in reads:
+                    if next_read.order.listed:
+                        anyone_listed = True
+                        if falls_through:
+                            shown, read = next_sport, next_read
+                        break
+        order = read.order
+        seen = await _seen(order, the_top_ten(order.listed), self._faces, reader=reader)
+        return TopTen(sport=shown, anyone_listed=anyone_listed, rows=seen.ranked)
 
 
 def _ranked(

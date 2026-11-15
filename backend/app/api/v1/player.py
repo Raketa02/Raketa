@@ -79,6 +79,7 @@ from app.modules.proposals.presentation.routes import (
 )
 from app.modules.proposals.presentation.routes import router as proposals_router
 from app.modules.rankings.presentation.routes import router as rankings_router
+from app.modules.rankings.presentation.routes import top_ten_router
 from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
 from app.modules.sportsmanship.presentation.routes import (
@@ -112,6 +113,7 @@ player_api_router.include_router(hottest_groups_router)
 player_api_router.include_router(new_in_raketa_router)
 player_api_router.include_router(same_level_router)
 player_api_router.include_router(same_vibe_router)
+player_api_router.include_router(top_ten_router)
 player_api_router.include_router(on_screen_router)
 player_api_router.include_router(invitations_router)
 player_api_router.include_router(administrator_router)
