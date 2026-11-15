@@ -22,13 +22,15 @@ what the neighbour publishes, wired by the composition root, each with a row in
 
 The current levels (``PlayerLevels``, #794) are the context's own storage too.
 *Same vibe players* (#795) reads the directory alone: its tags, one row each,
-are counted against the reader's in SQL.
+are counted against the reader's in SQL. So is **the rest count**
+(``RestCount``, #796): the phone's on-screen reports, which no stream holds.
 """
 
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
@@ -37,6 +39,7 @@ from app.modules.discovery.domain.directory import DirectoryEntry
 from app.modules.discovery.domain.levels import CurrentLevel, Estimate
 from app.modules.discovery.domain.new_in_raketa import Joiner
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.rest import OnScreenRow
 from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer
 
 
@@ -70,6 +73,14 @@ class PlayerDirectory(Protocol):
         way). At most ``limit``, when one is given."""
         ...
 
+    async def which_may_be_listed(
+        self, players: Collection[UUID], *, leaving_out: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these may be on a people row — as ``who_joined`` reads it:
+        named, playing, *Show me to new people* on, none of ``leaving_out``.
+        An id the directory holds no entry for may not (#796)."""
+        ...
+
     async def tags_of(self, player_id: UUID) -> frozenset[str]:
         """Every social tag the player holds — none for an account the
         directory has no entry for (#795)."""
@@ -97,6 +108,43 @@ class PlayerDirectory(Protocol):
     ) -> tuple[Sport, ...]:
         """Every sport at least one player ``alike`` would list holds a level
         in, in the sports' own order — See all's pill (#795)."""
+        ...
+
+
+@runtime_checkable
+class RestCount(Protocol):
+    """The rest count: **one entry per viewer, row and player**, holding how
+    many different Warsaw days the card came on screen while the two were
+    unconnected (#796; ``docs/adr/0204`` §10). The phone's reports, which no
+    stream holds — so no rebuild.
+
+    **Same session as the caller**, as the directory is.
+    """
+
+    async def came_on_screen(
+        self,
+        viewer: UUID,
+        row: OnScreenRow,
+        players: Collection[UUID],
+        *,
+        day: date,
+    ) -> None:
+        """One more day for each of these — **unless ``day`` is counted
+        already**, or a later day is: a day is never counted twice, under two
+        reports at once too."""
+        ...
+
+    async def days_on_screen(
+        self, viewer: UUID, row: OnScreenRow, players: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        """How many days each of these has been counted in the viewer's row —
+        absent where none has."""
+        ...
+
+    async def forget(self, player_id: UUID) -> None:
+        """An account that is gone: every entry naming it **on either side**,
+        as the viewer and as the player seen. Nothing to forget is no
+        error."""
         ...
 
 

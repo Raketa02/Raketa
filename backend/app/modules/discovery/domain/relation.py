@@ -23,3 +23,10 @@ class Relation(StrEnum):
     #: They asked the reader, and the request is open.
     ASKED_YOU = "ASKED_YOU"
     FRIEND = "FRIEND"
+
+    @property
+    def connected(self) -> bool:
+        """Friends, or the reader's request still open — never somebody who
+        asked the reader."""
+
+        return self in (Relation.SENT, Relation.FRIEND)

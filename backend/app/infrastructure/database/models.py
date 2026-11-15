@@ -30,6 +30,9 @@ from app.modules.discovery.infrastructure.directory_model import (
     DirectoryTagORM,
 )
 from app.modules.discovery.infrastructure.levels_model import DiscoveryLevelORM
+from app.modules.discovery.infrastructure.rest_count_model import (
+    DiscoveryRestCountORM,
+)
 from app.modules.friends.infrastructure.friend_link_model import FriendLinkCodeORM
 from app.modules.friends.infrastructure.friendship_model import (
     FriendLevelAskORM,
@@ -73,6 +76,7 @@ __all__ = [
     "DirectoryPlayerORM",
     "DirectoryTagORM",
     "DiscoveryLevelORM",
+    "DiscoveryRestCountORM",
     "EventOutboxORM",
     "EventStoreORM",
     "FriendLevelAskORM",

@@ -5119,7 +5119,7 @@
           "discovery"
         ],
         "summary": "Home's Same competitive level players row",
-        "description": "The players a competitive game with would be most even \u2014 each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, weaker matches \u2014 best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "description": "The players a competitive game with would be most even \u2014 each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you, not rested; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, rested players, weaker matches \u2014 best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
         "operationId": "read_same_level_api_v1_same_level_get",
         "responses": {
           "200": {
@@ -5251,7 +5251,7 @@
           "discovery"
         ],
         "summary": "Home's Same vibe players row",
-        "description": "The players whose Social tags overlap yours, most in common first \u2014 ties to fewer of their tags you don't hold, then the player id \u2014 each with the vibe %, 1 \u2212 \u00bd\u207f for n shared tags. Every tag counts the same, and skill plays no part, so a player with no level sees it too. Ten: fresh good matches first (2 shared tags or more, not your friend, not asked by you; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, 1-tag matches \u2014 in the same order. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "description": "The players whose Social tags overlap yours, most in common first \u2014 ties to fewer of their tags you don't hold, then the player id \u2014 each with the vibe %, 1 \u2212 \u00bd\u207f for n shared tags. Every tag counts the same, and skill plays no part, so a player with no level sees it too. Ten: fresh good matches first (2 shared tags or more, not your friend, not asked by you, not rested; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, rested players, 1-tag matches \u2014 in the same order. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
         "operationId": "read_same_vibe_api_v1_same_vibe_get",
         "responses": {
           "200": {
@@ -5375,6 +5375,56 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/on-screen": {
+      "post": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Cards that came on screen in a row",
+        "description": "The phone's word that these cards were at least half visible in Home's *Same competitive level* or *Same vibe* row. **Each counts once per card, row and Warsaw day**, and only while you and they are unconnected \u2014 no friendship, no request of yours open; somebody who asked you counts. **On the fifth different day a player rests in that row**: a gap, never hidden, behind every fresh match \u2014 for good, even once you add them. Each row keeps its own count, and a day never reported counts nothing. **Ignored**: an id nobody holds, yours, and anybody never on a people row \u2014 blocked either way, *Show me to new people* off, an account that doesn't play.",
+        "operationId": "report_on_screen_api_v1_on_screen_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnScreenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Counted \u2014 also when nothing was: every id that counts nothing is ignored, with the same answer."
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so nothing is counted rather than a day for somebody never on your rows. Safe to send again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/invitations/claim": {
@@ -15805,6 +15855,41 @@
         ],
         "title": "OnCourtVerdict",
         "description": "What the on-court check concluded about a photograph. **Two values.**\n\nThe third state \u2014 *nobody looked* \u2014 is the **absence** of one of these and\nnever a third value, which is ``docs/adr/0138``'s rule: a shield saying\n*checked and passed* cannot be drawn on a photograph nothing examined, and a\nvalue meaning *unknown* is a value somebody eventually draws a tick for.\n\n**The words are the ones a card already carries, and they are checked\nagainst it.** This is a second spelling of ``player_profile``'s\n``PhotoReviewDecision`` on purpose \u2014 this context imports no other context's\ndomain types \u2014 and a second spelling that drifts is worse than an import: a\nclient reading a search card and a record would get two words for one fact.\n``tests/unit/test_player_record_identity.py`` fails the build if the two\nvocabularies stop agreeing."
+      },
+      "OnScreenRequest": {
+        "properties": {
+          "row": {
+            "$ref": "#/components/schemas/OnScreenRow",
+            "description": "The row they came on screen in \u2014 `SAME_LEVEL` or `SAME_VIBE`, each with its own count. New in Raketa and See all rest nobody, so are never reported."
+          },
+          "player_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Player Ids",
+            "description": "Each card at least half visible \u2014 the card's `player_id`. A card named twice, or reported again the same Warsaw day, counts once."
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "player_ids"
+        ],
+        "title": "OnScreenRequest",
+        "description": "The cards that came on screen in one row (#796)."
+      },
+      "OnScreenRow": {
+        "type": "string",
+        "enum": [
+          "SAME_LEVEL",
+          "SAME_VIBE"
+        ],
+        "title": "OnScreenRow",
+        "description": "A row whose cards rest \u2014 each with its own count."
       },
       "OpenCardSchema": {
         "properties": {

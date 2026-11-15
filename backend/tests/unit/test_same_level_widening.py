@@ -5,7 +5,8 @@ Random crowds, sure and unsure levels across the four sports, clamped at the
 forecast's floor and ceiling: the row and every See all page, read through the
 windows over an in-memory store that answers ``near`` as the SQL does, are held
 to the brute force — every candidate compared, sorted, the row filled from the
-whole order. The % is the matcher's own forecast.
+whole order. The % is the matcher's own forecast. **Some of each crowd has
+rested** (#796), so a rested good match is a gap on the brute force's row too.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from app.modules.discovery.application.same_level import (
 from app.modules.discovery.domain.levels import Band, CurrentLevel
 from app.modules.discovery.domain.ports import Candidate
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.rest import OnScreenRow, has_rested
 from app.modules.discovery.domain.same_level import (
     SameLevelPlayer,
     RowOfTen,
@@ -131,6 +133,32 @@ class Faces:
         return f"https://photos/{photo_id}"
 
 
+class Rests:
+    """The rest count of the reader's Same competitive level row."""
+
+    def __init__(self, days: Mapping[UUID, int]) -> None:
+        self._days = days
+
+    async def came_on_screen(self, viewer, row, players, *, day) -> None:
+        raise NotImplementedError
+
+    async def days_on_screen(
+        self, viewer: UUID, row: OnScreenRow, players: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        assert (viewer, row) == (READER, OnScreenRow.SAME_LEVEL)
+        return {one: self._days[one] for one in players if one in self._days}
+
+    async def forget(self, player_id: UUID) -> None:
+        raise NotImplementedError
+
+
+def some_days(seed: int, players: Collection[UUID]) -> dict[UUID, int]:
+    """Days on screen for about a third of the crowd, rested or not yet."""
+
+    draw = random.Random(seed * 31 + 7)
+    return {one: draw.randint(1, 7) for one in players if draw.random() < 0.35}
+
+
 def a_crowd(seed: int, size: int) -> tuple[list[CurrentLevel], dict[UUID, Relation]]:
     """The reader in two or three sports; everybody else in one to four, with
     levels bunched as two decimals — so ties in % and in gap are common — and
@@ -231,12 +259,14 @@ async def test_every_see_all_page_is_the_brute_force_order(seed):
 @pytest.mark.parametrize("seed", range(40))
 async def test_the_row_is_the_brute_force_row(seed):
     levels, relations = a_crowd(seed, size=random.Random(seed).choice([5, 30, 200]))
+    days = some_days(seed, relations)
     store = InMemoryLevels(levels)
     read = ReadSameLevel(
         levels=store,
         even=build_how_even(),
         blocks=NoBlocks(),
         relations=Relations(relations),
+        rests=Rests(days),
         faces=Faces(),
     )
 
@@ -246,7 +276,11 @@ async def test_the_row_is_the_brute_force_row(seed):
     for player in best_first_by_brute_force(levels, None):
         if row.full:
             break
-        row.take(player, relation=relations[player.player_id], rested=False)
+        row.take(
+            player,
+            relation=relations[player.player_id],
+            rested=has_rested(days.get(player.player_id, 0)),
+        )
     assert [(card.player_id, card.shown) for card in cards] == [
         (player.player_id, player.shown) for player in row.row()
     ]
@@ -286,6 +320,7 @@ async def test_a_crowd_around_the_reader_is_read_in_its_nearest_windows():
         even=build_how_even(),
         blocks=NoBlocks(),
         relations=Relations({}),
+        rests=Rests({}),
         faces=Faces(),
     )
 

@@ -1,4 +1,5 @@
-"""Wire schemas for the people rows (#793, #794, #795; ``docs/adr/0204`` §12).
+"""Wire schemas for the people rows (#793, #794, #795, #796; ``docs/adr/0204``
+§12).
 
 **The reader is never in a body**, and every relation is the reader's own —
 the one wire vocabulary every face carries, Friends' ``FriendRelation``. What a
@@ -32,6 +33,7 @@ from app.modules.discovery.domain.errors import (
     NotASameVibePage,
 )
 from app.modules.discovery.domain.new_in_raketa import JoinerKey
+from app.modules.discovery.domain.rest import A_REPORT, OnScreenRow
 from app.modules.discovery.domain.same_level import Comparison, SameLevelKey
 from app.modules.discovery.domain.same_vibe import VibeKey
 from app.modules.friends.domain.relation import FriendRelation
@@ -468,3 +470,23 @@ class SameVibePageResponse(BaseModel):
             next=None if page.next is None else same_vibe_cursor_of(page.next),
             sports=list(page.sports),
         )
+
+
+class OnScreenRequest(BaseModel):
+    """The cards that came on screen in one row (#796)."""
+
+    row: OnScreenRow = Field(
+        description=(
+            "The row they came on screen in — `SAME_LEVEL` or `SAME_VIBE`, each "
+            "with its own count. New in Raketa and See all rest nobody, so are "
+            "never reported."
+        )
+    )
+    player_ids: list[UUID] = Field(
+        min_length=1,
+        max_length=A_REPORT,
+        description=(
+            "Each card at least half visible — the card's `player_id`. A card "
+            "named twice, or reported again the same Warsaw day, counts once."
+        ),
+    )

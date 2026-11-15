@@ -1,9 +1,10 @@
 """The player directory's follower and rebuild (#793; ``docs/adr/0204`` §10),
 over hand-written stand-ins for the two ports: an entry is written whole from
 what the owners hold, and **an account the owners no longer know is forgotten**
-— the deleted account's rows go. Nothing in ``users`` disables an account
-today, so this is the seam that holds it; the routes hold the rest
-(``tests/api/test_new_in_raketa.py``)."""
+— the deleted account's rows go, and its rest count on either side (#796).
+Nothing in ``users`` disables an account today, so this is the seam that holds
+it; the routes hold the rest (``tests/api/test_new_in_raketa.py``,
+``tests/api/test_rows_stay_alive.py``)."""
 
 from __future__ import annotations
 
@@ -63,6 +64,22 @@ class Directory:
         raise AssertionError("the writers never read the directory")
 
 
+class Rests:
+    """Who the rest count was told to forget."""
+
+    def __init__(self) -> None:
+        self.forgotten: list[UUID] = []
+
+    async def came_on_screen(self, viewer, row, players, *, day) -> None:
+        raise AssertionError("the writers report nothing")
+
+    async def days_on_screen(self, viewer, row, players):
+        raise AssertionError("the writers never read the count")
+
+    async def forget(self, player_id: UUID) -> None:
+        self.forgotten.append(player_id)
+
+
 class Committed:
     def __init__(self) -> None:
         self.commits = 0
@@ -75,22 +92,27 @@ class Committed:
 
 
 async def test_an_entry_is_written_from_what_the_owners_hold_and_a_gone_one_forgotten():
-    directory = Directory()
-    follower = FollowTheDirectory(sources=Owners(), directory=directory)
+    directory, rests = Directory(), Rests()
+    follower = FollowTheDirectory(sources=Owners(), directory=directory, rests=rests)
 
     await follower.execute(EWA)
     await follower.execute(GONE)
     await follower.execute(GONE)
 
     assert directory.entries == {EWA: an_entry(EWA)}
+    # Ewa's count stands; the gone account's goes, on either side, each time.
+    assert rests.forgotten == [GONE, GONE]
 
 
 async def test_the_rebuild_writes_every_account_the_owners_know_and_commits_once():
-    directory, uow = Directory(), Committed()
-    rebuild = RebuildTheDirectory(sources=Owners(), directory=directory, uow=uow)
+    directory, rests, uow = Directory(), Rests(), Committed()
+    rebuild = RebuildTheDirectory(
+        sources=Owners(), directory=directory, rests=rests, uow=uow
+    )
 
     rebuilt = await rebuild.execute()
 
     assert (rebuilt.accounts, rebuilt.entries) == (2, 1)
     assert directory.entries == {EWA: an_entry(EWA)}
+    assert rests.forgotten == [GONE]
     assert uow.commits == 1

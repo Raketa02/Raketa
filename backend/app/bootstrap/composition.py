@@ -570,6 +570,7 @@ from app.modules.discovery.application.new_in_raketa import (
     ReadNewInRaketaPage,
     ReadNewInRaketa,
 )
+from app.modules.discovery.application.on_screen import ReportOnScreen
 from app.modules.discovery.application.same_level import (
     ReadSameLevel,
     ReadSameLevelPage,
@@ -588,6 +589,7 @@ from app.modules.discovery.domain.ports import (
     PlayerDirectory,
     PlayerLevels,
     ReadersRelations,
+    RestCount,
 )
 from app.modules.discovery.infrastructure.account_directory_sources import (
     AccountDirectorySources,
@@ -613,6 +615,9 @@ from app.modules.discovery.infrastructure.sqlalchemy_player_directory import (
 )
 from app.modules.discovery.infrastructure.sqlalchemy_player_levels import (
     SqlAlchemyPlayerLevels,
+)
+from app.modules.discovery.infrastructure.sqlalchemy_rest_count import (
+    SqlAlchemyRestCount,
 )
 from app.modules.rankings.application.projection import (
     MoveTheRanking,
@@ -4279,6 +4284,11 @@ def build_player_directory(session: AsyncSession) -> PlayerDirectory:
     return SqlAlchemyPlayerDirectory(session)
 
 
+def build_rest_count(session: AsyncSession) -> RestCount:
+    """The rest count, ``discovery_rest_counts`` (#796)."""
+    return SqlAlchemyRestCount(session)
+
+
 def build_directory_sources(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> DirectorySources:
@@ -4303,6 +4313,7 @@ def build_follow_the_directory(
     return FollowTheDirectory(
         sources=build_directory_sources(session, runtime=runtime),
         directory=build_player_directory(session),
+        rests=build_rest_count(session),
     )
 
 
@@ -4313,6 +4324,7 @@ def build_rebuild_the_directory(
     return RebuildTheDirectory(
         sources=build_directory_sources(session, runtime=runtime),
         directory=build_player_directory(session),
+        rests=build_rest_count(session),
         uow=build_unit_of_work(session),
     )
 
@@ -4440,6 +4452,7 @@ def build_read_same_level(
         even=build_how_even(),
         blocks=build_blocks_either_way(session, runtime=runtime),
         relations=build_readers_relations(session, runtime=runtime),
+        rests=build_rest_count(session),
         faces=build_directory_faces(settings),
     )
 
@@ -4471,6 +4484,7 @@ def build_read_same_vibe(
         directory=build_player_directory(session),
         blocks=build_blocks_either_way(session, runtime=runtime),
         relations=build_readers_relations(session, runtime=runtime),
+        rests=build_rest_count(session),
         faces=build_directory_faces(settings),
     )
 
@@ -4487,6 +4501,24 @@ def build_read_same_vibe_page(
         blocks=build_blocks_either_way(session, runtime=runtime),
         relations=build_readers_relations(session, runtime=runtime),
         faces=build_directory_faces(settings),
+    )
+
+
+def build_report_on_screen(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReportOnScreen:
+    """``POST /on-screen``: the phone's word that cards came on screen in a
+    row today, which rests them after five days (#796)."""
+    return ReportOnScreen(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        rests=build_rest_count(session),
+        uow=build_unit_of_work(session),
+        clock=clock,
     )
 
 

@@ -26,16 +26,13 @@ from app.modules.discovery.domain.relation import Relation
 #: Cards on Home's row.
 ON_THE_ROW: Final = 10
 
-#: The relations a fresh card may stand in: nothing yet, or they asked.
-_UNCONNECTED: Final = frozenset({Relation.NONE, Relation.ASKED_YOU})
-
 T = TypeVar("T")
 
 
 def is_fresh(*, good: bool, relation: Relation, rested: bool) -> bool:
     """A good match the reader is not connected with, who hasn't rested."""
 
-    return good and relation in _UNCONNECTED and not rested
+    return good and not relation.connected and not rested
 
 
 class FreshThenGaps(Generic[T]):
@@ -53,6 +50,12 @@ class FreshThenGaps(Generic[T]):
         self._fresh: list[T] = []
         self._gaps: list[T] = []
         self._no_more_fresh = False
+
+    def may_be_fresh(self, one: T, *, relation: Relation) -> bool:
+        """Whether the card is fresh unless it has rested — the only cards a
+        row asks the rest count about (``rest``)."""
+
+        return is_fresh(good=self._good(one), relation=relation, rested=False)
 
     def take(self, one: T, *, relation: Relation, rested: bool) -> None:
         good = self._good(one)

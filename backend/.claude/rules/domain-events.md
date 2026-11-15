@@ -66,4 +66,10 @@ name, is what history is recorded under.
   (`discovery.md`); and beside them `discovery_levels` (#794), each rating stream's current
   Level, written when `rating.rating_initialised` or `rating.moved_on_result` is delivered and
   by the same rebuild.
+- **One table is event-free because it is the phone's word, not a fold**:
+  `discovery_rest_counts` (#796; ADR-0204 §10, where it is argued), the rest count — the
+  different Warsaw days each card came on screen in a viewer's *Same competitive level* or
+  *Same vibe* row while the two were unconnected, written by `POST /on-screen` in its own
+  transaction. No stream holds what a phone saw, nobody is told, and only the viewer's own
+  rows read it, so there is no event to emit and no rebuild (`discovery.md`).
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

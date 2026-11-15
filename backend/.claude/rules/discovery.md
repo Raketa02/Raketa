@@ -7,11 +7,12 @@ paths:
   - "app/seeds/same_vibe.py"
   - "migrations/versions/0073_player_directory.py"
   - "migrations/versions/0074_discovery_levels.py"
+  - "migrations/versions/0075_discovery_rest_counts.py"
 ---
 
 # Discovery
 
-Decisions that are load-bearing and not obvious from the code (#793, #794, #795;
+Decisions that are load-bearing and not obvious from the code (#793, #794, #795, #796;
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §4–§7, §9, §10; `docs/specs/home-rows/` §4.6, §6–§9, §12, §16). The words are root
 `CONTEXT.md`'s *Discovery* section and the words §31.5–§31.8, §31.10.
@@ -19,8 +20,8 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795;
 - **The people rows' context, with no aggregate and no event of its own** — it registers nothing
   in the catalog. It owns *Same competitive level players*, *New in Raketa* and *Same vibe
   players*, their See all reads and the copies they read. **New in Raketa** (#793), **Same
-  competitive level** (#794, with the current levels) and **Same vibe** (#795) are built; the
-  rest count (#796) is the next.
+  competitive level** (#794, with the current levels), **Same vibe** (#795) and **the rest
+  count** (#796) are built.
 - **The player directory, a stated exception to *derived, never stored*** (ADR-0204 §10;
   `backend/CLAUDE.md`): `discovery_players` (migration 0073) — **one row per account**: the
   nickname (`users`), and, once it holds a Player profile, `plays` with the profile's *joined*
@@ -146,7 +147,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795;
   are one gap), then the player id (`SameLevelKey`). A person on the row is a
   `SameLevelPlayer` — never a *match*, which the glossary bars for this row (_Avoid_). **The row** (`RowOfTen`): fresh good
   matches first — ≥ 70 (`GOOD_MATCH`), `NONE` or `ASKED_YOU`, not rested — then the gaps,
-  best first, ten in all; **nobody rests until #796** (`rested=False`). **See all** is the
+  best first, ten in all — a rested player among the gaps (#796, below). **See all** is the
   plain order in pages of 20, the cursor the last card's `SameLevelKey` (the %, the gap's
   `repr` and the id, base64url; `400 not_a_same_level_page` otherwise), and `sports` the
   reader's sports somebody on a row holds a level in, whatever the filter
@@ -213,7 +214,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795;
   75, 88, 94, 97, 98. **The order** (`VibeKey`) is more shared first, then **fewer of their
   tags the reader doesn't hold**, then the player id. A person on the row is a `VibePlayer` —
   never a *match* (the glossary's _Avoid_ for the % is *match %*). **The row**: §9's rule, a
-  good match **two shared tags or more** (`GOOD_MATCH`), nobody rested until #796; it reads
+  good match **two shared tags or more** (`GOOD_MATCH`), a rested player a gap (#796); it reads
   the order **twenty at a time** (`A_BATCH`), asking Friends once per batch, and stops once
   the row is full — a reader whose friends crowd the top reads a batch more, nobody reads the
   crowd. **See all** is the plain order in pages of 20, the cursor the last card's `VibeKey`
@@ -263,3 +264,42 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795;
   the run that asked** — the two relations stand. **Her row is all fresh**: far more than ten
   unconnected players share two tags with her, so her friends and her request wait in See all
   and the run says so as a cost; gaps are walked in the API tests.
+- **The rest count, the third stated exception** (#796; ADR-0204 §7, §10; the mechanics §9.2;
+  `backend/CLAUDE.md`): `discovery_rest_counts` (migration 0075) — **one row per viewer, row
+  and player seen** (`row` `SAME_LEVEL` or `SAME_VIBE`, `OnScreenRow`), holding `days`, the
+  different Warsaw days the card came on screen, and `last_day`, the last of them. **The
+  phone's word, so event-free and with no rebuild** (`domain-events.md`): no stream holds what
+  a phone saw, and a phone that never reports rests nobody. **No foreign key** to the
+  directory, as the levels have none.
+- **`POST /on-screen`** (`ReportOnScreen`, `application/on_screen.py`; player surface,
+  `{row, player_ids}`, 1–50 ids (`A_REPORT`), `204` whatever it counted): **one count per card, row and Warsaw day**
+  (`day_on_screen`, the request's clock) — one statement, `INSERT … ON CONFLICT DO UPDATE SET
+  days = days + 1 … WHERE stored.last_day < new.last_day`, the ids deduplicated and sorted, so
+  the same day twice, in one report or two at once, counts once, and a report racing midnight
+  can lose a day but never count one twice. **Ignored, with the same answer**: an id the
+  directory holds no entry for, the reader, a block either way, *Show me to new people* off,
+  an account that doesn't play (`PlayerDirectory.which_may_be_listed`, the rows' own `WHERE`)
+  — and **anybody connected** (`counts_toward_rest`, `Relation.connected` — `SENT` or `FRIEND`,
+  the glossary's *Connected*, which `is_fresh` reads too — asked of Friends' relations), so a
+  day a friend's card or a requested one was on screen never rests them after the friendship
+  or the request ends: the mechanics' *without the reader adding them* (a reading, open to the
+  PO). Fails closed (`503 block_state_unavailable`), counting nothing, safe to send again. A report names a row and never checks the
+  card was on it: a stale card is still a card the phone showed.
+- **Five days rest a player in that row** (`RESTS_AFTER`, `has_rested`), and **each row keeps
+  its own count**. **Rested is a gap, never hidden**: each row's read asks the count once per
+  batch (Same vibe's twenty, Same competitive level's ten), only about the cards that could be
+  fresh (`FreshThenGaps.may_be_fresh`: a good match, unconnected) — so today's Same competitive
+  level, with no good match, never asks — and hands `rested` to §9's rule, which puts them with
+  the friends, the requests sent and the weaker matches, best first. **The count never resets**
+  (call 9): a rested player added stays a gap as `SENT` or `FRIEND`, and is still rested when
+  the request is cancelled or the friendship removed. **See all rests nobody**, and New in
+  Raketa is never reported. `tests/api/test_rows_stay_alive.py` walks it over HTTP, day by
+  day on the request's clock; `tests/unit/test_same_level_widening.py` holds a crowd with rests
+  to the brute force.
+- **A gone account's rows go on either side** (`RestCount.forget`, by the viewer's key prefix
+  and `ix_discovery_rest_counts_player_id`): the directory's follower and its rebuild forget
+  them with the entry, in the same transaction (`application/directory.py`). Nothing disables an
+  account yet; `tests/unit/test_directory_follower.py` holds the seam, and the API test flips
+  the `users` row and runs the real follower.
+- **Not seeded**: nothing on the dev store rests, since five reported days can't be walked in one
+  run and the seed reports none. A rested card is walked in the API tests.

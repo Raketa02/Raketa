@@ -7,7 +7,8 @@ every account (``docs/adr/0204`` §10).
 writes the same entry and changes nothing, a delivery out of order writes what
 the owners hold, and the rebuild writes what live delivery did, entry for
 entry. An account the owners no longer know — disabled, the one way an account
-goes today — is forgotten, its tags with it.
+goes today — is forgotten, its tags with it, and **its rest count on either
+side** (#796): every row it was seen in and every card it saw.
 
 **No commit** in the follower: the transaction is the delivery's. The rebuild
 is a command-line run of its own and commits once at the end
@@ -21,15 +22,23 @@ from typing import final
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
-from app.modules.discovery.domain.ports import DirectorySources, PlayerDirectory
+from app.modules.discovery.domain.ports import (
+    DirectorySources,
+    PlayerDirectory,
+    RestCount,
+)
 
 
 async def _write(
-    sources: DirectorySources, directory: PlayerDirectory, player_id: UUID
+    sources: DirectorySources,
+    directory: PlayerDirectory,
+    rests: RestCount,
+    player_id: UUID,
 ) -> bool:
     entry = await sources.entry_of(player_id)
     if entry is None:
         await directory.forget(player_id)
+        await rests.forget(player_id)
         return False
     await directory.save(entry)
     return True
@@ -41,13 +50,18 @@ class FollowTheDirectory:
     from what the owners hold now."""
 
     def __init__(
-        self, *, sources: DirectorySources, directory: PlayerDirectory
+        self,
+        *,
+        sources: DirectorySources,
+        directory: PlayerDirectory,
+        rests: RestCount,
     ) -> None:
         self._sources = sources
         self._directory = directory
+        self._rests = rests
 
     async def execute(self, player_id: UUID) -> None:
-        await _write(self._sources, self._directory, player_id)
+        await _write(self._sources, self._directory, self._rests, player_id)
 
 
 @final
@@ -70,10 +84,12 @@ class RebuildTheDirectory:
         *,
         sources: DirectorySources,
         directory: PlayerDirectory,
+        rests: RestCount,
         uow: UnitOfWork,
     ) -> None:
         self._sources = sources
         self._directory = directory
+        self._rests = rests
         self._uow = uow
 
     async def execute(self) -> Rebuilt:
@@ -81,7 +97,7 @@ class RebuildTheDirectory:
         entries = 0
         for player_id in await self._sources.every_account():
             accounts += 1
-            if await _write(self._sources, self._directory, player_id):
+            if await _write(self._sources, self._directory, self._rests, player_id):
                 entries += 1
         await self._uow.commit()
         return Rebuilt(accounts=accounts, entries=entries)

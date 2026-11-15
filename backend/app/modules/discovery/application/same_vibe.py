@@ -17,8 +17,10 @@ who blocked the reader, players with *Show me to new people* off, accounts that
 don't play and accounts that are gone (``docs/adr/0204`` §10): the directory's
 ``alike`` holds all but the reader and the blocks, which are handed to it.
 
-**Nobody rests yet** — *rested* is false for everyone until the on-screen
-reports and their count land (#796).
+**A rested player is a gap** (#796; ``rest``): the rest count is asked once a
+batch, about the cards that could be fresh — good matches the reader is not
+connected with — and nobody else, since a rest changes nothing for them. See
+all rests nobody.
 """
 
 from __future__ import annotations
@@ -29,13 +31,16 @@ from typing import Final, final
 from uuid import UUID
 
 from app.kernel import Sport
+from app.modules.discovery.application.on_screen import rested_among
 from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
     DirectoryFaces,
     PlayerDirectory,
     ReadersRelations,
+    RestCount,
 )
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.rest import OnScreenRow
 from app.modules.discovery.domain.same_vibe import (
     A_PAGE,
     ON_THE_ROW,
@@ -130,10 +135,12 @@ class ReadSameVibe:
         directory: PlayerDirectory,
         blocks: BlocksEitherWay,
         relations: ReadersRelations,
+        rests: RestCount,
         faces: DirectoryFaces,
     ) -> None:
         self._directory = directory
         self._blocks = blocks
+        self._rests = rests
         self._cards = _Cards(relations=relations, faces=faces)
 
     async def execute(self, reader: UUID) -> tuple[SameVibeCard, ...]:
@@ -149,11 +156,24 @@ class ReadSameVibe:
                 mine, leaving_out=leaving_out, sport=None, after=after, limit=A_BATCH
             )
             relations.update(await self._cards.relations_of(reader, batch))
+            rested = await rested_among(
+                self._rests,
+                reader,
+                OnScreenRow.SAME_VIBE,
+                [
+                    one.player_id
+                    for one in batch
+                    if row.may_be_fresh(one, relation=relations[one.player_id])
+                ],
+            )
             for one in batch:
                 if row.full:
                     break
-                # Nobody rests until the on-screen count lands (#796).
-                row.take(one, relation=relations[one.player_id], rested=False)
+                row.take(
+                    one,
+                    relation=relations[one.player_id],
+                    rested=one.player_id in rested,
+                )
             if len(batch) < A_BATCH:
                 break
             after = batch[-1].key

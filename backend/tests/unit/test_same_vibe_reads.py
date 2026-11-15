@@ -1,6 +1,8 @@
 """*Same vibe*'s two reads over hand-written stubs (#795): the row reads the
 order a batch at a time and stops once §9's rule is full, and See all is a
-page of the plain order with the next page's key."""
+page of the plain order with the next page's key. **A rested good match is a
+gap** (#796), and the rest count is asked only about the cards that could be
+fresh."""
 
 from __future__ import annotations
 
@@ -14,6 +16,7 @@ from app.modules.discovery.application.same_vibe import (
     ReadSameVibePage,
 )
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.rest import RESTS_AFTER, OnScreenRow
 from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer, vibe_player
 
 READER = UUID(int=10**6)
@@ -79,6 +82,27 @@ class NoFaces:
         raise AssertionError("nobody here has a photograph")
 
 
+class StandInRests:
+    """The rest count of the reader's Same vibe row, every question recorded."""
+
+    def __init__(self, rested: set[UUID] | None = None) -> None:
+        self._rested = rested or set()
+        self.asked: list[set[UUID]] = []
+
+    async def came_on_screen(self, viewer, row, players, *, day) -> None:
+        raise AssertionError("a read reports nothing")
+
+    async def days_on_screen(
+        self, viewer: UUID, row: OnScreenRow, players: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        assert (viewer, row) == (READER, OnScreenRow.SAME_VIBE)
+        self.asked.append(set(players))
+        return {one: RESTS_AFTER for one in players if one in self._rested}
+
+    async def forget(self, player_id: UUID) -> None:
+        raise AssertionError("a read forgets nothing")
+
+
 def sharing(n: int, shared: int) -> VibePlayer:
     found = vibe_player(
         UUID(int=n), f"p{n}", None, sorted(MINE)[:shared] + ["X"], mine=MINE
@@ -87,9 +111,13 @@ def sharing(n: int, shared: int) -> VibePlayer:
     return found
 
 
-def the_row(directory, relations) -> ReadSameVibe:
+def the_row(directory, relations, rests=None) -> ReadSameVibe:
     return ReadSameVibe(
-        directory=directory, blocks=NoBlocks(), relations=relations, faces=NoFaces()
+        directory=directory,
+        blocks=NoBlocks(),
+        relations=relations,
+        rests=StandInRests() if rests is None else rests,
+        faces=NoFaces(),
     )
 
 
@@ -118,6 +146,33 @@ async def test_one_batch_does_when_the_row_fills_inside_it():
     assert len(cards) == 10
     assert directory.asked == [(None, A_BATCH)]
     assert relations.asked == [A_BATCH]
+
+
+async def test_a_rested_match_waits_in_a_gap_behind_every_fresh_one():
+    first, *others = [sharing(n, 6 - n % 3) for n in range(1, 15)]
+    directory = StandInDirectory([first, *others])
+    rests = StandInRests({first.player_id})
+
+    cards = await the_row(directory, StandInRelations(set()), rests).execute(READER)
+
+    assert first.player_id not in {card.player_id for card in cards}
+    assert len(cards) == 10
+
+
+async def test_only_cards_that_could_be_fresh_are_asked_about_their_rest():
+    friend = sharing(1, 6)
+    fresh = sharing(2, 3)
+    weak = sharing(3, 1)
+    directory = StandInDirectory([friend, fresh, weak])
+    rests = StandInRests({fresh.player_id})
+
+    cards = await the_row(
+        directory, StandInRelations({friend.player_id}), rests
+    ).execute(READER)
+
+    assert rests.asked == [{fresh.player_id}]
+    # Rested, the one fresh match is a gap: the three in the order.
+    assert [card.nickname for card in cards] == ["p1", "p2", "p3"]
 
 
 async def test_a_reader_with_no_tags_reads_nothing():

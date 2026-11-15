@@ -21,8 +21,10 @@ who blocked the reader, players with *Show me to new people* off, accounts that
 don't play and accounts that are gone (``docs/adr/0204`` §10): the projection's
 ``near`` holds all but the reader and the blocks, which are handed to it.
 
-**Nobody rests yet** — *rested* is false for everyone until the on-screen
-reports and their count land (#796).
+**A rested player is a gap** (#796; ``rest``): the rest count is asked once
+for each ten the row takes, about the cards that could be fresh — good matches
+the reader is not connected with — and nobody else, since a rest changes nothing
+for them. See all rests nobody.
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ from typing import Final, final
 from uuid import UUID
 
 from app.kernel import Sport
+from app.modules.discovery.application.on_screen import rested_among
 from app.modules.discovery.domain.levels import CurrentLevel, Estimate
 from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
@@ -41,8 +44,10 @@ from app.modules.discovery.domain.ports import (
     HowEven,
     PlayerLevels,
     ReadersRelations,
+    RestCount,
 )
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.rest import OnScreenRow
 from app.modules.discovery.domain.same_level import (
     A_PAGE,
     ON_THE_ROW,
@@ -253,11 +258,13 @@ class ReadSameLevel:
         even: HowEven,
         blocks: BlocksEitherWay,
         relations: ReadersRelations,
+        rests: RestCount,
         faces: DirectoryFaces,
     ) -> None:
         self._levels = levels
         self._even = even
         self._blocks = blocks
+        self._rests = rests
         self._cards = _Cards(relations=relations, faces=faces)
 
     async def execute(self, reader: UUID) -> tuple[SameLevelCard, ...]:
@@ -282,6 +289,18 @@ class ReadSameLevel:
                     break
                 chunk = settled[start : start + ON_THE_ROW]
                 relations.update(await self._cards.relations_of(reader, chunk))
+                rested = await rested_among(
+                    self._rests,
+                    reader,
+                    OnScreenRow.SAME_LEVEL,
+                    [
+                        one.player.player_id
+                        for one in chunk
+                        if row.may_be_fresh(
+                            one.player, relation=relations[one.player.player_id]
+                        )
+                    ],
+                )
                 for one in chunk:
                     if row.full:
                         break
@@ -289,8 +308,7 @@ class ReadSameLevel:
                     row.take(
                         one.player,
                         relation=relations[one.player.player_id],
-                        # Nobody rests until the on-screen count lands (#796).
-                        rested=False,
+                        rested=one.player.player_id in rested,
                     )
         return await self._cards.of(
             [taken[player.player_id] for player in row.row()], relations

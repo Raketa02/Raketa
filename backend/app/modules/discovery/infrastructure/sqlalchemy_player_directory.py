@@ -120,6 +120,19 @@ class SqlAlchemyPlayerDirectory:
             for row in (await self._session.execute(query)).all()
         )
 
+    async def which_may_be_listed(
+        self, players: Collection[UUID], *, leaving_out: Collection[UUID]
+    ) -> frozenset[UUID]:
+        if not players:
+            return frozenset()
+        found = await self._session.scalars(
+            select(DirectoryPlayerORM.player_id).where(
+                DirectoryPlayerORM.player_id.in_(sorted(players, key=str)),
+                may_be_on_a_row(leaving_out),
+            )
+        )
+        return frozenset(found.all())
+
     async def tags_of(self, player_id: UUID) -> frozenset[str]:
         rows = await self._session.scalars(
             select(DirectoryTagORM.tag).where(DirectoryTagORM.player_id == player_id)

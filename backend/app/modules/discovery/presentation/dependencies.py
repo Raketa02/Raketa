@@ -18,11 +18,13 @@ from app.bootstrap.composition import (
     build_read_same_level_page,
     build_read_same_vibe,
     build_read_same_vibe_page,
+    build_report_on_screen,
 )
 from app.modules.discovery.application.new_in_raketa import (
     ReadNewInRaketaPage,
     ReadNewInRaketa,
 )
+from app.modules.discovery.application.on_screen import ReportOnScreen
 from app.modules.discovery.application.same_level import (
     ReadSameLevel,
     ReadSameLevelPage,
@@ -79,3 +81,10 @@ def get_read_same_vibe_page(db: DbSession, settings: SettingsDep) -> ReadSameVib
 
 
 ReadSameVibePageDep = Annotated[ReadSameVibePage, Depends(get_read_same_vibe_page)]
+
+
+def get_report_on_screen(db: DbSession, clock: ClockDep) -> ReportOnScreen:
+    return build_report_on_screen(db, clock=clock)
+
+
+ReportOnScreenDep = Annotated[ReportOnScreen, Depends(get_report_on_screen)]
