@@ -37,13 +37,21 @@ now_ with _All_ (a call: §31.7 words only the sport).
 
 **One tap moves a person everywhere — wherever it is made** (the mechanics §13, the screens §8.5).
 Both reads declare **`LISTS_PEOPLE`** (`shared/lib/query-client`), and every friend write and every
-block re-reads whatever declared it (`rereadPeopleLists`): a tile's round button, the record a tile
+block reaches whatever declared it (`rereadPeopleLists`): a tile's round button, the record a tile
 opens, an answer on FRIEND REQUESTS, a record Rankings or a notice opened, Members. So no surface hands
 this feature's reads down, and `friends` and `blocks` never name its keys — `discovery` draws
-`friends`' button, so naming them would run the import both ways. The round button's write settles
-once the row and any open See all have read again; See all pushed over Home keeps the row mounted, so
-both move. **Nothing is guessed into this feature's cache**: the round button draws its next mark
-while its write is out, and the read lands over it. `rereadDiscovery` is only Home's pull. **The
+`friends`' button, so naming them would run the import both ways. **Home's rows hold still under the
+thumb** (`holdsPeople` in `usePeopleRow`; §13's _a row never changes while the reader looks at it_):
+a friend write hands in its answer — whom, and where the reader now stands with them — and each row
+draws it on the card where it stands and is marked stale rather than read again; the next read (a
+return to Home, a pull, foregrounding) works §9.1 out again and moves them. **Read at the tap, the
+card left under the thumb** (2026-11-15): asking a fresh match on Same vibe made them a gap, and the
+next fresh match took their place; Same competitive level hid it only because nobody reaches 70% yet,
+so its row is all gaps. See all reads again (its order is plain, so nobody moves), and a block or a
+refusal that is the state moving re-reads every row at once — those cards leave. The round button's
+write settles once every list has the answer. **Nothing is guessed into this feature's cache**: the
+round button draws its next mark while its write is out, and the write's answer, or the read, lands
+over it. `rereadDiscovery` is only Home's pull. **The
 record a tile opens** sends its request from _new players_ (`foundIn`, `FOUND_AMONG_NEW_PLAYERS`).
 **The first version handed the reads down** (a `reread` on the tile, a `rereadToo` on the record, two
 from the shell) and the review found every write made off those surfaces left the row stale — Home's
@@ -83,7 +91,7 @@ the row and See all alike) is _You vs zofia.b_ with `friends`' worded button on 
 (`BottomSheet`'s `action`), then one block per shared sport in the served order, divided by hairlines:
 the sport and _You 2,71 · zofia.b 2,69_, the bar's light paint (mint fill, ink mark), the gap and the
 _91% even_ `Tag` of its tone — the light version of the card's colour. **It reads nothing** (§6.5):
-the person is looked up in the caller's current list, so a friend write that re-reads it moves the sheet's button. **A write that moves them out of the list closes the sheet**, drawn as they last were — asking a fresh match makes them a gap, and on a row with more fresh matches than places the next takes theirs (§9.1) — and **a later read bringing them back never reopens it** (a call; the spec review found the first version emptied the sheet mid-write and reopened it by itself).
+the person is looked up in the caller's current list, so a friend write moves the sheet's button with the card. **A read that moves them out of the list closes the sheet**, drawn as they last were — the row holds still through a write, but its next read works §9.1 out again, and on a row with more fresh matches than places a gap leaves it; a block takes them off at once — and **a later read bringing them back never reopens it** (a call; the spec review found the first version emptied the sheet mid-write and reopened it by itself).
 
 **See all** (`SameLevelScreen`, `/same-level`, pushed over Home with the tab lit) is New in Raketa's
 frame: ‹, the title, the pill — _All_ and the sports the reader shares with somebody, from the first

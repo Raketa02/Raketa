@@ -14,9 +14,10 @@
  *
  * **+** turns to **…** and the envelope to **✓** the moment they are pressed (`shownWhilePressed`),
  * and the guess holds **while the write is out — which is until the read under it has landed**:
- * every write here settles once the people lists have read again (`useFriendWrites`), so the read
- * under the button already says what the server did when the guess gives way. Nothing is written into another
- * feature's cache. **A failed write is no longer out**, so the read's own relation is drawn again —
+ * every write here settles once the people lists have its answer (`useFriendWrites`) — a list that
+ * holds still draws it where the card stands, any other reads again — so the list under the button
+ * already says what the server did when the guess gives way. This feature writes into no other
+ * feature's cache: a list draws the answer through its own `holdsPeople`. **A failed write is no longer out**, so the read's own relation is drawn again —
  * *a failed write puts it back*; a refusal that is the state moving (`player_unavailable` from a card
  * read before they turned *Show me to new people* off) re-reads, and the card leaves on that read. Any
  * other refusal is a toast: there is no room for a note under a 24pt mark.
@@ -27,7 +28,7 @@
  * ## What a write re-reads
  *
  * **Every read that lists people** (`rereadPeopleLists`) — Home's people rows and their See all — as
- * every friends write does, so the guess holds until the row under the button has read again; and
+ * every friends write does, so the guess holds until the row under the button has the answer; and
  * Home, and this feature's own lists. A surface whose read of the person is not a people list hands
  * it in (`reread`), as Members and the record do theirs.
  *
@@ -80,7 +81,7 @@ export interface RoundFriendButtonProps {
   /**
    * **The surface's own read of this person, where it is not a people list** — every write awaits it
    * before it settles. A read that declares `LISTS_PEOPLE` (Home's people rows) needs none: every
-   * friend write re-reads it already.
+   * friend write reaches it already.
    */
   readonly reread?: Reread;
   /** `round` on a card (the default); `worded` on a sheet's title row. */

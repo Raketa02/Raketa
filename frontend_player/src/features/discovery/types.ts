@@ -11,7 +11,7 @@
  * - **`SameVibeRow`** — the fourth of the five rows.
  * - **`SameVibeScreen`** — See all, the route `/same-vibe`, pushed over Home.
  * - **`rereadDiscovery`** — every Discovery read again: Home's pull. A friend write or a block needs
- *   nothing from here: these reads declare `LISTS_PEOPLE`, which every one of them re-reads (§13).
+ *   nothing from here: these reads declare `LISTS_PEOPLE`, which every one of them reaches (§13).
  *
  * **Same competitive level and Same vibe report the cards that came on screen**
  * ([#804](https://github.com/Raketa02/Raketa/issues/804)) on a page that watches — Home, whose

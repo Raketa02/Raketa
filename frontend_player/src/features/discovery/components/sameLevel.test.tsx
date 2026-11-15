@@ -367,7 +367,7 @@ describe('a card', () => {
     );
   });
 
-  it('asks from the row with the card’s sport, and the row moves', async () => {
+  it('asks from the row with the card’s sport, and the card reads the answer where it stands', async () => {
     levelServer();
     await homeWithTheRow();
     const before = rowReads();
@@ -379,8 +379,10 @@ describe('a card', () => {
         { player_id: KUBA.player_id, made_from: 'SAME_LEVEL', sport: 'TENNIS' },
       ]),
     );
-    await waitFor(() => expect(rowReads()).toBeGreaterThan(before));
     expect(await round(KUBA, 'SENT')).toBeTruthy();
+    // The row holds still under the thumb, read again on the next read (§9.1, §13).
+    await waitFor(() => expect(queryClient.isMutating() + queryClient.isFetching()).toBe(0));
+    expect(rowReads()).toBe(before);
   });
 });
 
@@ -442,7 +444,7 @@ describe('the comparison sheet', () => {
 });
 
 describe('the comparison sheet, when its person leaves the row', () => {
-  it('closes rather than emptying, and never reopens by itself when they come back', async () => {
+  it('stays up through the ask, closes once a read moves them out, and never reopens by itself', async () => {
     levelServer();
     await homeWithTheRow();
     // Asking Kuba makes him a gap, and a fresh match behind him takes his place among the ten.
@@ -456,6 +458,12 @@ describe('the comparison sheet, when its person leaves the row', () => {
     fireEvent.press(card(KUBA).getByRole('button', { name: /^Compare/ }));
     fireEvent.press(sheet().getByRole('button', { name: roundLabel('NONE', 'kuba.w') }));
 
+    // The row holds still under the sheet, which reads the answer …
+    expect(await sheet().findByRole('button', { name: roundLabel('SENT', 'kuba.w') })).toBeTruthy();
+    expect(screen.getByTestId(`same-level-${KUBA.player_id}`)).toBeTruthy();
+
+    // … until the next read — the app foregrounded with it up — moves him off the ten.
+    await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     await waitFor(() => expect(screen.queryByTestId(`same-level-${KUBA.player_id}`)).toBeNull());
     await waitFor(() => expect(screen.queryByTestId('bottom-sheet')).toBeNull());
 

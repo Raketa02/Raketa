@@ -8,14 +8,16 @@
  * - **The round button**: every state's mark and name; **+** asks at once and draws **…** before the
  *   answer; **…** opens *Request sent* · *Cancel request*; **✓** asks *Remove … as a friend?*; the
  *   envelope accepts at once. A failed write puts it back.
- * - **One tap, everywhere**: a write re-reads every Discovery read, Home's answer on a request card
- *   re-reads the row, and a request from the record a tile opens says *new players*.
+ * - **One tap, everywhere**: a write reaches every Discovery read — the row holding still with the
+ *   answer drawn where the card stands, See all reading again — Home's answer on a request card moves
+ *   the row, and a request from the record a tile opens says *new players*.
  * - **See all**: pushed over Home with the tab lit, the pill, a sport's filter, paging and the empty line.
  * - **The request card** on the receiver's Home reads *Found you among new players*.
  *
  * **The routes are answered by a small fake of the server** (`peopleServer`): a write moves the
  * person's relation, and the row and See all read it back — so what a tile draws after a write is the
- * read again, never this client guessing, beyond what the button draws while the write is out.
+ * write's answer or the read again, never this client guessing, beyond what the button draws while the
+ * write is out.
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
@@ -367,9 +369,9 @@ describe('a tile', () => {
     await waitFor(() =>
       expect(asked()).toEqual([{ player_id: BARTEK.player_id, made_from: 'NEW_PLAYERS' }]),
     );
-    // The row under the record moves with it.
-    await waitFor(() => expect(rowReads()).toBeGreaterThan(before));
+    // The row under the record draws the answer where the card stands, read again on the next read.
     expect(await round(BARTEK, 'SENT')).toBeTruthy();
+    expect(rowReads()).toBe(before);
   });
 });
 
@@ -476,7 +478,7 @@ describe('the round friend button', () => {
     expect(toasts()).toEqual([]);
   });
 
-  it('one tap re-reads the row, and Hottest groups, whose faces are friends first', async () => {
+  it('one tap re-reads Hottest groups, whose faces are friends first, and the row holds still', async () => {
     peopleServer();
     await homeWithTheRow();
     const before = rowReads();
@@ -484,9 +486,15 @@ describe('the round friend button', () => {
 
     fireEvent.press(await round(MICHAL, 'ASKED_YOU'));
 
-    await waitFor(() => expect(rowReads()).toBeGreaterThan(before));
     await waitFor(() =>
       expect(transport.requestsTo('GET', HOTTEST_GROUPS_PATH).length).toBeGreaterThan(hottest),
+    );
+    // The row draws the answer on the card where it stands, and is read again on the next read.
+    await waitFor(() => expect(queryClient.isMutating() + queryClient.isFetching()).toBe(0));
+    expect(await round(MICHAL, 'FRIEND')).toBeTruthy();
+    expect(rowReads()).toBe(before);
+    expect(queryClient.getQueryState(['discovery', 'new-in-raketa', 'row'])?.isInvalidated).toBe(
+      true,
     );
   });
 
@@ -657,7 +665,7 @@ describe('See all', () => {
     expect(screen.getByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
   });
 
-  it('a tap on a grid tile’s button re-reads the grid and the row under it', async () => {
+  it('a tap on a grid tile’s button re-reads the grid, and the row under it once back on Home', async () => {
     peopleServer();
     await openSeeAll();
     const rows = rowReads();
@@ -665,10 +673,15 @@ describe('See all', () => {
 
     fireEvent.press(await round(BARTEK, 'NONE'));
 
-    await waitFor(() => expect(rowReads()).toBeGreaterThan(rows));
     await waitFor(() =>
       expect(transport.requestsTo('GET', NEW_IN_RAKETA_ALL_PATH).length).toBeGreaterThan(grids),
     );
+    expect(await round(BARTEK, 'SENT')).toBeTruthy();
+    expect(rowReads()).toBe(rows);
+
+    // Back on Home, the row holding still under the grid reads again.
+    fireEvent.press(screen.getByRole('button', { name: COPY.back }));
+    await waitFor(() => expect(rowReads()).toBeGreaterThan(rows));
     expect(await round(BARTEK, 'SENT')).toBeTruthy();
   });
 

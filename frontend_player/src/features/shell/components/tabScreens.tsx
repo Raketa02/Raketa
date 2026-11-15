@@ -92,7 +92,7 @@ import { HOME_COPY } from './shellCopy';
  * **NEW IN RAKETA follows it** (`discovery`'s row, [#801](https://github.com/Raketa02/Raketa/issues/801)),
  * the third of the five: Same competitive level (#802) will stand between them. The pull re-reads it
  * with the rest. **A friend act anywhere moves a person on it** — an answer on FRIEND REQUESTS, the
- * record a face opens — because its reads list people (`LISTS_PEOPLE`) and every friend write re-reads
+ * record a face opens — because its reads list people (`LISTS_PEOPLE`) and every friend write reaches
  * those; the shell hands it nothing for that.
  *
  * **TOP 10 is the last** (`rankings`' row, [#805](https://github.com/Raketa02/Raketa/issues/805)), after

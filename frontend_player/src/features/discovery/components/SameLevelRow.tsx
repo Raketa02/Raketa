@@ -9,8 +9,10 @@
  * sport), is in flight, or failed: a row that fails is left out, and the rest of Home stands.
  *
  * **A face opens the record**, its requests sent from *same level* in the card's sport; *N sports ›*
- * opens the comparison sheet. The row's reads list people (`LISTS_PEOPLE`), so any friend write or
- * block — from a card, the sheet, the record, or anywhere else — reads the row again (§13).
+ * opens the comparison sheet. The row's reads list people (`LISTS_PEOPLE`), so any friend write —
+ * from a card, the sheet, the record, or anywhere else — reaches it, the row holding still: the card
+ * draws the answer where it stands, and the next read moves it (§9.1, §13; `usePeopleRow`). A block
+ * reads the row again.
  *
  * **Every card that comes at least half on screen is reported**, once that Warsaw day
  * ([#804](https://github.com/Raketa02/Raketa/issues/804); §9.2), so a card seen on five days without

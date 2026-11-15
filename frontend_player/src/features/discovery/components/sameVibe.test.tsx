@@ -18,7 +18,7 @@
  * relation, and See all keeps who holds a level in a sport it is asked for.
  */
 
-import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { FlatList } from 'react-native';
 
 import { FRIENDS_COPY, roundLabel } from '@/features/friends/types';
@@ -44,6 +44,8 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+
+import { rereadDiscovery } from '../hooks/useNewInRaketa';
 
 import { DISCOVERY_COPY, moreTags, nobodySharesYourTagsIn } from './discoveryCopy';
 
@@ -199,6 +201,11 @@ const tile = (person: Wire['SameVibePlayerSchema']) =>
 const round = (person: Wire['SameVibePlayerSchema'], relation: Wire['FriendRelation']) =>
   screen.findByRole('button', { name: roundLabel(relation, person.nickname) });
 const rowReads = () => transport.requestsTo('GET', SAME_VIBE_PATH).length;
+/** The row's tiles, as drawn, left to right. */
+const tileIds = () =>
+  screen
+    .getAllByTestId(/^same-vibe-e0/)
+    .map((node) => (node.props.testID as string).replace('same-vibe-', ''));
 const pageReads = () => transport.requestsTo('GET', SAME_VIBE_ALL_PATH);
 const asked = () => transport.requestsTo('POST', REQUESTS_PATH).map((request) => request.body);
 const sheets = () => screen.queryAllByTestId('bottom-sheet');
@@ -265,10 +272,7 @@ describe('the row on Home', () => {
     vibeServer();
     await homeWithTheRow();
 
-    const ids = screen
-      .getAllByTestId(/^same-vibe-e0/)
-      .map((node) => (node.props.testID as string).replace('same-vibe-', ''));
-    expect(ids).toEqual(ROW.map((one) => one.player_id));
+    expect(tileIds()).toEqual(ROW.map((one) => one.player_id));
   });
 
   it('is gone with its heading while the read holds nobody', async () => {
@@ -360,18 +364,47 @@ describe('a tile', () => {
     expect(tile(KAROL).getByText(moreTags(4))).toBeTruthy();
   });
 
-  it('asks from the row naming neither a group nor a sport, and the row moves', async () => {
+  it('asks from the row naming neither a group nor a sport', async () => {
     vibeServer();
     await homeWithTheRow();
-    const before = rowReads();
 
     fireEvent.press(await round(KUBA, 'NONE'));
 
     await waitFor(() =>
       expect(asked()).toEqual([{ player_id: KUBA.player_id, made_from: 'SAME_VIBE' }]),
     );
-    await waitFor(() => expect(rowReads()).toBeGreaterThan(before));
     expect(await round(KUBA, 'SENT')).toBeTruthy();
+  });
+
+  it('holds the tile where it was, reading request sent, though the next read moves it', async () => {
+    vibeServer();
+    await homeWithTheRow();
+    const drawn = tileIds();
+    const before = rowReads();
+    // §9.1 on every read: asking Kuba makes him a gap, and a fresh match behind him takes his place.
+    const ZOSIA = vibe(4, 'zosia.p', ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'HERE_TO_IMPROVE']);
+    transport.on('POST', REQUESTS_PATH, () => {
+      transport.on('GET', SAME_VIBE_PATH, () =>
+        json<Wire['SameVibeResponse']>({ players: [ZOSIA, KAROL, ANIA] }),
+      );
+      return json<Wire['RelationResponse']>({ relation: 'SENT' });
+    });
+
+    fireEvent.press(await round(KUBA, 'NONE'));
+    await waitFor(() => expect(asked()).toHaveLength(1));
+    // Once the write has settled …
+    await waitFor(() => expect(queryClient.isMutating() + queryClient.isFetching()).toBe(0));
+
+    // … the tile is where it was, reading … : the row under the thumb never moves.
+    expect(tileIds()).toEqual(drawn);
+    expect(screen.getByRole('button', { name: roundLabel('SENT', 'kuba.w') })).toBeTruthy();
+    expect(rowReads()).toBe(before);
+
+    // The next read — a pull, a return to Home — works §9.1 out again, and he has gone.
+    await act(() => rereadDiscovery(queryClient));
+    await waitFor(() =>
+      expect(tileIds()).toEqual([ZOSIA, KAROL, ANIA].map((one) => one.player_id)),
+    );
   });
 });
 
@@ -447,7 +480,7 @@ describe('the vibe sheet', () => {
     );
   });
 
-  it('closes with the record over it when a write there moves them out of the row, and the next tile opens its own sheet', async () => {
+  it('stays up with the record over it when a write there would move them, and closes once a read does', async () => {
     vibeServer();
     await homeWithTheRow();
     // Asking Kuba from his record makes him a gap, and a fresh match takes his place among the ten.
@@ -465,6 +498,14 @@ describe('the vibe sheet', () => {
       await within(sheets()[1]!).findByRole('button', { name: FRIENDS_COPY.record.add }),
     );
 
+    // The row holds still under both sheets, his sheet reading the answer.
+    expect(
+      await vibeSheet().findByRole('button', { name: roundLabel('SENT', 'kuba.w') }),
+    ).toBeTruthy();
+    expect(sheets()).toHaveLength(2);
+
+    // The next read — the app foregrounded with them up — works §9.1 out again: he has gone.
+    await act(() => rereadDiscovery(queryClient));
     await waitFor(() => expect(screen.queryByTestId(`same-vibe-${KUBA.player_id}`)).toBeNull());
     await waitFor(() => expect(sheets()).toHaveLength(0));
 

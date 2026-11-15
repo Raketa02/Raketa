@@ -13,9 +13,10 @@
  *   again*), offline (resumes), a later page refused (said under the grid, with its own *Try again*),
  *   and the pull, which reads every page again.
  *
- * A tile opens the record and its round button acts, as on Home's row; **every friend write re-reads
- * every people list** (`LISTS_PEOPLE`), so this grid and the row under the screen both move. The
- * frame, the paging and every state are every people row's (`SeeAllScreen`).
+ * A tile opens the record and its round button acts, as on Home's row; **every friend write reaches
+ * every people list** (`LISTS_PEOPLE`): this grid reads again, and the row under the screen draws the
+ * answer, holding still until Home is back (`usePeopleRow`). The frame, the paging and every state are
+ * every people row's (`SeeAllScreen`).
  */
 
 import { useState } from 'react';

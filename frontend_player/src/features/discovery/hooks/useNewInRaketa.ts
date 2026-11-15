@@ -13,9 +13,9 @@
  * manager. The row is the 10 newest, so a return after somebody joined shows them.
  *
  * **One tap moves a person everywhere** (§13): both reads declare `LISTS_PEOPLE`, so every friend
- * write and every block — wherever it is made — re-reads the row and every See all, and the round
- * button's write settles once they have. See all opened over Home keeps Home's row mounted, so both
- * move. `rereadDiscovery` is Home's pull.
+ * write — wherever it is made — reaches the row, holding still under the thumb (`usePeopleRow`), and
+ * every See all, which reads again; the round button's write settles once they have. Every block
+ * re-reads both. `rereadDiscovery` is Home's pull.
  */
 
 import type { QueryClient } from '@tanstack/react-query';
@@ -28,7 +28,7 @@ import { discoveryKeys } from './discoveryKeys';
 import { usePeopleRow } from './usePeopleRow';
 import { useSeeAllPages, type SeeAllList } from './useSeeAllPages';
 
-/** Home's row — re-read on return and by every friend write (`usePeopleRow`). */
+/** Home's row — re-read on return, holding still under a friend write (`usePeopleRow`). */
 export function useNewInRaketa() {
   return usePeopleRow<Joiner>(discoveryKeys.newInRaketa(), (signal) => readNewInRaketa({ signal }));
 }

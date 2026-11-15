@@ -15,8 +15,9 @@
  *   leaves nobody, and the pull, which reads every page again.
  *
  * A face opens the record, *N sports ›* the comparison sheet and the round button acts, as on Home's
- * row; **every friend write re-reads every people list** (`LISTS_PEOPLE`), so this list and the row
- * under the screen both move. The frame, the paging and every state are every people row's
+ * row; **every friend write reaches every people list** (`LISTS_PEOPLE`): this list reads again, and
+ * the row under the screen draws the answer, holding still until Home is back (`usePeopleRow`). The
+ * frame, the paging and every state are every people row's
  * (`SeeAllScreen`).
  */
 

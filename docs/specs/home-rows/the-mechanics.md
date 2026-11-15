@@ -562,6 +562,10 @@ Q33).
 - **Each row is its own read** (§3). A row that fails shows nothing, and the rest of Home stands.
 - **After any friend or join write from a row**, every row, See all and Home read that could show that
   person or group is read again, so one tap shows everywhere.
+- **A people row holds still under the tap** (2026-11-15): the person's card stays where it stands and
+  shows the new state, and §9.1 moves them on the row's next read — a return to Home, a pull — never
+  under the thumb. Read at the tap, asking a fresh match on *Same vibe* made the card leave as it was
+  pressed, the next fresh match taking its place. A block still takes the card off at once.
 - **No live connection**: a row never changes while the reader looks at it.
 
 ---

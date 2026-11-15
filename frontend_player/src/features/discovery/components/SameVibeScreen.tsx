@@ -13,8 +13,8 @@
  *   page refused, and the pull.
  *
  * Every tile opens the same vibe sheet and its round button acts, as on Home's row; **every friend
- * write re-reads every people list** (`LISTS_PEOPLE`), so this grid and the row under the screen both
- * move.
+ * write reaches every people list** (`LISTS_PEOPLE`): this grid reads again, and the row under the
+ * screen draws the answer, holding still until Home is back (`usePeopleRow`).
  */
 
 import { useState } from 'react';

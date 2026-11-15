@@ -1,8 +1,8 @@
 /**
  * **The record a people row opens** (#801, #802; the Home rows mechanics §12) — `player_record`'s
  * sheet, its requests sent from **the row it was opened from** (`foundIn`): *new players*, or *same
- * level* in the card's sport. A friend act or a block there re-reads the row under it on its own
- * (`rereadPeopleLists`). Nothing while no record is open.
+ * level* in the card's sport. A friend act there moves the card on the row under it, and a block
+ * re-reads that row, on their own (`rereadPeopleLists`). Nothing while no record is open.
  */
 
 import type { FoundIn } from '@/features/friends/types';

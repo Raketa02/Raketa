@@ -24,7 +24,11 @@
  * all, and Hottest groups' friends, declare `LISTS_PEOPLE`, so one tap — from a tile, a record
  * Rankings opened, a notice, Members — moves that person on every one of them (the Home rows
  * mechanics §13). The tag, not their keys: `discovery` draws this feature's round button, and naming
- * its keys here would be a dependency both ways.
+ * its keys here would be a dependency both ways. **A write hands its answer in** (`RelationMoved`:
+ * whom, and where the reader now stands with them): a list that holds still — Home's people rows —
+ * draws it where the card stands rather than reading again, so the card never leaves under the thumb
+ * when §9.1 would make it a gap (#803's bug, 2026-11-15); every other list reads again. A refusal
+ * that is the state moving has no answer, and re-reads them all.
  *
  * ## The surface hands its own read in
  *
@@ -89,7 +93,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
-import { rereadPeopleLists, shouldRetryQuery } from '@/shared/lib/query-client';
+import { rereadPeopleLists, shouldRetryQuery, type RelationMoved } from '@/shared/lib/query-client';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { movesTheFaces, type AskedWhere } from '../domain/friendship';
@@ -135,7 +139,8 @@ export function useAskToBeFriends(playerId: string, where: AskedWhere, reread?: 
   const client = useQueryClient();
   return useMutation<FriendRelation, AppError, void>({
     mutationFn: () => askToBeFriends(playerId, where),
-    onSuccess: (relation) => settle(client, reread, movesTheFaces('NONE', relation)),
+    onSuccess: (relation) =>
+      settle(client, reread, movesTheFaces('NONE', relation), { playerId, relation }),
     onError: (error) => rereadIfMoved(client, error, reread),
   });
 }
@@ -145,7 +150,7 @@ export function useAcceptFriendRequest(playerId: string, reread?: Reread) {
   return useMutation<FriendRelation, AppError, void>({
     mutationFn: () => acceptFriendRequest(playerId),
     // Home is among the faces, always: the card asking for this answer leaves it.
-    onSuccess: () => settle(client, reread, true),
+    onSuccess: (relation) => settle(client, reread, true, { playerId, relation }),
     onError: (error) => (stateMoved(error) ? rereadHomeToo(client, reread) : undefined),
   });
 }
@@ -163,7 +168,7 @@ export function useCancelFriendRequest(playerId: string, reread?: Reread) {
   const client = useQueryClient();
   return useMutation<void, AppError, void>({
     mutationFn: () => cancelFriendRequest(playerId),
-    onSuccess: () => settle(client, reread, false),
+    onSuccess: () => settle(client, reread, false, { playerId, relation: 'NONE' }),
   });
 }
 
@@ -171,7 +176,7 @@ export function useRemoveFriend(playerId: string, reread?: Reread) {
   const client = useQueryClient();
   return useMutation<void, AppError, void>({
     mutationFn: () => removeFriend(playerId),
-    onSuccess: () => settle(client, reread, true),
+    onSuccess: () => settle(client, reread, true, { playerId, relation: 'NONE' }),
   });
 }
 
@@ -247,13 +252,19 @@ function rereadIfMoved(client: QueryClient, error: AppError, reread?: Reread) {
 
 /**
  * The surface's own read, this feature's lists, every read that lists people (`rereadPeopleLists`),
- * and every face where the friendship turned.
+ * and every face where the friendship turned. **`moved` is the server's answer** — whom, and where
+ * the reader now stands with them — which a people list that holds still draws in place of a read.
  */
-function settle(client: QueryClient, reread: Reread | undefined, faces: boolean) {
+function settle(
+  client: QueryClient,
+  reread: Reread | undefined,
+  faces: boolean,
+  moved?: RelationMoved<FriendRelation>,
+) {
   return Promise.all([
     reread?.(),
     rereadTheLists(client),
-    rereadPeopleLists(client),
+    rereadPeopleLists(client, moved),
     ...(faces ? rereadEveryFace(client) : []),
   ]);
 }

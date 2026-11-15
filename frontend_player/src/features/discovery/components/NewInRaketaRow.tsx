@@ -8,8 +8,9 @@
  * failed: a row that fails is left out, and the rest of Home stands (the screens §1).
  *
  * **A tile opens the record**, its requests sent from *new players* (`foundIn`). The row's reads list
- * people (`LISTS_PEOPLE`), so any friend write or block — from a tile, the record, or anywhere else in
- * the app — reads the row again (the mechanics §13).
+ * people (`LISTS_PEOPLE`), so any friend write — from a tile, the record, or anywhere else in the app
+ * — reaches it, the row holding still: the tile draws the answer where it stands, and the next read
+ * moves it (the mechanics §13; `usePeopleRow`). A block reads the row again.
  */
 
 import { router } from 'expo-router';

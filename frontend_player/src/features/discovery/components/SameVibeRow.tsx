@@ -10,8 +10,9 @@
  * level sees it.
  *
  * **A tile opens the vibe sheet**; its round button acts, asking from *same vibe*. The row's reads
- * list people (`LISTS_PEOPLE`), so any friend write or block — from a tile, the sheet, the record its
- * face opens, or anywhere else — reads the row again (§13).
+ * list people (`LISTS_PEOPLE`), so any friend write — from a tile, the sheet, the record its face
+ * opens, or anywhere else — reaches it, the row holding still: the card draws the answer where it
+ * stands, and the next read moves it (§9.1, §13; `usePeopleRow`). A block reads the row again.
  *
  * **Every tile that comes at least half on screen is reported**, once that Warsaw day
  * ([#804](https://github.com/Raketa02/Raketa/issues/804); §9.2), its count this row's own. See all
