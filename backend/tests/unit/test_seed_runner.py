@@ -151,7 +151,13 @@ WRITTEN_CONTEXTS = frozenset(
 #: `rankings` joined with #768, and it has no aggregate at all: its rows are
 #: folded from the rating streams by the outbox delivery, so the seed only
 #: **reads** the list, through the page's own use case, to prove it.
-EXERCISED_CONTEXTS = frozenset({"matchmaking", "rankings", "sportsmanship"})
+#:
+#: `discovery` joined with #793 on the same terms: its player directory is
+#: written by the outbox delivery from the users' and the profiles' events, so
+#: the seed only **reads** New in Raketa, through the row's own use case.
+EXERCISED_CONTEXTS = frozenset(
+    {"discovery", "matchmaking", "rankings", "sportsmanship"}
+)
 
 #: The repository builders the seed path may take from the composition root, and
 #: the context each of them writes an aggregate in. Written out by name, because
@@ -312,7 +318,9 @@ def test_the_walk_has_something_to_walk():
         "full_hour.py",
         "groups.py",
         "guard.py",
+        "hottest_groups.py",
         "money.py",
+        "new_in_raketa.py",
         "official_groups.py",
         "payments.py",
         "photos.py",
@@ -323,8 +331,11 @@ def test_the_walk_has_something_to_walk():
         "rescues.py",
         "rooms.py",
         "runner.py",
+        "same_level.py",
+        "same_vibe.py",
         "screens.py",
         "sportsmanship.py",
+        "top_ten.py",
     }
 
 

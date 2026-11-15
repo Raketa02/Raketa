@@ -17,7 +17,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
-import { currentUserQuery } from '@/features/auth/types';
+import { useReaderId } from '@/features/auth/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
 import { FIRST_VIEW } from '../domain/ranking';
@@ -32,10 +32,8 @@ export interface RankingViewState {
 
 export function useRankingView(): RankingViewState {
   const client = useQueryClient();
-  // Whose choice this is — read from the cache once, and never observed, as `usePlaySegment` reads
-  // it: the entry gate has read the player before Home or Rankings can mount, and a sign-out tears
-  // the tree down.
-  const [account] = useState(() => client.getQueryData(currentUserQuery().queryKey)?.id);
+  // Whose choice this is — read from the cache once, and never observed (`useReaderId`).
+  const account = useReaderId();
 
   const read = useQuery({
     queryKey: phonePreferenceKeys.one(account ?? '', 'rankingView'),

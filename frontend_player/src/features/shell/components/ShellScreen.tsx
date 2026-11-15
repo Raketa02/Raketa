@@ -29,11 +29,19 @@
  * per branch.
  */
 
-import { useRef, useState, type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
+import { KEYBOARD_AVOIDANCE, useAppInBackground } from '@/shared/lib/platform';
+import {
+  PageOnScreen,
+  ScreenHeader,
+  theme,
+  TopSafeArea,
+  useWatchedPage,
+  type WatchedPage,
+} from '@/shared/ui';
 
 export interface ShellScreenProps {
   /**
@@ -110,6 +118,16 @@ export interface ShellScreenProps {
    * lets its own unmount release it. Off everywhere else, which keeps the default.
    */
   readonly keepsKeyboardOnTap?: boolean;
+  /**
+   * **Whether the page says what of it is on screen** — forwarded, not designed. Home is the one
+   * page that asks ([#804](https://github.com/Raketa02/Raketa/issues/804)): its *Same competitive
+   * level* and *Same vibe* rows report the cards that came at least half into view, and only the
+   * page knows how far it is scrolled and how tall it shows. So the scroller's every move, and the
+   * page leaving view and coming back — a screen pushed over it, another tab, the app in the
+   * background — are handed down as `shared/ui`'s `PageOnScreen`. Nothing drawn changes. Off
+   * everywhere else, where the scroller says nothing of where it is and the band stays empty.
+   */
+  readonly watchesOnScreen?: boolean;
   readonly children: ReactNode;
 }
 
@@ -132,8 +150,10 @@ export function ShellScreen({
   onRefresh,
   avoidsKeyboard = false,
   keepsKeyboardOnTap = false,
+  watchesOnScreen = false,
   children,
 }: ShellScreenProps) {
+  const watched = useWatchedPage();
   /**
    * Whether a pull is in flight — the pull's own state, never the queries': a background refetch
    * must not spin the control, and a pull must spin it until everything it asked for has landed,
@@ -161,6 +181,7 @@ export function ShellScreen({
 
   const page = (
     <ScrollView
+      {...(watchesOnScreen ? watched.scroller : {})}
       contentContainerStyle={[s.content, fill ? s.fill : undefined]}
       keyboardShouldPersistTaps={
         keepsKeyboardOnTap ? 'always' : avoidsKeyboard ? 'handled' : undefined
@@ -177,13 +198,14 @@ export function ShellScreen({
         )
       }
     >
-      {children}
+      <PageOnScreen.Provider value={watched.band}>{children}</PageOnScreen.Provider>
     </ScrollView>
   );
   const pinned = action !== undefined ? <View style={s.action}>{action}</View> : null;
 
   return (
     <TopSafeArea style={s.screen}>
+      {watchesOnScreen ? <FollowsTheScreen page={watched} /> : null}
       <ScreenHeader
         title={title}
         eyebrow={eyebrow}
@@ -206,6 +228,28 @@ export function ShellScreen({
       {avoidsKeyboard ? null : pinned}
     </TopSafeArea>
   );
+}
+
+/**
+ * **The page is in view while its screen is focused and the app is not in the background** — on
+ * Android the app's JavaScript runs on behind the home screen, and a re-read landing there would
+ * otherwise put new cards on a page nobody sees. Coming back says the band again. A child, so the
+ * navigator's hook is called only on a page that watches — a shell screen drawn on its own, outside
+ * a navigator, never asks.
+ */
+function FollowsTheScreen({ page }: { readonly page: WatchedPage }) {
+  const [focused, setFocused] = useState(false);
+  const away = useAppInBackground();
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  useEffect(() => {
+    page.inView(focused && !away);
+  }, [page, focused, away]);
+  return null;
 }
 
 const s = StyleSheet.create({

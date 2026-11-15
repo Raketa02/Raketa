@@ -23,6 +23,7 @@ import type {
   GroupAtClub,
   GroupMember,
   GroupPerson,
+  HottestGroup,
   JoinRequest,
   Monogram,
   MyGroup,
@@ -207,4 +208,31 @@ export function toJoinRequests(wire: Schemas['JoinRequestsResponse']): readonly 
 
 export function toEditedGroup(wire: Schemas['EditedGroupResponse']): EditedGroup {
   return { group: toGroup(wire.group), admitted: wire.admitted.map(toGroupPerson) };
+}
+
+/**
+ * **Home's Hottest groups** (#800), in the row's order — the server's. Everything the card and its
+ * sheet draw rides on the one read, so nothing here is worked out: the share, the tag and the six
+ * faces are carried as they came.
+ */
+export function toHottestGroups(wire: Schemas['HottestGroupsResponse']): readonly HottestGroup[] {
+  return wire.groups.map((group) => ({
+    id: group.id,
+    kind: group.kind,
+    name: group.name,
+    monogram: toMonogram(group.monogram),
+    sports: toSports(group.sports),
+    memberCount: group.member_count,
+    joinPolicy: group.join_policy,
+    runBy: group.run_by,
+    club: toClubName(group.club),
+    gamesThisWeek: group.games_this_week,
+    newThisMonth: group.new_this_month,
+    heatShare: group.heat_share,
+    tag: group.tag,
+    faces: group.faces.map(toGroupPerson),
+    friendsCount: group.friends_count,
+    relation: group.relation,
+    isAdministrator: group.is_administrator,
+  }));
 }

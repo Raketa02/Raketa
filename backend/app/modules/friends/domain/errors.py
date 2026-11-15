@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from http import HTTPStatus
-
 from app.shared.domain.errors import (
-    AppError,
     BadRequestError,
     ConflictError,
     NotFoundError,
@@ -22,37 +19,17 @@ class CannotBefriendYourself(BadRequestError):
         super().__init__("A player cannot ask themselves to be friends.")
 
 
-class NotInYourGroups(NotFoundError):
-    """The player shares no group with the requester **and isn't listed on
-    General, or is hidden from it** (the friends mechanics §3.1, widened by
-    ``docs/adr/0203`` §9, #773: nobody else can be asked except through the
-    link). **One answer for an id nobody holds, a stranger off the list and a
-    hidden one**, so the route is no oracle for which ids exist or who turned
-    *Show me in General* off. The code predates the widening and is kept: a
-    shipped client branches on it."""
+class PlayerUnavailable(NotFoundError):
+    """The player can't be asked by this requester (``docs/adr/0204`` §2):
+    they turned *Show me to new people* off and the two share no group, no game
+    and no friendship. **One answer for that and for an id nobody holds**, and
+    it names neither, so the route is no oracle for which ids exist or who
+    turned the switch off — the record's own refusal reads the same."""
 
-    code = "player_not_in_your_groups"
+    code = "player_unavailable"
 
     def __init__(self) -> None:
-        super().__init__("You can ask only people from your groups or on the ranking.")
-
-
-class DailyRequestLimit(AppError):
-    """The requester has sent ten requests this Warsaw day to people they share
-    no group with (#773; ``docs/adr/0203`` §9, Q21): *You've sent 10 requests to
-    new people today. Try again tomorrow.* Nothing was recorded. A request to a
-    group-mate still goes through, and the count resets at Warsaw midnight.
-
-    A 429, as the card-testing guard's ``payment_setups_exhausted`` is: the
-    same request succeeds tomorrow, unchanged."""
-
-    status_code = HTTPStatus.TOO_MANY_REQUESTS
-    code = "daily_request_limit"
-
-    def __init__(self) -> None:
-        super().__init__(
-            "You've sent 10 requests to new people today. Try again tomorrow."
-        )
+        super().__init__("This player can't be asked.")
 
 
 class AlreadyFriends(ConflictError):

@@ -395,6 +395,28 @@ class RatedAccounts(Protocol):
         ...
 
 
+class PercentsEven(Protocol):
+    async def between(
+        self, reader: UUID, others: Collection[tuple[UUID, Sport]]
+    ) -> Mapping[tuple[UUID, Sport], int]:
+        """**Today's** % even between the reader and each of these players in
+        its sport — the app's Forecast with one player a side, the figure
+        *Same competitive level* prints (#794). Absent where either holds no
+        level there: the line falls back to *Found you at your padel level*."""
+        ...
+
+
+class TagsInCommon(Protocol):
+    async def in_common(
+        self, reader: UUID, others: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        """How many Social tags the reader and each of these hold **today** —
+        the Player profile's own, the figure *Same vibe players* counts (#795).
+        Everybody asked is answered: ``0`` once nothing is shared, and the line
+        falls back to *Found you through your tags*."""
+        ...
+
+
 class EndedHours(Protocol):
     async def ended(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
         """Every booked game, whole, whose hour ended after ``after`` and by

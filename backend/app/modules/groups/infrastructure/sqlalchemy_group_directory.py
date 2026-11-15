@@ -18,7 +18,7 @@ from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.stored_time import (
@@ -27,7 +27,7 @@ from app.infrastructure.database.stored_time import (
 )
 from app.kernel import Instant
 from app.modules.clubs.domain.folding import fold
-from app.modules.groups.domain.ports import GroupListing
+from app.modules.groups.domain.ports import GroupCrowd, GroupListing
 from app.modules.groups.domain.value_objects import (
     DeclaredSports,
     GroupCode,
@@ -77,6 +77,21 @@ class SqlAlchemyGroupDirectory:
             .having(first > after, first <= by)
         )
         return {player_id: stored_instant(joined) for player_id, joined in rows}
+
+    async def crowds(
+        self, *, at_least: int, joined_after: Instant
+    ) -> Sequence[GroupCrowd]:
+        players = func.count(GroupMemberORM.player_id)
+        new = func.sum(case((GroupMemberORM.joined_at > joined_after, 1), else_=0))
+        rows = await self._session.execute(
+            select(GroupMemberORM.group_id, players, new)
+            .group_by(GroupMemberORM.group_id)
+            .having(players >= at_least)
+        )
+        return [
+            GroupCrowd(group_id=group_id, players=count, new=int(joined or 0))
+            for group_id, count, joined in rows.all()
+        ]
 
     async def every(self) -> Sequence[UUID]:
         return (

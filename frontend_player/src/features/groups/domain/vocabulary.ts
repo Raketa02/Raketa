@@ -24,3 +24,11 @@ export type JoinPolicy = 'ANYONE' | 'PEOPLE_I_APPROVE';
 
 /** What a search's text was read as — so an empty answer can say which empty it is. */
 export type ReadAs = 'TEXT' | 'LINK';
+
+/**
+ * **A Hottest groups card's tag** ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+ * §3; the Home rows mechanics §5.3): **HOTTEST** on one card at most — the highest heat, with a game
+ * this week — and **GROWING** on any other that gained four or more players this month, a quarter of
+ * its players or more. The rest carry none, which the card reads as `null`.
+ */
+export type HeatTag = 'HOTTEST' | 'GROWING';

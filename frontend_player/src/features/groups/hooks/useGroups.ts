@@ -1,5 +1,6 @@
 /**
- * **The Groups list, one group, its Members and its requests** — four reads, on the app's defaults.
+ * **The Groups list, one group, its Members and its requests** — four reads, on the app's defaults,
+ * and one answer off the first.
  *
  * | | |
  * | --- | --- |
@@ -7,6 +8,7 @@
  * | `useGroup` | `GET /groups/{id}` — one group, as its page reads it |
  * | `useGroupMembers` | `GET /groups/{id}/members?sport=` — Members, for the filter's sport |
  * | `useJoinRequests` | `GET /groups/{id}/requests` — *Want to join*, asked **only by the Owner** |
+ * | `useInNoGroup` | the Groups list's answer to whether *Your games* says the groupless line (#800) |
  *
  * Neither overrides anything: a group changes when somebody joins it, and the thirty-second
  * `staleTime` with a refetch on focus is what makes a count that moved while the app was away
@@ -149,4 +151,15 @@ export function useGroupInfo(groupId: string) {
   }, [reread]);
   useOnReturn(() => void reread());
   return { read, reread };
+}
+
+/**
+ * **Whether the reader is in no group** — then *Your games* reads *Join a group to get games — the
+ * hottest ones are just below.* in place of *Play finds you one.* (the Home rows mechanics §3;
+ * `GROUPS_COPY.hottest.groupless`). `false` for a member of any group, and while the list is unread
+ * or refused: the line it stands in for is true of everybody, so nothing is claimed about groups the
+ * phone has not been told of.
+ */
+export function useInNoGroup(): boolean {
+  return useMyGroups().data?.length === 0;
 }

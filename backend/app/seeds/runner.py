@@ -231,6 +231,38 @@ from app.seeds.friends_games import (
     friends_game_lines,
     write_the_friends_games,
 )
+from app.seeds.hottest_groups import (
+    SeededHottestGroups,
+    assert_the_hottest_groups,
+    hottest_group_lines,
+    write_the_hottest_groups,
+)
+from app.seeds.same_level import (
+    SeededSameLevel,
+    assert_same_level,
+    same_level_lines,
+    write_same_level,
+)
+from app.seeds.same_vibe import (
+    ON_THE_ROW as VIBE_ROW,
+    SeededSameVibe,
+    assert_same_vibe,
+    same_vibe_lines,
+    write_same_vibe,
+)
+from app.seeds.new_in_raketa import (
+    SeededJoiners,
+    assert_new_in_raketa,
+    new_in_raketa_lines,
+    write_new_in_raketa,
+)
+from app.seeds.top_ten import (
+    SQUASH_PAIR,
+    SeededSquashPair,
+    assert_the_top_ten,
+    squash_pair_lines,
+    write_the_squash_pair,
+)
 from app.seeds.full_hour import (
     SeededFullHour,
     assert_the_full_hour,
@@ -1222,6 +1254,21 @@ class SeedReport:
     #: The hour Ogrody 33 is full, which its official groups play elsewhere at
     #: (#746). ``None`` on the same callers.
     full_hour: SeededFullHour | None = None
+    #: The HOTTEST group and her request waiting on it (#792). ``None`` on the
+    #: same callers.
+    hottest_groups: SeededHottestGroups | None = None
+    #: New in Raketa's joiners and her three relations among them (#793).
+    #: ``None`` on the same callers.
+    new_in_raketa: SeededJoiners | None = None
+    #: Same competitive level's two requests, and how many fresh good matches
+    #: her row held (#794). ``None`` on the same callers.
+    same_level: SeededSameLevel | None = None
+    #: Same vibe's two requests, whether her six tags were set, and how many
+    #: fresh good matches her row held (#795). ``None`` on the same callers.
+    same_vibe: SeededSameVibe | None = None
+    #: Top 10's squash pair, their group and their five games (#797). ``None``
+    #: on the same callers.
+    squash_pair: SeededSquashPair | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1305,6 +1352,18 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 photographs=False,
                 clear_the_week=True,
             )
+            # **Top 10's squash pair, outside the cohort too** (#797): rated in
+            # squash through the questionnaire, their week cleared, so nobody
+            # deals them — the crowd's reasons, in a sport nobody else plays.
+            squash_players = await seed_the_cohort(
+                session,
+                cohort=SQUASH_PAIR,
+                clock=FixedClock(at=now),
+                settings=settings,
+                photos=photos,
+                photographs=False,
+                clear_the_week=True,
+            )
         # **The payment methods straight after the people**, each saved through
         # the setup a phone runs. Nothing below reads one yet and a saved card
         # changes nothing any other layer reads, so its place is free; it is
@@ -1314,7 +1373,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             now=now,
             cohort=[
                 (member.member.handle, member.player_id)
-                for member in (*members, *crowd)
+                for member in (*members, *crowd, *squash_players)
             ],
             money=money,
         )
@@ -1367,6 +1426,14 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             named=ACCOUNTS,
             crowd=RANKING_CROWD.members,
             money=money,
+        )
+        # **Top 10's squash pair's games after the played history, on its
+        # path** (#797): five results between the two at Prądnik Tennis, in a
+        # group of theirs — Ogrody 33, where the history plays, sells no squash
+        # — so the rooms layer's drain lists them both in squash. Nobody else
+        # plays squash, and nothing below deals them.
+        squash_pair = await write_the_squash_pair(
+            session_factory, settings=settings, now=now, money=money
         )
         # **After the games and before anything reads a record**, because a card
         # is drawn for a court that is over: nothing here arranges an evening,
@@ -1446,6 +1513,35 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         # the layers whose friends her other screens count on. Drained by the
         # layer itself.
         await write_her_ranked_friends(session_factory, now=now, money=money)
+        # **Hottest groups' one HOTTEST group after every layer that books or
+        # joins** (#792): the ranking's crowd's own, its games among them, and
+        # her request waiting on it. Drained by the layer itself.
+        hottest_groups = await write_the_hottest_groups(
+            session_factory,
+            settings=settings,
+            now=now,
+            crowd=[(member.member.handle, member.player_id) for member in crowd],
+            money=money,
+        )
+        # **New in Raketa's joiners after her friends layers** (#793): eight
+        # players outside the cohort across the 30 days and one past them, and
+        # her three relations among them. Drained by the layer itself.
+        new_in_raketa = await write_new_in_raketa(
+            session_factory,
+            settings=settings,
+            now=now,
+            photos=photos,
+            photographs=photographs,
+            money=money,
+        )
+        # **Same competitive level's two requests after every layer that rates
+        # or befriends** (#794): she asks one player from her row and another
+        # asks her from theirs. Drained by the layer itself.
+        same_level = await write_same_level(session_factory, now=now, money=money)
+        # **Same vibe's two requests, and her six tags on a store from before
+        # them** (#795): she asks one player from her row and another asks her
+        # from theirs. Drained by the layer itself.
+        same_vibe = await write_same_vibe(session_factory, now=now, money=money)
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1467,12 +1563,25 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 session_factory, settings=settings, now=now, full=full_hour
             ),
             await assert_the_ranking(session_factory, settings=settings, now=now),
+            await assert_the_hottest_groups(
+                session_factory, settings=settings, now=now, seeded=hottest_groups
+            ),
+            await assert_new_in_raketa(
+                session_factory, settings=settings, now=now, seeded=new_in_raketa
+            ),
+            await assert_the_top_ten(session_factory, settings=settings, now=now),
+        )
+        same_level_screen, same_level = await assert_same_level(
+            session_factory, settings=settings, seeded=same_level
+        )
+        same_vibe_screen, same_vibe = await assert_same_vibe(
+            session_factory, settings=settings, seeded=same_vibe
         )
         return SeedReport(
             accounts=accounts,
             members=members,
             now=now,
-            screens=screens,
+            screens=(*screens, same_level_screen, same_vibe_screen),
             rooms=rooms,
             opinions=opinions,
             clubs=clubs,
@@ -1489,6 +1598,11 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             friends=friends,
             friends_games=friends_games,
             full_hour=full_hour,
+            hottest_groups=hottest_groups,
+            new_in_raketa=new_in_raketa,
+            same_level=same_level,
+            same_vibe=same_vibe,
+            squash_pair=squash_pair,
             photographs=photographs,
         )
     finally:
@@ -1598,6 +1712,16 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *friend_lines(run_report.friends)])
     if run_report.friends_games is not None:
         lines.extend(["", *friends_game_lines(run_report.friends_games)])
+    if run_report.hottest_groups is not None:
+        lines.extend(["", *hottest_group_lines(run_report.hottest_groups)])
+    if run_report.new_in_raketa is not None:
+        lines.extend(["", *new_in_raketa_lines(run_report.new_in_raketa)])
+    if run_report.same_level is not None:
+        lines.extend(["", *same_level_lines(run_report.same_level)])
+    if run_report.same_vibe is not None:
+        lines.extend(["", *same_vibe_lines(run_report.same_vibe)])
+    if run_report.squash_pair is not None:
+        lines.extend(["", *squash_pair_lines(run_report.squash_pair)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
@@ -1623,6 +1747,25 @@ def report(run_report: SeedReport) -> list[str]:
             "fixture — bring MinIO up and seed a fresh database, because a "
             "photo list is settled at the profile commit and nothing adds one "
             "afterwards."
+        )
+    if run_report.same_level is not None and run_report.same_level.fresh == 0:
+        costs.append(
+            "no pair reads a good match (70% even or more) on her Same "
+            "competitive level row, so it is all gaps: her Levels are as unsure "
+            "as five results leave anybody, and the engine needs far more "
+            "results than the seed plays to make a level sure. Fresh before "
+            "gaps is walked in the API tests, not on this store."
+        )
+    if (
+        run_report.same_vibe is not None
+        and run_report.same_vibe.fresh is not None
+        and run_report.same_vibe.fresh >= VIBE_ROW
+    ):
+        costs.append(
+            "her Same vibe row is all fresh: far more than ten unconnected "
+            "players share two tags with her or more, so her friends and her "
+            "request wait in See all, where they fall, and never reach a gap. "
+            "Gaps on the row are walked in the API tests, not on this store."
         )
     if costs:
         lines.append("")

@@ -22,6 +22,7 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    JoinRequestWithdrawn,
     OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
@@ -159,6 +160,20 @@ class LogJoinRequestDeclined:
     ) -> None:
         logger.info(
             "groups.join_request.declined",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogJoinRequestWithdrawn:
+    async def __call__(
+        self, event: JoinRequestWithdrawn, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "groups.join_request.withdrawn",
             extra={
                 "group_id": str(event.group_id),
                 "event_id": str(context.event_id),

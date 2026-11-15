@@ -19,6 +19,13 @@
 >
 > **The people in every example:** **Tomek** is the reader, 7th of 13 in padel at 2,71. **Karol** sits
 > just above at 2,75, **Zofia** just below at 2,69, and **Inés** at the top at 3,40.
+>
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 (Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
+> every row is shown to every reader, blocked ones included, so [§4.5](#45-hidden-from-general-designed-no-mock)
+> is retired, [§5.1](#51-the-podium-rankings-4-6)'s podium is simply the first three, a blocked row's
+> tap reads *This record isn't available* ([§6](#6-the-record-from-the-ranking-designed-no-mock)), and
+> [§8](#8-you--show-me-in-general-designed-no-mock)'s switch moves to *Show me to new people*. Home's
+> **Top 10** is [the home rows screens §7](../home-rows/the-screens.md#7-top-10).
 
 ---
 
@@ -101,6 +108,9 @@ A light card in the dark card's place, one line, no button:
 - **The gap line is replaced** by *Hidden from General* and the switch, on the fold line's right. The
   switch is You's own setting, written by the same route; turning it on brings the gap line back.
 
+> **Retired 2026-11-14** (ADR-0204 §2). Nobody is hidden from General, so the card always has its gap
+> line, and the page has no switch.
+
 #### 4.6 The Friends view (designed, no mock)
 
 | Reader | Friends listed | The card | Below it |
@@ -112,7 +122,8 @@ A light card in the dark card's place, one line, no button:
 
 - **Add friends** opens the existing Add friends sheet: your groups, and your friend link
   ([the friends screens §5](../friends/the-screens.md#5-the-add-friends-sheet-friends-4)).
-- **Friends ignores *Show me in General***: a hidden friend is in the table.
+- **Friends ignores *Show me in General***: a hidden friend is in the table. *(Since 2026-11-14 no switch
+  hides anybody, in either view.)*
 
 ### 5. The podium and the list
 
@@ -124,6 +135,9 @@ A light card in the dark card's place, one line, no button:
   with second hidden from the reader, the steps read 1, 3 and 4.
 - **A tap opens the record.**
 - **Only with at least three rows visible to the reader.** With one or two, the list shows alone.
+
+> **Amended 2026-11-14** (ADR-0204 §2). Every row is visible, so the podium is **places 1, 2 and 3**,
+> shown when at least three players are listed.
 
 #### 5.2 A row (rankings 7–11)
 
@@ -172,6 +186,10 @@ One row per listed player the reader can see, best first, on one white card:
   opens for either of them *(a call)*. The confirmation names You › Blocked players as the way back.
 - **A refused record** reads the record's one line, *This record isn't available.*, as today.
 
+> **Amended 2026-11-14** (ADR-0204 §2). **A blocked player's row is on the page**, and a tap on it
+> reads *This record isn't available.* Add friend shows on every record that opens, and **the
+> daily-limit line is gone**. The record shows all of the subject's photos.
+
 ### 7. Home's request card (designed, no mock)
 
 The friends screens' [§6.2](../friends/the-screens.md#62-friend-requests--n-friends-5) card, with
@@ -184,6 +202,10 @@ stands. The notice's body reads the same.
   General***, with *Players who don't know you can see your place, open your record and send you a
   request.* under it ([the You spec §3.14](../you/the-you-screen.md#314-show-me-in-general)).
 - **It writes at once**, with no Save, and reverts with the write's own error if the write fails.
+
+> **Replaced 2026-11-14** (ADR-0204 §2). The row is ***Show me to new people***
+> ([the home rows screens §9.1](../home-rows/the-screens.md#91-you--show-me-to-new-people)), and it
+> changes nothing on this page.
 
 ### 9. Notices
 

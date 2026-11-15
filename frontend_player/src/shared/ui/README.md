@@ -109,7 +109,29 @@ takes the sports to offer, the one the page is on and the page's words, and repo
 another sport; which sports, which one, and what pressing the pill does are the page's. **It came
 down ahead of its second caller**, which `docs/architecture.md`'s fourth non-negotiable would
 refuse: PRD #766 call 13 decided that Rankings draws the deck's own pill, so the promotion is the
-prefactor that keeps it one control rather than a copy made later. Import them from `@/shared/ui`.
+prefactor that keeps it one control rather than a copy made later. And by Home's rows, ahead of
+the five PRD #789 adds ([#798](https://github.com/Raketa02/Raketa/issues/798)): `HomeRow` — a
+row's section, its eyebrow heading and, on the heading's line, an optional control and an optional
+link (_See all ›_) — and `HomeRowRail`, 7.7's peeking or paging rail over Part 8's Strip, never
+remounted. Every row on Home draws them; the words, the presses and the cards are the row's. A
+rail handed **`onScreen`** is told which of its cards are at least half on screen
+([#804](https://github.com/Raketa02/Raketa/issues/804)), from `onScreen.ts`: the page's band
+(`PageOnScreen`, which a page that watches feeds through `useWatchedPage`), where `HomeRow`'s
+section stands on it (its own layout, so on such a page it stands directly in the page's column),
+and the rail's own frame and scroll (`useCardsOnScreen`). They are followed values, never state, so
+nothing re-renders as the page moves.
+And by the record's photos ([#799](https://github.com/Raketa02/Raketa/issues/799)):
+`PhotoCarousel` — every photo a player has, sideways, a 4:5 card at `photoCarouselRatio` of the
+content width over Part 8's Strip, nothing with no photo. **It came down ahead of its second
+caller** too: the Home rows screens §9.3 decided that the record and the vibe sheet (#803) draw one
+carousel, so it is built where both can reach it rather than copied out of `player_record` later.
+And by Top 10 ([#805](https://github.com/Raketa02/Raketa/issues/805)): `RowSportPill` — the deck's
+pill on a Home row's heading line, its bar ending where the pill ends rather than at the page's edge,
+laid over the row through `HomeRow`'s **`over`** — and `HomeRowRail`'s **`numbered`** geometry. **It
+has one caller and stands here anyway**, against the fourth non-negotiable, because it is not code
+moved out of a feature: it is a second holder of the one sport pill (`SportPill`, `SportBar`,
+`FoldAway`), whose parts are this folder's own and unexported, and written in `rankings` it would
+have to export them — making the pill's internals the surface instead. Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

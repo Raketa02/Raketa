@@ -1,6 +1,6 @@
 # ADR-0202 — Friends: a request between group-mates, and a game among them that books the court when it is sent
 
-- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130)
+- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **§1 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): anyone may be asked, with no daily limit, except across *Show me to new people*'s rule; three new origins from Home's rows
 - **Date:** 2026-11-06
 - **Supersedes [ADR-0199](0199-a-player-is-known-by-their-nickname.md)'s line *"there is no
   friendship in Raketa (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
@@ -158,6 +158,14 @@ friendship survives either of them leaving a group, and ends when either account
 > most 10 a Warsaw day to people the requester shares no group with. Such a request records **the
 > ranking** and its sport as where it was made, and its Home card reads *Found you in the padel
 > ranking* in place of the group.
+
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 and §9.** **Anyone may be asked, with no daily limit**,
+> except somebody whose *Show me to new people* is off and who shares no group, game or friendship
+> with the requester, refused with one unnamed code. A block still swallows a request silently (§2).
+> A request found on Home records **same level** (with its sport), **new players** or **same vibe**,
+> and its card reads *Your level in padel · 91% even*, *Found you among new players* or *6 things in
+> common*, worked out when the card is read. On Home's people cards the request is one round button:
+> **+**, **…**, **✓** and the envelope.
 
 **A Friend request** is a request and an answer:
 

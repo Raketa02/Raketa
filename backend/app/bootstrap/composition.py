@@ -197,6 +197,7 @@ from app.modules.proposals.domain.ports import (
     SeatRefunds,
     UndecidedCharges,
     ClubNames as ProposalClubNames,
+    TagsInCommon as ProposalsTagsInCommon,
     ClubTerms,
     CourtHours,
     CourtKinds,
@@ -406,9 +407,11 @@ from app.modules.notifications.domain.ports import (
     NoticeDirectory,
     NotificationPreferencesRepository,
     PaidShares,
+    PercentsEven,
     PushNotifications,
     RatedAccounts,
     SeatOffers,
+    TagsInCommon as NoticeTagsInCommon,
 )
 from app.modules.notifications.infrastructure.event_sourced_notification_repositories import (  # noqa: E501
     EventSourcedBellRepository,
@@ -421,6 +424,8 @@ from app.modules.notifications.infrastructure.told_by import (
     BookedAndProposedGames,
     BookedHours,
     DirectoryGroupJoiners,
+    ForecastPercentsEven,
+    ProfileTagsInCommon as NoticeProfileTagsInCommon,
     FriendsOfTheReader,
     GameStreamCourts,
     PlatformNames,
@@ -519,10 +524,9 @@ from app.modules.friends.domain.ports import (
     AsksWaitingOnALevel,
     LevelAsksOfTheReader,
     LevelsAskedByTheReader,
-    ShownToStrangers,
+    OpenToTheRequester,
     ReadersBlocks,
     ReadersGroups,
-    RequestsCounted,
 )
 from app.modules.friends.infrastructure.event_sourced_friend_link_repository import (
     EventSourcedFriendLinkRepository,
@@ -545,8 +549,8 @@ from app.modules.friends.infrastructure.sqlalchemy_friendship_directory import (
 from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
     SqlAlchemyLevelAskDirectory,
 )
-from app.modules.friends.infrastructure.sqlalchemy_requests_counted import (
-    SqlAlchemyRequestsCounted,
+from app.modules.proposals.infrastructure.tags_in_common import (
+    ProfileTagsInCommon,
 )
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
@@ -554,8 +558,68 @@ from app.modules.proposals.infrastructure.friends import (
     FriendsRequestsOnHome,
 )
 from app.modules.proposals.infrastructure.rankings import RankingsOnHome
+from app.modules.discovery.application.directory import (
+    FollowTheDirectory,
+    RebuildTheDirectory,
+)
+from app.modules.discovery.application.levels import (
+    FollowTheLevels,
+    RebuildTheLevels,
+)
+from app.modules.discovery.application.new_in_raketa import (
+    ReadNewInRaketaPage,
+    ReadNewInRaketa,
+)
+from app.modules.discovery.application.on_screen import ReportOnScreen
+from app.modules.discovery.application.same_level import (
+    ReadSameLevel,
+    ReadSameLevelPage,
+)
+from app.modules.discovery.application.same_vibe import (
+    ReadSameVibe,
+    ReadSameVibePage,
+)
+from app.modules.discovery.domain.ports import (
+    BlocksEitherWay,
+    DirectoryFaces,
+    DirectorySources,
+    HowEven,
+    LevelSources,
+    LevelsHeld,
+    PlayerDirectory,
+    PlayerLevels,
+    ReadersRelations,
+    RestCount,
+)
+from app.modules.discovery.infrastructure.account_directory_sources import (
+    AccountDirectorySources,
+)
+from app.modules.discovery.infrastructure.blocks_either_way import (
+    QueriedBlocksEitherWay,
+)
+from app.modules.discovery.infrastructure.friends_readers_relations import (
+    FriendsReadersRelations,
+)
+from app.modules.discovery.infrastructure.matcher_how_even import MatcherHowEven
+from app.modules.discovery.infrastructure.presigned_directory_faces import (
+    PresignedDirectoryFaces,
+)
+from app.modules.discovery.infrastructure.published_levels_held import (
+    PublishedLevelsHeld,
+)
+from app.modules.discovery.infrastructure.rating_stream_levels import (
+    RatingStreamLevels,
+)
+from app.modules.discovery.infrastructure.sqlalchemy_player_directory import (
+    SqlAlchemyPlayerDirectory,
+)
+from app.modules.discovery.infrastructure.sqlalchemy_player_levels import (
+    SqlAlchemyPlayerLevels,
+)
+from app.modules.discovery.infrastructure.sqlalchemy_rest_count import (
+    SqlAlchemyRestCount,
+)
 from app.modules.rankings.application.projection import (
-    FollowTheSwitch,
     MoveTheRanking,
     RebuildTheRankings,
 )
@@ -565,12 +629,10 @@ from app.modules.rankings.application.reads import (
     ReadGeneralPage,
     ReadHomeRanking,
     ReadRanking,
+    ReadTopTen,
 )
-from app.modules.rankings.application.shown_on_general import ShownOnGeneral
 from app.modules.rankings.domain.ports import (
-    BlocksEitherWay,
     GeneralOrders,
-    GeneralSwitches,
     LevelHistory,
     RankedFaces,
     RankingRows,
@@ -578,20 +640,11 @@ from app.modules.rankings.domain.ports import (
     ReadersFriends,
     SportLevels,
 )
-from app.modules.rankings.infrastructure.blocks_either_way import (
-    QueriedBlocksEitherWay,
-)
-from app.modules.rankings.infrastructure.friends_shown_to_strangers import (
-    RankingsShownToStrangers,
-)
 from app.modules.rankings.infrastructure.friends_readers_friends import (
     FriendsReadersFriends,
 )
 from app.modules.rankings.infrastructure.in_memory_general_orders import (
     InMemoryGeneralOrders,
-)
-from app.modules.rankings.infrastructure.profile_general_switches import (
-    ProfileGeneralSwitches,
 )
 from app.modules.rankings.infrastructure.profile_ranked_faces import (
     ProfileRankedFaces,
@@ -799,7 +852,7 @@ from app.modules.player_record.infrastructure.score_subject_reliability import (
     ScoreSubjectReliability,
 )
 from app.modules.player_record.domain.ports import (
-    ShownToEverybody,
+    OpenToNewPeople,
     RelationsOfTheReader,
     PriorDisclosure,
     RecordGates,
@@ -820,11 +873,17 @@ from app.modules.player_record.infrastructure.disclosures import (
 from app.modules.player_record.infrastructure.live_record_gates import (
     LiveRecordGates,
 )
+from app.modules.player_record.application.admission import WithinReach
+from app.modules.player_record.infrastructure.friends_open_to_the_requester import (
+    RecordOpenToTheRequester,
+)
 from app.modules.player_record.infrastructure.friends_relations import (
     FriendsRelationsOfTheReader,
+    FriendsTheyAre,
+    TheyAskedYou,
 )
-from app.modules.player_record.infrastructure.rankings_shown_to_everybody import (
-    RankingsShownToEverybody,
+from app.modules.player_record.infrastructure.profile_open_to_new_people import (
+    ProfileOpenToNewPeople,
 )
 from app.modules.player_record.infrastructure.presigned_record_photo import (
     PresignedRecordPhoto,
@@ -3275,6 +3334,21 @@ def build_friend_requests_on_home(
     return FriendsRequestsOnHome(
         build_read_requests_on_home(
             session, settings=settings, clock=clock, runtime=runtime
+        ),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        tags=build_home_tags_in_common(session, runtime=runtime),
+    )
+
+
+def build_home_tags_in_common(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ProposalsTagsInCommon:
+    """How many tags two players hold today, off the Player profile — a
+    request from *Same vibe players*' line on Home (#795)."""
+    return ProfileTagsInCommon(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
 
@@ -3811,30 +3885,23 @@ def build_read_relations(
     )
 
 
-def build_shown_to_strangers(
+def build_open_to_the_requester(
     session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ShownToStrangers:
-    """Whether the Ranking shows a player to everybody — what admits a request
-    from outside their groups — **signed in ``rankings/infrastructure/``** over
-    the Ranking's own read, so the arrow runs ``rankings → friends`` (#773)."""
-    return RankingsShownToStrangers(build_shown_on_general(session, runtime=runtime))
-
-
-def build_requests_counted(session: AsyncSession) -> RequestsCounted:
-    """The requests that count towards the daily limit,
-    ``friend_requests_counted`` (#773)."""
-    return SqlAlchemyRequestsCounted(session)
+) -> OpenToTheRequester:
+    """Whether a player may be asked by this requester — **the record's rule
+    (b)**, signed in ``player_record/infrastructure/``, so the arrow runs
+    ``player_record → friends`` (``docs/adr/0204`` §2, #791)."""
+    return RecordOpenToTheRequester(build_within_reach(session, runtime=runtime))
 
 
 def build_who_may_be_asked(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> WhoMayBeAsked:
-    """**Who may be asked to be friends** — a group-mate, or anybody the Ranking
-    shows everybody (#773). The rule the ask is admitted by, lent to the record
-    so *Add friend* is offered by it too."""
+    """**Who may be asked to be friends** — anybody the record would reach
+    (``docs/adr/0204`` §2)."""
     return WhoMayBeAsked(
         groups=build_readers_groups(session),
-        shown=build_shown_to_strangers(session, runtime=runtime),
+        reach=build_open_to_the_requester(session, runtime=runtime),
     )
 
 
@@ -3851,7 +3918,6 @@ def build_ask_to_be_friends(
         ),
         blocks=build_readers_blocks(session, runtime=runtime),
         who=build_who_may_be_asked(session, runtime=runtime),
-        counted=build_requests_counted(session),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -4108,70 +4174,15 @@ def build_rebuild_the_rankings(
     orders: GeneralOrders,
     runtime: EventRuntime | None = None,
 ) -> RebuildTheRankings:
-    """Every row and level-history point folded from every rating stream, and
-    every rated player's *Show me in General* followed — ``make
-    rankings-rebuild``."""
+    """Every row and level-history point folded from every rating stream —
+    ``make rankings-rebuild``."""
     return RebuildTheRankings(
         histories=build_rating_histories(session, runtime=runtime),
         rows=build_ranking_rows(session),
         level_history=build_level_history(session),
-        switches=build_general_switches(session, runtime=runtime),
         orders=orders,
         uow=build_unit_of_work(session),
     )
-
-
-def build_general_switches(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> GeneralSwitches:
-    """A player's *Show me in General*, off their profile — **signed in
-    ``rankings/infrastructure/``**, so the arrow runs ``rankings →
-    player_profile`` (#772)."""
-    event_store = build_domain_event_store(session, runtime=runtime)
-    return ProfileGeneralSwitches(
-        profiles=build_player_profile_repository(
-            event_store=event_store,
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-        event_store=event_store,
-    )
-
-
-def build_follow_the_switch(
-    session: AsyncSession,
-    *,
-    orders: GeneralOrders,
-    runtime: EventRuntime | None = None,
-) -> FollowTheSwitch:
-    """*Show me in General* turned, followed by the rows — built per delivery
-    run, over the session the delivery commits in — and the kept order of
-    every sport the player has a row in forgotten (#772)."""
-    return FollowTheSwitch(
-        switches=build_general_switches(session, runtime=runtime),
-        rows=build_ranking_rows(session),
-        orders=orders,
-    )
-
-
-def build_shown_on_general(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ShownOnGeneral:
-    """Whether the Ranking shows a player to everybody: listed on General in a
-    sport, *Show me in General* on, read live (#773) — the record's fourth
-    strand and what admits a stranger's friend request."""
-    return ShownOnGeneral(
-        rows=build_ranking_rows(session),
-        switches=build_general_switches(session, runtime=runtime),
-    )
-
-
-def build_blocks_either_way(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> BlocksEitherWay:
-    """Everybody a block stands between the reader and, either way — **signed
-    in ``rankings/infrastructure/``** over the blocks' one query, so the arrow
-    runs ``rankings → blocks`` (#772)."""
-    return QueriedBlocksEitherWay(build_block_query(session, runtime=runtime))
 
 
 def build_readers_friends(
@@ -4216,7 +4227,6 @@ def build_read_ranking(
         friends=build_the_friends_table(session, runtime=runtime),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         levels=build_sport_levels(session, runtime=runtime),
-        blocks=build_blocks_either_way(session, runtime=runtime),
         clock=clock,
     )
 
@@ -4233,7 +4243,22 @@ def build_read_general_page(
     return ReadGeneralPage(
         general=build_the_general_order(session, orders=orders),
         faces=build_ranked_faces(session, settings=settings, runtime=runtime),
-        blocks=build_blocks_either_way(session, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_top_ten(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    orders: GeneralOrders,
+    runtime: EventRuntime | None = None,
+) -> ReadTopTen:
+    """``GET /top-10``: Home's Top 10, the first ten of General (#797)."""
+    return ReadTopTen(
+        general=build_the_general_order(session, orders=orders),
+        faces=build_ranked_faces(session, settings=settings, runtime=runtime),
         clock=clock,
     )
 
@@ -4264,6 +4289,254 @@ def build_member_relations(
 ) -> MemberRelations:
     """Members' pills, **signed in ``groups/infrastructure/``** over Friends' read."""
     return FriendsMemberRelations(build_read_relations(session, runtime=runtime))
+
+
+# --------------------------------------------------------------------------
+# Discovery (#793; ``docs/adr/0204`` §10)
+# --------------------------------------------------------------------------
+
+
+def build_player_directory(session: AsyncSession) -> PlayerDirectory:
+    """The player directory, ``discovery_players`` and its tags (#793)."""
+    return SqlAlchemyPlayerDirectory(session)
+
+
+def build_rest_count(session: AsyncSession) -> RestCount:
+    """The rest count, ``discovery_rest_counts`` (#796)."""
+    return SqlAlchemyRestCount(session)
+
+
+def build_directory_sources(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> DirectorySources:
+    """What ``users`` and the Player profile hold about one account now —
+    every directory entry is written from it."""
+    event_store = build_domain_event_store(session, runtime=runtime)
+    return AccountDirectorySources(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=event_store,
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        event_store=event_store,
+    )
+
+
+def build_follow_the_directory(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FollowTheDirectory:
+    """An owner's event writes its account's entry — built per delivery run,
+    over the session the delivery commits in (#793)."""
+    return FollowTheDirectory(
+        sources=build_directory_sources(session, runtime=runtime),
+        directory=build_player_directory(session),
+        rests=build_rest_count(session),
+    )
+
+
+def build_rebuild_the_directory(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RebuildTheDirectory:
+    """Every entry written from every account — ``make discovery-rebuild``."""
+    return RebuildTheDirectory(
+        sources=build_directory_sources(session, runtime=runtime),
+        directory=build_player_directory(session),
+        rests=build_rest_count(session),
+        uow=build_unit_of_work(session),
+    )
+
+
+def build_readers_relations(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadersRelations:
+    """The round friend button's state, **signed in
+    ``discovery/infrastructure/``** over Friends' own read, so the arrow runs
+    ``discovery → friends``."""
+    return FriendsReadersRelations(build_read_relations(session, runtime=runtime))
+
+
+def build_blocks_either_way(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BlocksEitherWay:
+    """Everybody a people row may not show the reader, over the one place a
+    block is read."""
+    return QueriedBlocksEitherWay(build_block_query(session, runtime=runtime))
+
+
+def build_levels_held(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> LevelsHeld:
+    """Every sport a person holds a level in, off rating's published read."""
+    return PublishedLevelsHeld(build_rated_player_query(session, runtime=runtime))
+
+
+def build_directory_faces(settings: Settings) -> DirectoryFaces:
+    """A link to a face the directory names, signed over the photo store."""
+    return PresignedDirectoryFaces(
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_read_new_in_raketa(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadNewInRaketa:
+    """``GET /new-in-raketa``: Home's row of the 10 newest (#793)."""
+    return ReadNewInRaketa(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        levels=build_levels_held(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+        clock=clock,
+    )
+
+
+def build_read_new_in_raketa_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadNewInRaketaPage:
+    """``GET /new-in-raketa/all``: See all, in pages of 20 (#793)."""
+    return ReadNewInRaketaPage(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        levels=build_levels_held(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+        clock=clock,
+    )
+
+
+def build_player_levels(session: AsyncSession) -> PlayerLevels:
+    """Every player's current level per sport, ``discovery_levels`` (#794)."""
+    return SqlAlchemyPlayerLevels(session)
+
+
+def build_level_sources(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> LevelSources:
+    """Where each rating stream stands, **signed in
+    ``discovery/infrastructure/``** over the rating's own streams (#794)."""
+    return RatingStreamLevels(
+        event_store=build_domain_event_store(session, runtime=runtime)
+    )
+
+
+def build_how_even() -> HowEven:
+    """*Same competitive level*'s % even: the matcher's own forecast, one
+    player a side, under the live ruleset (#794)."""
+    return MatcherHowEven(build_ruleset())
+
+
+def build_follow_the_levels(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FollowTheLevels:
+    """A Level opened or moved writes that player's entry in the sport —
+    built per delivery run, over the session the delivery commits in (#794)."""
+    return FollowTheLevels(
+        sources=build_level_sources(session, runtime=runtime),
+        levels=build_player_levels(session),
+    )
+
+
+def build_rebuild_the_levels(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RebuildTheLevels:
+    """Every entry written from every rating — ``make discovery-rebuild``."""
+    return RebuildTheLevels(
+        sources=build_level_sources(session, runtime=runtime),
+        levels=build_player_levels(session),
+        uow=build_unit_of_work(session),
+    )
+
+
+def build_read_same_level(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameLevel:
+    """``GET /same-level``: Home's row of ten (#794)."""
+    return ReadSameLevel(
+        levels=build_player_levels(session),
+        even=build_how_even(),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        rests=build_rest_count(session),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_read_same_level_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameLevelPage:
+    """``GET /same-level/all``: See all, in pages of 20 (#794)."""
+    return ReadSameLevelPage(
+        levels=build_player_levels(session),
+        even=build_how_even(),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_read_same_vibe(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameVibe:
+    """``GET /same-vibe``: Home's row of ten (#795)."""
+    return ReadSameVibe(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        rests=build_rest_count(session),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_read_same_vibe_page(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadSameVibePage:
+    """``GET /same-vibe/all``: See all, in pages of 20 (#795)."""
+    return ReadSameVibePage(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        faces=build_directory_faces(settings),
+    )
+
+
+def build_report_on_screen(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReportOnScreen:
+    """``POST /on-screen``: the phone's word that cards came on screen in a
+    row today, which rests them after five days (#796)."""
+    return ReportOnScreen(
+        directory=build_player_directory(session),
+        blocks=build_blocks_either_way(session, runtime=runtime),
+        relations=build_readers_relations(session, runtime=runtime),
+        rests=build_rest_count(session),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -4897,26 +5170,67 @@ def build_record_gates(
     return LiveRecordGates(accounts=accounts, holds=holds, blocks=blocks)
 
 
-def build_shown_to_everybody(
+def build_friends_disclosure(
     session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ShownToEverybody:
-    """The record's fourth strand — the Ranking shows them to everybody — over
-    the Ranking's own read (``docs/adr/0203`` §9, #773)."""
+) -> PriorDisclosure:
+    """*We are friends* — over Friends' own friend list (``docs/adr/0204``
+    §2)."""
 
-    return RankingsShownToEverybody(build_shown_on_general(session, runtime=runtime))
+    return FriendsTheyAre(build_read_relations(session, runtime=runtime))
+
+
+def build_asked_you_disclosure(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PriorDisclosure:
+    """*They asked me to be friends* — over Friends' relations, from the
+    reader's side (a call made by #791)."""
+
+    return TheyAskedYou(build_read_relations(session, runtime=runtime))
+
+
+def build_open_to_new_people(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> OpenToNewPeople:
+    """*Show me to new people*, read live off the profile (``docs/adr/0204``
+    §2, #791)."""
+
+    return ProfileOpenToNewPeople(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_within_reach(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> WithinReach:
+    """**Rule (b)**, the record's and the ask's (``docs/adr/0204`` §2): the
+    switch, then — only for a subject with it off — the strands, **cheapest
+    first**, the first yes ending the walk: a group the pair share is two
+    indexed reads, a friendship one, a request they sent the reader one (a call
+    made by #791), a court they shared folds the reader's games, and a group the
+    reader runs reads the subject's groups and who runs each."""
+
+    return WithinReach(
+        new_people=build_open_to_new_people(session, runtime=runtime),
+        disclosures=(
+            build_group_disclosure(session),
+            build_friends_disclosure(session, runtime=runtime),
+            build_asked_you_disclosure(session, runtime=runtime),
+            build_game_disclosure(session),
+            build_runner_disclosure(session),
+        ),
+    )
 
 
 def build_relations_of_the_reader(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> RelationsOfTheReader:
     """The record's left button — the reader's own relation to the person on it,
-    over Friends' read (``docs/adr/0202`` §1) — and whether **Add friend** may
-    be offered, by Friends' own rule (``docs/adr/0203`` §9, #773)."""
+    over Friends' read (``docs/adr/0202`` §1)."""
 
-    return FriendsRelationsOfTheReader(
-        build_read_relations(session, runtime=runtime),
-        build_who_may_be_asked(session, runtime=runtime),
-    )
+    return FriendsRelationsOfTheReader(build_read_relations(session, runtime=runtime))
 
 
 # --------------------------------------------------------------------------
@@ -5410,6 +5724,17 @@ def build_seat_offers(
     )
 
 
+def build_percents_even(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PercentsEven:
+    """Today's % even for a request from *Same competitive level*: the
+    matcher's own forecast over rating's estimates (#794)."""
+    return ForecastPercentsEven(
+        ratings=build_rated_player_query(session, runtime=runtime),
+        ruleset=build_ruleset(),
+    )
+
+
 def build_notice_names(session: AsyncSession) -> Names:
     """A person's nickname and a club's name, for what a notice says."""
     return PlatformNames(
@@ -5419,8 +5744,25 @@ def build_notice_names(session: AsyncSession) -> Names:
     )
 
 
+def build_notice_tags_in_common(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> NoticeTagsInCommon:
+    """How many tags two players hold today, off the Player profile — a
+    request from *Same vibe players*' notice (#795)."""
+    return NoticeProfileTagsInCommon(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
 def build_notice_words(session: AsyncSession) -> NoticeWords:
-    return NoticeWords(names=build_notice_names(session))
+    return NoticeWords(
+        names=build_notice_names(session),
+        evens=build_percents_even(session),
+        tags=build_notice_tags_in_common(session),
+    )
 
 
 def build_notice_friendships(

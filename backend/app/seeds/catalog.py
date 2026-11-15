@@ -779,6 +779,19 @@ PROTAGONIST_TAGS: tuple[str, ...] = (
     SocialTag.WARMS_UP_PROPERLY.value,
 )
 
+#: **Hers alone: the three above and three more** — six, the most a player may
+#: hold — so *Same vibe players* (#795) shows her every overlap from one tag to
+#: six. The three more are where the cohort's own draws meet hers at each count
+#: (``app/seeds/same_vibe.py`` reads them back, and fails the run by name if a
+#: count goes missing); the other protagonists keep the three, and so does the
+#: cohort's close-match rule, which is about the three.
+HER_TAGS: tuple[str, ...] = (
+    *PROTAGONIST_TAGS,
+    SocialTag.BOOKS_THE_NEXT_ONE.value,
+    SocialTag.LAUGHS_OFF_MISTAKES.value,
+    SocialTag.SETTLES_UP_ON_THE_SPOT.value,
+)
+
 #: Settled, and clear of the fourteen-day window on the far side.
 SETTLED_DAYS_AGO = 40
 
@@ -818,7 +831,7 @@ THE_POPULATED_PLAYER = SeedAccount(
     ),
     profile=SeedProfile(
         weekly_hours=PROTAGONIST_WEEK,
-        social_tag_ids=PROTAGONIST_TAGS,
+        social_tag_ids=HER_TAGS,
         gender=Gender.WOMAN,
         gender_preference=GenderPreference.ANY,
         committed_days_ago=SETTLED_DAYS_AGO,

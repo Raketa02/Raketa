@@ -17,8 +17,9 @@
  * Strip: the card is `1.0 × content` and therefore has **no peek**, which is what makes
  * [7.18](../../../../docs/design-system.md#718-the-rails-dots)'s dots the affordance rather than
  * decoration — so they **track the scroll**, and a page indicator that did not move would be a
- * picture of a control. The scroller's numbers are Part 8's and are not restated: snapping, gap 9,
- * bleeding to the screen edge through a negative margin against the 15pt gutter.
+ * picture of a control. The heading, the scroller and the dots are Home's row frame (`HomeRow` and
+ * its paging `HomeRowRail`, #798), which every row on Home shares: Part 8's snapping, gap 9 and
+ * bleed live there, and the sentences this rail says in its place stand under the same heading.
  *
  * **The order is the read's — soonest first — and nothing re-sorts it.**
  *
@@ -45,13 +46,11 @@
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { useBookingRooms } from '@/features/conversations/types';
 import { recoveryMessage } from '@/shared/errors';
-import { Note, PagerDots, theme } from '@/shared/ui';
+import { HomeRow, HomeRowRail, Note, theme } from '@/shared/ui';
 
 import { chatIsOpen, isNew, lineCanRunOut, onHome } from '../domain/home';
 import { useDismissedGames, useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
@@ -75,10 +74,6 @@ export function HomeRail({ empty }: HomeRailProps) {
   const rooms = useBookingRooms();
   const { opened, open } = useOpenedGames();
   const { dismissed, dismiss } = useDismissedGames();
-  const { width: screen } = useWindowDimensions();
-
-  /** Which card is on screen. Route-local, and the dots' only input. */
-  const [current, setCurrent] = useState(0);
 
   const all = home.data?.games ?? [];
   // The clock runs while a cut-off or a time to pay is ahead, so *free to leave until …* and
@@ -88,19 +83,8 @@ export function HomeRail({ empty }: HomeRailProps) {
   const games = all.filter((game) => onHome(game, now) && !dismissed?.has(game.bookingId));
   const failure = home.data === undefined ? home.error : null;
 
-  const cardWidth = screen - 2 * theme.size.gutter;
-  const step = cardWidth + STRIP_GAP;
-
-  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setCurrent(Math.round(event.nativeEvent.contentOffset.x / step));
-  };
-
   return (
-    <View style={s.section}>
-      <Text style={s.heading} accessibilityRole="header">
-        {gamesHeading(games.length)}
-      </Text>
-
+    <HomeRow heading={gamesHeading(games.length)}>
       {failure !== null ? (
         <Note variant="coral" accessibilityRole="alert">
           {recoveryMessage(failure)}
@@ -115,58 +99,32 @@ export function HomeRail({ empty }: HomeRailProps) {
       ) : null}
 
       {games.length === 0 ? null : (
-        <>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={step}
-            decelerationRate="fast"
-            onScroll={onScroll}
-            scrollEventThrottle={SCROLL_THROTTLE_MS}
-            style={s.strip}
-            contentContainerStyle={s.stripContent}
-          >
-            {games.map((game) => (
-              <HomeGameCard
-                key={game.bookingId}
-                game={game}
-                now={now}
-                fresh={isNew(game, opened)}
-                onChat={
-                  chatIsOpen(game) && rooms.has(game.bookingId)
-                    ? () => {
-                        open(game.bookingId);
-                        router.push(bookedChatRoute(game.bookingId));
-                      }
-                    : undefined
-                }
-                width={cardWidth}
-                onOpen={() => router.push(bookedGameRoute(game.bookingId))}
-                onDismiss={() => dismiss(game.bookingId)}
-              />
-            ))}
-          </ScrollView>
-
-          <PagerDots count={games.length} current={current} />
-        </>
+        <HomeRowRail cards={games} geometry="paging">
+          {(game, width) => (
+            <HomeGameCard
+              key={game.bookingId}
+              game={game}
+              now={now}
+              fresh={isNew(game, opened)}
+              onChat={
+                chatIsOpen(game) && rooms.has(game.bookingId)
+                  ? () => {
+                      open(game.bookingId);
+                      router.push(bookedChatRoute(game.bookingId));
+                    }
+                  : undefined
+              }
+              width={width}
+              onOpen={() => router.push(bookedGameRoute(game.bookingId))}
+              onDismiss={() => dismiss(game.bookingId)}
+            />
+          )}
+        </HomeRowRail>
       )}
-    </View>
+    </HomeRow>
   );
 }
 
-/** Part 8's Strip gap, and the whole of what this file borrows from that section. */
-const STRIP_GAP = theme.space.sm;
-
-/** One frame at 60 Hz. The dots track the scroll, so they are told about every frame of it. */
-const SCROLL_THROTTLE_MS = 16;
-
 const s = StyleSheet.create({
-  section: { gap: theme.space.sm, marginTop: theme.space.lg },
-  // 3.3 as amended: a section heading is `eyebrow` / `muted` / uppercase, and `h2` titles a card.
-  heading: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   empty: { ...theme.type.tiny, color: theme.color.muted },
-  // Part 8: the negative margin is what lets the strip bleed to the screen edge while its content
-  // still aligns to the gutter.
-  strip: { marginHorizontal: -theme.size.gutter },
-  stripContent: { paddingHorizontal: theme.size.gutter, gap: STRIP_GAP },
 });

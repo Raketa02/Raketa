@@ -26,7 +26,15 @@ import {
   gamesLine,
   groupHeaderLabel,
   groupRowMeta,
+  gamesThisWeekWords,
+  grownBy,
+  hottestCardLabel,
+  hottestChipLabel,
+  hottestSports,
+  identityLine,
   membersAtClub,
+  peopleLine,
+  waitingFor,
   membersLine,
   seatsFilledLabel,
   shareMessage,
@@ -402,5 +410,75 @@ describe('an official group for a player rated in none of its sports', () => {
 
   it('names each sport’s button by what it asks, as the passport’s chip does', () => {
     expect(rateSportLabel('padel')).toBe('Rate Padel');
+  });
+});
+
+describe('Home’s Hottest groups (§31.2–§31.4)', () => {
+  const ogrody = {
+    name: 'Ogrody 33 Club',
+    kind: 'OFFICIAL',
+    joinPolicy: 'PEOPLE_I_APPROVE',
+    runBy: 'Ogrody 33',
+    club: { id: 'club-ogrody', name: 'Ogrody 33' },
+    sports: ['padel', 'tennis', 'squash', 'badminton'],
+    memberCount: 11,
+    friendsCount: 7,
+    gamesThisWeek: 14,
+    newThisMonth: 3,
+    tag: 'HOTTEST',
+  } as const;
+
+  it('names the sports in the registry’s order, whole', () => {
+    expect(hottestSports(ogrody.sports)).toBe('Padel · Tennis · Squash · Badminton');
+  });
+
+  // §31.2's call: *1 games this week* is never written.
+  it('writes one game in the singular', () => {
+    expect(gamesThisWeekWords(14)).toBe('games this week');
+    expect(gamesThisWeekWords(1)).toBe('game this week');
+    expect(gamesThisWeekWords(0)).toBe('games this week');
+  });
+
+  it('draws the growth only above nought', () => {
+    expect(grownBy(3)).toBe('+3');
+    expect(grownBy(0)).toBeUndefined();
+  });
+
+  it('says who runs it and where, as the sheet’s identity line', () => {
+    expect(identityLine(ogrody)).toBe('Closed group · run by Ogrody 33 · Ogrody 33');
+    expect(identityLine({ ...ogrody, joinPolicy: 'ANYONE', runBy: 'tomek.k' })).toBe(
+      'Open group · run by tomek.k · Ogrody 33',
+    );
+  });
+
+  it('leaves the runner out for an Owner who can no longer be named', () => {
+    expect(identityLine({ ...ogrody, runBy: null })).toBe('Closed group · Ogrody 33');
+  });
+
+  it('counts the reader’s friends, one friend, and the players when none', () => {
+    expect(peopleLine(ogrody)).toBe('7 of your friends play here');
+    expect(peopleLine({ ...ogrody, friendsCount: 1 })).toBe('1 of your friends plays here');
+    expect(peopleLine({ ...ogrody, friendsCount: 0 })).toBe('11 players');
+  });
+
+  it('says whose answer the reader waits for', () => {
+    expect(waitingFor(ogrody.runBy)).toBe('Waiting for Ogrody 33 to answer');
+    expect(waitingFor(null)).toBe('Waiting for an answer');
+  });
+
+  it('names each chip with the group, so six cards’ chips are six names', () => {
+    expect(hottestChipLabel('join', 'Ogrody 33 Club')).toBe('Join Ogrody 33 Club');
+    expect(hottestChipLabel('ask', 'Ogrody 33 Club')).toBe('Ask to join Ogrody 33 Club');
+    expect(hottestChipLabel('requested', 'Ogrody 33 Club')).toBe('Ogrody 33 Club: Asked');
+    expect(hottestChipLabel('in', 'Ogrody 33 Club')).toBe('Ogrody 33 Club: You’re in');
+  });
+
+  it('speaks the card as what it draws', () => {
+    expect(hottestCardLabel(ogrody)).toBe(
+      'Ogrody 33 Club, hottest, 14 games this week, 11 players, 3 new this month',
+    );
+    expect(hottestCardLabel({ ...ogrody, tag: null, gamesThisWeek: 1, newThisMonth: 0 })).toBe(
+      'Ogrody 33 Club, 1 game this week, 11 players',
+    );
   });
 });

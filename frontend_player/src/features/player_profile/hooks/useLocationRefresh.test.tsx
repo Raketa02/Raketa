@@ -56,7 +56,7 @@ const HELD_SURFACE: PlayerProfileSurface = {
   socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
   photos: [],
   genderPreference: 'any',
-  showMeInGeneral: true,
+  showMeToNewPeople: true,
 };
 
 let transport: Transport;

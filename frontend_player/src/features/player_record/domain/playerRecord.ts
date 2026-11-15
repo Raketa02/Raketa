@@ -281,6 +281,15 @@ export interface SkillPanel {
   readonly lastFive?: readonly GameResult[];
 }
 
+/**
+ * **One of a player's photos on their record** (#799) — its id, which keys it, and a short-lived
+ * signed link minted for the response that carried it and recorded nowhere.
+ */
+export interface RecordPhoto {
+  readonly photoId: string;
+  readonly photoUrl: string;
+}
+
 export interface PlayerRecord {
   /**
    * **The server's answer, never a comparison this client made.** It retitles the sheet and
@@ -308,6 +317,13 @@ export interface PlayerRecord {
   readonly intro?: string;
   /** Absent where they have no photograph, and on a link that has expired — both draw the poster. */
   readonly photoUrl?: string;
+  /**
+   * **Every photo, in their own order** — the first is `photoUrl`'s
+   * ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+   * §2, [#799](https://github.com/Raketa02/Raketa/issues/799)). Whoever the record opens for sees
+   * them all, a stranger included. Empty where they have none: the header's poster stands alone.
+   */
+  readonly photos: readonly RecordPhoto[];
   /**
    * Whether the photograph wears the **ON COURT** mark — folded here and nowhere else.
    *
@@ -356,11 +372,12 @@ export interface PlayerRecord {
    */
   readonly relation: FriendRelation;
   /**
-   * **Whether to offer *Add friend*** ([#779](https://github.com/Raketa02/Raketa/issues/779),
-   * ADR-0203 §9) — the server's answer: `relation` is `NONE` and a request would be admitted, because
-   * they share a group with the reader now or are listed on General and not hidden. `false` on your
-   * own record. Where it is `false` and nothing stands between them, *Block* stands alone
-   * (`friends`' `recordFootOf`). The daily limit is not in it: the eleventh press is refused.
+   * **Whether to offer *Add friend*** ([#779](https://github.com/Raketa02/Raketa/issues/779);
+   * ADR-0204 §2, [#799](https://github.com/Raketa02/Raketa/issues/799)) — the server's answer:
+   * `relation` is `NONE` and this is not your own record. A request is admitted by the rule the record
+   * opened by, so a record that opens is somebody the reader may ask, as many as they like — there is
+   * no daily limit. Where it is `false` and nothing stands between them, *Block* stands alone
+   * (`friends`' `recordFootOf`).
    */
   readonly canAddFriend: boolean;
 }

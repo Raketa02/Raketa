@@ -1,0 +1,124 @@
+"""The register of what Discovery demands of other contexts, and who signs each
+demand (#793; ``docs/adr/0204`` §10).
+
+**A register of its own**, on the rule every register here states: a new
+consumer gets a new register, not a row in somebody else's. **Seven rows**, each
+a port in Discovery's own words signed in ``discovery/infrastructure/``, so each
+arrow runs out of ``discovery`` into the neighbour and none comes back:
+
+- **what the owners hold** (``DirectorySources``, over ``users``' row and the
+  Player profile's stream): every directory entry is written from it, live and
+  in the rebuild;
+- **the reader's relations** (``ReadersRelations``, over Friends' own read):
+  the round friend button on every people card;
+- **blocks either way** (``BlocksEitherWay``, over the one place a block is
+  read): nobody a block stands between is on a people row;
+- **the levels held** (``LevelsHeld``, over rating's published read): a tile's
+  sport lines and See all's sport pill;
+- **a face's link** (``DirectoryFaces``, over the photo store);
+- **where a rating stands** (``LevelSources``, over the rating's own streams,
+  #794): every current-level entry is written from it, live and in the
+  rebuild;
+- **how even two players are** (``HowEven``, over the matcher's own forecast,
+  #794): *Same competitive level*'s % even.
+
+The directory and the current levels (``PlayerDirectory``, ``PlayerLevels``)
+are the context's own storage and not demands.
+
+**A row carries a builder over a session**, as the other registers' do; the
+faces' builds over the settings the session's application runs under.
+"""
+
+from __future__ import annotations
+
+from typing import TypeVar
+
+from app.bootstrap.composition import (
+    build_blocks_either_way,
+    build_directory_faces,
+    build_directory_sources,
+    build_how_even,
+    build_level_sources,
+    build_levels_held,
+    build_readers_relations,
+)
+from app.bootstrap.matcher_demands import RegisteredImplementation
+from app.core.config import get_settings
+from app.modules.discovery.domain.ports import (
+    BlocksEitherWay,
+    DirectoryFaces,
+    DirectorySources,
+    HowEven,
+    LevelSources,
+    LevelsHeld,
+    ReadersRelations,
+)
+
+P = TypeVar("P")
+
+#: What Discovery asks of the rest of the platform.
+DISCOVERY_DEMANDS: tuple[type, ...] = (
+    DirectorySources,
+    ReadersRelations,
+    BlocksEitherWay,
+    LevelsHeld,
+    DirectoryFaces,
+    LevelSources,
+    HowEven,
+)
+
+
+DISCOVERY_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
+    RegisteredImplementation(
+        port=DirectorySources,
+        name="AccountDirectorySources",
+        build=build_directory_sources,
+    ),
+    RegisteredImplementation(
+        port=ReadersRelations,
+        name="FriendsReadersRelations",
+        build=build_readers_relations,
+    ),
+    RegisteredImplementation(
+        port=BlocksEitherWay,
+        name="QueriedBlocksEitherWay",
+        build=build_blocks_either_way,
+    ),
+    RegisteredImplementation(
+        port=LevelsHeld,
+        name="PublishedLevelsHeld",
+        build=build_levels_held,
+    ),
+    RegisteredImplementation(
+        port=DirectoryFaces,
+        name="PresignedDirectoryFaces",
+        build=lambda session: build_directory_faces(get_settings()),
+    ),
+    RegisteredImplementation(
+        port=LevelSources,
+        name="RatingStreamLevels",
+        build=build_level_sources,
+    ),
+    RegisteredImplementation(
+        port=HowEven,
+        name="MatcherHowEven",
+        build=lambda session: build_how_even(),
+    ),
+)
+
+
+def implementations_of(port: type[P]) -> tuple[RegisteredImplementation[P], ...]:
+    """Every registered implementation of one port, in registration order."""
+
+    return tuple(
+        implementation
+        for implementation in DISCOVERY_IMPLEMENTATIONS
+        if implementation.port is port
+    )
+
+
+__all__ = [
+    "DISCOVERY_DEMANDS",
+    "DISCOVERY_IMPLEMENTATIONS",
+    "implementations_of",
+]

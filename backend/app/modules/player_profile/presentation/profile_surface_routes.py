@@ -72,10 +72,10 @@ rule, so the same aggregate holds it. It answers `204` like the preference, and
 is read back on the player's own record, beside how many players in their groups
 it hides — never on the profile read.
 
-**And *Show me in General*** (``docs/adr/0203`` §7, #772): the switch on *On
-your card*, `PUT /players/me/ranking-visibility`, `SHOWN` or `HIDDEN`, `204`.
-Unlike the filter it **is** read back on the profile read, as
-`ranking_visibility`, because the You tab draws its row from that read.
+**And *Show me to new people*** (``docs/adr/0204`` §2, #791): the switch on
+*On your card*, `PUT /players/me/show-me-to-new-people`, `{on}`, `204`. Unlike
+the filter it **is** read back on the profile read, as `show_me_to_new_people`,
+because the You tab draws its row from that read.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ from app.modules.player_profile.application.commands import (
     ChangeLocationCommand,
     ChangePhotosCommand,
     ChangeSocialTagsCommand,
-    SetRankingVisibilityCommand,
+    SetShowMeToNewPeopleCommand,
     SetReliabilityMinimumCommand,
     SetWeeklyHoursCommand,
 )
@@ -103,7 +103,7 @@ from app.modules.player_profile.presentation.dependencies import (
     ChangePhotosDep,
     ChangeSocialTagsDep,
     ReadPlayerProfileDep,
-    SetRankingVisibilityDep,
+    SetShowMeToNewPeopleDep,
     SetReliabilityMinimumDep,
     SetWeeklyHoursDep,
 )
@@ -116,7 +116,7 @@ from app.modules.player_profile.presentation.schemas import (
     ChangeSocialTagsRequest,
     PhotosResponse,
     PlayerProfileReadResponse,
-    SetRankingVisibilityRequest,
+    SetShowMeToNewPeopleRequest,
     SetReliabilityFilterRequest,
     SetWeeklyHoursRequest,
     SocialTagsResponse,
@@ -545,34 +545,32 @@ async def set_reliability_filter(
 
 
 @router.put(
-    "/ranking-visibility",
+    "/show-me-to-new-people",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_404_NOT_FOUND: _NO_PROFILE,
         status.HTTP_409_CONFLICT: _LOST_THE_RACE,
     },
-    summary="Show me in General",
+    summary="Show me to new people",
     description=(
-        "The switch on *On your card* (`docs/adr/0203` §7, #772): *Players who "
-        "don't know you can see your place, open your record and send you a "
-        "request.* `SHOWN` — on, which every profile starts with — or `HIDDEN`. "
-        "Written at once, with no Save; an unchanged value records nothing.\n\n"
-        "**`HIDDEN`**: your row leaves everybody else's General, in every "
-        "sport, and **places never renumber** — the others read #6, then #8, "
-        "and *of 13* still counts you. You still see your own place, on "
-        "Rankings (the card's state `HIDDEN`) and on Home's trophy. Friends "
-        "ignores the switch: your friends still see you there. It reaches the "
-        "ranking through the outbox, so the next read after it is delivered "
-        "follows it.\n\n"
+        "The switch on *On your card* (`docs/adr/0204` §2): *Players you don't "
+        "share a group or a game with can find you on Home, open your record "
+        "and send you a request.* On by default; written at once, with no "
+        "Save; an unchanged value records nothing.\n\n"
+        "**Off**: anybody you share no group, no game and no friendship with "
+        "reads your record as *not available* and can't send you a request — "
+        "from the next tap, with nothing to wait for. Your place in the ranking "
+        "never moves, a request already sent stays open, and you still see "
+        "everybody and may ask anybody yourself.\n\n"
         "**`204` and no body**: the switch is read back on "
-        "`GET /players/me/profile`, as `ranking_visibility`."
+        "`GET /players/me/profile`, as `show_me_to_new_people`."
     ),
 )
-async def set_ranking_visibility(
-    payload: SetRankingVisibilityRequest,
+async def set_show_me_to_new_people(
+    payload: SetShowMeToNewPeopleRequest,
     user: CurrentUserDep,
-    use_case: SetRankingVisibilityDep,
+    use_case: SetShowMeToNewPeopleDep,
 ) -> None:
     await use_case.execute(
-        SetRankingVisibilityCommand(player_id=user.id, visibility=payload.visibility)
+        SetShowMeToNewPeopleCommand(player_id=user.id, on=payload.on)
     )

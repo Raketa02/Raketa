@@ -25,6 +25,7 @@ function response(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['Playe
     relation: 'NONE',
     can_add_friend: true,
     nickname: 'bea_k',
+    photos: [],
     area_code: 'A+050612+0019938',
     social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
     sports: [
@@ -95,6 +96,21 @@ describe('the record, off the wire', () => {
  * reader blocked the subject: *Block* is always *Block*, and Unblock lives in You › Blocked players.
  */
 describe('whether a request may be sent', () => {
+  it('carries every photo, in their own order, and none where they have none (#799)', () => {
+    const photos: Wire['RecordPhotoSchema'][] = [
+      { photo_id: 'photo-1', photo_url: 'https://photos.example/1.jpg' },
+      { photo_id: 'photo-2', photo_url: 'https://photos.example/2.jpg' },
+      { photo_id: 'photo-3', photo_url: 'https://photos.example/3.jpg' },
+    ];
+
+    expect(toPlayerRecord(response({ photos })).photos).toEqual([
+      { photoId: 'photo-1', photoUrl: 'https://photos.example/1.jpg' },
+      { photoId: 'photo-2', photoUrl: 'https://photos.example/2.jpg' },
+      { photoId: 'photo-3', photoUrl: 'https://photos.example/3.jpg' },
+    ]);
+    expect(toPlayerRecord(response()).photos).toEqual([]);
+  });
+
   it('reads can_add_friend as it came', () => {
     expect(toPlayerRecord(response({ can_add_friend: true })).canAddFriend).toBe(true);
     expect(toPlayerRecord(response({ can_add_friend: false })).canAddFriend).toBe(false);

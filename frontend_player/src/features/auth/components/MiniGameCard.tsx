@@ -47,6 +47,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import {
+  BALANCE_FIGURE,
   BalanceBar,
   CourtPoster,
   POSTER_LABEL,
@@ -98,13 +99,6 @@ export interface MiniGameCardProps {
 
 const CAP = theme.size.stage.textMaxScale;
 
-/** The forecast's figure on the card's ground — the real card's three (`FORECAST_FIGURE`). */
-const FORECAST_FIGURE: Readonly<Record<BalanceBarTone, string>> = {
-  ok: theme.color.gameGreen,
-  warn: theme.color.gameAmber,
-  bad: theme.color.gameRed,
-};
-
 export function MiniGameCard({ ribbon, rows, forecast, booking }: MiniGameCardProps) {
   return (
     <View style={s.card}>
@@ -138,7 +132,7 @@ export function MiniGameCard({ ribbon, rows, forecast, booking }: MiniGameCardPr
 
           <View style={s.forecast}>
             <Text
-              style={[s.figure, { color: FORECAST_FIGURE[forecast.tone] }]}
+              style={[s.figure, { color: BALANCE_FIGURE[forecast.tone] }]}
               numberOfLines={1}
               maxFontSizeMultiplier={CAP}
             >

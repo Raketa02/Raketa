@@ -20,11 +20,12 @@ is a question about the reader rather than about the subject. Every figure that
 lands on this sheet arrives from the context that owns it, already decided.
 
 **Two facts are the reader's, and they are facts rather than gates**: the
-reader's relation to the subject (``docs/adr/0202`` §1) and whether **Add
-friend** may be offered (``docs/adr/0203`` §9, #773), both lent by Friends and
-asked once the record is admitted. **No block is among them any more**: a block
-made by either side is a gate now (§8), so a blocked pair's sheet is never
-drawn, and the reader's own block left the sheet with it.
+reader's relation to the subject (``docs/adr/0202`` §1), lent by Friends and
+asked once the record is admitted, and whether **Add friend** may be offered —
+read off that relation, because a request is admitted by the rule that admitted
+the record (``docs/adr/0204`` §2). **No block is among them**: a block made by
+either side is a gate (``docs/adr/0203`` §8), so a blocked pair's sheet is
+never drawn.
 
 **No zone is answered differently depending on who is reading.** What other
 players said used to be the one that was — a figure and a count for a stranger,
@@ -74,6 +75,7 @@ from app.modules.player_record.domain.ports import (
 from app.modules.player_record.domain.record import (
     GameOutcome,
     PlayerRecord,
+    RecordPhoto,
     RecordRelation,
     SkillPanel,
     SubjectRating,
@@ -127,17 +129,20 @@ async def assemble_record(
     identity = await identities.identity_of(subject_id)
     if identity is None:
         raise RecordUnavailable(RECORD_UNAVAILABLE)
-    photo_url = (
-        None
-        if identity.photo_id is None
-        else await photos.link_for(
-            # **Signed as the person on the record**, never as the person
-            # looking: an object store keys the pair, so a link signed under the
-            # reader's id would reach an object that does not exist.
-            owner_id=subject_id,
-            photo_id=identity.photo_id,
-        )
+    # **Every photo, for any reader the record is admitted to**
+    # (`docs/adr/0204` §2), each **signed as the person on the record**, never
+    # as the person looking: an object store keys the pair, so a link signed
+    # under the reader's id would reach an object that does not exist.
+    signed = tuple(
+        [
+            RecordPhoto(
+                photo_id=photo_id,
+                photo_url=await photos.link_for(owner_id=subject_id, photo_id=photo_id),
+            )
+            for photo_id in identity.photo_ids
+        ]
     )
+    photo_url = signed[0].photo_url if signed else None
     held = await ratings.ratings_of(subject_id)
     printed = sport_to_print(arrived_from, held)
     skill = (
@@ -154,6 +159,7 @@ async def assemble_record(
         can_add_friend=can_add_friend,
         identity=identity,
         photo_url=photo_url,
+        photos=signed,
         sports=pills_of(held),
         skill=skill,
         reliability=await reliability.reliability_of(subject_id, now=now),
@@ -232,9 +238,7 @@ class ReadPlayerRecord:
         """
 
         now = self._clock.now()
-        if not await self._admission.admits(
-            reader_id=reader_id, subject_id=subject_id, now=now
-        ):
+        if not await self._admission.admits(reader_id=reader_id, subject_id=subject_id):
             raise RecordUnavailable(RECORD_UNAVAILABLE)
         is_self = reader_id == subject_id
         # The reader's own relation, asked once admitted (`docs/adr/0202`).
@@ -245,15 +249,10 @@ class ReadPlayerRecord:
             subject_id=subject_id,
             is_self=is_self,
             relation=relation,
-            # Friends' own rule, asked only where the button could be drawn:
-            # nothing between them yet, and not the reader's own sheet (#773).
-            can_add_friend=(
-                not is_self
-                and relation is RecordRelation.NONE
-                and await self._relations.may_ask(
-                    reader_id=reader_id, subject_id=subject_id, now=now
-                )
-            ),
+            # A request is admitted by the rule that admitted this record
+            # (`docs/adr/0204` §2), so it is offered wherever nothing stands
+            # between them yet, and never on the reader's own sheet.
+            can_add_friend=not is_self and relation is RecordRelation.NONE,
             arrived_from=arrived_from,
             now=now,
             identities=self._identities,

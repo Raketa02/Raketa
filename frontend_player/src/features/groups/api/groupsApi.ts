@@ -148,6 +148,35 @@ export function deleteMembership(groupId: string): Promise<void> {
   });
 }
 
+/**
+ * **Withdraw a Join request** (#800; the Home rows mechanics §5.8) — the *Asked* sheet's. It
+ * **refuses nothing**: a request already answered or gone, and a group deleted meanwhile, answer
+ * 204 too, and an approval a moment earlier leaves the reader a member. Safe to repeat by the
+ * route's word; never retried all the same.
+ */
+export function deleteJoinRequest(groupId: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'DELETE',
+    path: `${groupPath(groupId)}/join-request`,
+    authenticated: true,
+  });
+}
+
+/**
+ * **Home's Hottest groups** (#800; ADR-0204 §3) — up to six groups with the most going on, whether
+ * the reader is in them or not, in the row's order, each carrying everything its sheet shows.
+ */
+export function getHottestGroups({ signal }: Cancellable = {}): Promise<
+  Schemas['HottestGroupsResponse']
+> {
+  return httpRequest({
+    method: 'GET',
+    path: '/api/v1/hottest-groups',
+    authenticated: true,
+    signal,
+  });
+}
+
 /** **Delete** — the Owner's, and only while they are its only member. */
 export function deleteGroup(groupId: string): Promise<void> {
   return httpRequest<void>({ method: 'DELETE', path: groupPath(groupId), authenticated: true });

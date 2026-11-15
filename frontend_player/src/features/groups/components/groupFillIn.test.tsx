@@ -449,6 +449,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
         relation: 'NONE',
         can_add_friend: true,
         nickname: 'karol.t',
+        photos: [],
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: 2.75, band: 'Established' }],

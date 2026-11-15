@@ -20,6 +20,7 @@ import type { SportPillWords } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Chip, GapLine, PlaceCard, PlayerAbove, PlayerBelow } from '../domain/ranking';
+import type { TopTenPlayer } from '../domain/topTen';
 import type { ChipKind, RankingView } from '../domain/vocabulary';
 
 export const RANKINGS_COPY = {
@@ -31,8 +32,6 @@ export const RANKINGS_COPY = {
   eyebrow: 'YOUR PLACE',
   /** §30.4: the whole line, in first place. */
   topOfTheList: 'Top of the list',
-  /** §30.4: the whole line, hidden from General — the switch beside it is #778's. */
-  hidden: 'Hidden from General',
   /** §30.6: under *Just you so far* and *None of your friends is ranked…* — opens §29.3's sheet. */
   addFriends: 'Add friends',
   /** §30.7: the reader's own row, and their step on the podium. */
@@ -304,4 +303,38 @@ export const RANKINGS_PILL_WORDS: SportPillWords = {
   sportName: (sport) => sportLabel(sport),
   pillLabel: (sport) => `Sport: ${sportLabel(sport)}`,
   pillHint: RANKINGS_COPY.pillHint,
+};
+
+/**
+ * **Top 10 on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); §31.1, §31.11): the
+ * heading — drawn uppercase by the row frame, *TOP 10* — and *Rankings ›*. The pill's hint and the
+ * link's spoken name are calls: §31 writes only what is drawn. The empty line is §30.7's
+ * `nobodyRankedLine`, as §31.11 cites it, and a card reads `rowName`'s *You*.
+ */
+export const TOP_TEN_COPY = {
+  heading: 'Top 10',
+  rankings: 'Rankings',
+  pillHint: 'Shows Top 10 in another sport',
+} as const;
+
+/** *Rankings ›*, spoken — what it opens: *Rankings in padel*. */
+export function topTenRankingsLabel(sport: Sport): string {
+  return `${TOP_TEN_COPY.rankings} in ${sportInLine(sport)}`;
+}
+
+/**
+ * A Top 10 card, spoken — *1st, ines.d, 3,40, down 1 this week*, or *7th, You, 2,71, up 1 this week*:
+ * the numeral and the drawn chip have no reading of their own.
+ */
+export function topTenCardLabel(player: TopTenPlayer): string {
+  return [
+    rankedRowLabel(player),
+    ...(player.chip === undefined ? [] : [chipSpoken(player.chip)]),
+  ].join(', ');
+}
+
+/** **Top 10's pill** — the Rankings page's words, with this row's hint. */
+export const TOP_TEN_PILL_WORDS: SportPillWords = {
+  ...RANKINGS_PILL_WORDS,
+  pillHint: TOP_TEN_COPY.pillHint,
 };

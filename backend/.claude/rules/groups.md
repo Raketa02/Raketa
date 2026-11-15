@@ -13,7 +13,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   kinds** (`player_group_created`, `group_joined`, the Join request's three —
   `join_requested`, `join_request_approved`, `join_request_declined` — #506's five:
   `group_left`, `ownership_passed`, `group_renamed`, `join_policy_changed`,
-  `group_deleted` — #509's three, below, and #510's `administrator_assigned`). The
+  `group_deleted` — #509's three, below, #510's `administrator_assigned` and #792's
+  `join_request_withdrawn`). The
   repository's `save` writes **three projections in the caller's transaction** —
   `groups`, with `name_folded` written from the first event (and again on a rename)
   because SQL cannot fold, `group_members`, whose `joined_version` (the
@@ -175,3 +176,35 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `.importlinter` contract. And the member's page, `GET /groups/{id}`, carries the
   card's `administrator_nickname` and `is_administrator` (one `approver_name` for both),
   so the Info tab reads *[club] approves joins* for an orphan, as the search row does.
+- **Any player reads Home's *Hottest groups*, and the asker withdraws a Join request**
+  (#792; [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+  §3, §11; the Home rows mechanics §5). `GET /hottest-groups` (its own router, as
+  `/join-search` is) answers up to six cards **whether the reader is in the group or
+  not**, worked out on every read and stored nowhere: `GroupDirectory.crowds` counts every
+  group's members and those joined in the last 30 days in one grouped query over
+  `group_members` (a leave deletes the row, so a leaver is in neither count; a rejoiner
+  counts by the stay that stands), and **`GroupBornGames.born_between`** — the port the
+  club's *Games* figure asks, signed in `proposals/infrastructure/`, over Bookings'
+  `counted_starting` — counts the games booked in each group whose hour started in the last 7
+  days, **booked or seat open, never called off, scored or not**, a friends game booked in
+  the group included. The rule is pure, in `domain/hottest.py` (unit-tested there): heat
+  2 × games + 3 × new + players to 20; one **HOTTEST** — the top heat (ties: more games,
+  then the group id), only if it played; **GROWING** at +4 and new × 4 ≥ players;
+  HOTTEST → GROWING → untagged, six, untagged cut first; `heat_share` over the HOTTEST's
+  heat or, with none, the row's highest. Only the six are read whole, and each card
+  carries everything the sheet shows: `run_by` — **an official group's club name,
+  always**, a player group's Owner's nickname — the club, the dots, up to six `faces`
+  (`faces_to_show`: the reader's friends first, through `MemberRelations`, then joining
+  order, **never the reader**), `friends_count`, and the club card's own row, policy,
+  `relation` and `is_administrator` (built by `views.at_clubs`, as the searches build
+  theirs). An Owner counts as new from the group's creation, which is their joining. **The
+  group page stays members-only**: a non-member reads the card and still meets
+  `group_not_found` there. **Withdraw** is `DELETE /groups/{id}/join-request` →
+  `Group.withdraw_request` → `join_request_withdrawn`, recorded only while a request
+  waits, its projection the decline's (`_stop_waiting`), so the Owner's, the
+  Administrator's and the club's lists — all three read `group_join_requests` — drop it at
+  once; **silent**, and **it refuses nothing**: 204 for a request already answered,
+  withdrawn or never made (an approval a moment earlier leaves a member) — and for a group
+  deleted meanwhile, which took its requests with it, or no such group (a call, so a stale
+  *Asked* sheet never ends on an error; it names no group). Seeded by
+  `app/seeds/hottest_groups.py` (`seeds.md`).

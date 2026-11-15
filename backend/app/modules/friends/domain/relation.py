@@ -43,6 +43,19 @@ class RequestOrigin(StrEnum):
     #: A record opened from the Rankings page, with that page's sport (#773;
     #: ``docs/adr/0203`` §9) — *Found you in the padel ranking* on their Home.
     RANKING = "RANKING"
+    #: Home's *New in Raketa* row, or a record opened from it (#793;
+    #: ``docs/adr/0204`` §9) — *Found you among new players* on their Home.
+    #: Names no group and no sport: the line is the whole line.
+    NEW_PLAYERS = "NEW_PLAYERS"
+    #: Home's *Same competitive level players* row, or a record opened from it
+    #: (#794; ``docs/adr/0204`` §9), with the card's sport — *Your level in
+    #: padel · 91% even* on their Home, worked out when it is read. Names no
+    #: group.
+    SAME_LEVEL = "SAME_LEVEL"
+    #: Home's *Same vibe players* row, or a record opened from it (#795;
+    #: ``docs/adr/0204`` §9) — *6 things in common* on their Home, counted when
+    #: it is read. Names no group and no sport.
+    SAME_VIBE = "SAME_VIBE"
 
 
 class HowFriendsWereMade(StrEnum):

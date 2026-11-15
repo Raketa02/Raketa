@@ -23,7 +23,8 @@
  *
  * One card takes the content width, as friends 5 draws it. Two or more are 7.7's **peeking** rail —
  * each `railCardRatio` of the content width, so the next card's edge is the affordance — over Part
- * 8's Strip, bleeding to the screen edge.
+ * 8's Strip, bleeding to the screen edge. The heading and the rail are Home's row frame
+ * (`HomeRow`, #798), which every row on Home shares.
  *
  * ## Each card answers itself
  *
@@ -43,11 +44,11 @@
  */
 
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { sportInLine, sportLabel } from '@/features/onboarding/types';
 import { useHomeFriendRequests, type HomeFriendRequest } from '@/features/proposals/types';
-import { Button, Card, PlayerPhoto, theme } from '@/shared/ui';
+import { Button, Card, HomeRow, HomeRowRail, PlayerPhoto, theme } from '@/shared/ui';
 
 import { useAcceptFriendRequest, useSetAsideFriendRequest } from '../hooks/useFriendWrites';
 
@@ -58,11 +59,41 @@ import {
   requestsHeading,
   wantsToBeYourFriend,
   whereLine,
+  type WhereFound,
 } from './friendsCopy';
 import { ROW_FACE } from './PersonRow';
 import { WriteNote } from './WriteNote';
 
 const COPY = FRIENDS_COPY.home;
+
+/**
+ * **Where they found the reader, named for the where-line** — the ranking's and Same competitive
+ * level's lines name a sport inside a sentence. **One whose sport this build cannot name says
+ * whatever else the wire named** — no group, since neither screen shows one — so the chip stands
+ * alone.
+ */
+function whereFound(request: HomeFriendRequest): WhereFound | undefined {
+  const found = request.foundBy;
+  if (found === undefined) return undefined;
+  switch (found.kind) {
+    case 'link':
+    case 'newInRaketa':
+    case 'sameVibe':
+      return found;
+    case 'ranking':
+      return request.sport === undefined
+        ? undefined
+        : { kind: 'ranking', sport: sportInLine(request.sport) };
+    case 'sameLevel':
+      return request.sport === undefined
+        ? undefined
+        : {
+            kind: 'sameLevel',
+            sport: sportInLine(request.sport),
+            ...(found.percentEven === undefined ? {} : { percentEven: found.percentEven }),
+          };
+  }
+}
 
 export interface FriendRequestsRowProps {
   /** The requester's reliability chip — `player_record`'s, handed in by the shell. */
@@ -78,25 +109,13 @@ export interface FriendRequestsRowProps {
 
 export function FriendRequestsRow({ scoreTag, onFace, onAnswered }: FriendRequestsRowProps) {
   const requests = useHomeFriendRequests();
-  const { width: screen } = useWindowDimensions();
 
   if (requests === undefined || requests.length === 0) return null;
 
-  const content = screen - 2 * theme.size.gutter;
-  const width = requests.length === 1 ? content : content * theme.size.railCardRatio;
-
   return (
-    <View style={s.section} testID="friend-requests">
-      <Text style={s.heading} accessibilityRole="header">
-        {requestsHeading(requests.length)}
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.strip}
-        contentContainerStyle={s.stripContent}
-      >
-        {requests.map((request) => (
+    <HomeRow heading={requestsHeading(requests.length)} testID="friend-requests">
+      <HomeRowRail cards={requests}>
+        {(request, width) => (
           <RequestCard
             key={request.playerId}
             request={request}
@@ -105,9 +124,9 @@ export function FriendRequestsRow({ scoreTag, onFace, onAnswered }: FriendReques
             onFace={() => onFace(request.playerId)}
             onAnswered={onAnswered}
           />
-        ))}
-      </ScrollView>
-    </View>
+        )}
+      </HomeRowRail>
+    </HomeRow>
   );
 }
 
@@ -124,14 +143,9 @@ function RequestCard({ request, width, scoreTag, onFace, onAnswered }: RequestCa
   // a press's own callbacks would go with it.
   const accepting = useAcceptFriendRequest(request.playerId, onAnswered);
   const settingAside = useSetAsideFriendRequest(request.playerId, onAnswered);
-  // A request from the ranking names its sport's ranking. One whose sport this build cannot name says
-  // whatever else the wire named — no group, since the ranking's page shows none — so the chip stands
-  // alone.
-  const ranking =
-    request.fromRanking && request.sport !== undefined ? sportInLine(request.sport) : undefined;
+  const found = whereFound(request);
   const where = whereLine({
-    byLink: request.byLink,
-    ...(ranking === undefined ? {} : { ranking }),
+    ...(found === undefined ? {} : { foundBy: found }),
     ...(request.group === undefined ? {} : { group: request.group }),
     ...(request.sport === undefined ? {} : { sportName: sportLabel(request.sport) }),
     ...(request.level === undefined ? {} : { level: request.level }),
@@ -191,15 +205,7 @@ function RequestCard({ request, width, scoreTag, onFace, onAnswered }: RequestCa
   );
 }
 
-/** Part 8's Strip gap. */
-const STRIP_GAP = theme.space.sm;
-
 const s = StyleSheet.create({
-  section: { gap: theme.space.sm, marginTop: theme.space.lg },
-  // 3.3 as amended: a section heading is `eyebrow` / `muted` / uppercase, as Your games' is.
-  heading: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  strip: { marginHorizontal: -theme.size.gutter },
-  stripContent: { paddingHorizontal: theme.size.gutter, gap: STRIP_GAP },
   // Friends 5 bounds the card in ink: a request waiting on the reader, as 5.1's selected border.
   card: { borderColor: theme.color.ink, gap: theme.space.md },
   top: { flexDirection: 'row', gap: theme.space.sm, alignItems: 'flex-start' },

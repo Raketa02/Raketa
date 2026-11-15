@@ -172,6 +172,42 @@ export const GROUPS_COPY = {
       'Selecting Anyone allows anyone to join the group, including players with pending requests.',
     anyoneClose: 'Keep People I approve',
   },
+  /**
+   * **Home's Hottest groups** ([#800](https://github.com/Raketa02/Raketa/issues/800); the words
+   * §31.1–§31.4): the row, its card, the group sheet and the withdraw sheet. The marks before the
+   * tags — ▲ and + — are drawn, never characters.
+   */
+  hottest: {
+    /** Drawn uppercase by the row frame: *HOTTEST GROUPS*, with no See all. */
+    heading: 'Hottest groups',
+    /** *Your games*, for a reader in no group, in place of *Play finds you one.* (§31.1). */
+    groupless: 'Join a group to get games — the hottest ones are just below.',
+    tag: { HOTTEST: 'HOTTEST', GROWING: 'GROWING' },
+    /** The tags, spoken. */
+    tagSpoken: { HOTTEST: 'hottest', GROWING: 'growing' },
+    gamesThisWeek: 'games this week',
+    /** One reads *game this week* (§31.2, a call). */
+    gameThisWeek: 'game this week',
+    players: 'players',
+    thisMonth: 'this month',
+    /** The chip (§31.2) and the sheet's button (§31.3), each by the reader's relation. */
+    chip: { join: 'Join', ask: 'Ask to join', requested: 'Asked', in: 'You’re in' },
+    openGroup: 'Open group',
+    /** The sheet's identity row: *Anyone* · *People I approve*. */
+    policy: { ANYONE: 'Open group', PEOPLE_I_APPROVE: 'Closed group' },
+    statPlayers: 'players · new this month',
+    oneFriend: '1 of your friends plays here',
+    /** The card's door and the chips' hints, spoken. */
+    opensSheet: 'Opens the group',
+    opensGroup: 'Opens the group’s page',
+    opensWithdraw: 'Opens Withdraw request',
+    /** The withdraw sheet (§31.4). */
+    withdraw: 'Withdraw request',
+    /** The withdraw sheet's ×, spoken (a call: §31.4 writes no name for it). */
+    keepRequest: 'Keep the request',
+    /** Its title for an Owner who can no longer be named — the runner unsaid (a call). */
+    waitingForAnswer: 'Waiting for an answer',
+  },
   /** What an official group's rows and header say beside its name — spoken; `OfficialMark` draws it (#529). */
   official: 'official',
   action: {

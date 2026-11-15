@@ -15,18 +15,13 @@
  */
 
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 import { theme } from '@/shared/ui';
 
 import type { Chip } from '../domain/ranking';
 
+import { MoveMark } from './MoveMark';
 import { chipFace } from './rankingsCopy';
-
-/** The triangles' own 10-unit box. */
-const SPACE = 10;
-const UP = 'M5 1.5 L9 8.5 L1 8.5 Z';
-const DOWN = 'M1 1.5 L9 1.5 L5 8.5 Z';
 
 const TONE: Readonly<Record<Chip['kind'], { readonly ground: string; readonly ink: string }>> = {
   UP: { ground: theme.color.mintSoft, ink: theme.color.mintInk },
@@ -52,14 +47,12 @@ export function RankChip({ chip }: { readonly chip: Chip }) {
         <View testID="rank-chip-same" style={[s.dash, { backgroundColor: tone.ink }]} />
       ) : (
         <>
-          <Svg
+          <MoveMark
             testID={`rank-chip-${face.mark}`}
-            width={theme.size.rankings.chipMark}
-            height={theme.size.rankings.chipMark}
-            viewBox={`0 0 ${SPACE} ${SPACE}`}
-          >
-            <Path d={face.mark === 'up' ? UP : DOWN} fill={tone.ink} />
-          </Svg>
+            up={face.mark === 'up'}
+            size={theme.size.rankings.chipMark}
+            ink={tone.ink}
+          />
           <Text style={[s.count, { color: tone.ink }]}>{face.count}</Text>
         </>
       )}

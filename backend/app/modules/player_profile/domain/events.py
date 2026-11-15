@@ -20,8 +20,9 @@ table beside the stream to keep in step with it. The key is evidence about a
 **Eight preference changes**, for the profile screen that edits the same values
 later: tags, photos, weekly hours, location, gender and gender preference — and
 two the creating event never carried: the reliability filter (#661), which
-every profile starts with off, and *Show me in General* (#772), which every
-profile starts with on. Each
+every profile starts with off, and *Show me to new people* (#791), which every
+profile starts with on — replacing *Show me in General* (#772), decode-only and
+folded into it. Each
 carries the whole new value rather than a delta, because a preference is small,
 replay stays a fold, and *what was it before* is answered by the event before it.
 
@@ -239,23 +240,37 @@ class ReliabilityMinimumSet:
     occurred_at: datetime
 
 
+#: ``RankingVisibilitySet.visibility`` for *Show me in General* off.
+HIDDEN_FROM_GENERAL = "HIDDEN"
+
+
 @dataclass(frozen=True)
 class RankingVisibilitySet:
-    """*Show me in General*, turned: ``SHOWN`` or ``HIDDEN``, a
-    ``RankingVisibility`` code (``docs/adr/0203`` §7, #772).
-
-    **A fact about the player, never about a row**: the creating event carries
-    no field for it, because every profile starts shown, and a stream with none
-    of these folds to ``SHOWN``. The Rankings context follows it through the
-    outbox into its projection, for every sport — one the player has no result
-    in yet included.
-
-    **What it stops is new**: a request already made through the ranking stays
-    open, and a record already drawn stays drawn (the mechanics §18).
-    """
+    """*Show me in General*, turned: ``SHOWN`` or ``HIDDEN`` (``docs/adr/0203``
+    §7, #772). **Decode-only since #791**: nothing records it any more, and
+    stored streams hold it, so the fold reads it into *Show me to new people* —
+    ``HIDDEN`` is off (``docs/adr/0204`` §2)."""
 
     player_id: UUID
     visibility: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ShowMeToNewPeopleSet:
+    """*Show me to new people*, turned on or off (``docs/adr/0204`` §2).
+
+    **A fact about the player**: the creating event carries no field for it,
+    because every profile starts on, and a stream with none of these — and no
+    *Show me in General* turned off before it — folds to on. Read live by the
+    record's admission and by Friends' ask; the ranking never reads it.
+
+    **What it stops is new**: a request already sent stays open, and a record
+    already drawn stays drawn (the mechanics §4.3).
+    """
+
+    player_id: UUID
+    on: bool
     occurred_at: datetime
 
 

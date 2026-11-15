@@ -35,6 +35,9 @@ class AskedFrom(StrEnum):
     RECORD = RequestOrigin.RECORD.value
     RESULT = RequestOrigin.RESULT.value
     RANKING = RequestOrigin.RANKING.value
+    NEW_PLAYERS = RequestOrigin.NEW_PLAYERS.value
+    SAME_LEVEL = RequestOrigin.SAME_LEVEL.value
+    SAME_VIBE = RequestOrigin.SAME_VIBE.value
 
 
 class AskToBeFriendsRequest(BaseModel):
@@ -46,7 +49,17 @@ class AskToBeFriendsRequest(BaseModel):
             "screen's *PLAYED WITH* card, or **the record opened from the "
             "Rankings page** — `RANKING`, with that page's `sport` (#773). Their "
             "Home card and notice then read *Found you in the padel ranking*, "
-            "whether or not you share a group."
+            "whether or not you share a group. From Home's **New in Raketa** "
+            "row, or a record opened from it — `NEW_PLAYERS` (#793): their card "
+            "and notice read *Found you among new players*. From Home's **Same "
+            "competitive level players** row, or a record opened from it — "
+            "`SAME_LEVEL`, with the card's `sport` (#794): their card and notice "
+            "read *Your level in padel · 91% even*, today's %, or *Found you at "
+            "your padel level* once either of you holds no level there. From "
+            "Home's **Same vibe players** row, or a record opened from it — "
+            "`SAME_VIBE` (#795): their card and notice read *6 things in common* "
+            "(*1 thing in common*), counted when read, or *Found you through your "
+            "tags* once you share none."
         )
     )
     group_id: UUID | None = Field(
@@ -55,15 +68,19 @@ class AskToBeFriendsRequest(BaseModel):
             "The group the screen showed — Members' group, or the game's — which "
             "their Home card names (*With you in Kazimierz crew*) while you are "
             "both in it. Omit it where the screen showed none; it is ignored "
-            "with `RANKING`, whose page shows no group."
+            "with `RANKING`, `NEW_PLAYERS`, `SAME_LEVEL` and `SAME_VIBE`, whose "
+            "screens show no group."
         ),
     )
     sport: Sport | None = Field(
         default=None,
         description=(
             "The sport the screen showed, whose Level the card prints beside your "
-            "nickname (*Padel 3,40*). Omit it where the screen showed none. "
-            "**Required with `RANKING`**: it is the ranking the card names."
+            "nickname (*Padel 3,40*). Omit it where the screen showed none; "
+            "it is ignored with `NEW_PLAYERS` and `SAME_VIBE`, whose lines name "
+            "no sport. "
+            "**Required with `RANKING`** — it is the ranking the card names — "
+            "**and with `SAME_LEVEL`**: it is the sport their line compares."
         ),
     )
 
@@ -71,6 +88,10 @@ class AskToBeFriendsRequest(BaseModel):
     def _a_ranking_names_its_sport(self) -> "AskToBeFriendsRequest":
         if self.made_from is AskedFrom.RANKING and self.sport is None:
             raise ValueError("a request made from the ranking names its sport")
+        if self.made_from is AskedFrom.SAME_LEVEL and self.sport is None:
+            raise ValueError(
+                "a request made from Same competitive level names its sport"
+            )
         return self
 
     def where(self) -> Where:

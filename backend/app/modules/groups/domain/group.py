@@ -37,6 +37,7 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    JoinRequestWithdrawn,
     OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
@@ -306,6 +307,25 @@ class Group:
                 player_id=player_id,
                 declined_by=by,
                 occurred_at=occurred_at,
+            )
+        )
+
+    def withdraw_request(self, player_id: UUID, *, occurred_at: datetime) -> None:
+        """The player who asked taps *Withdraw request* (``docs/adr/0204`` §3,
+        §11) — and their Join request is gone from whoever answers it, telling
+        nobody. They may ask again, as after a decline (``docs/adr/0183`` §7).
+
+        **Only a request still waiting is withdrawn.** One answered a moment
+        earlier — approved, so they are a member, or declined — or withdrawn
+        already records nothing and is not refused: the tap wanted the request
+        gone, and it is.
+        """
+
+        if not self.is_waiting(player_id):
+            return
+        self._record_that(
+            JoinRequestWithdrawn(
+                group_id=self.id, player_id=player_id, occurred_at=occurred_at
             )
         )
 
@@ -616,7 +636,7 @@ class Group:
         elif isinstance(event, JoinRequestApproved):
             del self.waiting[event.player_id]
             self.members[event.player_id] = event.occurred_at
-        elif isinstance(event, JoinRequestDeclined):
+        elif isinstance(event, (JoinRequestDeclined, JoinRequestWithdrawn)):
             del self.waiting[event.player_id]
         elif isinstance(event, GroupLeft):
             del self.members[event.player_id]

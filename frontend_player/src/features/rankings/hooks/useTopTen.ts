@@ -1,0 +1,91 @@
+/**
+ * **Home's Top 10, read** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows
+ * mechanics §3, §10; the screens §7) — on its own, so a slow or failed read holds up nothing else on
+ * Home.
+ *
+ * - **It opens on the trophy's sport**, else the deck's last, else padel (`useOpeningSport`, the
+ *   Rankings page's own reads), **sent as the preferred sport**: the server falls through to the next
+ *   sport where somebody is ranked, and says which it chose. Nothing is read until that sport is known.
+ * - **A pick on the pill is asked for exactly** — *Nobody ranked in squash yet* for a sport with
+ *   nobody in it — and is held while Home is up, kept nowhere (§10.3).
+ * - **A pick re-reads this row and nothing else**: its own query, and **the cards on screen stay until
+ *   the new ones land** (`keepPreviousData`), so the row never empties under the pill and no other row
+ *   blinks. The pill says the picked sport at once.
+ * - **A pick whose read fails puts the pill back** on the sport before it, whose cards never left — a
+ *   call: the screens leave a failed row out, and a row that vanished on a pick would take the pill
+ *   with it.
+ * - **Coming back to Home re-reads it once its last read is older than thirty seconds**, as every row
+ *   does; foregrounding does the same through the focus manager. `rereadTopTen` is Home's pull.
+ *
+ * It lists people, but no friend write moves anybody in it — it shows the ranking, which neither a
+ * friendship nor a block changes (ADR-0204 §2) — so it declares no `LISTS_PEOPLE`.
+ */
+
+import {
+  keepPreviousData,
+  skipToken,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
+import { useState } from 'react';
+
+import type { AppError } from '@/shared/errors';
+import { useOnReturn } from '@/shared/lib/platform';
+import type { Sport } from '@/shared/vocabulary/sport';
+
+import { topTenAsk, topTenFace, type TopTen, type TopTenFace } from '../domain/topTen';
+import { readTopTen } from '../use-cases/readTopTen';
+
+import { rankingKeys } from './rankingKeys';
+import { useOpeningSport } from './useRankingsSport';
+
+/** **A sport picked on the pill**, and the pick it was made over — where a failed read goes back to. */
+interface PickedSport {
+  readonly sport: Sport;
+  readonly before: PickedSport | undefined;
+}
+
+export interface TopTenRead {
+  /** What the row draws. */
+  readonly face: TopTenFace;
+  /** The pill's sports — all four, rated first — `undefined` while the ratings are read. */
+  readonly sports: readonly Sport[] | undefined;
+  /** The pill's sport: the one picked, else the one the read shows. */
+  readonly sport: Sport | undefined;
+  readonly pick: (sport: Sport) => void;
+}
+
+export function useTopTen(): TopTenRead {
+  const client = useQueryClient();
+  const { sports, opening } = useOpeningSport();
+  const [picked, setPicked] = useState<PickedSport>();
+  const ask = topTenAsk(picked?.sport, opening);
+
+  // No sport yet is `skipToken` under a key of its own, as `useDeckCounts` keeps it.
+  const read = useQuery<TopTen | null, AppError>({
+    queryKey: ask === undefined ? rankingKeys.topTenUnasked() : rankingKeys.topTenAsked(ask),
+    queryFn: ask === undefined ? skipToken : ({ signal }) => readTopTen(ask, { signal }),
+    placeholderData: keepPreviousData,
+  });
+
+  useOnReturn(() => {
+    void client.refetchQueries({ queryKey: rankingKeys.topTen(), type: 'active', stale: true });
+  });
+
+  // Derived state, as `usePersonSheet` keeps it: a pick that could not be read is undone at once,
+  // and the key it goes back to still holds its cards.
+  if (picked !== undefined && read.isError && read.data === undefined) setPicked(picked.before);
+
+  return {
+    face: topTenFace(read.data),
+    sports,
+    sport: picked?.sport ?? read.data?.sport,
+    pick: (sport) => setPicked({ sport, before: picked }),
+  };
+}
+
+/** **Every Top 10 read, again** — Home's pull. */
+export function rereadTopTen(client: QueryClient): Promise<unknown> {
+  return client.invalidateQueries({ queryKey: rankingKeys.topTen() });
+}

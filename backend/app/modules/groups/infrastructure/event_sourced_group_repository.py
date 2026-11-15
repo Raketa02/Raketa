@@ -33,6 +33,7 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    JoinRequestWithdrawn,
     OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
@@ -162,7 +163,9 @@ class EventSourcedGroupRepository:
         elif isinstance(event, JoinRequestApproved):
             await self._stop_waiting(event.group_id, event.player_id)
             self._admit(event.group_id, event.player_id, event, version)
-        elif isinstance(event, JoinRequestDeclined):
+        elif isinstance(event, (JoinRequestDeclined, JoinRequestWithdrawn)):
+            # Gone from every list that answers it: the Owner's, the
+            # Administrator's and the club's all read this one table.
             await self._stop_waiting(event.group_id, event.player_id)
         elif isinstance(event, GroupLeft):
             await self._statement(

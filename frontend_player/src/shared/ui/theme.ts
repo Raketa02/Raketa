@@ -134,6 +134,12 @@ const color = {
 
   scrim: 'rgba(10,52,65,0.45)', // the night colour at 45%, not black
 
+  /** A HOTTEST GROUPS CARD'S BAND (#800; home rows 3–5, 21): the paler diagonal stripes over the
+   *  group's own `MONOGRAM_HUES` colour. White at 0,12 over the hue rather than a second hue per
+   *  key — eight keys would need eight, and the band says *this group's colour*, not a ninth one.
+   *  Nothing is written on a stripe: the tag sits on its own `ink` pill. */
+  groupBandStripe: 'rgba(255,255,255,0.12)',
+
   /** THE COURT'S GROUND, and the system's only rule for text over a GENERATED fill.
    *
    *  The court is drawn from the selected sport's hue, so the ratio behind a white label
@@ -191,22 +197,32 @@ const color = {
   yesGroundCentre: '#203C48',
   yesGroundEdge: '#14252C',
 
-  /** THE DECK CARD'S WASH — the app's SECOND dark surface, and it is a surface and not a screen
-   *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
-   *  §7, docs/design-system.md Part 16 2026-09-15). One gradient over the lower part of the
-   *  card, from nothing to this: `ink` at .94, so the card's foot is the app's own text colour
-   *  over whatever photograph or poster is under it, and the name, the tags and the tiles sit on
-   *  `surface` and the on-dark tokens as they would on a dark card.
+  /** THE PORTRAIT TILE'S WASH — what was the deck card's, and the one card that wears a wash
+   *  ([#801](https://github.com/Raketa02/Raketa/issues/801); home rows 17–19; docs/design-system.md
+   *  7.31, Part 16 2026-11-14). The deck card it was fenced to (ADR-0169 §7, Part 16 2026-09-15) left
+   *  with Classic play (#576), so the value moved here whole rather than standing twice: New in
+   *  Raketa's tile — and Top 10's portrait after it (#805) — is a face edge to edge with a name, a
+   *  Level and a line over its foot, which is the deck card's own problem.
    *
-   *  NOT `photoScrim`, deliberately. The panel's scrim is a flat tint pinned so that white over
-   *  the worst photograph is computable (5,24 at .70); this is a scrim over a picture a player
-   *  decides about, and a face wants the whole card — so the wash RAMPS, and its worst case is
-   *  stated at the name's own top edge rather than over the whole box (`DeckCard.tsx` holds the
-   *  ramp; the row in Part 16 holds the arithmetic). The value is the foot's; the ramp's stops
-   *  are the drawing's own, as the yes screen's glow keeps its centre and reach in `YesGround`.
-   *  Nothing else may draw it: the day a second card wears a wash, ADR-0169 §7's fence has
-   *  become the rule. */
-  deckWash: 'rgba(16,27,32,0.94)',
+   *  One gradient over the lower part of the tile, from nothing to this: `ink` at .94, so the foot
+   *  is the app's own text colour over whatever photograph or poster is under it, and the words sit
+   *  on `surface` and the on-dark tokens as they would on a dark card. NOT `photoScrim`,
+   *  deliberately: the panel's scrim is a flat tint pinned so that white over the worst photograph is
+   *  computable (5,24 at .70), and a face wants the whole tile — so the wash RAMPS, and its worst case
+   *  is stated at the name's own top edge rather than over the whole box (`PortraitTile.tsx` holds
+   *  the ramp and the arithmetic). Nothing else may draw it. */
+  portraitWash: 'rgba(16,27,32,0.94)',
+
+  /** THE TOP 10 NUMERAL'S GRADIENT ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows
+   *  25–26; docs/design-system.md 7.36, Part 16 2026-11-15) — the huge place standing behind each
+   *  card, filled from `numeralTop` at its figures' top to `numeralFoot` at its baseline, inside a
+   *  paper outline: the screens' *night-to-teal*. MEASURED off home rows 25 at 1×, down the figure
+   *  *2*: #29444F at its top and #15252C at its foot, hue 197–199° — `night`'s family, as every dark
+   *  ground here is. It is a picture of a number, not text: the card it stands behind names the place
+   *  (`topTenCardLabel`), so no contrast is claimed for it. The reader's own numeral is `volt`.
+   *  Nothing else may draw these. */
+  numeralTop: '#29444F',
+  numeralFoot: '#15252C',
 
   /** THE RADAR'S GROUND — the app's THIRD dark surface, and a field rather than a card or a
    *  screen ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
@@ -326,6 +342,21 @@ const color = {
    *  it, computed: white 15,76 (the wordmark and the headline); `volt` 12,57 (the wordmark's dot,
    *  a mark). Derived in stageGround.test.ts. Nothing else may draw it. */
   stageGround: '#15252C',
+
+  /** THE SAME LEVEL CARD'S GROUND — Home's *Same competitive level players* card, the app's SIXTH
+   *  dark surface ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.2;
+   *  design-system 7.34, Part 16 2026-11-14). A card whose one figure is a forecast, drawn in the
+   *  game cards' three inks (`gameGreen`, `gameAmber`, `gameRed` — the ticket's *existing forecast
+   *  tokens*), which `night` cannot carry: `gameGreen` on it is 2,88, under large text's 3:1.
+   *
+   *  MEASURED off home rows 7, 8, 10.3 and 15 at 1x: one flat `#15252C` at every corner — the stage's
+   *  value, and NOT that token, for the reason each ground before it gave: a value is written for what
+   *  was drawn, and the stage is sign-in's alone. Hue 198°, `night`'s family. What sits on it,
+   *  computed: white 15,76 (You, the nickname, the mark); `volt` 12,57 (the fill, *2 sports*);
+   *  `gameGreen` 3,41, `gameAmber` 8,94, `gameRed` 3,48 (the figure, large only); `onDarkTiny` over it
+   *  7,97 (the levels, the gap, the sport, the bands). Derived in levelCardGround.test.ts. Nothing
+   *  else may draw it. */
+  levelCardGround: '#15252C',
 
   /** THE STAGE'S FOOT GLOW — a flat ellipse of light where the sheet meets the hero, brightest at
    *  the sheet's edge under the middle of the screen and gone a tenth of the hero above it.
@@ -534,6 +565,14 @@ const type = {
    *  ascenders. `surface` over the wash, with the on-media shadow. A second surface that wants a
    *  name this size reopens ADR-0169 §7 rather than reaching for this role. */
   deckName: { fontFamily: font.sans[700], fontSize: 24, letterSpacing: -0.84, lineHeight: 28 },
+  /** THE TOP 10 NUMERAL — 1 to 10, huge, tucked behind each card of Home's Top 10
+   *  ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 25–26; 7.36, Part 16
+   *  2026-11-15). Archivo at its heaviest loaded weight, whose figures stand 0,699 em over the
+   *  baseline: at 108 that is 75pt, where home rows 25 and 26 MEASURE 70–79 at 1× beside a 154pt
+   *  card. Tracked −16 (−0,15 em) so *10*'s two figures touch, the *0* over the *1*'s foot, as home
+   *  rows 25.3 draws them. Drawn as SVG text — no line box — so it carries no `lineHeight`. ONE USE:
+   *  a second surface that wants a figure this size reopens the Top 10 row in Part 16. */
+  numeral: { fontFamily: font.sans[800], fontSize: 108, letterSpacing: -16 },
   /** THE DECK'S TWO STAMPS — *LET'S PLAY* and *NOT TODAY*, outlined words rotated over the card
    *  under the thumb, invisible at rest (ADR-0169 §3, §7). The heaviest weight the app loads at
    *  22, TRACKED WIDE rather than tight — +0,05em, 1,1 — because a rubber stamp is set spaced
@@ -934,7 +973,36 @@ const size = {
    *  is the same drawing at the same two sizes. `chip` is the profile switcher's face (#518, as
    *  slimmed 2026-10-01): the worn profile drawn small enough that the pill reads as a control
    *  rather than as a second avatar beside the header's. */
-  monogram: { card: 38, row: 28, header: 36, chip: 22, radius: 0.27, letters: 0.37 },
+  monogram: {
+    card: 38,
+    row: 28,
+    header: 36,
+    chip: 22,
+    /** A Hottest groups card's shield, overlapping its band (#800, home rows 3), and the group
+     *  sheet's rounded badge (home rows 6) — the same tile at two more sizes, read off the mocks. */
+    shield: 45,
+    sheet: 48,
+    radius: 0.27,
+    letters: 0.37,
+  },
+  /** HOME'S HOTTEST GROUPS CARD ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home
+   *  rows screens §3.2; home rows 3–5, 21), read off the mocks at 1× and put on the 3pt grid:
+   *
+   *  - `band` — the striped band across the top, and `stripe` each stripe's width across, the gap
+   *    between two the same;
+   *  - `shieldTop` — how far below the card's top the shield (`monogram.shield`) starts, so it
+   *    overlaps the band and the body; `shieldRing` its white ring, and `shieldFoot` the share of
+   *    its side that rounds its two lower corners — a shield's, where a tile rounds all four;
+   *  - `heatBar` — the bar's height; `tagMark` the drawn ▲ in the HOTTEST pill. */
+  hottest: {
+    band: 39,
+    stripe: 9,
+    shieldTop: 15,
+    shieldRing: 3,
+    shieldFoot: 0.4,
+    heatBar: 6,
+    tagMark: 6,
+  },
   /** THE PROFILE SWITCHER'S CHIP (club 7, #518; slimmed 2026-10-01) — a face at `monogram.chip`
    *  (22) beside a drawn ⇅, in PROPORTION to the product owner's mock rather than at its pixels: the
    *  face about three quarters of the pill's height, the arrows about two fifths of the face's. So
@@ -1404,6 +1472,80 @@ const size = {
    *  There is a second rail and it has no ratio, because its card is the content width
    *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
+  /** THE PHOTO CAROUSEL's card — all of a player's photos, sideways, on the record
+   *  ([#799](https://github.com/Raketa02/Raketa/issues/799)) and the vibe sheet (home rows 23, #803),
+   *  over Part 8's Strip (Part 16 2026-11-14). A card's share of the content width, for
+   *  `railCardRatio`'s reason — a ratio, never a point value. **Half**: home rows 23 draws two photos
+   *  side by side, the second running into the sheet's edge, so two stand on screen and a third's
+   *  edge is the affordance. Its height is the photo panel's 4:5, read off `PHOTO_PANEL` — one owner
+   *  of the shape. */
+  photoCarouselRatio: 0.5,
+  /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
+   *  wash. `railRatio` is a tile's share of the content width on a Home row, for `railCardRatio`'s
+   *  reason — a ratio, never a point value: home rows 17 draws two whole and the third cut at two
+   *  thirds (0,355 × 360 = 128pt, the third showing 84). `railAspect` and `gridAspect` are its height
+   *  over its width — 11:8 standing on a row, 9:8 in See all's two columns (home rows 19), MEASURED
+   *  off the mocks at 1× (384 × 528 and 266 × 297 pixels). */
+  portraitTile: { railRatio: 0.355, railAspect: 1.375, gridAspect: 1.125 },
+  /** THE ROUND FRIEND BUTTON (#801; home rows 8, 10.3, 17, 18–18.3; 7.32) — MEASURED off the tiles at
+   *  1× (72 pixels on a 384-pixel tile): a 24pt circle centred in its own 44pt press (`minTouch`) —
+   *  a box, not a hitSlop, because a touch never lands past its parent on Android and a tile clips.
+   *  `halo` is the envelope's paler ring outside it; `dot` and `dotGap` the **…**'s three dots;
+   *  `glyph` the envelope's Feather size, the plus and the tick being 6.8's own 12pt box. */
+  roundFriend: { face: 24, halo: 3, dot: 3, dotGap: 2, glyph: 12 },
+  /** THE COMPARISON BAR (#802; home rows 7–16; 7.33) — the Skill passport's 1,00–5,00 and its four
+   *  bands, a fill to the other player's level and a tall mark at the reader's. MEASURED off home rows
+   *  8 at 1× (2,75 pixels to the point): an 8pt track, a 6pt mark 22 tall in a 2pt ring of the ground,
+   *  its YOU 3 above. `onDarkBand` is a band's `tint` over the card's ground — #344B5A, #31514E and
+   *  #534541 measured, each its tint at 0,26–0,31 — where the light bar takes 7.5's `inactiveOpacity`.
+   *  `nameMinScale` is how far a band's name may shrink to stay on one line under its band on a Home
+   *  row's card, where _ESTABLISHED_ has 30 % of 0,74 × content less the padding. */
+  comparisonBar: {
+    trackHeight: 8,
+    markWidth: 6,
+    markHeight: 22,
+    markRing: 2,
+    labelGap: 3,
+    namesTop: 6,
+    onDarkBand: 0.28,
+    nameMinScale: 0.75,
+  },
+  /** THE SAME LEVEL CARD (#802; home rows 7, 8, 10.3; 7.34) — a face 44 on either side, MEASURED (120
+   *  pixels at 2,75); the % between them at `num.xl`, the game card's figure. */
+  sameLevel: { face: 44 },
+  /** THE SAME VIBE TILE (#803; home rows 20, 22–22.3, 24; 7.35) — its face and the vibe %'s white
+   *  circle, MEASURED off the mocks at 1×: on Home's row 120 and 95 pixels at 2,92 to the point (41
+   *  and 33), in See all's two columns 60 and 48 at 1,74 (34 and 28), onto the 3pt grid. The vibe
+   *  sheet's face is the row's. */
+  sameVibe: { face: { row: 42, grid: 36 }, percent: { row: 33, grid: 30 } },
+  /** TOP 10'S CARD ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 2, 25–27; 7.36)
+   *  — MEASURED off home rows 2 at 1,5 to the point and 25–26 at 3:
+   *
+   *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason: 104pt of 360
+   *    in both mocks, narrower than New in Raketa's tile, because the numeral stands beside each one.
+   *  - `aspect` — its height over its width: 154 over 104.
+   *  - `overlap` — how much of the numeral's box the card covers, from the right: home rows 26 shows
+   *    32pt of the *1*'s ink and 25 39pt of the *2*'s, which at `type.numeral` leaves 24 under the card.
+   *  - `ring` — the reader's own card's volt ring, outside the card: 7 pixels at 3 (home rows 26.1).
+   *  - `outline` and `edge` — the numeral's paper outline, and the hairline of `line` that lets it
+   *    be seen on paper (home rows 25.3: about four pixels of paper and one of grey at 2).
+   *  - `chipMark` — the drawn ▲ / ▼ beside a card's level, the level's own size; `lean` the slant, in
+   *    degrees, the mark and its count take together as an italic would (no italic face is loaded).
+   *  - `figure` — `type.numeral`'s face's own metrics, in ems, READ OFF `Archivo_800ExtraBold.ttf`: a
+   *    figure's advance (tabular — every figure 625 of 1000 units), how far the figures stand over
+   *    the baseline, and the deepest under it (the *9*'s tail). The numeral's box is worked out from
+   *    them, so they change with the role's face or not at all. */
+  topTen: {
+    railRatio: 0.29,
+    aspect: 1.48,
+    overlap: 24,
+    ring: 2.5,
+    outline: 1.5,
+    edge: 0.75,
+    chipMark: 8,
+    lean: -12,
+    figure: { advance: 0.625, top: 0.699, foot: 0.012 },
+  },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it
@@ -1497,6 +1639,17 @@ const hit = {
   peopleRow: { top: 3, bottom: 3 },
   /** Home's trophy pill (#775): 30 tall, lifted to 44. */
   trophy: { top: 7, bottom: 7 },
+  /** A Home row's link — *See all ›*, Top 10's *Rankings ›* (#798; 6.5). Its 16pt line overhangs
+   *  the heading's 12 by 2 each way, `space.lg` under the row above and `space.sm` over its own
+   *  rail — so 13 above and 7 below are the whole of both gaps, and it stops at the rail, whose
+   *  cards keep their own targets: 36 tall, under 44 on purpose. Sideways it reaches the screen
+   *  edge on the right, and 3 on the left, as a chip's slop does (`chip`): of the `space.sm`
+   *  between a control and the link, the two take 3 each and leave 3 between their targets. */
+  rowLink: { top: 13, bottom: 7, left: 3, right: 15 },
+  /** *2 sports ›* on the Same level card's footer (#802; 7.34): a 16pt line in the footer's 44pt
+   *  row, beside the round friend button's own 44 box — 14 above and below reach exactly the row's
+   *  edges, so no touch lands past its parent on Android; 6 sideways keeps clear of the gap's words. */
+  sportsLink: { top: 14, bottom: 14, left: 6, right: 6 },
   /** The week grid's hour cell (6.8): half the 4pt gap on every side, which is all the
    *  neighbour rule allows and exactly enough that the reachable areas tile the grid with no
    *  dead point between two cells. It does not reach 44 — see `size.availability`. */

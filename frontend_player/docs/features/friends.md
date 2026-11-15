@@ -381,3 +381,74 @@ backend field first, so nothing changed there.
 rather than across both buttons, as §6 of the screens writes it — every friend refusal stands there;
 the new `unblock_them_first` and `player_not_in_your_groups` sentences. **Not seen on a device**: the limit sentence wrapping in the left
 half at the narrowest width; _Block_ alone across the foot; the ranking line on Home's card.
+
+**No daily limit, and asking somebody no longer askable says nothing** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§2; the words §31.13). Anybody may be asked, as many as you like, so `daily_request_limit` and its
+sentence are gone from `FRIENDS_COPY.refused`, and with them #779's call about where the sentence
+stood. **`player_not_in_your_groups` became `player_unavailable`** on the server — one code, naming
+nothing, for somebody who turned _Show me to new people_ off and shares no group, game or friendship
+with the asker — and **it is the state moving** (`useFriendWrites`' `MOVED`): no sentence, the
+surface re-reads, and on the record that read is refused with its own one line, _This record isn't
+available_, which is the answer ([`player_record.md`](player_record.md)). The old code's sentence is
+gone. **The record's foot still follows `can_add_friend`**, which the server now reads off the
+relation alone (`NONE` and not your own record): a record that opens is somebody you may ask. The
+paragraphs above on the limit sentence and on `player_not_in_your_groups` describe #779 and are
+superseded; so is that paragraph's _listed on General and not hidden_.
+
+**The round friend button, and its worded twin** ([#801](https://github.com/Raketa02/Raketa/issues/801);
+the Home rows mechanics §11, screens §8; Q29; design-system 7.32). `RoundFriendButton` is on every
+card of Home's people rows — **+** white, **…** amber, **✓** `mintInk`, the envelope volt with a halo,
+each a drawn mark named for whom (`roundLabel`, §31.9's calls) — and `variant="worded"` draws it on a
+sheet's title row as _+ Add friend_, _Request sent_, _✓ Friends_, _Accept_ (the comparison and vibe
+sheets, #802 and #803; `roundFriendButton.test.tsx` walks it until then). **What a tap does is the
+domain's** (`roundPressOf`): **+** asks and the envelope accepts at once; **…** opens _Request sent_ ·
+**Cancel request** (no _Keep_: it asks nothing); **✓** opens the record's own _Remove … as a
+friend?_. **The next mark is drawn while the write is out** (`shownWhilePressed`), and since every
+write settles once the people lists have read again, the read already says what the server did when
+the guess gives way — so nothing is written into another feature's cache, and a failed write puts the old mark
+back by itself. A refusal that is the state moving says nothing and re-reads (the card leaves on that
+read when they turned _Show me to new people_ off); any other is a toast — no room for a note under a
+24pt mark. The record's confirm sheet moved to `TakeBackSheet`, shared by both buttons.
+
+**A request found among new players** (#801; the words §31.10). `AskedFrom` gained `NEW_PLAYERS` and
+`AskedWhere` a `FoundIn` — a Home row a request was found in, `{ from: 'NEW_PLAYERS' }`, naming
+neither a group nor a sport (`toAskRequest` sends neither). **A record a Home row opened keeps the
+row** (`recordAskedWhere`'s `foundIn`, ahead of the ranking). Home's request card reads _Found you
+among new players_ (`whereLine`'s `newInRaketa`, from `proposals`' `foundBy` since #802) in place of the
+whole where-line, as a link's and the ranking's do. #802 and #803 add their rows to `FoundIn`.
+
+**A request found at the same level** (#802; the words §31.10). `AskedFrom` gained `SAME_LEVEL`, and
+`FoundIn` its arm `{ from: 'SAME_LEVEL', sport }` — **the card's sport**, the one the other person's
+line compares, which the server refuses a request without, so the type carries it (`toAskRequest`
+sends it and no group). The card's round button, the comparison sheet's worded one and the record a
+face opens all send it. Home's request card reads _Your level in padel · 91% even_ — **today's** %,
+which the server works out on the read — or _Found you at your padel level_ once either holds no
+level there.
+
+**The request card's origin is one discriminant now** (#802, #801's finding). `proposals`' mapper
+folds the wire's four exclusive flags (`by_link`, `from_ranking`, `from_new_players`,
+`from_same_level`) into `HomeFriendRequest.foundBy` — `link`, `ranking`, `newInRaketa`, or `sameLevel`
+with its %, absent for a group's or a screen's request — and `whereLine` takes the same shape
+(`WhereFound`, spelled in `friendsCopy` with each sport already named inside a sentence, so the copy
+module imports no feature). `FriendRequestsRow`'s `whereFound` names the sport; a found request whose
+sport this build cannot name draws the chip alone, as the ranking's did. A fifth origin (#803's Same
+vibe) is one arm in each and a `switch` that fails to compile without its words.
+
+**A request found through the tags** ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
+§31.10) — that fifth origin. `AskedFrom` gained `SAME_VIBE` and `FoundIn` the arm `{ from: 'SAME_VIBE'
+}`, naming **neither a group nor a sport** (`toAskRequest` sends neither, as New in Raketa's): the
+tile's round button, the vibe sheet's worded one and the record the sheet's face opens all send it.
+`proposals`' mapper reads the wire's fifth flag, `from_same_vibe`, with `in_common` — **today's** count,
+counted on the read — into `foundBy` `{ kind: 'sameVibe', inCommon }`, and the card reads _6 things in
+common_, _1 thing in common_, or _Found you through your tags_ at nought. The count's words are
+`shared/vocabulary`'s `thingsInCommon`, which the tile and the sheet say too — one spelling for two
+features, beside the tag row's own _you too_.
+
+**Every friends write re-reads every read that lists people** (#801; `rereadPeopleLists`, the Home
+rows mechanics §13). Home's people rows, their See all and Hottest groups declare `LISTS_PEOPLE`, and
+`settle`, `rereadHomeToo` and `rereadIfMoved` re-read whatever did — from any surface, a record Rankings
+or a notice opened included. A tag, not their keys: `discovery` draws this feature's button. So
+`reread` is now optional on the ask, cancel and remove hooks, and the round button takes none where
+its surface is a people list. The request card's three exclusive booleans this paragraph flagged for
+#802/#803 were folded into one discriminant by #802 (above).

@@ -314,6 +314,21 @@ the one ladder and never a second one, held to it at every score in `scoreTone.t
 cannot turn amber where a meter stays neutral. Not seen on a device: the fold's pace, and the sheet
 growing under it on both platforms.
 
+**The fold's height moves by a layout transition, never frame by frame** (2026-11-15, seen
+stuttering on an iPhone 15 Pro Max). The first build ran a shared value into the fold's `height`.
+Under the New Architecture, Reanimated 3.16 cannot write a layout prop onto the native view: it
+commits it to the shadow tree, and it **skips that commit while React commits anywhere in the
+app** — the Home header behind the sheet re-rendering was enough. Filmed over USB, the sheet's top
+edge held still for up to three frames and then jumped 100 pt, and the fade and the chevron held
+with it, because one layout prop in a frame's batch sends the whole batch through that commit. Now
+a press changes the fold's height once — nought, or the content's measured height — and
+`useFoldTransition` (`LinearTransition`, `motion.disclose`, `easeDecel`) moves the native frames:
+the fold's, and the sheet's and the foot's, which `PlayerRecordSheet` hands the same transition
+(`BottomSheet`'s `layoutTransition`, opt-in, so every other sheet draws plain views as before). The
+fade, the slide and the chevron stay on one shared value, opacity and transform only. Under the
+same forced commits every transition filmed followed `easeDecel` with no frame held. Seen on iOS
+only; Android owes a look.
+
 **The sheet ends in Block or Unblock, and a block is no longer one of its refusals**
 ([#587](https://github.com/Raketa02/Raketa/issues/587),
 [ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
@@ -445,3 +460,48 @@ opened the record — goes with `groupId` and `sport` into `friends`' `recordAsk
 record's request now goes through. The paragraphs above on _Unblock_ at the foot and on blocks that
 could not be read describe #587–#775 and are superseded; since #773 those are a `503`, the recovery
 sentence with _Try again_.
+
+**All their photos, and a refusal that wins over a record already drawn** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§2; the Home rows screens §9.3). **The record carries every photo** (`photos`, the wire's
+`[{photo_id, photo_url}]`, in the player's own order, the first the header's `photoUrl`), and the sheet
+draws them under the header on `shared/ui`'s `PhotoCarousel` — whoever the record opens for, a
+stranger included, and your own _How others see you_ alike. None with no photo: the header's poster
+is the face then. **One carousel for the record and the vibe sheet** is the screens §9.3's call; #803
+draws the same one. **The header's panel stays, and the carousel repeats its photo first** — a call,
+for the product owner: §9.3 says _in the record's header_, and home rows 23 draws the vibe sheet's
+face and then a carousel that starts with the same photo, so the record does as the sheet does. The
+panel is the face that carries the Level and _ON COURT_; the carousel is the photos. It sits outside the header's one element, hidden from a listener as a face is.
+**A refusal on a read again replaces the record**: the sheet drew `Standing` only while it had no
+record, so a re-read refused `record_unavailable` left the old record on screen with its _Add friend_.
+Since the server's gates are live — a block, or _Show me to new people_ turned off with nothing
+shared — the refusal now wins: the sheet draws its one line and no foot. That is what makes the
+unnamed `player_unavailable` quiet: the friend button re-reads, and the record says _This record isn't
+available_ ([`friends.md`](friends.md)). **Not seen on a device**: the carousel's two cards under the
+header, the bleed to the sheet's edge and the snap.
+
+**A record a Home row opened keeps the row** ([#801](https://github.com/Raketa02/Raketa/issues/801);
+the Home rows mechanics §12). **`foundIn`** is the row — a request asked at the foot is then _found
+among new players_, _at the same level_ in the card's sport (#802), or _through the tags_ (#803, from
+the vibe sheet's face; `friends`' `recordAskedWhere`);
+the people rows' faces hand it (`discovery`'s `RowRecord`). The row under the sheet moves on its own: a friend act or a block at the foot
+re-reads every read that lists people (`LISTS_PEOPLE`).
+
+**The vibe sheet reads the record through three of this feature's own parts** ([#803](https://github.com/Raketa02/Raketa/issues/803);
+the Home rows screens §6.3, the mechanics §8.5). Discovery's vibe sheet _reads the record_ and shows
+what it shows — every photo, the intro, every tag — so it opens only where the record would and is
+current as the record is. Rather than a second spelling of any of it, the record's own drawing crosses
+`types.ts`: **`RecordRead`** — the read in every state, the skeleton, _This record isn't available_
+(winning over a record already drawn) and the recovery sentence with _Try again_, handing the caller
+the record; **`RecordTags`** — the tag row as one element, `recordTagRow` in the caller's overlap and
+`socialTagsLabel` its name, so the sheet's shared tags read _· you too_ as the record's do; and
+**`RecordIntro`** — the intro in the drawing's marks, upright (no italic Archivo is loaded, and a
+`fontStyle` would be synthesised on iOS and dropped on Android; the ticket's _italics_ meets the
+screens' _as the record draws it_, and the record's decision stands — a call for the product owner).
+The sheet itself draws `RecordStanding` and `RecordTags` through the same two files, and the header
+`RecordIntro`, so the refactor moved code and changed nothing on the record (`recordCard`,
+`recordDetails` and the sheet's suites stand as they were). **The record carries no distance**: its
+wire has no `distance_km`, so a record opened from a Home row writes no identity line, and the sheet's
+row reads _6 things in common_ alone, never _· In your area · 0,6 km_. The reader's own area is known
+(their own record's `area_code`), but no form of the line writes _In your area_ without the kilometres.
+#795's contract says the sheet reads the distance off the record: a backend ask, for the product owner.

@@ -1160,6 +1160,7 @@ describe('Members', () => {
         relation: 'NONE',
         can_add_friend: true,
         nickname: ZOFIA.name,
+        photos: [],
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: 2.69, band: 'Established' }],

@@ -36,6 +36,7 @@ from app.modules.groups.application.club_groups import (
     ClubGroupRow,
     ClubGroupAdministrator,
 )
+from app.modules.groups.application.hottest_groups import HottestGroupCard
 from app.modules.groups.application.official_groups import (
     AdministeredClub,
     AdministeredGroupCard,
@@ -57,6 +58,7 @@ from app.modules.groups.application.views import (
     NamedClub,
     RequestCard,
 )
+from app.modules.groups.domain.hottest import HeatTag
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.link import group_link
 from app.modules.groups.domain.monogram import MONOGRAM_COLOURS, Monogram
@@ -406,6 +408,121 @@ class GroupPersonSchema(BaseModel):
             fields["photo_id"] = face.photo_id
             fields["photo_url"] = face.photo_url
         return fields
+
+
+class HottestGroupSchema(GroupRowSchema):
+    """One card of Home's *Hottest groups* — and **everything its group sheet
+    shows**, so tapping the card needs no second read (`docs/adr/0204` §3,
+    §11). Drawn for any player, **whether they are in the group or not**; the
+    group page itself stays members-only."""
+
+    join_policy: JoinPolicy = Field(
+        description=(
+            "`ANYONE` — *Open group*, and the chip is **Join**; "
+            "`PEOPLE_I_APPROVE` — *Closed group*, and the chip is **Ask to "
+            "join**. Read `relation` and `is_administrator` first."
+        )
+    )
+    run_by: str | None = Field(
+        description=(
+            "The sheet's *run by*: **an official group's club**, by its name — "
+            "whoever runs it, and while nobody does, since the club answers its "
+            "requests — and **a player group's Owner**, by their whole nickname, "
+            "never cut and never with an @. `null` only for an Owner who can no "
+            "longer be named."
+        )
+    )
+    club: ClubNameSchema = Field(description="The club it plays at.")
+    games_this_week: int = Field(
+        description=(
+            "Games booked in the group whose court time falls in **the last 7 "
+            "days**, to the minute — none called off, scored or not, a friends "
+            "game booked in the group included."
+        )
+    )
+    new_this_month: int = Field(
+        description=(
+            "Members who joined in **the last 30 days** and are still in it: the "
+            "green *+3 this month*, drawn only when above nought. Somebody who "
+            "left and came back counts by the join that stands."
+        )
+    )
+    heat_share: float = Field(
+        ge=0,
+        le=1,
+        description=(
+            "The heat bar, from 0 to 1: this card's heat over the **HOTTEST** "
+            "card's, whose bar is full — or, with no HOTTEST, over the highest "
+            "heat in the row, so no bar is more than full. Heat is 2 × games "
+            "this week + 3 × new this month + players counted up to 20."
+        ),
+    )
+    tag: HeatTag | None = Field(
+        description=(
+            "`HOTTEST` on exactly one card — the highest heat, and only if it "
+            "had a game this week; `GROWING` on any other with **+4 or more** "
+            "new this month **and** new making up at least a quarter of today's "
+            "players; `null` on the rest. The row is in order already: HOTTEST, "
+            "then GROWING by heat, then untagged by heat."
+        )
+    )
+    faces: list[GroupPersonSchema] = Field(
+        description=(
+            "**Up to six member faces** — the sheet's six; the card draws the "
+            "first four. The reader's friends first, then the longest-standing "
+            "members; **never the reader's own face**. Not a way to anybody: a "
+            "face here is not tapped."
+        )
+    )
+    friends_count: int = Field(
+        description=(
+            "How many of the reader's friends are members now: *7 of your "
+            "friends play here*. At 0 the sheet says `member_count` players "
+            "instead."
+        )
+    )
+    relation: GroupRelation = Field(
+        description=(
+            "`MEMBER` — **You're in** on the card, **Open group** on the sheet, "
+            "both opening the group page; `REQUESTED` — **Asked**, which opens "
+            "*Withdraw request*; `NONE` — **Join** or **Ask to join**, by "
+            "`join_policy`."
+        )
+    )
+    is_administrator: bool = Field(
+        description=(
+            "Whether **the reader** runs this official group: their chip is "
+            "**Join**, whatever `join_policy` says, and it admits them at once. "
+            "Always `false` on a player group."
+        )
+    )
+
+    @classmethod
+    def from_view(cls, card: HottestGroupCard) -> "HottestGroupSchema":
+        return cls(
+            **GroupRowSchema.fields_of(card.group.row),
+            join_policy=card.group.join_policy,
+            run_by=card.run_by,
+            club=ClubNameSchema.from_view(card.club),
+            games_this_week=card.games_this_week,
+            new_this_month=card.new_this_month,
+            heat_share=card.heat_share,
+            tag=card.tag,
+            faces=[GroupPersonSchema.from_view(face) for face in card.faces],
+            friends_count=card.friends_count,
+            relation=card.group.relation,
+            is_administrator=card.group.is_administrator,
+        )
+
+
+class HottestGroupsResponse(BaseModel):
+    groups: list[HottestGroupSchema] = Field(
+        description=(
+            "**Up to six**, in the row's order — every group with **3 or more "
+            "players** is a candidate, the reader's own included. Empty when "
+            "there is none, and Home hides the row."
+        )
+    )
 
 
 class GroupSportSchema(BaseModel):

@@ -34,11 +34,12 @@ import {
   SportPill,
   type AnotherSport,
   type BarCover,
+  type SportChoice,
   type SportPillWords,
 } from './SportPill';
 import { theme } from './theme';
 
-export type { AnotherSport, SportPillWords } from './SportPill';
+export { ALL_SPORTS, type AnotherSport, type SportChoice, type SportPillWords } from './SportPill';
 
 /** Where the bar's right end stands in from the page's edge: the gutter, less its own inset. */
 const BAR_INSET = theme.size.gutter - theme.size.groupPage.filterPad;
@@ -48,17 +49,18 @@ interface Box {
   readonly width: number;
 }
 
-export interface SportPillFrameProps {
+export interface SportPillFrameProps<S extends SportChoice = Sport> {
   /**
    * **The sports to offer**, in the order the bar lists them — `undefined` until the page knows. One
-   * is a plain label, unless there is *+ Another sport*.
+   * is a plain label, unless there is *+ Another sport*. *All* (`ALL_SPORTS`) where the page offers
+   * it (#801).
    */
-  readonly sports: readonly Sport[] | undefined;
+  readonly sports: readonly S[] | undefined;
   /** The sport the page is on — `undefined` until it is known. No pill is drawn until both are. */
-  readonly sport: Sport | undefined;
+  readonly sport: S | undefined;
   /** **Another sport was picked** — never the current one, which only folds the bar. */
-  readonly onPick: (sport: Sport) => void;
-  readonly words: SportPillWords;
+  readonly onPick: (sport: S) => void;
+  readonly words: SportPillWords<S>;
   /** *+ Another sport*, the bar's last pill — absent where the page offers none. */
   readonly another?: AnotherSport;
   /**
@@ -75,7 +77,7 @@ export interface SportPillFrameProps {
   readonly children: ReactNode;
 }
 
-export function SportPillFrame({
+export function SportPillFrame<S extends SportChoice = Sport>({
   sports,
   sport,
   onPick,
@@ -83,7 +85,7 @@ export function SportPillFrame({
   another,
   header,
   children,
-}: SportPillFrameProps) {
+}: SportPillFrameProps<S>) {
   const [unfolded, setUnfolded] = useState(false);
   const [headerBox, setHeaderBox] = useState<{ readonly width: number; readonly height: number }>();
   const [covered, setCovered] = useState<Box>();
@@ -91,7 +93,7 @@ export function SportPillFrame({
 
   const fold = () => setUnfolded(false);
 
-  function choose(chosen: Sport) {
+  function choose(chosen: S) {
     if (chosen !== sport) onPick(chosen);
     fold();
   }
@@ -196,7 +198,7 @@ function coverOf(headerWidth: number | undefined, covered: Box | undefined): Bar
  * folds it: the shell's tab bar is outside the page and the backdrop cannot cover it, so a tap
  * there leaves the page with the bar open, and it must not be open when the player comes back.
  */
-function FoldAway({ onFold }: { readonly onFold: () => void }) {
+export function FoldAway({ onFold }: { readonly onFold: () => void }) {
   useHardwareBack(onFold);
 
   // Through a ref, so the blur subscription is made once rather than on every render of a parent

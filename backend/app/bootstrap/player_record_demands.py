@@ -9,12 +9,13 @@ questions of ten others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
-**One port here has three implementations, and that is the shape rather than an
-accident.** ``PriorDisclosure`` is *has this reader already been shown this
-person*, and the platform answers it in three places — they were on a court
-together, they are both in a group, the reader runs a group the subject is in
-(#575). The suite runs **each** of them against the demand, which is what makes
-*no adapter signs half a contract* true of a port with more than one signatory.
+**One port here has five implementations, and that is the shape rather than an
+accident.** ``PriorDisclosure`` is *do these two already share something*, and
+the platform answers it in five places — they were on a court together, they
+are both in a group, the reader runs a group the subject is in (#575), they are
+friends (``docs/adr/0204`` §2), the subject asked the reader (a call, #791).
+The suite runs **each** of them against the demand, which is what makes *no
+adapter signs half a contract* true of a port with more than one signatory.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
@@ -42,9 +43,11 @@ from app.bootstrap.composition import (
     build_block_query,
     build_domain_event_store,
     build_event_publisher,
+    build_asked_you_disclosure,
+    build_friends_disclosure,
     build_game_disclosure,
-    build_shown_to_everybody,
     build_group_disclosure,
+    build_open_to_new_people,
     build_photo_storage,
     build_record_gates,
     build_record_photo_link,
@@ -60,7 +63,7 @@ from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
 from app.modules.player_record.domain.ports import (
     PLAYER_RECORD_DEMANDS,
-    ShownToEverybody,
+    OpenToNewPeople,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -121,11 +124,23 @@ def _record_gates(session: AsyncSession) -> RecordGates:
     )
 
 
-def _shown_to_everybody(session: AsyncSession) -> ShownToEverybody:
-    """Whom the Ranking shows everybody, over the session's ranking rows and
-    profiles."""
+def _asked_you(session: AsyncSession) -> PriorDisclosure:
+    """A request the subject sent the reader, over Friends' read on the
+    session."""
 
-    return build_shown_to_everybody(session)
+    return build_asked_you_disclosure(session)
+
+
+def _open_to_new_people(session: AsyncSession) -> OpenToNewPeople:
+    """*Show me to new people*, over the session's profiles."""
+
+    return build_open_to_new_people(session)
+
+
+def _friends(session: AsyncSession) -> PriorDisclosure:
+    """A friendship, over Friends' read on the session."""
+
+    return build_friends_disclosure(session)
 
 
 def _relations(session: AsyncSession) -> RelationsOfTheReader:
@@ -161,9 +176,19 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         build=build_runner_disclosure,
     ),
     RegisteredImplementation(
-        port=ShownToEverybody,
-        name="RankingsShownToEverybody",
-        build=_shown_to_everybody,
+        port=PriorDisclosure,
+        name="FriendsTheyAre",
+        build=_friends,
+    ),
+    RegisteredImplementation(
+        port=PriorDisclosure,
+        name="TheyAskedYou",
+        build=_asked_you,
+    ),
+    RegisteredImplementation(
+        port=OpenToNewPeople,
+        name="ProfileOpenToNewPeople",
+        build=_open_to_new_people,
     ),
     RegisteredImplementation(
         port=RecordGates,

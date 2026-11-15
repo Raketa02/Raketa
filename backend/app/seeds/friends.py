@@ -62,7 +62,6 @@ from app.bootstrap.composition import (
     build_read_your_friend_link,
     build_readers_blocks,
     build_readers_groups,
-    build_requests_counted,
     build_unit_of_work,
     build_who_may_be_asked,
     build_user_repository,
@@ -176,7 +175,6 @@ class FriendActs:
                 friendships=_friendships(session),
                 blocks=build_readers_blocks(session),
                 who=build_who_may_be_asked(session),
-                counted=build_requests_counted(session),
                 uow=build_unit_of_work(session),
                 clock=hours_before(self._now, hours),
             ).execute(
@@ -338,7 +336,11 @@ async def write_the_friends(
             session, settings=settings
         ).execute(ids[her.slug])
     slug_of = {player_id: slug for slug, player_id in ids.items()}
-    on_home = tuple(slug_of[card.requester_id] for card in home)
+    # The named accounts alone: a later layer's people ask her too — New in
+    # Raketa's newcomer (#793) — and this layer's claim is about its own.
+    on_home = tuple(
+        slug_of[card.requester_id] for card in home if card.requester_id in slug_of
+    )
     seeded = SeededFriends(
         friends=_with(relations, FriendRelation.FRIEND, slug_of),
         on_her_home=on_home,

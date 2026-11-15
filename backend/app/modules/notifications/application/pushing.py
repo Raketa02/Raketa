@@ -30,6 +30,7 @@ import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import final
+from uuid import UUID
 
 from app.application.events import DeliveryContext
 from app.kernel import Clock, instant, invariant
@@ -75,9 +76,14 @@ class NoticePushes:
     def __init__(self, *, words: NoticeWords) -> None:
         self._words = words
 
-    async def of(self, notices: Sequence[RecordedNotice]) -> list[PushMessage | None]:
+    async def of(
+        self, notices: Sequence[RecordedNotice], *, reader: UUID
+    ) -> list[PushMessage | None]:
+        """``reader`` is whose notices these are: a friend request from *Same
+        competitive level* says today's % between the two (#794)."""
+
         given = [replace(notice, gathered=0) for notice in notices if not notice.own]
-        drawn = iter(await self._words.of(given))
+        drawn = iter(await self._words.of(given, reader=reader))
         return [
             None if notice.own else _message(notice, next(drawn)) for notice in notices
         ]
@@ -137,7 +143,7 @@ class PushTheNotice:
         tokens = await self._preferences.tokens_of(event.player_id)
         if not tokens:
             return
-        [message] = await self._pushes.of([recorded(event)])
+        [message] = await self._pushes.of([recorded(event)], reader=event.player_id)
         if message is None:
             return
         try:

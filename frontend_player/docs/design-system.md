@@ -180,6 +180,13 @@ mark, 3,89:1 on white against a mark's 3:1. It says no meaning the list holds: i
 the product owner kept it when asked. It is recorded as what it is, an exception by taste on one
 control, and not as a seventh meaning anything else may reach for.
 
+**Home's heat bar ends in `coral`, the hot tag's meaning** ([#800](https://github.com/Raketa02/Raketa/issues/800),
+[7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet), Part 16
+2026-11-14; the Home rows screens §3.2, whose mocks win on a look). A Hottest groups card's bar runs
+from `amber` to `coral` up to the group's heat: the list's fifth entry, _hot_, drawn as a length
+rather than a tag, and a mark rather than a text bed. Not a seventh entry; flagged for the product
+owner with the rest.
+
 ## 1.3 Semantic colour is never decorative
 
 | Token   | Means                                  |
@@ -191,6 +198,11 @@ control, and not as a seventh meaning anything else may reach for.
 
 `info` is the deep teal already in the palette rather than a new blue. **The palette does
 not grow to accommodate a new meaning; a meaning is assigned to a colour already present.**
+
+> **Amended 2026-11-14** — a Hottest groups card's growth, _+3 this month_, is drawn in `mintInk`
+> ([#800](https://github.com/Raketa02/Raketa/issues/800), [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet);
+> home rows 3–6 draw it green): players who joined and **stayed**, a gain that is already banked,
+> which is _settled_ read as a count. It is the figure's ink and never its only word.
 
 ## 1.4 Numbers are monospaced, always
 
@@ -237,7 +249,9 @@ own two-part layout, drawn on the phone, and not a harness around it.
 
 > **Amended 2026-09-16** — three fenced dark grounds sit beside this table and are not in it,
 > because none is a surface a card or a control may be drawn on: the yes screen's
-> (`yesGroundCentre` / `yesGroundEdge`, ADR-0167), the deck card's wash (`deckWash`, ADR-0169)
+> (`yesGroundCentre` / `yesGroundEdge`, ADR-0167), the deck card's wash (`deckWash`, ADR-0169 —
+> since 2026-11-14 the portrait tile's `portraitWash`, [7.31](#731-the-portrait-tile), the deck card
+> having left with Classic play)
 > and the radar's field (`radarGroundCentre` / `radarGroundEdge`, ADR-0174), with the zoom
 > cluster's bed `radarControl` — `ink` at half strength — as the one dark-on-dark tile in the app.
 > Each is recorded in [15.4](#154-dark-mode) and [Part 16](#part-16--amendments-after-locking).
@@ -250,6 +264,16 @@ own two-part layout, drawn on the phone, and not a harness around it.
 > `stageGlow` at its foot, #784, [12.2](#122-the-stage--sign-in-and-sign-up)). Since 2026-11-09 its
 > podium's two translucent whites stand on it too — `stageStep`, the outer steps, and `stageRim`, the
 > rim round a face (#788) — fenced to sign-up's hero.
+>
+> **Amended 2026-11-14** — and one translucent white that is not a ground: `groupBandStripe`, white
+> at 0,12, the paler stripes over a Hottest groups card's band in the group's own `MONOGRAM_HUES`
+> colour (#800, [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet)).
+> Nothing is written on it, and it is drawn on that band alone.
+>
+> **Amended 2026-11-14** — a sixth ground: the Same level card's (`levelCardGround`, flat, #802,
+> [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet)), the mocks' measured value,
+> which the stage's happens to equal and is not, fenced to that card. It exists to carry the game
+> cards' three forecast inks at large text's 3:1, which `night` cannot (`gameGreen` 2,88 there).
 
 > `line` **bounds a thing**; `line2` is a **fold inside one thing**. The hairline uses
 > `line2` precisely so a card with two sections reads as one object, not two.
@@ -676,6 +700,14 @@ measured on `prototype/now-and-game-screen`.
 > reasoning for ascenders. **The next surface that wants a word this size reopens the record**,
 > which is the whole of why it is named for the screen rather than for a size.
 
+**And a figure, not a word: `numeral`** (2026-11-15, [#805](https://github.com/Raketa02/Raketa/issues/805),
+[7.36](#736-top-10-the-numbered-card-and-the-rows-sport-pill), Part 16) — Top 10's place, 1 to 10,
+**108 / 800, tracked −16**, drawn as SVG text behind each card. It is not a sans role a surface
+reaches for to say something: it is a picture of a number, hidden from a listener, the card beside it
+naming the place. Its size is the mock's — figures 70–79pt tall beside a 154pt card — and its metrics
+(`size.topTen.figure`) are Archivo 800's own, read off the font. **One use**: a second surface that
+wants a figure this size reopens the Top 10 row in Part 16, as a word this size reopens `yesWord`'s.
+
 ### `eyebrow` labels a section; `h2` titles a card
 
 This document said both, and five shipped surfaces split exactly along the seam
@@ -813,7 +845,10 @@ is 13 — the darker fill makes the corner read tighter at the same radius.
 > [ADR-0167](../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 > §2. The chip is still the only true pill among the controls the system's surfaces draw; the
 > exception is one screen's and is fenced there. **Amended 2026-11-06**: and Members' friend pills
-> (#753), the second surface the record was reopened for ([6.1](#61-button)).
+> (#753), the second surface the record was reopened for ([6.1](#61-button)). **Amended
+> 2026-11-14**: and Home's Hottest groups (#800, [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet)) —
+> the card's chip and the group sheet's _Join_, _Ask to join_ and _Open group_, which home rows 3–6
+> draw as pills; the sheet's _Asked_ keeps 6.1's corner, as home rows 6 draws it.
 
 > **Amended 2026-09-15** — and the Players tab draws three more, on
 > [ADR-0169](../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3 and
@@ -1077,16 +1112,18 @@ Used for every key-value list: the result screen's figures, the evidence trail's
 height 34   paddingHorizontal 15   radius 10   label 12 / 700
 ```
 
-| Variant   | Fill                    | Label  | Pressed fill                 |
-| --------- | ----------------------- | ------ | ---------------------------- |
-| primary   | `coralInk`              | `#fff` | `coral`                      |
-| dark      | `night`                 | `#fff` | `night2`                     |
-| secondary | `surface` + 1pt `line`  | `ink`  | `line2`                      |
-| settled   | `mintInk`               | `#fff` | `mint`                       |
-| volt      | `volt`                  | `ink`  | `opacity: .7`                |
-| arranging | `arranging`             | `ink`  | `opacity: .7`                |
-| on-dark   | `rgba(255,255,255,.17)` | `#fff` | `rgba(255,255,255,.26)`      |
-| disabled  | —                       | —      | `opacity: .4`, not pressable |
+| Variant     | Fill                    | Label     | Pressed fill                 |
+| ----------- | ----------------------- | --------- | ---------------------------- |
+| primary     | `coralInk`              | `#fff`    | `coral`                      |
+| dark        | `night`                 | `#fff`    | `night2`                     |
+| secondary   | `surface` + 1pt `line`  | `ink`     | `line2`                      |
+| settled     | `mintInk`               | `#fff`    | `mint`                       |
+| settledSoft | `mintSoft`              | `mintInk` | `mintLine`                   |
+| volt        | `volt`                  | `ink`     | `opacity: .7`                |
+| arranging   | `arranging`             | `ink`     | `opacity: .7`                |
+| on-dark     | `rgba(255,255,255,.17)` | `#fff`    | `rgba(255,255,255,.26)`      |
+| waiting     | `amberSoft`             | `amber`   | `amberLine`                  |
+| disabled    | —                       | —         | `opacity: .4`, not pressable |
 
 Heights in practice: **32** (tertiary in a card), **34** (default), **40** (screen action),
 **42** (the primary action on a result screen). All clear the touch minimum.
@@ -1294,6 +1331,14 @@ background line2    label muted
 | bad         | `redSoft`               | `red`      |
 | volt        | `volt`                  | `ink`      |
 | on-dark     | `rgba(255,255,255,.14)` | `#fff`     |
+| more        | none · 1pt `line` dash  | `muted`    |
+
+**`more` is a count, not a state** ([#803](https://github.com/Raketa02/Raketa/issues/803); home rows
+20, 22.3): _+2 more_ in the last place a Same vibe tile's three lines leave, for the tags it had no
+room for. No bed and none of the six tones — it says _there is more of the same_ — and a dashed `line`
+border to tell it from the tags beside it. **The dash stands in the padding's first point** (2 and 5
+where the others are 3 and 6), so the box is every tag's: a line of chips stays one height, and a width
+measured is the width drawn.
 
 **`volt` is the one variant whose background is a base colour rather than a soft.** Volt has
 no soft and needs none: it is _a fill anywhere and a stroke only on dark_
@@ -1353,10 +1398,12 @@ is right beside it. The dot stays free to say which sport, on a card that says s
 
 ## 6.5 Touch targets
 
-**Nothing tappable may have a reachable area smaller than 44 × 44pt** — with two recorded
-exceptions, [6.8](#68-the-availability-grid)'s hour cell, below, and **a face behind another on
+**Nothing tappable may have a reachable area smaller than 44 × 44pt** — with three recorded
+exceptions, [6.8](#68-the-availability-grid)'s hour cell, below, **a face behind another on
 Home's ASKED FOR A LEVEL card**, which keeps the 26pt of it that shows across (Part 16, 2026-11-07,
-#765: a stack whose faces each open a record cannot give each one 44 without ceasing to overlap). The prototype's
+#765: a stack whose faces each open a record cannot give each one 44 without ceasing to overlap),
+and **a Home row's link**, reachable 36 high between the row above and its own rail (Part 16,
+2026-11-14, #798, below). The prototype's
 controls are visually smaller than that, which is correct — the _visual_ stays, the
 _target_ grows:
 
@@ -1429,6 +1476,21 @@ apart, so a target overhanging the edge could take at most 4,5pt from the gap an
 land at 40,5 — and the 4,5pt it took would be the next tile's. Anchored inside, the whole
 square is the tile's own, and what remains of the tile is still four times the minimum.
 
+**A Home row's link — _See all ›_, Top 10's _Rankings ›_ — is reachable 36pt high, under the
+minimum on purpose** (2026-11-14, [#798](https://github.com/Raketa02/Raketa/issues/798), Part 16).
+The mocks draw the link on the heading's line with the rows no further apart than a row without
+one, so its 16pt line **overhangs** the eyebrow's 12 by 2 above and 2 below rather than growing it
+— and the heading's line sits `space.lg` under the row above and `space.sm` over the row's own
+rail, which is all the room there is. `hit.rowLink` takes the whole of both, 13 above and 7 below,
+and stops at the rail, whose cards are targets of their own: a slop that reached into them would
+take a press meant for a card. Sideways it reaches the screen edge on the right, and **3 on the
+left, the neighbour rule's** — a control beside it (Top 10's sport pill) is `space.sm` away and
+takes 3 of its own (`hit.chip`), which leaves 3 between the two targets.
+
+| Control                                  | Visual             | `hitSlop`                                                         |
+| ---------------------------------------- | ------------------ | ----------------------------------------------------------------- |
+| Home row link ([7.7](#77-the-card-rail)) | 16 tall, words + › | `{ top: 13, bottom: 7, left: 3, right: 15 }` — 36 tall, see above |
+
 ## 6.6 Press states
 
 Touch has no hover. Every pressable declares its pressed appearance explicitly:
@@ -1465,7 +1527,8 @@ the reading 6.5 already refuses.
 The auth forms' text link — _Create an account_, _Forgot password?_, _Ask again_ — takes the chip's
 `opacity: .7` ([#515](https://github.com/Raketa02/Raketa/issues/515)). Sign-in and sign-up drew it
 at `.6` while each held its own copy; it is one piece now, `AuthLink`, and a shared control does not
-keep the one value this table does not have.
+keep the one value this table does not have. A Home row's link (_See all ›_, #798) is the same
+text link on Home's heading line, and presses the same.
 
 **The add control takes the card's press state and the photo tile does not**, though they
 are the same rectangle. The add control is a pressable card-shaped surface with a border to
@@ -2117,6 +2180,13 @@ pressed opacity .7, over either state
 > what the mode being off means there — **and the switch is named _Show me in General_**, so a
 > listener hears _Show me in General, off_ rather than _Hidden from General, off_, which says the
 > opposite.
+>
+> **Amended 2026-11-14 — one consumer again** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+> [ADR-0204](../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+> §2). _Show me in General_ became _Show me to new people_, and the hidden card went with it: nobody is
+> hidden from the ranking. The You row still draws `door`; **`onDark` and `name` are unbuilt**, their
+> spelling above kept, as this section kept the switch itself while it was unbuilt. The two on-dark
+> figures, 7,88:1 and 13,29:1, stand as derived on 2026-11-08 and are derived again with `onDark`.
 
 **Nothing already in Part 6 carries `checked` on a mode.** [6.11](#611-the-tick-box) says in
 as many words that it is not a switch — it is _"a claim a player either makes or does not"_,
@@ -2632,6 +2702,26 @@ with neither peek nor dots says nothing at all about there being a second card.
 bottom **so footers align across cards of differing height** — which is the whole reason a rail
 can hold a card with a 40pt figure beside one with none.
 
+**A third, for portrait tiles** ([#801](https://github.com/Raketa02/Raketa/issues/801), home rows
+17): New in Raketa's tiles are `size.portraitTile.railRatio` (0,355) of the content width — two
+whole and the third cut at two thirds, the cut the affordance, as the peek is. **A lone tile keeps
+its width** (a portrait the width of the screen is a poster), and the rail scrolls freely with no
+dots ([7.31](#731-the-portrait-tile)).
+
+**A fourth, numbered** ([#805](https://github.com/Raketa02/Raketa/issues/805), home rows 25–25.3):
+Top 10's cards are `size.topTen.railRatio` (0,29) of the content width — the width the rail hands is
+the card's, and the numeral standing beside each is the row's own, so an item is wider than the width
+handed and _10_'s wider still. **A lone card keeps its width**, the rail scrolls freely with no dots,
+and the cut at the right edge is the affordance ([7.36](#736-top-10-the-numbered-card-and-the-rows-sport-pill)).
+
+**On Home both rails are one frame** ([#798](https://github.com/Raketa02/Raketa/issues/798)):
+`HomeRow` draws a row's section and its eyebrow heading, with an optional control and an optional
+link — _See all ›_ — on the heading's line, and `HomeRowRail` draws the rail in either geometry,
+handing each card its width. **A peeking rail of one card draws it at the content width**, there
+being nothing to peek at; it scrolls freely unless the row asks it to snap. A paging rail draws
+its dots itself. Every row on Home sits on it, so a new row inherits the heading, the gap, the
+bleed and the widths rather than copying them.
+
 ## 7.8 The confidence ring
 
 Like the level bar, not a styled component but a drawn object — an arc, a track and a tick,
@@ -2880,6 +2970,12 @@ stops a panel four lines under the bar picking a different amber from it. **The 
 deliberately not a pair**: the bar paints _yours_ `night` and only _theirs_ carries a tone, so
 a panel over the same split takes `line2` on your half and the tone's soft on theirs.
 
+**And a third, for a large figure on a dark card** (#802). `BALANCE_FIGURE` is the same three tones
+in the game cards' own inks — `gameGreen`, `gameAmber`, `gameRed` — for the figure the game card,
+the friends card, sign-in's miniature and the Same level card print on their dark grounds, where
+`BALANCE_INK`'s `mintInk` would sit at 2,67. It stood as three copies in three features until the
+fourth caller, and came here.
+
 **One thing recorded rather than fixed.** §B9's word breaks at 85 / 70 / 55 and its colour
 breaks at 70 / 55, so _Very even_ and _Fairly even_ share one green. That is **correct**: Part
 13 is satisfied by the word, and a fourth tone would need a fourth _meaning_, which
@@ -3061,7 +3157,8 @@ width, a `line2` fold above it — over the counted card and the tags, shut each
 opens. _Full record_ is the row's spoken name, never drawn. It moves
 both ways over `motion.disclose` (280, `easeDecel`, UI thread): the fold's **height** runs to the
 content's measured height, the content fades in from a `space.md` above, and the chevron turns half
-a turn. Never a scale. Shut, the fold is hidden from assistive technology. Under reduced motion it
+a turn. Never a scale, and never a height animated frame by frame: the height changes once and a
+layout transition moves it, the sheet and the foot with it (`RecordDetails`). Shut, the fold is hidden from assistive technology. Under reduced motion it
 is simply open or shut.
 
 **On the record sheet the row is a sibling of the skill card and never a footer on it**, and the
@@ -3448,9 +3545,12 @@ beyond them.
 ## 7.20 The group monogram
 
 ```
-tile      square · side 38 on a list card, 28 in a row, 36 in a group page's header
+tile      square · side 38 on a list card, 28 in a row, 36 in a group page's header,
+          48 on the group sheet (7.30)
 corner    0,27 × side          letters   sans 700 · surface · 0,37 × side, fitted to the tile
 fill      MONOGRAM_HUES[key]   — the backend's colour key 0–7, never a colour
+shield    side 45 · square on top, the two lower corners 0,4 × side · a 3pt surface ring —
+          a Hottest groups card's badge over its band (7.30)
 ```
 
 **A group's tile: two letters cut by the backend on a colour fixed for the group for ever**
@@ -3947,6 +4047,256 @@ close control and its hold is long enough to read two lines and reach for it (`m
 6 s). It is placed by the notifications feature, never pushed onto the toast queue, and spoken once,
 queued, as it arrives.
 
+## 7.30 Home's Hottest groups: the card, the group sheet and the withdraw sheet
+
+```
+card        5.1's card, its padding moved inside so the band runs to its edges · overflow hidden ·
+            a peeking rail card (7.7, 0,74 × content) on Home's row frame (HomeRow)
+band        size.hottest.band (39) · the group's MONOGRAM_HUES colour · diagonal stripes
+            size.hottest.stripe (9) wide, as far apart, in groupBandStripe (white 0,12)
+shield      7.20's shield, size.hottest.shieldTop (15) below the card's top, md from its left
+tag         a pill at the band's top-right, sm in · ink · size.tag high · tag type in surface ·
+            ▲ drawn in volt (size.hottest.tagMark) for HOTTEST, 6.8's volt Plus for GROWING
+body        md at the sides, 9 under the shield · h2 name, one line · the dots and the sports'
+            names, tiny muted, one line cut with an ellipsis
+figures     two columns · num.m tabular ink over tiny muted words · the growth "+3" mono 600 in
+            mintInk, "this month" after it in the words' muted
+heat bar    size.hottest.heatBar (6) · a line2 track, pill · the fill a gradient amber → coral
+            from the left to the served share
+foot        up to four faces (FaceStack, 28), their press grown to 44 by hit.btn · the chip:
+            6.1's button, sm, pill — dark for Join and Ask to join, secondary for Asked and
+            You're in
+sheet       9.1's sheet · the title row's act (9.1 as amended): dark pill for Join / Ask to join,
+            waiting at 6.1's corner for Asked, secondary pill for Open group · 7.20's tile at
+            48 · tiny muted identity line and sports written out · two stat cards: 5.1's card,
+            num.l tabular over tiny muted · six faces and a tiny line
+withdraw    the same sheet: "Waiting for … to answer" as its title · Withdraw request, 6.1's
+            secondary at lg
+```
+
+**The card is two doors, and not one element** ([#800](https://github.com/Raketa02/Raketa/issues/800);
+the Home rows screens §3.2; home rows 3, 3.2, 4, 5, 21). The chip acts; anywhere else opens the
+group sheet. So it is 5.1's `Card` with its pressed border drawn by the presses that open the sheet,
+and the chip is a button of its own, as Home's game card draws its two. **The band is the group's
+colour** — the tile's `MONOGRAM_HUES` hue, with paler stripes laid over it in one white, not a
+second palette — and the shield overlaps it and the body as the mocks draw it. The tag is the one
+dark pill on the band and its mark is volt, a fill on `ink`. **The heat bar runs from `amber` to
+`coral`**: heat is what [1.2](#12-one-accent-used-sparingly)'s _hot tag_ already means, and its
+coral end is that meaning at the bar's far end rather than a seventh — the amber start, _not yet_,
+is where an unheated bar stops. Every figure is mono, and the growth is `mintInk`, the system's
+_settled_ green at a size it can be read at on white.
+
+**The group sheet's one button stands on its title row** (9.1 as amended), and _Asked_ there is the
+**`waiting` button** — amber's soft bed and its ink, the warn tag's two colours as a control, since
+it is pressed: it opens _Withdraw request_. **The withdraw sheet is the same sheet**, its title and
+body swapped, because two native windows — one leaving as the next arrives — are where iOS drops the
+second. _Withdraw request_ is the outlined `secondary` button: the screens §3.3 name a
+_destructive-outline_ button the system does not have, and an outline is the half of it this system
+holds. **Not seen on a device**: the card, the band's stripes, the shield's overlap, the bar's
+gradient, the two sheets.
+
+## 7.31 The portrait tile
+
+```
+tile        a width and an aspect, the caller's: Home's row 0,355 × content at 11:8
+            (size.portraitTile.railRatio / .railAspect), See all's column at 9:8 (.gridAspect)
+            radius.cardDark (15) · overflow hidden · night under the face while it loads
+face        PlayerPhoto's media, edge to edge — the photograph, or the poster
+wash        a linear ramp in the tile's box: nothing at 40 % of the height → portraitWash
+            (ink at .94) at 70 %, held to the foot
+tag         top-left, sm in — New in Raketa's NEW: 6.4's volt tag
+corner      top-right, at the edge — a control of its own, beside the tile's press: the round
+            button's 44 box, its circle 10 in (7.32)
+words       sm in at the sides and foot, xxs apart · the nickname h2 surface · each sport its 6pt
+            dot and "Padel 2,35" num.tiny tabular surface — one to a line on the row, as many as
+            fit in See all · "Joined 2 days ago" tiny onDarkTiny · every label textOnMedia
+press       the tile dims to .7 (6.6's photo tile)
+```
+
+**A face with its words over its foot** ([#801](https://github.com/Raketa02/Raketa/issues/801); the
+Home rows screens §5.2, §11; home rows 17–19). New in Raketa draws it on Home's row and in See all's
+two columns, and Top 10's portrait is next (#805). **Two doors**: the tile opens the record, and the
+corner — the round friend button — is a sibling over it, never inside its press; the tag lets every
+touch through. **The wash is the deck card's, which left with Classic play** (#576): the value moved
+here whole as `portraitWash` rather than standing twice, with its arithmetic — the words stand from
+about 60 % of the height, where the ramp is already about two thirds strong, `ink` at about .63, the
+photo panel's flat pin within a step, and every label carries `textOnMedia`. **Measured** off the
+mocks at 1× (384 × 528 and 266 × 297 pixels). **Not seen on a device**: the tile, the wash over a
+pale photograph at the name, the grid.
+
+## 7.32 The round friend button
+
+```
+circle      size.roundFriend.face (24), pill · centred in its own 44 × 44 press (minTouch) — a
+            box, not a hitSlop: Android lands no touch past a parent's bounds, and a tile clips
++           surface · 6.8's PlusOnSurface (ink, 12pt box)
+…           amber · three 3pt surface dots, 2 apart
+✓           mintInk · 6.8's Tick (surface)
+envelope    volt · Feather mail, 12, ink · a halo: a volt fill 3pt round it at .5
+press       .7 (6.6)
+worded      on a sheet's title row, 6.1 at sm: "+ Add friend" dark pill (the plus a lead mark) ·
+            "Request sent" waiting · "✓ Friends" settledSoft (the tick a lead mark) · "Accept" primary
+```
+
+**One button on every card of Home's people rows, four states, each a shape**
+([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §8; Q29; home rows 8,
+10.3, 17, 18–18.3, 20, 22–22.3). **+** is white with an ink plus on every ground, the pale vibe tiles
+included (the README's override 9); **…** is `amber`, 1.3's _reversible, not yet settled_, which an
+open request is — the screens' _brown_ (white on it 5,70:1); **✓** is `mintInk`, Rule C's green under
+white (5,84:1); **the envelope** is `volt` with `ink` on it (13,96:1) and a paler halo — a volt
+**fill** at half strength, never a ring, which volt may not draw on paper. **Every mark is drawn**:
+Archivo ships no ✓ and no envelope. **The worded twin** takes 6.1's buttons: the pill for _+ Add
+friend_ is the black pill home rows 11 draws, fenced beside Members' friend pills; _Request sent_ is
+`waiting` — the screens say _outlined, brown text_, and the system's request-waiting control is the
+warn tag's soft bed; _✓ Friends_ is the new `settledSoft` (home rows 9). **Not seen on a device**: the
+four marks, the halo, the worded twin (no sheet draws it until #802, #803).
+
+## 7.33 The comparison bar
+
+```
+label       YOU · tag type at 800 · centred over the mark, size.comparisonBar.labelGap (3) above
+row         size.comparisonBar.markHeight (22) · the track centred in it
+track       trackHeight (8), pill, clipped · four band segments on theme.band's drawing values,
+            each its tint — onDark at onDarkBand (0,28) over levelCardGround, base at 7.5's
+            inactiveOpacity (0,38) over surface — with 7.5's 1pt separators in the surface
+fill        from the left to THEIR level, pill · onDark volt · base mint
+mark        at YOURS · markWidth (6) × markHeight (22), pill, a markRing (2) of the surface ·
+            onDark surface (white) · base ink
+names       namesTop (6) under the row · the four band names uppercase in tag type, each as wide as
+            its band, shrinking to nameMinScale (0,75) to stay on a line · the reader's band at 800 (onDark
+            surface · base ink), the rest at 600 (onDark onDarkTiny · base muted)
+```
+
+**Two players' levels in one sport on the Skill passport's scale**
+([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.2–§4.3, §11; home
+rows 7–16). **It reads 7.5's scale and bands, never new ones** — `LevelBar` exports the scale
+(`levelScaleFraction`) and the four bands (`LEVEL_BANDS`) rather than either being written twice —
+and which band is the reader's arrives as a key from the band the rating published, 7.5's correction
+#4. **The fill is the other player, the mark the reader**: a fill short of the mark means they are
+below, one past it above (home rows 7, 8). **Dark and light are two paints of one object**: on the
+Same level card the bands are their tints at a quarter over the ground — #344B5A, #31514E and #534541
+measured, each its tint at 0,26–0,31 — with a volt fill (a fill, which volt may be anywhere) and a
+white mark; on the comparison sheet 7.5's own inactive tints, the theme's `mint` fill (the screens'
+_mid green_) and an `ink` mark. One element to a screen reader, named by the caller. **Not seen on a
+device**: either paint, the names' shrink at a Home row card's width.
+
+## 7.34 Same competitive level: the card and the comparison sheet
+
+```
+card        5.2's dark card — radius.cardDark, lg padding (xs at the foot) — on levelCardGround,
+            no shadow · a peeking rail card on Home's row (7.7), the content width in See all
+pairing     a row: the reader | the % | them · each side a face (size.sameLevel.face, 44,
+            PlayerPhoto's face box) over h2 surface "You" / the nickname and num.s tabular
+            onDarkTiny level · the middle: the % at num.xl tabular in the game cards' ink by
+            balanceTone (gameGreen ≥ 70 · gameAmber 55–69 · gameRed < 55), EVEN in eyebrow
+            onDarkTiny, the sport's 6pt dot and its name in rlLabel onDarkTiny
+bar         7.33 onDark, md under the pairing
+foot        minTouch (44) high · the gap in rlLabel onDarkTiny · " · " · "2 sports" rlValue at
+            700 in volt with Feather's chevron-right, reached by hit.sportsLink · the round
+            friend button (7.32) at the right
+press       the other's side and "N sports" dim to .7 (6.6)
+sheet       9.1's sheet · the title row's act: 7.32's worded twin · one block per shared sport,
+            each after the first under a Hairline (md above): the dot and the sport h2 ink, the
+            levels num.xs tabular ink · 7.33 base · the gap rlLabel muted · 6.4's tag in its
+            tone (ok · warn · bad) — the light version of the card's colour
+```
+
+**A card whose one figure is a forecast** ([#802](https://github.com/Raketa02/Raketa/issues/802);
+the Home rows screens §4.2–§4.4; home rows 7, 8, 9, 10–10.3, 11–16). **It stands on its own ground**:
+the ticket names the game cards' forecast tokens for the %, and on `night` `gameGreen` is 2,88 — under
+large text's 3:1 — so the card takes the value the mocks draw, `#15252C`, as `levelCardGround`, fenced
+as each dark ground before it is; the three inks are 3,41, 8,94 and 3,48 on it at `num.xl`, large
+text (`levelCardGround.test.ts`). **Three doors and nothing else**: the other's side opens the record,
+_N sports ›_ the sheet, the round button acts; the reader's side and the % are not buttons (a call).
+_2 sports_ is volt as text on the dark ground (12,57) — a word, with a drawn chevron, never a
+character. **The sheet's tag is 6.4's**, whose `ok`, `warn` and `bad` already pair `BALANCE_SOFT`'s
+beds with `BALANCE_INK`'s inks — exactly _the light version of its colour_ — rather than a second
+pill. **Not seen on a device**: the card on a row and in See all, the % in each ink, the footer's
+reach beside the button, the sheet's blocks and tags.
+
+## 7.35 Same vibe: the tinted tile and the vibe sheet
+
+```
+tile        5.1's light card — surface, a 1pt line border, radius.card (13), clipped, no shadow ·
+            a peeking rail card on Home's row (7.7), a column of two in See all
+tint        a linear wash from the top-left corner: the player's poster hue (courtPosterFor, its
+            light stop) at TINTED_TILE.tint (0,12) → nothing at TINTED_TILE.until (0,7) of the
+            diagonal · hidden from a listener
+press       md in at the sides and top · the words dim to .7 (6.6), the tint stays · the corner's
+            44 kept clear under the words
+head        the face (size.sameVibe.face: 42 on the row, 36 in the grid, PlayerPhoto's face box),
+            sm to the nickname h2 ink, one line · at its end the vibe % in a surface circle
+            (size.sameVibe.percent: 33 / 30) num.tiny tabular at mono 600 ink · under them "6
+            things in common" rlLabel muted · sm under the head
+chips       6.4's ok tags with the tag's emoji, xs apart both ways, as many whole as fit in three
+            lines, measured — the last place 6.4's more tag, "+2 more" · the three lines' room
+            kept from the first frame
+corner      bottom-right, at the edge — the round friend button's 44 box, its circle 10 in (7.32)
+sheet       9.1's sheet · the title row's act: 7.32's worded twin · md between rows: the face
+            (42) beside the nickname h2 ink and "6 things in common" rlLabel muted, then the
+            record's carousel (Part 8), its intro, its tag row
+```
+
+**A light card that is somebody's colour** ([#803](https://github.com/Raketa02/Raketa/issues/803); the
+Home rows screens §6, §11; home rows 20, 22–22.3, 23, 24). **The tint is the court poster's hue**, so
+the person is one colour everywhere — the poster's own hash, never a second — and the hue still names
+nothing: the poster's 25° bound keeps it off every sport. Laid over `surface` at an eighth at most,
+the tile stays a light card: `muted` on the strongest corner of all sixteen hues is 4,62 at 0,12 —
+and exactly 4,50 at 0,14, so the strength is a ceiling, derived in `tintedTile.test.ts`; `ink` 14,98.
+Measured off home rows 22, where the green poster's corner is its hue at about a tenth. **Two doors**:
+the round button acts; anywhere else opens the vibe sheet. **The chips are measured, never guessed**:
+each chip and each _+N more_ the tile could say is laid out once, unseen, and `tagsThatFit` takes the
+most that leave the count room — the README's override 8, three lines on the row and in See all. **The
+vibe sheet draws the record's parts** — its carousel, its intro (upright: no italic Archivo is loaded,
+the record's own decision over the ticket's _italics_) and its tag row with _· you too_. **A chip is
+never wider than its line** — cut by its own ellipsis, at the width it was measured — and the three
+lines' room is `TAG_HEIGHT`, 6.4's own box, exported beside it. **Not seen on
+a device**: the tint over each hue, the circle, the chips' fit, the sheet against home rows 20–24.
+
+## 7.36 Top 10: the numbered card and the row's sport pill
+
+```
+item        the numeral, then the card over its right part, both on the card's foot · padded
+            by the ring above and below, so the reader's ring is never clipped by the rail
+numeral     type.numeral (Archivo 800, 108, tracked −16) as SVG text, 1–10 · each figure drawn
+            three times: a line hairline (2 × (outline + edge) = 4,5), the paper outline
+            (2 × outline = 3), then the fill — numeralTop → numeralFoot down the figures, volt
+            on the reader's own · its box worked out from Archivo's tabular figures (0,625 em
+            each, 0,699 em over the baseline) · hidden from a listener
+card        7.31's portrait tile at size.topTen.railRatio (0,29) of the content width and
+            size.topTen.aspect (1,48) · marginLeft −size.topTen.overlap (24) over the numeral ·
+            no tag, no corner
+words       the nickname h2 surface, "You" on the reader's own · the level num.tiny tabular
+            surface, sm to the move · every label textOnMedia
+move        a drawn triangle (size.topTen.chipMark, 8) and the count num.tiny at mono 600,
+            xxs apart, no ground · ▲ volt · ▼ gameCoral · the pair skewed −12° · none for no
+            change or New · hidden: the card's name says it
+ring        the reader's own card: a volt border size.topTen.ring (2,5) outside the card's edge,
+            its corner radius.cardDark + the ring
+row         HomeRow, rail numbered (7.7) · the heading's line: TOP 10, the sport pill (6.2's,
+            #774), Rankings › · "Nobody ranked in squash yet" rlLabel muted in the rail's place
+pill        RowSportPill: the bar (6.2) on the pill's own line, from the row's left edge to the
+            pill's right end + the bar's 9 inset, sliding over the heading; Rankings › stays ·
+            a backdrop over the row folds it
+```
+
+**The ranking's top, on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows
+screens §7, §11; home rows 2, 25–27). **The numeral is a picture of a number**, not text: the card it
+stands behind is named by its place, so it claims no contrast and is hidden. Its outline is paper —
+invisible on paper by itself — so a hairline of `line` stands outside it, as home rows 25.3 draws a
+grey edge round the paper; in _10_ the _0_ is drawn after the _1_ with its own outline over the _1_'s
+foot. **The gradient is measured** (`numeralTop` #29444F at the figures' top, `numeralFoot` #15252C at
+the baseline, `night`'s family) and fenced to the numeral. **Its size is the mock's, not the grid's**:
+108 is the figure height home rows 25–26 draw beside a 154pt card, and a new `type` role because
+nothing else may reach for a figure this large. **The move's ▼ is `gameCoral`** — coral's hue lifted
+for a dark ground, 7,12 on the wash's `ink` where `coral` is 4,50 — and ▲ `volt`, 13,96; the pair leans
+by a skew because no italic face is loaded. **The reader's volt ring stands on paper** against 1.3's
+rule that volt strokes only on dark — the mock's, touching the dark card it bounds, and never the only
+mark: the card reads _You_. **The row's pill** is the deck's, held by `RowSportPill` rather than
+`SportPillFrame`: on a row the bar must end where the pill ends, left of _Rankings ›_, not at the page's
+edge. **Not seen on a device**: the numeral's size, gradient, outline and overlap, _10_, the move's
+slant and colours, the ring, and the bar over the heading, against home rows 25–27.
+
 # Part 8 — Scrolling patterns
 
 Two horizontal patterns with different jobs.
@@ -3968,10 +4318,19 @@ Strip       horizontal, snapToInterval = contentWidth + 9, decelerationRate="fas
 **The strip's negative margin is what lets it bleed to the screen edge** while its content
 still aligns to the 15pt gutter.
 
+> **Amended 2026-11-14 — narrower children** ([#798](https://github.com/Raketa02/Raketa/issues/798),
+> [#799](https://github.com/Raketa02/Raketa/issues/799)). The Strip's gap 9, bleed and fast snap are
+> also what carries a child narrower than the content: 7.7's peeking rail (`railCardRatio`, snapping
+> where a row asks) and the **photo carousel** (`PhotoCarousel`, a 4:5 card at `photoCarouselRatio`,
+> half the content, two on screen). `snapToInterval` is then **the child's width + 9**, a card at a
+> time, and _one item at a time_ reads _one card at a time_.
+
 **Scroll position must survive a re-render.** The prototype preserves `scrollLeft` on every
 rail because the screen re-renders on every interaction; in RN the equivalent is keeping
 the rail's data identity stable and never remounting the `ScrollView` — a rail that snaps
-back to the start on every tap is the bug this prevents.
+back to the start on every tap is the bug this prevents. On Home it is kept once, by the row frame
+(`HomeRowRail`, [7.7](#77-the-card-rail)): one `ScrollView` at one place in the tree whatever the
+row's count, card width or heading, and `HomeRow.test.tsx` holds it.
 
 **Pager dots are [7.18](#718-the-rails-dots).** They were one line here — _5pt dots, the
 active one widened to 14pt and coloured `coral`_ — for as long as they were decoration
@@ -3993,6 +4352,11 @@ close   28 circle, line2 background, top-right
 ```
 
 **The scrim is the night colour, not black — the dim matches the palette.**
+
+> **A sheet may carry one act on its title row** ([Part 16](#part-16--amendments-after-locking),
+> 2026-11-14). The group sheet (home rows 6, [#800](https://github.com/Raketa02/Raketa/issues/800))
+> draws its one button between the title and the close: `action`, fixed with the head, so the act
+> never scrolls away from the title it acts on. Not on a sheet with a `mark`.
 
 > **A sheet may put a mark over a centred title** ([Part 16](#part-16--amendments-after-locking),
 > 2026-09-26). The invitation sheet (club 5, [#518](https://github.com/Raketa02/Raketa/issues/518))
@@ -5175,6 +5539,19 @@ every `Ink` would need a second computed value.
 > contract or cross-app effect — and it is fenced in [Part 16](#part-16--amendments-after-locking)
 > _for sign-in's and sign-up's hero only_. `#15252C` is the yes ground's edge a step off and is not
 > that token. Five exceptions, each named for the thing it is, and still no dark mode.
+>
+> **Amended 2026-11-14** — **and the Same competitive level card is the app's sixth dark surface,
+> and it is a card** ([#802](https://github.com/Raketa02/Raketa/issues/802),
+> [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet)). One flat value of its own
+> (`levelCardGround`, measured off home rows 7, 8, 10.3 and 15 and held by
+> `levelCardGround.test.ts`) under the pairing, the comparison bar's dark paint and the footer, on a
+> Home row and in See all; the page behind it is paper and the tab bar stands. It exists for one
+> figure: the ticket prints the % in the game cards' forecast inks (`BALANCE_FIGURE`), and on
+> `night` the green is 2,88 — under large text's 3:1. **Its record is the ticket and PRD
+> [#789](https://github.com/Raketa02/Raketa/issues/789)'s mocks, not an ADR** — the first dark
+> surface argued for without one, which is a call for the product owner to confirm or send back to
+> `night`. Fenced in [Part 16](#part-16--amendments-after-locking) _for this card only_. Six
+> exceptions, each named for the thing it is, and still no dark mode.
 
 ---
 
@@ -5516,6 +5893,14 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [7.22](#722-the-game-card) · [`StageDeck.tsx`](../src/features/auth/components/StageDeck.tsx) · [`MiniGameCard.tsx`](../src/features/auth/components/MiniGameCard.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.stage.card` `size.stage.fan` `motion.stageDeck`                 | Sign-in's hero room was empty night; nothing on the stage moved                                                                                                                                                                                                                                                                                              | **Sign-in's dealt deck (#786)**: three **miniature game cards** in the hero's room — a padel _Seat open_ straight in front, a tennis _Picked for you_ and a squash _Fill in · seat open_ turned 10° either side — each the game card's look redrawn in auth at **`size.stage.card` 270 × 342** with the card's own roles (a 45pt ribbon, the mock's), a one-line booking strip in `voltStroke` on all three and a **`gameGreen` ribbon** on the Fill in (white 4,62); the fan scaled whole into the measured room, never past 1; and **one deal** — stacked for `motion.stageDeck.stacked` 400, the back cards out over `deal` 500, `easeDecel`, once on open — **§1.5's deal**, dealt from the first frame under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | PRD #783 and mock 2, which lead on a look. **An illustration, not the live card**: auth may not import `proposals` (the gate already reaches auth, so it would be a cycle), and a live component bent around a sign-in picture is the wrong trade — so the cost is written in 7.22, 12.2 and `docs/features/auth.md`: **a change to the game card does not reach the hero by itself**. Drawn at twice the mock's miniature because the mock's words measure the real card's roles at almost exactly half (ribbon 0,49, names 0,42, figure 0,52, share 0,53). The green ribbon is the mock's reading of a Fill in, which the live card does not draw. The deal is the hero's one entrance; the swipe and _It's a game!_ that follow are #787's row. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-11-08 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [15.4](#154-dark-mode) · [`useStageLoop.ts`](../src/features/auth/components/useStageLoop.ts) · [`StageSplash.tsx`](../src/features/auth/components/StageSplash.tsx) · `motion.stageDeck` `.easeAccel` `size.stage.swipe` `.stamp` `.splashTile`                                       | One looping animation nothing needed was refused; two loops in the app (the ripple, the typing pulse), each the signal itself; the yes ground, `yesWord` and initials fenced to the yes screen                                                                                                                                                               | **Sign-in's hero loop (#787)**: after the deal, `still` 2000; the front card **picked up** (`swipe.across` 24, `turn` 6°, `pickUp` 700, `easeDecel`) with **I'M IN** on it — `deckStamp` volt, a 3pt volt outline on `photoScrim`, 12° clockwise, top-right, no price; **swiped off** (`swipe` 600, `easeAccel`, to `outTurn` 18°, fading from `fadesFrom`); then **_It's a game!_ over the whole dark hero but the wordmark** — the yes ground's radial, 45pt posters (`splashTile`) with KT, AK, KW and **You bare**, _vs_, the word in `yesWord`, the booked court's line in `tiny` — for `splash` 4000, the yes screen's entrance under a `fade`; the cards **restacked under it**, the splash fading over them for `reset` 400, and the next deal. About 8,6 s a cycle; only while sign-in is in view and the app not in the background (iOS's `inactive` keeps it running), from the deal on return; never under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | PRD #783 and mocks 2, 7–8. **Against 1.5 — the argument, so the next loop is not taken for free**: the ripple and the typing pulse loop because the motion is the signal; this one is not a signal, it is the app explaining itself to somebody who has never used it — the one gesture it is built on, and that the last yes books a court. That is worth motion on the one screen where nobody has seen a card yet, and on no other. So it is fenced as hard as a loop can be: sign-in only, in view, not in the background, nothing under reduced motion or a screen reader, never touching the form, and no haptic. **The three yes values are ADR-0167's, extended by its note of 2026-11-08** to this picture of that screen and nothing else; the live yes screen is not exported or changed. 45pt is measured off mocks 7–8 (44 in both); 54 is the yes screen's own, a whole screen's. The stamp is clockwise and top-right because mock 2 draws it so. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-09 | [12.2](#122-the-stage--sign-in-and-sign-up) · [1.5](#15-nothing-animates-that-does-not-have-to) · [15.4](#154-dark-mode) · [`StagePodium.tsx`](../src/features/auth/components/StagePodium.tsx) · `usePodiumRise.ts` · `StageFace.tsx` · `stageStep` `stageRim` `size.stage.podium` `motion.stagePodium`                                                                                 | Sign-up's hero room was empty night; the stage moved on sign-in alone, on a loop; the podium was Rankings' alone; letters over a poster were the yes screen's and sign-in's picture of it                                                                                                                                                                    | **Sign-up's podium (#788)**: the Rankings podium redrawn in auth — 2 / 1 / 3, `stepWidth` 93, heights 66 / 93 / 51, `radius.btn` tops; the first **volt** with its 1 in `num.l` `ink`, the outer two **`stageStep`** (white at 0,14) with `num.m` white — and on them `stas.w` (**SW**), **You (TK)** in a **3pt volt ring** at 63, and `ines.d` (**ID**), the others in a 2pt **`stageRim`** (white at 0,25) at 48 and 45, names in `cardTitle` white; fitted into the room and standing on its foot. **It rises once**: `motion.stagePodium` — `empty` 350, then the third, second and first steps `stagger` 200 apart, each over `step` 450, `easeDecel`, slid up out of a clip rather than scaled; each player landing from `space.md` below over `player` 300 as their step settles; still at 1 500; again on every opening of sign-up; risen from the first frame under collapsed presentation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | PRD #783 and mock 5, which lead on a look; every value measured off it at 2,1 pixels to the point. **Against 1.5 — once, not a loop**: sign-in's loop tells a story worth seeing again while somebody types; sign-up's picture says one thing, _you, first_, and said again it would be a gesture pulling the eye off the form — so it is the deal's kind of motion, an entrance, and it holds. **A picture of the live podium, not the podium**: rankings' `PodiumSteps` is not exported or changed, so a change to it does not reach the hero by itself (`rankings.md` says so from its side). `stageStep` is `onDarkTag`'s value and not that token — a step is not a tag. Numbers stay mono where mock 5 draws a sans, as the place card's gap line did. **The letters are ADR-0167 §3's, extended by its note of 2026-11-09** to this picture and nothing else; _TK_ is copy, the product owner's choice to keep mock 5's letters on the reader where the splash draws You bare. 2.1 and 15.4 name the two whites. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-14 | [7.7](#77-the-card-rail) · [Part 8](#part-8--scrolling-patterns) · [6.5](#65-touch-targets) · [6.6](#66-press-states) · [`HomeRow.tsx`](../src/shared/ui/HomeRow.tsx) `HomeRow` `HomeRowRail` · `hit.rowLink` · `PagerDots` `testID`                                                                                                                                                     | Each of Home's four rails — FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL, _Your games_ — drew its own section, eyebrow heading, Strip and card width from the same copied styles, and nothing offered _See all ›_                                                                                                                                        | **One Home row frame in shared UI** ([#798](https://github.com/Raketa02/Raketa/issues/798); the Home rows screens §2). `HomeRow` is the section — `space.lg` above, the eyebrow heading, `space.sm` over what follows — with an optional **control** and an optional **link** on the heading's line: the row's words with a hidden `›`, ink `rlValue`, a `link` role named by the row, pressed at `.7`, its 16pt line overhanging the eyebrow's 12 rather than growing it, reached by `hit.rowLink` (`{ top: 13, bottom: 7, left: 3, right: 15 }`, 36 high — 6.5's third exception). `HomeRowRail` takes the row's cards and draws 7.7's two geometries over Part 8's Strip — **peeking** (a lone card at the content width, more at `railCardRatio`, free unless the row asks to snap) and **paging** (the content width, snapping, the dots under it tracking the scroll) — handing each card its width, one `ScrollView` never remounted. The four rails moved onto it with **nothing on screen changing**; _TO CONFIRM_, a list in one card, keeps its own section                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Five new rows were coming (PRD #789: Hottest groups, Same competitive level, New in Raketa, Same vibe, Top 10), each with the same heading and rail — five more copies of the styles four rows already copied. **Two parts rather than one**, because a row says something in place of its rail (_Your games_' empty sentences, Top 10's _Nobody ranked in squash yet_). **The link's words are handed in**, as the sport pill's are, and its name names what it opens, since three _See all_s on one screen would be one name for three places. **36 high and not 44**: the mocks draw the link on the heading's line with the rows no further apart than a row with none, and the room above and below is all there is; a slop into the rail would take a press meant for a card. The link is drawn by no row yet — the first is #801's. **Not seen on a device**: that the four rows did not move is asked for a look                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-11-14 | [6.12](#612-the-switch) · [`Switch.tsx`](../src/shared/ui/Switch.tsx) `onDark` `accessibilityLabel`                                                                                                                                                                                                                                                                                      | Two props on the switch for the Rankings card of a player hidden from General (#778): the dark card's repaint, and _Show me in General_ named over the drawn _Hidden from General_                                                                                                                                                                           | **Unbuilt** ([#799](https://github.com/Raketa02/Raketa/issues/799)). The switch has one consumer, You's _Show me to new people_, with `door`; 6.12 keeps both props specified and its note says so                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | ADR-0204 §2 retired _Show me in General_ and the `HIDDEN` card with it — nobody is hidden from the ranking — so both props lost their only caller. A prop no caller passes is a branch no screen exercises; 6.12's precedent is to keep the decision and drop the code                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-14 | [Part 8](#part-8--scrolling-patterns) · [7.16](#716-the-photo-panel) · [`PhotoCarousel.tsx`](../src/shared/ui/PhotoCarousel.tsx) `PhotoCarousel` · [`theme.ts`](../src/shared/ui/theme.ts) `size.photoCarouselRatio` · Part 8's Strip note · Appendix B                                                                                                                                  | The record drew one photo, the panel's, and nothing drew a player's others                                                                                                                                                                                                                                                                                   | **The photo carousel** ([#799](https://github.com/Raketa02/Raketa/issues/799); the Home rows screens §6.3, §9.3; home rows 23): every photo in the player's order, a card `size.photoCarouselRatio` (0,5) of the content width and 4:5 tall — `PHOTO_PANEL`'s shape, read off it — `radius.card`, over Part 8's Strip — gap 9, bleeding past the gutter, `snapToInterval` a card and the gap, `decelerationRate` fast. **Nothing with no photo**; **a lone photo keeps the card's size**. Hidden from a listener, as `PlayerPhoto` is. Drawn on the record sheet under the header; the vibe sheet (#803) draws the same one                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | ADR-0204 §2: any record opens with all of a player's photos. **Half the width** because home rows 23 draws two side by side, the second running to the sheet's edge — a ratio, for `railCardRatio`'s reason. **4:5** is the photo panel's own shape, so a photo crops alike on the panel and in the carousel. **One carousel for two sheets** is the screens §9.3's call. **A lone photo at the content width** would be a 4:5 card taller than the sheet's first screen. **Not seen on a device**: the two cards, the bleed and the snap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-14 | [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet) · 7.20 · 6.1 · 9.1 · `Button` `waiting` · `BottomSheet` `action` · `theme.ts` `color.groupBandStripe` `size.hottest` `size.monogram.shield` `.sheet` · `GroupMonogram` `shape`                                                                                                                         | No card drew a group to a reader outside it; a sheet's title row held the title and the close; a waiting request was a tag, never pressed                                                                                                                                                                                                                    | **Home's Hottest groups card and its two sheets** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home rows screens §3; home rows 3–6, 21): the striped band in the group's `MONOGRAM_HUES` colour (stripes `groupBandStripe`, white 0,12), the tile as a **shield** over band and body (45, square top, lower corners 0,4 × side, a 3pt surface ring), the tag on an `ink` pill with its mark in volt, mono figures with the growth in `mintInk`, the **heat bar** amber → coral to the served share, four faces, the chip a `sm` pill (`dark` to ask, `secondary` once asked or in). **The group sheet** puts its one button on the title row (`BottomSheet`'s `action`), _Asked_ there a new **`waiting`** button — `amberSoft` / `amber` (5,06:1), pressed `amberLine` — the tile at 48 and two outlined stat cards. **The withdraw sheet** is the same sheet, its title and body swapped; _Withdraw request_ is `secondary` at `lg`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Every look is the mocks' (home rows 3–6, 21), read off them at 1× onto the 3pt grid. **Stripes in one white over the hue**, not a second palette: the band says _this group's colour_. **The heat bar's coral end** is 1.2's _hot tag_ meaning — heat — not a seventh coral; its amber start is _not yet_. **`waiting`** because _Asked_ on the sheet is pressed (it opens Withdraw), so it cannot be 6.4's tag, whose colours it takes. **One sheet for two faces**: iOS drops a second native window opened as the first closes. **`secondary` for Withdraw request**: the screens' _destructive-outline_ button does not exist here. **Not seen on a device**: all of it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-14 | [7.31](#731-the-portrait-tile) · [7.32](#732-the-round-friend-button) · [7.7](#77-the-card-rail) · [6.1](#61-button) · [`theme.ts`](../src/shared/ui/theme.ts) `color.portraitWash` (was `deckWash`) `size.portraitTile` `size.roundFriend` · `PortraitTile` · `HomeRowRail` `tiles` · `Button` `lead` `settledSoft` · `SportPill` `ALL_SPORTS` · Appendix B                             | The deck card's wash was fenced to a card that left with Classic play (#576); a Home rail was peeking or paging; a button's marks stood after its words, and `settled` was the one mint button; the sport pill offered sports only                                                                                                                           | **New in Raketa's portrait tile and the round friend button** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §5, §8, §11; home rows 8, 9, 11, 17–19): the **portrait tile** — a face edge to edge, the deck's wash moved whole to it as `portraitWash`, a corner tag and a corner control beside the tile's own press, the words over the wash — on a **third rail geometry**, `tiles` (0,355 × content, a lone tile keeping its width), at 11:8 on Home and 9:8 in See all's two columns. The **round friend button**: a 24pt circle centred in its own 44pt press, **+** white with `PlusOnSurface`, **…** `amber` with three dots, **✓** `mintInk` with `Tick`, the envelope `volt` with Feather `mail` and a volt-fill halo at .5. Its worded twin is 6.1: **`lead`** draws a Feather plus or check before the words (never spoken), and **`settledSoft`** — `mintSoft` / `mintInk` (5,08:1), pressed `mintLine` — is _✓ Friends_; _+ Add friend_ is the `dark` pill (fenced with the friend pills), _Request sent_ `waiting`, _Accept_ `primary`. **The sport pill offers _All_** (`ALL_SPORTS`), drawn with a two-toned dot, padel's coral into tennis's mint                                                                                                                                                                                                                                                                                                                                                              | Every look is the mocks', read off them at 1× onto the 3pt grid (tile 384 × 528 and 266 × 297 pixels; the button 72 of 384). **The wash moved rather than doubled**: the deck card is gone, and a second token of one value is two values the day either moves. **…'s brown is `amber`**, 1.3's _reversible_ — a request is; **✓ is `mintInk`** for Rule C. **The halo is a fill**, since volt draws no stroke on paper and a tile's top is a photograph's. **`waiting` for _Request sent_**: the screens' _outlined, brown text_ has no button here, and the warn tag's bed is the request-waiting control #800 already made. **Not seen on a device**: all of it — the tile and grid against home rows 17–19, the wash over a pale photograph, the four marks, the halo, the _All_ dot                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-11-14 | [7.33](#733-the-comparison-bar) · [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet) · [2.1](#21-surfaces-and-structure) · [`theme.ts`](../src/shared/ui/theme.ts) `color.levelCardGround` `size.comparisonBar` `size.sameLevel` `hit.sportsLink` · `ComparisonBar` · `LevelBar` `levelScaleFraction` `LEVEL_BANDS`                                                   | Five fenced dark grounds; 7.5's level bar drew one player's level, its scale and bands private to it                                                                                                                                                                                                                                                         | **Same competitive level's card, its bar and the comparison sheet** ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4, §11; home rows 7–16): the **comparison bar** — 7.5's scale and four bands, a fill to the other's level and a tall mark labelled _YOU_ at the reader's, the reader's band bold — in two paints, `onDark` (bands at 0,28 over the ground, volt fill, white mark) and `base` (7.5's inactive tints, `mint` fill, `ink` mark); `LevelBar` exports its scale and bands for it. The **Same level card** on a **sixth dark ground**, `levelCardGround` (`#15252C`): the two faces at 44, the % at `num.xl` in the game cards' inks by `balanceTone`, _EVEN_, the sport, the bar, the gap, _2 sports ›_ in volt reached by `hit.sportsLink`, the round button. The **comparison sheet**: the worded friend button on the title row, a block per sport under hairlines, 6.4's tag in the tone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | The ticket names the game cards' forecast tokens for the %, and `gameGreen` on `night` is 2,88 — under large text's 3:1 — so the card takes the mocks' measured value, fenced, where the three inks are 3,41 / 8,94 / 3,48 (`levelCardGround.test.ts`); it equals the stage's value and is not that token, a value being written for what was drawn. **The bar reads 7.5's scale rather than restating it**: two copies of 1,00–5,00 are two answers the day either moves. The dark bands are their tints at a quarter, measured off home rows 8 and 10.3; the light ones 7.5's own. **The tag is 6.4's**, whose three tones are already `BALANCE_SOFT` over `BALANCE_INK`. **Not seen on a device**: the card, both bar paints, the names' shrink, the sheet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-14 | [7.35](#735-same-vibe-the-tinted-tile-and-the-vibe-sheet) · [6.4](#64-tag--the-status-pill) · [`theme.ts`](../src/shared/ui/theme.ts) `size.sameVibe` · `TintedTile` `TINTED_TILE` · `Tag` `more`                                                                                                                                                                                        | A poster's hue was drawn only as a poster; a tag was a state in one of seven tones                                                                                                                                                                                                                                                                           | **Same vibe's tinted tile, its chips and the vibe sheet** ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens §6, §11; home rows 20–24): the **tinted tile** — 5.1's light card washed from the top-left in the player's poster hue (`courtPosterFor`, the light stop) at 0,12, gone by 0,7 of the diagonal, the round button's corner kept clear; the face and the vibe %'s white circle at `size.sameVibe` (42 / 33 on the row, 36 / 30 in See all). **6.4's `more` tag**: _+2 more_, a dashed `line` border on no bed, `muted`, the dash inside the padding's first point. The chips are 6.4's `ok`, as many whole as fit in three lines, measured. The **vibe sheet** draws the record's carousel, intro and tag row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **The poster's hue, not a new colour**: one person, one colour, by the poster's own hash, and its 25° bound keeps it off every sport. **0,12 is a ceiling**: `muted` on the strongest corner of all sixteen hues is 4,62 there and 4,50 at 0,14 (`tintedTile.test.ts`); the mock's corner is about a tenth. **`more` takes no tone**: a count of tags not drawn is no state. **Measured, not guessed** (PRD #789, the README's override 8). **Not seen on a device**: the tint over each hue, the circle, the chips' fit, the sheet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-15 | [7.36](#736-top-10-the-numbered-card-and-the-rows-sport-pill) · [7.7](#77-the-card-rail) · [3.3](#33-the-type-roles) · [`theme.ts`](../src/shared/ui/theme.ts) `color.numeralTop` `color.numeralFoot` `type.numeral` `size.topTen` · `HomeRow` `over` · `HomeRowRail` `numbered` · `RowSportPill`                                                                                        | No figure was drawn larger than `yesWord`; a Home rail was peeking, paging or tiles; the sport pill stood only in a page's header                                                                                                                                                                                                                            | **Top 10's numbered card and its pill** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows screens §7, §11; home rows 25–27): the **numeral** — `type.numeral` (Archivo 800 at 108, tracked −16) as SVG text, a `line` hairline, a paper outline and a `numeralTop` → `numeralFoot` fill, `volt` on the reader's own — behind the card's left edge; the **card**, 7.31's portrait tile at `size.topTen` (0,29 of the content width, 1,48), its move a drawn triangle and count in `volt` or `gameCoral`, skewed; the reader's **volt ring**; a **`numbered` rail**; `HomeRow`'s **`over`** layer; and **`RowSportPill`**, the deck's pill on a row's heading line, its bar ending where the pill ends                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **The mock's, measured**: the figures 70–79pt tall beside a 154pt card, 104pt cards on both mocks, the gradient #29444F → #15252C down the _2_ — a new type role because nothing else may reach for a figure this large, and fenced colours because nothing else draws them. **`gameCoral` for ▼**: coral at 4,50 on the wash's `ink` is a rounding from failing, the lifted coral 7,12. **The volt ring on paper** is the mock's and touches the dark card it bounds; the card also reads _You_. **A second pill holder** because a row's bar ends at the pill, left of _Rankings ›_, where a page's ends at its edge. **Not seen on a device**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 # Part 17 — What the reset removed
 
@@ -5575,8 +5960,10 @@ TYPE        Archivo everywhere · IBM Plex Mono for every number
             eyebrow 9.5 labels a SECTION — h2 titles a card and never a section
 SPACE       a 3pt grid · 9 between cards · 15 at the gutter
             content width = screen − 30 · rail card = 0.74 × content, or 1.0 with dots
+            portrait tile = 0.355 × content on a Home row, 11:8
+            photo carousel card = 0.5 × content, 4:5
 RADIUS      bigger surface, rounder · dark card 15, light card 13
-TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller · two exceptions: 6.8's hour cell, and a face behind another on Home's ask card (26 across)
+TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller · three exceptions: 6.8's hour cell, a face behind another on Home's ask card (26 across), a Home row's link (36 high)
             no hover — every pressable declares its pressed state
 NUMBERS     mono + tabular · weight 600, never 700 — mono 700 is not loaded
             comma decimals · 2,71 · 65% · 1,9 km · 60 min · 18:30

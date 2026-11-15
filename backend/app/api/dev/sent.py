@@ -169,7 +169,7 @@ async def read_sent(
     preferences: NotificationPreferencesRepositoryDep,
 ) -> SentResponse:
     recent = (await notices.execute(account.id, limit=MOST_RECENT)).notices
-    pushed = await pushes.of([listed.notice for listed in recent])
+    pushed = await pushes.of([listed.notice for listed in recent], reader=account.id)
     phones = await preferences.tokens_of(account.id)
     address = account.email.value
     queued = await db.execute(

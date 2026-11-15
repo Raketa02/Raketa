@@ -23,9 +23,9 @@
 // absent under jest-expo, and every icon in the app asks for it before it draws. That is a
 // harness gap, not a boundary.
 //
-// Three more gaps of that kind follow, each called out where it is: a function React Native's
-// own jest mock leaves out, React's scheduler reading the real clock under fake timers, and a
-// rendered node printed as its whole fiber.
+// Four more gaps of that kind follow, each called out where it is: a function React Native's
+// own jest mock leaves out, React's scheduler reading the real clock under fake timers, a
+// rendered node printed as its whole fiber, and an animation frame drawn every millisecond.
 
 // --- the OS keychain --------------------------------------------------------
 // expo-secure-store talks to the iOS Keychain / Android Keystore and has no JS
@@ -211,6 +211,14 @@ require('./src/test-support/nodePrinting').printNodesAsElements();
 // own `fireGestureHandler` and reads the field it drew.
 require('react-native-gesture-handler/jestSetup');
 require('react-native-reanimated').setUpTests();
+
+// --- animation frames, a screen's distance apart ----------------------------------
+// The fifth gap of the `expo-font` kind: nothing here is testing an animation library.
+// Reanimated's setup above leaves `requestAnimationFrame` a nought-delay timer, so on a fake
+// clock a move drew a frame every millisecond — and a navigation, which runs every pending
+// timer up to Query's five-minute collection, ran sign-in's endless hero loop for a hundred
+// thousand frames (#787). After the setup it replaces; the reasoning is in the module.
+require('./src/test-support/animationFrames').drawFramesAScreenApart();
 
 // --- public runtime config --------------------------------------------------
 // The variables themselves are set in jest.config.js — see the note there; Babel inlines

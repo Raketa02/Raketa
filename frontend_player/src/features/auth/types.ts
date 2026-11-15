@@ -125,6 +125,8 @@ export {
   useCurrentUser,
   useFollowedAccount,
 } from './hooks/useCurrentUser';
+/** **Who is reading the screen** — the cached player's id, read once and never observed. */
+export { useReaderId } from './hooks/useReaderId';
 /**
  * The one write another feature may make to the authenticated player.
  *

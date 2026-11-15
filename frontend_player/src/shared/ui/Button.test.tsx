@@ -83,6 +83,26 @@ describe('the arranging button (6.1)', () => {
   });
 });
 
+/**
+ * **`waiting` is a request waiting on somebody else** — the group sheet's *Asked* (#800, home rows
+ * 6): amber's soft bed and its ink, the warn tag's two colours, as a control. Amber on `amberSoft`
+ * is 5,06:1, and it presses into `amberLine`, its own fold, rather than a hex invented for a press.
+ */
+describe('the waiting button (6.1)', () => {
+  it('fills with amber’s soft bed and labels in amber', () => {
+    render(<Button label="Asked" variant="waiting" onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.amberSoft);
+    expect(label().color).toBe(theme.color.amber);
+  });
+
+  it('presses into amber’s line', () => {
+    render(<Button label="Asked" variant="waiting" onPress={jest.fn()} />);
+
+    expect(drawn(true).backgroundColor).toBe(theme.color.amberLine);
+  });
+});
+
 describe('the on-dark button (6.1)', () => {
   it('takes the two tokens the theme names the on-dark button', () => {
     render(<Button label="Competitive" variant="onDark" onPress={jest.fn()} />);
@@ -186,6 +206,31 @@ describe('the marks after the label (6.1, amended)', () => {
   it('draws none unless asked', () => {
     render(<Button label="Add friend" variant="dark" onPress={() => {}} />);
     expect(screen.UNSAFE_queryAllByType(Feather)).toHaveLength(0);
+  });
+});
+
+/**
+ * **A mark before the words, and the soft settled bed** (6.1, amended 2026-11-14, #801): a sheet's
+ * worded friend button reads *+ Add friend* and *✓ Friends*, and Archivo ships no ✓ — so the plus
+ * and the tick are drawn before the label and never spoken; *✓ Friends* is mint's soft bed with its
+ * ink, as home rows 9 draws it.
+ */
+describe('the mark before the label and settledSoft (6.1, amended)', () => {
+  it('draws a plus or a tick before the words, in the label’s own ink, and speaks the words alone', () => {
+    render(<Button label="Friends" variant="settledSoft" lead="tick" onPress={() => {}} />);
+
+    const [mark] = screen.UNSAFE_getAllByType(Feather);
+    expect(mark?.props.name).toBe('check');
+    expect(mark?.props.color).toBe(theme.color.mintInk);
+    const button = screen.getByRole('button', { name: 'Friends' });
+    expect(StyleSheet.flatten(button.props.style)).toMatchObject({
+      backgroundColor: theme.color.mintSoft,
+    });
+  });
+
+  it('draws the plus for Add friend', () => {
+    render(<Button label="Add friend" variant="dark" lead="plus" onPress={() => {}} />);
+    expect(screen.UNSAFE_getAllByType(Feather).map((mark) => mark.props.name)).toEqual(['plus']);
   });
 });
 

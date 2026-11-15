@@ -129,7 +129,7 @@ export { rereadHome } from './hooks/useHome';
  * `friends` draws them and answers them: the read and its type cross, and nothing else does.
  */
 export { useHomeFriendRequests } from './hooks/useHome';
-export type { HomeFriendRequest } from './domain/home';
+export type { HomeFriendRequest, RequestFoundBy } from './domain/home';
 
 /**
  * **Home's asks for a level** (#765) — they ride on `GET /home` too: `friends` draws ASKED FOR A

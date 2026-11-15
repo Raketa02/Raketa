@@ -4,7 +4,11 @@
 Rankings brief and its eleven mocks, copied here from `raketa_v2.0/4-features/4-ranking` so that every
 session can read them, then grilled on 2026-11-07 (Q1–Q26 there, the
 [games and fill-in mechanics' Q130](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
-Landed by [#767](https://github.com/Raketa02/Raketa/issues/767) on 2026-11-07.
+Landed by [#767](https://github.com/Raketa02/Raketa/issues/767) on 2026-11-07. **Amended 2026-11-14**
+by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+(Q131, [the Home rows spec set](../home-rows/README.md)): no row is hidden by a switch or a block,
+*Show me in General* is replaced by *Show me to new people*, requests have no daily limit, and Home
+gains **Top 10**.
 
 | File | What it holds |
 | --- | --- |

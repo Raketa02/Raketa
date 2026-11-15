@@ -22,6 +22,16 @@
 
   The refusal is still one refusal, and the gates about accounts and the reader's own hold are
   unchanged. Dated notes mark §3, §4 and §5.
+- **§3's admission, §4's gates and the record's photo amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** §2 (the
+  mechanics Q131):
+  - **a record opens for any reader**, unless (a) a block stands between the two, made by either side,
+    or (b) the subject has *Show me to new people* off and the reader shares no group, no game and no
+    friendship with them. The strands — played together, a shared group, running the subject's group —
+    and a friendship are what (b) asks about; the ranking's strand folds into the one rule;
+  - **(b) is refused with §5's one refusal**, as a block is;
+  - **all of the subject's photos** cross to an admitted reader, where the record carried the first.
+
+  Dated notes mark §3, §4 and §5.
 - **The 2026-09-08 sportsmanship amendment's split amended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5** — the
   figure and its count cross to the subject too, `SubjectSportsmanship` has one method,
   `sportsmanship_band` retires from the record and the invariant beside `is_self` with it.
@@ -144,6 +154,14 @@ the register, and this context never learns what it is.
 > record discloses nothing the list hadn't. A player who turns *Show me in General* off, or drops off
 > the list after 90 days, leaves this strand at once; their other strands stand.
 
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** Home's rows suggest any player to any other, so **a record
+> opens for any reader**, and the strands become the exceptions to one gate rather than the only ways
+> in: a subject who turned *Show me to new people* off is refused to a reader who shares no group, no
+> game and no friendship with them, and still admitted to a group-mate, a court-mate, a friend and
+> whoever runs their group. The product owner ruled that the record holds nothing sensitive and that
+> this is a social app (the Home rows grilling, Q11, Q18). Admitted readers see **all of the subject's
+> photos**.
+
 ### 4. The gates are re-run live, in the partition of the disclosure
 
 The disclosure entitles a reader to **ask**; the four fail-closed gates decide, on every
@@ -168,6 +186,9 @@ route that remembers what a search already showed.
 > on every strand, group-mates included. The ranking's strand (§3's note) reads no partition, as the
 > runner's doesn't, so it runs the gates about accounts, the reader's own hold and the block.
 
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** *Show me to new people*'s rule is a gate beside the block:
+> the subject's switch off and nothing shared with the reader. It reads no partition.
+
 ### 5. One refusal, and it names nothing
 
 Never disclosed, blocked either way, held, and no such player return **the same status and
@@ -184,6 +205,9 @@ one line: *This record isn't available.*
 > every strand, group-mates included, which supersedes ADR-0193 §2 for the record. A blocked pair's
 > record never opens, so the record carries no *blocked by you* and no Unblock; Unblock lives in You ›
 > Blocked players.
+
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** A subject refused by *Show me to new people*'s rule reads
+> the same `record_unavailable`, byte for byte.
 
 The indistinguishability is asserted **as a sameness** rather than as four statuses
 (`tests/api/test_player_record.py`), because four assertions about four codes all pass on

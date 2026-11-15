@@ -9,6 +9,8 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { TopTenAsk } from '../domain/topTen';
+
 export const rankingKeys = {
   all: () => ['rankings'] as const,
   general: (sport: Sport) => ['rankings', sport, 'GENERAL'] as const,
@@ -16,4 +18,10 @@ export const rankingKeys = {
   generalAroundMe: (sport: Sport) => [...rankingKeys.general(sport), 'aroundMe'] as const,
   /** Friends (#777): one read, the whole table — no pages. */
   friends: (sport: Sport) => ['rankings', sport, 'FRIENDS'] as const,
+  /** Home's Top 10 (#805): every read of the row — Home's pull re-reads them all. */
+  topTen: () => ['rankings', 'top-10'] as const,
+  /** One read of the row: a sport picked exactly, or the opening one preferred. */
+  topTenAsked: (ask: TopTenAsk) => [...rankingKeys.topTen(), ask.kind, ask.sport] as const,
+  /** No read yet — the opening sport is still being worked out (`skipToken`, never a sport's key). */
+  topTenUnasked: () => [...rankingKeys.topTen(), 'unasked'] as const,
 };

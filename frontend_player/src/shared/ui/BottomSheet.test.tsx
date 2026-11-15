@@ -146,3 +146,24 @@ describe('a sheet with the card field in it', () => {
     expect(body().props.keyboardShouldPersistTaps).toBe('always');
   });
 });
+
+describe('a sheet with an act on its title row', () => {
+  // The group sheet's one button (#800, home rows 6): the title, the act, then the close.
+  it('draws the act on the head, out of the scroll', () => {
+    render(
+      <BottomSheet
+        visible
+        onClose={() => undefined}
+        title="Ogrody 33 Club"
+        closeLabel="Close Ogrody 33 Club"
+        action={<Text>Asked</Text>}
+      >
+        <Text>The group</Text>
+      </BottomSheet>,
+    );
+
+    // On the sheet, and out of the scroll: it stays with the title it acts on.
+    expect(within(screen.getByTestId('bottom-sheet')).getByText('Asked')).toBeTruthy();
+    expect(within(body()).queryByText('Asked')).toBeNull();
+  });
+});

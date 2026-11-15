@@ -208,6 +208,15 @@ class NoticeReason(StrEnum):
     #: A friend request made from a record opened on the Rankings page: *Found
     #: you in the padel ranking* (#773), the sport riding as ``sport``.
     FROM_THE_RANKING = "FROM_THE_RANKING"
+    #: A friend request made from Home's *New in Raketa* row, or a record
+    #: opened from it: *Found you among new players* (#793).
+    FROM_NEW_PLAYERS = "FROM_NEW_PLAYERS"
+    #: A friend request made from Home's *Same competitive level players*, in
+    #: its sport (#794): *Your level in padel · 91% even*.
+    FROM_SAME_LEVEL = "FROM_SAME_LEVEL"
+    #: A friend request made from Home's *Same vibe players*, or a record
+    #: opened from it (#795): *6 things in common*.
+    FROM_SAME_VIBE = "FROM_SAME_VIBE"
     #: A friends game its sender called off: *Tomek called off Saturday 10:00
     #: · Nobody paid.* (#751; the words §29.10).
     BY_THE_SENDER = "BY_THE_SENDER"
@@ -349,13 +358,20 @@ def friend_request_notice(
     sport: Sport | None,
     by_link: bool,
     from_the_ranking: bool = False,
+    from_new_players: bool = False,
+    from_same_level: bool = False,
+    from_same_vibe: bool = False,
 ) -> Notice:
     """*{nickname} wants to be your friend* (#745) — about no game: **the group
     rides as ``pool_id``** (a group's pool is filed under the group's own id) and
     the sport as ``sport``, so the body can say where it was asked; a link's
     request names neither (its ``Where`` cannot) and says so as its ``reason``,
     and the ranking's names its sport and no group, its ``reason``
-    ``FROM_THE_RANKING`` (#773). Opens Home, where the card is."""
+    ``FROM_THE_RANKING`` (#773); New in Raketa's names no group, its
+    ``reason`` ``FROM_NEW_PLAYERS`` (#793); Same competitive level's names its
+    sport and no group, its ``reason`` ``FROM_SAME_LEVEL`` (#794); Same vibe's
+    names neither, its ``reason`` ``FROM_SAME_VIBE`` (#795). Opens Home, where
+    the card is."""
 
     return Notice(
         kind=NoticeKind.FRIEND_REQUEST,
@@ -373,6 +389,12 @@ def friend_request_notice(
             if by_link
             else NoticeReason.FROM_THE_RANKING.value
             if from_the_ranking
+            else NoticeReason.FROM_NEW_PLAYERS.value
+            if from_new_players
+            else NoticeReason.FROM_SAME_LEVEL.value
+            if from_same_level
+            else NoticeReason.FROM_SAME_VIBE.value
+            if from_same_vibe
             else None
         ),
     )

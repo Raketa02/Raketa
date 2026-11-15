@@ -571,7 +571,17 @@ no* or *… didn't answer in time* (Q105), went with *On request* (Q121).
 bell**, which keeps the corner. It reads the reader's place in the sport of their latest result, in
 the Rankings view they last looked at, and has no number when they have no place there. A tap opens
 Rankings ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
-[the rankings screens §1](../rankings/the-screens.md#1-home--the-trophy-rankings-1)).
+[the rankings screens §1](../rankings/the-screens.md#1-home--the-trophy-rankings-1)). *(Q131, 2026-11-14: the trophy is always
+there, a newcomer's included, with no number while there is no place.)*
+
+**The five rows** (Q131, 2026-11-14, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §1). **Home, top to bottom**: the header — the title, the
+trophy and the bell; *Get your level*; **FRIENDS GAME**; *To confirm*; **FRIEND REQUESTS**; **ASKED
+FOR A LEVEL**; *Your games*; then ***Hottest groups***, ***Same competitive level players***, ***New
+in Raketa***, ***Same vibe players*** and ***Top 10***. Each new row reads on its own and is hidden
+with its title when empty; pull-to-refresh re-reads them all, and coming back to Home re-reads them
+when the last read is older than 30 seconds. **A player in no group** reads ***Join a group to get
+games — the hottest ones are just below.*** under *Your games*, in place of *⚡ Play finds you one*
+([the home rows screens §1](../home-rows/the-screens.md#1-home-top-to-bottom)).
 
 ## A9. Notifications delivery
 

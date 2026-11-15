@@ -27,12 +27,14 @@ from app.modules.notifications.application.words import (
     words_for,
 )
 from app.modules.notifications.domain.events import NoticeGiven
-from app.modules.notifications.domain.notices import NoticeKind, Opens
+from app.modules.notifications.domain.notices import NoticeKind, NoticeReason, Opens
 from app.modules.notifications.domain.ports import (
     Friendships,
     Names,
     NoticeDirectory,
+    PercentsEven,
     RecordedNotice,
+    TagsInCommon,
 )
 
 #: The longest list a phone is handed.
@@ -70,12 +72,21 @@ def recorded(given: NoticeGiven) -> RecordedNotice:
 
 @final
 class NoticeWords:
-    """Every notice's words, the names read once for all of them."""
+    """Every notice's words, the names read once for all of them — and, for a
+    friend request from *Same competitive level*, today's % even between the
+    reader and the requester (#794), and from *Same vibe*, today's tags in
+    common (#795), each read once for all of those."""
 
-    def __init__(self, *, names: Names) -> None:
+    def __init__(
+        self, *, names: Names, evens: PercentsEven, tags: TagsInCommon
+    ) -> None:
         self._names = names
+        self._evens = evens
+        self._tags = tags
 
-    async def of(self, notices: Sequence[RecordedNotice]) -> list[Words]:
+    async def of(
+        self, notices: Sequence[RecordedNotice], *, reader: UUID
+    ) -> list[Words]:
         people = await self._names.of_people(
             {person for notice in notices for person in notice.people}
         )
@@ -93,8 +104,30 @@ class NoticeWords:
                 and (notice.game_id is None or notice.kind in _NAMING_THE_GROUP)
             }
         )
+        compared = {
+            (person, notice.sport)
+            for notice in notices
+            if notice.reason == NoticeReason.FROM_SAME_LEVEL
+            and notice.sport is not None
+            and (person := notice.person_named) is not None
+        }
+        evens = await self._evens.between(reader, compared) if compared else {}
+        alike = {
+            person
+            for notice in notices
+            if notice.reason == NoticeReason.FROM_SAME_VIBE
+            and (person := notice.person_named) is not None
+        }
+        in_common = await self._tags.in_common(reader, alike) if alike else {}
         return [
-            _drawn(notice, people=people, clubs=clubs, groups=groups)
+            _drawn(
+                notice,
+                people=people,
+                clubs=clubs,
+                groups=groups,
+                evens=evens,
+                in_common=in_common,
+            )
             for notice in notices
         ]
 
@@ -105,6 +138,8 @@ def _drawn(
     people: Mapping[UUID, str],
     clubs: Mapping[UUID, str],
     groups: Mapping[UUID, str],
+    evens: Mapping[tuple[UUID, Sport], int],
+    in_common: Mapping[UUID, int],
 ) -> Words:
     """One notice's words — from its kind and the person it names when it is
     about no game (*Get your level*, #727; a friend's two, #745), else from the
@@ -121,6 +156,16 @@ def _drawn(
                 group=None if notice.pool_id is None else groups.get(notice.pool_id),
                 sport=notice.sport,
                 reason=notice.reason,
+                percent_even=(
+                    None
+                    if notice.person_named is None or notice.sport is None
+                    else evens.get((notice.person_named, notice.sport))
+                ),
+                in_common=(
+                    None
+                    if notice.person_named is None
+                    else in_common.get(notice.person_named)
+                ),
             )
         )
     club_id = invariant(notice.club_id, f"{kind} names its club")
@@ -212,7 +257,9 @@ class ReadRecentNotices:
             notices=[
                 RecentNotice(notice=notice, words=words)
                 for notice, words in zip(
-                    recent.notices, await self._words.of(recent.notices), strict=True
+                    recent.notices,
+                    await self._words.of(recent.notices, reader=player_id),
+                    strict=True,
                 )
             ],
             new_count=recent.new_count,

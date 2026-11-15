@@ -75,7 +75,7 @@ export { useLocationRefresh } from './hooks/useLocationRefresh';
 export {
   IntroRow,
   PhotosRow,
-  ShowMeInGeneralRow,
+  ShowMeToNewPeopleRow,
   TagsRow,
   WhatKindOfGameRow,
   WhereYouPlayRow,
@@ -83,19 +83,6 @@ export {
   YourWeekRow,
   type YouRowProps,
 } from './components/YouRows';
-/**
- * ***Show me in General*** ([#778](https://github.com/Raketa02/Raketa/issues/778); ADR-0203 §7) —
- * the profile's switch, drawn by the You row above and by `rankings`' hidden card, which draws it as
- * *Hidden from General* and names it with the title, and `rankings`' General page, which follows the
- * value the profile holds (`useShownInGeneral`). The read and the write are this feature's, and one
- * queue holds both switches' writes.
- */
-export {
-  useShowMeInGeneral,
-  useShownInGeneral,
-  type ShowMeInGeneral,
-} from './hooks/useShowMeInGeneral';
-export { SHOW_ME_IN_GENERAL_TITLE } from './components/youProfilePresentation';
 export { YourWeekScreen } from './components/YourWeekScreen';
 export { WhereYouPlayScreen } from './components/WhereYouPlayScreen';
 export { WhatKindOfGameScreen } from './components/WhatKindOfGameScreen';

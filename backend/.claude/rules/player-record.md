@@ -1,40 +1,41 @@
 ---
 paths:
   - "app/modules/player_record/**"
-  - "app/modules/rankings/application/shown_on_general.py"
 ---
 
 # The player record
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
-- **A record is read through a prior disclosure, and the refusal names nothing**
-  ([ADR-0159](../../../docs/adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
+- **A record opens for any reader but a switched-off stranger, and the refusal names
+  nothing** ([ADR-0159](../../../docs/adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
   `app/modules/player_record/` is the ninth context and the second that keeps **no record
   at all** — no aggregate, no table, no migration, and a structural test that walks the
   package for an ORM import and the migrations for a table named after it. What separates
   it from `player_score` is that it also **enforces admission**, and that is the whole of
-  what it decides for itself. Four things are load-bearing. **A record opens on a prior
-  disclosure and never on a person**: you are the subject, you **played together** (were on
-  one court), you **share a group**, you **run a group they are in** (#575), or — the fourth
-  strand, since #773 — **the Ranking shows them to everybody**: listed on General in at least
-  one sport and *Show me in General* on, for **any reader**, with or without a level
-  ([ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §9) —
-  otherwise a route taking a player id is a player-enumeration endpoint, and a UUID being hard
-  to guess is not an authorization model. A search that showed them and a challenge you share
-  stopped being disclosures with #575, and the challenges are gone (#578). The first three
-  strands are each a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`,
-  `GroupsTheyShare`, `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game
-  discloses for as long as the pair are both on its court, played or not; a group is membership
-  as it stands. **The Ranking's strand is a port of its own, asked after them**: `ShownToEverybody`
-  (`RankingsShownToEverybody`, signed in `player_record/infrastructure/` over Rankings'
-  `ShownOnGeneral` — so `player_record` is on `.importlinter`'s
-  *rankings-knows-none-of-its-readers*), which asks nothing about the reader and takes the
-  response's one instant: the rows are the projection's, so a player is closed to strangers the
-  moment their 90 days run out, and the switch is **the profile's, read live**, so one turned
-  off is closed on the next tap, before the ranking follows it. An unlisted, inactive or hidden
-  player's record is refused a stranger with the one refusal; their other strands still admit
-  whoever they admitted. **The gates run live**: the two about accounts — the subject's hold,
+  what it decides for itself. Four things are load-bearing. **A record opens for any reader, with one rule
+  of who is out of reach** ([ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+  §2, #791, amending ADR-0159 §3 and ADR-0203 §9): you are the subject; otherwise **rule (b),
+  `WithinReach`** (`application/admission.py`) — the subject's *Show me to new people* is on,
+  **read live off the profile** through `OpenToNewPeople` (`ProfileOpenToNewPeople`, so a
+  switch turned off closes the record on the next tap; an id with no profile is open to
+  nobody), **or**, only for a subject with it off, a strand: you **share a group**, you are
+  **friends** (`FriendsTheyAre`, over Friends' `friends_among` — an open request is not one),
+  **they asked you** to be friends (`TheyAskedYou`, from your side's `ASKED_YOU` — **a call
+  made by #791**, so a switched-off player's request never sends the person asked to a
+  closed record, nor refuses the *Add friend* that would cross it), you **played together**
+  (were on one court), or you **run a group they are in** (#575; kept for a switched-off
+  subject by #790's call 1). Each strand is a `PriorDisclosure` answering **yes or no**
+  (`GroupsTheyShare`, `FriendsTheyAre`, `TheyAskedYou`, `GamesTheyPlayed`,
+  `GroupsTheReaderRuns`, cheapest first), asked in turn and stopped at the first yes. A game
+  discloses for as long as the pair are both on its court, played or not; a group is
+  membership as it stands. **A route taking a player id is a player-enumeration endpoint by
+  decision now**: the product owner ruled the record holds nothing sensitive and this is a
+  social app (ADR-0204 Consequences), and the switch is the way out. The ranking's strand
+  (`ShownToEverybody`, `RankingsShownToEverybody`) went with #791. **Rule (b) is also the
+  ask's**: Friends asks it through its own port, `OpenToTheRequester`, signed here
+  (`infrastructure/friends_open_to_the_requester.py`, `RecordOpenToTheRequester` over
+  `WithinReach`), so a request is admitted exactly where a record is reached. **The gates run live**: the two about accounts — the subject's hold,
   an account that may not be shown — through `matchmaking`'s `AccountGates`, the reader's
   **own** hold, because a hold points both ways, and **a block made by either side**
   (ADR-0203 §8, #773, superseding
@@ -42,7 +43,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   §2 for the record): `LiveRecordGates` asks `BlockQuery.blocked_between`, symmetric in its
   arguments, on every strand, group-mates included, so neither of a blocked pair opens the
   other's record anywhere, and the refusal is the one refusal — the blocked person reads what
-  any closed record reads. **A block state nobody can read is a `503 block_state_unavailable`**
+  any closed record reads — even from the ranking, which shows a blocked pair each other
+  (ADR-0204 §2). **A block state nobody can read is a `503 block_state_unavailable`**
   (declared on the route), never the record and never the refusal: a gate that cannot be
   evaluated excludes, and an outage is no verdict about a person. **The record's own-block fact
   went with it**: `blocked_by_you`, the tenth demand `BlocksByTheReader` and
@@ -53,21 +55,20 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`FriendsRelationsOfTheReader`, over Friends' `ReadRelations`), in the record's own spelling
   `RecordRelation` — held to `FriendRelation` by a test and put on the wire as that enum,
   `relation` — asked once admitted and never a gate, `NONE` on your own record;
-  `app.modules.friends` is on this context's forbidden list (`friends.md`). **The same port
-  says whether *Add friend* may be offered** (#773): `may_ask`, over Friends' own
-  `WhoMayBeAsked` — the object the ask is admitted by, so the button and the press cannot
-  disagree — put on the wire as `can_add_friend`, asked only where the button could be drawn
-  (not your own record, `relation` `NONE`), and `false` otherwise. It is the widened rule
-  (a group shared now, or listed on General and not hidden) and **never the daily limit**,
-  which refuses the press itself. **No gender preference is asked of any strand**: a preference
-  says who a player is willing to be *matched* with, and every strand here already put the
-  pair in front of each other (#575; it had been dropped for whoever runs the group by
+  `app.modules.friends` is on this context's forbidden list (`friends.md`). ***Add friend* is
+  read off the relation** (`can_add_friend`: not your own record and `relation` `NONE`): a
+  request is admitted by rule (b), which admitted the record, so an open record is somebody
+  you may ask — #773's `may_ask` went with #791, and there is no daily limit to leave out. **No gender preference is asked of any strand**: a preference
+  says who a player is willing to be *matched* with, and opening a record matches nobody with
+  anybody (#575; it had been dropped for whoever runs the group by
   ADR-0159's 2026-10-02 amendment, #566).
   **Your own record has no gates at all** and is a *second use case* rather than a branch, so
   the screen that tells a player how they appear cannot be taken down by the gate machinery.
-  **The refusals are one refusal, byte for byte** — never disclosed (nor listed), held,
+  **The refusals are one refusal, byte for byte** — switched off with nothing shared, held,
   blocked either way and no such player are one `404` with one body, asserted as a sameness
-  rather than as four statuses. And **this context declares its own ports and its
+  rather than as four statuses. **Every photo is on it** (ADR-0204 §2): `photos` — each id
+  and a URL signed as the subject, in the player's order (`SubjectIdentity.photo_ids`,
+  `RecordPhoto`) — beside the first photo's `photo_id`, `photo_url` and `review`, which stay. And **this context declares its own ports and its
   own types**: it borrows nothing from another context's domain, held by an `.importlinter`
   contract rather than a test, because an application layer importing `CardIdentity` would
   read as sensible reuse in the diff and nothing would go red. The cost is a second
@@ -162,10 +163,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   that the band's field is on none — which
   is where *it is not on search result cards* stopped being a promise.
 
-- **Strangers from the ranking are tested** over HTTP in `tests/api/test_ranking_strangers.py`
-  (#773): a stranger opens a listed player's full record, as does a reader with no level; an
-  unlisted, inactive or hidden player's record is refused a stranger with the one refusal
-  while a group-mate still opens it; the switch closes it before any delivery; a block closes
-  it both ways, group-mates included, and a lifted one opens it again. The admission's order in
-  `tests/unit/test_record_admission.py`, the Ranking's strand and the block gate in
-  `tests/demands/test_player_record_demands.py`.
+- **Who sees whom is tested** over HTTP in `tests/api/test_who_sees_whom.py` (#791): a
+  stranger and a reader with no level open any record and ask; every photo is on it; the
+  11th and 50th request of a day go through; switched off, a stranger reads the one refusal
+  and the request one unnamed code on the next tap, while a group-mate, a game-mate and a
+  friend still open it, and so does somebody they asked, whose *Add friend* crosses it; a
+  request sent before stays; a player who had hidden from General
+  starts off; a block closes the record both ways, group-mates included, and a lifted one
+  opens it again. The strands with the switch off in `tests/api/test_player_record.py`; the
+  admission's order in `tests/unit/test_record_admission.py`; the friendship strand and the
+  switch in `tests/demands/test_player_record_demands.py`.

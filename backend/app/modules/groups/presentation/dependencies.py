@@ -56,6 +56,7 @@ from app.modules.groups.application.commands import Administering
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.application.delete_group import DeleteGroup
 from app.modules.groups.application.edit_group import EditGroup
+from app.modules.groups.application.hottest_groups import ReadHottestGroups
 from app.modules.groups.application.join_group import JoinGroup
 from app.modules.groups.application.leave_group import LeaveGroup
 from app.modules.groups.application.official_groups import (
@@ -75,6 +76,9 @@ from app.modules.groups.application.read_join_requests import ReadJoinRequests
 from app.modules.groups.application.read_my_groups import ReadMyGroups
 from app.modules.groups.application.search_groups_to_join import SearchGroupsToJoin
 from app.modules.groups.application.search_home_clubs import SearchHomeClubs
+from app.modules.groups.application.withdraw_join_request import (
+    WithdrawJoinRequest,
+)
 from app.modules.groups.domain.ports import (
     MemberRelations,
     GroupAdministrators,
@@ -322,6 +326,42 @@ def get_decline_join_request(
 
 
 DeclineJoinRequestDep = Annotated[DeclineJoinRequest, Depends(get_decline_join_request)]
+
+
+def get_withdraw_join_request(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> WithdrawJoinRequest:
+    return WithdrawJoinRequest(groups=groups, uow=uow, clock=clock)
+
+
+WithdrawJoinRequestDep = Annotated[
+    WithdrawJoinRequest, Depends(get_withdraw_join_request)
+]
+
+
+def get_read_hottest_groups(
+    directory: GroupDirectoryDep,
+    games: GroupBornGamesDep,
+    clubs: HomeClubsDep,
+    ratings: RatedGroupMembersDep,
+    faces: GroupFacesDep,
+    relations: MemberRelationsDep,
+    administrators: GroupAdministratorsDep,
+    clock: ClockDep,
+) -> ReadHottestGroups:
+    return ReadHottestGroups(
+        directory=directory,
+        games=games,
+        clubs=clubs,
+        ratings=ratings,
+        faces=faces,
+        relations=relations,
+        administrators=administrators,
+        clock=clock,
+    )
+
+
+ReadHottestGroupsDep = Annotated[ReadHottestGroups, Depends(get_read_hottest_groups)]
 
 
 def get_leave_group(

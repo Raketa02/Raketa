@@ -1,34 +1,34 @@
-"""Who may open a record — the four strands, and the gates after them.
+"""Who may open a record — rule (b), then the gates (``docs/adr/0204`` §2).
 
-The rule (``docs/adr/0159``): **a record is read through a prior disclosure,
-never about a person.** Admitted when the reader *is* the subject, or when the
-pair played together, share a group, or the reader runs a group the subject is
-in (#575), or the Ranking shows the subject to everybody (``docs/adr/0203`` §9,
-#773) — and never otherwise.
+**A record opens for any reader**, unless a block stands between the two
+(a gate) or the subject turned *Show me to new people* off and the reader
+shares no group, no game and no friendship with them, nor runs a group they
+are in (``WithinReach``).
 
-Two properties are asserted here that no route test could see, because both are
-about calls that must or must not happen rather than about a status code:
+Three properties are asserted here that no route test could see, because each
+is about calls that must or must not happen rather than about a status code:
 
-**Nothing is asked before the strand that entitles.** A stranger is refused
-before a single gate is read, or the read would have looked a stranger up in
-order to decide it was not allowed to.
+**The switch is asked first, and a subject with it on costs no strand.** For
+almost everybody the answer is one profile read.
 
-**The first strand that answers yes is enough.** Every strand is admitted under
-the same gates, so the gates are asked once, and the strands after it are not
-asked at all — the Ranking, asked last, included.
+**Nothing is asked of the gates before rule (b) admits**, so a switched-off
+stranger is refused without a gate being read.
+
+**The first strand that answers yes is enough**, and the ones after it are not
+asked at all.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from app.kernel import Instant, instant
-from app.modules.player_record.application.admission import RecordAdmission
+from app.modules.player_record.application.admission import (
+    RecordAdmission,
+    WithinReach,
+)
 
 READER = uuid4()
 SUBJECT = uuid4()
-NOW = instant(datetime(2026, 11, 8, 9, tzinfo=timezone.utc))
 
 
 class Disclosure:
@@ -43,16 +43,16 @@ class Disclosure:
         return self.answer
 
 
-class Everybody:
-    """A ``ShownToEverybody`` that shows everybody, or nobody."""
+class Switch:
+    """An ``OpenToNewPeople`` with the switch on, or off."""
 
-    def __init__(self, shows: bool = False) -> None:
-        self.answer = shows
-        self.asked: list[tuple[UUID, Instant]] = []
+    def __init__(self, on: bool = True) -> None:
+        self.on = on
+        self.asked: list[UUID] = []
 
-    async def shows(self, subject_id: UUID, *, now: Instant) -> bool:
-        self.asked.append((subject_id, now))
-        return self.answer
+    async def open_to_new_people(self, subject_id: UUID) -> bool:
+        self.asked.append(subject_id)
+        return self.on
 
 
 class Gates:
@@ -67,115 +67,102 @@ class Gates:
         return self.admitting
 
 
-def admission(*, disclosures, gates, everybody=None) -> RecordAdmission:
+def admission(*, switch, disclosures=(), gates=None) -> RecordAdmission:
     return RecordAdmission(
-        disclosures=tuple(disclosures), everybody=everybody or Everybody(), gates=gates
+        reach=WithinReach(new_people=switch, disclosures=tuple(disclosures)),
+        gates=gates or Gates(),
     )
 
 
-async def test_your_own_record_needs_no_disclosure_and_asks_nothing():
-    """**The one case with no prior disclosure behind it**, and the one with no
-    gates: there is no pair to gate, and a reader is not blocked from
-    themselves."""
+async def test_your_own_record_asks_nothing():
+    """The one case with no gates: there is no pair to gate, and a switch
+    turned off closes nobody's own record."""
 
-    played, everybody, gates = Disclosure(True), Everybody(True), Gates()
+    switch, strand, gates = Switch(on=False), Disclosure(), Gates()
 
-    admitted = await admission(
-        disclosures=[played], everybody=everybody, gates=gates
-    ).admits(reader_id=READER, subject_id=READER, now=NOW)
+    admitted = await admission(switch=switch, disclosures=[strand], gates=gates).admits(
+        reader_id=READER, subject_id=READER
+    )
 
     assert admitted is True
-    assert played.asked == []
-    assert everybody.asked == []
-    assert gates.asked == []
+    assert (switch.asked, strand.asked, gates.asked) == ([], [], [])
 
 
-async def test_a_stranger_is_refused_before_a_gate_is_evaluated():
-    """No disclosure is the ordinary answer about almost everybody, and it costs
-    no gate read."""
+async def test_a_stranger_opens_a_record_with_the_switch_on_and_no_strand_is_asked():
+    """**Any reader**: nothing between the pair, and the record opens — under
+    the gates, and without a strand read."""
 
-    strands = [Disclosure(), Disclosure(), Disclosure()]
-    everybody, gates = Everybody(), Gates()
+    switch, strands, gates = Switch(on=True), [Disclosure(), Disclosure()], Gates()
 
-    admitted = await admission(
-        disclosures=strands, everybody=everybody, gates=gates
-    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+    admitted = await admission(switch=switch, disclosures=strands, gates=gates).admits(
+        reader_id=READER, subject_id=SUBJECT
+    )
+
+    assert admitted is True
+    assert switch.asked == [SUBJECT]
+    assert all(strand.asked == [] for strand in strands)
+    assert gates.asked == [(READER, SUBJECT)]
+
+
+async def test_a_switched_off_stranger_is_refused_before_a_gate_is_read():
+    switch, strands, gates = Switch(on=False), [Disclosure() for _ in range(4)], Gates()
+
+    admitted = await admission(switch=switch, disclosures=strands, gates=gates).admits(
+        reader_id=READER, subject_id=SUBJECT
+    )
 
     assert admitted is False
-    assert gates.asked == []
     assert all(strand.asked == [(READER, SUBJECT)] for strand in strands)
-    assert everybody.asked == [(SUBJECT, NOW)]
+    assert gates.asked == []
 
 
-async def test_every_strand_admits_on_its_own():
-    """Three sources, one demand. A pair with only a court between them, only a
-    group, or only a group the reader runs are each admitted — which is what
-    lets every surface that shows one player to another open this sheet without
-    this context learning what it is."""
+async def test_each_strand_admits_a_switched_off_subject_on_its_own():
+    """A group shared, a friendship, a request they sent the reader, a court
+    shared, a group the reader runs: any one of them keeps the record open."""
 
-    for strand in range(3):
-        sources = [Disclosure(), Disclosure(), Disclosure()]
+    for strand in range(5):
+        sources = [Disclosure() for _ in range(5)]
         sources[strand] = Disclosure(True)
         gates = Gates()
 
-        assert await admission(disclosures=sources, gates=gates).admits(
-            reader_id=READER, subject_id=SUBJECT, now=NOW
-        )
+        assert await admission(
+            switch=Switch(on=False), disclosures=sources, gates=gates
+        ).admits(reader_id=READER, subject_id=SUBJECT)
         assert gates.asked == [(READER, SUBJECT)]
 
 
 async def test_the_first_strand_that_answers_yes_ends_the_walk():
-    """Every strand is admitted under the same gates, so which one answered
-    changes nothing about what is asked next — and the ones after it are not
-    asked at all."""
-
     first, second = Disclosure(True), Disclosure(True)
-    everybody, gates = Everybody(True), Gates()
 
-    await admission(
-        disclosures=[first, second], everybody=everybody, gates=gates
-    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+    await admission(switch=Switch(on=False), disclosures=[first, second]).admits(
+        reader_id=READER, subject_id=SUBJECT
+    )
 
     assert first.asked == [(READER, SUBJECT)]
     assert second.asked == []
-    assert everybody.asked == []
-    assert gates.asked == [(READER, SUBJECT)]
 
 
-async def test_the_ranking_admits_a_stranger_through_the_gates():
-    """**The fourth strand** (``docs/adr/0203`` §9): nothing between the pair,
-    and General lists the subject for everybody — asked at the response's one
-    instant, after every disclosure, and still under the gates."""
-
-    strands = [Disclosure(), Disclosure(), Disclosure()]
-    everybody, gates = Everybody(True), Gates()
-
-    admitted = await admission(
-        disclosures=strands, everybody=everybody, gates=gates
-    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
-
-    assert admitted is True
-    assert everybody.asked == [(SUBJECT, NOW)]
-    assert gates.asked == [(READER, SUBJECT)]
-
-
-async def test_a_stranger_the_gates_refuse_is_no_entitlement():
-    """A block either way refuses a stranger from the ranking as it refuses a
+async def test_the_gates_refuse_whatever_rule_b_admitted():
+    """A block either way refuses a stranger with the switch on as it refuses a
     group-mate (``docs/adr/0203`` §8)."""
 
-    admitted = await admission(
-        disclosures=[], everybody=Everybody(True), gates=Gates(admitting=False)
-    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+    on = admission(switch=Switch(on=True), gates=Gates(admitting=False))
+    mate = admission(
+        switch=Switch(on=False),
+        disclosures=[Disclosure(True)],
+        gates=Gates(admitting=False),
+    )
 
-    assert admitted is False
+    assert await on.admits(reader_id=READER, subject_id=SUBJECT) is False
+    assert await mate.admits(reader_id=READER, subject_id=SUBJECT) is False
 
 
-async def test_a_disclosure_the_gates_refuse_is_no_entitlement():
-    """A block placed since the game still refuses the record. The disclosure
-    is what entitles a reader to *ask*; the gates decide, live, every time."""
+async def test_rule_b_alone_is_what_a_friend_request_asks():
+    """``WithinReach`` is the record's rule (b) and nothing else — no gate, no
+    self — so Friends can ask it of a request without a block deciding it."""
 
-    admitted = await admission(
-        disclosures=[Disclosure(True)], gates=Gates(admitting=False)
-    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+    reach = WithinReach(new_people=Switch(on=False), disclosures=[Disclosure()])
+    open_reach = WithinReach(new_people=Switch(on=True), disclosures=[])
 
-    assert admitted is False
+    assert await reach.reaches(reader_id=READER, subject_id=SUBJECT) is False
+    assert await open_reach.reaches(reader_id=READER, subject_id=SUBJECT) is True

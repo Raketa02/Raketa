@@ -73,6 +73,14 @@
  * hex added for nothing. It is drawn on the dark card and nowhere else, where the theme fences
  * the colour.
  *
+ * **`waiting` is the eighth variant: a request waiting on somebody else, as a control**
+ * ([#800](https://github.com/Raketa02/Raketa/issues/800), home rows 6;
+ * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-14). The group
+ * sheet's *Asked* is drawn cream with a brown-gold word, and it is pressed — it opens *Withdraw
+ * request* — so it is a button and not 6.4's warn tag, whose two colours it takes: `amberSoft` and
+ * `amber` (5,06:1), amber being 1.3's *reversible, not yet settled*, which a request is. It presses
+ * into `amberLine`, the fold the system already has for that bed.
+ *
  * **`shape` is a seventh option and it is not a variant**
  * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). 4.2's rule is *the chip — the only true pill*, and every button is a 10pt rounded
@@ -97,6 +105,14 @@
  * (`CLAUDE.md`), so they are Feather's `check` and `chevron-down`, in the label's own ink and at its
  * size, after it. **Never spoken**: the name is the label (or the caller's `accessibilityLabel`), and
  * a mark says nothing a sighted reader would read aloud. Two only, because two are asked for.
+ *
+ * **`lead` is a drawn glyph before the label, and `settledSoft` the ninth variant**
+ * ([#801](https://github.com/Raketa02/Raketa/issues/801), home rows 9, 11; Part 16, 2026-11-14). A
+ * sheet's worded friend button reads *+ Add friend* and *✓ Friends*, its mark before the words — so
+ * the plus and the tick are Feather's `plus` and `check`, drawn before the label as `marks` are
+ * after it, and never spoken. *✓ Friends* is drawn on mint's soft bed in its ink (5,08:1), the ok
+ * tag's two colours as a control, as `waiting` is the warn tag's: it is pressed, and opens *Remove
+ * friend*. It presses into `mintLine`, the fold the system already has for that bed.
  *
  * **`role` and `dot` are the sign-in stage's** ([#784](https://github.com/Raketa02/Raketa/issues/784);
  * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-08). *I have an
@@ -125,7 +141,15 @@ import { useReducedMotion } from './overlay';
 import { theme } from './theme';
 
 export type ButtonVariant =
-  'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'arranging' | 'onDark';
+  | 'primary'
+  | 'dark'
+  | 'secondary'
+  | 'settled'
+  | 'settledSoft'
+  | 'volt'
+  | 'arranging'
+  | 'onDark'
+  | 'waiting';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
@@ -149,6 +173,14 @@ const MARK_GLYPH: Readonly<Record<ButtonMark, 'check' | 'chevron-down'>> = {
   chevron: 'chevron-down',
 };
 
+/** A drawn mark before the label — the worded friend button's *+* and *✓* (#801). */
+export type ButtonLead = 'plus' | 'tick';
+
+const LEAD_GLYPH: Readonly<Record<ButtonLead, 'plus' | 'check'>> = {
+  plus: 'plus',
+  tick: 'check',
+};
+
 export interface ButtonProps {
   readonly label: string;
   /**
@@ -166,6 +198,8 @@ export interface ButtonProps {
   readonly shape?: ButtonShape;
   /** Glyphs drawn after the label, never spoken — see the module note. */
   readonly marks?: readonly ButtonMark[];
+  /** A glyph drawn before the label, never spoken — see the module note. */
+  readonly lead?: ButtonLead;
   /** `link` for a press that opens another screen — the stage's invitation button. See the module note. */
   readonly role?: ButtonRole;
   /** A 6pt `coral` dot before the label, never spoken — the stage's invitation button's alone. */
@@ -198,6 +232,7 @@ export function Button({
   size = 'md',
   shape = 'rounded',
   marks = [],
+  lead,
   role = 'button',
   dot = false,
   disabled = false,
@@ -256,10 +291,19 @@ export function Button({
         />
       )}
       <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
-        {marks.length === 0 && !dot ? (
+        {marks.length === 0 && !dot && lead === undefined ? (
           words
         ) : (
           <View style={s.marked}>
+            {lead === undefined ? null : (
+              <Feather
+                name={LEAD_GLYPH[lead]}
+                size={theme.type.btn.fontSize}
+                color={LABEL[variant].color}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            )}
             {dot ? (
               <View
                 testID="button-dot"
@@ -389,8 +433,10 @@ const FILL = StyleSheet.create({
     borderColor: theme.color.line,
   },
   settled: { backgroundColor: theme.color.mintInk },
+  settledSoft: { backgroundColor: theme.color.mintSoft },
   volt: { backgroundColor: theme.color.volt },
   arranging: { backgroundColor: theme.color.arranging },
+  waiting: { backgroundColor: theme.color.amberSoft },
 });
 
 const PRESSED = StyleSheet.create({
@@ -399,10 +445,14 @@ const PRESSED = StyleSheet.create({
   dark: { backgroundColor: theme.color.night2 },
   secondary: { backgroundColor: theme.color.line2 },
   settled: { backgroundColor: theme.color.mint },
+  // Mint's own fold — the soft's border, the bed the system already has for a press on it.
+  settledSoft: { backgroundColor: theme.color.mintLine },
   // Not a fill. Volt has no darker companion and does not get one invented for a press.
   volt: { opacity: 0.7 },
   // Volt's rule, for the same reason.
   arranging: { opacity: 0.7 },
+  // Amber's own fold — a colour the system already has for this bed, not one invented for a press.
+  waiting: { backgroundColor: theme.color.amberLine },
 });
 
 const LABEL = StyleSheet.create({
@@ -411,9 +461,13 @@ const LABEL = StyleSheet.create({
   dark: { color: theme.color.surface },
   secondary: { color: theme.color.ink },
   settled: { color: theme.color.surface },
+  // 5,08:1 on `mintSoft` — the ok tag's ink on the ok tag's bed.
+  settledSoft: { color: theme.color.mintInk },
   volt: { color: theme.color.ink },
   // `ink` and never white: 2,48:1 against 7,05:1 — the module note.
   arranging: { color: theme.color.ink },
+  // 5,06:1 on `amberSoft` — the warn tag's ink on the warn tag's bed.
+  waiting: { color: theme.color.amber },
 });
 
 /**
@@ -431,6 +485,8 @@ const GLOSS = StyleSheet.create({
   dark: { color: theme.color.surface },
   secondary: { color: theme.color.muted },
   settled: { color: theme.color.surface },
+  settledSoft: { color: theme.color.mintInk },
   volt: { color: theme.color.ink },
   arranging: { color: theme.color.ink },
+  waiting: { color: theme.color.amber },
 });

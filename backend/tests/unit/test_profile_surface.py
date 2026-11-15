@@ -43,7 +43,7 @@ from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
     PhoneReading,
-    SetRankingVisibilityCommand,
+    SetShowMeToNewPeopleCommand,
     SetReliabilityMinimumCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
@@ -55,8 +55,8 @@ from app.modules.player_profile.application.declare_play_intent import (
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
-from app.modules.player_profile.application.set_ranking_visibility import (
-    SetRankingVisibility,
+from app.modules.player_profile.application.set_show_me_to_new_people import (
+    SetShowMeToNewPeople,
 )
 from app.modules.player_profile.application.set_reliability_minimum import (
     SetReliabilityMinimum,
@@ -81,6 +81,7 @@ from app.modules.player_profile.domain.events import (
     PlayerProfileCreated,
     PlayIntentDeclared,
     RankingVisibilitySet,
+    ShowMeToNewPeopleSet,
     ReliabilityMinimumSet,
     SocialTagsChanged,
     WeeklyHoursSet,
@@ -104,7 +105,6 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntentSurface,
 )
 from app.modules.player_profile.domain.profile import MAX_PROFILE_PHOTOS
-from app.modules.player_profile.domain.ranking_visibility import RankingVisibility
 from app.modules.player_profile.infrastructure.event_sourced_play_intent_declaration_repository import (  # noqa: E501
     EventSourcedPlayIntentDeclarationRepository,
 )
@@ -245,14 +245,10 @@ class Harness:
             profiles=self._profiles(), uow=self.uow, clock=self.clock
         ).execute(SetReliabilityMinimumCommand(player_id=player_id, minimum=minimum))
 
-    async def set_ranking_visibility(
-        self, visibility: RankingVisibility, *, player_id=PLAYER
-    ) -> None:
-        await SetRankingVisibility(
+    async def set_show_me_to_new_people(self, on: bool, *, player_id=PLAYER) -> None:
+        await SetShowMeToNewPeople(
             profiles=self._profiles(), uow=self.uow, clock=self.clock
-        ).execute(
-            SetRankingVisibilityCommand(player_id=player_id, visibility=visibility)
-        )
+        ).execute(SetShowMeToNewPeopleCommand(player_id=player_id, on=on))
 
     async def declare(
         self,
@@ -769,53 +765,87 @@ async def test_a_filter_written_without_a_profile_is_refused(harness):
 
 
 # ---------------------------------------------------------------------------
-# Show me in General (#772)
+# Show me to new people (#791)
 # ---------------------------------------------------------------------------
 
 
-async def test_a_profile_starts_shown_in_general(harness):
+async def test_a_profile_starts_shown_to_new_people(harness):
     await harness.commit_profile()
 
-    assert (await harness.read()).profile.ranking_visibility is RankingVisibility.SHOWN
+    assert (await harness.read()).profile.show_me_to_new_people is True
 
 
-async def test_hiding_from_general_is_its_own_event_and_showing_again_another(
-    harness,
-):
-    """*Show me in General* off, then on — each a new event on the profile's
-    stream (``docs/adr/0203`` §7), carrying the whole new value."""
+async def test_turning_it_off_is_its_own_event_and_on_again_another(harness):
+    """*Show me to new people* off, then on — each a new event on the
+    profile's stream (``docs/adr/0204`` §2), carrying the whole new value."""
 
     await harness.commit_profile()
-    harness.forget_what_the_commit_released()
 
-    await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
-    hidden = (await harness.read()).profile.ranking_visibility
-    await harness.set_ranking_visibility(RankingVisibility.SHOWN)
+    await harness.set_show_me_to_new_people(False)
+    off = (await harness.read()).profile.show_me_to_new_people
+    await harness.set_show_me_to_new_people(True)
 
     first, second = harness.publisher.published
-    assert isinstance(first, RankingVisibilitySet) and first.visibility == "HIDDEN"
-    assert isinstance(second, RankingVisibilitySet) and second.visibility == "SHOWN"
+    assert isinstance(first, ShowMeToNewPeopleSet) and first.on is False
+    assert isinstance(second, ShowMeToNewPeopleSet) and second.on is True
     assert first.player_id == PLAYER
-    assert hidden is RankingVisibility.HIDDEN
-    assert (await harness.read()).profile.ranking_visibility is RankingVisibility.SHOWN
+    assert off is False
+    assert (await harness.read()).profile.show_me_to_new_people is True
 
 
-async def test_the_same_visibility_twice_appends_nothing(harness):
+async def test_the_same_value_twice_appends_nothing(harness):
     await harness.commit_profile()
-    harness.forget_what_the_commit_released()
 
-    await harness.set_ranking_visibility(RankingVisibility.SHOWN)
-    await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
-    await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
+    await harness.set_show_me_to_new_people(True)
+    await harness.set_show_me_to_new_people(False)
+    await harness.set_show_me_to_new_people(False)
 
     assert [type(event) for event in harness.publisher.published] == [
-        RankingVisibilitySet
+        ShowMeToNewPeopleSet
     ]
 
 
-async def test_a_visibility_written_without_a_profile_is_refused(harness):
+@pytest.mark.parametrize(("visibility", "shown"), [("HIDDEN", False), ("SHOWN", True)])
+async def test_an_old_show_me_in_general_folds_into_the_new_switch(
+    harness, visibility, shown
+):
+    """A stream holding *Show me in General* (decode-only since #791) reads it
+    as *Show me to new people*: a player who had hidden from General starts
+    with the new switch off (``docs/adr/0204`` §2)."""
+
+    await harness.commit_profile()
+    held = (await harness.read()).profile
+    if visibility == "SHOWN":
+        await harness.store.append(
+            aggregate_type=PLAYER_PROFILE_AGGREGATE,
+            aggregate_id=PLAYER,
+            expected_version=held.version,
+            events=[
+                RankingVisibilitySet(
+                    player_id=PLAYER,
+                    visibility="HIDDEN",
+                    occurred_at=harness.clock.now(),
+                )
+            ],
+        )
+        held = (await harness.read()).profile
+    await harness.store.append(
+        aggregate_type=PLAYER_PROFILE_AGGREGATE,
+        aggregate_id=PLAYER,
+        expected_version=held.version,
+        events=[
+            RankingVisibilitySet(
+                player_id=PLAYER, visibility=visibility, occurred_at=harness.clock.now()
+            )
+        ],
+    )
+
+    assert (await harness.read()).profile.show_me_to_new_people is shown
+
+
+async def test_the_switch_written_without_a_profile_is_refused(harness):
     with pytest.raises(PlayerProfileNotFound):
-        await harness.set_ranking_visibility(RankingVisibility.HIDDEN)
+        await harness.set_show_me_to_new_people(False)
 
     assert harness.uow.commits == 0
 

@@ -54,9 +54,9 @@ export const playerProfileKeys = {
 export const LOCATION_WRITES = { id: 'player-profile:location' } as const;
 
 /**
- * **The one queue every *Show me in General* write joins** — the You row's and the hidden card's on
- * Rankings (#778). Two presses in quick succession, on either, reach the server in the order they
- * were pressed, so the switch held is the one last drawn, and this app never sends the two
- * concurrent writes the route refuses as `concurrent_modification`.
+ * **The one queue every *Show me to new people* write joins** (#799). Two presses in quick
+ * succession reach the server in the order they were pressed, so the switch held is the one last
+ * drawn, and this app never sends the two concurrent writes the route refuses as
+ * `concurrent_modification`.
  */
-export const RANKING_VISIBILITY_WRITES = { id: 'player-profile:ranking-visibility' } as const;
+export const SHOW_ME_TO_NEW_PEOPLE_WRITES = { id: 'player-profile:show-me-to-new-people' } as const;

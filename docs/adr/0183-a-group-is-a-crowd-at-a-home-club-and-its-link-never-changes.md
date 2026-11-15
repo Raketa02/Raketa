@@ -10,6 +10,14 @@
 - **§8 amended 2026-10-04 by [ADR-0192](0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md)**: a handover is **told to whom it was handed**, once
   (`handover_seen` on the group), on a sheet in the app.
 - **§13 superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**, except *no friends list* and *no removing members*, which stand: a group picks games, members post them, courts are booked, money is handled, and each game has a chat. **§11's *Games* amended by the same record**: it counts the games actually booked in each official group.
+- **§7 and §11 amended, and the group page's members-only rule confirmed, 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** §3 (the
+  mechanics Q131):
+  - **any player sees any group's card, its sheet, its member faces and its activity** — games this
+    week, players and new players this month — in Home's *Hottest groups*, member or not. **The group
+    page stays members-only**, and still answers a non-member `group_not_found`;
+  - **a Join request can be withdrawn** by the player who made it: a new event on the group's stream
+    removes it from the Owner's, the Administrator's and the club's lists at once, tells nobody, and
+    succeeds on a request already answered while changing nothing. The player may ask again.
 - **§13's *no friends list* superseded 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)** §1: a player has friends, held across all their groups, and builds a game with them on a group's Friends tab. *No removing members* still stands.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for Groups:**
   *event-sourced*, with synchronous projections for groups, group members and join requests.
@@ -190,6 +198,11 @@ A rating earned or a member leaving moves the dots on the next read, with nothin
 - **Nobody removes a member**, not the Owner, not the Administrator, not the club. It's out of scope
   for this release, and the Consequences say what that costs.
 
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3.** **A Join request can be withdrawn** by the player who made
+> it, from *Asked* on Home's Hottest groups: it leaves every list that answers it at once, tells
+> nobody, and changes nothing if it was already answered. The player may ask again, as after a
+> decline.
+
 ### 8. A handover moves who answers, and nothing else
 
 The club may give **any** official group to another **active** Administrator of the club, including
@@ -228,6 +241,12 @@ that differed by reader would itself tell someone that something was being hidde
   **behind a port**, so the day a group can pick games, the count fills in without its meaning
   changing. Games two members arranged elsewhere are never counted, because the club would read them
   as the group's work.
+
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3.** A group's activity is shown to every player, member or
+> not, on Home's *Hottest groups*: *games this week* (games booked in the group with court time in the
+> last 7 days, not called off, friends games included), *players*, and *new this month* (joined in the
+> last 30 days and still members), with up to six member faces. They make its **Heat**. The group page
+> itself stays members-only.
 
 ### 12. Play opens on Groups, and the flag keeps the bridge
 

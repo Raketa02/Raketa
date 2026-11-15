@@ -6,6 +6,7 @@ import {
   toGroup,
   toGroupMembers,
   toHomeClubSearch,
+  toHottestGroups,
   toJoinRequests,
   toJoinSearch,
   toMyGroups,
@@ -472,5 +473,73 @@ describe('an edit’s answer', () => {
 
     expect(edited.group).toMatchObject({ name: 'Kazimierz padel', joinPolicy: 'ANYONE' });
     expect(edited.admitted).toEqual([{ playerId: 'p3', name: 'Michał Rogalski' }]);
+  });
+});
+
+describe('Home’s Hottest groups', () => {
+  const OGRODY_HOT: Wire['HottestGroupSchema'] = {
+    id: 'a0000000-0000-4000-8000-000000000800',
+    kind: 'OFFICIAL',
+    name: 'Ogrody 33 Club',
+    monogram: { letters: 'O3', colour: 2 },
+    sports: ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'],
+    member_count: 11,
+    join_policy: 'PEOPLE_I_APPROVE',
+    run_by: 'Ogrody 33',
+    club: { id: 'c0000000-0000-4000-8000-000000000800', name: 'Ogrody 33' },
+    games_this_week: 14,
+    new_this_month: 3,
+    heat_share: 1,
+    tag: 'HOTTEST',
+    faces: [
+      {
+        player_id: 'p0000000-0000-4000-8000-000000000801',
+        nickname: 'kuba.w',
+        photo_url: 'https://photos.test/kuba',
+      },
+      { player_id: 'p0000000-0000-4000-8000-000000000802', nickname: null },
+    ],
+    friends_count: 7,
+    relation: 'NONE',
+    is_administrator: false,
+  };
+
+  it('keeps every figure the card and its sheet draw, in the order served', () => {
+    expect(toHottestGroups({ groups: [OGRODY_HOT] })).toEqual([
+      {
+        id: OGRODY_HOT.id,
+        kind: 'OFFICIAL',
+        name: 'Ogrody 33 Club',
+        monogram: { letters: 'O3', colourKey: 2 },
+        sports: ['padel', 'tennis', 'squash', 'badminton'],
+        memberCount: 11,
+        joinPolicy: 'PEOPLE_I_APPROVE',
+        runBy: 'Ogrody 33',
+        club: { id: OGRODY_HOT.club.id, name: 'Ogrody 33' },
+        gamesThisWeek: 14,
+        newThisMonth: 3,
+        heatShare: 1,
+        tag: 'HOTTEST',
+        faces: [
+          {
+            playerId: 'p0000000-0000-4000-8000-000000000801',
+            name: 'kuba.w',
+            photoUrl: 'https://photos.test/kuba',
+          },
+          { playerId: 'p0000000-0000-4000-8000-000000000802', name: null },
+        ],
+        friendsCount: 7,
+        relation: 'NONE',
+        isAdministrator: false,
+      },
+    ]);
+  });
+
+  it('carries no tag as none, and an Owner who can no longer be named as nobody', () => {
+    const [kazimierz] = toHottestGroups({
+      groups: [{ ...OGRODY_HOT, kind: 'PLAYER', tag: null, run_by: null }],
+    });
+    expect(kazimierz?.tag).toBeNull();
+    expect(kazimierz?.runBy).toBeNull();
   });
 });

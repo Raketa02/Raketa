@@ -38,6 +38,7 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score
 from app.modules.notifications.domain.ports import (
+    TagsInCommon,
     Friendships,
     WaitingLevelAsk,
     WaitingRequest,
@@ -48,6 +49,7 @@ from app.modules.notifications.domain.ports import (
     GroupJoiners,
     Names,
     PaidShares,
+    PercentsEven,
     RatedAccounts,
     SeatOffers,
 )
@@ -68,9 +70,13 @@ from app.modules.proposals.domain.proposal import (
     TimeTo,
 )
 from app.shared.ids import new_uuid
+from tests.api import players_world as players
 from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.proposals_world import a_club_and_its_desk, every_hour_of_the_week
 from tests.demands.test_player_record_demands import _a_club, _a_rating
+from app.bootstrap.composition import build_ruleset
+from app.engines.racketskill.core import SkillEstimate
+from app.modules.matchmaking.domain.balance import forecast_the_sides
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
 NOW = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -873,6 +879,38 @@ async def test_a_rating_in_any_sport_counts_and_none_does_not(implementation, se
 
 
 # --------------------------------------------------------------------------- #
+# PercentsEven — a same level request's line, today (#794)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PercentsEven))
+async def test_today_s_percent_is_the_matcher_s_forecast_and_absent_without_a_level(
+    implementation, session
+):
+    evens: PercentsEven = implementation.build(session)
+    await _a_rating(session, TOMEK, sport=Sport.PADEL, mu=2.71)
+    await _a_rating(session, OLA, sport=Sport.PADEL, mu=2.69)
+    await _a_rating(session, KUBA, sport=Sport.TENNIS, mu=3.35)
+    await session.commit()
+
+    read = await evens.between(
+        TOMEK, [(OLA, Sport.PADEL), (KUBA, Sport.TENNIS), (EWA, Sport.PADEL)]
+    )
+
+    sides = forecast_the_sides(
+        (TOMEK,),
+        (OLA,),
+        {TOMEK: SkillEstimate(mu=2.71, sigma=0.35), OLA: SkillEstimate(2.69, 0.35)},
+        sport=Sport.PADEL,
+        rules=build_ruleset().balance,
+    )
+    assert sides is not None
+    # Kuba is rated in tennis, Tomek isn't; Ewa holds no level at all.
+    assert read == {(OLA, Sport.PADEL): sides[0].pct}
+    assert await evens.between(TOMEK, []) == {}
+
+
+# --------------------------------------------------------------------------- #
 # Friendships — a request told and listed while its card stands (#745)
 # --------------------------------------------------------------------------- #
 
@@ -958,3 +996,49 @@ async def test_a_group_is_called_its_name_and_a_missing_one_nothing(
     assert await names.of_groups([group.id, new_uuid()]) == {
         group.id: "Wednesday padel"
     }
+
+
+# --------------------------------------------------------------------------- #
+# TagsInCommon — a same vibe request's line, today (#795)
+# --------------------------------------------------------------------------- #
+
+
+async def _tagged(client, name: str, *held: str) -> tuple[UUID, str]:
+    player_id, token = await players.register(client, name)
+    if held:
+        await players.commit_profile(client, token, social_tag_ids=list(held))
+    return player_id, token
+
+
+@pytest.mark.parametrize("implementation", registered(TagsInCommon))
+async def test_tags_in_common_are_counted_off_the_profiles_as_they_stand(
+    implementation, client, session
+):
+    tomek, _ = await _tagged(
+        client, "tomek", "PLAYS_TO_WIN", "HERE_TO_IMPROVE", "STAYS_FOR_A_DRINK"
+    )
+    ola, ola_token = await _tagged(
+        client, "ola", "PLAYS_TO_WIN", "HERE_TO_IMPROVE", "QUIET_AND_FOCUSED"
+    )
+    kuba, _ = await _tagged(client, "kuba", "QUIET_AND_FOCUSED", "SHARES_A_LIFT")
+    halfway, _ = await _tagged(client, "halfway")
+    tags: TagsInCommon = implementation.build(session)
+
+    # Everybody asked is answered: nothing shared, or no profile, is none.
+    assert await tags.in_common(tomek, [ola, kuba, halfway]) == {
+        ola: 2,
+        kuba: 0,
+        halfway: 0,
+    }
+    assert await tags.in_common(halfway, [ola]) == {ola: 0}
+    assert await tags.in_common(tomek, []) == {}
+
+    changed = await client.put(
+        "/api/v1/players/me/social-tags",
+        json={"social_tags": ["QUIET_AND_FOCUSED", "SHARES_A_LIFT"]},
+        headers=players.auth(ola_token),
+    )
+    assert changed.status_code == 200, changed.text
+
+    # Today's, never the day it was asked.
+    assert await implementation.build(session).in_common(tomek, [ola]) == {ola: 0}

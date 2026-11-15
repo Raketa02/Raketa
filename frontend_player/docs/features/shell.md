@@ -251,3 +251,36 @@ pushed screen (`PUSHED_SCREENS`) under a segment `INSIDE_A_TAB` counts as Home's
 stays lit there, as on the notices. The trophy reads Home's own read, so it costs no request; the
 page's reads are the feature's ([`rankings.md`](rankings.md)). The entry gate lands a pass begun on
 Rankings back on it with Home beneath (`useShellLanding`), as it lands a group with Play beneath.
+
+**_Show me to new people_ closes _On your card_** ([#799](https://github.com/Raketa02/Raketa/issues/799)):
+`player_profile`'s `ShowMeToNewPeopleRow`, in the place `ShowMeInGeneralRow` stood — the paragraph
+above's row, renamed with its switch. The record is [`player_profile.md`](player_profile.md).
+
+**The five Home rows begin below _Your games_, HOTTEST GROUPS first**
+([#800](https://github.com/Raketa02/Raketa/issues/800); ADR-0204; the Home rows screens §1).
+`HomeScreen` draws `groups`' `HottestGroupsRow` after `HomeRail`, and the pull re-reads it beside
+Home's own reads (`rereadHomeGroups`, the row and the Groups list) — each row reads on its own, so a slow or failed one holds up
+nothing. **A reader in no group** reads _Join a group to get games — the hottest ones are just below._
+where _Play finds you one._ stood (§31.1): the first empty line is the tab's and stands, the second is
+handed to `HomeRail` from `groups`' answer (`useInNoGroup`) and its words (`GROUPS_COPY.hottest`), as
+the empty sentences have always been handed down. The walk is `groups`' `hottestGroups.test.tsx`.
+
+**NEW IN RAKETA follows HOTTEST GROUPS, and See all is pushed over Home**
+([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §1, §5). `HomeScreen`
+draws `discovery`'s `NewInRaketaRow` after `HottestGroupsRow` — Same competitive level (#802) will
+stand between them — and the pull re-reads it (`rereadDiscovery`). **The shell hands it nothing
+else**: accepting a request on FRIEND REQUESTS turns that person's envelope to ✓ on the row because the
+row's reads list people (`LISTS_PEOPLE`) and every friend write re-reads those. See all is
+`/new-in-raketa`, in `PUSHED_SCREENS` and `INSIDE_A_TAB` (Home stays lit). The record is
+[`discovery.md`](discovery.md).
+
+**Home says what of it is on screen** ([#804](https://github.com/Raketa02/Raketa/issues/804); the
+Home rows mechanics §9.2). `HomeScreen` turns on `ShellScreen`'s **`watchesOnScreen`** — forwarded,
+not designed, and off on every other shell screen, whose scroller says nothing of where it is. With
+it on, the page's scroller hands its rows `shared/ui`'s `PageOnScreen` (`useWatchedPage`): how far
+it is scrolled and how tall it shows, sampled ten times a second and read again where a drag or a
+fling comes to rest — and **nothing while Home is not the screen in view**, a screen pushed over it,
+another tab, the app in the background (`useFocusEffect` and `useAppInBackground` in a child, so a
+shell screen drawn outside a navigator never asks; coming back says the band again). Nothing drawn
+changes, and nothing re-renders as the page moves: the band is followed, not state. What a row does
+with it is `discovery`'s.

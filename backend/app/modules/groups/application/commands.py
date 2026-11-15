@@ -64,6 +64,15 @@ class AnswerJoinRequestCommand:
 
 
 @dataclass(frozen=True)
+class WithdrawJoinRequestCommand:
+    """The player who asked taps *Withdraw request*. ``player_id`` comes from
+    the session."""
+
+    group_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True)
 class LeaveGroupCommand:
     """A member taps *Leave the group*. ``player_id`` comes from the session."""
 

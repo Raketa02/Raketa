@@ -98,6 +98,20 @@ class GroupListing:
         return self.kind is GroupKind.OFFICIAL
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class GroupCrowd:
+    """How big a group is today and how much of it is new — what Hottest groups'
+    heat reads of the members (#792, ``docs/adr/0204`` §11)."""
+
+    group_id: UUID
+    #: Members today.
+    players: int
+    #: Of them, the ones whose joining — this stay, for somebody who left and
+    #: came back — was after the instant asked about.
+    new: int
+
+
 @runtime_checkable
 class GroupDirectory(Protocol):
     """The groups and group-members projections, read.
@@ -149,6 +163,17 @@ class GroupDirectory(Protocol):
         folded** — by the fold the stored copy was made with, the one clubs'
         search folds by (``docs/adr/0183`` §9) — **by home club**. Ids only: a
         search reads the members of the page it serves and of nothing else."""
+        ...
+
+    async def crowds(
+        self, *, at_least: int, joined_after: Instant
+    ) -> Sequence[GroupCrowd]:
+        """**Every group with at least ``at_least`` members today**, player or
+        official, with how many of them joined after ``joined_after`` — one
+        question about every group, counted where the members are kept, so
+        Hottest groups reads no group's members it will not show (#792). A
+        member who joined and left is in neither count; a Join request is a
+        member from its approval. In no particular order."""
         ...
 
     async def first_joined(
@@ -433,7 +458,8 @@ class GroupAdministrators(Protocol):
 @runtime_checkable
 class GroupBornGames(Protocol):
     """How many games each group **gave birth to** — the club's *Games* figure
-    (``docs/adr/0183`` §11). Only a game the group itself picked counts: a game
+    (``docs/adr/0183`` §11), and Hottest groups' *games this week*
+    (``docs/adr/0204`` §11). Only a game the group itself picked counts: a game
     two of its members arranged elsewhere never does, because the club would
     read it as the group's work.
 
@@ -446,4 +472,14 @@ class GroupBornGames(Protocol):
     async def born_in(self, group_ids: Collection[UUID]) -> Mapping[UUID, int]:
         """How many games each of these groups gave birth to — one question
         about the set. A group absent from the answer gave birth to none."""
+        ...
+
+    async def born_between(
+        self, group_ids: Collection[UUID], *, after: Instant, by: Instant
+    ) -> Mapping[UUID, int]:
+        """How many games booked in each of these groups have **a court time
+        after ``after`` and by ``by``** — *games this week* (#792): every one
+        not called off, **whether or not it was scored**, a friends game booked
+        in the group included. One question about the set; a group absent from
+        the answer had none then."""
         ...

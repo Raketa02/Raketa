@@ -34,7 +34,10 @@ import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
 import SeatInviteRoute from '@/app/(app)/(tabs)/booking/[bookingId]/invite';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
+import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
+import SameLevelRoute from '@/app/(app)/(tabs)/same-level';
+import SameVibeRoute from '@/app/(app)/(tabs)/same-vibe';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
@@ -164,6 +167,9 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/notices': NoticesRoute,
   // Rankings, behind the trophy left of Home's bell (#775).
   '(app)/(tabs)/rankings': RankingsRoute,
+  '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
+  '(app)/(tabs)/same-level': SameLevelRoute,
+  '(app)/(tabs)/same-vibe': SameVibeRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -617,7 +623,7 @@ export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
   intro: 'Will travel for a hard game.',
   gender: 'MAN',
   gender_preference: 'ANY',
-  ranking_visibility: 'SHOWN',
+  show_me_to_new_people: true,
 };
 
 /**
@@ -801,6 +807,74 @@ export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGrou
   );
 }
 
+/** Home's Hottest groups (#800) — none unless the suite says, so the row is hidden. */
+export const HOTTEST_GROUPS_PATH = '/api/v1/hottest-groups';
+
+export function stubHottestGroups(
+  transport: Transport,
+  groups: readonly Wire['HottestGroupSchema'][] = [],
+) {
+  transport.on('GET', HOTTEST_GROUPS_PATH, () =>
+    json<Wire['HottestGroupsResponse']>({ groups: [...groups] }),
+  );
+}
+
+/** Home's New in Raketa (#801) — nobody unless the suite says, so the row is hidden. */
+export const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
+/** New in Raketa's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const NEW_IN_RAKETA_ALL_PATH = '/api/v1/new-in-raketa/all';
+
+export function stubNewInRaketa(
+  transport: Transport,
+  players: readonly Wire['NewInRaketaPlayerSchema'][] = [],
+) {
+  transport.on('GET', NEW_IN_RAKETA_PATH, () =>
+    json<Wire['NewInRaketaResponse']>({ players: [...players] }),
+  );
+}
+
+/** Home's Same competitive level (#802) — nobody unless the suite says, so the row is hidden. */
+export const SAME_LEVEL_PATH = '/api/v1/same-level';
+/** Same level's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const SAME_LEVEL_ALL_PATH = '/api/v1/same-level/all';
+
+export function stubSameLevel(
+  transport: Transport,
+  players: readonly Wire['SameLevelPlayerSchema'][] = [],
+) {
+  transport.on('GET', SAME_LEVEL_PATH, () =>
+    json<Wire['SameLevelResponse']>({ players: [...players] }),
+  );
+}
+
+/** Home's Same vibe (#803) — nobody unless the suite says, so the row is hidden. */
+export const SAME_VIBE_PATH = '/api/v1/same-vibe';
+/** Same vibe's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const SAME_VIBE_ALL_PATH = '/api/v1/same-vibe/all';
+
+export function stubSameVibe(
+  transport: Transport,
+  players: readonly Wire['SameVibePlayerSchema'][] = [],
+) {
+  transport.on('GET', SAME_VIBE_PATH, () =>
+    json<Wire['SameVibeResponse']>({ players: [...players] }),
+  );
+}
+
+/** Home's Top 10 (#805) — the transport drops `?sport|prefer`, so one responder answers each read. */
+export const TOP_TEN_PATH = '/api/v1/top-10';
+
+/**
+ * **Home's Top 10** (#805) — nobody ranked anywhere unless the suite says, so the row is hidden. A
+ * suite about the row answers by the sport asked (`topTen.test.tsx`).
+ */
+export function stubTopTen(
+  transport: Transport,
+  read: Wire['TopTenResponse'] = { sport: 'PADEL', anyone_listed: false, players: [] },
+) {
+  transport.on('GET', TOP_TEN_PATH, () => json<Wire['TopTenResponse']>(read));
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -822,6 +896,7 @@ export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
   // Nobody asks themself: the route answers `false` on your own record.
   can_add_friend: false,
   nickname: GATE_USER_NICKNAME,
+  photos: [],
   area_code: 'A+050612+0019938',
   social_tags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],
   intro: 'Will travel for a hard game.',
@@ -986,6 +1061,11 @@ export function stubGate(
   stubConversations(transport);
   stubSportsmanship(transport);
   stubMyGroups(transport);
+  stubHottestGroups(transport);
+  stubNewInRaketa(transport);
+  stubSameLevel(transport);
+  stubSameVibe(transport);
+  stubTopTen(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);

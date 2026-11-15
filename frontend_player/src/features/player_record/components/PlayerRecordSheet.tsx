@@ -35,10 +35,13 @@
  * It opens instantly and fills — which is the whole reason a second round trip is affordable
  * here and was not on the twenty-row shortlist. A skeleton, the record, or the refusal.
  *
- * **The refusal draws one line and nothing else.** Never disclosed, held, an account that may
- * not be shown, no such player, and a block either way between the two (#773, ADR-0203 §8,
- * superseding ADR-0193 §2 for the record) answer the same code with the same body, byte for byte,
- * so the refusal never says which. There is no retry on it,
+ * **The refusal draws one line and nothing else.** *Show me to new people* turned off with nothing
+ * shared (ADR-0204 §2, #799), held, an account that may not be shown, no such player, and a block
+ * either way between the two (#773, ADR-0203 §8, superseding ADR-0193 §2 for the record) answer the
+ * same code with the same body, byte for byte, so the refusal never says which. **It wins over a
+ * record already drawn**: the gates are live, so a read again that is refused — after a request the
+ * server turned away unnamed, say (#799) — means the record no longer opens, and the sheet says so
+ * rather than standing on the answer before. There is no retry on it,
  * because re-asking a refusal returns the refusal —
  * where a failure to *reach* the platform gets the recovery sentence and a control, since that
  * one genuinely can succeed on a second press.
@@ -86,10 +89,24 @@
  * where nothing stands between them and none may be, *Block* stands alone, full width; **on your own
  * record, neither**. Which of the three is `friends`' `recordFootOf`, read off this record — the rule
  * is that feature's, the read is this one's. The friend button's acts re-read this record before they
- * settle, handed down. A request asked here says where it was asked from (`friends`'
+ * settle, handed down — **and a request refused unnamed** (`player_unavailable`: they turned *Show me
+ * to new people* off since this was read, #799) **is one of them**: nothing is said, the record is
+ * read again, and its refusal is what the sheet draws. There is no daily limit, so no sentence for
+ * one. A request asked here says where it was asked from (`friends`'
  * `recordAskedWhere`): the record, with the group and the sport the caller opened it from (`groupId`,
  * `sport`), which the other person's Home card names — or **the ranking**, with the page's sport,
- * where the Rankings page opened it (`rankingSport`), so the card reads *Found you in the padel ranking*.
+ * where the Rankings page opened it (`rankingSport`), so the card reads *Found you in the padel ranking*
+ * — or **the Home row** that opened it (`foundIn`, #801), so it reads *Found you among new players*.
+ * The row itself moves on its own: a friend act or a block re-reads every read that lists people.
+ *
+ * ## All their photos, under the header
+ *
+ * **Every photo the player has**, in their own order, on `shared/ui`'s carousel
+ * ([#799](https://github.com/Raketa02/Raketa/issues/799), ADR-0204 §2; the Home rows screens §9.3):
+ * whoever the record opens for sees them all, a stranger included, where the header's panel once
+ * stood alone. The vibe sheet (#803) draws the same carousel. **None with no photo** — the panel's
+ * poster is the face then. It sits outside the header's one element: a photograph is not a fact this
+ * app describes.
  *
  * ## The account is folded under the blocks
  *
@@ -115,7 +132,8 @@
  */
 
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { BlockRow } from '@/features/blocks/types';
 import {
@@ -123,35 +141,23 @@ import {
   recordAskedWhere,
   recordFootOf,
   type AskedWhere,
+  type FoundIn,
 } from '@/features/friends/types';
-import { codeMessage, type AppError } from '@/shared/errors';
-import { BottomSheet, Note, Button, SocialTagRow, theme } from '@/shared/ui';
+import { BottomSheet, PhotoCarousel, theme } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
-import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
 import { RecordBlocks } from './RecordBlocks';
 import { RecordCard } from './RecordCard';
-import { RecordDetails } from './RecordDetails';
+import { RecordDetails, useFoldTransition } from './RecordDetails';
 import { RecordHeader } from './RecordHeader';
+import { RecordStanding, isRecordRefusal } from './RecordRead';
+import { RecordTags } from './RecordTags';
 import { SkillCard } from './SkillCard';
-import {
-  READING_RECORD_LABEL,
-  RECORD_UNAVAILABLE,
-  RECORD_UNAVAILABLE_CODE,
-  RETRY_RECORD_LABEL,
-  recordCloseLabel,
-  recordTitle,
-  socialTagsLabel,
-} from './recordPresentation';
-
-/** The one code, for all four causes — and the one sentence this client draws from it. */
-const RECORD_FAILURES: Readonly<Record<string, string>> = {
-  [RECORD_UNAVAILABLE_CODE]: RECORD_UNAVAILABLE,
-};
+import { recordCloseLabel, recordTitle } from './recordPresentation';
 
 /**
  * How tall the sheet stands before it knows anything.
@@ -217,6 +223,11 @@ export interface PlayerRecordSheetProps {
    * ranking*. Absent everywhere else.
    */
   readonly rankingSport?: Sport;
+  /**
+   * **The Home row that opened the record** (#801; the Home rows mechanics §12): a request asked here
+   * keeps the row — *Found you among new players* on the other person's Home. Absent everywhere else.
+   */
+  readonly foundIn?: FoundIn;
 }
 
 export function PlayerRecordSheet({
@@ -231,6 +242,7 @@ export function PlayerRecordSheet({
   foot,
   groupId,
   rankingSport,
+  foundIn,
 }: PlayerRecordSheetProps) {
   const record = usePlayerRecord({
     subject,
@@ -242,6 +254,9 @@ export function PlayerRecordSheet({
   // default until it lands. A sheet opened from your own face is `kind: 'me'`, which is what
   // the caller knows rather than what it compared.
   const isSelf = record.data?.isSelf ?? subject.kind === 'me';
+  // The sheet stands on the bottom edge, so *Full record* opening moves its top: the fold's own
+  // transition brings it along (`RecordDetails`).
+  const fold = useFoldTransition();
 
   return (
     <BottomSheet
@@ -249,10 +264,11 @@ export function PlayerRecordSheet({
       onClose={onClose}
       title={recordTitle(isSelf)}
       closeLabel={recordCloseLabel(isSelf)}
+      layoutTransition={fold}
     >
       <View style={s.body}>
-        {record.data === undefined ? (
-          <Standing error={record.error} onRetry={() => void record.refetch()} />
+        {record.data === undefined || isRecordRefusal(record.error) ? (
+          <RecordStanding error={record.error} onRetry={() => void record.refetch()} />
         ) : (
           <Filled
             record={record.data}
@@ -262,46 +278,13 @@ export function PlayerRecordSheet({
             {...(tagOverlap === undefined ? {} : { tagOverlap })}
             {...(pairing === undefined ? {} : { pairing })}
             {...(foot === undefined ? {} : { foot })}
-            where={recordAskedWhere({ rankingSport, groupId, sport })}
+            where={recordAskedWhere({ rankingSport, groupId, sport, foundIn })}
             rereadRecord={() => record.refetch()}
             onBlocked={onClose}
           />
         )}
       </View>
     </BottomSheet>
-  );
-}
-
-/**
- * The two states that are not a record: still reading, and could not.
- *
- * A refusal is **one line and no control**. Everything else is the recovery sentence with the
- * control the failure belongs to, which is this read and nothing else on the screen underneath.
- */
-function Standing({
-  error,
-  onRetry,
-}: {
-  readonly error: AppError | null;
-  readonly onRetry: () => void;
-}) {
-  if (error === null) {
-    return (
-      <ActivityIndicator accessibilityLabel={READING_RECORD_LABEL} color={theme.color.muted} />
-    );
-  }
-
-  if (error.code === RECORD_UNAVAILABLE_CODE) {
-    return <Text style={s.refusal}>{RECORD_UNAVAILABLE}</Text>;
-  }
-
-  return (
-    <View style={s.failure}>
-      <Note variant="coral" accessibilityRole="alert">
-        {codeMessage(RECORD_FAILURES, error)}
-      </Note>
-      <Button label={RETRY_RECORD_LABEL} variant="secondary" onPress={onRetry} />
-    </View>
   );
 }
 
@@ -329,11 +312,7 @@ function Filled({
   PlayerRecordSheetProps,
   'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing' | 'foot'
 >) {
-  // Their live tags, in whichever register the pairing licenses. The claim about nothing is the
-  // engine's and is kept; every other silence draws the tags and says nothing.
-  const tags = recordTagRow(record.socialTags, tagOverlap);
-  const tagsLabel = socialTagsLabel(tags);
-
+  const fold = useFoldTransition();
   return (
     <>
       <RecordHeader
@@ -343,6 +322,9 @@ function Filled({
         {...(viewerAreaCode === undefined ? {} : { viewerAreaCode })}
         {...(pairing === undefined ? {} : { onExplainFit: pairing.onExplain, fit: pairing.fit })}
       />
+
+      {/* All of their photos, in their order — none with no photo (#799). */}
+      <PhotoCarousel playerId={playerId} photos={record.photos} testID="record-photos" />
 
       {/* Absent where they hold no rating at all — the pills speak instead, and there is no
           panel of noughts to mistake for a bad record. */}
@@ -372,16 +354,22 @@ function Filled({
           {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
         />
 
-        {tagsLabel === '' ? null : (
-          <View accessible accessibilityLabel={tagsLabel}>
-            <SocialTagRow row={tags} />
-          </View>
-        )}
+        {/* Their live tags, in whichever register the pairing licenses. The claim about nothing is
+            the engine's and is kept; every other silence draws the tags and says nothing. */}
+        <RecordTags
+          tags={record.socialTags}
+          {...(tagOverlap === undefined ? {} : { overlap: tagOverlap })}
+        />
       </RecordDetails>
 
       {/* The foot, last, where the surface filled it. A sheet reads statement first and answer
-          last, which is the whole reason it is at the end and inside the scroll (9.1). */}
-      {foot === undefined ? null : <View style={s.foot}>{foot}</View>}
+          last, which is the whole reason it is at the end and inside the scroll (9.1). It moves
+          down with the fold's own transition, so it keeps its place on screen as the sheet grows. */}
+      {foot === undefined ? null : (
+        <Animated.View layout={fold} style={s.foot}>
+          {foot}
+        </Animated.View>
+      )}
 
       {/* **Add friend beside Block, last** (#753, #587, #779): on every record but your own, from
           the record's own answers. The acts are `friends'` and `blocks'`; where the reader stands
@@ -416,19 +404,21 @@ function RecordFoot({
   readonly onBlocked: () => void;
 }) {
   const foot = recordFootOf(record);
+  // Under the fold, so it moves with the fold's transition and keeps its place on screen.
+  const fold = useFoldTransition();
   const block = <BlockRow playerId={playerId} name={record.nickname} onBlocked={onBlocked} />;
   switch (foot.kind) {
     case 'nothing':
       return null;
     case 'block':
       return (
-        <View style={s.footRow} testID="record-foot">
+        <Animated.View layout={fold} style={s.footRow} testID="record-foot">
           <View style={s.whole}>{block}</View>
-        </View>
+        </Animated.View>
       );
     case 'pair':
       return (
-        <View style={s.footRow} testID="record-foot">
+        <Animated.View layout={fold} style={s.footRow} testID="record-foot">
           <View style={s.half}>
             <FriendButton
               playerId={playerId}
@@ -439,7 +429,7 @@ function RecordFoot({
             />
           </View>
           <View style={s.half}>{block}</View>
-        </View>
+        </Animated.View>
       );
   }
 }
@@ -461,6 +451,4 @@ const s = StyleSheet.create({
   half: { flex: 1 },
   // Block alone takes the row whole.
   whole: { flex: 1 },
-  refusal: { ...theme.type.tiny, color: theme.color.muted },
-  failure: { gap: theme.space.sm },
 });

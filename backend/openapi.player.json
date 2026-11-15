@@ -1604,19 +1604,19 @@
         ]
       }
     },
-    "/api/v1/players/me/ranking-visibility": {
+    "/api/v1/players/me/show-me-to-new-people": {
       "put": {
         "tags": [
           "player-profile"
         ],
-        "summary": "Show me in General",
-        "description": "The switch on *On your card* (`docs/adr/0203` \u00a77, #772): *Players who don't know you can see your place, open your record and send you a request.* `SHOWN` \u2014 on, which every profile starts with \u2014 or `HIDDEN`. Written at once, with no Save; an unchanged value records nothing.\n\n**`HIDDEN`**: your row leaves everybody else's General, in every sport, and **places never renumber** \u2014 the others read #6, then #8, and *of 13* still counts you. You still see your own place, on Rankings (the card's state `HIDDEN`) and on Home's trophy. Friends ignores the switch: your friends still see you there. It reaches the ranking through the outbox, so the next read after it is delivered follows it.\n\n**`204` and no body**: the switch is read back on `GET /players/me/profile`, as `ranking_visibility`.",
-        "operationId": "set_ranking_visibility_api_v1_players_me_ranking_visibility_put",
+        "summary": "Show me to new people",
+        "description": "The switch on *On your card* (`docs/adr/0204` \u00a72): *Players you don't share a group or a game with can find you on Home, open your record and send you a request.* On by default; written at once, with no Save; an unchanged value records nothing.\n\n**Off**: anybody you share no group, no game and no friendship with reads your record as *not available* and can't send you a request \u2014 from the next tap, with nothing to wait for. Your place in the ranking never moves, a request already sent stays open, and you still see everybody and may ask anybody yourself.\n\n**`204` and no body**: the switch is read back on `GET /players/me/profile`, as `show_me_to_new_people`.",
+        "operationId": "set_show_me_to_new_people_api_v1_players_me_show_me_to_new_people_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetRankingVisibilityRequest"
+                "$ref": "#/components/schemas/SetShowMeToNewPeopleRequest"
               }
             }
           },
@@ -1879,7 +1879,7 @@
           "blocks"
         ],
         "summary": "Block a player",
-        "description": "**Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.\n\n**It closes the record and the ranking both ways** (`docs/adr/0203` \u00a78): neither of you can open the other's record, anywhere, group-mates included \u2014 each reads *This record isn't available* \u2014 and neither sees the other's row in the Ranking.\n\n**It reaches nothing else.** You both stay in your groups and see each other in their Members lists, and a chat you already share keeps working.\n\n**Your yeses where they are In are taken back** \u2014 on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified.** You can read your own blocks \u2014 `GET /blocks`, the one read that carries them, and where Unblock lives \u2014 and nothing in this API tells anybody they were blocked.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.",
+        "description": "**Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.\n\n**It closes the record both ways** (`docs/adr/0203` \u00a78): neither of you can open the other's record, anywhere, group-mates included \u2014 each reads *This record isn't available*. **The ranking still shows you both** at your true places (`docs/adr/0204` \u00a72): it is the real ranking, and a tap on the other's row reads the same refusal.\n\n**It reaches nothing else.** You both stay in your groups and see each other in their Members lists, and a chat you already share keeps working.\n\n**Your yeses where they are In are taken back** \u2014 on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified.** You can read your own blocks \u2014 `GET /blocks`, the one read that carries them, and where Unblock lives \u2014 and nothing in this API tells anybody they were blocked.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.",
         "operationId": "block_player_api_v1_blocks_post",
         "requestBody": {
           "content": {
@@ -2123,7 +2123,7 @@
           "friends"
         ],
         "summary": "Ask to be friends",
-        "description": "**+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it \u2014 or *Found you in the padel ranking* for a request made from the ranking \u2014 and they are told once.\n\n**Who may be asked** (`docs/adr/0203` \u00a79): somebody you share a group with now, or anybody listed on General in a sport who hasn't turned *Show me in General* off \u2014 the record's `can_add_friend` says which. **At most 10 a Warsaw day to people you share no group with**; a request to a group-mate is never counted, wherever it is made, and neither is accepting one or asking somebody who asked you first.\n\n**If they had already asked you, the requests cross**: you are friends at once, both are told, and the answer is `FRIEND`.\n\n**Otherwise `SENT`, for as long as the request is open.** Nothing ever tells you whether they set it aside: *request sent* is all you read, and a request never expires. Cancel it with `DELETE /friends/requests/{player_id}`.",
+        "description": "**+ Add** on Members or the result's *PLAYED WITH* card, **Add friend** on the record. Their Home gets a card naming the group you asked from while you are both in it \u2014 or *Found you in the padel ranking* for a request made from the ranking \u2014 and they are told once.\n\n**Anybody may be asked, as many as you like** (`docs/adr/0204` \u00a72), except somebody who turned *Show me to new people* off and shares no group, game or friendship with you, and hasn't asked you \u2014 exactly the people whose record opens for you, so the record's `can_add_friend` says it. Somebody who blocked you reads *request sent* and never sees it.\n\n**If they had already asked you, the requests cross**: you are friends at once, both are told, and the answer is `FRIEND`.\n\n**Otherwise `SENT`, for as long as the request is open.** Nothing ever tells you whether they set it aside: *request sent* is all you read, and a request never expires. Cancel it with `DELETE /friends/requests/{player_id}`.",
         "operationId": "ask_to_be_friends_api_v1_friends_requests_post",
         "security": [
           {
@@ -2162,7 +2162,7 @@
             }
           },
           "404": {
-            "description": "`player_not_in_your_groups` \u2014 they are in none of your groups, and not listed on General in any sport, or hidden from it. Somebody else can be asked only through your link. One answer for all of them, and for an id nobody holds.",
+            "description": "`player_unavailable` \u2014 they can't be asked: one answer, naming nothing, for somebody who turned *Show me to new people* off and shares no group, game or friendship with you, and for an id nobody holds. Their record reads *not available* too.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2173,16 +2173,6 @@
           },
           "409": {
             "description": "`already_friends`; `friend_request_already_sent` \u2014 your request to them is still open, set aside or not, and nobody asks twice; `unblock_them_first` \u2014 you blocked them; `concurrent_modification` \u2014 two acts on the two of you raced: retry.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "`daily_request_limit` \u2014 you have sent 10 requests today to people you share no group with: *You've sent 10 requests to new people today. Try again tomorrow.* Nothing was sent. A request to somebody in one of your groups still goes through, and the count starts again at midnight, Warsaw time.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3852,7 +3842,7 @@
           "player-record"
         ],
         "summary": "One player's record",
-        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, **anybody listed on General in a sport who hasn't turned *Show me in General* off** \u2014 whether or not you have a level \u2014 and yourself, and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires but a group and a listing.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now \u2014 and while you run a group they are in. General opens it while it lists them: ninety days after their last result, or once they turn the switch off, it opens for strangers no more.\n\n**The gates are live.** A hold, an account that may not be shown and **a block made by either of you** are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered. A block closes the record both ways, group-mates included, with the one refusal: whoever blocked whom reads only *This record isn't available.* Unblock lives in You \u203a Blocked players.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Any player's record opens for any player** (`docs/adr/0204` \u00a72), with or without a level, and with **all** their photos \u2014 except across a block, and when they turned *Show me to new people* off: then only people they share a group, a game or a friendship with, somebody they asked to be friends, and whoever runs a group they are in, may open it. A game you were both on counts for as long as you are both on it; a group while you are both in it, or while you run it. The switch is read live, so it closes the record on the next open.\n\n**The gates are live.** A hold, an account that may not be shown and **a block made by either of you** are re-evaluated on every open. A block \u2014 the ranking still shows a blocked pair each other \u2014 closes the record both ways, group-mates included, with the one refusal: whoever blocked whom reads only *This record isn't available.* Unblock lives in You \u203a Blocked players.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
         "operationId": "read_player_record_api_v1_players__player_id__record_get",
         "security": [
           {
@@ -3901,7 +3891,7 @@
             }
           },
           "404": {
-            "description": "`record_unavailable` \u2014 **one code for every cause, and the body is identical in all of them.** You were never shown this person and they are not listed on General, or hidden from it; the account is held or in a state that may not be shown; one of you blocked the other; or there is no such player.\n\n**The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger, and one that named a block would tell the blocked person. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
+            "description": "`record_unavailable` \u2014 **one code for every cause, and the body is identical in all of them.** They turned *Show me to new people* off and share no group, game or friendship with you; the account is held or in a state that may not be shown; one of you blocked the other; or there is no such player.\n\n**The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger, and one that named a block would tell the blocked person. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3939,7 +3929,7 @@
           "rankings"
         ],
         "summary": "A sport's ranking",
-        "description": "Your place card, the podium and the list, in one sport and view \u2014 sorted by the Level itself, competitive games only: General's first page, or the whole of Friends. An unknown sport is refused.",
+        "description": "Your place card, the podium and the list, in one sport and view \u2014 sorted by the Level itself, competitive games only: General's first page, or the whole of Friends. An unknown sport is refused.\n\n**The real ranking** (`docs/adr/0204` \u00a72): everybody is listed at their true place, a player you blocked or who blocked you included, and *of N* counts everyone. Their record stays closed to you.",
         "operationId": "read_ranking_api_v1_rankings__sport__get",
         "security": [
           {
@@ -3974,16 +3964,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RankingResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 your blocks could not be read, so no list is drawn. Retry the same request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4085,16 +4065,6 @@
           },
           "400": {
             "description": "`not_a_ranking_page` \u2014 a cursor this server never wrote, or a page asked for in two places at once.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 your blocks could not be read, so no list is drawn. Retry the same request.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4534,6 +4504,48 @@
         }
       }
     },
+    "/api/v1/groups/{group_id}/join-request": {
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Withdraw a Join request",
+        "description": "The *Asked* sheet's **Withdraw request**: the caller's request leaves the Owner's, the Administrator's and the club's lists **at once**, and **nobody is told** \u2014 no notice, no line, no email. The caller's `relation` to the group reads `NONE` again, and they may ask again. **A request already answered or gone changes nothing and still answers 204**: one approved a moment earlier leaves the caller a member, and a group deleted meanwhile took its requests with it \u2014 **this route refuses nothing**.",
+        "operationId": "withdraw_join_request_api_v1_groups__group_id__join_request_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups/{group_id}/members": {
       "get": {
         "tags": [
@@ -4940,6 +4952,564 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/hottest-groups": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Home's Hottest groups",
+        "description": "Up to **six** of the groups with the most going on, **whether the caller is in them or not** \u2014 every group with 3 or more players, player and official alike, the caller's own included \u2014 by **heat**: 2 \u00d7 games this week + 3 \u00d7 new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.",
+        "operationId": "hottest_groups_api_v1_hottest_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HottestGroupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/new-in-raketa": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Home's New in Raketa row",
+        "description": "The players who finished sign-up in the **last 30 days**, strictly \u2014 the 10 newest, unrated ones included \u2014 those you aren't connected with first, then those you sent a request to, then your friends, newest first within each. An 11th sign-up pushes the oldest off the row; they stay in See all until their 30 days end. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_new_in_raketa_api_v1_new_in_raketa_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewInRaketaResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/new-in-raketa/all": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "New in Raketa's See all",
+        "description": "Every player who joined in the last 30 days, newest first, friends where they fall, in pages of 20 \u2014 with `sport`, only those holding a level in it \u2014 and the sports at least one of them holds a level in. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_new_in_raketa_page_api_v1_new_in_raketa_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep only the players holding a level in this sport.",
+              "title": "Sport"
+            },
+            "description": "Keep only the players holding a level in this sport."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 players behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 players behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewInRaketaPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_new_in_raketa_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/same-level": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Home's Same competitive level players row",
+        "description": "The players a competitive game with would be most even \u2014 each in the sport where you two are evenest, by the app's Forecast with one player a side. Ten: fresh good matches first (70% or more, not your friend, not asked by you, not rested; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, rested players, weaker matches \u2014 best % first. **Empty while you hold no level anywhere.** **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_level_api_v1_same_level_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameLevelResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/same-level/all": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Same competitive level's See all",
+        "description": "Everybody who shares a sport with you, best % first, friends where they fall, in pages of 20 \u2014 each in your evenest shared sport, or with `sport` everybody holding a level in it, compared there \u2014 and the sports you share with somebody. Empty while you hold no level. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_level_page_api_v1_same_level_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Compare everybody in this sport, and keep only them.",
+              "title": "Sport"
+            },
+            "description": "Compare everybody in this sport, and keep only them."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 players behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 players behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameLevelPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_same_level_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/same-vibe": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Home's Same vibe players row",
+        "description": "The players whose Social tags overlap yours, most in common first \u2014 ties to fewer of their tags you don't hold, then the player id \u2014 each with the vibe %, 1 \u2212 \u00bd\u207f for n shared tags. Every tag counts the same, and skill plays no part, so a player with no level sees it too. Ten: fresh good matches first (2 shared tags or more, not your friend, not asked by you, not rested; somebody who asked you counts as fresh), then the gaps \u2014 friends, those you asked, rested players, 1-tag matches \u2014 in the same order. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_vibe_api_v1_same_vibe_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameVibeResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/same-vibe/all": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Same vibe's See all",
+        "description": "Everybody who shares a Social tag with you, most in common first, friends where they fall, in pages of 20 \u2014 with `sport`, only those holding a level in it \u2014 and the sports at least one of them holds a level in. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.",
+        "operationId": "read_same_vibe_page_api_v1_same_vibe_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep only the players holding a level in this sport.",
+              "title": "Sport"
+            },
+            "description": "Keep only the players holding a level in this sport."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 players behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 players behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameVibePageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_same_vibe_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/top-10": {
+      "get": {
+        "tags": [
+          "rankings"
+        ],
+        "summary": "Home's Top 10 row",
+        "description": "The first ten rows of General in one sport \u2014 the true top of the Rankings page, everybody at their true place, whoever blocked whom. Name the sport **exactly** with `sport` (the pill), or **prefer** one with `prefer` (the trophy's sport, on opening): with nobody listed in it, the row shows the next sport in the app's order where somebody is, going round from the last to the first. One of the two, never both. `anyone_listed` says whether the row shows at all.",
+        "operationId": "read_top_ten_api_v1_top_10_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "This sport exactly \u2014 empty when nobody is listed in it.",
+              "title": "Sport"
+            },
+            "description": "This sport exactly \u2014 empty when nobody is listed in it."
+          },
+          {
+            "name": "prefer",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "This sport, or, with nobody listed in it, the next in the app's order where somebody is.",
+              "title": "Prefer"
+            },
+            "description": "This sport, or, with nobody listed in it, the next in the app's order where somebody is."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopTenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_one_sport` \u2014 neither `sport` nor `prefer`, or both at once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/on-screen": {
+      "post": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Cards that came on screen in a row",
+        "description": "The phone's word that these cards were at least half visible in Home's *Same competitive level* or *Same vibe* row. **Each counts once per card, row and Warsaw day**, and only while you and they are unconnected \u2014 no friendship, no request of yours open; somebody who asked you counts. **On the fifth different day a player rests in that row**: a gap, never hidden, behind every fresh match \u2014 for good, even once you add them. Each row keeps its own count, and a day never reported counts nothing. **Ignored**: an id nobody holds, yours, and anybody never on a people row \u2014 blocked either way, *Show me to new people* off, an account that doesn't play.",
+        "operationId": "report_on_screen_api_v1_on_screen_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnScreenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Counted \u2014 also when nothing was: every id that counts nothing is ignored, with the same answer."
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 the blocks couldn't be read, so nothing is counted rather than a day for somebody never on your rows. Safe to send again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/invitations/claim": {
@@ -8940,7 +9510,7 @@
           },
           "made_from": {
             "$ref": "#/components/schemas/AskedFrom",
-            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group."
+            "description": "Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** \u2014 `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it \u2014 `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it \u2014 `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel \u00b7 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there. From Home's **Same vibe players** row, or a record opened from it \u2014 `SAME_VIBE` (#795): their card and notice read *6 things in common* (*1 thing in common*), counted when read, or *Found you through your tags* once you share none."
           },
           "group_id": {
             "anyOf": [
@@ -8953,7 +9523,7 @@
               }
             ],
             "title": "Group Id",
-            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, whose page shows no group."
+            "description": "The group the screen showed \u2014 Members' group, or the game's \u2014 which their Home card names (*With you in Kazimierz crew*) while you are both in it. Omit it where the screen showed none; it is ignored with `RANKING`, `NEW_PLAYERS`, `SAME_LEVEL` and `SAME_VIBE`, whose screens show no group."
           },
           "sport": {
             "anyOf": [
@@ -8964,7 +9534,7 @@
                 "type": "null"
               }
             ],
-            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none. **Required with `RANKING`**: it is the ranking the card names."
+            "description": "The sport the screen showed, whose Level the card prints beside your nickname (*Padel 3,40*). Omit it where the screen showed none; it is ignored with `NEW_PLAYERS` and `SAME_VIBE`, whose lines name no sport. **Required with `RANKING`** \u2014 it is the ranking the card names \u2014 **and with `SAME_LEVEL`**: it is the sport their line compares."
           }
         },
         "type": "object",
@@ -8980,7 +9550,10 @@
           "MEMBERS",
           "RECORD",
           "RESULT",
-          "RANKING"
+          "RANKING",
+          "NEW_PLAYERS",
+          "SAME_LEVEL",
+          "SAME_VIBE"
         ],
         "title": "AskedFrom",
         "description": "The screen a request is asked from. **Not a link**: a request by link is\nmade by opening the link, never sent here."
@@ -9829,8 +10402,7 @@
           "NO_LEVEL",
           "OFF_THE_LIST",
           "JUST_YOU",
-          "NO_FRIEND_LISTED",
-          "HIDDEN"
+          "NO_FRIEND_LISTED"
         ],
         "title": "CardState",
         "description": "What the reader's place card says (the screens \u00a74.1, \u00a74.3, \u00a74.4, \u00a74.6)."
@@ -12563,7 +13135,7 @@
             },
             "type": "array",
             "title": "Rows",
-            "description": "The page's rows, best first, each with its true place \u2014 the same rows the main read draws. **50 places**: a row you can't see leaves its gap, so a page may hold fewer."
+            "description": "The page's rows, best first, each with its true place \u2014 the same rows the main read draws, 50 places."
           },
           "previous": {
             "anyOf": [
@@ -13213,6 +13785,14 @@
         "title": "HandoversSeenRequest",
         "description": "The groups the sheet told the Administrator about (``docs/adr/0192``)."
       },
+      "HeatTag": {
+        "type": "string",
+        "enum": [
+          "HOTTEST",
+          "GROWING"
+        ],
+        "title": "HeatTag"
+      },
       "HomeClubPageResponse": {
         "properties": {
           "clubs": {
@@ -13314,6 +13894,21 @@
             "title": "From Ranking",
             "description": "Made from your record on the Rankings page: draw *Found you in the padel ranking* \u2014 `sport`'s ranking \u2014 in place of the group line, whether or not you share a group (#773)."
           },
+          "from_new_players": {
+            "type": "boolean",
+            "title": "From New Players",
+            "description": "Made from Home's *New in Raketa* row, or a record opened from it: draw *Found you among new players* in place of the group line (#793)."
+          },
+          "from_same_level": {
+            "type": "boolean",
+            "title": "From Same Level",
+            "description": "Made from Home's *Same competitive level players* row, or a record opened from it, in `sport` (#794): draw *Your level in padel \u00b7 91% even* \u2014 `percent_even` \u2014 in place of the group line, or *Found you at your padel level* when `percent_even` is `null`."
+          },
+          "from_same_vibe": {
+            "type": "boolean",
+            "title": "From Same Vibe",
+            "description": "Made from Home's *Same vibe players* row, or a record opened from it (#795): draw *6 things in common* \u2014 `in_common`; *1 thing in common* for one \u2014 in place of the group line, or *Found you through your tags* when `in_common` is `0`."
+          },
           "group": {
             "anyOf": [
               {
@@ -13358,6 +13953,33 @@
           "reliability_band": {
             "$ref": "#/components/schemas/ReliabilityBand",
             "description": "The band of that figure, the code their record serves."
+          },
+          "percent_even": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Even",
+            "description": "With `from_same_level`: **today's** % even between you two in `sport` \u2014 the app's Forecast with one player a side, worked out on this read. `null` once either of you holds no level there, and on every other card."
+          },
+          "in_common": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Common",
+            "description": "With `from_same_vibe`: how many Social tags you two hold **today**, counted on this read \u2014 `0` once you share none. `null` on every other card."
           }
         },
         "type": "object",
@@ -13369,11 +13991,16 @@
           "asked_at",
           "by_link",
           "from_ranking",
+          "from_new_players",
+          "from_same_level",
+          "from_same_vibe",
           "group",
           "sport",
           "level",
           "player_score",
-          "reliability_band"
+          "reliability_band",
+          "percent_even",
+          "in_common"
         ],
         "title": "HomeFriendRequestSchema",
         "description": "One card in *FRIEND REQUESTS* \u2014 *In\u00e9s wants to be your friend \u00b7 With you\nin Kazimierz crew \u00b7 Padel 3,40 \u00b7 \u2726 98*, **Not now** and **Accept**."
@@ -13844,6 +14471,148 @@
         "title": "HomeStatus",
         "description": "What a game on Home is, right now (the mechanics \u00a714.1)."
       },
+      "HottestGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` \u2014 *Open group*, and the chip is **Join**; `PEOPLE_I_APPROVE` \u2014 *Closed group*, and the chip is **Ask to join**. Read `relation` and `is_administrator` first."
+          },
+          "run_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run By",
+            "description": "The sheet's *run by*: **an official group's club**, by its name \u2014 whoever runs it, and while nobody does, since the club answers its requests \u2014 and **a player group's Owner**, by their whole nickname, never cut and never with an @. `null` only for an Owner who can no longer be named."
+          },
+          "club": {
+            "$ref": "#/components/schemas/ClubNameSchema",
+            "description": "The club it plays at."
+          },
+          "games_this_week": {
+            "type": "integer",
+            "title": "Games This Week",
+            "description": "Games booked in the group whose court time falls in **the last 7 days**, to the minute \u2014 none called off, scored or not, a friends game booked in the group included."
+          },
+          "new_this_month": {
+            "type": "integer",
+            "title": "New This Month",
+            "description": "Members who joined in **the last 30 days** and are still in it: the green *+3 this month*, drawn only when above nought. Somebody who left and came back counts by the join that stands."
+          },
+          "heat_share": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Heat Share",
+            "description": "The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full \u2014 or, with no HOTTEST, over the highest heat in the row, so no bar is more than full. Heat is 2 \u00d7 games this week + 3 \u00d7 new this month + players counted up to 20."
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeatTag"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`HOTTEST` on exactly one card \u2014 the highest heat, and only if it had a game this week; `GROWING` on any other with **+4 or more** new this month **and** new making up at least a quarter of today's players; `null` on the rest. The row is in order already: HOTTEST, then GROWING by heat, then untagged by heat."
+          },
+          "faces": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Faces",
+            "description": "**Up to six member faces** \u2014 the sheet's six; the card draws the first four. The reader's friends first, then the longest-standing members; **never the reader's own face**. Not a way to anybody: a face here is not tapped."
+          },
+          "friends_count": {
+            "type": "integer",
+            "title": "Friends Count",
+            "description": "How many of the reader's friends are members now: *7 of your friends play here*. At 0 the sheet says `member_count` players instead."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/GroupRelation",
+            "description": "`MEMBER` \u2014 **You're in** on the card, **Open group** on the sheet, both opening the group page; `REQUESTED` \u2014 **Asked**, which opens *Withdraw request*; `NONE` \u2014 **Join** or **Ask to join**, by `join_policy`."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether **the reader** runs this official group: their chip is **Join**, whatever `join_policy` says, and it admits them at once. Always `false` on a player group."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "join_policy",
+          "run_by",
+          "club",
+          "games_this_week",
+          "new_this_month",
+          "heat_share",
+          "tag",
+          "faces",
+          "friends_count",
+          "relation",
+          "is_administrator"
+        ],
+        "title": "HottestGroupSchema",
+        "description": "One card of Home's *Hottest groups* \u2014 and **everything its group sheet\nshows**, so tapping the card needs no second read (`docs/adr/0204` \u00a73,\n\u00a711). Drawn for any player, **whether they are in the group or not**; the\ngroup page itself stays members-only."
+      },
+      "HottestGroupsResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/HottestGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "**Up to six**, in the row's order \u2014 every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "HottestGroupsResponse"
+      },
       "InProgressAssessmentResponse": {
         "properties": {
           "assessment_id": {
@@ -14136,6 +14905,31 @@
         ],
         "title": "LeavingSchema",
         "description": "What *Leave the game* would cost now (the mechanics \u00a713)."
+      },
+      "LevelBandSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "*Established* \u2014 RacketSkill's own word."
+          },
+          "lower": {
+            "type": "number",
+            "title": "Lower"
+          },
+          "upper": {
+            "type": "number",
+            "title": "Upper"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lower",
+          "upper"
+        ],
+        "title": "LevelBandSchema",
+        "description": "A band as the rating published it with the Level \u2014 the comparison\nbar's bold name. Its edges travel with it; never derived from a level."
       },
       "LevelRangeSchema": {
         "properties": {
@@ -14674,6 +15468,156 @@
         "title": "NamingResponse",
         "description": "What the naming recorded: the nickname as it now stands.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on; this is what lets it show the nickname back at once."
       },
+      "NewInRaketaPageResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/NewInRaketaPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 20 players who joined in the last 30 days, newest first, friends where they fall \u2014 with `sport`, only those holding a level in it. Empty with a sport: *Nobody new plays squash yet*."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport at least one of them holds a level in, in the sports' own order \u2014 the pill's chips beside *All*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "next",
+          "sports"
+        ],
+        "title": "NewInRaketaPageResponse"
+      },
+      "NewInRaketaPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` draws their court poster."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At",
+            "description": "When they finished sign-up \u2014 the profile commit."
+          },
+          "days_since_joined": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Days Since Joined",
+            "description": "Warsaw days since they joined: `0` is *Joined today*, `1` *Joined yesterday*, 2\u20136 *Joined {n} days ago*, 7\u201313 *Joined last week*, then *Joined {n} weeks ago* (days \u00f7 7, at most 4)."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/NewInRaketaSportSchema"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport they hold a level in, in the sports' own order \u2014 **empty** for a player with no level, whose tile shows no sport line."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them \u2014 the round friend button: `NONE` **+**, `SENT` **\u2026**, `FRIEND` **\u2713**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `NEW_PLAYERS`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "joined_at",
+          "days_since_joined",
+          "sports",
+          "relation"
+        ],
+        "title": "NewInRaketaPlayerSchema",
+        "description": "One New in Raketa tile."
+      },
+      "NewInRaketaResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/NewInRaketaPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 10: the 10 newest of the last 30 days, those you aren't connected with first (someone who asked you among them), then those you sent a request to, then your friends \u2014 newest first within each. **Empty hides the row.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "NewInRaketaResponse"
+      },
+      "NewInRaketaSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their published Level in the sport \u2014 *Padel 2,35*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "NewInRaketaSportSchema"
+      },
       "NewPasswordRequest": {
         "properties": {
           "token": {
@@ -14996,6 +15940,41 @@
         ],
         "title": "OnCourtVerdict",
         "description": "What the on-court check concluded about a photograph. **Two values.**\n\nThe third state \u2014 *nobody looked* \u2014 is the **absence** of one of these and\nnever a third value, which is ``docs/adr/0138``'s rule: a shield saying\n*checked and passed* cannot be drawn on a photograph nothing examined, and a\nvalue meaning *unknown* is a value somebody eventually draws a tick for.\n\n**The words are the ones a card already carries, and they are checked\nagainst it.** This is a second spelling of ``player_profile``'s\n``PhotoReviewDecision`` on purpose \u2014 this context imports no other context's\ndomain types \u2014 and a second spelling that drifts is worse than an import: a\nclient reading a search card and a record would get two words for one fact.\n``tests/unit/test_player_record_identity.py`` fails the build if the two\nvocabularies stop agreeing."
+      },
+      "OnScreenRequest": {
+        "properties": {
+          "row": {
+            "$ref": "#/components/schemas/OnScreenRow",
+            "description": "The row they came on screen in \u2014 `SAME_LEVEL` or `SAME_VIBE`, each with its own count. New in Raketa and See all rest nobody, so are never reported."
+          },
+          "player_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Player Ids",
+            "description": "Each card at least half visible \u2014 the card's `player_id`. A card named twice, or reported again the same Warsaw day, counts once."
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "player_ids"
+        ],
+        "title": "OnScreenRequest",
+        "description": "The cards that came on screen in one row (#796)."
+      },
+      "OnScreenRow": {
+        "type": "string",
+        "enum": [
+          "SAME_LEVEL",
+          "SAME_VIBE"
+        ],
+        "title": "OnScreenRow",
+        "description": "A row whose cards rest \u2014 each with its own count."
       },
       "OpenCardSchema": {
         "properties": {
@@ -15430,7 +16409,7 @@
         "properties": {
           "state": {
             "$ref": "#/components/schemas/CardState",
-            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table. **General only**: `HIDDEN` \u2014 you are listed and turned *Show me in General* off: *YOUR PLACE \u00b7 7th \u00b7 of 13*, your Level and your chip, with *Hidden from General* and the switch where the gap line was; others don't see your row. Friends ignores the switch, so there you read `LISTED`; not listed, you read your not-listed card."
+            "description": "`LISTED` \u2014 *YOUR PLACE \u00b7 7th \u00b7 of 13* and your Level. `NEEDS_RESULTS` \u2014 fewer results in the sport than the view takes: in General *2 of 5 games \u2014 3 more competitive padel games put you on the list*; in Friends, with none, *Not ranked in padel yet \u2014 your first confirmed competitive game puts you on the list*. `NO_LEVEL` \u2014 no level in the sport, read live: *No squash level yet \u2014 get one, then 5 competitive games put you on the list* (in Friends *\u2026 then one competitive game \u2026*), with **Get your squash level**. `OFF_THE_LIST` \u2014 no result in the last 90 days: *Off the list \u2014 no competitive padel game in 90 days. Your next one puts you back.* **Friends only**: `JUST_YOU` \u2014 you are listed and no friend is: *Just you so far*, with **Add friends**; `NO_FRIEND_LISTED` \u2014 neither you nor any friend is: *None of your friends is ranked in padel yet*, with **Add friends**, whatever your own state. With either, the card is the whole page: nothing is drawn below it. In Friends, `NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your friends' podium and table."
           },
           "results": {
             "type": "integer",
@@ -15454,7 +16433,7 @@
               }
             ],
             "title": "Place",
-            "description": "With `LISTED` and `HIDDEN` only: your place \u2014 *7th*."
+            "description": "With `LISTED` only: your place \u2014 *7th*."
           },
           "of": {
             "anyOf": [
@@ -15467,7 +16446,7 @@
               }
             ],
             "title": "Of",
-            "description": "With `LISTED` and `HIDDEN` only: how many are listed \u2014 *of 13* \u2014 hidden players and rows you can't see included."
+            "description": "With `LISTED` only: how many are listed \u2014 *of 13* \u2014 everyone, whoever blocked whom."
           },
           "level": {
             "anyOf": [
@@ -15479,7 +16458,7 @@
               }
             ],
             "title": "Level",
-            "description": "With `LISTED` and `HIDDEN` only: your Level, two decimals \u2014 *2,71*."
+            "description": "With `LISTED` only: your Level, two decimals \u2014 *2,71*."
           },
           "chip": {
             "anyOf": [
@@ -15490,7 +16469,7 @@
                 "type": "null"
               }
             ],
-            "description": "With `LISTED` and `HIDDEN` only: your places moved this week, under the Level."
+            "description": "With `LISTED` only: your places moved this week, under the Level."
           },
           "gap_line": {
             "anyOf": [
@@ -15501,7 +16480,7 @@
                 "type": "null"
               }
             ],
-            "description": "With `LISTED` only: the line under the fold. `null` with `HIDDEN`, where *Hidden from General* and the switch stand in its place."
+            "description": "With `LISTED` only: the line under the fold \u2014 the true neighbours above and below you, whoever they are."
           }
         },
         "type": "object",
@@ -15712,9 +16691,10 @@
             "$ref": "#/components/schemas/GenderPreference",
             "description": "Who the owner is willing to be matched with \u2014 their own setting, served here and on no other response shape (`docs/adr/0179` \u00a74). Always present: it defaults to `ANY` at commit, so there is nothing for its absence to mean."
           },
-          "ranking_visibility": {
-            "$ref": "#/components/schemas/RankingVisibility",
-            "description": "*Show me in General* (`docs/adr/0203` \u00a77): `SHOWN`, on \u2014 every profile starts with it, one committed before the switch existed included \u2014 or `HIDDEN`. Always present. Written by `PUT /players/me/ranking-visibility`."
+          "show_me_to_new_people": {
+            "type": "boolean",
+            "title": "Show Me To New People",
+            "description": "*Show me to new people* (`docs/adr/0204` \u00a72): `true`, on \u2014 every profile starts with it \u2014 or `false`. A player who had turned *Show me in General* off starts with it off. Always present. Written by `PUT /players/me/show-me-to-new-people`."
           }
         },
         "type": "object",
@@ -15724,7 +16704,7 @@
           "social_tags",
           "photos",
           "gender_preference",
-          "ranking_visibility"
+          "show_me_to_new_people"
         ],
         "title": "PlayerProfileReadResponse",
         "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), and\n``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each\nmade while no build had shipped anywhere but ``local``."
@@ -15799,12 +16779,20 @@
           "can_add_friend": {
             "type": "boolean",
             "title": "Can Add Friend",
-            "description": "Whether to offer **Add friend** (`docs/adr/0203` \u00a79): `relation` is `NONE` and a request from you would be admitted \u2014 you share a group now, or they are listed on General and haven't turned *Show me in General* off. `false` otherwise, and on your own record.\n\n**The daily limit is not in it.** Ten requests a Warsaw day may go to people you share no group with, and the eleventh press is refused `daily_request_limit` \u2014 show *You've sent 10 requests to new people today. Try again tomorrow.* under the buttons then. Send a request made from a record opened on the Rankings page with `made_from` `RANKING` and that page's sport."
+            "description": "Whether to offer **Add friend** (`docs/adr/0204` \u00a72): `relation` is `NONE` and this is not your own record. A request is admitted by the rule this record opened by, so a record you can read is somebody you can ask \u2014 as many as you like, with no daily limit. Send a request made from a record opened on the Rankings page with `made_from` `RANKING` and that page's sport."
           },
           "nickname": {
             "type": "string",
             "title": "Nickname",
             "description": "Their handle, unique across the platform, and the title of the sheet \u2014 drawn large, with nothing under it, and never with an @. **Nothing may derive a familiar form from it**: every sentence naming somebody uses the whole nickname or names nobody (``docs/adr/0199`` \u00a71)."
+          },
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/RecordPhotoSchema"
+            },
+            "type": "array",
+            "title": "Photos",
+            "description": "**Every** photo, in their own order \u2014 the first is `photo_id`'s \u2014 each with a short-lived signed URL minted for this response (`docs/adr/0204` \u00a72). Empty when they have none. Always present."
           },
           "photo_id": {
             "type": "string",
@@ -15870,13 +16858,14 @@
           "relation",
           "can_add_friend",
           "nickname",
+          "photos",
           "area_code",
           "social_tags",
           "sports",
           "reliability"
         ],
         "title": "PlayerRecordResponse",
-        "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody you were on a game with, somebody you share a\ngroup with, somebody in a group you run, somebody listed on General who\nhasn't turned *Show me in General* off, and yourself. Anybody else \u2014 and\nanybody a live gate no longer admits, a block either way among them \u2014 is\n`404`, in one shape that names nothing."
+        "description": "Everything the platform will say about one person, to this reader.\n\n**Open to any reader** (``docs/adr/0204`` \u00a72), except somebody who turned\n*Show me to new people* off and shares no group, game or friendship with\nyou, nor is in a group you run \u2014 and anybody a live gate no longer admits,\na block either way among them. Those are `404`, in one shape that names\nnothing."
       },
       "PostRequest": {
         "properties": {
@@ -16611,7 +17600,7 @@
             "type": "integer",
             "minimum": 1.0,
             "title": "Place",
-            "description": "Their true place \u2014 coral for 1\u20133, grey after. A row you can't see leaves a gap, so places may skip a number."
+            "description": "Their true place \u2014 coral for 1\u20133, grey after. A blocked player is here too; a tap on them reads *This record isn't available*."
           },
           "player_id": {
             "type": "string",
@@ -16709,7 +17698,7 @@
             },
             "type": "array",
             "title": "Podium",
-            "description": "The first three rows you see, each with its true place \u2014 first in the middle, second left, third right; with second hidden from you, the steps read 1, 3 and 4. **Empty with fewer than three rows you see**, and the list shows alone."
+            "description": "The first three rows, each with its true place \u2014 first in the middle, second left, third right. **Empty with fewer than three listed**, and the list shows alone."
           },
           "rows": {
             "items": {
@@ -16753,14 +17742,6 @@
         ],
         "title": "RankingView",
         "description": "Which list a ranking is read in (``docs/adr/0203`` \u00a73). **General** is\neverybody in Raketa listed in the sport; **Friends** is the reader and their\nfriends, worked out on each read (#771). Both drop a player 90 days after\ntheir last result, and both order and place them alike."
-      },
-      "RankingVisibility": {
-        "type": "string",
-        "enum": [
-          "SHOWN",
-          "HIDDEN"
-        ],
-        "title": "RankingVisibility"
       },
       "RatingResponse": {
         "properties": {
@@ -16991,6 +17972,27 @@
         ],
         "title": "RecordLikelyRangeSchema",
         "description": "The **likely range** a Level sits in \u2014 \u03bc \u00b1 \u03c3, clamped to the scale.\n\n**Named for its surface, because the contract is one namespace and this\narrived second.** ``matchmaking`` already publishes a ``LikelyRangeSchema``\non the player card; a second class of that name does not shadow it, it\n*renames* it \u2014 the emitted document qualifies both by module and every\ngenerated type a shipped app already holds moves. It is ``games``' rule for\n``GameStanding``, applied to the wire: the cost of a shared word is paid by\nwhoever arrives second.\n\nThe shape is deliberately identical to the card's. Two edges of one value,\nboth rounded by the engine, and a client computes neither."
+      },
+      "RecordPhotoSchema": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "Short-lived signed URL that draws this photo, minted per response and stored nowhere."
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id",
+          "photo_url"
+        ],
+        "title": "RecordPhotoSchema",
+        "description": "One of a player's photos on their record (``docs/adr/0204`` \u00a72)."
       },
       "RecordSportsmanshipSchema": {
         "properties": {
@@ -17267,6 +18269,306 @@
           "calibration_priority"
         ],
         "title": "ResultResponse"
+      },
+      "SameLevelPageResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameLevelPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 20, best % first, friends where they fall \u2014 with `sport`, everybody holding a level in it, compared there."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport you share with somebody, in the sports' own order \u2014 the pill's chips beside *All*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "next",
+          "sports"
+        ],
+        "title": "SameLevelPageResponse"
+      },
+      "SameLevelPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` draws their court poster."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "shown": {
+            "$ref": "#/components/schemas/SameLevelSportSchema",
+            "description": "The sport the card shows: the one where you two are evenest \u2014 or, on a See all page asked for a sport, that one."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/SameLevelSportSchema"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "**Every** sport you share, most even first \u2014 the comparison sheet's blocks, so it needs no read. *N sports \u203a* when there is more than one."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them \u2014 the round friend button: `NONE` **+**, `SENT` **\u2026**, `FRIEND` **\u2713**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `SAME_LEVEL` and the card's sport."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "shown",
+          "sports",
+          "relation"
+        ],
+        "title": "SameLevelPlayerSchema",
+        "description": "One *Same competitive level* card."
+      },
+      "SameLevelResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameLevelPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 10: **fresh** good matches first \u2014 70% even or more, neither your friend nor somebody you asked \u2014 best % first; then the **gaps** at the right \u2014 your friends, those you asked and weaker matches \u2014 best % first. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row**: you hold no level anywhere, or nobody shares a sport with you."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "SameLevelResponse"
+      },
+      "SameLevelSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "your_level": {
+            "type": "number",
+            "title": "Your Level",
+            "description": "Your Level in the sport \u2014 *You 2,71*."
+          },
+          "their_level": {
+            "type": "number",
+            "title": "Their Level",
+            "description": "Theirs \u2014 *zofia.b 2,69*."
+          },
+          "percent_even": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Percent Even",
+            "description": "How even a game between you two would be \u2014 the app's Forecast with one player a side, the figure a game card prints: green at 70 and above, amber 55\u201369, red below 55; the word under it is always *EVEN*. It falls with the gap and with how unsure the app is of either level, and tops out at 96."
+          },
+          "level_gap": {
+            "type": "number",
+            "title": "Level Gap",
+            "description": "Their level less yours, to the hundredth, signed: `-0.02` is *0,02 below you*, `0.09` *0,09 above you*, `0` *Same level*. A level gap, never a row's **gap** (a place after the fresh good matches)."
+          },
+          "your_band": {
+            "$ref": "#/components/schemas/LevelBandSchema",
+            "description": "Your band in the sport \u2014 the bar's name in bold."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "your_level",
+          "their_level",
+          "percent_even",
+          "level_gap",
+          "your_band"
+        ],
+        "title": "SameLevelSportSchema",
+        "description": "You and them in one sport you both hold a level in."
+      },
+      "SameVibePageResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameVibePlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 20 who share a tag with you, most in common first, friends where they fall \u2014 with `sport`, only those holding a level in it."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "Every sport at least one of them holds a level in, in the sports' own order \u2014 the pill's chips beside *All*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players",
+          "next",
+          "sports"
+        ],
+        "title": "SameVibePageResponse"
+      },
+      "SameVibePlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id",
+            "description": "Their first photograph; `null` draws their court poster."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived signed link to it, minted for this response."
+          },
+          "vibe_percent": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 50.0,
+            "title": "Vibe Percent",
+            "description": "The **vibe %**, 1 \u2212 \u00bd\u207f for n shared tags, rounded: 50, 75, 88, 94, 97, 98 for 1\u20136 \u2014 the white circle, *98%*. Every tag counts the same, and skill plays no part."
+          },
+          "in_common": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "In Common",
+            "description": "How many tags you both hold \u2014 *6 things in common*, *1 thing in common*."
+          },
+          "shared_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shared Tags",
+            "description": "The Social tag ids you both hold, in the vocabulary's own order \u2014 the green chips, as many whole as fit in three lines, then *+2 more*. The vibe sheet reads the player's record for all their tags, photos, intro and distance."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/FriendRelation",
+            "description": "Your relation to them \u2014 the round friend button: `NONE` **+**, `SENT` **\u2026**, `FRIEND` **\u2713**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `SAME_VIBE`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "vibe_percent",
+          "in_common",
+          "shared_tags",
+          "relation"
+        ],
+        "title": "SameVibePlayerSchema",
+        "description": "One *Same vibe players* tile."
+      },
+      "SameVibeResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/SameVibePlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Up to 10: **fresh** good matches first \u2014 2 shared tags or more, neither your friend nor somebody you asked; somebody who asked you counts \u2014 most in common first; then the **gaps** at the right \u2014 your friends, those you asked and 1-tag matches \u2014 in the same order. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "SameVibeResponse"
       },
       "SavedMethodSchema": {
         "properties": {
@@ -17748,20 +19050,6 @@
         "title": "SendMessageRequest",
         "description": "One player's own words."
       },
-      "SetRankingVisibilityRequest": {
-        "properties": {
-          "visibility": {
-            "$ref": "#/components/schemas/RankingVisibility",
-            "description": "`SHOWN` \u2014 on, which every profile starts with: you are listed in General for everybody. `HIDDEN` \u2014 your row leaves everybody else's General, your place kept and still counted in *of N*; you still see it, and your friends still see you in Friends."
-          }
-        },
-        "type": "object",
-        "required": [
-          "visibility"
-        ],
-        "title": "SetRankingVisibilityRequest",
-        "description": "*Show me in General*, on or off (``docs/adr/0203`` \u00a77, #772)."
-      },
       "SetReliabilityFilterRequest": {
         "properties": {
           "minimum": {
@@ -17812,6 +19100,21 @@
         ],
         "title": "SetScoreSchema",
         "description": "One set, **absolute**: what side A took, and what side B took.\n\nNever relative to the reader. A score stored from one point of view has to be\nflipped by whoever reads it next, and the first reader to forget publishes a\nloss as a win."
+      },
+      "SetShowMeToNewPeopleRequest": {
+        "properties": {
+          "on": {
+            "type": "boolean",
+            "title": "On",
+            "description": "`true` \u2014 on, which every profile starts with: anybody may open your record and send you a request. `false` \u2014 only people you share a group, a game or a friendship with may."
+          }
+        },
+        "type": "object",
+        "required": [
+          "on"
+        ],
+        "title": "SetShowMeToNewPeopleRequest",
+        "description": "*Show me to new people*, on or off (``docs/adr/0204`` \u00a72, #791)."
       },
       "SetWeeklyHoursRequest": {
         "properties": {
@@ -18376,6 +19679,141 @@
           "expires_in"
         ],
         "title": "TokenResponse"
+      },
+      "TopTenChipSchema": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "UP",
+              "DOWN"
+            ],
+            "title": "Kind",
+            "description": "`UP` \u2014 *\u25b2 2*. `DOWN` \u2014 *\u25bc 1*."
+          },
+          "places": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Places",
+            "description": "How many places \u2014 the *2* of *\u25b2 2*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "places"
+        ],
+        "title": "TopTenChipSchema",
+        "description": "**The week's move on a Top 10 card**, drawn \u2014 a triangle and a bold\nitalic number, *\u25b2 2* in volt, *\u25bc 1* in coral. The Rankings page's chip for\nthe same row; a card draws none for no change or *New*."
+      },
+      "TopTenPlayerSchema": {
+        "properties": {
+          "place": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Place",
+            "description": "Their true place in General \u2014 the huge numeral, 1 to 10."
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "Whole, never with an @ (docs/adr/0199 \u00a71)."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws the court picture."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level, two decimals \u2014 *3,40*."
+          },
+          "chip": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TopTenChipSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their places moved this week, rolling \u2014 as the Rankings page's row reads them. `null` for no change and for *New*: no chip is drawn."
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You",
+            "description": "Your own card \u2014 it reads *You*, its numeral volt and the card ringed in volt."
+          }
+        },
+        "type": "object",
+        "required": [
+          "place",
+          "player_id",
+          "nickname",
+          "photo_id",
+          "photo_url",
+          "level",
+          "chip",
+          "is_you"
+        ],
+        "title": "TopTenPlayerSchema",
+        "description": "One Top 10 card: the numeral, the portrait, the nickname, the Level and\nthe week's move. **A tap opens their record**; across a block it reads\n*This record isn't available*."
+      },
+      "TopTenResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The sport the row shows: the one asked for, or the one a preference fell through to \u2014 the pill's chosen sport, and the one *Rankings \u203a* opens on."
+          },
+          "anyone_listed": {
+            "type": "boolean",
+            "title": "Anyone Listed",
+            "description": "Whether anybody is listed in General **in any sport**. While nobody is, the row is hidden."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/TopTenPlayerSchema"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Players",
+            "description": "Places 1 to 10 of General in `sport`, best first \u2014 fewer while fewer are listed, one or two included. **Empty while nobody is ranked in `sport`**: *Nobody ranked in squash yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "anyone_listed",
+          "players"
+        ],
+        "title": "TopTenResponse",
+        "description": "**Top 10 on Home**: places 1 to 10 of General in one sport, the true\ntop of the Rankings page \u2014 everybody at their true place, whoever blocked\nwhom."
       },
       "TranscriptEntryResponse": {
         "properties": {

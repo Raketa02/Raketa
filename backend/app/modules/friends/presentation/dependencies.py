@@ -27,11 +27,10 @@ from app.bootstrap.composition import (
     build_friendship_directory,
     build_friendship_repository,
     build_levels_asked_by_the_reader,
-    build_shown_to_strangers,
     build_read_level_asks_waiting,
     build_readers_blocks,
     build_readers_groups,
-    build_requests_counted,
+    build_open_to_the_requester,
 )
 from app.modules.friends.application.level_asks import (
     AskForALevel,
@@ -64,10 +63,9 @@ from app.modules.friends.domain.ports import (
     FriendLevels,
     FriendshipDirectory,
     FriendshipRepository,
-    ShownToStrangers,
+    OpenToTheRequester,
     ReadersBlocks,
     ReadersGroups,
-    RequestsCounted,
 )
 
 
@@ -106,18 +104,15 @@ def get_readers_groups(db: DbSession) -> ReadersGroups:
 ReadersGroupsDep = Annotated[ReadersGroups, Depends(get_readers_groups)]
 
 
-def get_shown_to_strangers(db: DbSession, runtime: EventRuntimeDep) -> ShownToStrangers:
-    return build_shown_to_strangers(db, runtime=runtime)
+def get_open_to_the_requester(
+    db: DbSession, runtime: EventRuntimeDep
+) -> OpenToTheRequester:
+    return build_open_to_the_requester(db, runtime=runtime)
 
 
-ShownToStrangersDep = Annotated[ShownToStrangers, Depends(get_shown_to_strangers)]
-
-
-def get_requests_counted(db: DbSession) -> RequestsCounted:
-    return build_requests_counted(db)
-
-
-RequestsCountedDep = Annotated[RequestsCounted, Depends(get_requests_counted)]
+OpenToTheRequesterDep = Annotated[
+    OpenToTheRequester, Depends(get_open_to_the_requester)
+]
 
 
 def get_friend_faces(
@@ -137,11 +132,11 @@ FriendLevelsDep = Annotated[FriendLevels, Depends(get_friend_levels)]
 
 
 def get_who_may_be_asked(
-    groups: ReadersGroupsDep, shown: ShownToStrangersDep
+    groups: ReadersGroupsDep, reach: OpenToTheRequesterDep
 ) -> WhoMayBeAsked:
-    """**Who may be asked to be friends** — the one rule (#773): a group-mate,
-    or anybody the Ranking shows strangers."""
-    return WhoMayBeAsked(groups=groups, shown=shown)
+    """**Who may be asked to be friends** — the record's rule (b)
+    (``docs/adr/0204`` §2): anybody but a switched-off stranger."""
+    return WhoMayBeAsked(groups=groups, reach=reach)
 
 
 WhoMayBeAskedDep = Annotated[WhoMayBeAsked, Depends(get_who_may_be_asked)]
@@ -151,7 +146,6 @@ def get_ask_to_be_friends(
     friendships: FriendshipRepositoryDep,
     blocks: ReadersBlocksDep,
     who: WhoMayBeAskedDep,
-    counted: RequestsCountedDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> AskToBeFriends:
@@ -159,7 +153,6 @@ def get_ask_to_be_friends(
         friendships=friendships,
         blocks=blocks,
         who=who,
-        counted=counted,
         uow=uow,
         clock=clock,
     )

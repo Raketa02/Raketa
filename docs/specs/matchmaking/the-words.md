@@ -676,6 +676,9 @@ present-tense, saying what the tab **is** and pointing at the act:
 > score.`
 > `⚡ Play finds you one.`
 
+*(2026-11-14, ADR-0204 §1: a player in no group reads §31.1's `Join a group to get games — the
+hottest ones are just below.` in place of the second line.)*
+
 **`PLACEHOLDER_COPY.now` dies with it**, and the test moves rather than being deleted.
 
 **The doors**, each carrying its act's verb and each navigating rather than writing:
@@ -1019,7 +1022,7 @@ anything else.
 | The rows, Playing | `Skill passport` · `Player reliability` · `What kind of game` | |
 | The rows, Your games | `Your week` · `Where you play` · `Who you play with` | *(ADR-0200)* the group was `Finding players`; it also titles its screens' eyebrow |
 | The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Nickname` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
-| The switch, On your card | `Show me in General` · `Players who don't know you can see your place, open your record and send you a request.` | *(ADR-0203)* §30.8's, cited; a switch in the row, on by default, after *Nickname* |
+| The switch, On your card | ~~`Show me in General` · `Players who don't know you can see your place, open your record and send you a request.`~~ §31.12's `Show me to new people` and its sentence, cited | *(ADR-0203)* a switch in the row, on by default, after *Nickname*; **replaced 2026-11-14** (ADR-0204 §2) |
 | Live line, passport | `{sport} {level}` joined by ` · ` | one per rating, the registry's order |
 | Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Raketa02/Raketa/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
 | Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
@@ -1160,7 +1163,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too |
 | The card, buttons | `Not now` · `Accept` | |
 | Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request |
-| Refused, the daily limit | §30.8's limit sentence, cited | `daily_request_limit`: the 11th request in a Warsaw day to people the requester shares no group with (ADR-0203 §9) |
+| Refused, the daily limit | ~~§30.8's limit sentence, cited~~ | **retired 2026-11-14** (ADR-0204 §2): there is no daily limit, and `daily_request_limit` leaves the contract |
 | Notice, accepted | `{nickname} said yes — you're friends` | to the requester |
 | Notice, crossed | `You and {nickname} are friends now` | to both, each naming the other *(a call: nobody said yes)* |
 
@@ -1294,6 +1297,10 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 ## 30. Rankings
 
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+> (the mechanics Q131): §30.4's *Hidden from General* and §30.8's limit and switch rows are retired.
+> The switch is §31.12's *Show me to new people*.
+>
 > Added 2026-11-07 by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), the
 > mechanics Q130, PRD [#766](https://github.com/Raketa02/Raketa/issues/766). The surfaces are
 > [the Rankings spec set](../rankings/README.md): [the mechanics](../rankings/the-mechanics.md) say
@@ -1353,7 +1360,7 @@ bold.
 | Below | `{nickname} is {gap} behind you` | *Zofia is 0,02 behind you*; left out in last place |
 | Below, level | `{nickname} is level with you` | *(a call)* |
 | First place | `Top of the list` | the whole line |
-| Hidden from General | `Hidden from General` | the whole line, with the switch beside it |
+| Hidden from General | ~~`Hidden from General`~~ | **retired 2026-11-14** (ADR-0204 §2): nobody is hidden from the ranking |
 
 **Whole lines:** *0,04 behind Karol · one win closes it · Zofia is 0,02 behind you* · *0,04 behind Karol
 · about 3 wins close it · Zofia is 0,02 behind you* · *0,31 behind Karol · Zofia is 0,02 behind you* ·
@@ -1396,7 +1403,173 @@ list*.
 | Where | Sentence | Note |
 | --- | --- | --- |
 | A request's card and notice, from the ranking | `Found you in the {sport} ranking` | in place of the group line (§29.2) |
-| The record, the limit reached | `You've sent 10 requests to new people today. Try again tomorrow.` | `daily_request_limit` |
+| The record, the limit reached | ~~`You've sent 10 requests to new people today. Try again tomorrow.`~~ | **retired 2026-11-14** (ADR-0204 §2): there is no daily limit |
 | The record, Block's confirmation | the existing confirmation, with `You can unblock from You › Blocked players.` | *(a call)*: the record's Unblock is gone |
-| You, the switch | `Show me in General` | on by default |
-| You, under it | `Players who don't know you can see your place, open your record and send you a request.` | |
+| You, the switch | ~~`Show me in General`~~ | **retired 2026-11-14** (ADR-0204 §2): replaced by §31.12's `Show me to new people` |
+| You, under it | ~~`Players who don't know you can see your place, open your record and send you a request.`~~ | **retired 2026-11-14**, with the switch |
+
+## 31. Home rows
+
+> Added 2026-11-14 by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
+> the mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789). The surfaces are
+> [the Home rows spec set](../home-rows/README.md): [the mechanics](../home-rows/the-mechanics.md) say
+> what happens and [the screens](../home-rows/the-screens.md) where each sentence stands. Built by the
+> player app's [#798](https://github.com/Raketa02/Raketa/issues/798)–[#805](https://github.com/Raketa02/Raketa/issues/805).
+> The same record retires §30.4's *Hidden from General*, §30.8's switch and limit rows, and §29.2's
+> daily-limit row ([§31.13](#3113-retired)).
+>
+> **Every sentence of PRD #789's *Solution* is here.** Rows marked *(a call)* are words written in
+> while recording it, for the product owner to overrule. **No sentence says *her*, *his*, *she* or
+> *he* about another player** (ADR-0096, the glossary's **Gender**). The marks ▲, ▼, ✓, +, …, the
+> envelope and the dots are drawn, never characters. **The mocks' names, initials, tags and numbers
+> are sample data**: *Rakieta* reads **Raketa**, a district reads as a distance.
+
+**Placeholders.** `{nickname}` is a player's whole nickname (§15), and `You` for the reader.
+`{sport}` is the sport's name inside a sentence (*padel*), `{Sport}` at a line's start or after a `·`
+(*Padel*). `{level}` is a level with the decimal comma (*2,71*), and `{gap}` a difference of levels the
+same way (*0,02*). `{pct}` is a whole percent with no space before the sign (*91%*). `{n}` is a plain
+number. `{group}` is a group's name. `{runner}` is who answers the group's requests: **the club's name**
+for an Official group, **the Owner's nickname** for a Player group (*Ogrody 33*, *tomek.k*). `{club}` is
+the club the group plays at.
+
+### 31.1 Home
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Hottest groups, the heading | `HOTTEST GROUPS` | no See all |
+| Same competitive level, the heading | `SAME COMPETITIVE LEVEL PLAYERS` · `See all ›` | |
+| New in Raketa, the heading | `NEW IN RAKETA` · `See all ›` | never *Rakieta* |
+| Same vibe, the heading | `SAME VIBE PLAYERS` · `See all ›` | |
+| Top 10, the heading | `TOP 10` · the sport pill · `Rankings ›` | the pill is the deck's control, cited |
+| *Your games*, a player in no group | `Join a group to get games — the hottest ones are just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands |
+
+### 31.2 Hottest groups — the card
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The tag, the hottest | `▲ HOTTEST` | on one card at most |
+| The tag, growing | `+ GROWING` | |
+| The first figure | `{n}` · `games this week` | *14 games this week*; `1 games this week` is never written: one reads `game this week` *(a call)* |
+| The second figure | `{n}` · `players` | *11 players* |
+| … grown | `+{n}` · `this month` | green, beside the players: *+3 this month* |
+| The chip | `Join` · `Ask to join` · `Asked` · `You're in` | *Anyone* · *People I approve* · a request waiting · a member |
+
+### 31.3 The group sheet
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The button | `Join` · `Ask to join` · `Asked` · `Open group` | *Open group* for a member, opening the group page |
+| The identity row | `Open group` · `Closed group` | *Anyone* · *People I approve* |
+| … who runs it | `run by {runner}` | *run by Ogrody 33*, *run by tomek.k* |
+| … where | `{club}` | *Ogrody 33* |
+| The first stat card | `{n}` · `games this week` | as §31.2 |
+| The second stat card | `{n}` · `players · new this month` | with the green `+{n}` |
+| The people row, friends | `{n} of your friends play here` | *7 of your friends play here* |
+| … one friend | `1 of your friends plays here` | |
+| … no friend | `{n} players` | *11 players* |
+
+### 31.4 Withdraw
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The sheet, from *Asked* | `Waiting for {runner} to answer` | *Waiting for Ogrody 33 to answer* |
+| Its button | `Withdraw request` | tells nobody |
+
+### 31.5 Same competitive level — the card
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The reader's side | `You` · `{level}` | |
+| The other's side | `{nickname}` · `{level}` | |
+| Between them | `{pct}` · `EVEN` | *91%*, in the game cards' colour; the word is always *EVEN* |
+| The sport | `{Sport}` | with its dot |
+| The bar's mark | `YOU` | the reader's tall white mark |
+| The bands | `New` · `Developing` · `Established` · `Advanced` | the reader's own in bold |
+| The gap, below | `{gap} below you` | *0,02 below you* |
+| The gap, above | `{gap} above you` | *0,09 above you* |
+| The gap, none | `Same level` | when the gap rounds to 0,00 |
+| More sports | `{n} sports ›` | *2 sports ›*; only with more than one shared sport |
+
+### 31.6 The comparison sheet
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The title | `You vs {nickname}` | *You vs zofia.b* |
+| A block's levels | `You {level} · {nickname} {level}` | *You 2,71 · zofia.b 2,69* |
+| A block's gap | §31.5's gap lines, cited | |
+| A block's tag | `{pct} even` | *91% even*, in the light version of its colour |
+
+### 31.7 New in Raketa
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The tag | `NEW` | volt, top-left |
+| The sports | `{Sport} {level}`, one per sport | each with its dot: one per line on the Home tile, two to a line where they fit in See all (home rows 18, 19); prose writes them *Padel 2,35 · Badminton 2,10*; none for a player with no level |
+| Joined, 0 days | `Joined today` | Warsaw days *(a call)* |
+| … 1 day | `Joined yesterday` | |
+| … 2–6 days | `Joined {n} days ago` | *Joined 2 days ago* … *Joined 6 days ago* |
+| … 7–13 days | `Joined last week` | |
+| … 14 days and up | `Joined {n} weeks ago` | *Joined 2 weeks ago* … *Joined 4 weeks ago*; `{n}` = days ÷ 7, rounded down, at most 4 |
+| See all, a sport with nobody | `Nobody new plays {sport} yet` | *Nobody new plays squash yet* |
+
+### 31.8 Same vibe
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The tile, the % | `{pct}` | *98%*; one of 50%, 75%, 88%, 94%, 97%, 98% |
+| The tile, in common | `{n} things in common` | *6 things in common* |
+| … one | `1 thing in common` | |
+| The tile, more tags | `+{n} more` | *+2 more*, dashed |
+| The sheet, the title | `You and {nickname}` | *You and karol.t* |
+| The sheet, the identity row | `{n} things in common · In your area · {km}` | *6 things in common · In your area · 0,6 km*; the area and the distance as the record writes them, or the kilometres alone, or nothing |
+| A shared tag | `· you too` | as on the record |
+
+### 31.9 The friend button
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| On a sheet | `+ Add friend` · `Request sent` · `✓ Friends` · `Accept` | the + and ✓ drawn |
+| The round button | *no words* | **+** white · **…** brown · **✓** green · **the envelope** volt |
+| … its spoken name, unconnected | `Add {nickname} as a friend` | *(a call)*: the button's name, kept for tests (ADR-0198) |
+| … request sent | `Request sent to {nickname}` | *(a call)* |
+| … friends | `Friends with {nickname}` | *(a call)* |
+| … they asked | `Accept {nickname}'s request` | *(a call)* |
+| Request sent, the sheet | `Request sent` · `Cancel request` | from **…** |
+| Friends, the sheet | `Remove {nickname} as a friend?` · `Remove friend` · `Keep` | from **✓**; the body is §29.1's, cited |
+| A request refused from a stale card | *no words* | the button turns back to **+** *(a call)* |
+
+### 31.10 Request lines
+
+On the receiver's request card and its notice, in place of the group line (§29.2):
+
+| Found in | Sentence | Falls back to |
+| --- | --- | --- |
+| Same competitive level | `Your level in {sport} · {pct} even` | `Found you at your {sport} level`, when either no longer has a level there |
+| New in Raketa | `Found you among new players` | — |
+| Same vibe | `{n} things in common` (`1 thing in common`) | `Found you through your tags`, when none is shared any more |
+| Top 10 | §30.8's `Found you in the {sport} ranking`, cited | — |
+
+### 31.11 Top 10
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| A sport with nobody ranked | `Nobody ranked in {sport} yet` | *Nobody ranked in squash yet*, in the row |
+| The reader's own card | `You` | volt numeral and ring |
+| A card | `{nickname}` · `{level}` | |
+| The chip | `▲ {n}` · `▼ {n}` | none for no change, nor for *New* |
+| The numeral | `{n}` | 1–10 |
+
+### 31.12 The switch
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| You, the switch | `Show me to new people` | on by default |
+| You, under it | `Players you don't share a group or a game with can find you on Home, open your record and send you a request.` | |
+
+### 31.13 Retired
+
+| Was | Where | Why |
+| --- | --- | --- |
+| `Show me in General` · `Players who don't know you can see your place, open your record and send you a request.` | §30.8, You | replaced by §31.12's switch (ADR-0204 §2) |
+| `Hidden from General` | §30.4, the place card | nobody is hidden from the ranking |
+| `You've sent 10 requests to new people today. Try again tomorrow.` | §30.8, §29.2 | the daily limit goes, with `daily_request_limit` |

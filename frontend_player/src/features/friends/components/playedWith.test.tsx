@@ -134,6 +134,7 @@ function bookingServer(
         relation: relations.get(id) ?? 'NONE',
         can_add_friend: true,
         nickname: name,
+        photos: [],
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: 2.66, band: 'Established' }],

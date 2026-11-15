@@ -55,7 +55,7 @@
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 import { GAME_RESULTS, type GameResult } from '@/shared/vocabulary/gameResult';
-import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
+import { toSocialTagId } from '@/shared/vocabulary/socialTags';
 
 import {
   RELIABILITY_BANDS,
@@ -86,6 +86,11 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
     // crosses is what they wrote, fenced on the way in and never on the way out.
     ...(response.intro === undefined ? {} : { intro: response.intro }),
     ...(response.photo_url === undefined ? {} : { photoUrl: response.photo_url }),
+    // Every photo, as served — the first is the one above (#799).
+    photos: response.photos.map(({ photo_id, photo_url }) => ({
+      photoId: photo_id,
+      photoUrl: photo_url,
+    })),
     // The mark is a fact about **a photograph**: a player with none is drawn the generated
     // poster, which has nothing to have passed. The pair is read together and once.
     onCourt: response.photo_url !== undefined && response.review === 'allowed',
@@ -218,16 +223,11 @@ function lastFive(served: readonly string[]): { readonly lastFive?: readonly Gam
 }
 
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
-const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
 const KNOWN_BANDS = new Set<string>(RELIABILITY_BANDS);
 const KNOWN_MINIMUMS = new Set<string>(RELIABILITY_MINIMUMS);
 
 function toGameResult(served: string): GameResult | undefined {
   return KNOWN_RESULTS.has(served) ? (served as GameResult) : undefined;
-}
-
-function toSocialTagId(served: string): SocialTagId | undefined {
-  return KNOWN_TAGS.has(served) ? (served as SocialTagId) : undefined;
 }
 
 /**

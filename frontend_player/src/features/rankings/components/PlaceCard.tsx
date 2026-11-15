@@ -4,13 +4,6 @@
  * - **Listed** — the dark card: the eyebrow *YOUR PLACE*, the place large in volt with *of 13*
  *   beside it; the level on the right with the chip and its words under it; and under a fold the gap
  *   line, its numbers bold (§4.1, §4.2).
- * - **Hidden from General** — the same card with *Hidden from General* where the gap line was, and
- *   **the switch beside it** (§4.5, [#778](https://github.com/Raketa02/Raketa/issues/778)): You's own
- *   *Show me in General*, `player_profile`'s, written by the same route and spoken by its name —
- *   *Show me in General, off* — because *Hidden from General* is what off means here. Turned on, it
- *   stands on while the ranking catches up, and the page follows it until the gap line is back
- *   (`useGeneral`). A refused write says why above the card, on paper, as the declaration's card
- *   says it — the dark card's repaint has no on-dark coral.
  * - **Not listed** — a light card in the dark card's place, one line: *2 of 5 games — …*, *Off the
  *   list — …*, or *No squash level yet — …* with **Get your squash level**, which starts that sport's
  *   questionnaire and returns to Rankings on this sport (§4.3, §4.4).
@@ -23,15 +16,19 @@
  * **Volt is the place's**, as a fill anywhere and a stroke only on dark: here it is text on `night`,
  * the confidence ring's own ground (13,96:1 is ink on volt; volt on night is the ring's pair). The
  * bold numbers in the gap line are mono, as every number is (Part 16, 2026-11-08).
+ *
+ * **No switch on it** ([#799](https://github.com/Raketa02/Raketa/issues/799), ADR-0204 §2): the
+ * *Hidden from General* card and the *Show me in General* switch it drew under the fold (#778) are
+ * gone, since nobody is hidden from the ranking. The one switch about being found is You's *Show me
+ * to new people*, which moves nothing here.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { STARTING_LABEL, fromRankings, useAddASport } from '@/features/onboarding/types';
-import { SHOW_ME_IN_GENERAL_TITLE, useShowMeInGeneral } from '@/features/player_profile/types';
 import { recoveryMessage } from '@/shared/errors';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
-import { Button, Card, DarkCard, Note, Switch, theme } from '@/shared/ui';
+import { Button, Card, DarkCard, Note, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { GapLine, PlaceCard as ReaderCard, Placed } from '../domain/ranking';
@@ -65,8 +62,6 @@ export function PlaceCard({ card, sport, view, onAddFriends }: PlaceCardProps) {
   switch (card.state) {
     case 'LISTED':
       return <PlacedCard placed={card} below={<GapLineText line={card.gapLine} />} />;
-    case 'HIDDEN':
-      return <HiddenCard placed={card} />;
     case 'NO_LEVEL':
       return <NoLevelCard card={card} sport={sport} view={view} />;
     case 'NEEDS_RESULTS':
@@ -117,39 +112,6 @@ function PlacedCard({
       <View style={s.fold} />
       {below}
     </DarkCard>
-  );
-}
-
-/**
- * §4.5: the placed card, and under the fold *Hidden from General* with the switch — the row the
- * switch is, on the dark card's repaint.
- */
-function HiddenCard({ placed }: { readonly placed: Placed }) {
-  const showMe = useShowMeInGeneral();
-
-  return (
-    <View style={s.hidden}>
-      {showMe.writeError === null ? null : (
-        <Note variant="coral" accessibilityRole="alert">
-          {recoveryMessage(showMe.writeError)}
-        </Note>
-      )}
-      <PlacedCard
-        placed={placed}
-        below={
-          <View testID="hidden-from-general">
-            <Switch
-              onDark
-              label={RANKINGS_COPY.hidden}
-              accessibilityLabel={SHOW_ME_IN_GENERAL_TITLE}
-              // The card says hidden: off, until the profile has said otherwise.
-              checked={showMe.checked ?? false}
-              onChange={showMe.change}
-            />
-          </View>
-        }
-      />
-    </View>
   );
 }
 
@@ -251,8 +213,6 @@ function AddFriendsCard({
 
 const s = StyleSheet.create({
   dark: { gap: theme.space.md },
-  // A refused write above the hidden card, the card's own gap below it — as a stack of cards.
-  hidden: { gap: theme.space.xs },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   left: { gap: theme.space.xs, flexShrink: 1 },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.onDarkEyebrow },

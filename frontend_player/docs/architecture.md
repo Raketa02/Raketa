@@ -116,6 +116,7 @@ nothing in `shared/` may import a feature.
 | Navigation state              | expo-router                                                                            |
 | Build/environment config      | `src/shared/config/env.ts`                                                             |
 | A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188) |
+| What of a page is on screen   | `src/shared/ui/onScreen.ts`: followed values, read when wanted — never state           |
 
 Never represent the same state in two of these at once. In particular: **never copy
 Query data into Zustand**, **never put a token in Zustand**, and **never use a navigation
@@ -591,6 +592,17 @@ join match succeeds
 
 **Prefer response-driven updates.** If the mutation returns the updated entity, write it
 into the cache; don't immediately refetch what you were just handed.
+
+### A write some other feature's reads depend on
+
+A mutation re-reads its own feature's keys, and a surface that draws another feature's control
+hands its own read in (`friends`' `reread`). **Where the reads that depend on a write belong to a
+feature that imports the writer** — Home's people rows draw `friends`' button, so `friends` naming
+their keys would run the import both ways — the read **declares a tag** in its `meta` and the write
+re-reads whatever carries it: `LISTS_PEOPLE` and `rereadPeopleLists` in `shared/lib/query-client`
+(#801), called by every friend write and every block. A tag says what a read **is** (it lists people
+with the reader's relation to them), never who wrote it; one tag per such dependency, and none for a
+dependency an import can already express.
 
 ### Optimistic updates are not the default
 
@@ -1327,7 +1339,7 @@ A feature is not done when the screen looks right.
 [ ] duplicate-submit behaviour decided (idempotency, not just a disabled button)
 [ ] authorization enforced server-side
 [ ] route + deep-link params validated with Zod
-[ ] accessibility implemented (labels, roles, 44pt targets — two recorded exceptions: 6.8's hour cell, and a face behind another on Home's ask card)
+[ ] accessibility implemented (labels, roles, 44pt targets — three recorded exceptions: 6.8's hour cell, a face behind another on Home's ask card, and a Home row's link)
 [ ] analytics events defined and catalogued, if any
 [ ] breadcrumbs added where useful; no sensitive logging
 [ ] tested on Android and iOS

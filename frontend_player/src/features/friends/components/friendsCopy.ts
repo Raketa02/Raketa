@@ -14,8 +14,8 @@
  * - **Cancelling a request asks first**, as #753 asks and §29 has no words for: *Cancel your request
  *   to kuba.w?* over *Nobody is told.*, removing's shape.
  * - **The busy words** (*Asking…*, *Accepting…*, *Cancelling…*, *Removing…*), `blocks`' *Blocking…*.
- * - **The refusals that are not the state moving** (`useFriendWrites`): asking somebody you blocked,
- *   and somebody you no longer share a group with (or who left General since, #773).
+ * - **The refusals that are not the state moving** (`useFriendWrites`): asking somebody you blocked.
+ *   Asking somebody who can no longer be asked was one, and is the state moving since #799.
  * - **The spoken names of a pill and a card's buttons**: a column of *+ Add* or two cards' *Accept*
  *   name nobody, so each says whom — *Add kuba.w*, `blocks`' *Unblock kuba.w*.
  *
@@ -65,16 +65,24 @@
  * - **The busy words** are onboarding's *Starting…* for the coral button, the start's own, and none
  *   for Not now, which the friend request card's Not now has none of either.
  *
- * And these, written in by #779 (strangers from the ranking; the words §30.8 gives the two sentences):
+ * And this, written in by #779 (strangers from the ranking; the words §30.8):
  *
- * - **The limit's sentence stands under _Add friend_**, in the friend button's half, as every friend
- *   refusal does — §30.8 says _under the buttons_.
  * - **Asking somebody you blocked** names You › Blocked players, since the record's Unblock it named
  *   is gone (ADR-0203 §8).
- * - **Asking somebody no longer askable** says _your groups or on the ranking_, the server's own
- *   widening of the code's sentence (#773).
  *
- * _Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
+ * #779's two other calls went with #799 (ADR-0204 §2; the words §31.13): **there is no daily limit**,
+ * so no sentence for one, and **asking somebody no longer askable says nothing** — the server's
+ * unnamed `player_unavailable` is the state moving, the record is read again, and it reads _This
+ * record isn't available_.
+ *
+ * And these, written in by #801 (the round friend button; the words §31.9–§31.10):
+
+- **The round button's spoken names** are §31.9's own calls; **its busy words** are none — it draws
+  the next mark at once instead.
+- **The *Request sent* sheet's busy word** is the record's *Cancelling…*.
+- **A refusal on the round button is a toast**: there is no room under a 24pt mark for a note.
+
+_Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
  * chip beside it — which is §29.2's own: the group line is the whole line, and a link's replaces it.
  *
  * ## The whole nickname, and no pronoun
@@ -85,10 +93,12 @@
 
 import { codeMessage, type AppError } from '@/shared/errors';
 import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
-import { formatLevel } from '@/shared/formatting/ratingFormat';
+import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
+import { thingsInCommon } from '@/shared/vocabulary/socialTagPresentation';
 
 import type { FriendsTab } from '../domain/friendList';
 import { askersFormOf, type AskersForm } from '../domain/levelAsk';
+import type { FriendRelation } from '../domain/vocabulary';
 
 export const FRIENDS_COPY = {
   members: {
@@ -138,6 +148,10 @@ export const FRIENDS_COPY = {
     accepting: 'Accepting…',
     /** A link's request, in place of the group line. */
     byLink: 'Invited you to Raketa',
+    /** A request from New in Raketa, or a record it opened, in place of the group line (§31.10). */
+    newPlayers: 'Found you among new players',
+    /** A request from Same vibe once the two share no tag any more (§31.10). */
+    throughYourTags: 'Found you through your tags',
   },
   /** **You › Friends** (the screens §4.1): the header, the three tabs, their rows and empty lines. */
   page: {
@@ -227,6 +241,21 @@ export const FRIENDS_COPY = {
     /** A greyed no-Level row, once you asked (§29.3) — you ask once per sport, ever. */
     asked: 'Asked',
   },
+  /**
+   * **The round friend button** (#801; the Home rows screens §8; the words §31.9) — no words of its
+   * own, a drawn mark per relation; its spoken names are `roundLabel`. **Its worded twin** on a
+   * sheet says these, the + and the ✓ drawn before them.
+   */
+  round: {
+    worded: {
+      NONE: 'Add friend',
+      SENT: 'Request sent',
+      FRIEND: 'Friends',
+      ASKED_YOU: 'Accept',
+    } satisfies Readonly<Record<FriendRelation, string>>,
+    /** From **…**: what stands, and the one act under it — no question, so no *Keep* (§31.9). */
+    requestSent: { title: 'Request sent', act: 'Cancel request', busy: 'Cancelling…' },
+  },
   /** Said where a write was pressed, when the server refused it for a reason that is not the state moving. */
   refused: {
     /**
@@ -234,18 +263,26 @@ export const FRIENDS_COPY = {
      * the record's own Unblock is gone (#779, ADR-0203 §8): the way back is You › Blocked players.
      */
     unblock_them_first: 'You blocked this player. Unblock them in You › Blocked players first.',
-    /**
-     * Nobody you share a group with, nor listed on General and shown (#773): what a ranking stranger
-     * who turned *Show me in General* off between the read and the press meets — the server's own
-     * widening of the code's sentence, said the app's way (#779).
-     */
-    player_not_in_your_groups: 'You can only ask people from your groups or on the ranking.',
-    /** The eleventh request in a Warsaw day to somebody you share no group with (§30.8). Nothing was sent. */
-    daily_request_limit: "You've sent 10 requests to new people today. Try again tomorrow.",
     /** An ask for a Level (#758) from a group you have since left. */
     not_one_of_your_groups: 'You’re not in this group any more.',
   } as Readonly<Record<string, string>>,
 } as const;
+
+/**
+ * **The round friend button's spoken name** (the words §31.9, each a call) — the button's whole name,
+ * kept for tests (ADR-0198): a row of marks names nobody, so each says whom and where the reader
+ * stands. Keyed by the relation, so one with no name fails to compile.
+ */
+const ROUND_LABEL: Readonly<Record<FriendRelation, (nickname: string) => string>> = {
+  NONE: (nickname) => `Add ${nickname} as a friend`,
+  SENT: (nickname) => `Request sent to ${nickname}`,
+  FRIEND: (nickname) => `Friends with ${nickname}`,
+  ASKED_YOU: (nickname) => `Accept ${nickname}'s request`,
+};
+
+export function roundLabel(relation: FriendRelation, nickname: string): string {
+  return ROUND_LABEL[relation](nickname);
+}
 
 /** The spoken name of a Members row's **+ Add** — the person it asks, since a column names nobody. */
 export function addLabel(nickname: string): string {
@@ -283,28 +320,41 @@ export function wantsToBeYourFriend(nickname: string): string {
 }
 
 /**
+ * **Where they found the reader, as the where-line says it** (§29.2, §30.8, §31.10) — the request
+ * card's `foundBy`, with the sport named inside a sentence (*padel*, `sportInLine`) where the line
+ * names one. Spelled here rather than imported, so this module imports no feature (see below).
+ */
+export type WhereFound =
+  | { readonly kind: 'link' }
+  | { readonly kind: 'ranking'; readonly sport: string }
+  | { readonly kind: 'newInRaketa' }
+  | { readonly kind: 'sameLevel'; readonly sport: string; readonly percentEven?: number }
+  | { readonly kind: 'sameVibe'; readonly inCommon: number };
+
+/**
  * **The card's where-line, before the reliability chip** (the words §29.2) — *With you in Kazimierz
- * crew · Padel 3,40 ·*, or *Invited you to Raketa* for a link's request. Each part only where the
- * wire named it: the group while both are still in it, the sport and the Level where the screen
- * showed one. The trailing ` ·` stands before the chip the card draws after it; with nothing to say
- * the line is empty and the chip stands alone. The sport arrives named (`sportLabel`'s *Padel*), so
- * this module imports no feature: it is read at module load by every component here, and a feature's
- * barrel would close a loop back into them.
+ * crew · Padel 3,40 ·*. Each part only where the wire named it: the group while both are still in it,
+ * the sport and the Level where the screen showed one. The trailing ` ·` stands before the chip the
+ * card draws after it; with nothing to say the line is empty and the chip stands alone.
+ *
+ * **A request found by a link, the ranking or a Home row says where in the group line's place**, and
+ * nothing else: *Invited you to Raketa*, *Found you in the padel ranking*, *Found you among new
+ * players*, *Your level in padel · 91% even* — today's %, or *Found you at your padel level* once
+ * either holds no level there — and *6 things in common* — today's count, or *Found you through your
+ * tags* once they share none (§31.10).
+ *
+ * The sport arrives named (`sportLabel`'s *Padel*, `sportInLine`'s *padel*), so this module imports
+ * no feature: it is read at module load by every component here, and a feature's barrel would close
+ * a loop back into them.
  */
 export function whereLine(request: {
-  readonly byLink: boolean;
-  /**
-   * **A request from the ranking** (#779; §30.8): the ranking's sport inside a sentence (*padel*,
-   * `sportInLine`). *Found you in the padel ranking* stands in place of the group line, as a link's
-   * *Invited you to Raketa* does.
-   */
-  readonly ranking?: string;
+  readonly foundBy?: WhereFound;
   readonly group?: { readonly name: string };
   readonly sportName?: string;
   readonly level?: number;
 }): string {
-  if (request.byLink) return FRIENDS_COPY.home.byLink;
-  if (request.ranking !== undefined) return foundYouInTheRanking(request.ranking);
+  const found = request.foundBy;
+  if (found !== undefined) return foundLine(found);
   const sport =
     request.sportName === undefined
       ? []
@@ -319,6 +369,26 @@ export function whereLine(request: {
     ...sport,
   ];
   return parts.length === 0 ? '' : `${parts.join(' · ')} ·`;
+}
+
+/** The line a found request says in the group line's place — a switch, so a kind with no words fails to compile. */
+function foundLine(found: WhereFound): string {
+  switch (found.kind) {
+    case 'link':
+      return FRIENDS_COPY.home.byLink;
+    case 'ranking':
+      return foundYouInTheRanking(found.sport);
+    case 'newInRaketa':
+      return FRIENDS_COPY.home.newPlayers;
+    case 'sameLevel':
+      return found.percentEven === undefined
+        ? `Found you at your ${found.sport} level`
+        : `Your level in ${found.sport} · ${formatPercent(found.percentEven)} even`;
+    case 'sameVibe':
+      return found.inCommon === 0
+        ? FRIENDS_COPY.home.throughYourTags
+        : thingsInCommon(found.inCommon);
+  }
 }
 
 /** *Found you in the padel ranking* — a request from the ranking's where-line (§30.8). */

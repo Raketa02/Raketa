@@ -157,6 +157,56 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Advanced — and the module says why. `assert_the_ranking` reads the
   page's own use case among the screens and fails the run by name; proven twice over on a
   fresh Postgres, the rebuild equal to live delivery row for row.
+- **Hottest groups needs a group that played this week, so one is written for it**
+  (#792, `app/seeds/hottest_groups.py`): nothing else the seed books is sure to fall in the
+  last 7 days (the history is placed before her week; her games and the rescues are still
+  to come), and *Padel po pracy*, joined on the run's instant, is the busiest group by heat
+  with no game — GROWING, and nobody HOTTEST. So the ranking's crowd's first player owns
+  **Wieczorny Kazimierz** at Kazimierz Padel (*People I approve*), twenty-three more of the
+  crowd let in ten days ago, and **three unscored games** among four of them two, three and
+  four days ago — made two days ahead and filled by four yeses, the cut-off job run at each
+  cut-off — and the protagonist's **Join request waits on it**, asked again on a run that
+  finds it withdrawn. The crowd because nobody deals them (their week is cleared), unscored
+  because a result would move the ranking's promised places. **A game is looked for in
+  the last seven days**, so a run days later books the same fours again where they now
+  fall. After the friends layers, drained by the layer itself; `assert_the_hottest_groups`
+  reads her row among the screens and fails the run by name unless it opens on that group,
+  HOTTEST and *Asked*, with *Błonia po pracy* (two players) left out — and, **on the run
+  that created the group**, a GROWING and an untagged card too: those are other layers'
+  groups, which age with the store. Proven on a fresh Postgres 17, run twice: no group or
+  booking event the second time.
+- **New in Raketa needs newcomers in relations to her, so eight are written for it**
+  (#793, `app/seeds/new_in_raketa.py`; `discovery.md`): `NEWCOMERS`, outside the cohort, by
+  `seed_the_cohort` on the clock their row names — today (no level), yesterday (she asked them
+  from the row), 2 days (they asked her), 4 days (her friend, no level), 9, 16, 23 days, and 35
+  days, out — in no group. After the Hottest groups layer, drained by the layer itself;
+  `assert_new_in_raketa` reads her row and See all among the screens, the relations held only
+  on the run that wrote them (their ages are that run's). The friends layer's Home claim reads
+  the named accounts alone, since the newcomer who asked her is on her Home too.
+- **Same competitive level writes no player, and a request each way** (#794,
+  `app/seeds/same_level.py`; `discovery.md`): the cohort already sits around her padel and
+  tennis Levels, so she asks `cohort-c-01` from the row and `cohort-b-03` asks her, both in
+  padel, after New in Raketa, drained by the layer itself; `assert_same_level` reads her row
+  and See all among the screens. **Nobody on the seed reads 70%** — five results leave a Level
+  as unsure as hers — so her row is all gaps, and the run says so as a cost.
+- **Same vibe writes no player, gives her six tags, and a request each way** (#795,
+  `app/seeds/same_vibe.py`; `discovery.md`): she holds six (`catalog.HER_TAGS` — the other
+  protagonists keep three), where the cohort's draws meet hers at every count from one to six,
+  so she asks `cohort-a-13` (five) from the row and `cohort-d-01` (six) asks her, after Same
+  competitive level, drained by the layer itself; a store seeded before #795 is given her six
+  through *Edit tags*' own use case. `assert_same_vibe` reads her row and See all among the
+  screens and fails by name if a count from one to six goes missing. **Her row is all fresh**
+  — the crowd sharing two tags with her is far more than ten — and the run says so as a cost.
+- **Top 10's squash needs two listed players, so two are written for it** (#797,
+  `app/seeds/top_ten.py`; `rankings.md`): `SQUASH_PAIR`, outside the cohort, seeded beside the
+  ranking's crowd (`seed_the_cohort(…, clear_the_week=True)`) and carded by the payment layer
+  with it; after the played history, `write_the_squash_pair` makes their group of two at
+  Prądnik Tennis and plays their five squash results through
+  `booked_history.write_games_among` — the history's own placing, booking, playing and
+  finding again, for a game the history's club can't hold — so the rooms layer's drain lists
+  the two. `assert_the_top_ten` reads her row among the screens. Her own card is in tennis,
+  after the API's first tick; padel keeps her 56th, so the ten-card row with your own card is
+  the crowd's 7th, named on the screen line.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer
   (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
   the pool's played history (`pool_history.py`) and the eleven relationship accounts

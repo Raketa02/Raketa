@@ -26,7 +26,9 @@ face and on Home (#745, #764), the reader's relations, the friend requests and
 the asks for a level waiting on the reader (``friends``, ``ReaderRelations``,
 ``FriendRequestsOnHome``, ``LevelAsksOnHome``) — and, for Home's trophy (#768),
 the sport of the reader's latest result and their General place there
-(``rankings``, ``RankingOnHome``) — each a fact another context
+(``rankings``, ``RankingOnHome``) — and, for a request from *Same vibe* on
+Home (#795), how many Social tags two players hold today (the Player profile,
+``TagsInCommon``) — each a fact another context
 owns, read through a port declared in this context's words. The sender's court
 held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
 with the fake.
@@ -68,6 +70,7 @@ from app.bootstrap.composition import (
     build_level_asks_on_home,
     build_general_orders_kept_here,
     build_ranking_on_home,
+    build_home_tags_in_common,
     build_reader_relations,
     build_friends_game_bookings,
     build_covers_at_the_cut_off,
@@ -99,6 +102,7 @@ from app.modules.proposals.domain.ports import (
     FriendRequestsOnHome,
     LevelAsksOnHome,
     RankingOnHome,
+    TagsInCommon,
 )
 
 P = TypeVar("P")
@@ -129,6 +133,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     FriendRequestsOnHome,
     LevelAsksOnHome,
     RankingOnHome,
+    TagsInCommon,
     FriendsGameBookings,
     CoversAtTheCutOff,
 )
@@ -266,6 +271,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         build=lambda session: build_ranking_on_home(
             session, clock=build_clock(), orders=build_general_orders_kept_here()
         ),
+    ),
+    RegisteredImplementation(
+        port=TagsInCommon,
+        name="ProfileTagsInCommon",
+        build=build_home_tags_in_common,
     ),
 )
 

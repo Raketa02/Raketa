@@ -7,7 +7,10 @@
 > 2026-11-07 by PRD [#762](https://github.com/Raketa02/Raketa/issues/762) (Q129). The same day, PRD
 > [#766](https://github.com/Raketa02/Raketa/issues/766) (Q130, [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md)) took Unblock off the
 > record ([§2](#2-the-player-record--add-friend-beside-block-designed-no-mock)) and gave the request
-> card a ranking line ([§6.2](#62-friend-requests--n-friends-5)).
+> card a ranking line ([§6.2](#62-friend-requests--n-friends-5)). On 2026-11-14, PRD
+> [#789](https://github.com/Raketa02/Raketa/issues/789) (Q131, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)) let anyone be asked, with no
+> daily limit, gave the request card three lines from Home's rows, and put a round friend button on
+> Home's people cards ([the home rows screens §8](../home-rows/the-screens.md#8-the-round-friend-button-and-its-sheets)).
 >
 > **What it is:** how each Friends screen looks and behaves. The rules are in
 > [the-mechanics.md](the-mechanics.md); where the two disagree on a rule, the mechanics win, and on a
@@ -66,6 +69,11 @@ show nothing to the other person.
 > shows **Block** alone: the record says whether *Add friend* may be offered. A record opened from the
 > Rankings page sends its request from the ranking
 > ([the rankings screens §6](../rankings/the-screens.md#6-the-record-from-the-ranking-designed-no-mock)).
+
+> **Amended 2026-11-14** ([ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, Q131). **Add friend shows on any record that opens**:
+> a record refused by *Show me to new people*'s rule never opens, so the *Block alone* case is gone
+> wherever the reader can read the record. There is no daily-limit sentence. A record opened from a
+> Home row sends its request from that row, and shows **all of the subject's photos**.
 
 ### 3. The result screen — PLAYED WITH (designed, no mock)
 
@@ -134,7 +142,10 @@ A horizontal row of request cards: the face, *Inés D. wants to be your friend*,
 crew · Padel 3,40 ·* and the reliability chip, **Not now** (outline) / **Accept** (coral). A link's
 request reads *Invited you to Raketa* in place of the group line. A tap on the face opens the record.
 *(Since 2026-11-07, Q130:)* a request from the ranking reads ***Found you in the padel ranking*** in
-place of the group line, even from a group-mate.
+place of the group line, even from a group-mate. *(Since 2026-11-14, Q131:)* a request found on
+Home's rows reads its row's line in the same place — *Your level in padel · 91% even*, *Found you
+among new players*, *6 things in common*, or their fallbacks
+([the words §31.10](../matchmaking/the-words.md#3110-request-lines)).
 
 #### 6.3 The sender's game, in Your games (designed, no mock)
 
@@ -285,7 +296,7 @@ The proposed shapes; the tickets settle them.
 | **Bookings** | The birth *booked by a friend*, invited seats and their 24-hour job, the sender's choices, the covered booking's cut-off ([#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)) |
 | **Payments** | The Cover: a seat charge whose payer is the sender; the amount agreed recorded with the terms acceptance |
 | **Notifications** | The new kinds of [the mechanics §12](the-mechanics.md#12-notifications), all always on; a *level asked* row listed only while its card is on Home ([#764](https://github.com/Raketa02/Raketa/issues/764)) |
-| **Player routes** | send (admitted to a group-mate, or to anybody listed on General and not hidden, at most 10 a Warsaw day to people outside your groups, `daily_request_limit` — Q130, [#773](https://github.com/Raketa02/Raketa/issues/773)), accept, set aside and cancel a request; remove a friend; list friends by sport; list requests by direction; read and replace the link; open a code; ask for a level; set aside a sport's level asks; the friends card and the court list; send, accept, decline, invite, open a seat, call off, leave |
+| **Player routes** | send (admitted to a group-mate, or to anybody listed on General and not hidden, at most 10 a Warsaw day to people outside your groups, `daily_request_limit` — Q130, [#773](https://github.com/Raketa02/Raketa/issues/773); since 2026-11-14 to anybody, with no limit, except across *Show me to new people*'s rule — Q131, [#791](https://github.com/Raketa02/Raketa/issues/791)), accept, set aside and cancel a request; remove a friend; list friends by sport; list requests by direction; read and replace the link; open a code; ask for a level; set aside a sport's level asks; the friends card and the court list; send, accept, decline, invite, open a seat, call off, leave |
 | **Public route** | read a code: the owner's nickname and face, or `friend_link_not_found` |
 | **Jobs** | the 24-hour run-out; the cover warning; the cut-off's cover |
 | **Seed and the games test console** | friendships, open requests both ways, a set-aside request, a link, a Split and a Whole-court friends game, a seat waiting on an answer, a level ask waiting on the protagonist's Home; console actions to send, accept, decline, invite and open a seat as seed accounts |

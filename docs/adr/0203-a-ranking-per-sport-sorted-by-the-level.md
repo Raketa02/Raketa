@@ -1,6 +1,9 @@
 # ADR-0203 — A ranking per sport, sorted by the level
 
-- **Status:** Accepted
+- **Status:** Accepted — **§3's *of N*, §7, §8's rows, §9 and §10's hidden flag amended 2026-11-14
+  by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** §2 (Q131): *Show me to new people* replaces §7's switch and closes nothing in
+  the ranking, blocks hide no row, requests need no ranking and have no limit, and *of N* counts
+  everyone; Home gains **Top 10** (ADR-0204 §8). Dated notes mark §3 and §7–§10.
 - **Date:** 2026-11-07
 - **Retires the documents' *nothing ranks players*.** The player-app source document's *"Not a
   ranking ladder. A rating exists to make matches balanced, not to be climbed."*
@@ -159,6 +162,9 @@ with the friends Raketa now has.
 - **A place** is a player's position in that order. ***Of N*** counts every listed player in the view,
   hidden ones included (§7).
 
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** Nobody is hidden any more, so *of N* counts every listed
+> player and every row is shown to every reader.
+
 ### 4. The chip: places moved in 7 days
 
 - **The chip covers the last 7 days, rolling** (Q4). It compares a player's place now with where
@@ -229,6 +235,11 @@ behind you* (Q19).
 - **The switch is a fact about the player.** Turning it is a new event on the Player profile's
   stream, the profile read returns it, and the ranking follows through the outbox.
 
+> **Replaced 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** *Show me to new people* takes its place on You. It
+> takes a player out of Home's three people rows and closes their record and requests to anyone who
+> shares no group, game or friendship with them; **the ranking shows them at their true place**,
+> in General, Friends and Top 10. Its old events fold into the new switch, *hidden* as off.
+
 ### 8. A block hides rows both ways, and closes the record both ways
 
 - **In the ranking**, a blocked pair, either way round, never sees each other's row, in either view.
@@ -248,6 +259,13 @@ behind you* (Q19).
   other's matchmaking, decks, radar and rankings"* was called false by ADR-0193. The matchmaking,
   decks and radar it names are gone. Rankings is back, and there the promise is true.
 
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** **The ranking hides nobody**: a blocked pair sees each
+> other's rows at their true places, in both views and in Top 10, because the ranking is the true
+> ranking (the Home rows grilling, Q17). A tap on the other's row reads *This record isn't available*:
+> **the record stays closed both ways**, as above. A block now keeps the pair out of each other's
+> people rows on Home, the surfaces that suggest one player to another, and ADR-0095's promise holds
+> there instead.
+
 ### 9. Strangers: the record and a friend request
 
 - **The record gains a strand.** It is admitted when *the subject is listed on General in at least
@@ -265,6 +283,12 @@ behind you* (Q19).
   `daily_request_limit`: *You've sent 10 requests to new people today. Try again tomorrow.*
   Requests to group-mates are never counted. The count resets at midnight, Warsaw time.
 
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** **Anyone may open any record and ask anyone, with no daily
+> limit**, except across a block or when the subject's *Show me to new people* is off and they share no
+> group, game or friendship with the reader. The strand above folds into that rule; the limit, its
+> counts and `daily_request_limit` go. A request from the ranking still reads *Found you in the padel
+> ranking*, and Home's rows add three more origins.
+
 ### 10. Where it lives: a stored projection, as a stated exception
 
 **Rankings** is a new bounded context. It owns the ranking projection and its reads. Each neighbour
@@ -275,6 +299,11 @@ is reached through a port the context declares in its own words, wired at bootst
 - blocks, in both directions;
 - players' nicknames and photos;
 - the Player profile's *Show me in General*.
+
+> **Amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2.** The port onto *Show me in General* and the row's *hidden
+> from General* go, and with them the lists' block filtering. The ranking still reaches
+> the rating's events, Friends' friend list, and players' nicknames and photos; Discovery (ADR-0204
+> §10) keeps its own copies.
 
 **The projection, fed by the rating's events:**
 

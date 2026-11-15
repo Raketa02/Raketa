@@ -66,6 +66,18 @@ export const SOCIAL_TAG_IDS = [
 
 export type SocialTagId = (typeof SOCIAL_TAG_IDS)[number];
 
+const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
+
+/**
+ * **A served tag id, or nothing** — for a read whose wire spells a tag as a plain string (the record,
+ * a Same vibe tile's shared tags). A phone that has not been updated is served an id its build has no
+ * words for, and that tag is left off rather than drawn as a chip with nothing on it. The profile's
+ * own mapper keeps its typed twin, which also fails to compile when the wire grows a tag.
+ */
+export function toSocialTagId(served: string): SocialTagId | undefined {
+  return KNOWN_TAGS.has(served) ? (served as SocialTagId) : undefined;
+}
+
 /** The three groups the nineteen are rendered under. Each is about the game and nothing else. */
 export const SOCIAL_TAG_GROUP_IDS = [
   'AFTER_THE_MATCH',

@@ -1,6 +1,6 @@
 /**
- * **The feature's writes** — creating a Player group, joining one (or asking to), and the Info
- * tab's: answering a Join request, editing the group, leaving it and deleting it.
+ * **The feature's writes** — creating a Player group, joining one (or asking to), withdrawing a
+ * request, and the Info tab's: answering a Join request, editing the group, leaving it and deleting it.
  *
  * No rule is applied here that the server does not apply again: *Create the group* is only
  * pressable once the form's schema answers a group (`newGroupFrom`), and the server refuses the
@@ -10,6 +10,7 @@
 import type { GroupExit } from '../domain/groupInfo';
 import {
   deleteGroup,
+  deleteJoinRequest,
   deleteMembership,
   postApproval,
   postDecline,
@@ -34,6 +35,14 @@ export async function createGroup(group: NewGroup): Promise<Group> {
 /** Join, or ask to — the answer's relation says which happened. */
 export async function joinGroup(groupId: string): Promise<GroupAtClub> {
   return toGroupAtClub(await postMembership(groupId));
+}
+
+/**
+ * **Withdraw request** (#800) — the reader's Join request on the group is gone, and nobody is told.
+ * Nothing is refused: a request already answered changes nothing, and still succeeds.
+ */
+export function withdrawJoinRequest(groupId: string): Promise<void> {
+  return deleteJoinRequest(groupId);
 }
 
 /** How the Owner answers a Join request: **Approve** admits the player, **✕** declines, silently. */

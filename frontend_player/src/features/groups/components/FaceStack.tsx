@@ -1,7 +1,8 @@
 /**
- * **Stacked faces and *+N*** — up to five faces, each over the one before it, and a count of
- * everybody not drawn (play 58–60; club 18, 19). Info's members row draws it (#514), and so does an
- * official group's members card in the administrator area (#516), which is why it is one drawing.
+ * **Stacked faces and *+N*** — up to six faces, each over the one before it, and a count of
+ * everybody not drawn (play 58–60; club 18, 19). Info's members row draws it (#514), so does an
+ * official group's members card in the administrator area (#516), and so do a Hottest groups card
+ * (four) and its group sheet (six, #800) — which is why it is one drawing.
  *
  * Each face is ringed in the card's white, so an overlapping face reads as in front rather than
  * merged — its corner the face's own, grown by the ring, so the two curves stay one distance apart.
@@ -21,7 +22,7 @@ const FACE = theme.size.groupPage.stackFace;
 const RING = theme.size.groupPage.stackRing;
 
 export interface FaceStackProps {
-  /** Drawn in this order, the first at the back. The caller has already cut them to five. */
+  /** Drawn in this order, the first at the back. The caller has already cut them to its count. */
   readonly faces: readonly Pick<GroupPerson, 'playerId' | 'photoUrl'>[];
   /** Everybody not drawn — *+N* — and nothing at `0`. */
   readonly more: number;

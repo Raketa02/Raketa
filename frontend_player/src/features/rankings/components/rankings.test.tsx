@@ -2,10 +2,12 @@
  * **The trophy on Home and the Rankings page, walked through the real route tree**
  * ([#775](https://github.com/Raketa02/Raketa/issues/775)–[#779](https://github.com/Raketa02/Raketa/issues/779),
  * PRD #766; [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md); the
- * rankings screens §1–§6), with only `fetch` faked.
+ * rankings screens §1–§6; the ranking that shows everybody, [#799](https://github.com/Raketa02/Raketa/issues/799),
+ * ADR-0204 §2), with only `fetch` faked.
  *
  * Tomek is 7th of 13 in padel at 2,71: Karol just above at 2,75, Zofia just below at 2,69, Inés at the
- * top at 3,40. Places 4 and 5 are rows he can't see, so his list skips them. He has no squash level,
+ * top at 3,40. **Marek, whom he blocked, is 4th** — the real ranking lists him at his true place, and
+ * his record reads *This record isn't available* — and Ewa is 5th. He has no squash level,
  * and nobody is ranked in badminton. **Among his friends** (#777) he is 4th of 9 in padel, Ola just
  * above and Kasia just below; no friend of his is listed in any other sport.
  *
@@ -14,7 +16,7 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, Image, RefreshControl, StyleSheet } from 'react-native';
 
 import { BLOCKS_COPY, blockRowLabel } from '@/features/blocks/types';
 import { FRIENDS_COPY } from '@/features/friends/types';
@@ -28,7 +30,6 @@ import {
   OWN_RECORD_SERVED,
   SPORTS_SERVED,
   launchSignedIn,
-  profileSurface,
   ratingGuideAlreadyShown,
   stubGate,
   stubHome,
@@ -100,6 +101,9 @@ function ranked(
 const INES = ranked(1, 'Inés', 3.4, { chip: { kind: 'DOWN', places: 1 } });
 const STAS = ranked(2, 'Staś', 3.05, { chip: { kind: 'UP', places: 2 } });
 const PIOTR = ranked(3, 'Piotr', 2.95, { chip: { kind: 'NEW', places: null } });
+/** Blocked by Tomek: listed at his true place all the same (ADR-0204 §2), his record closed. */
+const MAREK = ranked(4, 'Marek', 2.92);
+const EWA = ranked(5, 'Ewa', 2.8);
 const KAROL = ranked(6, 'Karol', 2.75);
 const TOMEK = ranked(7, GATE_USER.nickname ?? 'tomek.k', 2.71, {
   player_id: GATE_USER.id,
@@ -108,7 +112,7 @@ const TOMEK = ranked(7, GATE_USER.nickname ?? 'tomek.k', 2.71, {
   is_you: true,
 });
 const ZOFIA = ranked(8, 'Zofia', 2.69, { chip: { kind: 'DOWN', places: 2 } });
-const PADEL_ROWS = [INES, STAS, PIOTR, KAROL, TOMEK, ZOFIA];
+const PADEL_ROWS = [INES, STAS, PIOTR, MAREK, EWA, KAROL, TOMEK, ZOFIA];
 
 const GAP_LINE: Wire['GapLineSchema'] = {
   above: { nickname: 'Karol', gap: 0.04, wins: 3, tied: false },
@@ -274,16 +278,13 @@ interface RankingServer {
 function rankingServer({
   trophy = { sport: 'PADEL', general_place: 7, friends_place: 4 },
   ratings = [rating('PADEL', 2.71), rating('TENNIS', 3.1)],
-  visibility = 'SHOWN',
 }: {
   readonly trophy?: Wire['HomeRankingSchema'] | null;
   readonly ratings?: readonly Wire['RatingResponse'][];
-  /** *Show me in General*, as his profile read serves it (#778). */
-  readonly visibility?: Wire['RankingVisibility'];
 } = {}): RankingServer {
   stubGate(transport, { ratings: [...ratings], hasPlayerProfile: true });
   stubProfileOptions(transport);
-  stubProfileSurface(transport, profileSurface({ ranking_visibility: visibility }));
+  stubProfileSurface(transport);
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
   stubHome(transport, { ranking: trophy });
   stubOwnRecord(transport, OWN_RECORD_SERVED);
@@ -310,13 +311,14 @@ function rankingServer({
     );
   }
 
-  for (const row of PADEL_ROWS.filter((one) => !one.is_you)) {
+  for (const row of PADEL_ROWS.filter((one) => !one.is_you && one !== MAREK)) {
     transport.on('GET', recordPath(row.player_id), () =>
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
         relation: 'NONE',
         can_add_friend: true,
         nickname: row.nickname,
+        photos: [],
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: row.level, band: 'Established' }],
@@ -324,6 +326,8 @@ function rankingServer({
       }),
     );
   }
+  // A block either way closes the record, with the one refusal that names nothing.
+  transport.on('GET', recordPath(MAREK.player_id), () => errorResponse(404, 'record_unavailable'));
 
   return {
     answer: (sport, read) => reads.set(sport, read),
@@ -621,17 +625,15 @@ describe('the place card', () => {
     expect(card.getByText(words)).toBeTruthy();
   });
 
-  it('hidden from General: the place, and Hidden from General where the gap line was', async () => {
-    const server = rankingServer();
-    server.answer(
-      'PADEL',
-      general('PADEL', { card: listedCard({ state: 'HIDDEN', gap_line: null }) }),
-    );
+  it('draws no switch: no Show me in General, no Hidden from General — only General | Friends (#799)', async () => {
+    rankingServer();
     await openRankings();
 
-    expect(await screen.findByText('7th')).toBeTruthy();
-    expect(screen.getByText('Hidden from General')).toBeTruthy();
-    expect(screen.queryByTestId('gap-line')).toBeNull();
+    expect(said(await screen.findByTestId('gap-line'))).toContain('behind Karol');
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByText('Hidden from General')).toBeNull();
+    expect(screen.queryByText(/^Show me/)).toBeNull();
+    expect(screen.queryByTestId('hidden-from-general')).toBeNull();
   });
 
   it.each<[string, Wire['PlaceCardSchema'], string]>([
@@ -789,17 +791,14 @@ describe('the podium', () => {
     expect(within(screen.getByTestId('podium-third')).getByText('Piotr')).toBeTruthy();
   });
 
-  it('labels each step with its true place — with second hidden, 1, 3 and 4', async () => {
-    const server = rankingServer();
-    const fourth = ranked(4, 'Marek', 2.92);
-    server.answer('PADEL', general('PADEL', { podium: [INES, PIOTR, fourth] }));
+  it('labels each step with its true place', async () => {
+    rankingServer();
     await openRankings();
 
-    const podium = await screen.findByTestId('podium');
+    await screen.findByTestId('podium');
     expect(within(screen.getByTestId('podium-first')).getByText('1')).toBeTruthy();
-    expect(within(screen.getByTestId('podium-second')).getByText('3')).toBeTruthy();
-    expect(within(screen.getByTestId('podium-third')).getByText('4')).toBeTruthy();
-    expect(podium).toBeTruthy();
+    expect(within(screen.getByTestId('podium-second')).getByText('2')).toBeTruthy();
+    expect(within(screen.getByTestId('podium-third')).getByText('3')).toBeTruthy();
   });
 
   it('is not drawn with fewer than three rows: the list shows alone', async () => {
@@ -813,7 +812,7 @@ describe('the podium', () => {
 });
 
 describe('the rows', () => {
-  it('draw each place — coral for 1–3, grey after, skipping the rows he can’t see', async () => {
+  it('draw every place — coral for 1–3, grey after, the player he blocked among them (#799)', async () => {
     rankingServer();
     await openRankings();
     await screen.findAllByTestId(/^ranked-row-/);
@@ -825,10 +824,13 @@ describe('the rows', () => {
       [1, theme.color.coralInk],
       [2, theme.color.coralInk],
       [3, theme.color.coralInk],
+      [4, theme.color.muted],
+      [5, theme.color.muted],
       [6, theme.color.muted],
       [7, theme.color.muted],
       [8, theme.color.muted],
     ]);
+    expect(within(rowOf(MAREK)).getByText('Marek')).toBeTruthy();
   });
 
   it('draw the form as the record’s squares, oldest first and never padded', async () => {
@@ -917,6 +919,19 @@ describe('a face opens the record', () => {
     );
   });
 
+  it('reads This record isn’t available from the row of a player he blocked (#799)', async () => {
+    rankingServer();
+    await openRankings();
+
+    fireEvent.press(await screen.findByTestId(`ranked-row-${MAREK.player_id}`));
+
+    expect(await screen.findByText(RECORD_UNAVAILABLE)).toBeTruthy();
+    expect(transport.requestsTo('GET', recordPath(MAREK.player_id))).toHaveLength(1);
+    // One line and nothing else: no foot, no Block, no Add friend.
+    expect(screen.queryByTestId('record-foot')).toBeNull();
+    expect(screen.queryByRole('button', { name: FRIENDS_COPY.record.add })).toBeNull();
+  });
+
   it('opens the reader’s own record from their own row', async () => {
     rankingServer();
     await openRankings();
@@ -935,7 +950,7 @@ describe('a face opens the record', () => {
 const REQUESTS_PATH = '/api/v1/friends/requests';
 const asked = () => transport.requestsTo('POST', REQUESTS_PATH).map((request) => request.body);
 
-/** Piotr, 3rd in padel, whom Tomek shares no group with — listed, so anybody may open his record. */
+/** Piotr, 3rd in padel, whom Tomek shares no group with — anybody may open his record (ADR-0204 §2). */
 function piotrsRecord(
   over: Partial<Wire['PlayerRecordResponse']> = {},
 ): Wire['PlayerRecordResponse'] {
@@ -944,6 +959,7 @@ function piotrsRecord(
     relation: 'NONE',
     can_add_friend: true,
     nickname: PIOTR.nickname,
+    photos: [],
     area_code: 'A+050612+0019938',
     social_tags: [],
     sports: [{ sport: 'PADEL', level: PIOTR.level, band: 'Established' }],
@@ -954,18 +970,43 @@ function piotrsRecord(
 
 /**
  * **The friends route, faked as far as a stranger's request goes**: a request is `SENT`, and his
- * record says so on its next read — or the eleventh of the day, refused with the limit.
+ * record says so on its next read — or, once he has turned *Show me to new people* off since the
+ * record was read, the request is refused with the one unnamed code and his record with the one
+ * refusal (ADR-0204 §2).
  */
-function strangerServer({ limitReached = false }: { readonly limitReached?: boolean } = {}) {
+function strangerServer({
+  record = piotrsRecord(),
+  switchedOff = false,
+}: { readonly record?: Wire['PlayerRecordResponse']; readonly switchedOff?: boolean } = {}) {
   let relation: Wire['FriendRelation'] = 'NONE';
+  let closed = false;
   transport.on('POST', REQUESTS_PATH, () => {
-    if (limitReached) return errorResponse(429, 'daily_request_limit');
+    if (switchedOff) {
+      closed = true;
+      return errorResponse(404, 'player_unavailable');
+    }
     relation = 'SENT';
     return json<Wire['RelationResponse']>({ relation });
   });
   transport.on('GET', recordPath(PIOTR.player_id), () =>
-    json(piotrsRecord({ relation, can_add_friend: relation === 'NONE' })),
+    closed
+      ? errorResponse(404, 'record_unavailable')
+      : json({ ...record, relation, can_add_friend: relation === 'NONE' }),
   );
+}
+
+/** Three photos, in his own order — the first is the header's. */
+const PIOTRS_PHOTOS: Wire['RecordPhotoSchema'][] = [
+  { photo_id: 'p0000000-0000-4000-8000-000000079901', photo_url: 'https://photos.test/piotr-1' },
+  { photo_id: 'p0000000-0000-4000-8000-000000079902', photo_url: 'https://photos.test/piotr-2' },
+  { photo_id: 'p0000000-0000-4000-8000-000000079903', photo_url: 'https://photos.test/piotr-3' },
+];
+
+/** The photos a carousel draws, in order, read off their images. */
+function carouselPhotos(): string[] {
+  return within(screen.getByTestId('record-photos', HIDDEN_TOO))
+    .UNSAFE_getAllByType(Image)
+    .map((image) => (image.props.source as { uri: string }).uri);
 }
 
 /** Piotr's record, opened from his step on the podium. */
@@ -1005,21 +1046,60 @@ describe('a stranger’s record from the ranking (#779)', () => {
     expect(screen.queryByRole('button', { name: /^Unblock/ })).toBeNull();
   });
 
-  it('says the daily limit under the buttons when the eleventh is refused, and Add friend stays', async () => {
+  it('draws all of a stranger’s photos, in his order, with Add friend beside Block (#799)', async () => {
     rankingServer();
-    strangerServer({ limitReached: true });
+    strangerServer({
+      record: piotrsRecord({
+        photos: PIOTRS_PHOTOS,
+        photo_id: PIOTRS_PHOTOS[0]!.photo_id,
+        photo_url: PIOTRS_PHOTOS[0]!.photo_url,
+        review: 'allowed',
+      }),
+    });
+    await openPiotrsRecord();
+
+    expect(carouselPhotos()).toEqual([
+      'https://photos.test/piotr-1',
+      'https://photos.test/piotr-2',
+      'https://photos.test/piotr-3',
+    ]);
+    expect(foot().getByRole('button', { name: FRIENDS_COPY.record.add })).toBeTruthy();
+  });
+
+  it('draws no carousel for a stranger with no photo', async () => {
+    rankingServer();
+    strangerServer();
+    await openPiotrsRecord();
+
+    expect(screen.queryByTestId('record-photos', HIDDEN_TOO)).toBeNull();
+  });
+
+  it('asks with no limit: request after request is sent, and no limit sentence is said (#799)', async () => {
+    rankingServer();
+    strangerServer();
     await openPiotrsRecord();
 
     fireEvent.press(foot().getByRole('button', { name: FRIENDS_COPY.record.add }));
 
-    expect(
-      await foot().findByText(FRIENDS_COPY.refused['daily_request_limit'] ?? 'missing'),
-    ).toBeTruthy();
-    expect(foot().getByRole('alert')).toBeTruthy();
-    expect(asked()).toHaveLength(1);
-    // Nothing was sent: the record still offers the request.
-    expect(foot().getByRole('button', { name: FRIENDS_COPY.record.add })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: FRIENDS_COPY.record.sent })).toBeNull();
+    expect(await screen.findByRole('button', { name: FRIENDS_COPY.record.sent })).toBeTruthy();
+    expect(screen.queryByText(/requests to new people today/)).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(Object.keys(FRIENDS_COPY.refused)).not.toContain('daily_request_limit');
+  });
+
+  it('re-reads the record quietly when he turned Show me to new people off since — and it reads This record isn’t available (#799)', async () => {
+    rankingServer();
+    strangerServer({ switchedOff: true });
+    await openPiotrsRecord();
+
+    fireEvent.press(foot().getByRole('button', { name: FRIENDS_COPY.record.add }));
+
+    await waitFor(() => expect(asked()).toHaveLength(1));
+    // Nothing said about the refusal: the record read again is the answer.
+    expect(await screen.findByText(RECORD_UNAVAILABLE)).toBeTruthy();
+    expect(transport.requestsTo('GET', recordPath(PIOTR.player_id))).toHaveLength(2);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByTestId('record-foot')).toBeNull();
   });
 
   it('draws Block alone, full width, where the record says no request may be sent — and never Unblock', async () => {
@@ -1035,7 +1115,7 @@ describe('a stranger’s record from the ranking (#779)', () => {
     expect(screen.queryByRole('button', { name: /^Unblock/ })).toBeNull();
   });
 
-  it('reads the record’s one refusal where the server refuses it — a block, or the switch turned off', async () => {
+  it('reads the record’s one refusal where the server refuses it — a block, or Show me to new people off', async () => {
     rankingServer();
     transport.on('GET', recordPath(PIOTR.player_id), () =>
       errorResponse(404, 'record_unavailable'),
@@ -1072,7 +1152,7 @@ describe('reading the page', () => {
 
   it('says why when it is refused, and Try again reads it again', async () => {
     rankingServer();
-    transport.on('GET', rankingPath('PADEL'), () => errorResponse(503, 'block_state_unavailable'));
+    transport.on('GET', rankingPath('PADEL'), () => errorResponse(503, 'service_unavailable'));
     await launchSignedIn();
     fireEvent.press(await screen.findByTestId('ranking-trophy'));
     await waitFor(() => expect(screen).toHavePathname('/rankings'));
@@ -1115,7 +1195,7 @@ describe('reading the page', () => {
 /*
  * Here Tomek is 212th of 480. **Each page holds a few rows rather than the server's 50**, so a test
  * renderer with no layout draws the whole list at once: the list asks for every page the same way
- * whatever a page holds, and a page with rows the reader can't see holds fewer than 50 anyway.
+ * whatever a page holds.
  */
 
 const rowsPath = (sport: Wire['Sport']) => `/api/v1/rankings/${sport}/general/rows`;
@@ -1282,7 +1362,7 @@ describe('General in pages (#776)', () => {
 
   it('says why when the page below is refused, and Try again asks for it again', async () => {
     longListServer();
-    servePages({ 'after=below-5': () => errorResponse(503, 'block_state_unavailable') });
+    servePages({ 'after=below-5': () => errorResponse(503, 'service_unavailable') });
     await openRankings();
     await rowDrawn(crowd(5));
 
@@ -1399,16 +1479,13 @@ describe('the You · 212th button (#776)', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'You · 7th' }));
 
-    expect(centring).toHaveBeenCalledWith({ index: 4, viewPosition: 0.5, animated: true });
+    expect(centring).toHaveBeenCalledWith({ index: 6, viewPosition: 0.5, animated: true });
     expect(pageReads()).toEqual([]);
   });
 
-  it.each([
-    ['not listed', notListed('NEEDS_RESULTS', { results: 2 })],
-    ['hidden from General', listedCard({ state: 'HIDDEN', gap_line: null })],
-  ])('is not shown when he is %s', async (_case, card) => {
+  it('is not shown when he is not listed', async () => {
     const server = rankingServer();
-    server.answer('PADEL', general('PADEL', { card }));
+    server.answer('PADEL', general('PADEL', { card: notListed('NEEDS_RESULTS', { results: 2 }) }));
     await openRankings();
     await rowDrawn(INES);
 
@@ -1419,7 +1496,7 @@ describe('the You · 212th button (#776)', () => {
 
   it('says why where it stood when the jump is refused, and Try again jumps', async () => {
     longListServer();
-    servePages({ 'around_me=true': () => errorResponse(503, 'block_state_unavailable') });
+    servePages({ 'around_me=true': () => errorResponse(503, 'service_unavailable') });
     await openRankings();
     await rowDrawn(crowd(5));
     reportOnScreen(crowd(1));
@@ -1761,148 +1838,5 @@ describe('the Friends view (#777)', () => {
     await waitFor(() => expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(2));
     expect(await screen.findByText('3rd')).toBeTruthy();
     expect(viewReads('PADEL', 'GENERAL')).toHaveLength(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Show me in General (#778)
-// ---------------------------------------------------------------------------
-
-describe('Show me in General (#778)', () => {
-  const SWITCH_PATH = '/api/v1/players/me/ranking-visibility';
-  const writes = () => transport.requestsTo('PUT', SWITCH_PATH);
-  const HIDDEN_CARD = listedCard({ state: 'HIDDEN', gap_line: null });
-  const generalReads = () => viewReads('PADEL', 'GENERAL');
-  const cardSwitch = () =>
-    within(screen.getByTestId('hidden-from-general')).getByRole('switch', {
-      name: 'Show me in General',
-    });
-  /** The page follows the switch a second at a time — the outbox's own pace. */
-  const aSecond = () => act(() => jest.advanceTimersByTimeAsync(1_000));
-
-  /**
-   * **The switch's route, as the server keeps it**: a write is the profile read's from then on, and
-   * `then` is whatever else the write moves — the ranking, where it has caught up.
-   */
-  function serveTheSwitch(then: () => void = () => undefined) {
-    transport.on('PUT', SWITCH_PATH, (request) => {
-      const { visibility } = request.body as Wire['SetRankingVisibilityRequest'];
-      stubProfileSurface(transport, profileSurface({ ranking_visibility: visibility }));
-      then();
-      return noContent();
-    });
-  }
-
-  it('turned off on You: his card still reads 7th of 13, with Hidden from General and the switch where the gap line was, and no You button', async () => {
-    const server = rankingServer();
-    serveTheSwitch(() => server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD })));
-    await launchSignedIn();
-    fireEvent.press(await screen.findByLabelText('You'));
-
-    fireEvent.press(await screen.findByRole('switch', { name: 'Show me in General' }));
-
-    await waitFor(() => expect(writes()).toHaveLength(1));
-    expect(writes()[0]!.body).toEqual({ visibility: 'HIDDEN' });
-
-    fireEvent.press(screen.getByLabelText('Home'));
-    fireEvent.press(await screen.findByTestId('ranking-trophy'));
-    await waitFor(() => expect(screen).toHavePathname('/rankings'));
-
-    expect(await screen.findByText('Hidden from General')).toBeTruthy();
-    const card = within(screen.getByTestId('place-card'));
-    expect(card.getByText('7th')).toBeTruthy();
-    expect(card.getByText('of 13')).toBeTruthy();
-    expect(card.getByText('2,71')).toBeTruthy();
-    expect(card.getByTestId('rank-chip-UP', HIDDEN_TOO)).toBeTruthy();
-    expect(screen.queryByTestId('gap-line')).toBeNull();
-    expect(cardSwitch().props.accessibilityState?.checked).toBe(false);
-
-    await rowDrawn(INES);
-    reportOnScreen(INES, STAS, PIOTR);
-    expect(screen.queryByRole('button', { name: /^You · / })).toBeNull();
-  });
-
-  it('turned back on from the card: SHOWN is sent, the page is read again, and the gap line is back', async () => {
-    const server = rankingServer({ visibility: 'HIDDEN' });
-    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
-    serveTheSwitch(() => server.answer('PADEL', general('PADEL')));
-    await openRankings();
-    await screen.findByText('Hidden from General');
-    const readsBefore = generalReads().length;
-
-    fireEvent.press(cardSwitch());
-
-    await waitFor(() => expect(writes()).toHaveLength(1));
-    expect(writes()[0]!.body).toEqual({ visibility: 'SHOWN' });
-    await waitFor(() => expect(cardSwitch().props.accessibilityState?.checked).toBe(true));
-    await aSecond();
-
-    expect(said(await screen.findByTestId('gap-line'))).toContain('behind Karol');
-    expect(generalReads()).toHaveLength(readsBefore + 1);
-    expect(screen.queryByText('Hidden from General')).toBeNull();
-    expect(screen.queryByRole('switch')).toBeNull();
-  });
-
-  it('follows the switch while the ranking has not caught up, and stops once it has', async () => {
-    // The ranking follows the profile through the outbox, so a read sent just after the write
-    // answers can still be the one from before.
-    const server = rankingServer({ visibility: 'HIDDEN' });
-    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
-    serveTheSwitch();
-    await openRankings();
-    await screen.findByText('Hidden from General');
-    const readsBefore = generalReads().length;
-
-    fireEvent.press(cardSwitch());
-    await waitFor(() => expect(writes()).toHaveLength(1));
-    await aSecond();
-    await waitFor(() => expect(generalReads()).toHaveLength(readsBefore + 1));
-
-    // Still hidden on the read again, the switch on: the page reads once more, a second later.
-    expect(screen.getByText('Hidden from General')).toBeTruthy();
-    expect(cardSwitch().props.accessibilityState?.checked).toBe(true);
-    server.answer('PADEL', general('PADEL'));
-    await aSecond();
-
-    expect(said(await screen.findByTestId('gap-line'))).toContain('behind Karol');
-    expect(generalReads()).toHaveLength(readsBefore + 2);
-
-    await act(() => jest.advanceTimersByTimeAsync(10_000));
-    expect(generalReads()).toHaveLength(readsBefore + 2);
-  });
-
-  it('stops following after five reads when the ranking never catches up', async () => {
-    const server = rankingServer({ visibility: 'HIDDEN' });
-    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
-    serveTheSwitch();
-    await openRankings();
-    await screen.findByText('Hidden from General');
-    const readsBefore = generalReads().length;
-
-    fireEvent.press(cardSwitch());
-    await waitFor(() => expect(writes()).toHaveLength(1));
-    for (let second = 0; second < 20; second += 1) await aSecond();
-
-    // Five reads a second apart, then the page waits for a pull.
-    expect(generalReads()).toHaveLength(readsBefore + 5);
-    expect(screen.getByText('Hidden from General')).toBeTruthy();
-  });
-
-  it('says why above the card when the write is refused, and the switch is back off', async () => {
-    const server = rankingServer({ visibility: 'HIDDEN' });
-    server.answer('PADEL', general('PADEL', { card: HIDDEN_CARD }));
-    transport.on('PUT', SWITCH_PATH, () => errorResponse(409, 'concurrent_modification'));
-    await openRankings();
-    await screen.findByText('Hidden from General');
-    const readsBefore = generalReads().length;
-
-    fireEvent.press(cardSwitch());
-
-    expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(cardSwitch().props.accessibilityState?.checked).toBe(false);
-    expect(screen.getByText('Hidden from General')).toBeTruthy();
-    // Nothing to follow: the profile never moved.
-    await act(() => jest.advanceTimersByTimeAsync(5_000));
-    expect(generalReads()).toHaveLength(readsBefore);
   });
 });

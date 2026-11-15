@@ -45,6 +45,7 @@ mocks, numbered 1–11 and 13–20, with no 12) so that every session can read t
 | The club website: sign in, Administrators, Groups | club [1](mocks/club/01_club_sign_in.png)–[4](mocks/club/04_club_admin_invitation_sent.png), [14](mocks/club/14_administrator_table.png)–[16](mocks/club/16_groups_club_table.png) | [#522](https://github.com/Raketa02/Raketa/issues/522)–[#524](https://github.com/Raketa02/Raketa/issues/524) |
 | The invitation sheet and the profile switcher | club [5](mocks/club/05_player_admin_invitation.png)–[7](mocks/club/07_profile_selector_player_admin.png) | [#518](https://github.com/Raketa02/Raketa/issues/518) |
 | The Administrator's side of the app | club [8](mocks/club/08_administrator_view_general_no_groups_yet.png)–[11](mocks/club/11_administrator_group_created.png), [13](mocks/club/13_administrator_group_created_details.png), [17](mocks/club/17_administrator_with_groups_in_filled.png)–[19](mocks/club/19_administrator_group_no_pending_request.png) | [#516](https://github.com/Raketa02/Raketa/issues/516), [#517](https://github.com/Raketa02/Raketa/issues/517) |
+| A group seen from outside it: the card, the group sheet and Withdraw (2026-11-14) | home rows 3–6 and 21, in [the Home rows spec set](../home-rows/README.md#index) | [#792](https://github.com/Raketa02/Raketa/issues/792), [#800](https://github.com/Raketa02/Raketa/issues/800) |
 
 **Mocks exist for none of these:** the sign-up page and Club details on the club website, the public
 site, the app's *Set your password*, *Have an invitation code?*, *Forgot password* and *Set a new
@@ -52,6 +53,20 @@ password* screens, Edit group, and the Administrator's You tab. The club website
 club 1's look. The public site borrows the club website's look (paper, the coral square wordmark, a
 white card) and is laid out for phones first. The app's account screens are built from the sign-in
 screen's own components.
+
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+> §3 (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
+>
+> - **A non-member sees a group from outside**, on Home's *Hottest groups*: its card and **the group
+>   sheet** — the name, *Open group* or *Closed group*, *run by* the club or the Owner's nickname, the
+>   club, the sports, *games this week*, *players · new this month*, up to six member faces that can't
+>   be tapped, and *7 of your friends play here* or *11 players* — with **Join**, **Ask to join**,
+>   **Asked** or, for a member, **Open group** ([the home rows screens §3](../home-rows/the-screens.md#3-hottest-groups)).
+>   **The group page itself stays members-only.**
+> - **A Join request can be withdrawn**: *Asked* opens *Waiting for Ogrody 33 to answer* with
+>   **Withdraw request**. It leaves the Owner's, the Administrator's and the club website's request
+>   lists at once, tells nobody, and the player may ask again
+>   ([the home rows mechanics §5.8](../home-rows/the-mechanics.md#58-withdrawing-a-join-request-q12)).
 
 ## Background only
 

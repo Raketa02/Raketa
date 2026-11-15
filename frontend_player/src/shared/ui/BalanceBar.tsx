@@ -114,6 +114,19 @@ export const BALANCE_SOFT: Readonly<Record<BalanceBarTone, string>> = {
   bad: theme.color.redSoft,
 };
 
+/**
+ * The same three as **a large figure on a dark card** — the game card's forecast and the friends
+ * card's (#553, #757), sign-in's miniature copy of the card (#786), and the Same competitive level
+ * card's % (#802): the game cards' own `gameGreen`, `gameAmber` and `gameRed`, each carrying a large
+ * figure at 3:1 on the grounds that draw it (`gameGround.test.ts`, `levelCardGround.test.ts`). Three
+ * copies of it stood in three features until #802 made the fourth caller, and it came below them all.
+ */
+export const BALANCE_FIGURE: Readonly<Record<BalanceBarTone, string>> = {
+  ok: theme.color.gameGreen,
+  warn: theme.color.gameAmber,
+  bad: theme.color.gameRed,
+};
+
 export type BalanceBarVariant = 'base' | 'onDark';
 
 export interface BalanceBarProps {

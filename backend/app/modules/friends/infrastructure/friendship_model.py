@@ -1,5 +1,6 @@
-"""The Friendship's three projections: ``friend_relations``, since #749
-``friend_level_asks``, and since #773 ``friend_requests_counted``.
+"""The Friendship's two projections: ``friend_relations`` and, since #749,
+``friend_level_asks``. (``friend_requests_counted``, the daily limit's count
+since #773, went with the limit in #791.)
 
 **Two rows per pair while something stands between them**, one from each side —
 ``FRIEND`` and ``FRIEND``, or ``SENT`` for the requester and ``ASKED_YOU`` for the
@@ -20,13 +21,6 @@ first level in it answered it. Read from the asker's side by the picker
 (*Asked*), by friend and sport by the one subscriber that answers the asks when
 that level arrives, and by friend by the friend's own Home and bell — the asks
 made of them (``FriendLevelAskORM``).
-
-**``friend_requests_counted``** holds every request that counts towards its
-requester's daily limit (#773; ``docs/adr/0203`` §9): asked of somebody the
-requester shared no group with — ``FriendRequested.counted`` — one row per
-request **ever sent**, so a request cancelled, answered or ended still counts
-for the day it was sent. Read by the requester and the start of their Warsaw
-day (``FriendRequestCountedORM``).
 """
 
 from __future__ import annotations
@@ -94,22 +88,3 @@ class FriendLevelAskORM(Base):
     set_aside_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
-
-class FriendRequestCountedORM(Base):
-    """One request **sent** that counts towards the requester's daily limit
-    (#773): asked of somebody they shared no group with at asking. Written by
-    the repository's ``save`` from the ``friends.friend_requested`` it appends,
-    and never deleted — a request taken back was still sent.
-
-    **Keyed on the requester and the instant**, so *how many since this Warsaw
-    midnight* is one range on the primary key's prefix; the addressee completes
-    the key, since two requests of one instant go to two people."""
-
-    __tablename__ = "friend_requests_counted"
-
-    requester_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
-    asked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), primary_key=True
-    )
-    addressee_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)

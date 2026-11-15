@@ -54,12 +54,22 @@ name, is what history is recorded under.
   webhook's inbox — the id of every provider notice already read, written in the transaction
   that acted on it, the outbox's mirror (ADR-0190 §3). What a notice *moves* is still
   event-sourced.
-- **One projection is written by a context with no events of its own**: `ranking_rows`
+- **Projections written by contexts with no events of their own**: `ranking_rows`
   (#768; ADR-0203 §10), a fold of each rating stream written when `rating.moved_on_result`
   is delivered and by the rebuild, and beside it `ranking_level_history` (#769), the same
-  fold kept point by point, keyed by the stored event, and `ranking_visibility` (#772),
-  each player's *Show me in General* followed from `player_profile.ranking_visibility_set`
-  at the profile version it was read at. They record no fact the rating stream and the
-  profile stream do not, so there is no event to emit; ADR-0203 §10 is where the stored
-  copy is argued (`rankings.md`).
+  fold kept point by point, keyed by the stored event (#772's `ranking_visibility` was
+  dropped in #791 with the switch it copied). They record no fact the rating stream does
+  not, so there is no event to emit; ADR-0203 §10 is where the stored copy is argued
+  (`rankings.md`). **And `discovery_players` with `discovery_player_tags`** (#793; ADR-0204
+  §10): the player directory, written whole from what `users` and the Player profile hold when
+  one of their events is delivered, and by the rebuild — no fact their streams don't hold
+  (`discovery.md`); and beside them `discovery_levels` (#794), each rating stream's current
+  Level, written when `rating.rating_initialised` or `rating.moved_on_result` is delivered and
+  by the same rebuild.
+- **One table is event-free because it is the phone's word, not a fold**:
+  `discovery_rest_counts` (#796; ADR-0204 §10, where it is argued), the rest count — the
+  different Warsaw days each card came on screen in a viewer's *Same competitive level* or
+  *Same vibe* row while the two were unconnected, written by `POST /on-screen` in its own
+  transaction. No stream holds what a phone saw, nobody is told, and only the viewer's own
+  rows read it, so there is no event to emit and no rebuild (`discovery.md`).
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

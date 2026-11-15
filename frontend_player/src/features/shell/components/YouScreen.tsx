@@ -7,7 +7,7 @@
  * header card       the record's header, compact — tapping it opens How others see you
  * PLAYING           Skill passport · Player reliability · What kind of game
  * YOUR GAMES        Your week · Where you play · Who you play with · Friends
- * ON YOUR CARD      How others see you · Photos · Tags · Intro · Nickname · Show me in General
+ * ON YOUR CARD      How others see you · Photos · Tags · Intro · Nickname · Show me to new people
  * ACCOUNT           Games & money · Payments · Notifications · Blocked players
  * ─────────────
  * Sign out          pinned under the page, above the bar
@@ -43,9 +43,10 @@
  * friend is the shortcut to one (ADR-0202) — `friends`' row, its line *3 friends · 1 asked you*,
  * the door to You › Friends.
  *
- * **_Show me in General_ closes On your card** ([#778](https://github.com/Raketa02/Raketa/issues/778);
- * the You spec §3.14): the one fact on the tab that says who may read the rest of the group, and the
- * one row that is a switch rather than a door — `player_profile`'s, written at once.
+ * **_Show me to new people_ closes On your card** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+ * which renamed #778's _Show me in General_; the Home rows screens §9.1): the one fact on the tab that
+ * says who may read the rest of the group, and the one row that is a switch rather than a door —
+ * `player_profile`'s, written at once.
  *
  * ## The switcher chip
  *
@@ -79,7 +80,7 @@ import { FriendsRow } from '@/features/friends/types';
 import {
   IntroRow,
   PhotosRow,
-  ShowMeInGeneralRow,
+  ShowMeToNewPeopleRow,
   TagsRow,
   WhatKindOfGameRow,
   WhereYouPlayRow,
@@ -143,7 +144,7 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <TagsRow divided />
             <IntroRow divided />
             <NicknameRow divided />
-            <ShowMeInGeneralRow divided />
+            <ShowMeToNewPeopleRow divided />
           </YouGroup>
 
           <YouGroup title={YOU_COPY.groups.account}>

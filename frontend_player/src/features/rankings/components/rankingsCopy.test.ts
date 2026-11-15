@@ -8,6 +8,7 @@ import type { GapLine } from '../domain/ranking';
 
 import {
   RANKINGS_COPY,
+  TOP_TEN_COPY,
   cardChipWords,
   chipFace,
   gapLineParts,
@@ -20,6 +21,8 @@ import {
   ordinal,
   placeCardSpoken,
   rankedRowLabel,
+  topTenCardLabel,
+  topTenRankingsLabel,
   trophyLabel,
   trophyPlace,
 } from './rankingsCopy';
@@ -246,6 +249,45 @@ describe('the list', () => {
   });
 });
 
+describe('Top 10 on Home (#805; §31.1, §31.11)', () => {
+  it('names Rankings › for what it opens: the rankings in the row’s sport', () => {
+    expect(TOP_TEN_COPY.rankings).toBe('Rankings');
+    expect(topTenRankingsLabel('squash')).toBe('Rankings in squash');
+  });
+
+  it('speaks a card as its place, its name — You for the reader — its level and its move', () => {
+    expect(
+      topTenCardLabel({
+        place: 1,
+        playerId: 'p-ines',
+        nickname: 'ines.d',
+        level: 3.4,
+        isYou: false,
+        chip: { kind: 'DOWN', places: 1 },
+      }),
+    ).toBe('1st, ines.d, 3,40, down 1 this week');
+    expect(
+      topTenCardLabel({
+        place: 7,
+        playerId: 'p-tomek',
+        nickname: 'tomek.k',
+        level: 2.71,
+        isYou: true,
+        chip: { kind: 'UP', places: 1 },
+      }),
+    ).toBe('7th, You, 2,71, up 1 this week');
+    expect(
+      topTenCardLabel({
+        place: 10,
+        playerId: 'p-magda',
+        nickname: 'magda.p',
+        level: 2.66,
+        isYou: false,
+      }),
+    ).toBe('10th, magda.p, 2,66');
+  });
+});
+
 describe('no sentence says her, his, she or he', () => {
   it('holds over every sentence the page writes', () => {
     const sentences: readonly string[] = [
@@ -267,6 +309,16 @@ describe('no sentence says her, his, she or he', () => {
       trophyLabel('padel', 4, 'FRIENDS'),
       nobodyRankedLine('padel'),
       jumpButtonLabel(212),
+      ...Object.values(TOP_TEN_COPY),
+      topTenRankingsLabel('padel'),
+      topTenCardLabel({
+        place: 1,
+        playerId: 'p-ines',
+        nickname: 'ines.d',
+        level: 3.4,
+        isYou: false,
+        chip: { kind: 'DOWN', places: 1 },
+      }),
     ];
 
     for (const sentence of sentences) {

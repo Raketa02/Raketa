@@ -49,6 +49,13 @@ export { friendKeys } from './hooks/friendKeys';
 export { levelIn, type Friend } from './domain/friendList';
 export { PlayedWithCard, type PlayedWithCardProps } from './components/PlayedWithCard';
 export { FriendButton, type FriendButtonProps } from './components/FriendButton';
+/**
+ * **The round friend button** (#801; the Home rows screens §8) — on every card of Home's people rows,
+ * and worded on a sheet's title row. The surface hands in its own reads of the person (`reread`), and
+ * the row it stands in (`where`, a `FoundIn`).
+ */
+export { RoundFriendButton, type RoundFriendButtonProps } from './components/RoundFriendButton';
+export type { Reread } from './hooks/useFriendWrites';
 export { FriendRequestsRow, type FriendRequestsRowProps } from './components/FriendRequestsRow';
 /**
  * **ASKED FOR A LEVEL** (#765) — Home's row of a friend's asks for a level, after FRIEND REQUESTS:
@@ -61,6 +68,7 @@ export {
   recordAskedWhere,
   recordFootOf,
   type AskedWhere,
+  type FoundIn,
   type FriendButton as FriendButtonKind,
   type RecordFoot,
 } from './domain/friendship';
@@ -87,6 +95,7 @@ export {
   notNowLabel,
   removeTitle,
   requestsHeading,
+  roundLabel,
   wantsToBeYourFriend,
   whereLine,
 } from './components/friendsCopy';

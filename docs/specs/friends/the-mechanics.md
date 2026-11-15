@@ -14,6 +14,11 @@
 > ([§3.2](#32-asking)), and is capped at 10 a day to people outside your groups
 > ([§13](#13-numbers-in-one-place)); a block closes the record both ways, so the record's Unblock goes
 > ([§3.5](#35-blocks)).
+> **Amended on 2026-11-14** by the Home rows grilling, PRD [#789](https://github.com/Raketa02/Raketa/issues/789),
+> logged as **Q131** and recorded by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md): **anyone may be asked, with no daily limit**
+> ([§3.1](#31-who-can-be-a-friend), [§13](#13-numbers-in-one-place)), except across *Show me to new
+> people*'s rule; a request found on Home's rows records the row and reads its own line
+> ([§3.2](#32-asking)); and Home's people cards carry one round friend button.
 >
 > **Its companion** is [the-screens.md](the-screens.md), which says how each screen looks. Every
 > sentence a player reads is in [the words §29](../matchmaking/the-words.md#29-friends). Where this
@@ -87,6 +92,12 @@ cost*, never a forecast's **Split**.
   > ([the rankings mechanics §13](../rankings/the-mechanics.md#13-friend-requests)), and to anybody
   > through the link. **At most 10 a day** may go to people you share no group with; requests to
   > group-mates are never counted. There is still no search for a player by name.
+
+  > **Amended 2026-11-14** ([ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, Q131). **Anyone may be asked**, found anywhere,
+  > **with no daily limit**, except somebody whose *Show me to new people* is off and who shares no
+  > group, game or friendship with the requester: that request is refused with one unnamed code
+  > ([the home rows mechanics §4.2](../home-rows/the-mechanics.md#42-friend-requests-q18)). A block
+  > still swallows a request silently (§3.5). There is still no search for a player by name.
 - **Friendships are per pair, across all your groups.** One friendship between Tomek and Ania holds
   in Ogrody, in Kazimierz crew, and in any group either joins later.
 - **A friendship survives either of them leaving a group**, and ends when either account is deleted.
@@ -109,6 +120,14 @@ the + Add was pressed, or the group of the game it was pressed from, and its spo
 link reads *Invited you to Raketa*. *(Since 2026-11-07, Q130:)* a request made from the ranking
 records the ranking and its sport, and reads ***Found you in the padel ranking***, even to a
 group-mate.
+
+> **Amended 2026-11-14** ([ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §9, Q131). **Home's people rows are three more places a
+> request is made**, each on its card's round button, its sheet's worded button, or the record opened
+> from it, which keeps the row: **same level** (with its sport), **new players** and **same vibe**. A
+> request from Top 10 is the ranking's. The card's line is worked out when it is read: *Your level in
+> padel · 91% even* (else *Found you at your padel level*), *Found you among new players*, *6 things
+> in common* (else *Found you through your tags*)
+> ([the home rows mechanics §12](../home-rows/the-mechanics.md#12-where-a-request-was-found)).
 
 - **You can't ask yourself.**
 - **You can't ask while a request of yours to that person is open**, set aside or not. Nobody can
@@ -607,7 +626,7 @@ longer on the card: the level got by any route, **Not now**, or the asker no lon
 | The cover warning | once, 24 hours before the cut-off, Split only |
 | Held on a Split sender's card at send | the whole court: his share + a cover per other seat (100 zł for a 100 zł court) |
 | Ask for a level | once per friend per sport |
-| Requests to people outside your groups | at most 10 a Warsaw day; group-mates never counted (Q130, `daily_request_limit`) |
+| Requests to people outside your groups | ~~at most 10 a Warsaw day; group-mates never counted (Q130, `daily_request_limit`)~~ **no limit** since 2026-11-14 (Q131, ADR-0204 §2) |
 | A level ask on Home | one card per sport, up to three faces, no expiry |
 | A friend request's push | once per request |
 | Other clubs for an official group | within the club's distance, 10 km by default; switch on by default |

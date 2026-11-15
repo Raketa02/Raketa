@@ -15,8 +15,13 @@ from app.bootstrap.composition import (
     build_general_orders,
     build_read_general_page,
     build_read_ranking,
+    build_read_top_ten,
 )
-from app.modules.rankings.application.reads import ReadGeneralPage, ReadRanking
+from app.modules.rankings.application.reads import (
+    ReadGeneralPage,
+    ReadRanking,
+    ReadTopTen,
+)
 from app.modules.rankings.domain.ports import GeneralOrders
 
 
@@ -46,3 +51,12 @@ def get_read_general_page(
 
 
 ReadGeneralPageDep = Annotated[ReadGeneralPage, Depends(get_read_general_page)]
+
+
+def get_read_top_ten(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, orders: GeneralOrdersDep
+) -> ReadTopTen:
+    return build_read_top_ten(db, settings=settings, clock=clock, orders=orders)
+
+
+ReadTopTenDep = Annotated[ReadTopTen, Depends(get_read_top_ten)]

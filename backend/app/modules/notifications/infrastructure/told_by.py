@@ -18,7 +18,9 @@ own figures, never an estimate (#641). ``PlatformNames`` is a person's nickname
 (``docs/adr/0199`` §1) and a club's name. ``DirectoryGroupJoiners`` is when each
 account first joined a group it is in now, asked of the groups' own published
 directory, and ``RatingsRatedAccounts`` who holds a rating, asked of rating's
-published read — *Get your level*'s two questions (#727).
+published read — *Get your level*'s two questions (#727). ``ProfileTagsInCommon``
+is how many Social tags two players hold today, asked of the Player profile —
+a *Same vibe* request's line (#795).
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
+from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import Booking
 from app.modules.bookings.domain.ports import BookingDirectory, BookingRepository
@@ -65,6 +68,8 @@ from app.modules.proposals.domain.ports import (
 )
 from app.modules.proposals.domain.proposal import Standing
 from app.modules.proposals.domain.rescues import rescuable
+from app.modules.matchmaking.domain.balance import forecast_the_sides
+from app.modules.player_profile.domain.ports import PlayerProfileRepository
 from app.modules.rating.domain.ports import RatedPlayerQuery
 from app.modules.users.domain.ports import UserRepository
 
@@ -475,3 +480,54 @@ class RatingsRatedAccounts:
             rated |= found
             unknown -= found
         return frozenset(rated)
+
+
+@final
+class ForecastPercentsEven:
+    """``PercentsEven`` by **the matcher's own forecast** over rating's
+    published estimates, live — the reader and each requester one a side, the
+    figure *Same competitive level* printed (#794). One estimates read per
+    sport; somebody unrated there is absent, and so is the figure."""
+
+    def __init__(self, *, ratings: RatedPlayerQuery, ruleset: Ruleset) -> None:
+        self._ratings = ratings
+        self._rules = ruleset.balance
+
+    async def between(
+        self, reader: UUID, others: Collection[tuple[UUID, Sport]]
+    ) -> Mapping[tuple[UUID, Sport], int]:
+        by_sport: dict[Sport, set[UUID]] = {}
+        for other, sport in others:
+            by_sport.setdefault(sport, set()).add(other)
+        evens: dict[tuple[UUID, Sport], int] = {}
+        for sport, people in by_sport.items():
+            levels = await self._ratings.estimates_for({reader, *people}, sport=sport)
+            for other in people:
+                sides = forecast_the_sides(
+                    (reader,), (other,), levels, sport=sport, rules=self._rules
+                )
+                if sides is not None:
+                    evens[(other, sport)] = sides[0].pct
+        return evens
+
+
+@final
+class ProfileTagsInCommon:
+    """``TagsInCommon`` over the Player profile, the tags' one owner, live —
+    the notice of a request from *Same vibe* says what the two share when it is
+    read (#795)."""
+
+    def __init__(self, profiles: PlayerProfileRepository) -> None:
+        self._profiles = profiles
+
+    async def in_common(
+        self, reader: UUID, others: Collection[UUID]
+    ) -> Mapping[UUID, int]:
+        if not others:
+            return {}
+        mine = await self._tags_of(reader)
+        return {other: len(mine & await self._tags_of(other)) for other in others}
+
+    async def _tags_of(self, player_id: UUID) -> frozenset[str]:
+        profile = await self._profiles.load(player_id)
+        return frozenset(()) if profile is None else frozenset(profile.social_tags.ids)

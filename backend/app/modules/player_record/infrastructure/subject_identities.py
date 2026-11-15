@@ -62,7 +62,8 @@ class ProfileAndAccountIdentity:
         self._photos = photos
 
     async def identity_of(self, player_id: UUID) -> SubjectIdentity | None:
-        """Their nickname, first photograph, its verdict, area, tags and intro.
+        """Their nickname, every photograph and the first one's verdict, area,
+        tags and intro.
 
         **Two absences, one answer.** A nickname this platform cannot read — an
         id it never issued, or an account with none yet — and a profile that was
@@ -107,6 +108,7 @@ class ProfileAndAccountIdentity:
             # The text and never the value object — this context's own type
             # holds a `str`, and a missing line is `None` all the way out.
             intro=None if profile.intro is None else profile.intro.text,
+            photo_ids=tuple(profile.photo_ids),
         )
 
 

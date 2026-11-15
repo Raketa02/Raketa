@@ -665,8 +665,8 @@ to its tab: the page's own, and on Members the page's beneath it, as #729's card
 Administrator's Members hands none. **Home's card is `HomeLevelCard`**, which the shell draws:
 onboarding's `LevelDoor` `from` Home, where `homeAsksForALevel(groups, rated)` — a member of at
 least one group, player or official, holding no rating. **`useHomeAsksForALevel` reads the ratings
-first and the groups only for a player rated in nothing** (`useMyGroups({ enabled })`), so a rated
-Home costs one read — `GET /ratings` on every visit, the price of the card, which every group's chip
+first and the groups only for a player rated in nothing** (`useMyGroups({ enabled })`) — though Home
+reads the groups for everybody since #800, for _Your games_' groupless line — so the card costs one read — `GET /ratings` on every visit, the price of the card, which every group's chip
 shares — and it draws nothing until both have answered and nothing on a failure: it is a nudge,
 never a wall. **A friend's ask for a level stands in its place** ([#765](https://github.com/Raketa02/Raketa/issues/765),
 Q129): the rule is `homeAsksForALevel(groups, rated, askedForALevel)` now, over `proposals`'
@@ -705,3 +705,40 @@ page on its Friends tab standing on the sport — `groupReturnRoute`'s params, t
 stands on one, so opening is not picking — and the Friends screen over it, so Done seats the picks
 on that court and _back_ is the court, as from _+ Friends_; `notifications` pushes the two
 ([`notifications.md`](notifications.md)).
+
+**Home's HOTTEST GROUPS is this feature's row** ([#800](https://github.com/Raketa02/Raketa/issues/800),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§3; the Home rows screens §3, the mechanics §5; home rows 3–6, 21). `HottestGroupsRow` reads
+`GET /hottest-groups` (`useHottestGroups`, keyed `groupKeys.hottest()`) and draws up to six cards on
+the shared row frame (`HomeRow`, `HomeRowRail`, #798), peeking, in the read's order, with no See all;
+**nothing while the read is empty, in flight or failed** — the screens §1's call, the rest of Home
+standing. The shell draws it just below _Your games_ and re-reads it on Home's pull
+(`rereadHomeGroups`, with the Groups list); **a return to Home re-reads it once its read is older than thirty seconds**
+(`refetchQueries` with `stale: true` on `useOnReturn`), the app's `staleTime`, and foregrounding does
+the same through the focus manager. **Every figure is the server's** — the heat share, the tag, the
+order, the faces, the friends count, `run_by` — so the phone's half (`domain/hottest.ts`) is what a
+card offers (`hottestChip`, which is `groupAction`: an Administrator who runs an official group reads
+_Join_ whatever its policy), the sheet's one button (`sheetButton`: _Open group_ for a member), four
+faces on the card and six on the sheet, and a bar held inside its track. **The card is two doors**:
+the chip acts, anywhere else opens the group sheet (`HottestGroupCard`; design-system 7.30). **The
+group sheet and the withdraw sheet are one `BottomSheet`** whose title, title-row button
+(`BottomSheet`'s new `action`) and body swap — _Asked_ on the group sheet turns it into _Waiting for
+Ogrody 33 to answer_ · **Withdraw request** — because iOS drops a second native window opened while the
+first closes; nothing on it but its button presses (Q26), and _Open group_ is the row's callback, so no
+navigation hook sits inside the sheet. **The chip moves at once** (the screens §3.4): `useJoinGroup`
+now guesses a Hottest card's relation from its own policy on the tap and lands the answer's relation
+over the guess, putting the one card back with a toast on a refusal; `useWithdrawJoinRequest` does the
+same for `DELETE …/join-request`, which refuses nothing. A tap on a card whose write is in flight is
+let go — any card's, found by the writes' shared mutation key (`useRelationWritesInFlight`). **After either, the row, the Groups list and Home's own read are read again**; the searches
+are written, never re-read — a search read again landed its older relation over the join's answer.
+Leaving a group re-reads the row too. **_Your games_' groupless line** is the shell's to place and
+this feature's to answer: `useInNoGroup` is `true` only once the Groups list has answered with none,
+and the words are `GROUPS_COPY.hottest.groupless`. So **Home reads `GET /groups` for every reader
+now**, where `HomeLevelCard` read it only for a player rated in nothing — the price of the line; the
+card's own rule is unchanged. The words are §31.1–§31.4's in `groupsCopy.ts` and
+`groupsPresentation.ts`. **Calls made here**: _Waiting for an answer_ for an Owner who can no longer
+be named; the identity line leaves the runner out for one; _1 game this week_ in the singular (§31.2's
+call); the chip's spoken names (_Ogrody 33 Club: Asked_) and the withdraw sheet's spoken close,
+_Keep the request_, neither in §31; _Withdraw request_ is the outlined
+`secondary` button, since the system has no destructive-outline one. **Not seen on a device**: the
+card, the band's stripes, the shield, the heat bar, both sheets — against home rows 3–6 and 21.

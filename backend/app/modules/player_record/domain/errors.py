@@ -1,12 +1,12 @@
 """The one refusal this context has, and the whole of what it says.
 
-**Three refusals, one answer, byte for byte.** *Never disclosed to you*,
-*held*, and *no such player* return the same status and the same body — not three
-codes a client branches on, not three messages, and no ``details``. The
-indistinguishability **is** the feature: a payload naming the gate would say
-which (``docs/adr/0130``), and a payload separating *never disclosed* from *no
-such player* answers *is this id real* about a stranger. **A block is not one of
-them** since ``docs/adr/0193`` §2: it refuses no record, either way round.
+**Four refusals, one answer, byte for byte.** *Switched off and nothing
+shared* (``docs/adr/0204`` §2), *held*, *blocked either way* and *no such
+player* return the same status and the same body — not four codes a client
+branches on, not four messages, and no ``details``. The indistinguishability
+**is** the feature: a payload naming the gate would say which
+(``docs/adr/0130``), and a payload separating a closed record from *no such
+player* answers *is this id real* about a stranger.
 
 **It is a 404 rather than a 403**, and that follows from the same rule rather
 than from taste. A 403 says *there is somebody here you may not see*; a 404 says

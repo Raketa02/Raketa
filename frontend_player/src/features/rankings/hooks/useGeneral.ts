@@ -24,13 +24,10 @@
  * it — the query's own refetch, so the window stays whole; a reader deep in the list pays a page a
  * round trip for it, which is what keeps the rows on screen agreeing with each other.
  *
- * **The page follows *Show me in General*** ([#778](https://github.com/Raketa02/Raketa/issues/778);
- * the mechanics §10). The ranking follows the profile's switch through the outbox, a second or so
- * behind, so a card read the moment the switch turns still says what it said before. **While the card
- * is behind the switch** (`cardBehindTheSwitch`: hidden with it on, listed with it off), **the page
- * is read again a second after its last read, at most five times** — the press on the hidden card
- * re-reads the page this way, and so does a switch turned on You while the page stands under another
- * tab. After the fifth the page waits for a pull, a focus or its half minute, as before.
+ * **Nothing follows a switch.** The page once re-read itself a second at a time behind *Show me in
+ * General* (#778); that switch and the hidden card it drove are gone (ADR-0204 §2,
+ * [#799](https://github.com/Raketa02/Raketa/issues/799)) — the ranking lists everybody, so there is
+ * nothing for the reader's own card to catch up with.
  *
  * **A page is asked for only when there is one, and never twice**: an end reached while that page is
  * on its way joins it. **An end reached while the list is read again is owed**, and asked for once
@@ -44,7 +41,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { cardBehindTheSwitch, joinPages, jumpPlace, type PageAt } from '../domain/ranking';
+import { joinPages, jumpPlace, type PageAt } from '../domain/ranking';
 import { readGeneralPage, type GeneralRead } from '../use-cases/readGeneralPage';
 
 import { rankingKeys } from './rankingKeys';
@@ -57,22 +54,12 @@ const below = (page: GeneralRead): PageAt | undefined =>
 const above = (page: GeneralRead): PageAt | undefined =>
   page.previous === undefined ? undefined : { at: 'before', cursor: page.previous };
 
-/** **How long after its last read the page reads again**, while the card is behind the switch. */
-const SWITCH_FOLLOWED_MS = 1_000;
-/** **How many times it does**, before it waits for a pull, a focus or its half minute. */
-const SWITCH_FOLLOWED_READS = 5;
-
-/**
- * General for one sport. `showMeInGeneral` is what the profile holds — the switch the card is
- * followed to — `undefined` while it is not known, and then nothing is followed.
- */
-export function useGeneral(sport: Sport, showMeInGeneral?: boolean): RankingRead {
+/** General for one sport. */
+export function useGeneral(sport: Sport): RankingRead {
   const queryClient = useQueryClient();
   const [jumped, setJumped] = useState(false);
   const read = ({ pageParam, signal }: { pageParam: PageAt; signal: AbortSignal }) =>
     readGeneralPage(sport, pageParam, { signal });
-  // The count of reads the main read had landed when its card first fell behind the switch.
-  const followedFrom = useRef<number>();
 
   const top = useInfiniteQuery<GeneralRead, AppError, Pages, readonly unknown[], PageAt>({
     queryKey: rankingKeys.generalFromTheTop(sport),
@@ -81,17 +68,6 @@ export function useGeneral(sport: Sport, showMeInGeneral?: boolean): RankingRead
     getNextPageParam: below,
     // Opening General — the page, another sport, or the switch back from Friends — always reads it.
     refetchOnMount: 'always',
-    refetchInterval: (query) => {
-      const card = query.state.data?.pages[0]?.ranking?.card;
-      if (!cardBehindTheSwitch(card, showMeInGeneral)) {
-        followedFrom.current = undefined;
-        return false;
-      }
-      // A refused read counts too, so a ranking that cannot be read is not read every second.
-      const reads = query.state.dataUpdateCount + query.state.errorUpdateCount;
-      const from = (followedFrom.current ??= reads);
-      return reads - from < SWITCH_FOLLOWED_READS ? SWITCH_FOLLOWED_MS : false;
-    },
   });
 
   const aroundMe = useInfiniteQuery<GeneralRead, AppError, Pages, readonly unknown[], PageAt>({

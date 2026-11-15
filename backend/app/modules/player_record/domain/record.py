@@ -99,6 +99,16 @@ class SubjectIdentity:
     #: it is absent. The record reads the *current* line where a search record
     #: quotes the one shown at the deal — today they cannot differ.
     intro: str | None
+    #: **Every** photo, in the player's own order — ``photo_id`` first — for any
+    #: reader the record is admitted to (``docs/adr/0204`` §2). Empty when they
+    #: have none.
+    photo_ids: tuple[UUID, ...]
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.photo_ids[0] if self.photo_ids else None) == self.photo_id,
+            f"a first photo that is not the first of the photos: {self!r}",
+        )
 
 
 #: How many results a run of form draws. **This context's own spelling of a
@@ -471,6 +481,16 @@ class RecordRelation(StrEnum):
 
 @final
 @dataclass(frozen=True, slots=True)
+class RecordPhoto:
+    """One of the subject's photos and the URL that draws it, **signed as the
+    subject** and minted for this response."""
+
+    photo_id: UUID
+    photo_url: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class PlayerRecord:
     """One player's record, as of the moment somebody opened it.
 
@@ -502,18 +522,20 @@ class PlayerRecord:
     #: where there is no button. A request their own block hides from the
     #: reader reads ``NONE``, as it does everywhere.
     relation: RecordRelation
-    #: Whether **Add friend** may be offered (``docs/adr/0203`` §9, #773):
-    #: nothing stands between them (``relation`` ``NONE``) and a request from
-    #: the reader would be admitted — they share a group now, or the subject
-    #: is listed on General and not hidden. Friends' own rule, asked through
-    #: ``RelationsOfTheReader``. **Not the daily limit**: that refuses the
-    #: press, and the sheet says so then. ``False`` on your own record.
+    #: Whether **Add friend** may be offered (``docs/adr/0204`` §2): nothing
+    #: stands between them (``relation`` ``NONE``) and it is not your own
+    #: record. **The record's own rule decides it**: a request is admitted by
+    #: the rule that admitted this record, so an open record is one whose
+    #: subject may be asked.
     can_add_friend: bool
     #: A short-lived signed URL for ``identity.photo_id``, minted for this
     #: response and stored nowhere. **Present exactly when the photo id is**:
     #: signing is a signature over a request that is never sent, so there is no
     #: outage that produces an id without an address for it.
     photo_url: str | None
+    #: **Every** photo with its signed URL, in the player's order — the first
+    #: is ``photo_url``'s (``docs/adr/0204`` §2).
+    photos: tuple[RecordPhoto, ...]
     #: One per sport they hold a rating in, **in the sport registry's own
     #: order**. Empty for somebody rated in nothing, which is an ordinary state
     #: during onboarding rather than an error.
@@ -548,6 +570,7 @@ __all__ = [
     "OnCourtVerdict",
     "OpponentVariety",
     "PlayerRecord",
+    "RecordPhoto",
     "ReliabilityFilter",
     "ReliabilityPanel",
     "SkillPanel",

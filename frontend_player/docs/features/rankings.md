@@ -212,3 +212,106 @@ level, the podium's steps, the rows and the tint, the drawn marks, and the pill 
 and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,
 the jump landing centred, and the button over the list. The suites say what the list reports (the
 rows on screen, an end reached), because a test renderer lays nothing out.
+
+**The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+§2; the Home rows screens §9.2). The server lists every player at their true place — a player the
+reader blocked, or who blocked the reader, and one who turned their switch off, included — so the
+`HIDDEN` card state, the hidden card with _Hidden from General_ and You's switch under its fold, and
+the page following the switch (`cardBehindTheSwitch`, `useGeneral`'s one-second re-reads) are gone,
+with `RANKINGS_COPY.hidden` and the `rankings` → `player_profile` import they needed. `useGeneral`
+takes the sport alone. **A tap on a blocked player** — a row or a podium step — opens the record
+sheet, whose read is refused with the one code and which draws _This record isn't available_, as a
+group's Members list already did: nothing here knows about blocks. **Places run without a gap** now,
+so the notes that explained a podium reading 1, 3 and 4 and a list skipping places were rewritten;
+`podiumOf` is unchanged — it was always the first three rows. The only switch on the page is
+_General | Friends_. The paragraphs above on the hidden card, the page following the switch and #778's
+calls describe #778 and are superseded. **The record from the ranking** shows all of a stranger's
+photos and no daily-limit sentence, and a request the server refuses unnamed re-reads the record
+quietly ([`player_record.md`](player_record.md), [`friends.md`](friends.md)). Walked in
+`rankings.test.tsx`: Marek, blocked, at 4th and his row's refusal; no switch on the page; all of
+Piotr's photos with _Add friend_; no limit sentence; the quiet re-read.
+
+**Top 10 is the last of Home's rows** ([#805](https://github.com/Raketa02/Raketa/issues/805), PRD
+[#789](https://github.com/Raketa02/Raketa/issues/789);
+[ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md);
+the Home rows mechanics §10, the screens §7; the words §31.1, §31.11; home rows 2, 25–27). The shell
+draws `TopTenRow` after Same vibe and re-reads it on Home's pull (`rereadTopTen`). It reads `GET
+/top-10` (`useTopTen`, keyed under `rankingKeys.topTen()`), and **every place, level, chip and the
+fall-through are the server's**; what is this feature's own is in `domain/topTen.ts`: which read the
+row asks for (`topTenAsk`) and what it draws for the answer (`topTenFace`).
+
+- **It opens where the trophy would**: the Rankings page's own reads, lifted into `useOpeningSport`
+  so the page and the row share them — the trophy's sport, else the deck's last, else padel, nothing
+  read until it is known — **sent as `prefer`**, so the server falls through, going round the app's
+  order, to a sport where somebody is ranked, and **says which**: the pill shows the answer's sport.
+- **A pick on the pill asks for that sport exactly** — _Nobody ranked in squash yet_ (§30.7's
+  `nobodyRankedLine`, as §31.11 cites it) for a sport with nobody in it — and is held while Home is up,
+  kept nowhere. **It re-reads this row alone**: its own query, the pill saying the pick at once and
+  **the cards on screen staying until the new ones land** (`keepPreviousData`), so nothing blinks.
+- **Hidden with its heading** while the read is out, refused, unreadable (a sport this build has never
+  heard of reads `null`), or says nobody is ranked in any sport (`anyone_listed`).
+- **The pill offers all four**, rated first, as the page's does: `pillSports`, the same reads.
+- **The card** (`TopTenCard`): the numeral (`TopTenNumeral`) behind the card's left edge, the card
+  covering its last `size.topTen.overlap`; `shared/ui`'s `PortraitTile` with the nickname — _You_ on
+  the reader's own (`rowName`) — the level in mono, and the move: a drawn triangle and the count,
+  ▲ in `volt`, ▼ in `gameCoral`, no ground, slanted together as an italic. **No chip for no change or
+  _New_** — the wire sends none. The reader's own card has a **volt numeral and a volt ring** outside
+  its edge. Spoken as its place, name, level and move (`topTenCardLabel`).
+- **The numeral is drawn as SVG text** — a gradient fill and an outline take SVG — each figure three
+  times: a `line` hairline, the paper outline, then the fill, `numeralTop` → `numeralFoot` (the
+  screens' _night-to-teal_). **Its box is worked out from Archivo's metrics**, not measured on screen
+  (tabular figures, 0,625 em each), so the card's overlap is known before layout and _10_ is a figure
+  wider, tracked so the _0_ stands over the _1_'s foot.
+- **A tap opens the record from the ranking**, on the row's sport — `sport` and `rankingSport`, as the
+  page hands them (#779) — so a request reads _Found you in the padel ranking_; the reader's own card
+  opens their own; **across a block the sheet reads _This record isn't available_**, its own drawing of
+  the server's refusal.
+- **_Rankings ›_ opens the page on the row's sport, in General** (the mechanics §10.4): it chooses
+  General first, so the page — and the trophy, which reads the same view — then remember General.
+
+Walked in `components/topTen.test.tsx`: hidden with nobody ranked and on a refusal; the opening
+sport, the fall-through, the deck's and padel, nothing read until Home answers; the pill's four; a pick
+re-reading this row and nothing else, the cards held while it is out; the empty line; a failed pick
+put back; ten cards, _10_ in two figures, two cards; the reader's volt card; the chips; the record,
+the ranking origin, a block and the reader's own; _Rankings ›_ in General; the pull.
+
+**Calls made here (#805), open to overrule:**
+
+- **a pick whose read fails puts the pill back** on the sport before it, its cards never having left —
+  the screens leave a failed row out, and a row that vanished on a pick would take its pill with it;
+- **while a pick's read is out the pill already says the new sport over the old cards** — the cards
+  are held so the row never empties, and the pill answers the tap at once. For that moment the row is
+  two sports: _Rankings ›_ names and opens the pill's, and a card opens its record on the card's own;
+- **the pill lists the reader's rated sports first**, as the Rankings page's does (`pillSports`; the
+  ticket's _as the Rankings page's does_), where the screens §7.3 write _the other sports in the app's
+  order_ — the same order for anyone rated in sports that lead the app's order, different for, say, a
+  squash-only reader;
+- _Rankings ›_ is spoken _Rankings in padel_, and the pill's hint is _Shows Top 10 in another sport_ —
+  §31 writes only what is drawn;
+- **▼ is `gameCoral`**, coral's hue lifted for a dark ground (the mock's #EF8772 within a step), not
+  `coral` itself: on the wash's full `ink` coral is 4,50, a rounding from failing, and the count stands
+  where the wash is thinner; `gameCoral` is 7,12 there. ▲ is `volt`, 13,96;
+- **the move leans by a skew** (−12°), the triangle with the count: no italic face is loaded, as the
+  vibe sheet's intro found (#803), and a number's slant is cheap to draw where a sentence's is not;
+- **the reader's volt ring is drawn on paper**, against 1.3's _volt is a stroke only on dark_, and in
+  `volt`, not `voltStroke` — the token for a stroke on paper that means volt: the mock draws a bright
+  volt ring, `voltStroke` is a dark olive that would read as another colour, and the ring's inner edge
+  touches the dark card it bounds, where volt is 13,96. It is not the only mark — the card reads _You_;
+- **the numeral's paper outline has a hairline of `line` outside it** — paper on paper alone draws
+  nothing, and home rows 25.3 draws a grey edge round the paper;
+- **the empty line** is `rlLabel` in `muted`, left-aligned under the heading — the page's line,
+  uncentred because a row has no centre to stand on;
+- **the bar's backdrop is the row's**: a tap elsewhere on Home leaves it open, and a tap on another
+  row's card does what it does — **for the product owner**, since the deck's pill folds on a tap
+  anywhere;
+- **on a narrow phone the open bar can run past the row's left edge**: it ends where the pill ends and
+  grows leftwards, all four sports wide — about 268pt, where the room left of _Rankings ›_ is about
+  290 on a 390pt phone and 260 on a 360pt one — and Android lands no touch outside the row, so the
+  first sport's leftmost points go dead there. Not clamped: a shorter bar would drop a sport.
+
+**Not seen on a device — a look is owed against home rows 25–27**: the numeral (its size, gradient,
+outline and hairline, _10_'s two figures touching, the baseline near the card's foot, the overlap),
+the card's portrait and wash, the move's slant and colours on a pale photograph, the volt ring, the
+pill on the heading's line and the bar sliding over _TOP 10_ while _Rankings ›_ stays, and the row's
+spacing among the others.

@@ -30,6 +30,28 @@ describe('toAskRequest', () => {
       sport: 'TENNIS',
     });
   });
+
+  it('sends a request from New in Raketa with neither a group nor a sport (#801)', () => {
+    expect(toAskRequest('p-1', { from: 'NEW_PLAYERS' })).toEqual({
+      player_id: 'p-1',
+      made_from: 'NEW_PLAYERS',
+    });
+  });
+
+  it('sends a request from Same vibe naming neither a group nor a sport (#803)', () => {
+    expect(toAskRequest('p-1', { from: 'SAME_VIBE' })).toEqual({
+      player_id: 'p-1',
+      made_from: 'SAME_VIBE',
+    });
+  });
+
+  it('sends a request from Same competitive level with the card’s sport, and no group (#802)', () => {
+    expect(toAskRequest('p-1', { from: 'SAME_LEVEL', sport: 'squash' })).toEqual({
+      player_id: 'p-1',
+      made_from: 'SAME_LEVEL',
+      sport: 'SQUASH',
+    });
+  });
 });
 
 describe('toFriend', () => {

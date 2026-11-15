@@ -479,15 +479,26 @@ class ReliabilitySchema(BaseModel):
     )
 
 
+class RecordPhotoSchema(BaseModel):
+    """One of a player's photos on their record (``docs/adr/0204`` §2)."""
+
+    photo_id: UUID
+    photo_url: str = Field(
+        description=(
+            "Short-lived signed URL that draws this photo, minted per response "
+            "and stored nowhere."
+        )
+    )
+
+
 class PlayerRecordResponse(BaseModel):
     """Everything the platform will say about one person, to this reader.
 
-    **Read through a prior disclosure and never about a person at large.** A
-    record opens for somebody you were on a game with, somebody you share a
-    group with, somebody in a group you run, somebody listed on General who
-    hasn't turned *Show me in General* off, and yourself. Anybody else — and
-    anybody a live gate no longer admits, a block either way among them — is
-    `404`, in one shape that names nothing.
+    **Open to any reader** (``docs/adr/0204`` §2), except somebody who turned
+    *Show me to new people* off and shares no group, game or friendship with
+    you, nor is in a group you run — and anybody a live gate no longer admits,
+    a block either way among them. Those are `404`, in one shape that names
+    nothing.
     """
 
     is_self: bool = Field(
@@ -521,14 +532,10 @@ class PlayerRecordResponse(BaseModel):
     )
     can_add_friend: bool = Field(
         description=(
-            "Whether to offer **Add friend** (`docs/adr/0203` §9): `relation` is "
-            "`NONE` and a request from you would be admitted — you share a "
-            "group now, or they are listed on General and haven't turned *Show "
-            "me in General* off. `false` otherwise, and on your own record.\n\n"
-            "**The daily limit is not in it.** Ten requests a Warsaw day may go "
-            "to people you share no group with, and the eleventh press is "
-            "refused `daily_request_limit` — show *You've sent 10 requests to "
-            "new people today. Try again tomorrow.* under the buttons then. "
+            "Whether to offer **Add friend** (`docs/adr/0204` §2): `relation` is "
+            "`NONE` and this is not your own record. A request is admitted by "
+            "the rule this record opened by, so a record you can read is "
+            "somebody you can ask — as many as you like, with no daily limit. "
             "Send a request made from a record opened on the Rankings page "
             "with `made_from` `RANKING` and that page's sport."
         )
@@ -541,6 +548,14 @@ class PlayerRecordResponse(BaseModel):
             "**Nothing may derive a familiar form from it**: every sentence "
             "naming somebody uses the whole nickname or names nobody "
             "(``docs/adr/0199`` §1)."
+        ),
+    )
+    photos: list[RecordPhotoSchema] = Field(
+        ...,
+        description=(
+            "**Every** photo, in their own order — the first is `photo_id`'s — "
+            "each with a short-lived signed URL minted for this response "
+            "(`docs/adr/0204` §2). Empty when they have none. Always present."
         ),
     )
     photo_id: UUID = Field(
@@ -775,6 +790,10 @@ class PlayerRecordResponse(BaseModel):
                 distinct_opponents=record.variety.distinct_opponents,
                 times_on_court=record.variety.times_on_court,
             )
+        fields["photos"] = [
+            RecordPhotoSchema(photo_id=photo.photo_id, photo_url=photo.photo_url)
+            for photo in record.photos
+        ]
         if identity.photo_id is not None and record.photo_url is not None:
             fields["photo_id"] = identity.photo_id
             fields["photo_url"] = record.photo_url

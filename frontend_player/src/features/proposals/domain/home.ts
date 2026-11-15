@@ -214,11 +214,32 @@ export function withoutLevelAsksIn(home: Home, sports: readonly Sport[]): Home {
 }
 
 /**
+ * **Where they found the reader, said in place of the group line** (the words §29.2, §30.8, §31.10) —
+ * one at most, which is why it is one field and not a flag each:
+ *
+ * | `kind` | Line |
+ * | --- | --- |
+ * | `link` | *Invited you to Raketa* — made by their Friend link |
+ * | `ranking` | *Found you in the padel ranking* — the reader's record on the Rankings page, `sport`'s (#779) |
+ * | `newInRaketa` | *Found you among new players* — Home's New in Raketa, or a record it opened (#801) |
+ * | `sameLevel` | *Your level in padel · 91% even* — Home's Same competitive level, or a record it opened, in `sport` (#802): **today's** %, absent once either holds no level there — *Found you at your padel level* |
+ * | `sameVibe` | *6 things in common* — Home's Same vibe, or a record or vibe sheet it opened (#803): **today's** count, `0` once they share none — *Found you through your tags* |
+ *
+ * Absent for a request asked from a group's Members, a record or a result: the group line.
+ */
+export type RequestFoundBy =
+  | { readonly kind: 'link' }
+  | { readonly kind: 'ranking' }
+  | { readonly kind: 'newInRaketa' }
+  | { readonly kind: 'sameLevel'; readonly percentEven?: number }
+  | { readonly kind: 'sameVibe'; readonly inCommon: number };
+
+/**
  * **One friend request on Home** (friends 5; the words §29.2): *Inés wants to be your friend · With
  * you in Kazimierz crew · Padel 3,40 · ✦ 98*. Every part but the requester and their reliability is
- * absent where the wire says nothing: a link's request names no group (`byLink`), nor does one from
- * the ranking (`fromRanking`); a request asked from a screen with no group names none, and neither
- * does one either of them has since left.
+ * absent where the wire says nothing: a request found by a link, the ranking or a Home row says where
+ * in place of the group (`foundBy`); a request asked from a screen with no group names none, and
+ * neither does one either of them has since left.
  */
 export interface HomeFriendRequest {
   readonly playerId: string;
@@ -226,13 +247,8 @@ export interface HomeFriendRequest {
   readonly nickname: string;
   /** Omitted when they have no photograph: the face draws their poster. */
   readonly photoUrl?: string;
-  /** Made by their Friend link: *Invited you to Raketa* in place of the group line. */
-  readonly byLink: boolean;
-  /**
-   * Made from the reader's record on the Rankings page (#779): *Found you in the padel ranking* — the
-   * ranking of `sport` — in place of the group line, whether or not they share a group.
-   */
-  readonly fromRanking: boolean;
+  /** Where they found the reader, where the card says so in place of the group line. */
+  readonly foundBy?: RequestFoundBy;
   /** The group they asked from, while both are in it. */
   readonly group?: { readonly id: string; readonly name: string };
   /** The sport of the screen they asked from — absent for one this build cannot name. */

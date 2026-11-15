@@ -53,7 +53,12 @@ SUBJECT = uuid4()
 PHOTO = uuid4()
 
 
-def an_identity(*, photo_id: UUID | None = PHOTO) -> SubjectIdentity:
+SECOND_PHOTO = uuid4()
+
+
+def an_identity(
+    *, photo_id: UUID | None = PHOTO, more: tuple[UUID, ...] = ()
+) -> SubjectIdentity:
     return SubjectIdentity(
         nickname="karol_t",
         photo_id=photo_id,
@@ -61,6 +66,7 @@ def an_identity(*, photo_id: UUID | None = PHOTO) -> SubjectIdentity:
         area_code="A+05151-00013",
         social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
         intro=None,
+        photo_ids=((photo_id,) if photo_id else ()) + more,
     )
 
 
@@ -187,28 +193,21 @@ class Admission:
         self.verdict = verdict
         self.asked: list[tuple[UUID, UUID]] = []
 
-    async def admits(self, *, reader_id: UUID, subject_id: UUID, now: Instant) -> bool:
+    async def admits(self, *, reader_id: UUID, subject_id: UUID) -> bool:
         self.asked.append((reader_id, subject_id))
         return self.verdict
 
 
 class Relations:
-    """The reader's own relation to each subject — ``NONE`` unless told — and
-    whether Friends' rule would admit a request (``may``)."""
+    """The reader's own relation to each subject — ``NONE`` unless told."""
 
-    def __init__(self, *, may: bool = True, **standing: RecordRelation) -> None:
+    def __init__(self, **standing: RecordRelation) -> None:
         self.standing = standing
-        self.may = may
         self.asked: list[tuple[UUID, UUID]] = []
-        self.asked_may: list[tuple[UUID, UUID, Instant]] = []
 
     async def relation_to(self, *, reader_id: UUID, subject_id: UUID) -> RecordRelation:
         self.asked.append((reader_id, subject_id))
         return self.standing.get(str(subject_id), RecordRelation.NONE)
-
-    async def may_ask(self, *, reader_id: UUID, subject_id: UUID, now: Instant) -> bool:
-        self.asked_may.append((reader_id, subject_id, now))
-        return self.may
 
 
 class Clock:
@@ -255,6 +254,26 @@ async def test_a_record_carries_the_identity_and_a_link_minted_for_it():
     # Signed as the person on the record, never as the person looking: the store
     # keys the pair, so a link signed under the reader's id reaches nothing.
     assert links.asked == [(SUBJECT, PHOTO)]
+    assert [photo.photo_id for photo in record.photos] == [PHOTO]
+
+
+async def test_every_photo_is_signed_for_any_reader_in_the_players_order():
+    """``docs/adr/0204`` §2: all of them, where a stranger used to get the
+    first alone — each signed as the subject, the first ``photo_url``'s."""
+
+    use_case, _, links = reading(
+        admits=True, identity=an_identity(more=(SECOND_PHOTO,))
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert [photo.photo_id for photo in record.photos] == [PHOTO, SECOND_PHOTO]
+    assert [photo.photo_url for photo in record.photos] == [
+        f"https://photos.example/{SUBJECT}/{PHOTO}?signed",
+        f"https://photos.example/{SUBJECT}/{SECOND_PHOTO}?signed",
+    ]
+    assert record.photo_url == record.photos[0].photo_url
+    assert links.asked == [(SUBJECT, PHOTO), (SUBJECT, SECOND_PHOTO)]
 
 
 async def test_a_player_with_no_photograph_has_no_address_to_sign():
@@ -266,6 +285,7 @@ async def test_a_player_with_no_photograph_has_no_address_to_sign():
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
     assert record.photo_url is None
+    assert record.photos == ()
     assert links.asked == []
 
 
@@ -292,39 +312,27 @@ async def test_a_refused_read_touches_no_provider():
     assert variety.asked == []
 
 
-async def test_add_friend_is_offered_where_friends_rule_admits_a_request():
-    """``docs/adr/0203`` §9: the sheet relays Friends' own rule, asked once the
-    record is admitted, at the response's one instant."""
+async def test_add_friend_is_offered_wherever_nothing_stands_between_them():
+    """``docs/adr/0204`` §2: a request is admitted by the rule that admitted
+    the record, so an open record with nothing between the pair offers it."""
 
-    relations = Relations(may=True)
-    use_case, _, _ = reading(admits=True, identity=an_identity(), relations=relations)
+    use_case, _, _ = reading(admits=True, identity=an_identity())
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
     assert record.can_add_friend is True
-    assert relations.asked_may == [(READER, SUBJECT, NOW)]
 
 
-async def test_add_friend_is_not_offered_where_the_rule_admits_none():
-    use_case, _, _ = reading(
-        admits=True, identity=an_identity(), relations=Relations(may=False)
-    )
-
-    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
-
-    assert record.can_add_friend is False
-
-
-async def test_add_friend_is_never_asked_once_something_stands_between_them():
+async def test_add_friend_is_never_offered_once_something_stands_between_them():
     """``SENT``, ``ASKED_YOU`` or ``FRIEND``: the foot's left button is the
-    relation's, so the rule is not asked."""
+    relation's."""
 
     for relation in (
         RecordRelation.SENT,
         RecordRelation.ASKED_YOU,
         RecordRelation.FRIEND,
     ):
-        relations = Relations(may=True, **{str(SUBJECT): relation})
+        relations = Relations(**{str(SUBJECT): relation})
         use_case, _, _ = reading(
             admits=True, identity=an_identity(), relations=relations
         )
@@ -332,18 +340,16 @@ async def test_add_friend_is_never_asked_once_something_stands_between_them():
         record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
         assert (record.relation, record.can_add_friend) == (relation, False)
-        assert relations.asked_may == []
 
 
 async def test_a_refused_read_asks_nothing_about_friends():
-    relations = Relations(may=True)
+    relations = Relations()
     use_case, _, _ = reading(admits=False, identity=an_identity(), relations=relations)
 
     with pytest.raises(RecordUnavailable):
         await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
     assert relations.asked == []
-    assert relations.asked_may == []
 
 
 async def test_a_person_the_platform_cannot_describe_refuses_the_same_way():
@@ -360,15 +366,13 @@ async def test_your_own_id_on_the_parameterised_route_still_reads_as_your_own():
     """``is_self`` is the server's answer wherever the read came from — the route
     for a given player, asked about yourself, is your own record."""
 
-    relations = Relations(may=True)
-    use_case, _, _ = reading(admits=True, identity=an_identity(), relations=relations)
+    use_case, _, _ = reading(admits=True, identity=an_identity())
 
     record = await use_case.execute(reader_id=READER, subject_id=READER)
 
     assert record.is_self is True
     # Nobody asks themselves to be friends.
     assert record.can_add_friend is False
-    assert relations.asked_may == []
 
 
 async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():

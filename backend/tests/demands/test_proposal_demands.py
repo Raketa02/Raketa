@@ -90,6 +90,7 @@ from app.modules.proposals.domain.ports import (
     PoolOrigins,
     RefundReason,
     SeatRefunds,
+    TagsInCommon,
 )
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
@@ -1922,3 +1923,49 @@ async def test_the_trophy_is_the_latest_results_sport_and_its_places(
     assert await trophy.of(tomek["id"]) == HomeRanking(
         sport=Sport.PADEL, general_place=2, friends_place=2
     )
+
+
+# --------------------------------------------------------------------------- #
+# TagsInCommon — a same vibe request's line on Home, today (#795)
+# --------------------------------------------------------------------------- #
+
+
+async def _tagged(client, name: str, *held: str) -> tuple[UUID, str]:
+    player_id, token = await players.register(client, name)
+    if held:
+        await players.commit_profile(client, token, social_tag_ids=list(held))
+    return player_id, token
+
+
+@pytest.mark.parametrize("implementation", registered(TagsInCommon))
+async def test_tags_in_common_are_counted_off_the_profiles_as_they_stand(
+    implementation, client, session
+):
+    tomek, _ = await _tagged(
+        client, "tomek", "PLAYS_TO_WIN", "HERE_TO_IMPROVE", "STAYS_FOR_A_DRINK"
+    )
+    ola, ola_token = await _tagged(
+        client, "ola", "PLAYS_TO_WIN", "HERE_TO_IMPROVE", "QUIET_AND_FOCUSED"
+    )
+    kuba, _ = await _tagged(client, "kuba", "QUIET_AND_FOCUSED", "SHARES_A_LIFT")
+    halfway, _ = await _tagged(client, "halfway")
+    tags: TagsInCommon = implementation.build(session)
+
+    # Everybody asked is answered: nothing shared, or no profile, is none.
+    assert await tags.in_common(tomek, [ola, kuba, halfway]) == {
+        ola: 2,
+        kuba: 0,
+        halfway: 0,
+    }
+    assert await tags.in_common(halfway, [ola]) == {ola: 0}
+    assert await tags.in_common(tomek, []) == {}
+
+    changed = await client.put(
+        "/api/v1/players/me/social-tags",
+        json={"social_tags": ["QUIET_AND_FOCUSED", "SHARES_A_LIFT"]},
+        headers=players.auth(ola_token),
+    )
+    assert changed.status_code == 200, changed.text
+
+    # Today's, never the day it was asked.
+    assert await implementation.build(session).in_common(tomek, [ola]) == {ola: 0}

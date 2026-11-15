@@ -41,11 +41,9 @@ from typing import Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
-from app.modules.friends.domain.daily_limit import DAILY_REQUEST_LIMIT
 from app.modules.friends.domain.errors import (
     AlreadyFriends,
     CannotBefriendYourself,
-    DailyRequestLimit,
     FriendNotFound,
     FriendRequestAlreadySent,
     FriendRequestNotFound,
@@ -80,7 +78,11 @@ class Where:
     when it showed one. **A link's names neither**: it was opened, not pressed
     on a group's screen. **The ranking's names its sport and no group** (#773):
     the Rankings page is one sport's and no group's, and the card reads *Found
-    you in the padel ranking*."""
+    you in the padel ranking*. **New in Raketa's names neither** (#793): its
+    card reads *Found you among new players* and nothing more. **Same
+    competitive level's names its sport and no group** (#794): the card reads
+    *Your level in padel · 91% even*. **Same vibe's names neither** (#795):
+    the card reads *6 things in common*."""
 
     made_from: RequestOrigin
     group_id: UUID | None = None
@@ -97,16 +99,42 @@ class Where:
             or (self.group_id is None and self.sport is not None),
             f"a ranking's request names a group, or no sport: {self!r}",
         )
+        invariant(
+            self.made_from is not RequestOrigin.NEW_PLAYERS
+            or (self.group_id is None and self.sport is None),
+            f"a new player's request names a group or a sport: {self!r}",
+        )
+        invariant(
+            self.made_from is not RequestOrigin.SAME_LEVEL
+            or (self.group_id is None and self.sport is not None),
+            f"a same level request names a group, or no sport: {self!r}",
+        )
+        invariant(
+            self.made_from is not RequestOrigin.SAME_VIBE
+            or (self.group_id is None and self.sport is None),
+            f"a same vibe request names a group or a sport: {self!r}",
+        )
 
     @classmethod
     def pressed_on(
         cls, made_from: RequestOrigin, *, group_id: UUID | None, sport: Sport | None
     ) -> "Where":
         """Where a client says a request was pressed — **the ranking's group
-        dropped**, since the Rankings page shows none (#773)."""
+        dropped**, since the Rankings page shows none (#773), **New in
+        Raketa's group and sport** both, since its line names neither (#793),
+        **Same competitive level's group**, since its row shows none (#794),
+        and **Same vibe's group and sport**, since its line names neither
+        (#795)."""
 
-        if made_from is RequestOrigin.RANKING:
+        if made_from in (
+            RequestOrigin.RANKING,
+            RequestOrigin.NEW_PLAYERS,
+            RequestOrigin.SAME_LEVEL,
+            RequestOrigin.SAME_VIBE,
+        ):
             group_id = None
+        if made_from in (RequestOrigin.NEW_PLAYERS, RequestOrigin.SAME_VIBE):
+            sport = None
         return cls(made_from=made_from, group_id=group_id, sport=sport)
 
     def without_the_group(self) -> "Where":
@@ -210,22 +238,13 @@ class Friendship:
         where: Where,
         at: Instant,
         unseen: bool = False,
-        counted: bool = False,
-        sent_today: int = 0,
     ) -> FriendRelation:
         """The requester asks the other. Answers the requester's relation now:
         *sent*, or *friend* when the request crossed one made of them.
 
         ``unseen`` — the other had blocked the requester — records a request the
-        other never sees; **the requester's answer is the same**.
-
-        ``counted`` — the two share no group (#773) — records a request that
-        counts towards the requester's daily limit, and ``sent_today`` is how
-        many such the requester has sent this Warsaw day already: **the
-        eleventh is refused** (``daily_request_limit``). Both read by the use
-        case, the rule decided here. **A crossing is never limited**: asking
-        somebody who asked you first is an answer, and an answer is not a
-        request sent (the mechanics §13.3)."""
+        other never sees; **the requester's answer is the same**. **Nothing
+        limits how many a requester sends** (``docs/adr/0204`` §2)."""
 
         addressee = self._other_than(requester)
         if self.are_friends:
@@ -254,8 +273,6 @@ class Friendship:
                 )
             )
             return FriendRelation.FRIEND
-        if counted and sent_today >= DAILY_REQUEST_LIMIT:
-            raise DailyRequestLimit()
         self._record_that(
             FriendRequested(
                 requester_id=requester,
@@ -265,7 +282,6 @@ class Friendship:
                 sport=None if where.sport is None else where.sport.value,
                 occurred_at=at,
                 unseen=unseen,
-                counted=counted,
             )
         )
         return FriendRelation.SENT

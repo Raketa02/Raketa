@@ -97,15 +97,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `reliability_minimum_not_offered` (400). It sits beside the gender preference because it is a
   clause of the same pair rule — `proposals`' `MatcherPlayerFit` reads it off the profile load
   it already makes — and it is read back on the player's own record, never on the profile read.
-  **And *Show me in General* is a profile fact** (#772; ADR-0203 §7): the **Ranking
-  visibility**, `PUT /players/me/ranking-visibility` (`{visibility: SHOWN | HIDDEN}`, `204`),
-  `PlayerProfile.ranking_visibility` (`domain/ranking_visibility.py`; every profile starts
-  `SHOWN`, one committed before the switch existed included, so the creating event grew no
-  field), recorded as `player_profile.ranking_visibility_set` / v1, a no-op on the value
-  held. **Read back on the profile read**, as `ranking_visibility`, always present, because
-  the You tab draws its row from it. Nothing here acts on it: Rankings follows it through the
-  outbox, reading the profile live (`rankings.md`). Two values rather than a boolean, so the
-  body says what it does.
+  **And *Show me to new people* is a profile fact** (#791; ADR-0204 §2), replacing #772's
+  *Show me in General*: `PUT /players/me/show-me-to-new-people` (`{on: true | false}`, `204`),
+  `PlayerProfile.show_me_to_new_people` (every profile starts on, so the creating event grew
+  no field), recorded as `player_profile.show_me_to_new_people_set` / v1, a no-op on the value
+  held. **The old switch folds into it**: `player_profile.ranking_visibility_set` is
+  decode-only (nothing records it, stored streams hold it) and its `HIDDEN` reads as off, so a
+  player who had hidden from General starts with this off. **Read back on the profile read**,
+  as `show_me_to_new_people`, always present (the You tab draws its row from it), and
+  `ranking_visibility` left the read. **Nothing follows it through the outbox**: the record's
+  admission and Friends' ask read it live off the profile (`player-record.md`), so it closes a
+  stranger's record and request on the next tap; the ranking never reads it. The
+  `/players/me/ranking-visibility` route is gone.
 - **A Location area is set by a reading of the phone or by a club picked in its place,
   and the intro is up to 250 characters**
   ([ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §9, §10, #726).

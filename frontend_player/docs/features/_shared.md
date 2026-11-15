@@ -387,3 +387,72 @@ segment's, and it never carries `disabled`, because a door that reads as shut is
 Its press is reported like any other, and the caller decides what a door opens — the Games switch's
 other kind, recorded in `proposals.md`. The dim stops at 3,17:1 on `line2`, under 1.4.3 and past
 3:1, and the words say the state as well: a door carries no number. `Segment.test.tsx` holds all three.
+
+**Every row on Home sits on one frame** ([#798](https://github.com/Raketa02/Raketa/issues/798), the
+Home rows screens §2, Part 16 2026-11-14). `HomeRow` is the section — `space.lg` under the row above,
+the eyebrow heading, and on its line an optional **control** (Top 10's sport pill, #805) and an
+optional **link** (_See all ›_, _Rankings ›_) — with whatever the row draws under it. `HomeRowRail` is
+the rail, in 7.7's two geometries over Part 8's Strip: **peeking** (a lone card at the content width,
+more at `railCardRatio`, free scroll unless the row asks to `snap`) and **paging** (the content
+width, snapping, 7.18's dots tracking the scroll). **They are two parts, not one**, because a row
+says something in place of a rail — _Your games_' empty sentences and failure, Top 10's _Nobody
+ranked in squash yet_ — and a frame that owned its rail would grow a slot per sentence. FRIENDS
+GAME, FRIEND REQUESTS, ASKED FOR A LEVEL and _Your games_ moved onto it with nothing on screen
+changing; _TO CONFIRM_ stays as it is, a list in one card and not a rail. **The rail is never
+remounted** — one `ScrollView` at one place in the tree whatever its count, width or heading — so it
+keeps its scroll position across a re-render, as Part 8 asks. **The link is the row's words and
+name**, nothing the frame's own: the words drawn with a hidden chevron, the name naming what it
+opens, a `link` role, ink `rlValue` like sign-in's link, its 16pt line overhanging the heading's
+12 so a row with a link stands where one without does, reached by `hit.rowLink` — 36 tall, under 44
+on purpose, and 3 to the left so a control beside it keeps its own target (6.5). **The rail takes the
+row's cards**, not their count, and hands each back with its width, so the lone-card width and the
+dots can never disagree with what is drawn. `HomeRow.test.tsx` walks the link, the slot, both geometries and the rail's
+identity across re-renders.
+
+**`PhotoCarousel`: all of a player's photos, sideways** ([#799](https://github.com/Raketa02/Raketa/issues/799);
+the Home rows screens §6.3, §9.3; home rows 23; design-system Part 16, 2026-11-14). Every photo in the
+order handed in, each a card at `size.photoCarouselRatio` (half) of the content width and 4:5
+(`PHOTO_PANEL`'s shape, read off it rather than restated), on `radius.card`, over Part 8's Strip — gap 9, bleeding past the
+gutter, snapping a card at a time. **Nothing with no photo**, and **a lone photo keeps the card's
+size**, since a 4:5 card the content's width would stand taller than the sheet's first screen. It
+announces nothing, as `PlayerPhoto` does, and imports no feature. The record draws it first, and the
+vibe sheet (#803) is to draw the same one. `PhotoCarousel.test.tsx` holds the order, the size, the
+corner, the Strip and the absence.
+
+**`Switch` lost `onDark` and `accessibilityLabel`** (#799): both were for the Rankings card of a player
+hidden from General, which went with _Show me in General_ (ADR-0204 §2). 6.12 keeps them specified,
+as it kept the switch itself while it was unbuilt; the dark-card tests and the two contrast figures
+they derived went with the code.
+
+**`PortraitTile`, a third rail geometry, the sport pill's _All_, and two `Button` additions**
+([#801](https://github.com/Raketa02/Raketa/issues/801); design-system 7.31, 7.32, Part 16 2026-11-14).
+**`PortraitTile`** is a face edge to edge with the wash rising over its foot (`portraitWash`, the deck
+card's value moved whole since that card is gone), a tag top-left that lets touches through, a control
+top-right beside the tile's own press, and the words over the wash; its width and aspect are the
+caller's (`size.portraitTile`). Top 10's portrait (#805) is to draw it too. **`HomeRowRail`'s `tiles`**
+draws each at 0,355 of the content width, a lone one too. **The sport pill is generic over its
+choices** (`SportPillFrame<S>`, `SportPillWords<S>`) and may offer **`ALL_SPORTS`**, drawn with a
+two-toned dot; existing callers infer `Sport` and changed nothing. **`Button`** gained **`lead`**, a
+Feather plus or check before the words, never spoken, and **`settledSoft`**, mint's soft bed in its
+ink. `PlusOnSurface` is exported. **`shared/lib/query-client`'s `LISTS_PEOPLE`** is a query `meta`
+a read declares when it lists people with the reader's relation to them (Home's people rows, Hottest
+groups), and **`rereadPeopleLists`** re-reads every such read — what every friend write and every block
+calls, so a write made anywhere moves the person on every row without naming a feature's keys
+(architecture Part 7). Each has its suite: `HomeRow.test.tsx`, `SportPillFrame.test.tsx`,
+`Button.test.tsx`; the tile is walked through New in Raketa.
+
+**`RowSportPill`, `HomeRow`'s `over`, and a `numbered` rail** ([#805](https://github.com/Raketa02/Raketa/issues/805);
+the Home rows screens §7; home rows 25–27; design-system 7.36, Part 16 2026-11-15). Top 10 puts the
+deck's sport pill on a row's heading line, beside _Rankings ›_, and its bar slides over the heading
+while the link stays put (home rows 27) — so the bar must end where **the pill** ends, which
+`SportPillFrame`, a page's, does not know: its bar ends at the page's edge. **`RowSportPill`** measures
+the pill where it stands on the heading's line and hands the row two things: the pill, for `HomeRow`'s
+`control`, and — while open — a layer for **`HomeRow`'s new `over`**, which the frame draws last over
+the whole section: a backdrop that folds the bar, and the bar on the pill's own line, from the row's
+left edge to the pill's right end and the bar's inset past it. What folds it is the frame's —
+`FoldAway`, now exported from `SportPillFrame.tsx` for this: the current sport, the backdrop,
+Android's back and the screen losing focus. **The backdrop is the row's**, so a tap elsewhere on Home
+leaves the bar open (a call: a backdrop over Home would need a layer above the page). **`HomeRowRail`'s
+`numbered`** hands each card `size.topTen.railRatio` of the content width — the card's width; the
+numeral beside it is the row's own, so its items are wider than the width it hands. Each has its
+suite: `RowSportPill.test.tsx`, `HomeRow.test.tsx`; the row is walked in `rankings`' `topTen.test.tsx`.

@@ -15,7 +15,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
-import { currentUserQuery } from '@/features/auth/types';
+import { useReaderId } from '@/features/auth/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
 import { DEFAULT_PLAY_SEGMENT, type PlaySegment } from '../domain/playSegment';
@@ -29,11 +29,8 @@ export interface PlaySegmentState {
 
 export function usePlaySegment(): PlaySegmentState {
   const client = useQueryClient();
-  // Whose choice this is — read from the cache once, and never
-  // observed: an observer here would refetch `/users/me` on every entry to Play once it was stale.
-  // The entry gate has always read the player before a tab can mount, and the account cannot
-  // change under a mounted tab — a sign-out tears the tree down.
-  const [account] = useState(() => client.getQueryData(currentUserQuery().queryKey)?.id);
+  // Whose choice this is — read from the cache once, and never observed (`useReaderId`).
+  const account = useReaderId();
 
   const read = useQuery({
     queryKey: phonePreferenceKeys.one(account ?? '', 'playSegment'),

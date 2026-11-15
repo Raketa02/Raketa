@@ -2,10 +2,9 @@
 screens §4–§5).
 
 **Every Level is the two-decimal number the passport prints**, and so is every
-gap; the client draws both with the decimal comma. Places are true places: a
-row the reader can't see — a player hidden from General, in General; anybody a
-block stands between the reader and, either way, in either view (#772) —
-leaves a gap, and `of` still counts it. **The backend
+gap; the client draws both with the decimal comma. **Everybody is on every
+list at their true place** (``docs/adr/0204`` §2): no switch and no block hides
+a row, and `of` counts everyone. **The backend
 counts the wins and the client draws them**: the count reads the rating
 engine's update rule, which nobody else may compute.
 
@@ -18,12 +17,18 @@ from __future__ import annotations
 
 import base64
 import binascii
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from app.kernel import Sport
-from app.modules.rankings.application.reads import GeneralPage, RankedRow, Ranking
+from app.modules.rankings.application.reads import (
+    GeneralPage,
+    RankedRow,
+    Ranking,
+    TopTen,
+)
 from app.modules.rankings.domain.errors import NotAPage
 from app.modules.rankings.domain.general_order import (
     OrderKey,
@@ -44,6 +49,7 @@ from app.modules.rankings.domain.ranking import (
     RankingView,
     level_of,
 )
+from app.modules.rankings.domain.top_ten import TOP_TEN, drawn_chip
 
 
 def cursor_of(key: OrderKey) -> str:
@@ -214,12 +220,7 @@ class PlaceCardSchema(BaseModel):
             "with **Add friends**, whatever your own state. With either, the card "
             "is the whole page: nothing is drawn below it. In Friends, "
             "`NEEDS_RESULTS`, `NO_LEVEL` and `OFF_THE_LIST` stand above your "
-            "friends' podium and table. **General only**: `HIDDEN` — you are "
-            "listed and turned *Show me in General* off: *YOUR PLACE · 7th · of "
-            "13*, your Level and your chip, with *Hidden from General* and the "
-            "switch where the gap line was; others don't see your row. Friends "
-            "ignores the switch, so there you read `LISTED`; not listed, you "
-            "read your not-listed card."
+            "friends' podium and table."
         )
     )
     results: int = Field(
@@ -236,30 +237,27 @@ class PlaceCardSchema(BaseModel):
         )
     )
     place: int | None = Field(
-        ge=1, description="With `LISTED` and `HIDDEN` only: your place — *7th*."
+        ge=1, description="With `LISTED` only: your place — *7th*."
     )
     of: int | None = Field(
         ge=1,
         description=(
-            "With `LISTED` and `HIDDEN` only: how many are listed — *of 13* — "
-            "hidden players and rows you can't see included."
+            "With `LISTED` only: how many are listed — *of 13* — everyone, "
+            "whoever blocked whom."
         ),
     )
     level: float | None = Field(
-        description=(
-            "With `LISTED` and `HIDDEN` only: your Level, two decimals — *2,71*."
-        )
+        description=("With `LISTED` only: your Level, two decimals — *2,71*.")
     )
     chip: ChipSchema | None = Field(
         description=(
-            "With `LISTED` and `HIDDEN` only: your places moved this week, "
-            "under the Level."
+            "With `LISTED` only: your places moved this week, under the Level."
         )
     )
     gap_line: GapLineSchema | None = Field(
         description=(
-            "With `LISTED` only: the line under the fold. `null` with `HIDDEN`, "
-            "where *Hidden from General* and the switch stand in its place."
+            "With `LISTED` only: the line under the fold — the true neighbours "
+            "above and below you, whoever they are."
         )
     )
 
@@ -286,8 +284,8 @@ class RankedRowSchema(BaseModel):
     place: int = Field(
         ge=1,
         description=(
-            "Their true place — coral for 1–3, grey after. A row you can't see "
-            "leaves a gap, so places may skip a number."
+            "Their true place — coral for 1–3, grey after. A blocked player is "
+            "here too; a tap on them reads *This record isn't available*."
         ),
     )
     player_id: UUID
@@ -344,10 +342,9 @@ class RankingResponse(BaseModel):
     )
     podium: list[RankedRowSchema] = Field(
         description=(
-            "The first three rows you see, each with its true place — first in "
-            "the middle, second left, third right; with second hidden from "
-            "you, the steps read 1, 3 and 4. **Empty with fewer than three "
-            "rows you see**, and the list shows alone."
+            "The first three rows, each with its true place — first in the "
+            "middle, second left, third right. **Empty with fewer than three "
+            "listed**, and the list shows alone."
         )
     )
     rows: list[RankedRowSchema] = Field(
@@ -384,6 +381,108 @@ class RankingResponse(BaseModel):
         )
 
 
+class TopTenChipSchema(BaseModel):
+    """**The week's move on a Top 10 card**, drawn — a triangle and a bold
+    italic number, *▲ 2* in volt, *▼ 1* in coral. The Rankings page's chip for
+    the same row; a card draws none for no change or *New*."""
+
+    kind: Literal[ChipKind.UP, ChipKind.DOWN] = Field(
+        description="`UP` — *▲ 2*. `DOWN` — *▼ 1*."
+    )
+    places: int = Field(ge=1, description="How many places — the *2* of *▲ 2*.")
+
+
+class TopTenPlayerSchema(BaseModel):
+    """One Top 10 card: the numeral, the portrait, the nickname, the Level and
+    the week's move. **A tap opens their record**; across a block it reads
+    *This record isn't available*."""
+
+    place: int = Field(
+        ge=1,
+        le=TOP_TEN,
+        description="Their true place in General — the huge numeral, 1 to 10.",
+    )
+    player_id: UUID
+    nickname: str = Field(description="Whole, never with an @ (docs/adr/0199 §1).")
+    photo_id: UUID | None
+    photo_url: str | None = Field(
+        description=(
+            "A short-lived link to their first photograph; `null` with "
+            "`photo_id` draws the court picture."
+        )
+    )
+    level: float = Field(description="Their Level, two decimals — *3,40*.")
+    chip: TopTenChipSchema | None = Field(
+        description=(
+            "Their places moved this week, rolling — as the Rankings page's row "
+            "reads them. `null` for no change and for *New*: no chip is drawn."
+        )
+    )
+    is_you: bool = Field(
+        description=(
+            "Your own card — it reads *You*, its numeral volt and the card "
+            "ringed in volt."
+        )
+    )
+
+    @classmethod
+    def of_row(cls, row: RankedRow) -> "TopTenPlayerSchema":
+        chip = drawn_chip(row.chip)
+        return cls(
+            place=row.place,
+            player_id=row.player_id,
+            nickname=row.nickname,
+            photo_id=row.photo_id,
+            photo_url=row.photo_url,
+            level=level_of(row.hundredths),
+            chip=(
+                None
+                if chip is None
+                else TopTenChipSchema(
+                    kind=ChipKind.UP if chip.kind is ChipKind.UP else ChipKind.DOWN,
+                    places=chip.places,
+                )
+            ),
+            is_you=row.is_you,
+        )
+
+
+class TopTenResponse(BaseModel):
+    """**Top 10 on Home**: places 1 to 10 of General in one sport, the true
+    top of the Rankings page — everybody at their true place, whoever blocked
+    whom."""
+
+    sport: Sport = Field(
+        description=(
+            "The sport the row shows: the one asked for, or the one a "
+            "preference fell through to — the pill's chosen sport, and the one "
+            "*Rankings ›* opens on."
+        )
+    )
+    anyone_listed: bool = Field(
+        description=(
+            "Whether anybody is listed in General **in any sport**. While "
+            "nobody is, the row is hidden."
+        )
+    )
+    players: list[TopTenPlayerSchema] = Field(
+        max_length=TOP_TEN,
+        description=(
+            "Places 1 to 10 of General in `sport`, best first — fewer while "
+            "fewer are listed, one or two included. **Empty while nobody is "
+            "ranked in `sport`**: *Nobody ranked in squash yet*."
+        ),
+    )
+
+    @classmethod
+    def of_top_ten(cls, top: TopTen) -> "TopTenResponse":
+        return cls(
+            sport=top.sport,
+            anyone_listed=top.anyone_listed,
+            players=[TopTenPlayerSchema.of_row(row) for row in top.rows],
+        )
+
+
 class GeneralPageResponse(BaseModel):
     """**A page of General**: 50 places of the list, the rows of them you see
     and the cursors either side. Scrolling to either end reads the next page
@@ -397,8 +496,7 @@ class GeneralPageResponse(BaseModel):
     rows: list[RankedRowSchema] = Field(
         description=(
             "The page's rows, best first, each with its true place — the same "
-            "rows the main read draws. **50 places**: a row you can't see "
-            "leaves its gap, so a page may hold fewer."
+            "rows the main read draws, 50 places."
         )
     )
     previous: str | None = Field(

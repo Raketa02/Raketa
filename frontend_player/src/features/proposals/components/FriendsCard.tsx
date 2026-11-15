@@ -48,7 +48,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { offlineMessage } from '@/shared/errors';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
-import { BalanceBar, Button, Note, courtSeatCount, theme } from '@/shared/ui';
+import { BALANCE_FIGURE, BalanceBar, Button, Note, courtSeatCount, theme } from '@/shared/ui';
 import { balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -71,7 +71,6 @@ import { barLabels, forecastSpoken, vsLine } from './deckPresentation';
 import { FindACourtSheet } from './FindACourtSheet';
 import { FRIENDS_CARD_COPY } from './friendsCardCopy';
 import { courtShare, fullAtLine, refusalLine } from './friendsCardPresentation';
-import { FORECAST_FIGURE } from './GameCard';
 import { GameGround } from './GameGround';
 import { OverlapGrid } from './OverlapGrid';
 import { ReadFailed } from './ReadFailed';
@@ -322,7 +321,7 @@ function Forecast({
       accessibilityLabel={spoken}
       testID="friends-card-forecast"
     >
-      <Text style={[s.figure, { color: FORECAST_FIGURE[tone] }]}>{formatPercent(pct)}</Text>
+      <Text style={[s.figure, { color: BALANCE_FIGURE[tone] }]}>{formatPercent(pct)}</Text>
       <Text style={s.word}>{balanceWord(pct)}</Text>
       <View
         style={s.bar}

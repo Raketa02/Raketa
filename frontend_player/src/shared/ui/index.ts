@@ -18,6 +18,7 @@ export {
   type AvailabilityGridRow,
 } from './AvailabilityGrid';
 export {
+  BALANCE_FIGURE,
   BALANCE_INK,
   BALANCE_SCALE,
   BALANCE_SOFT,
@@ -29,7 +30,12 @@ export {
   type BalanceBarVariant,
 } from './BalanceBar';
 export { Bar, type BarProps } from './Bar';
-export { BottomSheet, SHEET_LIST, type BottomSheetProps } from './BottomSheet';
+export {
+  BottomSheet,
+  SHEET_LIST,
+  type BottomSheetProps,
+  type SheetLayoutTransition,
+} from './BottomSheet';
 export {
   Button,
   type ButtonMark,
@@ -40,6 +46,7 @@ export {
 } from './Button';
 export { Card, PressableCard, type CardProps, type PressableCardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
+export { ComparisonBar, type ComparisonBarProps, type ComparisonBarVariant } from './ComparisonBar';
 export { CloseControl, type CloseControlProps } from './CloseControl';
 export { CornerBadge, type CornerBadgeProps } from './CornerBadge';
 export { CountBadge, type CountBadgeProps, type CountBadgeTone } from './CountBadge';
@@ -67,6 +74,14 @@ export { DoorRow, doorRowLabel, type DoorRowGlyph, type DoorRowProps } from './D
 export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';
 export { Guide, type GuideProps, type GuideStep } from './Guide';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
+export {
+  HomeRow,
+  HomeRowRail,
+  type HomeRowLink,
+  type HomeRowProps,
+  type HomeRowRailGeometry,
+  type HomeRowRailProps,
+} from './HomeRow';
 export { InfoGlyph, type InfoGlyphProps } from './InfoGlyph';
 export {
   LevelBar,
@@ -85,6 +100,7 @@ export {
   type OnCourtMarkProps,
 } from './OnCourtMark';
 export { Note, type NoteProps, type NoteVariant } from './Note';
+export { PageOnScreen, useWatchedPage, type WatchedPage } from './onScreen';
 export {
   PhotoAddTile,
   PhotoPosterTile,
@@ -99,6 +115,9 @@ export {
 } from './PhotoTile';
 export { PagerDots, type PagerDotsProps } from './PagerDots';
 export { MARK_TOP, PhotoPanel, type PhotoPanelProps } from './PhotoPanel';
+export { PhotoCarousel, type CarouselPhoto, type PhotoCarouselProps } from './PhotoCarousel';
+export { PortraitTile, type PortraitTileProps } from './PortraitTile';
+export { TINTED_TILE, TintedTile, type TintedTileProps } from './TintedTile';
 export {
   PHOTO_PANEL,
   POSTER_LABEL,
@@ -112,6 +131,7 @@ export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popo
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
+export { RowSportPill, type RowSportPillProps } from './RowSportPill';
 export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export {
@@ -127,8 +147,10 @@ export {
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
 export {
+  ALL_SPORTS,
   SportPillFrame,
   type AnotherSport,
+  type SportChoice,
   type SportPillFrameProps,
   type SportPillWords,
 } from './SportPillFrame';
@@ -149,10 +171,10 @@ export {
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';
-export { Tag, type TagProps, type TagVariant } from './Tag';
+export { TAG_HEIGHT, Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
 export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';
-export { Dash, Plus, PlusOnMedia, Tick, TICK_PATH, TICK_SPACE } from './Tick';
+export { Dash, Plus, PlusOnMedia, PlusOnSurface, Tick, TICK_PATH, TICK_SPACE } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
 export { UndoToast, type UndoToastProps } from './UndoToast';

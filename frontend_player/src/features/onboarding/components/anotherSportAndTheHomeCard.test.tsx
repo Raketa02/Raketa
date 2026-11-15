@@ -566,15 +566,16 @@ describe('Home, for anybody else', () => {
     expect(screen.queryByText(HOME_CARD)).toBeNull();
   });
 
-  it('draws no card for a player who holds any rating — and never asks which groups she is in', async () => {
+  // Home itself reads the groups for every reader since #800 — *Your games*' groupless line — so
+  // the card's own rule is what is pinned: the ratings decide it, whatever the groups say.
+  it('draws no card for a player who holds any rating, though she is in a group', async () => {
     stubAnia([WEDNESDAY], { rated: [PADEL] });
     await launchSignedIn();
 
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     await waitFor(() => expect(transport.requestsTo('GET', RATINGS_PATH)).not.toEqual([]));
-    // The ratings have answered and been drawn from: a rated Home is one read.
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/groups')).not.toEqual([]));
     await act(async () => jest.advanceTimersByTime(1));
     expect(screen.queryByText(HOME_CARD)).toBeNull();
-    expect(transport.requestsTo('GET', '/api/v1/groups')).toEqual([]);
   });
 });

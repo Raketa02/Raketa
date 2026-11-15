@@ -33,6 +33,7 @@ import {
   type Group,
   type GroupAtClub,
   type GroupMember,
+  type HottestGroup,
   type SearchedClub,
   type SportLevel,
 } from '../domain/group';
@@ -40,6 +41,7 @@ import { adminTagged, type GroupExit, type GroupRunner } from '../domain/groupIn
 import type { GroupKind } from '../domain/vocabulary';
 import type { GamesCard } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
+import { isJoinTap } from '../domain/hottest';
 
 import { GROUPS_COPY } from './groupsCopy';
 
@@ -609,4 +611,74 @@ export function addSportLine(sports: readonly Sport[]): string {
  */
 export function rateSportLabel(sport: Sport): string {
   return `Rate ${sportLabel(sport)}`;
+}
+
+// ── Home's Hottest groups (#800; the words §31.2–§31.4) ──────────────────────────────────────────
+
+const HOT = GROUPS_COPY.hottest;
+
+/** *Padel · Tennis · Squash · Badminton* — every name whole; the card cuts the line, the sheet wraps it. */
+export function hottestSports(sports: readonly Sport[]): string {
+  return sports.map(sportLabel).join(DOT);
+}
+
+/** The words under the first figure: *games this week*, and *game this week* for one (a call). */
+export function gamesThisWeekWords(count: number): string {
+  return count === 1 ? HOT.gameThisWeek : HOT.gamesThisWeek;
+}
+
+/** The green growth beside the players — *+3* — and nothing at nought. */
+export function grownBy(count: number): string | undefined {
+  return count > 0 ? `+${count}` : undefined;
+}
+
+/**
+ * *Closed group · run by Ogrody 33 · Ogrody 33* — the sheet's identity line (§31.3): the policy,
+ * who answers its requests, the club it plays at. An Owner who can no longer be named is left out
+ * rather than named as nobody.
+ */
+export function identityLine(group: Pick<HottestGroup, 'joinPolicy' | 'runBy' | 'club'>): string {
+  const runner = group.runBy === null ? [] : [`run by ${group.runBy}`];
+  return [HOT.policy[group.joinPolicy], ...runner, group.club.name].join(DOT);
+}
+
+/** *7 of your friends play here* · *1 of your friends plays here* · *11 players* (§31.3). */
+export function peopleLine(group: Pick<HottestGroup, 'friendsCount' | 'memberCount'>): string {
+  if (group.friendsCount === 1) return HOT.oneFriend;
+  if (group.friendsCount > 1) return `${group.friendsCount} of your friends play here`;
+  return `${group.memberCount} ${HOT.players}`;
+}
+
+/** The group sheet's ×, spoken — what closes. */
+export function closeGroupLabel(groupName: string): string {
+  return `Close ${groupName}`;
+}
+
+/** *Waiting for Ogrody 33 to answer* — the withdraw sheet's title (§31.4). */
+export function waitingFor(runBy: string | null): string {
+  return runBy === null ? HOT.waitingForAnswer : `Waiting for ${runBy} to answer`;
+}
+
+/**
+ * **The chip, spoken with the group's name** — six cards' chips are six names. The two taps say
+ * their word before the name, the two states theirs after it, as a search row's do (`actionLabel`).
+ */
+export function hottestChipLabel(action: GroupAction, groupName: string): string {
+  const word = HOT.chip[action];
+  return isJoinTap(action) ? `${word} ${groupName}` : `${groupName}: ${word}`;
+}
+
+/** The card, spoken: *Ogrody 33 Club, hottest, 14 games this week, 11 players, 3 new this month*. */
+export function hottestCardLabel(
+  group: Pick<HottestGroup, 'name' | 'tag' | 'gamesThisWeek' | 'memberCount' | 'newThisMonth'>,
+): string {
+  const tag = group.tag === null ? [] : [HOT.tagSpoken[group.tag]];
+  const grown = group.newThisMonth > 0 ? [`${group.newThisMonth} new ${HOT.thisMonth}`] : [];
+  return [
+    group.name,
+    ...tag,
+    `${group.gamesThisWeek} ${gamesThisWeekWords(group.gamesThisWeek)}`,
+    `${group.memberCount} ${HOT.players}`,
+    ...grown,
+  ].join(', ');
 }

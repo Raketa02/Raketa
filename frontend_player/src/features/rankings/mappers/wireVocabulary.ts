@@ -9,6 +9,7 @@ import type { components } from '@/generated/schema';
 import type { GameResult } from '@/shared/vocabulary/gameResult';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
+import type { Moved } from '../domain/topTen';
 import type { CardState, ChipKind, RankingView } from '../domain/vocabulary';
 
 type Schemas = components['schemas'];
@@ -16,6 +17,8 @@ type Schemas = components['schemas'];
 export const RANKINGS_VOCABULARY_AGREES: {
   readonly cardState: Exact<CardState, Schemas['CardState']>;
   readonly chip: Exact<ChipKind, Schemas['ChipKind']>;
+  /** Top 10's chip (#805): up or down only — no change and *New* come as no chip. */
+  readonly topTenChip: Exact<Moved['kind'], Schemas['TopTenChipSchema']['kind']>;
   readonly view: Exact<RankingView, Schemas['RankingView']>;
   readonly form: Exact<GameResult, Schemas['app__modules__rankings__domain__ranking__Outcome']>;
-} = { cardState: true, chip: true, view: true, form: true };
+} = { cardState: true, chip: true, topTenChip: true, view: true, form: true };

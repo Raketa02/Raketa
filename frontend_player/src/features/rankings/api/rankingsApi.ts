@@ -6,6 +6,7 @@
  * | --- | --- |
  * | `getRanking` | `GET /rankings/{sport}?view=GENERAL\|FRIENDS` — the reader's card, the podium, and General's first page of 50 or the whole of Friends |
  * | `getGeneralPage` | `GET /rankings/{sport}/general/rows?after=\|before=\|around_me=true` — a page of General: below a cursor, above one, or with the reader in the middle |
+ * | `getTopTen` | `GET /top-10?sport=\|prefer=` — Home's Top 10 ([#805](https://github.com/Raketa02/Raketa/issues/805)): General's first ten in a sport named exactly, or in a preferred one the server falls through from |
  */
 
 import type { components } from '@/generated/schema';
@@ -48,6 +49,26 @@ export function getGeneralPage(
   return httpRequest<Schemas['GeneralPageResponse']>({
     method: 'GET',
     path: `/api/v1/rankings/${sport}/general/rows?${query}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * **Which sport Top 10 is read in** — named exactly (the pill's pick), or preferred (the opening
+ * sport), never both: the route refuses either with `not_one_sport`.
+ */
+export type TopTenQuery =
+  { readonly sport: Schemas['Sport'] } | { readonly prefer: Schemas['Sport'] };
+
+export function getTopTen(
+  query: TopTenQuery,
+  { signal }: Cancellable = {},
+): Promise<Schemas['TopTenResponse']> {
+  const asked = 'sport' in query ? `sport=${query.sport}` : `prefer=${query.prefer}`;
+  return httpRequest<Schemas['TopTenResponse']>({
+    method: 'GET',
+    path: `/api/v1/top-10?${asked}`,
     authenticated: true,
     signal,
   });

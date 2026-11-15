@@ -390,15 +390,20 @@ async def test_nobody_asks_themselves(client, crew):
     assert refused.json()["code"] == "cannot_befriend_yourself"
 
 
-async def test_somebody_outside_your_groups_reads_as_an_id_nobody_holds(client, crew):
-    stranger = await a_padel_player(client, "stranger")
+async def test_a_switched_off_stranger_reads_as_an_id_nobody_holds(client, crew):
+    """``docs/adr/0204`` §2: a stranger who turned *Show me to new people* off
+    can't be asked, and the refusal names nothing."""
+
+    rated = await players.a_rated_player(client, "stranger")
+    stranger = {"id": rated["id"]}
+    await players.closed_to_new_people(client, rated["token"])
 
     outside = await asks(client, crew["tomek"], stranger)
     nobody = await asks(client, crew["tomek"], {"id": uuid4()})
 
     assert outside.status_code == nobody.status_code == 404
     assert without_trace(outside.json()) == without_trace(nobody.json())
-    assert outside.json()["code"] == "player_not_in_your_groups"
+    assert outside.json()["code"] == "player_unavailable"
 
 
 async def test_a_link_is_not_something_a_phone_sends(client, crew):

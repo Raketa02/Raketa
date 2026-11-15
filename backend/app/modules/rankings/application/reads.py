@@ -1,6 +1,6 @@
 """The ranking's reads: a sport's General list as the reader sees it, a page
-of it, the reader's Friends table, and the trophy's places on Home
-(``docs/adr/0203`` §2–§5; the screens §1, §4–§5).
+of it, the reader's Friends table, the trophy's places on Home, and Home's Top
+10 (``docs/adr/0203`` §2–§5; the screens §1, §4–§5; ``docs/adr/0204`` §8).
 
 **A read, recorded nowhere, and the clock is read once.** Who is listed — five
 results, the last within the 90 days — and every chip are decided by **the
@@ -9,20 +9,17 @@ kept for at most a minute and forgotten on the next ranking write in the sport.
 So the card, the podium, the rows and every page read in that minute agree
 about who dropped off.
 
-**The places are counted over every listed row.** A row the read leaves out
-keeps its place, so the places stay true: an id nobody can name, and — the
-reader's ``Sight`` (#772) — a player hidden from General, in General, and
-anybody a block stands between the reader and, whichever of them made it, in
-either view, read live through ``BlocksEitherWay``. **A page is a slice of the
-order**, its cursors the keys of the slice's first and last rows, so what a
-reader may not see is dropped from the slice and never moves a cursor.
+**Everybody sees everybody** (``docs/adr/0204`` §2): no switch hides a row and
+no block does, so a place means the same on every phone and *of N* counts
+everyone. A blocked pair see each other's rows; the record is what stays
+closed between them. **The places are counted over every listed row**, and the
+one row a read leaves out — an id nobody can name — keeps its place. **A page
+is a slice of the order**, its cursors the keys of the slice's first and last
+rows, so a nameless row dropped from it never moves a cursor.
 
-**The gap line names only rows the reader can see** — a row the reader's sight
-lets through that somebody can name — so a hidden, blocked or nameless
-neighbour is skipped and the line reads against the nearest one seen (the
-mechanics §7.3). **A hidden reader's card has no gap line**: *Hidden from
-General* and the switch stand in its place. **The podium is the first three
-rows the reader sees**, each with its true place, and none with fewer.
+**The gap line names the nearest named row above and below** — a nameless
+neighbour is skipped (the mechanics §7.3). **The podium is the first three
+named rows**, each with its true place, and none with fewer.
 
 **Friends is the same read over a table of its own** (``TheFriendsTable``,
 #771): the reader and their friends with a result in the 90 days, worked out on
@@ -34,6 +31,7 @@ listed* — and nothing is drawn below it.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
+from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Final, NamedTuple, final
 from uuid import UUID
@@ -44,7 +42,6 @@ from app.modules.rankings.application.general_order import TheGeneralOrder
 from app.modules.rankings.domain.general_order import (
     ListedRow,
     OrderKey,
-    Sight,
     Slice,
     first_page,
     page_after,
@@ -56,7 +53,6 @@ from app.modules.rankings.domain.ports import (
     RankedFace,
     RankedFaces,
     RankingRows,
-    BlocksEitherWay,
     SportLevels,
 )
 from app.modules.rankings.domain.ranking import (
@@ -72,6 +68,7 @@ from app.modules.rankings.domain.ranking import (
     player_above,
     player_below,
 )
+from app.modules.rankings.domain.top_ten import sports_from, the_top_ten
 
 #: How many rows the gap line reads off the order at a time, walking away from
 #: the reader for the nearest named one — almost always the first.
@@ -141,34 +138,28 @@ class _Seen(NamedTuple):
 
 
 async def _seen(
-    order: HeldOrder,
-    page: Slice,
-    faces: RankedFaces,
-    *,
-    sight: Sight,
+    order: HeldOrder, page: Slice, faces: RankedFaces, *, reader: UUID
 ) -> _Seen:
-    """The slice, and the face of everybody on it the reader sees, asked in
-    one question."""
+    """The slice, and the face of everybody on it, asked in one question."""
 
     rows = await order.rows(page.start, page.stop)
-    return await _seen_of(rows, faces, sight=sight)
+    return await _seen_of(rows, faces, reader=reader)
 
 
 async def _seen_of(
-    rows: tuple[ListedRow, ...], faces: RankedFaces, *, sight: Sight
+    rows: tuple[ListedRow, ...], faces: RankedFaces, *, reader: UUID
 ) -> _Seen:
-    """These rows, and the face of everybody on them the reader sees, asked
-    in one question — nobody they can't see is asked about."""
+    """These rows, and the face of everybody on them, asked in one
+    question."""
 
-    seen = [row for row in rows if sight.sees(row)]
-    known = dict(await faces.faces_of([row.player_id for row in seen]))
+    known = dict(await faces.faces_of([row.player_id for row in rows]))
     return _Seen(
         rows=rows,
         faces=known,
         ranked=tuple(
             ranked
-            for row in seen
-            if (ranked := _ranked(row, known, reader=sight.reader)) is not None
+            for row in rows
+            if (ranked := _ranked(row, known, reader=reader)) is not None
         ),
     )
 
@@ -185,37 +176,31 @@ class ReadRanking:
         friends: TheFriendsTable,
         faces: RankedFaces,
         levels: SportLevels,
-        blocks: BlocksEitherWay,
         clock: Clock,
     ) -> None:
         self._general = general
         self._friends = friends
         self._faces = faces
         self._levels = levels
-        self._blocks = blocks
         self._clock = clock
 
     async def execute(
         self, reader: UUID, sport: Sport, *, view: RankingView = RankingView.GENERAL
     ) -> Ranking:
         now = instant(self._clock.now())
-        sight = await _sight_of(reader, view, self._blocks)
         if view is RankingView.FRIENDS:
-            return await self._among_friends(reader, sport, now=now, sight=sight)
+            return await self._among_friends(reader, sport, now=now)
         read = await self._general.read(sport, now=now, reader=reader)
         order, mine = read.order, read.mine
         page = first_page(order.listed)
-        seen = await _seen(order, page, self._faces, sight=sight)
+        seen = await _seen(order, page, self._faces, reader=reader)
         card = card_of(
             read.own,
             holds_a_level=await self._levels.holds_a_level(reader, sport),
             of=order.listed,
             placed=mine,
             gap_line=(
-                # A hidden reader's card has *Hidden from General* instead.
-                None
-                if mine is None or mine.hidden
-                else await self._gap_line(order, mine, seen.faces, sight)
+                None if mine is None else await self._gap_line(order, mine, seen.faces)
             ),
         )
         return Ranking(
@@ -224,20 +209,20 @@ class ReadRanking:
             read_at=now,
             card=card,
             listed_count=order.listed,
-            podium=await self._podium(order, page, seen, sight),
+            podium=await self._podium(order, page, seen, reader=reader),
             rows=seen.ranked,
             next=seen.rows[-1].key if page.stop < order.listed else None,
         )
 
     async def _among_friends(
-        self, reader: UUID, sport: Sport, *, now: Instant, sight: Sight
+        self, reader: UUID, sport: Sport, *, now: Instant
     ) -> Ranking:
         """The Friends view: the whole table and the card read within it —
         or, with no friend listed, the card alone."""
 
         read = await self._friends.read(sport, now=now, reader=reader)
         table, mine = read.table, read.mine
-        seen = await _seen_of(table.order.rows, self._faces, sight=sight)
+        seen = await _seen_of(table.order.rows, self._faces, reader=reader)
         card = friends_card_of(
             read.own,
             holds_a_level=await self._levels.holds_a_level(reader, sport),
@@ -245,9 +230,7 @@ class ReadRanking:
             friends_listed=read.friends_listed,
             placed=mine,
             gap_line=(
-                None
-                if mine is None
-                else await self._gap_line(table, mine, seen.faces, sight)
+                None if mine is None else await self._gap_line(table, mine, seen.faces)
             ),
         )
         shown = () if card.is_the_page else seen.ranked
@@ -267,21 +250,18 @@ class ReadRanking:
         order: HeldOrder,
         mine: ListedRow,
         faces: dict[UUID, RankedFace],
-        sight: Sight,
     ) -> GapLine:
-        """The nearest row the reader sees above them and the nearest below,
+        """The nearest named row above the reader and the nearest below,
         measured from the reader's own row — or, in first place, *Top of the
-        list* and nothing else. With nobody seen above a reader who isn't
+        list* and nothing else. With nobody named above a reader who isn't
         first, only the part about below reads."""
 
         if mine.place == 1:
             return GapLine(above=None, below=None, top_of_the_list=True)
         above = await _first(
-            _seen_named(_walk_up(order, mine.place - 1), faces, self._faces, sight)
+            _named(_walk_up(order, mine.place - 1), faces, self._faces)
         )
-        below = await _first(
-            _seen_named(_walk_down(order, mine.place), faces, self._faces, sight)
-        )
+        below = await _first(_named(_walk_down(order, mine.place), faces, self._faces))
         return GapLine(
             above=None if above is None else player_above(mine, *above),
             below=None if below is None else player_below(mine, *below),
@@ -289,19 +269,17 @@ class ReadRanking:
         )
 
     async def _podium(
-        self, order: HeldOrder, page: Slice, seen: _Seen, sight: Sight
+        self, order: HeldOrder, page: Slice, seen: _Seen, *, reader: UUID
     ) -> tuple[RankedRow, ...]:
-        """The first three rows the reader sees, each with its true place —
-        off the first page, read on below it only when that page shows fewer
-        than three — and none with fewer."""
+        """The first three named rows, each with its true place — off the
+        first page, read on below it only when that page names fewer than
+        three — and none with fewer."""
 
         podium = list(seen.ranked[:PODIUM_SIZE])
         if len(podium) < PODIUM_SIZE and page.stop < order.listed:
-            below = _seen_named(
-                _walk_down(order, page.stop), seen.faces, self._faces, sight
-            )
+            below = _named(_walk_down(order, page.stop), seen.faces, self._faces)
             async for row, _ in below:
-                ranked = _ranked(row, seen.faces, reader=sight.reader)
+                ranked = _ranked(row, seen.faces, reader=reader)
                 if ranked is not None:
                     podium.append(ranked)
                 if len(podium) == PODIUM_SIZE:
@@ -309,30 +287,17 @@ class ReadRanking:
         return _podium_of(tuple(podium))
 
 
-async def _sight_of(reader: UUID, view: RankingView, blocks: BlocksEitherWay) -> Sight:
-    """What the reader sees in the view — everybody a block stands between
-    them and read live, once a read."""
-
-    return Sight(
-        reader=reader, view=view, blocked=await blocks.blocked_either_way(reader)
-    )
-
-
-async def _seen_named(
+async def _named(
     rows: AsyncIterator[ListedRow],
     known: dict[UUID, RankedFace],
     faces: RankedFaces,
-    sight: Sight,
 ) -> AsyncIterator[tuple[ListedRow, str]]:
-    """Each of ``rows`` the reader sees that somebody can name, with the name,
-    asking ``faces`` only of a row off the page — almost always the first one
-    asked about, and never one the reader can't see. **Adds every face it
-    asks for to ``known``**, so the walk below the reader never asks twice
-    about a row the walk above already asked."""
+    """Each of ``rows`` somebody can name, with the name, asking ``faces``
+    only of a row off the page — almost always the first one asked about.
+    **Adds every face it asks for to ``known``**, so the walk below the
+    reader never asks twice about a row the walk above already asked."""
 
     async for row in rows:
-        if not sight.sees(row):
-            continue
         if row.player_id not in known:
             known.update(await faces.faces_of([row.player_id]))
         face = known.get(row.player_id)
@@ -387,12 +352,10 @@ class ReadGeneralPage:
         *,
         general: TheGeneralOrder,
         faces: RankedFaces,
-        blocks: BlocksEitherWay,
         clock: Clock,
     ) -> None:
         self._general = general
         self._faces = faces
-        self._blocks = blocks
         self._clock = clock
 
     async def execute(
@@ -409,7 +372,6 @@ class ReadGeneralPage:
             "a page asked for in two places at once",
         )
         now = instant(self._clock.now())
-        sight = await _sight_of(reader, RankingView.GENERAL, self._blocks)
         read = await self._general.read(sport, now=now, reader=reader)
         order = read.order
         if after is not None:
@@ -420,7 +382,7 @@ class ReadGeneralPage:
             page = page_around(read.mine.place, order.listed)
         else:
             page = first_page(order.listed)
-        seen = await _seen(order, page, self._faces, sight=sight)
+        seen = await _seen(order, page, self._faces, reader=reader)
         first, last = (seen.rows[0], seen.rows[-1]) if seen.rows else (None, None)
         return GeneralPage(
             sport=sport,
@@ -437,6 +399,68 @@ class ReadGeneralPage:
                 else last.key
             ),
         )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class TopTen:
+    """Home's Top 10: the sport it shows, whether anybody is listed in any
+    sport, and the first ten rows of General there."""
+
+    sport: Sport
+    #: While nobody is listed in any sport, the row is hidden.
+    anyone_listed: bool
+    #: Places 1–10, or fewer while fewer are listed — empty while nobody is.
+    #: Each row's chip is the Rankings page's; the card draws ``drawn_chip``.
+    rows: tuple[RankedRow, ...]
+
+
+@final
+class ReadTopTen:
+    """``GET /top-10``: the first ten of General in one sport — **a sport
+    asked for exactly**, or **a preferred one falling through** to the next
+    sport in the app's order where anybody is listed, going round (#797; the
+    home-rows mechanics §10.3).
+
+    **Off each sport's kept General order**, as the Rankings page reads it, so
+    the row and the page never disagree and a warm read is the kept order and
+    one face question for the ten. Another sport's order is read only while
+    the answer still turns on it: whether anybody is listed anywhere, when
+    the asked sport lists nobody, and where a preference falls through to."""
+
+    def __init__(
+        self,
+        *,
+        general: TheGeneralOrder,
+        faces: RankedFaces,
+        clock: Clock,
+    ) -> None:
+        self._general = general
+        self._faces = faces
+        self._clock = clock
+
+    async def execute(
+        self, reader: UUID, sport: Sport, *, falls_through: bool = False
+    ) -> TopTen:
+        """``sport``'s first ten — or, ``falls_through`` and nobody listed in
+        it, the first ten of the next sport after it where anybody is."""
+
+        now = instant(self._clock.now())
+        async with aclosing(
+            self._general.read_each(sports_from(sport), now=now, reader=reader)
+        ) as reads:
+            shown, read = await anext(reads)
+            anyone_listed = read.order.listed > 0
+            if not anyone_listed:
+                async for next_sport, next_read in reads:
+                    if next_read.order.listed:
+                        anyone_listed = True
+                        if falls_through:
+                            shown, read = next_sport, next_read
+                        break
+        order = read.order
+        seen = await _seen(order, the_top_ten(order.listed), self._faces, reader=reader)
+        return TopTen(sport=shown, anyone_listed=anyone_listed, rows=seen.ranked)
 
 
 def _ranked(
