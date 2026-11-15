@@ -453,7 +453,8 @@ async def _the_hours(
     now: Instant,
 ) -> list[_Target]:
     """The hour on the day at Bonarka — or inside its cut-off — and the first
-    Kazimierz sells next week. The first is inside Bonarka's release lead, so
+    Kazimierz sells the week after that one's: one of her games a week, so
+    neither week is full. The first is inside Bonarka's release lead, so
     it is read as Bonarka sold it before any deadline, and filled an hour
     before its own release time."""
 
@@ -481,13 +482,19 @@ async def _the_hours(
             f"{GAMES_CLUB.name} sells no padel hour inside its cut-off from "
             f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
         )
+    state, hour = soon
     picked = {pick.start for pick in seeded.picks}
     next_week = await club_id_of(session, NEXT_WEEK_CLUB)
+    # The week after the first game's, which is the week after this one's
+    # unless the first rolled over into it: late on a Sunday, past Bonarka's
+    # last hour, the first is Monday's, and two games in one week would fill
+    # her *games per week* and her crowd's.
     later = next(
         (
-            hour.start
-            for hour in await padel_hours_on_sale(session, next_week, now=now)
-            if week_of(hour.start) > week_of(now) and hour.start not in picked
+            later_hour.start
+            for later_hour in await padel_hours_on_sale(session, next_week, now=now)
+            if week_of(later_hour.start) > week_of(hour.start)
+            and later_hour.start not in picked
         ),
         None,
     )
@@ -496,7 +503,6 @@ async def _the_hours(
             f"{NEXT_WEEK_CLUB.name} sells no padel hour next week from "
             f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
         )
-    state, hour = soon
     return [
         _Target(state, hour.start, GAMES_CLUB, club_id, when_it_fills(hour, now=now)),
         _Target(BEFORE_THE_CUT_OFF, later, NEXT_WEEK_CLUB, next_week, now),
