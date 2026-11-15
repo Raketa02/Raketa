@@ -17,6 +17,7 @@ of a heat read is about the read. Every assertion reads what a player reads.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from uuid import UUID
 
 import pytest
 
@@ -26,12 +27,16 @@ from app.bootstrap.composition import (
     build_event_publisher,
 )
 from app.engines.matchfit.core import SearchMode
+from app.infrastructure.events.sqlalchemy_domain_event_store import SqlAlchemyEventStore
 from app.kernel import Sport, instant
 from app.modules.bookings.domain.booking import (
     BookedCourt,
     Booking,
     CancelReason,
     PayMode,
+)
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    RATING_AGGREGATE,
 )
 from app.shared.ids import new_uuid
 from tests.api.administration_world import (
@@ -490,6 +495,44 @@ async def test_the_dots_are_the_group_s_own(client, club):
     [only] = await hottest(client, tomek)
 
     assert only["sports"] == ["PADEL"]
+
+
+@pytest.fixture
+def rating_loads(monkeypatch: pytest.MonkeyPatch) -> list[UUID]:
+    """Every rating stream the store loads, in the order it loads them."""
+
+    loads: list[UUID] = []
+    original = SqlAlchemyEventStore.load_stream
+
+    async def counting(self, *, aggregate_type: str, aggregate_id: UUID):
+        if aggregate_type == RATING_AGGREGATE:
+            loads.append(aggregate_id)
+        return await original(
+            self, aggregate_type=aggregate_type, aggregate_id=aggregate_id
+        )
+
+    monkeypatch.setattr(SqlAlchemyEventStore, "load_stream", counting)
+    return loads
+
+
+async def test_the_dots_replay_no_rating_and_ask_whether_once(
+    client, club, rating_loads
+):
+    """**A dot needs whether, never a figure**: the row asks which of its
+    members' rating streams exist, about every member and every sport at once,
+    and replays none of them — where it once loaded a stream per member per
+    sport, most of them streams that do not exist."""
+
+    owner = await a_padel_player(client, "owner", Sport.TENNIS)
+    ania = await a_padel_player(client, "ania", Sport.TENNIS)
+    bartek, tomek = await people(client, "bartek", "tomek")
+    await a_group_of(client, owner, club, ania, bartek, name="Padel")
+    rating_loads.clear()
+
+    [only] = await hottest(client, tomek)
+
+    assert only["sports"] == ["PADEL", "TENNIS"]
+    assert rating_loads == []
 
 
 async def test_the_reader_s_relation_to_each_group(client, club):

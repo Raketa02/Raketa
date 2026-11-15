@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -53,6 +53,23 @@ class DomainEventStore(Protocol):
     async def load_stream(
         self, *, aggregate_type: str, aggregate_id: UUID
     ) -> list[StoredDomainEvent]: ...
+
+    async def streams_present(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these streams hold at least one event.
+
+        **Addressed, never searched.** The caller names every stream it asks
+        about, so this is ``load_stream``'s keyed read for a batch and without
+        the events — one statement however many ids, answering only about those.
+        A stream that does not exist is absent, which is the same answer as
+        ``load_stream``'s empty list with nothing to translate. Empty in, empty
+        out, and no statement.
+
+        For a caller that needs *whether*, never *what*: replaying a stream to
+        learn that it exists is a load and a fold for one bit.
+        """
+        ...
 
     async def find_aggregate_ids_by_first_event(
         self, *, aggregate_type: str, payload_equals: Mapping[str, str]

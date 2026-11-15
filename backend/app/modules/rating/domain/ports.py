@@ -216,6 +216,15 @@ class RatedPlayerQuery(Protocol):
     batch's shape with the record's payload, and it is a third method rather
     than a flag on either because a caller that could ask the batch for the
     published form is one step from a matcher printing a band it derived.
+
+    **A fourth, for a list's dots** (``docs/adr/0183`` §6). A Groups list draws a
+    sport's dot where two members are rated in it, and asks about every member
+    of every group on the screen at once. A dot needs *whether*, never a figure,
+    so nothing is replayed: it is which of the addressed streams exist, one
+    question however many people and sports it is about — where the batch read
+    above, asked once a sport, is a replay per pair. It is a method of its own
+    rather than ``estimates_for`` with the figures thrown away, because the
+    figures are the cost.
     """
 
     async def estimates_for(
@@ -260,6 +269,20 @@ class RatedPlayerQuery(Protocol):
         A player with no rating in this sport is **absent from the answer**, on
         the rule every read here applies. Asked about ids the caller already
         holds, and answers only about those.
+        """
+        ...
+
+    async def rated_in(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[Sport, frozenset[UUID]]:
+        """For each sport, the ones among these players who hold a rating in it
+        — **whether, and no figure.**
+
+        **Every ``Sport`` is a key**, its set empty where nobody asked about is
+        rated in it, so a caller walking the registry finds each sport answered;
+        asking about nobody is every sport empty. A player rated in nothing is
+        in none of the sets — absent, on the rule every read here applies.
+        Asked about ids the caller already holds, and answers only about those.
         """
         ...
 

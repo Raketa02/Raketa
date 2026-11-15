@@ -17,13 +17,16 @@ class — but ``append`` still forgets the stream it appended to, so a misuse
 would be slower rather than wrong.
 
 A search by first event is handed straight through: it crosses streams and is
-not one, and nothing in the deck read repeats it.
+not one, and nothing in the deck read repeats it. So is *which of these streams
+exist*: one statement for a batch, cheaper than the loads it stands in for, and
+asked of the store every time, so it always agrees with what an append through
+this wrapper wrote.
 """
 
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from typing import final
 from uuid import UUID
 
@@ -90,6 +93,13 @@ class ReadOnceEventStore:
         )
         self._loads.pop((aggregate_type, aggregate_id), None)
         return appended
+
+    async def streams_present(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        return await self._inner.streams_present(
+            aggregate_type=aggregate_type, aggregate_ids=aggregate_ids
+        )
 
     async def find_aggregate_ids_by_first_event(
         self, *, aggregate_type: str, payload_equals: Mapping[str, str]

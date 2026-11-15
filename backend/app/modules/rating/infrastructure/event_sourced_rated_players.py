@@ -1,10 +1,12 @@
 """``RatedPlayerQuery`` over the rating streams.
 
 **Addressed, never searched.** A rating's stream id is derived from
-``(player, sport)``, so reading a batch is one ``load_stream`` per pair rather
-than a query with a predicate — and a player who has never been rated in that
-sport is a stream that does not exist, which is the same answer as *absent from
-the reply* with nothing to translate.
+``(player, sport)``, so reading a batch's figures is one ``load_stream`` per pair
+rather than a query with a predicate — and a player who has never been rated in
+that sport is a stream that does not exist, which is the same answer as *absent
+from the reply* with nothing to translate. *Whether* they are rated needs no
+figure, so ``rated_in`` asks the store once which of every pair's streams exist,
+and replays none of them.
 
 **It replays and remembers nothing.** No version is recorded, so an aggregate
 that came out of here cannot be saved through the repository beside it: the
@@ -89,6 +91,34 @@ class EventSourcedRatedPlayers:
             if rating is not None:
                 found[player_id] = _published(rating)
         return found
+
+    async def rated_in(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[Sport, frozenset[UUID]]:
+        """A list's dots: which of every pair's streams exist, in **one**
+        addressed question to the store, and nothing replayed.
+
+        *Rated in that sport* is *that stream exists* — exactly when
+        ``_replayed`` answers something other than ``None``, without the load
+        and the fold. The pairs are derived in the file's declared walk, sorted
+        ids then ``Sport``, so the statement binds its ids in one order on every
+        process; and the answer is read back over the pairs asked about, so a
+        stream the store named that nobody asked about could not join it.
+        """
+
+        pairs = {
+            skill_rating_id(player_id, sport): (player_id, sport)
+            for player_id in sorted(set(player_ids))
+            for sport in Sport
+        }
+        present = await self._event_store.streams_present(
+            aggregate_type=RATING_AGGREGATE, aggregate_ids=list(pairs)
+        )
+        rated: dict[Sport, set[UUID]] = {sport: set() for sport in Sport}
+        for stream_id, (player_id, sport) in pairs.items():
+            if stream_id in present:
+                rated[sport].add(player_id)
+        return {sport: frozenset(players) for sport, players in rated.items()}
 
     async def _replayed(self, player_id: UUID, sport: Sport) -> SkillRating | None:
         """One pair's rating, replayed, or ``None`` where the stream does not exist.

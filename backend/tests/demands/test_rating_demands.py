@@ -265,6 +265,71 @@ async def test_a_court_read_leaves_the_unrated_seat_absent(implementation, sessi
     assert set(found) == {rated}
 
 
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_list_s_dots_find_each_player_in_every_sport_they_are_rated_in(
+    implementation, session
+):
+    """**The fourth read, and the one a Groups list asks** (``docs/adr/0183``
+    §6). A dot needs *whether*, never a figure: who among these people is rated,
+    in each sport, asked once about all of them."""
+
+    port = implementation.build(session)
+    both = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    await _rated(session, mu=4.10, sigma=0.50, sport=Sport.SQUASH, player_id=both)
+    tennis = await _rated(session, mu=2.60, sigma=0.40, sport=Sport.TENNIS)
+
+    rated = await port.rated_in([both, tennis])
+
+    assert rated[Sport.PADEL] == {both}
+    assert rated[Sport.SQUASH] == {both}
+    assert rated[Sport.TENNIS] == {tennis}
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_list_s_dots_answer_every_sport_and_leave_the_unrated_out(
+    implementation, session
+):
+    """Every ``Sport`` is a key, so a caller walking the registry finds each one
+    answered — empty where nobody asked about is rated in it, and somebody rated
+    in nothing in none of them."""
+
+    port = implementation.build(session)
+    padel = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    nobody = new_uuid()
+
+    rated = await port.rated_in([padel, nobody])
+
+    assert set(rated) == set(Sport)
+    assert rated[Sport.PADEL] == {padel}
+    assert all(nobody not in players for players in rated.values())
+    assert all(not rated[sport] for sport in Sport if sport is not Sport.PADEL)
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_list_s_dots_answer_only_about_ids_they_were_asked_about(
+    implementation, session
+):
+    """A batch read, and never a scan of everybody who happens to be rated."""
+
+    port = implementation.build(session)
+    asked = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    await _rated(session, mu=2.10, sigma=0.30, sport=Sport.PADEL)
+
+    rated = await port.rated_in([asked])
+
+    assert rated[Sport.PADEL] == {asked}
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_list_s_dots_asked_about_nobody_are_every_sport_empty(
+    implementation, session
+):
+    port = implementation.build(session)
+    await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+
+    assert await port.rated_in([]) == {sport: frozenset() for sport in Sport}
+
+
 @pytest.mark.parametrize("port", RATING_DEMANDS, ids=lambda port: port.__name__)
 def test_every_published_read_has_something_answering_it(port):
     """A port nothing implements is a demand nothing runs against.

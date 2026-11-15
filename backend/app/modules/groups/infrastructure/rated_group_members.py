@@ -1,10 +1,14 @@
 """``RatedGroupMembers`` over the rating context's published read.
 
-**One batch per sport, over the union of every member the answer is about** —
-a list of groups asks once, never once per group. ``RatedPlayerQuery`` replays a
-stream per ``(player, sport)``, which is the cost ``docs/adr/0183`` names beside
-its dots (*a Groups list costs a ratings read*), free at seed scale and the first
-thing to cache when a list slows down.
+**One question, over the union of every member the answer is about** — a list
+of groups asks once, never once per group, and once for every sport.
+``docs/adr/0183`` names the cost beside its dots (*a Groups list costs a ratings
+read*), and that read is one addressed question — which of these people's rating
+streams exist (``RatedPlayerQuery.rated_in``) — where it was a replay per
+``(player, sport)``: a load for every member in every sport, most of them of
+streams that do not exist, and the bulk of Home's *Hottest groups* read. A
+member's Level, which a Members row and a Join request print, is still a replay,
+of only the sport and the people the screen shows.
 
 It reads the rating context's port and never its repository, which remembers
 stream versions so a rating it found can be moved: a dot has no business holding
@@ -30,13 +34,7 @@ class RatingsRatedGroupMembers:
     async def rated_in(
         self, player_ids: Collection[UUID]
     ) -> Mapping[Sport, frozenset[UUID]]:
-        wanted = set(player_ids)
-        if not wanted:
-            return {}
-        return {
-            sport: frozenset(await self._ratings.estimates_for(wanted, sport=sport))
-            for sport in Sport
-        }
+        return await self._ratings.rated_in(player_ids)
 
     async def levels_in(
         self, player_ids: Collection[UUID], *, sport: Sport
