@@ -16,7 +16,7 @@ Issues and specs for this repo live as GitHub issues on **`Raketa02/Raketa`**. U
 > ```
 >
 > The symptom when it has flipped is **not** a 403. It is
-> `GraphQL: Could not resolve to a Repository with the namei  'Raketa02/Raketa'` — this repo
+> `GraphQL: Could not resolve to a Repository with the name 'Raketa02/Raketa'` — this repo
 > is private, so the wrong account cannot see that it exists at all. Treat that message as
 > "wrong account", never as "wrong repo name". Re-run the switch and retry.
 
@@ -51,11 +51,6 @@ raise an error — it makes work invisible to the loop, or feeds it the wrong ta
 
 Agents file work they discover mid-task as a **new** issue labelled `needs-triage` —
 never by relabelling the issue they are working on.
-
-None of the three carried across the detach: no issue on `Raketa02/Raketa` holds
-`ready-for-agent` or `prd` yet, and the loop has not been run against this repo. The
-conventions describe what `afk.py` still parses, so honour them the first time a ticket
-is filed for it.
 
 ## Pull requests as a triage surface
 

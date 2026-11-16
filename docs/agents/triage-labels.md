@@ -30,3 +30,6 @@ Every triaged issue carries exactly one **category** role (`bug` / `enhancement`
 - **`prd` is not a state role.** It marks a spec published by `/to-spec` so that the AFK
   loop — which queries `ready-for-agent` — cannot pick a spec up as a task. See
   [`issue-tracker.md`](issue-tracker.md).
+- **`story` is not a state role either.** `/story-tickets` puts it on a PRD's story index
+  and on each story, together with `ready-for-human`. Neither ever carries
+  `ready-for-agent`, or the loop would try to build a story.

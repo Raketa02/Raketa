@@ -136,7 +136,7 @@ guardrail doing its job.
 ## Repo-wide docs
 
 - [`CONTEXT.md`](CONTEXT.md) — the shared domain glossary. **Source of truth for domain
-  terms.** Much of the racket-sport domain is still unwritten; see
+  terms.** A term it doesn't define has no settled meaning yet; see
   [`docs/agents/domain.md`](docs/agents/domain.md) before naming something new.
 - [`CONTEXT-MAP.md`](CONTEXT-MAP.md) — topology: which file owns which vocabulary.
 - [`docs/environments.md`](docs/environments.md) — **the four environment names and the
