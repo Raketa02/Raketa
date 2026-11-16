@@ -1,6 +1,6 @@
 # ADR-0202 — Friends: a request between group-mates, and a game among them that books the court when it is sent
 
-- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **§1 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): anyone may be asked, with no daily limit, except across *Show me to new people*'s rule; three new origins from Home's rows
+- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **§1 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): anyone may be asked, with no daily limit, except across *Show me to new people*'s rule; three new origins from Home's rows — **§1's Home row, §3's *at the top of Home*, §5's FRIENDS GAME row and the 2026-11-07 amendment's Home row and hand-off amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)** (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): a request, an invitation and an ask wait in *Needs your answer*, behind Home's envelope, and an ask is never drawn instead of *Get your level*
 - **Date:** 2026-11-06
 - **Supersedes [ADR-0199](0199-a-player-is-known-by-their-nickname.md)'s line *"there is no
   friendship in Raketa (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
@@ -84,6 +84,22 @@
     alone. A search by name, suggestions, mutual friends and a feed stay undecided.
 
   Dated notes mark §1's definition, its record bullet and its Home bullet.
+- **§1, §3, §5 and the 2026-11-07 amendment amended 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
+  §1 and §4 (the Home refactor grilling, Q1–Q46 there, PRD
+  [#810](https://github.com/Raketa02/Raketa/issues/810)):
+  - **the FRIEND REQUESTS and ASKED FOR A LEVEL rows leave Home**, with the friends game
+    invitations, for *Needs your answer*: a sheet the header's envelope opens, there only while
+    something waits. Every answer they give is unchanged;
+  - **a request's tile names no group, ranking or row.** It shows the sender's level in every sport
+    they hold one in. Where it was made is still recorded;
+  - **the friend link opens Home with the sheet up**, the request in it, in place of *at the top of
+    Home*;
+  - **the ask's card is never drawn instead of *Get your level***, which shows whenever ADR-0200 §7
+    says it does. The bell lists *level asked* while its card waits in the sheet.
+
+  Dated notes mark §1's Home bullet, §3, §5's invitation row, the link's tell under *Consequences*
+  and the amendment.
 
 ## Context
 
@@ -205,7 +221,11 @@ friendship survives either of them leaving a group, and ends when either account
 - **Home**: a **FRIEND REQUESTS · n** row under the friends game invitations and above Your games,
   each card naming the group the request was made in and its sport, with **Not now** and **Accept**.
   The row and its title are gone once every request is answered. *(Since 2026-11-07, a request from
-  the ranking names the ranking and its sport in place of the group — ADR-0203 §9.)*
+  the ranking names the ranking and its sport in place of the group — ADR-0203 §9.)* *(Amended
+  2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §1: the requests leave Home for the **FRIEND REQUESTS · n** section of *Needs your answer*, behind
+  the header's envelope. A tile names no group, ranking or row, and shows the sender's level in every
+  sport they hold one in, with **Not now** and **Accept** level across the row.)*
 
 **Notices**: a friend request (pushed once per request, never again for it) and *you're friends*,
 both always on, pushed and kept in the bell. Answering a request on Home clears it from the bell.
@@ -255,6 +275,11 @@ on Android, like `join/`:
   so she taps *Open in Raketa* once more. On Android the store button carries the link as the
   **install referrer**, which the app reads once on first launch, **for group links too**. A replaced
   or unknown code shows *Nothing at that link*.
+
+> **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1.** Wherever the link lands on Home, it opens
+> Home with *Needs your answer* already up, the owner's request in it, in place of *at the top of
+> Home*. The tile reads *Tomek wants to be your friend* with his levels, and no longer *Invited you to
+> Raketa*; the request still records the link as where it was made.
 
 The public surface gains one read of a code: the owner's nickname and face, or
 `friend_link_not_found`, and nothing else about them.
@@ -344,6 +369,12 @@ reads, top to bottom: friends game invitations, friend requests, Your games *(am
 asks for a level stand between friend requests and Your games — [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home))*. Tomek's own game sits
 under **Your games** from the moment he sends it (*2 of 3 friends in · waiting for Ania*), and the
 Friends tab goes back to an empty court. When the last seat is taken, all four get *It's a game!*.
+
+> **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1 and §4.** **The invitation waits in *Needs your
+> answer***, the sheet behind Home's envelope, in its **FRIENDS GAME · n** section after To confirm:
+> one big tile at a time, full width, with dots from two, and the same content and buttons. *Not this
+> time* takes it out of the sheet, and the invitation notice opens Home with the sheet up. Home reads
+> the header, *Get your level*, *Your games* and FOR YOU.
 
 **An empty seat.** A declined or run-out seat is told to Tomek (*"Ania can't make it"*, *"Ania didn't
 answer"*) with two choices. **Invite a friend** sends the same kind of invitation to another friend.
@@ -507,6 +538,10 @@ serve. No threshold has either property.
 - **A link is the one place a block could be guessed.** A blocked player who opens the blocker's
   link finds nothing on Home, where anybody else finds a request. Swallowing it is still right, since
   showing it would offer friendship across a block, but the silence is a tell §2 otherwise avoids.
+  *(Amended 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §1: anybody else finds the request in *Needs your answer*, opened as Home opens; the blocked player
+  finds Home as it is, with no sheet unless something else waits. The tell stands.)*
 - **The drift checks are red** between each backend ticket and the client ticket that regenerates from
   it, for the player app and the club website, accepted until the branch's end.
 
@@ -562,6 +597,13 @@ specified in [the friends mechanics §5.1](../specs/friends/the-mechanics.md#51-
 - **For a player rated in no sport, the ask card is drawn instead of Home's *Get your level*** while
   it is there ([ADR-0200](0200-a-level-is-asked-where-play-begins.md) §7's card), and *Get your level*
   comes back if she sets the ask aside still rated in nothing.
+
+> **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1 and §4.** **The card waits in *Needs your answer***,
+> the sheet behind Home's envelope, in its **ASKED FOR A LEVEL · n** section, after To confirm,
+> Friends game and Friend requests, with no subtitle. Home reads the header, *Get your level*, *Your
+> games* and FOR YOU. **The ask's card is never drawn instead of *Get your level***, which shows
+> whenever ADR-0200 §7 says it does, asked or not. The *level asked* row is in the bell, and in its
+> number, while its card waits in the sheet. Everything else above stands.
 
 **Unchanged:** once per friend per sport, ever, and the picker's *Asked*; the push, its words, and
 where tapping it opens; *level got* to every asker; and Home's tab badge, which counts this row no

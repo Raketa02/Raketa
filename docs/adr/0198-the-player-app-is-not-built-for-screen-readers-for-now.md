@@ -1,6 +1,11 @@
 # ADR-0198 — The player app is not built for screen readers, for now
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1 narrowed 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
+  §8 (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)), for three things the product owner
+  asked for by name: Home's FOR YOU lines open and close at once under *Reduce motion*, *Needs your
+  answer*'s title takes the screen reader's focus, and each line says whether it is open. A dated
+  note marks §1.
 - **Date:** 2026-10-25
 - **Amends [ADR-0012](0012-player-app-design-system.md)'s *Consequences*.** Its line *"The app is
   AA-conformant, thumb-reachable and screen-reader navigable from its first screen"* now holds for
@@ -84,6 +89,12 @@ pressable, modal sheets, reduced motion and scaled text. Nobody adds to it.
 
 **Contrast (AA) and touch targets (44 × 44 pt) are not part of this pause.** They serve everyone who
 looks at and touches the phone, and stay in force.
+
+> **Narrowed 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §8**, for three things the Home refactor
+> grilling ruled by name (Q11, Q39), and only these: **FOR YOU's lines open and close at once** under
+> the phone's *Reduce motion*; **Needs your answer's title takes the screen reader's focus** when the
+> sheet opens; and **each line says its title, its count and whether it is open**. No announcement,
+> no spoken confirmation and no other setting is added, and the rest of the pause stands.
 
 ### 2. Nothing already built is removed
 

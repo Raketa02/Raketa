@@ -122,7 +122,8 @@ A rating is **never only a number**.
   player and one sport. **Started where play begins, never at sign-up** ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md)):
   a player group's door (*Get your level*) for a player rated in nothing, an official group's own
   card and Post a game's (*Rate padel*), *+ Another sport* at the end of a group's sport chip, the
-  Home card, a friend's **Ask for a level** (its notice, and since 2026-11-07 its Home card), and
+  Home card, a friend's **Ask for a level** (its notice, and since 2026-11-07 its card, in **Needs
+  your answer** since ADR-0205), and
   the **Skill passport**'s *Add a sport*, and since 2026-11-07 the Rankings page's *Get your {sport}
   level* ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §5). Its result returns to wherever it was
   started. A run left unfinished is never forced on anybody: the door and the Home card offer to
@@ -495,8 +496,8 @@ of the code because this file asks for them in that order.
 - **Profile photo** — the first of a player's photos, and the one a face on a card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices. **The player record shows
-  all of them**, in the player's order, to any reader it is admitted to ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, not yet
-  built — [#791](https://github.com/Raketa02/Raketa/issues/791)); until then it showed only this one.
+  all of them**, in the player's order, to any reader it is admitted to ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, built by
+  [#791](https://github.com/Raketa02/Raketa/issues/791)); before that it showed only this one.
 - **Intro** — **one line a player writes about themselves**: at most **250** characters
   ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §9, not yet built — [#726](https://github.com/Raketa02/Raketa/issues/726), [#733](https://github.com/Raketa02/Raketa/issues/733)), no line
   breaks, any language, one per player, and **optional** — a player who wrote none has none,
@@ -530,7 +531,7 @@ of the code because this file asks for them in that order.
   screens, and such a stranger reads *This record isn't available* and can't send a request. They
   **keep their true place** in the ranking and **Top 10**, and their face in group sheets, and still
   see the rows and send requests themselves. Changed at any time, as a new event on this stream, and
-  returned by the profile read ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, not yet built —
+  returned by the profile read ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, built by
   [#791](https://github.com/Raketa02/Raketa/issues/791), [#799](https://github.com/Raketa02/Raketa/issues/799)). **It replaces *Show me in General***: the
   `player_profile.ranking_visibility_set` events still fold, *hidden* as **off**, so a player who had
   hidden from General starts with it off. _Avoid_: Ranking visibility, Show me in General (both
@@ -613,12 +614,12 @@ amended by [ADR-0193](docs/adr/0193-a-block-keeps-two-people-off-one-court-and-t
 three routes — block, unblock and **Blocked players** — the record's own-block fact, and the
 withdrawal of the blocker's yeses where the blocked person is In. Members lists no longer ask
 about blocks, and the record asks only about the reader's own. The player app's Block and Unblock are
-[#587](https://github.com/Raketa02/Raketa/issues/587). **Since 2026-11-07** ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §8, not yet
-built — [#772](https://github.com/Raketa02/Raketa/issues/772), [#773](https://github.com/Raketa02/Raketa/issues/773),
+[#587](https://github.com/Raketa02/Raketa/issues/587). **Since 2026-11-07** ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §8, built by
+[#772](https://github.com/Raketa02/Raketa/issues/772), [#773](https://github.com/Raketa02/Raketa/issues/773),
 [#779](https://github.com/Raketa02/Raketa/issues/779)) a block also hides the pair's rows from each
 other in the **Ranking**, and **closes the record both ways**, so the record asks about blocks again,
 in both directions, and Unblock lives only in You › Blocked players. **Since 2026-11-14** ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2,
-not yet built — [#791](https://github.com/Raketa02/Raketa/issues/791)) **the ranking shows the pair
+built by [#791](https://github.com/Raketa02/Raketa/issues/791)) **the ranking shows the pair
 to each other again**, and a block instead keeps them out of each other's **people rows**
 (Discovery); the record stays closed both ways.
 
@@ -1304,10 +1305,10 @@ every fact read through the owning context's published port, and one rule of its
   else, and nothing expires but a group**: a game the pair were both on discloses for as long as
   they are both on it, played or not, while a group discloses its members only while they are in
   it and only to whoever runs it now. **A fourth strand since 2026-11-07** ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §9,
-  not yet built — [#773](https://github.com/Raketa02/Raketa/issues/773)): the subject is **Listed** on **General** in at least one sport and hasn't turned
+  built by [#773](https://github.com/Raketa02/Raketa/issues/773)): the subject is **Listed** on **General** in at least one sport and hasn't turned
   **Show me in General** off, for **any reader**, with or without a level. It ends when they leave
   the list or turn the switch off. **Since 2026-11-14 the strands are exceptions, not the way in**
-  ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, not yet built — [#791](https://github.com/Raketa02/Raketa/issues/791)): a record
+  ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, built by [#791](https://github.com/Raketa02/Raketa/issues/791)): a record
   opens for **any reader**, except (a) across a block made by either side, or (b) when the subject has
   **Show me to new people** off and the reader shares no group, no game and no friendship with them.
   Under (b) the subject's group-mates, the people on one court with them, their friends and whoever
@@ -1531,7 +1532,7 @@ booked game has its chat (**Conversation**) —
   Group members hold a Skill rating; for an Official group, the ones it declares. **Any player
   sees any group's card, sheet, member faces and activity** — in **Hottest groups** — whether a
   member or not; **the group page stays members-only**, and a non-member asking for it reads
-  `group_not_found` ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3, not yet built — [#792](https://github.com/Raketa02/Raketa/issues/792), [#800](https://github.com/Raketa02/Raketa/issues/800)). _Avoid_: team,
+  `group_not_found` ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3, built by [#792](https://github.com/Raketa02/Raketa/issues/792), [#800](https://github.com/Raketa02/Raketa/issues/800)). _Avoid_: team,
   community, circle, league, *club* (a Club is the place).
 - **Player group** — a Group a player created and runs as its **Owner**, at a Home club they chose.
   It may be deleted only while its Owner is its only member.
@@ -1572,7 +1573,7 @@ booked game has its chat (**Conversation**) —
   player who asked, from *Asked* in Hottest groups — removes it at once from the Owner's, the
   Administrator's and the club website's lists, **tells nobody**, and they may ask again; withdrawing
   a request already answered changes nothing and still succeeds. A new event on the group's stream
-  ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3, not yet built — [#792](https://github.com/Raketa02/Raketa/issues/792)). The same word as a
+  ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3, built by [#792](https://github.com/Raketa02/Raketa/issues/792)). The same word as a
   yes's **Withdraw** (Proposals), and the same shape — taken back, free and silent — on a different
   thing: always *withdraw a Join request* in prose. _Avoid_: application, invitation (an
   **Invitation** is a club naming an Administrator); cancel or retract for withdraw.
@@ -1598,7 +1599,7 @@ booked game has its chat (**Conversation**) —
   then the rest. Each card carries what its **group sheet** shows: games this week, players and new
   this month, up to 6 member faces (4 on the card; the reader's friends first, then the
   longest-standing members), and the reader's chip (*Join*, *Ask to join*, *Asked*, *You're in*). **The faces can't be tapped**: they are
-  a picture of the group ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3, not yet built — [#792](https://github.com/Raketa02/Raketa/issues/792), [#800](https://github.com/Raketa02/Raketa/issues/800)). _Avoid_: trending,
+  a picture of the group ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §3, built by [#792](https://github.com/Raketa02/Raketa/issues/792), [#800](https://github.com/Raketa02/Raketa/issues/800)). _Avoid_: trending,
   popular, top groups.
 - **Heat** — how much is going on in a group: **2 × *games this week* + 3 × *new players this month*
   + *players*, counted up to 20**. *Games this week* are games booked in the group whose court time
@@ -1999,22 +2000,53 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   confirmed payment completes a game sees it too. The missing payment coming in never brings a
   second one ([#622](https://github.com/Raketa02/Raketa/issues/622), [#625](https://github.com/Raketa02/Raketa/issues/625)). Its *answers by · Nobody pays until
   it confirms*, at an On request club, retired with that way ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, [#676](https://github.com/Raketa02/Raketa/issues/676)).
-- **Home** — the first tab of the bottom bar: your games from the moment they fill, and the games
-  waiting for one payment, or full once and filling again (*Seat open*). Above them since
-  [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) (not yet built — [#751](https://github.com/Raketa02/Raketa/issues/751), [#745](https://github.com/Raketa02/Raketa/issues/745)): **FRIENDS GAME**, the friends games you
-  are invited to, then **FRIEND REQUESTS**, then **ASKED FOR A LEVEL** (ADR-0202 §4's 2026-11-07
-  amendment, not yet built — [#764](https://github.com/Raketa02/Raketa/issues/764), [#765](https://github.com/Raketa02/Raketa/issues/765)), each row gone once it is empty; a friends game you sent is
-  among your games from its send. A booked game's row names
-  its court's **Kind of court** (ADR-0196 §4). Its badge
-  counts only the games that need you. Proposals assembles it. **Its header carries the trophy**,
-  just left of the bell ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §5, not yet built — [#768](https://github.com/Raketa02/Raketa/issues/768),
-  [#775](https://github.com/Raketa02/Raketa/issues/775)): *🏆 #7*, the reader's **Place** in the sport
-  of their latest result, in the view they last looked at, with no number when they have none; it
-  opens Rankings. **Below *Your games*, five rows** ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §1, not yet built —
-  [#798](https://github.com/Raketa02/Raketa/issues/798)–[#805](https://github.com/Raketa02/Raketa/issues/805)): **Hottest groups** (Groups), **Same competitive level players**,
-  **New in Raketa**, **Same vibe players** (Discovery) and **Top 10** (Rankings), each read on its own
-  and hidden when empty. A player in no group reads *Join a group to get games — the hottest ones are
-  just below.* under *Your games*.
+- **Home** — the first tab of the bottom bar. **Since [ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §4 it reads, top to bottom** (not yet built — [#816](https://github.com/Raketa02/Raketa/issues/816)–[#823](https://github.com/Raketa02/Raketa/issues/823)):
+  - **the header: the envelope, the bell and the trophy**, right-aligned in that order, the trophy in
+    the corner. **The envelope** opens **Needs your answer**, and is there only while something waits
+    in it. **The trophy**, *🏆 #7*, is the reader's **Place** in the sport of their latest result, in
+    the view they last looked at, with no number when they have none, and opens Rankings
+    ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §5, built by
+    [#768](https://github.com/Raketa02/Raketa/issues/768), [#775](https://github.com/Raketa02/Raketa/issues/775));
+  - ***Get your level***, while the player is in a group and rated in nothing, **whether or not
+    somebody asked them** ([ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md) §7);
+  - ***Your games***: your games from the moment they fill, and the games waiting for one payment,
+    or full once and filling again (*Seat open*). A friends game you sent is among them from its
+    send. A booked game's row names its court's **Kind of court** (ADR-0196 §4). A player in no group
+    reads *Join a group to get games — see Groups heating up, just below.*;
+  - **FOR YOU**: the five rows of [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
+    §1, in that order (built by [#798](https://github.com/Raketa02/Raketa/issues/798)–[#805](https://github.com/Raketa02/Raketa/issues/805)):
+    **Hottest groups** (Groups), **Same competitive level players**, **New in Raketa**, **Same vibe
+    players** (Discovery) and **Top 10** (Rankings). Each is **folded into one line**, a title with a
+    count of how many there are to explore (*99+* past 99; none on Top 10), **one open at a time**,
+    each read on its own and hidden while it has nothing to show. On screen they are titled *Groups
+    heating up*, *Players at your level*, *New in Raketa*, *Players with your vibe* and *Top 10*;
+    the terms keep their names. For a player in no group, *Groups heating up* starts open.
+
+  **The four cards that waited on the player are no longer on Home.** *To confirm*, the friends game
+  invitations, the friend requests and the asks for a level wait in **Needs your answer**. Until
+  ADR-0205 they were rows above *Your games*: **FRIENDS GAME**, **TO CONFIRM**, **FRIEND REQUESTS**
+  and **ASKED FOR A LEVEL** ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  and its 2026-11-07 amendment). **Home's badge** counts only the games that need you, a payment to
+  confirm among them, wherever it waits. Proposals assembles Home.
+- **Needs your answer** — **the sheet the header's envelope opens on Home, and everything waiting in
+  it** for the player's answer ([ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §1–§3, not yet built — [#815](https://github.com/Raketa02/Raketa/issues/815)–[#819](https://github.com/Raketa02/Raketa/issues/819)).
+  - **Four sections, always in this order, each a sideways rail and each hidden while empty:**
+    **To confirm** (a payment to confirm or a card to fix, with its deadline while it has one, read
+    by Proposals), **Friends game** (an invitation into a **Friends game**, one at a time), **Friend
+    requests** (Friends) and **Asked for a level** (Friends' **Ask for a level**).
+  - **The envelope is there only while something waits.** Its badge counts what is **new**: what
+    arrived since the player last closed the sheet, kept on the server so every phone agrees.
+    Closing the sheet records a **visit** whose watermark is the newest item it showed, owned by
+    Proposals, and the count travels on Home's read.
+  - **An item arrives once.** A new friend asking for the same sport's level arrives; a payment
+    moving from *Fix your card* to *Confirm* does not.
+  - **Answering** takes the item out, and the last answer closes the sheet and takes the envelope
+    away. A link or a notice that pointed at one of the four opens Home with the sheet up.
+
+  _Avoid_: inbox, pending, requests (a **Friend request** is only one kind), envelope (the envelope
+  is only the button), and the bell's **new**, which counts notices, not what waits.
 - **Proposal events** (durable name / version) — none of them is told to anybody:
   - **ProposalMade** — `proposals.proposal_made` / v1 — the pool and its kind, the origin and
     poster, the sport and kind, the club and start, the share and the book-by.
@@ -2160,10 +2192,12 @@ told by the other contexts and tells none of them.
   to a sender paying by *Split the cost* while a seat lacks its own payment: *At Fri 10:00 you pay 50 zł: your 25 zł and
   Ania's seat.*), and ***level asked*** — a friend asking for a level in a sport, not the
   once-per-account **Get your level** — with its answer, ***level got***.
-  Answering a request or an invitation on Home clears it from the bell, and a *level asked* row is
-  listed only while its card is on Home (ADR-0202 §4's 2026-11-07 amendment). Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
-  §1, §4–§6, not yet built ([#745](https://github.com/Raketa02/Raketa/issues/745),
-  [#749](https://github.com/Raketa02/Raketa/issues/749), [#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)).
+  Answering a request or an invitation clears it from the bell, and a *level asked* row is listed
+  only while its card waits (ADR-0202 §4's 2026-11-07 amendment) — on Home until
+  [ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §1, then in **Needs your answer** (Proposals). Decided by [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+  §1, §4–§6, and built by [#745](https://github.com/Raketa02/Raketa/issues/745),
+  [#749](https://github.com/Raketa02/Raketa/issues/749), [#751](https://github.com/Raketa02/Raketa/issues/751) and [#752](https://github.com/Raketa02/Raketa/issues/752).
 
 ### Friends
 
@@ -2194,9 +2228,9 @@ across all of them. Since [ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by
   ranking*), or since ADR-0204 §9 one of Home's people rows — **Same competitive level** with its
   sport (*Your level in padel · 91% even*), **New in Raketa** (*Found you among new players*) or
   **Same vibe** (*6 things in common*), the line worked out when the card is read. **Anybody may be asked, with no daily
-  limit** ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, not yet built — [#791](https://github.com/Raketa02/Raketa/issues/791)), except somebody whose **Show me to new
+  limit** ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, built by [#791](https://github.com/Raketa02/Raketa/issues/791)), except somebody whose **Show me to new
   people** is off and who shares no group, game or friendship with the requester, which is refused
-  with one unnamed code. (From ADR-0203 §9 until then: a shared group or the ranking, at most 10 a
+  with one unnamed code. (From ADR-0203 §9 until #791: a shared group or the ranking, at most 10 a
   Warsaw day outside your groups.) Nobody asks themselves, and nobody asks while a request of
   theirs to that person is open. **Accept** makes them friends, and the requester is told. **Not
   now** **sets it aside**: the request stays open and can still be accepted, and the requester is
@@ -2209,26 +2243,35 @@ across all of them. Since [ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by
 - **Friend link** — a player's own address on the public site, `/f/` and a **code**: random, shaped
   like a group's code, made on its owner's first read of it, never reused, one per player. **New
   link** replaces it, and the old code reads as not found. **Opening it never makes friends by
-  itself**: it puts the owner's **Friend request** on the opener's Home (*Invited you to Raketa*),
-  through sign-up and onboarding when the opener has no account. Nothing happens for the owner, or
+  itself**: it puts the owner's **Friend request** in the opener's **Needs your answer**, opening Home
+  with the sheet up, through sign-up and onboarding when the opener has no account (since
+  [ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §1, not yet built — [#817](https://github.com/Raketa02/Raketa/issues/817); until then at the top of
+  Home, *Invited you to Raketa*). Nothing happens for the owner, or
   for somebody already a friend; a request the opener already sent crosses it; and when the owner
   blocked the opener, the owner's request is swallowed and nothing reaches the opener's Home. _Avoid_: invite link, referral link, and **Group link**,
   which joins a group.
 - **Ask for a level** — a player asking a friend with no level in a sport to get one, so they can be
   seated: a notice that opens that sport's questionnaire, and a notice back when the friend's first
-  level in it arrives. **Once per friend per sport.** **While it waits, it is a card on the friend's
-  Home**, one per sport in an **ASKED FOR A LEVEL** row, naming every friend whose ask in it waits and
-  isn't set aside,
+  level in it arrives. **Once per friend per sport.** **While it waits, it is a card in the friend's
+  Needs your answer**, one per sport in its **ASKED FOR A LEVEL** section, naming every friend whose
+  ask in it waits and isn't set aside,
   until the friend holds a level in the sport, by any route, or no asker is still their friend. **Not
   now** **sets aside** the asks the card named, as a **Friend request** is set aside: nobody is told,
   the card comes back only when a new friend asks in that sport and then names only the askers not set
   aside,
   and a set-aside ask is still answered, every asker told, when the level arrives. The *level asked*
-  row is in the bell only while its card is on Home. For a player rated in nothing, the card is drawn
-  instead of Home's *Get your level*. Decided by ADR-0202 §4's 2026-11-07 amendment (the mechanics
-  Q129), not yet built ([#764](https://github.com/Raketa02/Raketa/issues/764),
-  [#765](https://github.com/Raketa02/Raketa/issues/765)). _Avoid_: rating request, nudge; declined
-  (nothing declines an ask).
+  row is in the bell only while its card waits in Needs your answer. Decided by ADR-0202 §4's
+  2026-11-07 amendment (the mechanics Q129) and built by
+  [#764](https://github.com/Raketa02/Raketa/issues/764) and
+  [#765](https://github.com/Raketa02/Raketa/issues/765) as a card on Home, drawn instead of Home's
+  *Get your level* for a player rated in nothing. **Since
+  [ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §1 and §4 it waits in Needs your answer, not on Home**, with no subtitle, and **is never drawn
+  instead of *Get your level***, which shows whenever the player is in a group and rated in nothing,
+  asked or not (not yet built — [#816](https://github.com/Raketa02/Raketa/issues/816)). A new
+  friend's ask on a card already there is **new** in Needs your answer. _Avoid_: rating request,
+  nudge; declined (nothing declines an ask).
 
 ### Rankings
 
@@ -2236,7 +2279,7 @@ Settled by [ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) 
 [`docs/specs/rankings/`](docs/specs/rankings/README.md). **Built** by the backend's
 [#768](https://github.com/Raketa02/Raketa/issues/768)–[#773](https://github.com/Raketa02/Raketa/issues/773)
 and the player app's [#774](https://github.com/Raketa02/Raketa/issues/774)–[#779](https://github.com/Raketa02/Raketa/issues/779).
-**Amended 2026-11-14** by [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 (not yet built — [#791](https://github.com/Raketa02/Raketa/issues/791),
+**Amended 2026-11-14** by [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 (built by [#791](https://github.com/Raketa02/Raketa/issues/791),
 [#797](https://github.com/Raketa02/Raketa/issues/797), [#799](https://github.com/Raketa02/Raketa/issues/799), [#805](https://github.com/Raketa02/Raketa/issues/805)): **the ranking shows everybody**.
 *Show me in General* is retired, blocks no longer hide rows, and *of N* counts everyone. Home gains
 **Top 10**.
@@ -2281,7 +2324,7 @@ ago can't be folded on every read (ADR-0203 §10).
   a sport nobody is listed in. It appears once anybody is listed in any sport, and opens on the
   trophy's sport, else the next sport in the app's order where somebody is listed. A pick lasts while
   the reader is on Home. A card opens the record; **Rankings ›** opens the page
-  ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §8, not yet built — [#797](https://github.com/Raketa02/Raketa/issues/797), [#805](https://github.com/Raketa02/Raketa/issues/805)). _Avoid_: leaderboard, top
+  ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §8, built by [#797](https://github.com/Raketa02/Raketa/issues/797), [#805](https://github.com/Raketa02/Raketa/issues/805)). _Avoid_: leaderboard, top
   players, See all.
 - **Show me in General** — *retired 2026-11-14* by ADR-0204 §2. It was a switch, on by default, that
   took a player's row out of everybody else's General and closed their record to strangers found
@@ -2304,7 +2347,7 @@ ago can't be folded on every read (ADR-0203 §10).
 ### Discovery
 
 Settled by [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) on [#790](https://github.com/Raketa02/Raketa/issues/790), and
-specified in [`docs/specs/home-rows/`](docs/specs/home-rows/README.md). **Not yet built**: the backend's
+specified in [`docs/specs/home-rows/`](docs/specs/home-rows/README.md). **Built** by the backend's
 [#793](https://github.com/Raketa02/Raketa/issues/793)–[#796](https://github.com/Raketa02/Raketa/issues/796)
 and the player app's [#801](https://github.com/Raketa02/Raketa/issues/801)–[#804](https://github.com/Raketa02/Raketa/issues/804).
 

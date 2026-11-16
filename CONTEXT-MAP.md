@@ -82,7 +82,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Discovery comes without a new app either**
 > ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
-> PRD [#789](https://github.com/Raketa02/Raketa/issues/789); decided, not yet built). Home gains five
+> PRD [#789](https://github.com/Raketa02/Raketa/issues/789); built). Home gains five
 > rows below *Your games*. The backend grows a **Discovery** context for the three people rows — *Same
 > competitive level*, *New in Raketa* and *Same vibe* — with three stored tables, the stated exceptions
 > to *derived, never stored*: a player directory fed by the profile's and the user's events, every
@@ -96,6 +96,17 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > a withdrawn request from its list; the public site doesn't change. The terms are in `CONTEXT.md`
 > under **Discovery**, **Groups**, **Rankings**, **Player profile**, **Player record**, **Blocks** and
 > **Friends**; the spec set is `docs/specs/home-rows/`.
+>
+> **The Home refactor comes without a new context**
+> ([ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md),
+> PRD [#810](https://github.com/Raketa02/Raketa/issues/810); decided, not yet built). The four cards
+> that wait on the player move behind an envelope in Home's header, into **Needs your answer**, and
+> Home's five rows fold into FOR YOU's lines, with counts. **Proposals** keeps the envelope's *new*: a
+> visit per player, counted on `GET /home`. **Groups** gains a paged Groups heating up read, and the
+> four row reads, Groups' and Discovery's, a capped `total`. Every contract change is additive, and
+> only the backend and the player app change. The terms are in `CONTEXT.md` under **Proposals**
+> (*Home*, *Needs your answer*) and **Friends**; the brief, the decision log and the mocks are
+> `docs/specs/home-refactor/`.
 >
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
@@ -246,6 +257,8 @@ else lives one layer down. See
 │   ├── specs/friends/        ← friends, the friend link and friends games (ADR-0202)
 │   ├── specs/home-rows/      ← Home's five rows and who sees whom (ADR-0204): the mechanics,
 │   │                            the screens, the brief and its mocks
+│   ├── specs/home-refactor/  ← Needs your answer and FOR YOU (ADR-0205): the brief, the
+│   │                            decision log and the mocks, which lead on design
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
