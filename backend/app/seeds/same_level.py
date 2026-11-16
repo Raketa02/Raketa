@@ -50,6 +50,7 @@ from app.modules.discovery.domain.same_level import (
     SameLevelPlayer,
     is_fresh,
 )
+from app.modules.discovery.domain.totals import capped
 from app.modules.friends.application.commands import AskCommand
 from app.modules.friends.domain.friendship import Where
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
@@ -148,7 +149,8 @@ async def assert_same_level(
 
     async with session_factory() as session:
         her = await _id_of(session, THE_POPULATED_PLAYER.email)
-        row = await build_read_same_level(session, settings=settings).execute(her)
+        read = await build_read_same_level(session, settings=settings).execute(her)
+        row = read.cards
         everyone: list[SameLevelCard] = []
         page = await build_read_same_level_page(session, settings=settings).execute(
             her, sport=None, after=None
@@ -165,6 +167,11 @@ async def assert_same_level(
     if len(row) != min(ON_THE_ROW, len(everyone)):
         raise RuntimeError(
             f"{len(everyone)} players in See all and {len(row)} on her row"
+        )
+    if read.total != capped(len(everyone)):
+        raise RuntimeError(
+            f"her Same competitive level line counts {read.total} and See all "
+            f"lists {len(everyone)}"
         )
     listed = {card.player_id for card in everyone}
     if not {card.player_id for card in row} <= listed:
@@ -184,7 +191,8 @@ async def assert_same_level(
                 )
     fresh = sum(is_fresh(_as_player(card), card.relation, rested=False) for card in row)
     return (
-        f"Same competitive level: {len(row)} on her row ({fresh} fresh), "
+        f"Same competitive level: {len(row)} on her row of {read.total} "
+        f"({fresh} fresh), "
         f"{len(everyone)} in See all, best "
         f"{everyone[0].shown.percent_even}% (pill: "
         f"{', '.join(sport.value.title() for sport in page.sports)})"

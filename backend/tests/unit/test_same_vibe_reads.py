@@ -15,6 +15,7 @@ from app.modules.discovery.application.same_vibe import (
     ReadSameVibe,
     ReadSameVibePage,
 )
+from app.modules.discovery.domain.ports import Alike
 from app.modules.discovery.domain.relation import Relation
 from app.modules.discovery.domain.rest import RESTS_AFTER, OnScreenRow
 from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer, vibe_player
@@ -29,6 +30,8 @@ class StandInDirectory:
     def __init__(self, players: list[VibePlayer]) -> None:
         self._players = sorted(players, key=lambda one: one.key.order)
         self.asked: list[tuple[VibeKey | None, int]] = []
+        #: Which reads asked how many they list.
+        self.counting: list[bool] = []
 
     async def tags_of(self, player_id: UUID) -> frozenset[str]:
         return MINE if player_id == READER else frozenset()
@@ -41,15 +44,19 @@ class StandInDirectory:
         sport: Sport | None,
         after: VibeKey | None,
         limit: int,
-    ) -> tuple[VibePlayer, ...]:
+        counting: bool = False,
+    ) -> Alike:
         self.asked.append((after, limit))
+        self.counting.append(counting)
         behind = [
             one
             for one in self._players
             if one.player_id not in leaving_out
             and (after is None or one.key.is_behind(after))
         ]
-        return tuple(behind[:limit])
+        return Alike(
+            players=tuple(behind[:limit]), listed=len(behind) if counting else None
+        )
 
     async def sports_alike(
         self, mine: frozenset[str], *, leaving_out: Collection[UUID]
@@ -127,25 +134,39 @@ async def test_friends_filling_the_first_batch_are_read_past_to_the_fresh():
     directory = StandInDirectory([*friends, *strangers])
     relations = StandInRelations({one.player_id for one in friends})
 
-    cards = await the_row(directory, relations).execute(READER)
+    read = await the_row(directory, relations).execute(READER)
 
-    assert [card.nickname for card in cards] == [
+    assert [card.nickname for card in read.cards] == [
         *(one.nickname for one in strangers),
         *(one.nickname for one in friends[:7]),
     ]
     assert len(directory.asked) == 2
     assert directory.asked[1][0] == friends[A_BATCH - 1].key
+    # The total is what the first batch, read from the top, lists — and the
+    # second batch counts nothing.
+    assert read.total == len(friends) + len(strangers)
+    assert directory.counting == [True, False]
 
 
 async def test_one_batch_does_when_the_row_fills_inside_it():
     directory = StandInDirectory([sharing(n, 3) for n in range(1, 40)])
     relations = StandInRelations(set())
 
-    cards = await the_row(directory, relations).execute(READER)
+    read = await the_row(directory, relations).execute(READER)
 
-    assert len(cards) == 10
+    assert len(read.cards) == 10
+    assert read.total == 39
     assert directory.asked == [(None, A_BATCH)]
     assert relations.asked == [A_BATCH]
+
+
+async def test_the_total_stops_at_100_without_reading_another_batch():
+    directory = StandInDirectory([sharing(n, 2) for n in range(1, 140)])
+
+    read = await the_row(directory, StandInRelations(set())).execute(READER)
+
+    assert read.total == 100
+    assert directory.asked == [(None, A_BATCH)]
 
 
 async def test_a_rested_match_waits_in_a_gap_behind_every_fresh_one():
@@ -153,7 +174,9 @@ async def test_a_rested_match_waits_in_a_gap_behind_every_fresh_one():
     directory = StandInDirectory([first, *others])
     rests = StandInRests({first.player_id})
 
-    cards = await the_row(directory, StandInRelations(set()), rests).execute(READER)
+    cards = (
+        await the_row(directory, StandInRelations(set()), rests).execute(READER)
+    ).cards
 
     assert first.player_id not in {card.player_id for card in cards}
     assert len(cards) == 10
@@ -166,9 +189,11 @@ async def test_only_cards_that_could_be_fresh_are_asked_about_their_rest():
     directory = StandInDirectory([friend, fresh, weak])
     rests = StandInRests({fresh.player_id})
 
-    cards = await the_row(
-        directory, StandInRelations({friend.player_id}), rests
-    ).execute(READER)
+    cards = (
+        await the_row(directory, StandInRelations({friend.player_id}), rests).execute(
+            READER
+        )
+    ).cards
 
     assert rests.asked == [{fresh.player_id}]
     # Rested, the one fresh match is a gap: the three in the order.
@@ -178,7 +203,9 @@ async def test_only_cards_that_could_be_fresh_are_asked_about_their_rest():
 async def test_a_reader_with_no_tags_reads_nothing():
     directory = StandInDirectory([sharing(1, 3)])
 
-    assert await the_row(directory, StandInRelations(set())).execute(UUID(int=1)) == ()
+    read = await the_row(directory, StandInRelations(set())).execute(UUID(int=1))
+
+    assert (read.cards, read.total) == ((), 0)
     assert directory.asked == []
 
 
@@ -195,6 +222,8 @@ async def test_see_all_is_a_page_and_the_key_behind_it():
     first = await read.execute(READER, sport=None, after=None)
     second = await read.execute(READER, sport=None, after=first.next)
 
+    # See all carries no total, so it never pays for the count.
+    assert directory.counting == [False, False]
     ordered = sorted(players, key=lambda one: one.key.order)
     assert [card.player_id for card in first.cards] == [
         one.player_id for one in ordered[:20]

@@ -28,6 +28,7 @@ from app.modules.discovery.infrastructure.directory_model import (
     DirectoryTagORM,
 )
 from tests.api import players_world as players
+from tests.api.discovery_world import a_crowd
 
 ROW = "/api/v1/new-in-raketa"
 ALL = "/api/v1/new-in-raketa/all"
@@ -43,11 +44,19 @@ async def a_player(client, name: str, **profile) -> dict:
     return {"id": player_id, "token": token, "headers": players.auth(token)}
 
 
-async def row(client, mailbox, reader: dict) -> list[dict]:
+async def whole_row(client, mailbox, reader: dict) -> dict:
     await mailbox.drain()
     read = await client.get(ROW, headers=reader["headers"])
     assert read.status_code == 200, read.text
-    return read.json()["players"]
+    return read.json()
+
+
+async def row(client, mailbox, reader: dict) -> list[dict]:
+    return (await whole_row(client, mailbox, reader))["players"]
+
+
+async def total(client, mailbox, reader: dict) -> int:
+    return (await whole_row(client, mailbox, reader))["total"]
 
 
 async def see_all(client, mailbox, reader: dict, **params) -> dict:
@@ -146,9 +155,12 @@ async def test_bartek_and_ola_are_on_tomeks_row_ola_first(
     await players.rate_in(session_factory, bartek["id"], Sport.PADEL, mu=2.35)
     await players.rate_in(session_factory, bartek["id"], Sport.BADMINTON, mu=2.10)
 
-    cards = await row(client, mailbox, tomek)
+    read = await whole_row(client, mailbox, tomek)
+    cards = read["players"]
 
     assert names(cards) == ["ola", "bartek"]
+    # Bartek holds two sports, and is counted once.
+    assert read["total"] == 2
     ola_card, bartek_card = cards
     assert ola_card["player_id"] == str(ola["id"])
     assert ola_card["days_since_joined"] == 1
@@ -349,6 +361,119 @@ async def test_never_the_reader_a_block_either_way_or_a_switched_off_player(
 
     await switches(client, hidden, on=True)
     assert "hidden" in names(await row(client, mailbox, tomek))
+
+
+# --------------------------------------------------------------------------- #
+# The total: everybody new, counted up to 100 (#812)
+# --------------------------------------------------------------------------- #
+
+
+async def test_the_total_counts_the_month_under_the_rows_own_exclusions(
+    client, mailbox, walk, tomek
+):
+    walk.to(timedelta(days=35))
+    await a_player(client, "old")
+    walk.to(timedelta(days=30))
+    await a_player(client, "edge")
+    blocked = await joins(client, walk, "blocked", days=5)
+    blocker = await joins(client, walk, "blocker", days=4)
+    hidden = await joins(client, walk, "hidden", days=3)
+    await joins(client, walk, "seen", days=2)
+    walk.to(timedelta(days=1))
+    await players.register(client, "halfway")
+    reader = await a_player(client, "reader")
+    walk.to_now()
+    await blocks(client, reader, blocked)
+    await blocks(client, blocker, reader)
+    await switches(client, hidden, on=False)
+
+    # Neither the reader, a block either way, the switched off, the one who
+    # never finished sign-up, nor anybody 30 days in.
+    assert await total(client, mailbox, reader) == 1
+    assert await total(client, mailbox, tomek) == 4
+
+    await switches(client, hidden, on=True)
+    assert await total(client, mailbox, tomek) == 5
+
+
+async def test_an_empty_month_totals_nought(client, mailbox, tomek):
+    assert await whole_row(client, mailbox, tomek) == {"players": [], "total": 0}
+
+
+async def test_the_total_stops_at_100_and_the_row_and_see_all_stand(
+    client, mailbox, session_factory, clock, walk, tomek
+):
+    walk.to_now()
+    yesterday = clock.now() - timedelta(days=1)
+    await a_crowd(session_factory, 99, joined_at=yesterday)
+    assert await total(client, mailbox, tomek) == 99
+
+    await a_crowd(session_factory, 1, joined_at=yesterday, named="hundredth")
+    assert await total(client, mailbox, tomek) == 100
+
+    await a_crowd(session_factory, 5, joined_at=yesterday, named="more")
+    read = await whole_row(client, mailbox, tomek)
+    assert read["total"] == 100
+    assert len(read["players"]) == 10
+    assert len((await see_all(client, mailbox, tomek))["players"]) == 20
+
+
+async def test_the_count_from_ten_leaves_out_who_the_row_leaves_out(
+    client, mailbox, session_factory, clock, walk, tomek
+):
+    """Ten new yesterday fill the row, so the month is counted — and the count
+    holds the row's own exclusions, which the row's ten never test."""
+
+    walk.to(timedelta(days=35))
+    await a_player(client, "old")
+    walk.to(timedelta(days=30))
+    await a_player(client, "edge")
+    blocked = await joins(client, walk, "blocked", days=5)
+    blocker = await joins(client, walk, "blocker", days=4)
+    hidden = await joins(client, walk, "hidden", days=3)
+    await joins(client, walk, "seen", days=2)
+    await players.register(client, "halfway")
+    walk.to_now()
+    await blocks(client, tomek, blocked)
+    await blocks(client, blocker, tomek)
+    await switches(client, hidden, on=False)
+    await a_crowd(session_factory, 6, joined_at=clock.now() - timedelta(days=40))
+    await a_crowd(
+        session_factory, 10, joined_at=clock.now() - timedelta(days=1), named="new"
+    )
+
+    read = await whole_row(client, mailbox, tomek)
+
+    assert len(read["players"]) == 10
+    assert "seen" not in names(read["players"])
+    # The ten and Seen: nobody blocked either way, switched off, half signed
+    # up, 30 days in or older.
+    assert read["total"] == 11
+
+
+async def test_the_total_is_free_below_ten_and_one_count_from_ten(
+    client, mailbox, session_factory, clock, statements, walk, tomek
+):
+    """**At most one statement more** than the row read before its total.
+    Every statement a total could cost is the directory's — the neighbours'
+    (the session, the blocks, Friends, the rating) are the cards', and move
+    with their owners — and the row read the directory once: ``who_joined``."""
+
+    walk.to_now()
+    yesterday = clock.now() - timedelta(days=1)
+    await a_crowd(session_factory, 9, joined_at=yesterday)
+    await mailbox.drain()
+    with statements.counting() as nine:
+        assert (await client.get(ROW, headers=tomek["headers"])).json()["total"] == 9
+
+    await a_crowd(session_factory, 3, joined_at=yesterday, named="later")
+    with statements.counting() as twelve:
+        assert (await client.get(ROW, headers=tomek["headers"])).json()["total"] == 12
+
+    assert len(nine.naming("discovery_players")) == 1
+    the_row, the_count = twelve.naming("discovery_players")
+    assert the_row == nine.naming("discovery_players")[0]
+    assert "count(" in the_count.lower() and "joined_at" in the_count
 
 
 # --------------------------------------------------------------------------- #

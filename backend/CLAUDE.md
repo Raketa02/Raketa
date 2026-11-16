@@ -187,8 +187,10 @@ tests.
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse `tests/conftest.py`'s fixtures rather than standing up new app/db instances:
   **`clock`** — check an expiry by moving time (`clock.move(timedelta(hours=1))`), never by
-  waiting — and **`mailbox`**, which delivers through the real worker so a test reads the
-  emails, links and codes a person would.
+  waiting — **`mailbox`**, which delivers through the real worker so a test reads the
+  emails, links and codes a person would, and **`statements`**, which counts the SQL statements
+  a request sends (`with statements.counting() as sent:`) for a test that holds a read to its
+  cost (#812).
 - `tests/demands/` — every outward port, parameterised over every adapter in its register
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)); a port with no
   row fails the suite. A new provider or consumer gets a new register.

@@ -28,15 +28,12 @@ from app.modules.discovery.presentation.dependencies import (
     ReportOnScreenDep,
 )
 from app.modules.discovery.presentation.schemas import (
-    NewInRaketaPlayerSchema,
     OnScreenRequest,
     NewInRaketaPageResponse,
     NewInRaketaResponse,
     SameLevelPageResponse,
-    SameLevelPlayerSchema,
     SameLevelResponse,
     SameVibePageResponse,
-    SameVibePlayerSchema,
     SameVibeResponse,
     key_of,
     same_level_key_of,
@@ -82,11 +79,7 @@ _BLOCKS_UNREADABLE: dict[int | str, dict[str, Any]] = {
 async def read_new_in_raketa(
     user: CurrentUserDep, use_case: ReadNewInRaketaDep
 ) -> NewInRaketaResponse:
-    return NewInRaketaResponse(
-        players=[
-            NewInRaketaPlayerSchema.of(card) for card in await use_case.execute(user.id)
-        ]
-    )
+    return NewInRaketaResponse.of(await use_case.execute(user.id))
 
 
 @new_in_raketa_router.get(
@@ -147,11 +140,7 @@ async def read_new_in_raketa_page(
 async def read_same_level(
     user: CurrentUserDep, use_case: ReadSameLevelDep
 ) -> SameLevelResponse:
-    return SameLevelResponse(
-        players=[
-            SameLevelPlayerSchema.of(card) for card in await use_case.execute(user.id)
-        ]
-    )
+    return SameLevelResponse.of(await use_case.execute(user.id))
 
 
 @same_level_router.get(
@@ -216,11 +205,7 @@ async def read_same_level_page(
 async def read_same_vibe(
     user: CurrentUserDep, use_case: ReadSameVibeDep
 ) -> SameVibeResponse:
-    return SameVibeResponse(
-        players=[
-            SameVibePlayerSchema.of(card) for card in await use_case.execute(user.id)
-        ]
-    )
+    return SameVibeResponse.of(await use_case.execute(user.id))
 
 
 @same_vibe_router.get(

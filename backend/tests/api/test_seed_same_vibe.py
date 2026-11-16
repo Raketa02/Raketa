@@ -14,6 +14,8 @@ writes them; one friendship stands in for the friends layer, which
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from sqlalchemy import func, select
 
@@ -162,7 +164,10 @@ async def test_the_screen_holds_and_a_second_run_changes_nothing(
     assert await stored_events(session_factory) == before
     assert not again.created and not again.retagged
     assert read.fresh == 10
-    assert screen.startswith("Same vibe: 10 on her row (10 fresh)")
+    # Her line counts everybody in See all, fewer than a hundred here (#812).
+    assert re.match(
+        r"Same vibe: 10 on her row of (\d+) \(10 fresh\), \1 in See all", screen
+    )
 
 
 async def test_a_store_from_before_her_six_tags_is_given_them(

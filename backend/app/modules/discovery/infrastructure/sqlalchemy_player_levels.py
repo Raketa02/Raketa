@@ -14,6 +14,11 @@ ids left out), with every level each of them holds in the sports compared.
 **Columns, never ORM objects**, as the ranking reads its rows: a wide window
 hands back thousands. **The least Uncertainty in a sport** is one ``min`` over
 ``ix_discovery_levels_sport_sigma``, a single index probe.
+
+**The row's total, when the windows didn't settle it** (#812), is one count:
+the directory's players who may be on a row, each once by construction, with
+an ``EXISTS`` on a level in one of the reader's sports — the primary key's
+probe — and a ``LIMIT`` at the cap inside it, so the scan stops at 100.
 """
 
 from __future__ import annotations
@@ -32,6 +37,7 @@ from app.modules.discovery.infrastructure.dialect_insert import insert_into
 from app.modules.discovery.infrastructure.directory_model import DirectoryPlayerORM
 from app.modules.discovery.infrastructure.levels_model import DiscoveryLevelORM
 from app.modules.discovery.infrastructure.sqlalchemy_player_directory import (
+    count_up_to,
     may_be_on_a_row,
 )
 
@@ -138,6 +144,23 @@ class SqlAlchemyPlayerLevels:
             if await self._session.scalar(anybody):
                 shared.append(sport)
         return tuple(shared)
+
+    async def how_many_hold(
+        self, sports: Collection[Sport], *, leaving_out: Collection[UUID], up_to: int
+    ) -> int:
+        if not sports:
+            return 0
+        return await count_up_to(
+            self._session,
+            select(DirectoryPlayerORM.player_id).where(
+                may_be_on_a_row(leaving_out),
+                exists().where(
+                    DiscoveryLevelORM.player_id == DirectoryPlayerORM.player_id,
+                    DiscoveryLevelORM.sport.in_(sorted(one.value for one in sports)),
+                ),
+            ),
+            up_to,
+        )
 
     async def least_doubt(self, sports: Collection[Sport]) -> Mapping[Sport, float]:
         least = {}

@@ -12,16 +12,17 @@ paths:
 
 # Discovery
 
-Decisions that are load-bearing and not obvious from the code (#793, #794, #795, #796;
+Decisions that are load-bearing and not obvious from the code (#793, #794, #795, #796, #812;
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-§4–§7, §9, §10; `docs/specs/home-rows/` §4.6, §6–§9, §12, §16). The words are root
+§4–§7, §9, §10; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§6; `docs/specs/home-rows/` §4.6, §6–§9, §12, §16). The words are root
 `CONTEXT.md`'s *Discovery* section and the words §31.5–§31.8, §31.10.
 
 - **The people rows' context, with no aggregate and no event of its own** — it registers nothing
   in the catalog. It owns *Same competitive level players*, *New in Raketa* and *Same vibe
   players*, their See all reads and the copies they read. **New in Raketa** (#793), **Same
-  competitive level** (#794, with the current levels), **Same vibe** (#795) and **the rest
-  count** (#796) are built.
+  competitive level** (#794, with the current levels), **Same vibe** (#795), **the rest
+  count** (#796) and **each row's total** (#812) are built.
 - **The player directory, a stated exception to *derived, never stored*** (ADR-0204 §10;
   `backend/CLAUDE.md`): `discovery_players` (migration 0073) — **one row per account**: the
   nickname (`users`), and, once it holds a Player profile, `plays` with the profile's *joined*
@@ -303,3 +304,46 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   the `users` row and runs the real follower.
 - **Not seeded**: nothing on the dev store rests, since five reported days can't be walked in one
   run and the seed reports none. A rested card is walked in the API tests.
+- **Each row's read answers a `total`** (#812; ADR-0205 §6; `domain/totals.py`): how many the row
+  could show — **everybody who qualifies, never its good matches** — under the row's own `WHERE`
+  and the reader's blocks, **each person once**, `0` for an empty or hidden row; FOR YOU's line
+  count and *See all N ›*. ADR-0205 calls them the rows' *pools*; the code doesn't, since **Pool**
+  is the glossary's word for whom a game is dealt to. Additive on the wire
+  (`NewInRaketaResponse`, `SameLevelResponse`, `SameVibeResponse`); See all carries none. **Counted
+  up to 100** (`COUNTED_UP_TO`, `capped`), because the phone draws *99+* past 99: counting on buys
+  nothing on screen and costs a scan of everybody who qualifies. **Each adds at most one statement
+  to its row's read, and none scores anybody**:
+  - *New in Raketa*: **the row itself when it came back short of ten** (it is everybody); otherwise
+    `how_many_joined`, one count with a `LIMIT 100` inside it (`count_up_to`) on
+    `ix_discovery_players_joined_at`'s range.
+  - *Same vibe*: **`count(*) OVER ()` on the first batch's page** (`alike(…, counting=True)`,
+    `Alike.listed`), over every player the `WHERE` keeps before the `LIMIT` — read from the top,
+    so its list is everybody sharing a tag. **Never a second pass**, and a later batch and See all
+    don't count: the window holds the whole list before the sort.
+  - *Same competitive level*: **what the windows already read** (`_Widening.read`, distinct players)
+    once they read everybody (`read_everybody`) or 100; otherwise `how_many_hold`, one count over the
+    directory with an `EXISTS` on a level in one of the reader's sports — each player once by
+    construction — and a `LIMIT 100` (`count_up_to`). **Never another window**, and nobody's %
+    worked out. A row that fills in a near window with fewer than 100 read is the one that counts.
+  - **A count never answers fewer than the cards**: it is a later statement, so under READ
+    COMMITTED it can see somebody leave whom the row read; each count's answer is
+    `max(what the row read, the count)`.
+  - **The cap is a `LIMIT 100`, not the ticket's 101**: a 101st row would tell 100 from more than
+    100, which an answer capped at 100 never does.
+  - **Held by `statements`** (`tests/conftest.py`, any API test's): each row's API test counts the
+    statements on the row's own tables, where any total's cost lands (the neighbours' — the session,
+    the blocks, Friends, the rating — are the cards', and move with their owners): New in Raketa
+    reads the directory once below ten and twice from ten, the second a count; Same vibe reads the
+    tag rows twice, the reader's and the one pass, and See all's pass has no window; Same
+    competitive level counts nothing after a drained or hundred-strong read and once, with one
+    window read, otherwise. **Each count is walked against every exclusion** where only it could let
+    somebody in. `tests/unit/test_same_level_widening.py` holds the total to the brute force, at most
+    one count. **The seed** fails each layer unless its total is its See all's length, capped.
+  - **Measured at 50,000** (#812; a scratch Postgres 17 in Docker on the laptop, the real adapters,
+    50,000 synthetic players written straight into the three tables — 2–6 tags each, padel for all,
+    tennis for 40%, squash for 30, about 1,900 new in the month): `how_many_joined` 1.1 ms (5.9 ms
+    uncapped, for scale); `how_many_hold` 1.3 ms in padel and tennis and 1.3 ms in squash, where
+    only 30 qualify — the planner drives a small sport from its levels, so the count never walks
+    the directory; Same vibe's first batch 117 ms counting against 106 ms without, the window's
+    whole cost (that store's pass is slower than #795's 62 ms: more tags held). ADR-0205 §6's timing
+    of Home on the phone still comes before the branch merges.

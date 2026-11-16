@@ -15592,11 +15592,19 @@
             "type": "array",
             "title": "Players",
             "description": "Up to 10: the 10 newest of the last 30 days, those you aren't connected with first (someone who asked you among them), then those you sent a request to, then your friends \u2014 newest first within each. **Empty hides the row.**"
+          },
+          "total": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "How many the row could show: everybody who joined in the last 30 days \u2014 each person once, under the row's own exclusions \u2014 **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N \u203a*: who there is to explore, never how many are good matches. `0` with an empty row."
           }
         },
         "type": "object",
         "required": [
-          "players"
+          "players",
+          "total"
         ],
         "title": "NewInRaketaResponse"
       },
@@ -18385,11 +18393,19 @@
             "type": "array",
             "title": "Players",
             "description": "Up to 10: **fresh** good matches first \u2014 70% even or more, neither your friend nor somebody you asked \u2014 best % first; then the **gaps** at the right \u2014 your friends, those you asked and weaker matches \u2014 best % first. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row**: you hold no level anywhere, or nobody shares a sport with you."
+          },
+          "total": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "How many the row could show: everybody holding a level in any sport you hold one in \u2014 each person once, under the row's own exclusions \u2014 **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N \u203a*: who there is to explore, never how many are good matches. `0` with an empty row."
           }
         },
         "type": "object",
         "required": [
-          "players"
+          "players",
+          "total"
         ],
         "title": "SameLevelResponse"
       },
@@ -18562,11 +18578,19 @@
             "type": "array",
             "title": "Players",
             "description": "Up to 10: **fresh** good matches first \u2014 2 shared tags or more, neither your friend nor somebody you asked; somebody who asked you counts \u2014 most in common first; then the **gaps** at the right \u2014 your friends, those you asked and 1-tag matches \u2014 in the same order. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row.**"
+          },
+          "total": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "How many the row could show: everybody sharing at least one Social tag with you \u2014 each person once, under the row's own exclusions \u2014 **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N \u203a*: who there is to explore, never how many are good matches. `0` with an empty row."
           }
         },
         "type": "object",
         "required": [
-          "players"
+          "players",
+          "total"
         ],
         "title": "SameVibeResponse"
       },

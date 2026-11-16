@@ -40,6 +40,7 @@ from app.engines.racketskill.core import (
 )
 from app.engines.racketskill.update_v1 import MovedRating, Stakes
 from app.kernel import Sport, instant
+from app.modules.discovery.application.same_level import WINDOWS
 from app.modules.discovery.domain.levels import Band, CurrentLevel
 from app.modules.discovery.infrastructure.levels_model import DiscoveryLevelORM
 from app.modules.matchmaking.domain.balance import forecast_the_sides
@@ -47,6 +48,7 @@ from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
+from tests.api.discovery_world import a_crowd
 
 ROW = "/api/v1/same-level"
 ALL = "/api/v1/same-level/all"
@@ -151,10 +153,14 @@ def forecast(sport: Sport, yours: tuple[float, float], theirs: tuple[float, floa
 
 
 async def row(client, mailbox, reader: dict) -> list[dict]:
+    return (await whole_row(client, mailbox, reader))["players"]
+
+
+async def whole_row(client, mailbox, reader: dict) -> dict:
     await mailbox.drain()
     read = await client.get(ROW, headers=reader["headers"])
     assert read.status_code == 200, read.text
-    return read.json()["players"]
+    return read.json()
 
 
 async def see_all(client, mailbox, reader: dict, **params) -> dict:
@@ -226,7 +232,7 @@ async def test_the_row_is_hidden_while_the_reader_has_no_level(
     kuba = await a_player(client, "kuba")
     await rated(session_factory, kuba, Sport.PADEL, 2.80)
 
-    assert await row(client, mailbox, ola) == []
+    assert await whole_row(client, mailbox, ola) == {"players": [], "total": 0}
     assert await see_all(client, mailbox, ola) == {
         "players": [],
         "next": None,
@@ -234,7 +240,9 @@ async def test_the_row_is_hidden_while_the_reader_has_no_level(
     }
 
     await rated(session_factory, ola, Sport.PADEL, 2.75, sigma=UNSURE)
-    assert names(await row(client, mailbox, ola)) == ["kuba"]
+    read = await whole_row(client, mailbox, ola)
+    assert names(read["players"]) == ["kuba"]
+    assert read["total"] == 1
 
 
 async def test_only_players_who_share_a_sport_with_the_reader(
@@ -244,10 +252,14 @@ async def test_only_players_who_share_a_sport_with_the_reader(
     await rated(session_factory, ewa, Sport.BADMINTON, 2.70)
     await a_player(client, "nobody")
 
-    cards = await row(client, mailbox, tomek)
+    read = await whole_row(client, mailbox, tomek)
+    cards = read["players"]
 
     assert "ewa" not in names(cards) and "nobody" not in names(cards)
     assert set(names(cards)) == {"zofia", "kuba", "bartek"}
+    # Kuba shares padel and tennis with Tomek, and is counted once; Zofia's
+    # squash is nobody's here.
+    assert read["total"] == 3
 
 
 async def test_each_player_is_in_the_sport_where_the_two_are_evenest(
@@ -408,11 +420,133 @@ async def test_nobody_blocked_switched_off_or_not_playing_is_on_it(
     halfway_id, _ = await players.register(client, "halfway")
     await rated(session_factory, {"id": halfway_id}, Sport.PADEL, 2.71)
 
-    everyone = names(await row(client, mailbox, tomek))
+    read = await whole_row(client, mailbox, tomek)
+    everyone = names(read["players"])
     page = await see_all(client, mailbox, tomek)
 
     assert set(everyone) == {"zofia", "bartek"}
     assert set(names(page["players"])) == {"zofia", "bartek"}
+    assert read["total"] == 2
+
+
+# --------------------------------------------------------------------------- #
+# The total: everybody sharing a sport, counted up to 100 (#812)
+# --------------------------------------------------------------------------- #
+
+
+def the_windows(sent) -> list[str]:
+    """The level windows a read sent: each reads the ring's players with
+    their faces."""
+
+    return [
+        one
+        for one in sent.naming("discovery_levels")
+        if "discovery_players.photo_id" in one
+    ]
+
+
+def the_counts(sent) -> list[str]:
+    return [one for one in sent.naming("discovery_levels") if "count(" in one.lower()]
+
+
+async def test_a_row_that_read_everybody_has_its_total_for_nothing(
+    client, mailbox, statements, tomek, crowd
+):
+    """Three players: the row widens to everybody, so what the windows read
+    is the total, and no statement counts it."""
+
+    await mailbox.drain()
+    with statements.counting() as sent:
+        read = (await client.get(ROW, headers=tomek["headers"])).json()
+
+    assert read["total"] == 3
+    assert len(the_windows(sent)) == len(WINDOWS)
+    assert the_counts(sent) == []
+
+
+async def test_a_row_filled_in_its_first_window_counts_once_and_stops_at_100(
+    client, mailbox, session_factory, statements, tomek
+):
+    """Twelve sure players at Tomek's own padel fill the row in the first
+    window; everybody else sharing a sport plays tennis far above him. **At most one
+    statement more** than the row read before its total — its levels, one
+    window, the least doubt in his two sports — and it stops at 100, without
+    a second window."""
+
+    await a_crowd(session_factory, 12, levels={Sport.PADEL: (2.71, SURE)})
+    await a_crowd(session_factory, 87, levels={Sport.TENNIS: (5.5, SURE)}, named="far")
+    await mailbox.drain()
+    with statements.counting() as sent:
+        read = (await client.get(ROW, headers=tomek["headers"])).json()
+
+    assert len(read["players"]) == 10 and read["total"] == 99
+    assert len(the_windows(sent)) == 1
+    [count] = the_counts(sent)
+    before_its_total = [one for one in sent.naming("discovery_levels") if one != count]
+    assert len(before_its_total) == 1 + 1 + 2
+
+    await a_crowd(session_factory, 1, levels={Sport.TENNIS: (5.5, SURE)}, named="th")
+    assert (await whole_row(client, mailbox, tomek))["total"] == 100
+    await a_crowd(session_factory, 8, levels={Sport.TENNIS: (5.5, SURE)}, named="m")
+    assert (await whole_row(client, mailbox, tomek))["total"] == 100
+
+
+async def test_the_count_leaves_out_who_the_row_leaves_out(
+    client, mailbox, session_factory, statements, tomek
+):
+    """The row fills in its first window, so the rest is counted. Everybody
+    the row must leave out plays padel far above Tomek, where no window read
+    reaches: only the count could let them in."""
+
+    await a_crowd(session_factory, 12, levels={Sport.PADEL: (2.71, SURE)})
+    await a_crowd(session_factory, 3, levels={Sport.TENNIS: (5.5, SURE)}, named="t")
+    await a_crowd(session_factory, 5, levels={Sport.BADMINTON: (2.71, SURE)}, named="b")
+    blocked = await a_player(client, "blocked")
+    await rated(session_factory, blocked, Sport.PADEL, 4.5)
+    blocks_him = await client.post(
+        "/api/v1/blocks",
+        json={"player_id": str(blocked["id"])},
+        headers=tomek["headers"],
+    )
+    assert blocks_him.status_code == 204, blocks_him.text
+    blocker = await a_player(client, "blocker")
+    await rated(session_factory, blocker, Sport.PADEL, 4.5)
+    blocks_tomek = await client.post(
+        "/api/v1/blocks",
+        json={"player_id": str(tomek["id"])},
+        headers=blocker["headers"],
+    )
+    assert blocks_tomek.status_code == 204, blocks_tomek.text
+    shy = await a_player(client, "shy")
+    await rated(session_factory, shy, Sport.PADEL, 4.5)
+    await players.closed_to_new_people(client, shy["token"])
+    halfway_id, _ = await players.register(client, "halfway")
+    await rated(session_factory, {"id": halfway_id}, Sport.PADEL, 4.5)
+    await mailbox.drain()
+
+    with statements.counting() as sent:
+        read = (await client.get(ROW, headers=tomek["headers"])).json()
+
+    assert len(read["players"]) == 10
+    assert len(the_windows(sent)) == 1 and len(the_counts(sent)) == 1
+    # The twelve at his padel and the three far up in his tennis; nobody
+    # blocked either way, switched off, half signed up, or in badminton alone.
+    assert read["total"] == 15
+
+
+async def test_a_hundred_read_in_the_windows_are_the_total_for_nothing(
+    client, mailbox, session_factory, statements, tomek
+):
+    await a_crowd(session_factory, 101, levels={Sport.PADEL: (2.71, SURE)})
+    await mailbox.drain()
+    with statements.counting() as sent:
+        read = (await client.get(ROW, headers=tomek["headers"])).json()
+
+    assert len(read["players"]) == 10 and read["total"] == 100
+    assert len(the_windows(sent)) == 1
+    assert the_counts(sent) == []
+    page = await see_all(client, mailbox, tomek)
+    assert len(page["players"]) == 20 and page["next"] is not None
 
 
 # --------------------------------------------------------------------------- #

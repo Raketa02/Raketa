@@ -10,13 +10,24 @@ rows. ``forget`` deletes both.
 playing, *Show me to new people* on, and none of the ids left out — the reader
 and every block either way, tens at most, as one ``NOT IN``.
 
+**New in Raketa's total is one count over the month's range** (#812):
+``ix_discovery_players_joined_at`` read from 30 days back, the same ``WHERE``,
+stopping at the cap — a ``LIMIT`` inside the count (``count_up_to``, which
+Same competitive level's count shares), so a busy month is never counted
+whole.
+
 **Same vibe counts shared tags in SQL, portably** (#795): one pass over
 ``discovery_player_tags`` grouped by player counts how many of the reader's
 each holds and how many they hold in all, ordered most in common first and
 paged by the last card's key. **One statement per read**:
 the page is a derived table, joined back to its players' tags, so the counts
 and the chips come from one snapshot. The chips are put in the vocabulary's
-order here, where the vocabulary may be read.
+order here, where the vocabulary may be read. **The row's total rides the
+same statement** (#812): with ``counting``, ``count(*) OVER ()`` on the page,
+taken over every player the ``WHERE`` keeps before the ``LIMIT``, so everybody
+sharing a tag is counted in the pass the row already makes and never in a
+second one. Only the row's first batch asks: the window holds the whole list
+before the sort, which See all and a later batch have no use for.
 """
 
 from __future__ import annotations
@@ -26,14 +37,15 @@ from datetime import timezone
 from typing import Any, Final, final
 from uuid import UUID
 
-from sqlalchemy import and_, case, delete, distinct, exists, func, or_, select
+from sqlalchemy import Select, and_, case, delete, distinct, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.stored_time import stored_instant
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Sport, invariant
 from app.modules.discovery.domain.directory import DirectoryEntry
 from app.modules.discovery.domain.new_in_raketa import Joiner
-from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer, vibe_player
+from app.modules.discovery.domain.ports import Alike
+from app.modules.discovery.domain.same_vibe import VibeKey, vibe_player
 from app.modules.discovery.infrastructure.directory_model import (
     DirectoryPlayerORM,
     DirectoryTagORM,
@@ -120,6 +132,18 @@ class SqlAlchemyPlayerDirectory:
             for row in (await self._session.execute(query)).all()
         )
 
+    async def how_many_joined(
+        self, *, after: Instant, leaving_out: Collection[UUID], up_to: int
+    ) -> int:
+        return await count_up_to(
+            self._session,
+            select(DirectoryPlayerORM.player_id).where(
+                may_be_on_a_row(leaving_out),
+                DirectoryPlayerORM.joined_at > after.astimezone(timezone.utc),
+            ),
+            up_to,
+        )
+
     async def which_may_be_listed(
         self, players: Collection[UUID], *, leaving_out: Collection[UUID]
     ) -> frozenset[UUID]:
@@ -147,19 +171,26 @@ class SqlAlchemyPlayerDirectory:
         sport: Sport | None,
         after: VibeKey | None,
         limit: int,
-    ) -> tuple[VibePlayer, ...]:
-        if not mine or limit <= 0:
-            return ()
-        counted = _counted_against(mine)
-        in_common = counted.c.in_common
-        not_shared = counted.c.held - counted.c.in_common
+        counting: bool = False,
+    ) -> Alike:
+        invariant(limit > 0, f"a page holds somebody: limit {limit}")
+        if not mine:
+            return Alike(players=(), listed=0 if counting else None)
+        shared = _counted_against(mine)
+        in_common = shared.c.in_common
+        not_shared = shared.c.held - shared.c.in_common
+        # Over every row the WHERE keeps, before the LIMIT: the read's whole
+        # list, counted in the pass it already makes — and only when asked,
+        # since the window holds the whole list before the sort.
+        everybody = [func.count().over().label("everybody")] if counting else []
         page = (
             select(
                 DirectoryPlayerORM.player_id.label("player_id"),
                 DirectoryPlayerORM.nickname.label("nickname"),
                 DirectoryPlayerORM.photo_id.label("photo_id"),
+                *everybody,
             )
-            .join(counted, counted.c.player_id == DirectoryPlayerORM.player_id)
+            .join(shared, shared.c.player_id == DirectoryPlayerORM.player_id)
             .where(may_be_on_a_row(leaving_out))
             .order_by(in_common.desc(), not_shared, DirectoryPlayerORM.player_id)
             .limit(limit)
@@ -190,13 +221,18 @@ class SqlAlchemyPlayerDirectory:
                 listed.c.nickname,
                 listed.c.photo_id,
                 DirectoryTagORM.tag,
+                *([listed.c.everybody] if counting else []),
             ).join(DirectoryTagORM, DirectoryTagORM.player_id == listed.c.player_id)
         )
         tags_of: dict[UUID, list[str]] = {}
         named: dict[UUID, tuple[str, UUID | None]] = {}
+        # An empty page lists nobody: no row carries the count, and it is 0.
+        listed_in_all = 0
         for row in rows.all():
             tags_of.setdefault(row.player_id, []).append(row.tag)
             named[row.player_id] = (row.nickname, row.photo_id)
+            if counting:
+                listed_in_all = row.everybody
         found = (
             vibe_player(
                 player_id,
@@ -207,11 +243,14 @@ class SqlAlchemyPlayerDirectory:
             )
             for player_id, (nickname, photo_id) in named.items()
         )
-        return tuple(
-            sorted(
-                (one for one in found if one is not None),
-                key=lambda one: one.key.order,
-            )
+        return Alike(
+            players=tuple(
+                sorted(
+                    (one for one in found if one is not None),
+                    key=lambda one: one.key.order,
+                )
+            ),
+            listed=listed_in_all if counting else None,
         )
 
     async def sports_alike(
@@ -253,6 +292,17 @@ def may_be_on_a_row(leaving_out: Collection[UUID]) -> Any:
             DirectoryPlayerORM.player_id.not_in(sorted(leaving_out, key=str))
         )
     return and_(*conditions)
+
+
+async def count_up_to(session: AsyncSession, listed: Select[Any], up_to: int) -> int:
+    """How many rows ``listed`` selects — **counted no further than
+    ``up_to``**: a ``LIMIT`` inside the count, so a read that finds that many
+    stops there (#812)."""
+
+    counted = await session.scalar(
+        select(func.count()).select_from(listed.limit(up_to).subquery("listed"))
+    )
+    return counted or 0
 
 
 def _counted_against(mine: frozenset[str]) -> Any:

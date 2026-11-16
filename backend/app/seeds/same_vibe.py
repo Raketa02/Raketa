@@ -57,6 +57,7 @@ from app.modules.discovery.domain.same_vibe import (
     is_fresh,
     is_good_match,
 )
+from app.modules.discovery.domain.totals import capped
 from app.modules.friends.application.commands import AskCommand
 from app.modules.friends.domain.friendship import Where
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
@@ -185,7 +186,8 @@ async def assert_same_vibe(
 
     async with session_factory() as session:
         her = await _id_of(session, THE_POPULATED_PLAYER.email)
-        row = await build_read_same_vibe(session, settings=settings).execute(her)
+        read = await build_read_same_vibe(session, settings=settings).execute(her)
+        row = read.cards
         everyone: list[SameVibeCard] = []
         page = await build_read_same_vibe_page(session, settings=settings).execute(
             her, sport=None, after=None
@@ -203,6 +205,10 @@ async def assert_same_vibe(
         raise RuntimeError(
             f"{len(everyone)} players in her Same vibe See all and {len(row)} "
             "on her row"
+        )
+    if read.total != capped(len(everyone)):
+        raise RuntimeError(
+            f"her Same vibe line counts {read.total} and See all lists {len(everyone)}"
         )
     if not {card.player_id for card in row} <= {card.player_id for card in everyone}:
         raise RuntimeError("her Same vibe row holds a player See all doesn't list")
@@ -231,7 +237,8 @@ async def assert_same_vibe(
                 )
     fresh = sum(_is_fresh(card) for card in row)
     return (
-        f"Same vibe: {len(row)} on her row ({fresh} fresh), {len(everyone)} in "
+        f"Same vibe: {len(row)} on her row of {read.total} ({fresh} fresh), "
+        f"{len(everyone)} in "
         f"See all — "
         + ", ".join(f"{counts[n]} sharing {n}" for n in reversed(EVERY_COUNT))
         + f" (pill: {', '.join(sport.value.title() for sport in page.sports)})"

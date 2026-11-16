@@ -20,6 +20,10 @@
 >
 > **Calls marked *(a call)*** were made while specifying PRD #789 or writing this document, and are
 > open for the product owner to overrule ([§17](#17-calls-made-without-a-ruling)).
+>
+> **Amended by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §6** for each people row's **total** — the count on its FOR YOU line — built by
+> [#812](https://github.com/Raketa02/Raketa/issues/812): §6.9, §7.5, §8.8 and §15.
 
 ---
 
@@ -333,6 +337,17 @@ Tomek's row: 7 fresh good matches, then **Zofia** (a friend, 91%), **Ania** (req
 **Piotr** (a stranger, 60%). Marta starts playing and reads 85% → Marta joins the fresh ones and Piotr
 leaves. Two more fresh matches → Ania leaves, then Zofia.
 
+### 6.9 Its total (ADR-0205 §6)
+
+- **Everybody holding a level in a sport the reader holds one in**, counted **once however many
+  sports they share**, and never anyone §4.6 leaves out. **0** while the reader holds no level.
+- **Who there is to explore, never the good matches**: nobody's % is worked out to count it, so a
+  busy city reads *99+* and that is intended.
+- **Counted up to 100**, drawn *99+* past 99, on the line and on *See all N ›* alike — whichever
+  sport See all opens on.
+- **Free once the row's own windows read everybody, or a hundred**; otherwise one count, which stops
+  at 100. No window is read to count.
+
 ---
 
 ## 7. New in Raketa
@@ -381,6 +396,14 @@ No weekday names (a call made while writing PRD #789).
   and a sport keeps only players rated in it.
 - **If a sport leaves nobody:** *Nobody new plays squash yet*. (It can, between the read that offered
   the chip and the read of the sport.)
+
+### 7.5 Its total (ADR-0205 §6)
+
+- **Everybody who joined in the last 30 days**, strictly, as §7.1 reads them — friends and those the
+  reader asked included, anyone §4.6 leaves out not. **0** with nobody new.
+- **Counted up to 100**, drawn *99+* past 99, on the line and on *See all N ›*.
+- **Free when the row holds fewer than ten** — the row is everybody — and otherwise one count over
+  the month's sign-ups, which stops at 100.
 
 ---
 
@@ -435,6 +458,15 @@ being §8.3's order.
 The You spec said *a tag is shown, never scored*. **Tags now order one row**, *Same vibe players*, and
 still score nothing else: no proposal, card, forecast, level or other row reads one. *A tag is not an
 intent* stands.
+
+### 8.8 Its total (ADR-0205 §6)
+
+- **Everybody sharing at least one tag with the reader**, counted **once however many they share**,
+  and never anyone §4.6 leaves out. **0** with nobody sharing one.
+- **Who there is to explore, never the good matches**: one shared tag counts as six do.
+- **Counted up to 100**, drawn *99+* past 99, on the line and on *See all N ›*.
+- **Counted in the row's own pass over the tags**, never a second one, and never by reading more of
+  the order.
 
 ---
 
@@ -595,6 +627,7 @@ A withdrawn Join request tells nobody.
 | *% even*'s ceiling | 96% |
 | A good match | ≥ 70% even · ≥ 2 shared tags |
 | People rows | 10 cards each |
+| A people row's total | everybody who qualifies, each once, counted up to 100 · *99+* past 99 |
 | New in Raketa | joined in the last 30 days, strictly |
 | Vibe % | 50 · 75 · 88 · 94 · 97 · 98 for 1–6 shared tags |
 | Rest | on screen on 5 different days, per row |
