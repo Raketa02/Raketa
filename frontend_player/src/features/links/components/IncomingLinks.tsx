@@ -10,10 +10,10 @@
  * - **A group link** opens **Join a group** with the link in its field and its group found under it,
  *   over Play › Groups so *back* is the list — or, in an administrator area, switches an account that
  *   plays to Player first (`playersLinkMove`).
- * - **A friend link** (#756) is opened as the account (`friends`' opening), and lands on **Home**,
- *   where its owner's request now waits at the top — nowhere for the account's own link or a
- *   friend's; a dead link, or one whose owner the account blocked, is a toast. In an administrator
- *   area it moves as a group link does.
+ * - **A friend link** (#756) is opened as the account (`friends`' opening), and lands on **Home with
+ *   Needs your answer up** (#817), where its owner's request now waits — nowhere for the account's
+ *   own link or a friend's; a dead link, or one whose owner the account blocked, is a toast. In an
+ *   administrator area it moves as a group link does.
  * - **An invitation's link** is read (`by-token`) and weighed against the account signed in
  *   (`invitationLinkOutcome`): the account's own invitation has the invitation sheet offer that club's
  *   again; another address's gets a sheet naming it, with **Sign out**; a spent link says why.
@@ -46,7 +46,7 @@ import {
 import { linkOpeningMessage, useOpenFriendLink } from '@/features/friends/types';
 import { joinGroupRouteFor } from '@/features/groups/types';
 import { rereadNotices } from '@/features/notifications/types';
-import { openTab } from '@/features/shell/types';
+import { openNeedsYourAnswer, openTab } from '@/features/shell/types';
 import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 import { BottomSheet, Button, Note, theme } from '@/shared/ui';
@@ -130,10 +130,11 @@ function GroupLink({ link, over }: { readonly link: LinkOf<'join'>; readonly ove
 }
 
 /**
- * **A friend link: opened as the account, then Home** (#756, the friends mechanics §4.2–§4.3). The
- * opening puts the owner's request on Home — *wants to be your friend · Invited you to Raketa* — and
- * the player lands there; Home and the bell are read again by the opening, the bell's re-read handed
- * in. **The account's own
+ * **A friend link: opened as the account, then Home with Needs your answer up** (#756, #817; the
+ * friends mechanics §4.2–§4.3; ADR-0205 §1). The opening puts the owner's request in the sheet —
+ * *{nickname} wants to be your friend* — and the player lands on it; Home and the bell are read
+ * again by the opening, the bell's re-read handed in, so the sheet opens on what Home says then: a
+ * request the owner's block swallowed lands on Home as it is, with no sheet. **The account's own
  * link, or a friend's, moves nobody**: there is nothing to answer. **A link that cannot be opened is
  * said, as a toast, wherever the player is** — a dead one *Nothing at that link*, one whose owner
  * they blocked how to see it, a failed one why — and let go: it is never tried again.
@@ -162,7 +163,7 @@ function FriendLink({ link, over }: { readonly link: LinkOf<'friend'>; readonly 
         open(link.code).then(
           (relation) => {
             letGoOf(link);
-            if (friendLinkLanding(relation) === 'home') openTab('home', where.current);
+            if (friendLinkLanding(relation) === 'home') openNeedsYourAnswer(where.current);
           },
           (error: AppError) => {
             showToast({ message: linkOpeningMessage(error), hold: 'read' });

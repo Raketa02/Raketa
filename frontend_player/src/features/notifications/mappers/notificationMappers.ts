@@ -12,7 +12,13 @@ import type { GameKind } from '@/features/proposals/types';
 import type { components } from '@/generated/schema';
 
 import type { NotificationChoices } from '../domain/choices';
-import { targetOf, type Notice, type NoticeTarget, type RecentNotices } from '../domain/notice';
+import {
+  homeTargetOf,
+  targetOf,
+  type Notice,
+  type NoticeTarget,
+  type RecentNotices,
+} from '../domain/notice';
 import { NOTICE_KINDS, type NoticeKind } from '../domain/vocabulary';
 import type { SentFacts } from '../schemas/pushNotice';
 
@@ -54,7 +60,9 @@ function toNoticeKind(wire: string): NoticeKind | undefined {
 
 /**
  * Where a tap goes — **Home for a notice that opens Home** (#727, #731), whatever its kind, since
- * it names nothing a later release could have meant differently; **the record of the person a
+ * it names nothing a later release could have meant differently — **with Needs your answer up for a
+ * friend request and a friends game invitation** (#817, `homeTargetOf`), whose cards wait there
+ * now; **the record of the person a
  * notice names for one that opens a record** (#753), and nowhere when it names nobody; **the
  * questionnaire of the sport an ask names, and the picker of the group and sport it names** (#758),
  * nowhere without them; `undefined` for a game's notice, a sport or a kind this build cannot name,
@@ -62,7 +70,7 @@ function toNoticeKind(wire: string): NoticeKind | undefined {
  */
 export function toTarget(facts: SentFacts): NoticeTarget | undefined {
   const { opens, gameId, poolId } = facts;
-  if (opens === 'HOME') return { opens: 'home' };
+  if (opens === 'HOME') return homeTargetOf(toNoticeKind(facts.kind));
   if (opens === 'RECORD') {
     const playerId = facts.playerId ?? null;
     return playerId === null ? undefined : { opens: 'record', playerId };

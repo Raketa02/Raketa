@@ -16,6 +16,13 @@
  * and it is only ever *held*, as the deck holds the card in flight. **Where a game opens is the
  * shell's** (`openGame`): this feature never imports the shell that mounts it.
  *
+ * **Its overlays are drawn here, or inside the sheet that asked for them** (#817): Needs your answer
+ * holds *TO CONFIRM* and *FRIENDS GAME*, whose **Confirm**, **Fix** and *Accept* open the
+ * confirmation, the setup and *It's a game!* — and a sheet opened from a sheet is drawn inside it,
+ * because iOS drops a second native window opened over the first (design-system 9.1). So a sheet
+ * that carries the fill in (`FillInASheet`) hosts them while it is up, and they come back here when
+ * it goes. What the fill has up is `over`, which that sheet reads to step aside under it.
+ *
  * ## The ten seconds (§6.5)
  *
  * `book` starts them for a yes `waitsForUndo` — *Book it now*, or any rescue. The toast draws the
@@ -65,7 +72,10 @@
  * a toast, as a confirmation does.
  *
  * **A friends game's last seat taken by an *Accept*** (#759) is *It's a game!* too, raised through
- * `celebrate` — the accept is no yes, and the fill only draws the moment.
+ * `celebrate` — the accept is no yes, and the fill only draws the moment. **So is its refused share's
+ * confirmation** (`confirmOwn`, #817): confirmed the card's own way — the *Accept* again — but drawn
+ * here with the fill's other sheets, so a sheet carrying the fill in steps aside under it rather than
+ * closing beneath it when the confirmed accept takes the invitation off Home's read.
  *
  * A delayed yes refused for a game that is gone — full, over, no longer the player's — leaves the
  * details it was said on, as the details' own refusal does.
@@ -97,10 +107,13 @@ import {
 } from '../domain/fill';
 import {
   FillContext,
+  FillHostContext,
   type BookAsk,
   type ConfirmAsk,
   type Fill,
   type FillAsk,
+  type FillOver,
+  type OwnConfirmation,
 } from '../hooks/useFill';
 import { paymentWindowAt } from '../domain/home';
 import { rereadAfterFill, useBookingYes, useConfirmPaymentYes } from '../hooks/useFillWrites';
@@ -146,6 +159,8 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   const [, setTick] = useState(0);
   const [settingUp, setSettingUp] = useState<{ readonly then?: () => void } | null>(null);
   const [confirming, setConfirming] = useState<ConfirmAsk | null>(null);
+  /** A share no yes carries, confirmed its own way — a friends game's *Accept* (#817). */
+  const [confirmingOwn, setConfirmingOwn] = useState<OwnConfirmation | null>(null);
   /** *It's a game!* up — with the sides the yes held, or read off the booking when it held none. */
   const [celebrating, setCelebrating] = useState<Celebrating | null>(null);
   /** A rescue whose booking or seat went while it was reached for — the sheet says why. */
@@ -297,39 +312,37 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
     [client],
   );
 
+  const over: FillOver =
+    celebrating !== null
+      ? 'itsAGame'
+      : settingUp !== null || confirming !== null || confirmingOwn !== null || gone !== undefined
+        ? 'sheet'
+        : 'none';
+
   const fill = useMemo<Fill>(
     () => ({
       counting: counting?.card.proposalId ?? null,
+      over,
       book,
       setUpThen: (then) => setSettingUp({ then }),
       confirm: setConfirming,
+      confirmOwn: setConfirmingOwn,
       answered,
       refused,
       celebrate,
     }),
-    [counting, book, answered, refused, celebrate],
+    [counting, over, book, answered, refused, celebrate],
   );
 
-  return (
-    <FillContext.Provider value={fill}>
-      {children}
+  // The sheets hosting the overlays, oldest first — none, and they are drawn here.
+  const [hosts, setHosts] = useState<readonly string[]>([]);
+  const enter = useCallback((host: string) => {
+    setHosts((held) => [...held, host]);
+    return () => setHosts((held) => held.filter((one) => one !== host));
+  }, []);
 
-      {counting === null ? null : (
-        <View
-          pointerEvents="box-none"
-          style={[s.toastHost, { bottom: toastAbove + insets.bottom + theme.space.sm }]}
-        >
-          <UndoToast
-            message={bookingIn(undoSecondsLeft(counting.endsAt, Date.now()))}
-            actionLabel={FILL_COPY.undo.action}
-            actionAccessibilityLabel={FILL_COPY.undo.actionSpoken}
-            onAction={() => setCounting(null)}
-            endsAt={counting.endsAt}
-            windowMs={UNDO_WINDOW_MS}
-          />
-        </View>
-      )}
-
+  const overlays = (
+    <>
       <PaymentSetupSheet
         visible={settingUp !== null}
         onClose={() => setSettingUp(null)}
@@ -354,6 +367,22 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         />
       )}
 
+      {confirmingOwn === null ? null : (
+        <ConfirmPaymentSheet
+          key={`own-${confirmingOwn.seatChargeId}`}
+          seatChargeId={confirmingOwn.seatChargeId}
+          {...(confirmingOwn.confirmBy === undefined ? {} : { confirmBy: confirmingOwn.confirmBy })}
+          {...(confirmingOwn.timeTo === undefined ? {} : { timeTo: confirmingOwn.timeTo })}
+          seat="yours"
+          onClose={() => setConfirmingOwn(null)}
+          refusal={confirmingOwn.refusal}
+          yesAgain={async () => {
+            await confirmingOwn.yesAgain();
+            setConfirmingOwn((open) => (open === confirmingOwn ? null : open));
+          }}
+        />
+      )}
+
       {celebrating === null ? null : (
         <ItsAGameFor
           {...celebrating}
@@ -368,6 +397,32 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
           }}
         />
       )}
+    </>
+  );
+
+  return (
+    <FillContext.Provider value={fill}>
+      <FillHostContext.Provider value={{ overlays, hosts, enter }}>
+        {children}
+
+        {counting === null ? null : (
+          <View
+            pointerEvents="box-none"
+            style={[s.toastHost, { bottom: toastAbove + insets.bottom + theme.space.sm }]}
+          >
+            <UndoToast
+              message={bookingIn(undoSecondsLeft(counting.endsAt, Date.now()))}
+              actionLabel={FILL_COPY.undo.action}
+              actionAccessibilityLabel={FILL_COPY.undo.actionSpoken}
+              onAction={() => setCounting(null)}
+              endsAt={counting.endsAt}
+              windowMs={UNDO_WINDOW_MS}
+            />
+          </View>
+        )}
+
+        {hosts.length === 0 ? overlays : null}
+      </FillHostContext.Provider>
     </FillContext.Provider>
   );
 }

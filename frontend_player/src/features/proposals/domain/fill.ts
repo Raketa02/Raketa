@@ -242,6 +242,20 @@ export interface PaymentToConfirm extends LiveYes {
 }
 
 /**
+ * **What a *TO CONFIRM* payment hands the fill's confirmation** — the deck it was dealt in, and the
+ * payment with its time — whether it was pressed on You › Payments' row or on Needs your answer's
+ * tile (#817).
+ */
+export function confirmAskOf(
+  payment: PaymentToConfirm,
+): { readonly dealtIn: DealtIn } & Confirmation {
+  return {
+    dealtIn: { groupId: payment.groupId, sport: payment.sport, kind: payment.kind },
+    ...confirmationOf(payment),
+  };
+}
+
+/**
  * **The reader's refused share on one game** — a booked game's details offer its confirmation. A
  * booking takes its proposal's id (#541), so the row for the game Home opens is found by it.
  */

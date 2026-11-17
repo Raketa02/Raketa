@@ -12,9 +12,10 @@
  * group with nothing dealt still draws.
  *
  * The shell composes `GamesAndMoneyRow` into the You tab's ACCOUNT group, and a route file under
- * `you/` mounts its screen. `LiveYeses` is You › Payments' section, **handed to that screen by its
- * route file** rather than imported by `payments`: the deck will open the payment setup as a sheet
- * (A2.4), so the edge between the two features points from here to there.
+ * `you/` mounts its screen. `LiveYeses` and `PaymentsToConfirm` are You › Payments' sections,
+ * **handed to that screen by its route file** rather than imported by `payments`: the deck will open
+ * the payment setup as a sheet (A2.4), so the edge between the two features points from here to
+ * there.
  *
  * Since #556 it is Home's too: the booked games on the rail, a booked game's details, its chat and
  * its result — see the block below on Home.
@@ -118,7 +119,7 @@ export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
  * screen, where each step at the court is acted on (#664); and the keys a tap re-reads, so the
  * screen it opens draws what the notice said rather than a read from before it, as `paymentKeys`
  * crosses for the fill. A notice arriving while the app is open re-reads Home's two reads
- * (`rereadHome`): the games, the bar's badge with them, and *TO CONFIRM* above them.
+ * (`rereadHome`): the games, the bar's badge with them, and *TO CONFIRM*, in Needs your answer.
  */
 export { bookedResultRoute, gameRoute, rescueRoute } from './components/proposalRoutes';
 export { proposalKeys } from './hooks/proposalKeys';
@@ -147,12 +148,31 @@ export type { HomeRanking } from './domain/home';
 export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
 
 /**
- * **FRIENDS GAME · n** (#759; friends 12) — Home's row of friends game invitations, at the very top:
- * the shell composes it, handing in the bell's re-read, since answering takes the invitation's row
- * off the bell. The words cross for the suites that walk it.
+ * **Needs your answer's first two sections** (#817, ADR-0205 §1) — ***TO CONFIRM · n***, a tile per
+ * payment to confirm, and ***FRIENDS GAME · n***, one invitation at a time on the paging rail (#759;
+ * friends 12). They were Home's rows. The shell composes them in the sheet the header's envelope
+ * opens, handing the bell's re-read to the invitations, since answering takes one off the bell; and
+ * counts what waits in all four sections off this feature's reads (`useAnswersWaiting`). The words
+ * cross for the suites that walk them.
  */
-export { FriendsGamesRow, type FriendsGamesRowProps } from './components/FriendsGamesRow';
+export { ToConfirmSection } from './components/ToConfirmSection';
+export { FriendsGameSection, type FriendsGameSectionProps } from './components/FriendsGameSection';
+export { useAnswersWaiting, type AnswersWaiting } from './hooks/useNeedsYourAnswer';
+export type { FriendsGamesWaiting } from './hooks/useHome';
 export { FRIENDS_GAME_COPY } from './components/friendsGameCopy';
+/**
+ * **The fill, carried into a sheet** (#817) — read outside it (`useSheetFill`), provided again
+ * inside it (`FillInASheet`), which also draws the fill's confirmation, setup and *It's a game!* over
+ * it: a sheet keeps the root's contexts only, and a sheet opened from a sheet is drawn inside it.
+ * `over` is what the fill has up, which Needs your answer steps aside under.
+ */
+export {
+  FillInASheet,
+  useSheetFill,
+  type FillInASheetProps,
+  type SheetFill,
+} from './components/FillInASheet';
+export type { FillOver } from './hooks/useFill';
 
 /**
  * **The friends card and *Find a court*** (#757; the friends screens §7.2–§7.3) — the card a

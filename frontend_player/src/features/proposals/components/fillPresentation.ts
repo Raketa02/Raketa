@@ -19,7 +19,13 @@ import type {
   ItsAGamePicture,
   PaymentToConfirm,
 } from '../domain/fill';
-import type { PaymentWindow, SeatAtStake, YourTime } from '../domain/home';
+import {
+  deadlineAhead,
+  paymentWindowAt,
+  type PaymentWindow,
+  type SeatAtStake,
+  type YourTime,
+} from '../domain/home';
 import { gameDayOf, type GameDay } from '../domain/when';
 
 import {
@@ -106,6 +112,56 @@ export function confirmNote(time: YourTime, seat: SeatAtStake): string {
  */
 export function refusedToast(window: PaymentWindow, seat: SeatAtStake): string {
   return FILL_COPY.refused[seat][window];
+}
+
+/**
+ * ***To confirm · 2*** — Needs your answer's section heading, counting its tiles (#817, ADR-0205
+ * §1), drawn uppercase by the row frame as every section's is.
+ */
+export function toConfirmHeading(count: number): string {
+  return `${FILL_COPY.toConfirm.title} · ${count}`;
+}
+
+/**
+ * **What a *TO CONFIRM* payment says, as a row or a tile** — You › Payments' row and Needs your
+ * answer's tile draw the same words by the same rules (#555, #625, #643, #817), so they are read
+ * here once, at an instant:
+ *
+ * - the game, as a live yes is drawn — *Padel · Saturday 15:00*, its day said against `readAt`;
+ * - the club and the share — *Bonarka Arena · 32 zł*;
+ * - **the time**, `running` while it is ahead (drawn amber): *Confirm your payment by 14:40*, or
+ *   *Fix your card by 14:40* before the cut-off with *Nothing is paid now* under it; once it ran
+ *   out, that the seat is open to others until they confirm — no window named;
+ * - **the button**, *Confirm* or *Fix*, and its name aloud.
+ */
+export interface ToConfirmWords {
+  readonly title: string;
+  readonly place: string;
+  readonly time: string;
+  readonly running: boolean;
+  readonly nothingPaidNow: boolean;
+  readonly action: string;
+  readonly spoken: string;
+}
+
+export function toConfirmWords(
+  payment: PaymentToConfirm,
+  readAt: number,
+  now: number,
+): ToConfirmWords {
+  const day = gameDayOf(payment.startsAt, readAt);
+  const by = deadlineAhead(payment.confirmBy, now);
+  // Once the time is gone the payment reads as the server's next read will: no window named.
+  const window = paymentWindowAt(payment.confirmBy, payment.timeTo, now);
+  return {
+    title: liveYesTitle(payment, day),
+    place: `${clubName(payment)}${LINE_JOIN}${shareWords(payment)}`,
+    time: toConfirmRowLine(by === undefined ? undefined : { by, window }),
+    running: by !== undefined,
+    nothingPaidNow: window === 'FIX_THE_CARD',
+    action: FILL_COPY.toConfirm.action[window],
+    spoken: toConfirmLabel(payment, day, window),
+  };
 }
 
 /**

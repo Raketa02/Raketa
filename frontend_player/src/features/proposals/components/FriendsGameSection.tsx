@@ -1,10 +1,12 @@
 /**
- * **FRIENDS GAME · n** — Home's row of friends game invitations, at the very top
- * ([#759](https://github.com/Raketa02/Raketa/issues/759); the friends screens §6.1; friends 12;
- * Q13; the mechanics §9).
+ * **FRIENDS GAME · n** — Needs your answer's section of friends game invitations, after TO CONFIRM
+ * and before FRIEND REQUESTS ([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1;
+ * home refactor 2). It was Home's row at the very top from
+ * [#759](https://github.com/Raketa02/Raketa/issues/759) (the friends screens §6.1; friends 12; the
+ * mechanics §9).
  *
  * ```
- * FRIENDS GAME · 1
+ * FRIENDS GAME · 2
  * ┌───────────────────────────────────────────────┐
  * │ tomek.k's game                      ⏱ 1 h 35 │   the clock: the deck ribbon's, coral under an hour
  * │   [TK]✓    [ZB]✓    [AK]     [EW]             │   ✓ on those In, faded on those still to answer
@@ -13,20 +15,24 @@
  * │ tomek.k paid the court                        │   Whole court only
  * │ ┌─ Not this time ─┐ ┌─ Accept and pay 25 zł ─┐ │   Whole court: Accept
  * └───────────────────────────────────────────────┘
+ *                      ━ ·                            the dots, from two
  * ```
  *
  * ## Only while an invitation waits
  *
- * **The row and its title are there only while they hold a card** (the screens §6): nothing while
+ * **The section and its title are there only while they hold a card** (ADR-0205 §1): nothing while
  * Home's read is in flight, refused or holds none. The read is Home's (`friends_games`), the soonest
  * to end first, and nothing re-sorts it. A card whose time runs out while it is on screen leaves at
- * that instant (`invitationWaits`, on the read's clock), as the server would no longer list it.
+ * that instant (`useFriendsGamesWaiting`, on the read's clock), as the server would no longer list
+ * it — and Needs your answer counts the same list, so it never opens on a section left empty.
  *
- * ## A horizontal row
+ * ## One big tile at a time
  *
- * One card takes the content width; two or more are 7.7's peeking rail — the friend requests row's
- * own geometry, so the two rows under one another read as one kind of thing: both are Home's row
- * frame (`HomeRow`, #798).
+ * **The paging rail** (Q9, Q46): every card the content width, snapping one at a time, as Your
+ * games pages — and **its dots from two** (`dotsAlone`, 7.18 as amended): one invitation has nothing
+ * to page to, and the heading counts it. **The card is as it was on Home** — title, clock, faces,
+ * the when/where/sport line, a refusal said on it, **Not this time** and **Accept and pay 25 zł** or
+ * **Accept** — mock 2's tile.
  *
  * ## Each card answers itself
  *
@@ -34,7 +40,11 @@
  *   the payment setup first (the fill's); a bank that wants them present, or a decline, opens the
  *   confirmation (`ConfirmPaymentSheet`, the deck's), which is the accept again once confirmed.
  *   *Whole court*: nothing held. In, the card moves to Your games — and the last seat taken is
- *   ***It's a game!***, as for any game (`useFill().celebrate`).
+ *   ***It's a game!***, as for any game (`useFill().celebrate`). **All three are the fill's** — the
+ *   confirmation too (`confirmOwn`, #817) — drawn inside the sheet that carries it (`FillInASheet`),
+ *   so the sheet steps aside under them, and *It's a game!* closes it for good (the shell's). The
+ *   confirmation was the card's own sheet until then, and the sheet could close beneath it when the
+ *   confirmed accept took the invitation off Home's read.
  * - **Not this time** — the card leaves.
  * - **A full week, a game at that hour** — the sentence on the card, which stays. **An invitation
  *   that ended, a game off or under way** — a toast, and Home read again: the card leaves.
@@ -42,9 +52,9 @@
  * Either answer re-reads the bell (`onAnswered`, `notifications`', handed in by the shell): the
  * invitation's row there is the server's to take off.
  *
- * **The border is `ink`, not mock 12's coral** — §1.2's coral list is closed, and a card waiting on
- * the reader is the friend requests row's ink (5.1's selected border); the clock under an hour is
- * `coralInk`, coral text on paper (Part 16, 2026-11-07).
+ * **The border is `ink`, not mock 12's or mock 2's coral** — §1.2's coral list is closed, and a card
+ * waiting on the reader is the friend request tile's ink (5.1's selected border); the clock under an
+ * hour is `coralInk`, coral text on paper (Part 16, 2026-11-07).
  */
 
 import { Feather } from '@expo/vector-icons';
@@ -61,7 +71,6 @@ import {
   acceptPaymentOf,
   answerRefusalOf,
   invitationFaces,
-  invitationWaits,
   type FriendsGameInvitation,
   type InvitationFace,
 } from '../domain/friendsGame';
@@ -71,9 +80,8 @@ import {
   useConfirmFriendsPayment,
   useDeclineFriendsGame,
 } from '../hooks/useFriendsGameWrites';
-import { useHomeFriendsGames, useReadClock } from '../hooks/useHome';
+import type { FriendsGamesWaiting } from '../hooks/useHome';
 
-import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
 import { FILL_COPY } from './fillCopy';
 import { FRIENDS_GAME_COPY } from './friendsGameCopy';
 import {
@@ -93,25 +101,29 @@ import { YesTile } from './YesTile';
 
 const COPY = FRIENDS_GAME_COPY.invitation;
 
-export interface FriendsGamesRowProps {
+export interface FriendsGameSectionProps {
   /**
-   * **An invitation was answered** — the bell's re-read, handed in by the shell: answering on Home
-   * clears the invitation from the bell (the mechanics §9), and the bell is `notifications`'.
+   * **The invitations still waiting, and the clock they wait on** — `useAnswersWaiting`'s, which the
+   * sheet's owner reads all session to count them, handed back in: the envelope's count and the
+   * section's tiles are one list on one clock, which has run since the launch rather than from this
+   * section's mount.
+   */
+  readonly invitations: FriendsGamesWaiting;
+  /**
+   * **An invitation was answered** — the bell's re-read, handed in by the shell: answering clears
+   * the invitation from the bell (the mechanics §9), and the bell is `notifications`'.
    */
   readonly onAnswered: () => Promise<unknown>;
 }
 
-export function FriendsGamesRow({ onAnswered }: FriendsGamesRowProps) {
-  const { invitations, readAt, receivedAt } = useHomeFriendsGames();
-  // The clocks tick while an invitation waits: *1 h 35* counts down, and a card leaves at its end.
-  const now = useReadClock(readAt, receivedAt, (invitations?.length ?? 0) > 0);
-
-  const waiting = (invitations ?? []).filter((one) => invitationWaits(one.friendsGame, now));
-  if (waiting.length === 0) return null;
+export function FriendsGameSection({ invitations, onAnswered }: FriendsGameSectionProps) {
+  // The clock ticks while an invitation waits: *1 h 35* counts down, and a card leaves at its end.
+  const { waiting, now } = invitations;
+  if (waiting === undefined || waiting.length === 0) return null;
 
   return (
     <HomeRow heading={friendsGamesHeading(waiting.length)} testID="friends-games">
-      <HomeRowRail cards={waiting}>
+      <HomeRowRail cards={waiting} geometry="paging" dotsAlone={false}>
         {(invitation, width) => (
           <InvitationCard
             key={invitation.bookingId}
@@ -143,7 +155,6 @@ function InvitationCard({
   const decline = useDeclineFriendsGame();
   const confirmPayment = useConfirmFriendsPayment();
   const [failure, setFailure] = useState<string>();
-  const [confirming, setConfirming] = useState<YourPayment | null>(null);
 
   const { bookingId, friendsGame: game, startsAt } = invitation;
   const sender = game.senderNickname;
@@ -177,6 +188,25 @@ function InvitationCard({
     }
   };
 
+  /**
+   * **The bank's check, or a card declined** — the fill's confirmation, which is the accept again once
+   * confirmed. The fill draws it, over Needs your answer, so the sheet steps aside under it rather
+   * than closing beneath it when the confirmed accept takes the invitation off Home's read.
+   */
+  const confirmShare = (payment: YourPayment) =>
+    fill.confirmOwn({
+      seatChargeId: payment.seatChargeId,
+      ...(payment.confirmBy === undefined ? {} : { confirmBy: payment.confirmBy }),
+      ...(payment.timeTo === undefined ? {} : { timeTo: payment.timeTo }),
+      refusal: (error) => answerRefusal(error, startsAt),
+      yesAgain: async () => {
+        await confirmPayment.mutateAsync(payment.seatChargeId);
+        // Confirmed is the accept made: asked again, it says whether the game is whole now.
+        const again = await accept.mutateAsync(bookingId);
+        if (again.accepted) landed(again.whole);
+      },
+    });
+
   const sendAccept = () => {
     setFailure(undefined);
     accept.mutate(bookingId, {
@@ -189,7 +219,7 @@ function InvitationCard({
         if (payment === undefined) return;
         switch (acceptPaymentOf(payment)) {
           case 'confirm':
-            setConfirming(payment);
+            confirmShare(payment);
             return;
           case 'setUp':
             fill.setUpThen(sendAccept);
@@ -286,25 +316,6 @@ function InvitationCard({
           style={s.accept}
         />
       </View>
-
-      {confirming === null ? null : (
-        <ConfirmPaymentSheet
-          key={confirming.seatChargeId}
-          seatChargeId={confirming.seatChargeId}
-          {...(confirming.confirmBy === undefined ? {} : { confirmBy: confirming.confirmBy })}
-          {...(confirming.timeTo === undefined ? {} : { timeTo: confirming.timeTo })}
-          seat="yours"
-          onClose={() => setConfirming(null)}
-          refusal={(error) => answerRefusal(error, startsAt)}
-          yesAgain={async () => {
-            await confirmPayment.mutateAsync(confirming.seatChargeId);
-            // Confirmed is the accept made: asked again, it says whether the game is whole now.
-            const again = await accept.mutateAsync(bookingId);
-            setConfirming(null);
-            if (again.accepted) landed(again.whole);
-          }}
-        />
-      )}
     </Card>
   );
 }

@@ -17,7 +17,7 @@ import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { anySeatToOpen, type FriendsGameInvitation } from '../domain/friendsGame';
+import { anySeatToOpen, invitationWaits, type FriendsGameInvitation } from '../domain/friendsGame';
 import {
   openedToKeep,
   withoutLevelAsksIn,
@@ -111,8 +111,30 @@ export function useHomeFriendsGames(): {
 }
 
 /**
- * **Home's two reads, read again** — the games, the badge with them, and *TO CONFIRM* above them
- * (#556, #625): what a notice arriving changes. *Confirm your payment by 14:40 to keep your seat*
+ * **FRIENDS GAME · n, as drawn** (#759, #817) — the invitations still waiting on the read's clock,
+ * which ticks while one does: a card whose time runs out leaves at that instant
+ * (`invitationWaits`), as the server would no longer list it. `undefined` while Home's read is in
+ * flight or refused. Needs your answer's owner reads them once, counts them and hands them to the
+ * section, so the envelope never opens on a section that has nothing left to draw.
+ */
+export interface FriendsGamesWaiting {
+  readonly waiting: readonly FriendsGameInvitation[] | undefined;
+  /** Now, on the read's clock — what each card's countdown and faces are drawn at. */
+  readonly now: number;
+}
+
+export function useFriendsGamesWaiting(): FriendsGamesWaiting {
+  const { invitations, readAt, receivedAt } = useHomeFriendsGames();
+  const now = useReadClock(readAt, receivedAt, (invitations?.length ?? 0) > 0);
+  return {
+    waiting: invitations?.filter((one) => invitationWaits(one.friendsGame, now)),
+    now,
+  };
+}
+
+/**
+ * **Home's two reads, read again** — the games, the badge with them, and *TO CONFIRM*, in Needs your
+ * answer since #817 (#556, #625): what a notice arriving changes. *Confirm your payment by 14:40 to keep your seat*
  * puts a row there, and *Your time to pay ran out* takes the time off it, as the games' lines move
  * with every other notice.
  */

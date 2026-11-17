@@ -58,6 +58,7 @@ import {
   stubBooking,
   stubHomeGames,
 } from '@/test-support/home';
+import { invitation } from '@/test-support/friendsGame';
 import {
   closeNeedsYourAnswer,
   envelope,
@@ -84,6 +85,7 @@ import {
   stubHome,
   stubNotices,
   stubOwnRecord,
+  stubPaymentsToConfirm,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -614,10 +616,11 @@ describe('Home, kept', () => {
 });
 
 /**
- * **Needs your answer** ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1–§2;
- * home refactor 1 and 2): the header's envelope, there only while something waits, and the sheet it
- * opens. What each section's tiles say and do is `friends`' suites'; this is the frame — the header's
- * order, the sheet's title, focus and ways out, the sections' order, and the self-close.
+ * **Needs your answer** ([#816](https://github.com/Raketa02/Raketa/issues/816),
+ * [#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1–§2; home refactor 1 and 2): the
+ * header's envelope, there only while something waits, and the sheet it opens. What each section's
+ * tiles say and do is `friends`' and `proposals`' suites'; this is the frame — the header's order, the
+ * sheet's title, focus and ways out, the four sections' order, and the self-close.
  */
 describe('Needs your answer', () => {
   const INES: Wire['HomeFriendRequestSchema'] = {
@@ -651,6 +654,22 @@ describe('Needs your answer', () => {
     ],
   };
   const SET_ASIDE = `/api/v1/friends/requests/${INES.player_id}/set-aside`;
+  /** A share refused while the reader was elsewhere, waiting in TO CONFIRM (#817). */
+  const A_PAYMENT: Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema'] =
+    {
+      seat_charge_id: 'f1000000-0000-4000-8000-000000000001',
+      refusal: 'AUTHENTICATION_REQUIRED',
+      proposal_id: 'f1000000-0000-4000-8000-000000000002',
+      pool_id: 'f1000000-0000-4000-8000-000000000003',
+      sport: 'PADEL',
+      kind: 'COMPETITIVE',
+      starts_at: '2026-10-03T14:00:00Z',
+      club: { id: 'f1000000-0000-4000-8000-000000000004', name: 'Bonarka Arena' },
+      share_grosze: 3200,
+      book_by: '2026-10-02T11:00:00Z',
+      confirm_by: null,
+      time_to: null,
+    };
 
   /** Home's read, holding `waiting` until *Not now* takes Inés's request off it. */
   function serveHome(waiting: Partial<Wire['HomeResponse']>) {
@@ -719,11 +738,19 @@ describe('Needs your answer', () => {
     expect(header()).toEqual(['bell', 'trophy']);
   });
 
-  it('opens on the envelope, its title taking the focus, FRIEND REQUESTS then ASKED FOR A LEVEL', async () => {
-    serveHome({ friend_requests: [INES], level_asks: [KUBA_ASKS] });
+  it('opens on the envelope, its title taking the focus, TO CONFIRM, FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL', async () => {
+    stubPaymentsToConfirm(transport, [A_PAYMENT]);
+    serveHome({
+      needing_you: 1,
+      friends_games: [invitation()],
+      friend_requests: [INES],
+      level_asks: [KUBA_ASKS],
+    });
     await launchIntoTheApp();
     // Nothing that waits is on Home itself.
     await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(screen.queryByTestId('to-confirm')).toBeNull();
+    expect(screen.queryByTestId('friends-games')).toBeNull();
     expect(screen.queryByTestId('friend-requests')).toBeNull();
     expect(screen.queryByTestId('level-asks')).toBeNull();
     const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
@@ -732,12 +759,32 @@ describe('Needs your answer', () => {
       // Only what the press moves: Home's own launch may move focus before it.
       focus.mockClear();
       await openNeedsYourAnswer();
+      await screen.findByTestId('to-confirm');
 
       expect(focus).toHaveBeenCalledTimes(1);
-      expect(sections()).toEqual([requestsHeading(1), levelAsksHeading(1)]);
+      expect(sections()).toEqual([
+        'To confirm · 1',
+        'Friends game · 1',
+        requestsHeading(1),
+        levelAsksHeading(1),
+      ]);
     } finally {
       focus.mockRestore();
     }
+  });
+
+  /** #817: a payment to confirm or a friends game invitation waits there too, alone. */
+  it.each<[string, () => void]>([
+    ['a payment to confirm', () => stubPaymentsToConfirm(transport, [A_PAYMENT])],
+    ['a friends game invitation', () => serveHome({ friends_games: [invitation()] })],
+  ])('draws the envelope for %s alone', async (_, waiting) => {
+    serveHome({});
+    waiting();
+    await launchIntoTheApp();
+
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    await openNeedsYourAnswer();
+    expect(sections()).toHaveLength(1);
   });
 
   it('hides a section with nothing in it', async () => {

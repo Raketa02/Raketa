@@ -45,14 +45,15 @@ function Row({
   heading = 'Friend requests · 2',
   ...rest
 }: { readonly count: number } & Partial<Omit<HomeRowProps, 'children'>> &
-  Pick<HomeRowRailProps<number>, 'geometry' | 'snap'>) {
-  const { geometry, snap, ...row } = rest;
+  Pick<HomeRowRailProps<number>, 'geometry' | 'snap' | 'dotsAlone'>) {
+  const { geometry, snap, dotsAlone, ...row } = rest;
   return (
     <HomeRow heading={heading} testID="row" {...row}>
       <HomeRowRail
         cards={Array.from({ length: count }, (_, at) => at)}
         {...(geometry === undefined ? {} : { geometry })}
         {...(snap === undefined ? {} : { snap })}
+        {...(dotsAlone === undefined ? {} : { dotsAlone })}
       >
         {(at, width) => <View key={at} testID={`card-${at}`} style={{ width }} />}
       </HomeRowRail>
@@ -304,6 +305,23 @@ describe('the Home row frame', () => {
         nativeEvent: { contentOffset: { x: 2 * (content() + theme.space.sm), y: 0 } },
       });
       expect(current()).toBe(2);
+    });
+
+    const dotsDrawn = () => screen.queryByTestId('pager-dots', { includeHiddenElements: true });
+
+    /** 7.18: a rail of one draws its one dot — the affordance before a second card arrives. */
+    it('draws one dot for a lone card', () => {
+      render(<Row count={1} geometry="paging" />);
+      expect(dotsDrawn()).not.toBeNull();
+    });
+
+    /** 7.18 as amended (#817, Q46): Needs your answer's FRIENDS GAME draws its dots from two. */
+    it('draws its dots from two for a row that asks so', () => {
+      render(<Row count={1} geometry="paging" dotsAlone={false} />);
+      expect(dotsDrawn()).toBeNull();
+
+      screen.rerender(<Row count={2} geometry="paging" dotsAlone={false} />);
+      expect(dotsDrawn()).not.toBeNull();
     });
   });
 

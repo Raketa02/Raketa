@@ -7,6 +7,7 @@ import type { DeckCard, DeckPerson } from './deck';
 import {
   UNDO_WINDOW_MS,
   aPaymentAwaited,
+  confirmAskOf,
   confirmationOf,
   fillOutcome,
   fillRefusal,
@@ -174,6 +175,31 @@ describe('confirmationOf — a refused share to confirm, and its time to pay', (
         timeTo: 'FIX_THE_CARD',
       }),
     ).toEqual({ seatChargeId: 's-1', confirmBy: '2026-10-06T12:40:00Z', timeTo: 'FIX_THE_CARD' });
+  });
+
+  /** #817: the row on You › Payments and the tile in Needs your answer hand the fill the same ask. */
+  it('is a To confirm payment’s ask — the deck it was dealt in, and the payment with its time', () => {
+    expect(
+      confirmAskOf({
+        proposalId: 'p-1',
+        groupId: 'group-1',
+        sport: 'padel',
+        kind: 'competitive',
+        startsAt: '2026-10-03T13:00:00Z',
+        deadline: '2026-10-03T11:00:00Z',
+        club: { id: 'club-1', name: 'Bonarka Arena' },
+        shareGrosze: 3200,
+        seatChargeId: 's-1',
+        refusal: 'AUTHENTICATION_REQUIRED',
+        confirmBy: '2026-10-06T12:40:00Z',
+        timeTo: 'PAY',
+      }),
+    ).toEqual({
+      dealtIn: { groupId: 'group-1', sport: 'padel', kind: 'competitive' },
+      seatChargeId: 's-1',
+      confirmBy: '2026-10-06T12:40:00Z',
+      timeTo: 'PAY',
+    });
   });
 });
 

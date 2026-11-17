@@ -25,13 +25,8 @@ import {
   rereadHomeGroups,
   useInNoGroup,
 } from '@/features/groups/types';
-import { NoticeBell, rereadNotices } from '@/features/notifications/types';
-import {
-  FriendsGamesRow,
-  HomeRail,
-  PaymentsToConfirm,
-  rereadHome,
-} from '@/features/proposals/types';
+import { NoticeBell } from '@/features/notifications/types';
+import { HomeRail, rereadHome } from '@/features/proposals/types';
 import { RankingTrophy, TopTenRow, rereadTopTen } from '@/features/rankings/types';
 import { theme } from '@/shared/ui';
 
@@ -53,24 +48,19 @@ import { HOME_COPY } from './shellCopy';
  * **It still never says nothing is happening.** The line says what the tab **is** and the one under
  * it names the act, which is true whether or not a game is on screen.
  *
- * **A payment to confirm is above the rail** — proposals' *TO CONFIRM*, which draws nothing while
- * there is none: the bar's Home badge counts every payment the player has to confirm, and a count
- * with nothing on the tab to answer it would be a dead end.
- *
  * **A member of a group rated in nothing is asked for a level first** (`groups`' `HomeLevelCard`,
  * [#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7): *Get your level — your
  * groups can't deal you games until you have one.*, at the top, since until she has one nothing
  * under it can happen. It draws nothing for anybody else.
  *
- * **FRIENDS GAME sits at the very top** (`proposals`' row, [#759](https://github.com/Raketa02/Raketa/issues/759);
- * the friends screens §6; Q13: *Friends game → Friend requests → Your games*), drawn only while an
- * invitation waits on the reader — above *TO CONFIRM* too: an invitation runs out in hours, and the
- * mechanics put it at the very top. Answering one re-reads the bell, handed in as for requests.
- *
- * **FRIEND REQUESTS and ASKED FOR A LEVEL are behind the envelope** ([#816](https://github.com/Raketa02/Raketa/issues/816),
- * ADR-0205 §1): `friends`' sections in **Needs your answer**, the sheet the header's envelope opens
- * (`NeedsYourAnswer`). They were Home's rows above Your games from #753 and #765, and the ask no longer
- * stands in place of *Get your level*, which is drawn whether or not someone asked.
+ * **What waits on the reader is behind the envelope** (ADR-0205 §1): **Needs your answer**, the sheet
+ * the header's envelope opens (`NeedsYourAnswer`) — TO CONFIRM and FRIENDS GAME, `proposals`'
+ * ([#817](https://github.com/Raketa02/Raketa/issues/817)), then FRIEND REQUESTS and ASKED FOR A
+ * LEVEL, `friends`' ([#816](https://github.com/Raketa02/Raketa/issues/816)). They were Home's rows
+ * above Your games from #555, #759, #753 and #765, and the ask no longer stands in place of *Get your
+ * level*, which is drawn whether or not someone asked. **The bar's Home badge still counts every
+ * payment to confirm** (`needing_you`): the tab still pulls the player in when money waits, and the
+ * envelope on the tab is where it is answered.
  *
  * **The header reads envelope, bell, trophy** (ADR-0205 §2; home refactor 1): the envelope only while
  * something waits for an answer; `notifications`' bell; and `rankings`' `RankingTrophy`
@@ -87,7 +77,7 @@ import { HOME_COPY } from './shellCopy';
  *
  * **NEW IN RAKETA follows it** (`discovery`'s row, [#801](https://github.com/Raketa02/Raketa/issues/801)),
  * the third of the five: Same competitive level (#802) will stand between them. The pull re-reads it
- * with the rest. **A friend act anywhere moves a person on it** — an answer on FRIEND REQUESTS, the
+ * with the rest. **A friend act anywhere moves a person on it** — an answer in FRIEND REQUESTS, the
  * record a face opens — because its reads list people (`LISTS_PEOPLE`) and every friend write reaches
  * those; the shell hands it nothing for that.
  *
@@ -125,8 +115,6 @@ export const HomeScreen = memo(function HomeScreen() {
       }
     >
       <HomeLevelCard />
-      <FriendsGamesRow onAnswered={() => rereadNotices(client)} />
-      <PaymentsToConfirm />
       <HomeRail
         empty={
           inNoGroup ? { ...HOME_COPY.empty, act: GROUPS_COPY.hottest.groupless } : HOME_COPY.empty

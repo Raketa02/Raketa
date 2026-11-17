@@ -28,7 +28,8 @@
  *   friend request and an ask for a level in Needs your answer. A lone card takes the content
  *   width, as on the peeking rail. It scrolls freely.
  * - **Paging**: every card the content width, snapping one at a time, and 7.18's dots under it,
- *   tracking the scroll — a paging rail takes the dots always.
+ *   tracking the scroll — a paging rail takes the dots always, but for Needs your answer's *FRIENDS
+ *   GAME*, which draws them from two (`dotsAlone`, #817).
  * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
  *   content width — two whole and the third cut, the cut the affordance. **A lone tile keeps its
  *   width**: a portrait the width of the screen would be a poster, not a tile. It scrolls freely.
@@ -180,6 +181,12 @@ export interface HomeRowRailProps<Card> {
   /** A peeking rail that snaps a card at a time. A paging rail always does. */
   readonly snap?: boolean;
   /**
+   * **Whether a paging rail of one draws its one dot** — 7.18's *always*, the default. Needs your
+   * answer's *FRIENDS GAME* draws its dots from two (#817, Q46; 7.18 as amended): one big tile in a
+   * sheet has nothing to page to, and its heading counts it.
+   */
+  readonly dotsAlone?: boolean;
+  /**
    * **Told which cards are on screen** — at least half of each visible, across the page's scroll and
    * the rail's (#804) — whenever either moves, the rail is laid out, the cards change, or the page
    * comes back into view. Only on a page that watches (`PageOnScreen`); a row that does not ask is
@@ -194,6 +201,7 @@ export function HomeRowRail<Card>({
   cards,
   geometry = 'peeking',
   snap = false,
+  dotsAlone = true,
   onScreen,
   children,
 }: HomeRowRailProps<Card>) {
@@ -266,7 +274,11 @@ export function HomeRowRail<Card>({
           ),
         )}
       </ScrollView>
-      {paging ? <PagerDots count={cards.length} current={current} /> : null}
+      {paging && (dotsAlone || cards.length > 1) ? (
+        // Held inside the rail: a card that leaves from the end — an invitation answered or run out —
+        // shortens it with no scroll to say where the rail now stands.
+        <PagerDots count={cards.length} current={Math.min(current, cards.length - 1)} />
+      ) : null}
     </>
   );
 }

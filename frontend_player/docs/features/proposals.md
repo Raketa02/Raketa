@@ -284,8 +284,10 @@ they stand for**. A booked game's Game is in `GET /games` too, so the rail leave
 out of its own cards and `useGamesNeedingYou` leaves them out of the Classic half of the badge; the
 bar's Home count is the two halves added (`useHomeBadge`: the server's `needing_you`, which counts
 the cards that need you and every payment to confirm). Booked cards come first, in their read's
-order. **_TO CONFIRM_ is on Home too**, above the rail: the badge counts a payment to confirm, and a
-count with nothing on the tab to answer it would be a dead end.
+order. **_TO CONFIRM_ was on Home too**, above the rail: the badge counts a payment to confirm, and a
+count with nothing on the tab to answer it would be a dead end. _(Since #817 it waits in Needs your
+answer, behind Home's envelope, a tile per payment — below; the badge still counts it, and the
+envelope on the tab is where it is answered.)_
 
 **A card is the Now card's shell with a booking's content** (`HomeGameCard`): the status as a grey
 tag with the status's dot, _New_ until opened, the sport word; WHERE (club + court), DAY and TIME on
@@ -362,7 +364,8 @@ terminal sentence.
   `refunded_grosze`), below.
 - **The result is today's screen**, opened from the details by _We played_ / _Confirm the result_ —
   no mock draws where the act sits on a booked game.
-- **_TO CONFIRM_ above Home's rail**, because the badge counts it.
+- **_TO CONFIRM_ above Home's rail**, because the badge counts it. _(Moved into Needs your answer by
+  #817, ADR-0205 §1.)_
 - **The status colours**: amber for waiting, a seat open and the two result acts; mint for booked
   and counted; `gameRed` for called off.
 
@@ -1345,9 +1348,10 @@ sentence above it until the line-up asks anew; `court_hour_not_for_sale` lets a 
 _two games waiting_, the sender's hour and week are said in the sheet, above the maximum so the
 maximum stays right above the order (a toast once it is closed).
 
-**FRIENDS GAME · n is `FriendsGamesRow`**, at the very top of Home — above _TO CONFIRM_ too, since an
+**FRIENDS GAME · n was `FriendsGamesRow`**, at the very top of Home — above _TO CONFIRM_ too, since an
 invitation runs out in hours — the friend requests row's geometry, one card full width, two or more
-peeking. A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, `coralInk` under an hour —
+peeking. _(Since #817 it is `FriendsGameSection`, in Needs your answer, on the paging rail — below;
+the card is unchanged.)_ A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, `coralInk` under an hour —
 coral text on paper), the four faces as the yes screen's tiles (✓ — a `mintInk` disc at 6.9's remove
 square's size with the drawn tick — on those In, faded at 0.4 on those still to answer, the reader
 last as _You_), _Saturday 10:00 · Ogrody 33 · Court 3 · Padel ·
@@ -1449,3 +1453,65 @@ the button was.
 **Not seen on a device**: two `onDark` buttons side by side under a long nickname, wrapping at a
 narrow width; the glossed answers' two-line lines in the sheet; the picker with one seat pushed over
 the details.
+
+## Needs your answer's first two sections (#817)
+
+[ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1; home refactor 2. **_TO CONFIRM_ and _FRIENDS GAME_ leave Home for Needs your answer**, the sheet
+Home's envelope opens (`shell`'s), where they stand first and second, before `friends`' FRIEND
+REQUESTS and ASKED FOR A LEVEL. This feature draws them (`ToConfirmSection`, `FriendsGameSection`);
+the shell places them.
+
+- **TO CONFIRM · n is a tile per payment** (`ToConfirmSection`), first because a seat is held with
+  the shortest deadline (Q14, Q32). Each tile is the row it was: _Padel · Saturday 15:00_ (two lines
+  at most), _Bonarka Arena · 32 zł_, then _Confirm your payment by 14:40_ in amber or _Fix your card by
+  14:40_ over _Nothing is paid now_, and **Confirm** or **Fix** at its foot, spoken as the row's.
+  7.7's peeking rail at its standard 0.74 — the one wider card is the request's — every tile as tall
+  as the tallest, so the buttons sit level (Q3). **The time leaves the tile at the deadline, and the
+  tile stays**, saying the seat is theirs to take back while free, as the row did — the ticket's _a
+  tile leaves at its deadline, as today_ is read as today's behaviour, which ADR-0205 §1 states. The
+  read is still its own (`GET /players/me/payments-to-confirm`, ADR-0205 §3): **a read in flight,
+  refused or empty draws nothing**, and counts nothing, so a failed read draws no envelope by itself.
+- **You › Payments keeps `PaymentsToConfirm`**, its card of rows, looking as it did; Home's tab
+  badge still counts every payment to confirm (`needing_you`). **The row and the tile say one thing**
+  (`toConfirmWords`, `fillPresentation.ts`) and hand the fill one ask (`confirmAskOf`,
+  `domain/fill.ts`), so the payment-window rules (Q109, Q113) live once.
+- **FRIENDS GAME · n is one big tile at a time** (`FriendsGameSection`; Q9, Q46): the paging rail,
+  every card the content width, snapping, **its dots from two** (`HomeRowRail`'s `dotsAlone`, 7.18
+  as amended), held inside the rail when a card leaves from its end. The card is #759's, whole.
+  **What it draws and what the sheet counts are one list on one clock**: the section is handed
+  `useAnswersWaiting`'s `friendsGames` — the invitations still waiting on the read's clock — by the
+  sheet's owner, which reads them all session; so the sheet never opens on a section that has
+  stopped drawing, and a section opened late does not start its clock at the read.
+- **What waits is counted here** (`useAnswersWaiting`): the four sections' counts off this feature's
+  reads, and whether a read behind them is on its way — what a link or a notice that asks for the
+  sheet waits on.
+
+**The fill, carried into the sheet** (`useSheetFill` / `FillInASheet`). A sheet keeps the root's
+contexts only — on Android its content is drawn by the root's overlay host, outside the tabs the
+fill is mounted around — so `useFill` inside it would throw on a device while every jest suite (iOS,
+in place) stayed green. The shell reads the fill outside the sheet and hands it in. **And the fill's
+overlays are drawn inside the sheet while it is up**: **Confirm** and **Fix** open the confirmation,
+an invitation's _Accept_ the setup or _It's a game!_ — sheets opened from a sheet, which iOS drops
+when they are a second native window opened beside the first (design-system 9.1). `FillProvider`
+draws them at its own place while no sheet hosts them, and reports what it has up (`over`: nothing,
+a sheet, or _It's a game!_), which Needs your answer steps aside under, and closes for good after
+_It's a game!_. **An invitation's own confirmation is the fill's too** (`confirmOwn`): it was the
+card's own sheet, and the sheet did not know it was up — so a confirmed accept, which takes the
+invitation off Home's read, emptied the sheet and closed it under the confirmation while the accept
+was still asked again. Now the fill draws it, confirmed the card's way (the accept again), and the
+sheet steps aside under it as under the rest.
+
+**Calls left as they are, from #817's review**: a failed _To confirm_ read leaves Home's badge with
+no envelope — ADR-0205 §3 and the decision log §3.6 accept it, the notice and the email carrying the
+deadline; the saved-method read starts when the card mounts, in the sheet, so a first _Accept_
+pressed before it lands is answered by the server's `payment_method_required` and the setup opens
+then, the fill's own fallback; the fill's overlays are handed to the sheet through the host's
+context, so its countdown re-renders the sheet's owner once a second during a deck yes's ten
+seconds; and a portal for every sheet opened from a sheet, in `ModalStage`, would replace the
+record's and the fill's two ways of doing it — a change of its own.
+
+**Not seen on a device**: the To confirm tile and the Friends game tile against mock 2; the paging
+rail's snap in a sheet; the confirmation, the setup and _It's a game!_ over the sheet on iOS (each
+inside it) and on Android (the overlay host's next layer); _It's a game!_ raised as the sheet's own
+tile leaves it.

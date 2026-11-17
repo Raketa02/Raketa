@@ -324,3 +324,37 @@ The walk is `theShell.test.tsx` (_Needs your answer_: the header's order with an
 the mark, the title's focus, the sections' order and hidden empties, ✕, the scrim and the pull, the
 self-close and what arrives after it). **Not seen on a device**: the header against mock 1, the sheet
 against mock 2, the pull and its spring back.
+
+**TO CONFIRM and FRIENDS GAME join the sheet, first and second, and links and notices land on it**
+([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; Q14, Q24, Q25, Q32). The sheet
+reads **TO CONFIRM · n**, **FRIENDS GAME · n**, then `friends`' two — `proposals`'
+`ToConfirmSection` and `FriendsGameSection` above `friends`' sections — and **Home's body is _Get your
+level_, _Your games_ and the five rows**. The envelope counts all four off `proposals`'
+`useAnswersWaiting`: a read in flight or refused counts nothing, so a failed _To confirm_ read draws
+no envelope by itself (ADR-0205 §3). **Home's tab badge is unchanged** — `needing_you`, the payments
+to confirm among it.
+
+- **The fill is carried in** (`proposals`' `useSheetFill` / `FillInASheet`): a sheet keeps the root's
+  contexts only, and the fill is mounted around the tabs, so the shell reads it beside the sheet and
+  hands it in. Its overlays — the confirmation **Confirm** and **Fix** open, the setup an
+  invitation's _Accept_ opens, _It's a game!_ — are drawn inside the sheet while it is up, for the
+  record's iOS reason.
+- **Where the sheet stands grew two states** (`domain/needsYourAnswer`): `underTheFill`, beneath what
+  the fill put up — back when it goes if anything still waits, closed with it when nothing does, and
+  **closed for good once _It's a game!_ was raised**, whatever still waits; and `asked`.
+- **A link or a notice asks for it** (`openNeedsYourAnswer`, `components/needsYourAnswerAsked.ts`):
+  Home laid down as `openTab` lays it, and the kept Home's sheet told, by a module-level listener as
+  `homeStart`'s landing is. **An ask nobody hears is held** for the next Home to subscribe — a stack
+  that began somewhere else gets its Home from `openTab` itself, mounted after the ask — and taken
+  once. The sheet hears the fill again as it opens, so one opened over a fill sheet already up
+  steps aside under it. **Asked, it waits for the reads behind it** — Home's and the payments to
+  confirm, which the link or the notice re-read — and opens once they land if anything waits by then,
+  or stays closed: the sheet is never shown empty. Its callers are `links`' friend link and
+  `notifications`' `FRIEND_REQUEST` and `FRIENDS_GAME_INVITATION`.
+
+The walks: `theShell.test.tsx` (the four sections' order, the envelope for a payment or an invitation
+alone), `proposals`' `friendsGames.test.tsx` and `homeAndBookedGame.test.tsx` (the tiles, answering,
+the setup's and the confirmation's hand-back, _It's a game!_ closing the sheet, the badge), and
+`links`' and `notifications`' suites for the landings. **Not seen on a device**: the To confirm and
+Friends game tiles against mock 2, and every sheet the fill draws over this one — on iOS each is a
+native window opened inside the sheet's; nothing in jest can show that it presents.

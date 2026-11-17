@@ -53,6 +53,7 @@ import {
   stubPaymentMethod,
   stubPush,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { fakePush, type FakePush } from '@/test-support/platform';
 import {
   errorResponse,
@@ -537,10 +538,10 @@ describe('the sender leaving (the mechanics §11.2)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// A seat invitation on Home
+// A seat invitation in Needs your answer
 // ---------------------------------------------------------------------------
 
-describe('a seat invitation on Home', () => {
+describe('a seat invitation in Needs your answer', () => {
   it('shows in FRIENDS GAME like any invitation, the reader in the seat they are invited into', async () => {
     stubHomeGames(transport, [], {
       friends_games: [
@@ -562,6 +563,8 @@ describe('a seat invitation on Home', () => {
       ],
     });
     await launchSignedIn();
+    // FRIENDS GAME waits in Needs your answer, behind Home's envelope, since #817.
+    await openNeedsYourAnswer();
 
     const row = await screen.findByTestId('friends-games');
     expect(within(row).getByText('tomek.k’s game')).toBeTruthy();

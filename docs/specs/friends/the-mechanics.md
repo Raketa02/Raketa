@@ -46,7 +46,8 @@ where **Ania** and **Inés** play. **Zofia** plays with him every week and isn't
    **Not now**: the card goes, the request stays open, and Inés still reads *request sent*. On
    Thursday he accepts from her record, and she is told *"Tomek said yes — you're friends"*.
 2. **Tomek sends Zofia his link** on WhatsApp. She installs Raketa, signs up, and lands on Home with
-   *"Tomek wants to be your friend · Invited you to Raketa"*. She accepts. She has no padel level, so
+   *Needs your answer* already up and *"Tomek wants to be your friend"* in it *(since 2026-11-17,
+   ADR-0205 §1: the tile names no where-line, so no longer · Invited you to Raketa)*. She accepts. She has no padel level, so
    on Tomek's picker she is greyed; he asks her to get one, and she does.
 3. **On Monday at 19:00**, on Ogrody's **Friends** tab, Tomek picks **Competitive**, seats Ewa, Magda
    and Ania (Ania isn't in Ogrody: she plays as a **guest**), and taps **Done**. Raketa seats them in
@@ -186,7 +187,7 @@ reaches friendship too (Q5):
 | **Members** | **+ Add** (black) on anybody not your friend; *request sent* (amber); *friend* (green); **Accept** (black) on somebody who asked you. The pill acts; the rest of the row opens the record. Not on the administrator's view of an official group's Members |
 | **The record** | **Add friend** and **Block** side by side at its foot. The left button: **Request sent ▾**, **Accept** (coral) or **Friend ✓ ▾**. ~~Only **Unblock**, full width, on somebody you blocked.~~ *(Since 2026-11-07, Q130: a blocked pair's record never opens; Unblock is in You › Blocked players. **Add friend** shows only when the record says a request may be sent, and **Block** stands alone otherwise.)* Neither on your own record |
 | **The result screen** | **PLAYED WITH**, between the score and the sportsmanship card: the other players with Members' pills. Hidden once they are all your friends. Shown after a For fun game too |
-| **Home** | **FRIEND REQUESTS · n**, under the friends game invitations and above Your games. The row and its title are gone once every request is answered |
+| **Home** | ~~**FRIEND REQUESTS · n**, under the friends game invitations and above Your games.~~ *(Since 2026-11-17, ADR-0205 §1: **FRIEND REQUESTS · n** waits behind Home's envelope, in **Needs your answer**, after TO CONFIRM and FRIENDS GAME.)* The section and its title are gone once every request is answered |
 | **You › Friends** | Tabs **Friends · Asked you · You asked**, a count on *Asked you* while requests wait, **Accept** and **Cancel** on the rows, **+ Add friends** top right |
 
 ---
@@ -220,9 +221,13 @@ Ania, who already has the app. Unless:
 In production the link is a deep link, exactly like a group's `join/` link: a universal link on
 iPhone and an app link on Android, through the public site's app-link files, which gain `/f/`.
 
-- **App installed, signed in**: Raketa opens, and the request is at the top of Home.
+- **App installed, signed in**: Raketa opens on Home with **Needs your answer already up**, and the
+  request in it *(since 2026-11-17, ADR-0205 §1; it was at the top of Home)*. When nothing waits by
+  then — a crossing request made friends, or one a block swallowed — Home opens as it is, with no
+  sheet: the sheet is never shown empty.
 - **App installed, signed out or no account**: Raketa opens on sign-up. The link waits through
-  sign-up and onboarding, as a group link does, then lands on Home with the request.
+  sign-up and onboarding, as a group link does, then lands on Home with Needs your answer up and the
+  request in it.
 - **App not installed**: the link opens the public site's page, *"Tomek invited you to play on
   Raketa"*, with his face, the store buttons, **Open in Raketa**, and a preview image for the chat it
   is pasted into.
@@ -283,7 +288,8 @@ iPhone and an app link on Android, through the public site's app-link files, whi
     call)*. The card goes with the last asker.
 - **It never expires.**
 - **The bell follows the card.** A *level asked* row is listed in the bell, and counted in its number,
-  only while its card is on Home ([§12](#12-notifications)). The row is matched to the card by asker and
+  only while its card waits in Needs your answer ([§12](#12-notifications); it was on Home until
+  ADR-0205 §1). The row is matched to the card by asker and
   sport, which is unique, because an ask is once per friend per sport, ever *(a call)*.
 - **A player rated in no sport** sees the ask card **instead of** Home's *Get your level* while it is
   drawn: the ask's row is drawn, and *Get your level* draws nothing. If she sets the ask aside and is still rated in nothing, *Get your level* comes back. Answering
@@ -477,8 +483,10 @@ seat until the cut-off; with Whole court, it pays every seat.
 
 ## 9. The invitation
 
-- **Each friend gets** a push, a bell notice, and a card in the **FRIENDS GAME · n** row at the very
-  top of Home (mock 12): *"Tomek's game"*, a clock with the time left, the four faces (✓ on those In,
+- **Each friend gets** a push, a bell notice, and a card in **FRIENDS GAME · n** — ~~the row at the
+  very top of Home~~ *(since 2026-11-17, ADR-0205 §1: in **Needs your answer**, behind Home's
+  envelope, after TO CONFIRM, one big tile at a time with dots from two)* (mock 12): *"Tomek's
+  game"*, a clock with the time left, the four faces (✓ on those In,
   faded on those still to answer), *"Saturday 10:00 · Ogrody 33 · Court 3 · Padel · Competitive"*, and
   **Not this time** / **Accept and pay 25 zł** (Whole court: **Accept**, and *"Tomek paid the court"*).
 - **24 hours to answer** (Q30), **never past the cut-off**. An invitation made after the cut-off, into
@@ -596,20 +604,20 @@ The sentences are [the words §29](../matchmaking/the-words.md#29-friends)'s.
 
 | Notice | To | Opens |
 | --- | --- | --- |
-| **Friend request** — once per request, never again for it | the person asked | Home |
+| **Friend request** — once per request, never again for it | the person asked | Home, with Needs your answer up *(since 2026-11-17)* |
 | **You're friends** — *Kuba said yes — you're friends* | the requester; both, for a crossed request | the friend's record |
-| **Friends game invitation** | each invited friend | Home, on the invitation |
-| **Seat invitation** — into an empty seat | the friend invited | Home, on the invitation |
+| **Friends game invitation** | each invited friend | Home, with Needs your answer up, on the invitation *(since 2026-11-17)* |
+| **Seat invitation** — into an empty seat | the friend invited | Home, with Needs your answer up, on the invitation *(since 2026-11-17)* |
 | ***Can't make it*** / ***didn't answer*** | the sender | the game, where the seat reads empty |
 | ***Seat taken*** | an invitee whose seat somebody else took first | the game |
 | ***Someone left your game*** — an accepted friend leaving; inside the last 24 hours, with the cover line | the sender and those In | the game |
 | **Friends game called off** — *nobody paid* | everyone In and every invitee still waiting | the game |
 | **The cover warning** — Split, 24 hours before the cut-off | the sender | the game, with its three actions |
-| **Level asked** — a friend's ask, not the once-per-account *Get your level*. Listed in the bell, and counted in its number, **only while its card is on Home** ([§5.1](#51-the-ask-waits-on-her-home-q129)) | the friend asked | that sport's questionnaire, through the level pass and its usual return |
+| **Level asked** — a friend's ask, not the once-per-account *Get your level*. Listed in the bell, and counted in its number, **only while its card waits in Needs your answer** ([§5.1](#51-the-ask-waits-on-her-home-q129); on Home until 2026-11-17) | the friend asked | that sport's questionnaire, through the level pass and its usual return |
 | **Level got** | the asker | the picker of the group the ask was made from |
 
 *It's a game!* fires when the last seat is taken, to all four. **Answering a request or an invitation
-on Home clears it from the bell too.** A *level asked* row leaves the bell as soon as its asker is no
+in Needs your answer clears it from the bell too** (on Home until 2026-11-17). A *level asked* row leaves the bell as soon as its asker is no
 longer on the card: the level got by any route, **Not now**, or the asker no longer a friend (Q129).
 
 ---

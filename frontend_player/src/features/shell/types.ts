@@ -84,6 +84,14 @@ export { InviteAFriendScreen } from './components/InviteAFriendScreen';
 export { openTab } from './components/shellNavigation';
 
 /**
+ * **Open Home with Needs your answer up** (#817, ADR-0205 §1; Q25) — where a link or a notice that
+ * pointed at one of the sheet's cards lands: the friend link (`links`), a friend request's and a
+ * friends game invitation's notice (`notifications`). Home is laid down as `openTab` lays it, and the
+ * sheet opens once the reads they re-read land, if anything waits by then.
+ */
+export { openNeedsYourAnswer } from './components/needsYourAnswerAsked';
+
+/**
  * **Arrive in the app on a screen inside a tab**, its start beneath it, in one reset made before the
  * shell draws — so nothing is drawn on the way. The entry gate's, for a rating pass that ends where
  * it began: a group's page with Play beneath (ADR-0200 §5), the passport with You beneath

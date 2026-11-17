@@ -145,11 +145,18 @@ buttons at the bottom and their titles held to two lines, so the buttons sit lev
   anything still waits.
 - ***Get your padel level*** closes the sheet for good and starts the questionnaire.
 
-FRIENDS GAME stays on Home until #817 moves it into the sheet, first after *TO CONFIRM*.
+*(Since 2026-11-17, [#817](https://github.com/Raketa02/Raketa/issues/817):)* **FRIENDS GAME is no
+longer on Home either.** It waits in Needs your answer after *TO CONFIRM* and before FRIEND REQUESTS,
+**one big tile at a time on the paging rail**, full width, snapping, with dots from two invitations.
+The card is unchanged. Its notice, and a friend request's, and the friend link open Home with the
+sheet already up — or Home as it is, when nothing waits by then. **Accept**'s card setup and the
+bank's confirmation open over the sheet and hand back to it when they close, if anything still
+waits; ***It's a game!*** closes the sheet for good.
 
 #### 6.1 FRIENDS GAME · n (friends 12)
 
-A horizontal row of invitation cards, each with a coral border:
+A horizontal row of invitation cards, each with a coral border *(an `ink` border as built, since
+§1.2's coral list is closed; one at a time in Needs your answer since #817)*:
 
 - **Top**: *Tomek's game* · a clock and the time left (*1 h 35*), coral under an hour.
 - **Faces**: the four, ✓ on those In, faded on those still to answer, *You* for the reader.

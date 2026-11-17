@@ -493,8 +493,9 @@ rest grey. **The order is changed from the mocks** (Q82):
   game fills · taken by the club at its cut-off* (Q113; *written in while recording it*), **Change** (reopens the setup; the old method keeps working until the
   new one is saved). Under it a small **Remove this method** link, refused with its reason while
   anything is live (Q83).
-- **TO CONFIRM** — above the live yeses, and above Home's rail too: a card refused when a game
-  filled, at the holding time or on a rescue (and, until Q121, when its club accepted it),
+- **TO CONFIRM** — above the live yeses, and first in Home's *Needs your answer* too, a tile per
+  payment there ([A8](#a8-home); #817 — it stood above Home's rail until then): a card refused when
+  a game filled, at the holding time or on a rescue (and, until Q121, when its club accepted it),
   which the player can still
   confirm; tap → the confirmation. While the seat is held for them, the row names the end of their
   window by the one the server names: *Fix your card by 14:40* before the cut-off (with a line that
@@ -550,8 +551,8 @@ refilling.) It is in *You're In* too ([A3.2](#a32-youre-in--n--your-row-mock-13)
 **Waiting for one payment** (Q111) is on all four's Home while one player's time to fix the card
 or time to pay runs: *Waiting for one payment · until 14:40 · Nobody pays until it's in*, the same
 in both windows. The refused player's own card reads *Fix your card by 14:40* before the cut-off and
-*Confirm your payment by 14:40* after it, beside their *TO CONFIRM* row ([A7.3](#a73-payments);
-Q113). At the end it becomes *Booked*, or *Seat open*. A card refused at the holding time leaves the
+*Confirm your payment by 14:40* after it, as their *TO CONFIRM* tile in *Needs your answer* does
+([A7.3](#a73-payments); Q113). At the end it becomes *Booked*, or *Seat open*. A card refused at the holding time leaves the
 game *Booked*: only its player's card reads *Fix your card by 14:40*.
 
 **Get your level** (Q126). While a player is a member of at least one group and holds no rating,
@@ -561,7 +562,9 @@ left halfway it offers to carry on — *Carry on with your padel questions — y
 and never to start again. Once she holds any rating, it is gone. The *Get your level* notice opens
 Home on this card. *(Q129, 2026-11-07: while a friend's ask for a level is on her Home, the ask's
 card is drawn instead of this one, in its own row, and this one comes back if she sets the ask aside still rated in nothing —
-[the friends screens §6.4](../friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock).)*
+[the friends screens §6.4](../friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock). Undone on
+2026-11-17 by ADR-0205 §4: the ask waits in Needs your answer, and this card shows whether or not
+anybody asked.)*
 
 A **Called off** card says why, as the notice and the email do: short at the cut-off, the club's
 cancel with its reason, a payment that didn't come in time. The club's answer, *Kazimierz Padel said
@@ -574,14 +577,25 @@ Rankings ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
 [the rankings screens §1](../rankings/the-screens.md#1-home--the-trophy-rankings-1)). *(Q131, 2026-11-14: the trophy is always
 there, a newcomer's included, with no number while there is no place.)*
 
-**The five rows** (Q131, 2026-11-14, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §1). **Home, top to bottom**: the header — the title, the
-trophy and the bell; *Get your level*; **FRIENDS GAME**; *To confirm*; **FRIEND REQUESTS**; **ASKED
-FOR A LEVEL**; *Your games*; then ***Hottest groups***, ***Same competitive level players***, ***New
-in Raketa***, ***Same vibe players*** and ***Top 10***. Each new row reads on its own and is hidden
+**The five rows** (Q131, 2026-11-14, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §1). Each new row reads on its own and is hidden
 with its title when empty; pull-to-refresh re-reads them all, and coming back to Home re-reads them
 when the last read is older than 30 seconds. **A player in no group** reads ***Join a group to get
 games — the hottest ones are just below.*** under *Your games*, in place of *⚡ Play finds you one*
 ([the home rows screens §1](../home-rows/the-screens.md#1-home-top-to-bottom)).
+
+**Home, top to bottom** (2026-11-17, [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1, §4; [#816](https://github.com/Raketa02/Raketa/issues/816), [#817](https://github.com/Raketa02/Raketa/issues/817)):
+the header — the title, then the **envelope**, the bell and the trophy in the far-right corner;
+*Get your level*; *Your games*; then the five rows. **What waits on the player is behind the
+envelope**, in ***Needs your answer***, the sheet it opens, in this order: ***To confirm***, a tile per
+payment, ***Friends game***, one invitation at a time on the paging rail, ***Friend requests*** and
+***Asked for a level*** ([the home refactor](../home-refactor/README.md)). They stood on Home,
+above *Your games*, from Q128 and Q129. **Home's tab badge still counts the payments to confirm**, and
+a link or a notice that pointed at one of the four cards — the friend link, a friend request's, a
+friends game invitation's — opens Home with the sheet already up, or Home as it is when nothing waits
+by then. *(The rows' order from ADR-0204 — Hottest groups, Same competitive level players, New in
+Raketa, Same vibe players, Top 10 — stands until FOR YOU folds them,
+[#820](https://github.com/Raketa02/Raketa/issues/820)–[#823](https://github.com/Raketa02/Raketa/issues/823).)*
 
 ## A9. Notifications delivery
 

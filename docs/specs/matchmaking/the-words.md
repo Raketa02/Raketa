@@ -1162,7 +1162,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | The card, where (a link) | `Invited you to Raketa` | in place of the group line. **Retired on the tile 2026-11-17**, as the group line |
 | The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too. **Retired on the tile 2026-11-17**, as the group line; the notice keeps it |
 | The card, buttons | `Not now` · `Accept` | at the tile's foot |
-| Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request |
+| Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request; opens Home with Needs your answer up since 2026-11-17 (#817) |
 | Refused, the daily limit | ~~§30.8's limit sentence, cited~~ | **retired 2026-11-14** (ADR-0204 §2): there is no daily limit, and `daily_request_limit` leaves the contract |
 | Notice, accepted | `{nickname} said yes — you're friends` | to the requester |
 | Notice, crossed | `You and {nickname} are friends now` | to both, each naming the other *(a call: nobody said yes)* |
@@ -1257,14 +1257,14 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the row's title | `FRIENDS GAME · {n}` | `{n}` ≥ 1; at 0 the row and its title are gone |
+| Needs your answer, the section's title | `FRIENDS GAME · {n}` | `{n}` ≥ 1; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #817) |
 | The card | `{nickname}'s game` · the clock · `{when} · {club} · {court} · {Sport} · {Kind}` | the clock is the deck ribbon's countdown, cited (`1 h 35`, `45 min`); `{Kind}` is `Competitive` or `For fun` |
 | The card, the faces | `{nickname}` under each, `You` under the reader | ✓ on those In; faded while waiting |
 | The card, Split | `Not this time` · `Accept and pay {share}` | |
 | The card, Whole court | `{nickname} paid the court` · `Not this time` · `Accept` | the sender's nickname |
 | Accept refused, a full week | `Your week is full: {n} games, the most you set in Games & money.` · `… 1 game, …` | *(a call)* |
 | Accept refused, a game at that hour | `You already have a game at {HH:MM}.` | *(a call)* |
-| Notice, the invitation | `{nickname} invited you to a game` · body: `{when} · {club} · {Sport} · {Kind}` | *(a call)*; opens Home on the card. A seat invitation into an empty seat says the same |
+| Notice, the invitation | `{nickname} invited you to a game` · body: `{when} · {club} · {Sport} · {Kind}` | *(a call)*; opens Home with Needs your answer up, on the card (since 2026-11-17, #817). A seat invitation into an empty seat says the same |
 | Notice, a seat taken | `Someone took that seat first.` · body: `{when} · {club}` | *(a call)*; `seat_just_taken`'s sense |
 | The last seat taken | *It's a game!*, cited | to all four |
 | Your games, the sender's game | `{k} of {m} friends in · waiting for {names}` · at `{k}` = 0, `Waiting for {names}` · `{k} of {m} friends in · 1 seat empty` · `… · {e} seats empty` | `{m}` is 3 in doubles, 1 in singles: `Waiting for Ania`, then the ordinary row once In |
@@ -1583,12 +1583,19 @@ them, and the server still serves where a request was found:
 > envelope that opens it. Each section under the title keeps its own words: FRIEND REQUESTS is
 > [§29.2](#292-friend-requests) and ASKED FOR A LEVEL [§29.5](#295-asking-for-a-level), moved off Home by
 > the player app's [#816](https://github.com/Raketa02/Raketa/issues/816). *TO CONFIRM* and FRIENDS GAME
-> join them with [#817](https://github.com/Raketa02/Raketa/issues/817), and the envelope's count with
-> [#819](https://github.com/Raketa02/Raketa/issues/819). Rows marked *(a call)* were written in by #816.
+> joined them with [#817](https://github.com/Raketa02/Raketa/issues/817): FRIENDS GAME keeps
+> [§29.8](#298-the-invitation-and-the-senders-game)'s card whole, and *TO CONFIRM* the rows' words of
+> You › Payments (the Games and Fill in screens A7.3), a tile per payment. The envelope's count comes
+> with [#819](https://github.com/Raketa02/Raketa/issues/819). Rows marked *(a call)* were written in by
+> #816.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
 | Home's header, the envelope | `Needs your answer` | its spoken name; the mark is drawn. #819 adds `, {n} new` while its count shows |
 | The sheet's title | `Needs your answer` | |
 | The sheet's ✕ | `Close Needs your answer` | spoken *(a call)*: a close is never just *Close* |
-| The sections, in order | `TO CONFIRM · {n}` · `FRIENDS GAME · {n}` · `FRIEND REQUESTS · {n}` · `ASKED FOR A LEVEL · {n}` | each hidden at 0; the first two from #817 |
+| The sections, in order | `TO CONFIRM · {n}` · `FRIENDS GAME · {n}` · `FRIEND REQUESTS · {n}` · `ASKED FOR A LEVEL · {n}` | each hidden at 0 |
+| TO CONFIRM, a tile | `{Sport} · {day} {HH:MM}` · `{club} · {share}` | the row's two lines, as You › Payments draws them: `Padel · Saturday 15:00` · `Bonarka Arena · 32 zł`; the title held to two lines |
+| TO CONFIRM, the time | `Confirm your payment by {HH:MM}` · `Fix your card by {HH:MM}` and under it `Nothing is paid now` | amber while it runs, written as Home writes a time; at the deadline it leaves the tile, which says `Your seat stays open until you confirm — or someone else takes it.` |
+| TO CONFIRM, the button | `Confirm` · `Fix` | at the tile's foot; spoken `Confirm your payment for {game} at {club}, {share}` · `Fix your card for …`, as the row's |
+| A link or a notice that pointed at a card here | — | opens Home with the sheet up: the friend link, a friend request's notice, a friends game invitation's. Home as it is when nothing waits by then |
