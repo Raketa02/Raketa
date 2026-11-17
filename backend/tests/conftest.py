@@ -102,7 +102,11 @@ async def db_engine():
 
 class SentStatements(list[str]):
     """The SQL statements sent while a ``Statements.counting`` block ran, in
-    the order they were sent."""
+    the order they were sent — and, beside them, what each was bound to."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.parameters: list[object] = []
 
     def naming(self, table: str) -> list[str]:
         """The statements that name ``table`` — read, written or joined, under
@@ -110,6 +114,29 @@ class SentStatements(list[str]):
 
         named = re.compile(rf"\b{re.escape(table)}(?:_\d+)?\b")
         return [statement for statement in self if named.search(statement)]
+
+    def binding(self, value: object) -> list[str]:
+        """The statements bound to ``value`` — for a table every context shares,
+        where the statement's text cannot tell one context's reads from
+        another's: ``sent.binding("skill_rating")`` is every read of a rating
+        stream (#814)."""
+
+        return [
+            statement
+            for statement, bound in zip(self, self.parameters, strict=True)
+            if _binds(bound, value)
+        ]
+
+
+def _binds(bound: object, value: object) -> bool:
+    if isinstance(bound, dict):
+        return value in bound.values()
+    if isinstance(bound, (list, tuple)):
+        return any(
+            _binds(one, value) if isinstance(one, (list, tuple, dict)) else one == value
+            for one in bound
+        )
+    return False
 
 
 class Statements:
@@ -130,8 +157,9 @@ class Statements:
     def counting(self) -> Iterator[SentStatements]:
         sent = SentStatements()
 
-        def heard(_connection, _cursor, statement, _parameters, _context, _many):
+        def heard(_connection, _cursor, statement, parameters, _context, _many):
             sent.append(statement)
+            sent.parameters.append(parameters)
 
         event.listen(self._engine, "before_cursor_execute", heard)
         try:

@@ -85,6 +85,30 @@ class SqlAlchemyEventStore:
         )
         return [_to_stored(row, self._codec) for row in result.scalars().all()]
 
+    async def load_streams(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> Mapping[UUID, list[StoredDomainEvent]]:
+        # Deduplicated in the caller's order, as `streams_present` binds its ids.
+        wanted = list(dict.fromkeys(aggregate_ids))
+        if not wanted:
+            return {}
+        # `ix_event_store_stream`'s leading columns, each id an index probe —
+        # `load_stream`'s read, once for the batch. Each stream's rows come out
+        # in version order, so each list is exactly what `load_stream` returns.
+        result = await self._session.execute(
+            select(EventStoreORM)
+            .where(
+                EventStoreORM.aggregate_type == aggregate_type,
+                EventStoreORM.aggregate_id.in_(wanted),
+            )
+            .order_by(EventStoreORM.aggregate_id, EventStoreORM.version)
+        )
+        streams: dict[UUID, list[StoredDomainEvent]] = {}
+        for row in result.scalars().all():
+            stored = _to_stored(row, self._codec)
+            streams.setdefault(row.aggregate_id, []).append(stored)
+        return streams
+
     async def streams_present(
         self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
     ) -> frozenset[UUID]:

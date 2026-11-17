@@ -363,9 +363,13 @@ class RequestOnHome:
     #: in Kazimierz crew*. ``None`` for a link's, and for a group either left.
     group: NamedGroup | None
     #: Their published Level in the request's sport, when it names one and they
-    #: are rated in it.
+    #: are rated in it — the one in ``levels`` for that sport.
     level: float | None
     reliability: FriendReliability
+    #: Their Level in every sport they hold one in, in the app's sport order —
+    #: the tile's *● Padel 3,40 · ● Tennis 2,90* (#814). Empty when they hold
+    #: none.
+    levels: tuple[FriendLevel, ...] = ()
 
 
 @final
@@ -414,9 +418,9 @@ class ReadRequestsOnHome:
         groups = {
             group.group_id: group for group in await self._groups.groups_of(reader)
         }
-        levels: dict[Sport, Mapping[UUID, FriendLevel]] = {}
-        for sport in {row.where.sport for row in rows if row.where and row.where.sport}:
-            levels[sport] = await self._levels.levels_in(requesters, sport=sport)
+        # Every sport of every requester in one read (#814): the card's own
+        # ``level`` is the one of them in its sport, so the two never differ.
+        levels = await self._levels.levels_of(requesters)
 
         cards: list[RequestOnHome] = []
         for row in rows:
@@ -425,11 +429,8 @@ class ReadRequestsOnHome:
             if face.nickname is None:
                 continue
             group = groups.get(where.group_id) if where.group_id else None
-            level = (
-                levels[where.sport].get(row.other_id)
-                if where.sport is not None
-                else None
-            )
+            held = levels.get(row.other_id, ())
+            level = next((one for one in held if one.sport is where.sport), None)
             cards.append(
                 RequestOnHome(
                     requester_id=row.other_id,
@@ -445,6 +446,7 @@ class ReadRequestsOnHome:
                     ),
                     level=None if level is None else level.level,
                     reliability=reliability[row.other_id],
+                    levels=held,
                 )
             )
         return tuple(cards)

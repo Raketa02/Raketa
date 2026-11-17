@@ -20,7 +20,9 @@ A search by first event is handed straight through: it crosses streams and is
 not one, and nothing in the deck read repeats it. So is *which of these streams
 exist*: one statement for a batch, cheaper than the loads it stands in for, and
 asked of the store every time, so it always agrees with what an append through
-this wrapper wrote.
+this wrapper wrote. And so is a batch of loads (#814): one statement already,
+asked of the store every time for the same reason, and remembered nowhere — a
+later ``load_stream`` of one of its streams loads it, slower and never wrong.
 """
 
 from __future__ import annotations
@@ -93,6 +95,13 @@ class ReadOnceEventStore:
         )
         self._loads.pop((aggregate_type, aggregate_id), None)
         return appended
+
+    async def load_streams(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> Mapping[UUID, list[StoredDomainEvent]]:
+        return await self._inner.load_streams(
+            aggregate_type=aggregate_type, aggregate_ids=aggregate_ids
+        )
 
     async def streams_present(
         self, *, aggregate_type: str, aggregate_ids: Collection[UUID]

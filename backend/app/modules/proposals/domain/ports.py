@@ -463,6 +463,16 @@ class ReaderRelations(Protocol):
 
 @final
 @dataclass(frozen=True, slots=True)
+class HomeRequestLevel:
+    """One sport on a friend request's sport-levels line — *● Padel 3,40* —
+    the requester's published Level in it (#814)."""
+
+    sport: Sport
+    level: float
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class HomeFriendRequest:
     """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
@@ -507,6 +517,11 @@ class HomeFriendRequest:
     #: **today** — ``0`` once they share none (*Found you through your tags*)
     #: — and ``None`` for any other.
     in_common: int | None = None
+    #: The requester's Level in **every** sport they hold one in, in the app's
+    #: sport order — the tile's sport-levels line, *● Padel 3,40 · ● Tennis
+    #: 2,90* (#814; ``docs/adr/0205`` §2). Empty when they hold none; the one in
+    #: ``sport`` is ``level``.
+    levels: tuple[HomeRequestLevel, ...] = ()
 
 
 @runtime_checkable

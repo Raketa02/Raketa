@@ -330,6 +330,43 @@ async def test_a_list_s_dots_asked_about_nobody_are_every_sport_empty(
     assert await port.rated_in([]) == {sport: frozenset() for sport in Sport}
 
 
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_row_of_people_crosses_with_every_sport_each_is_rated_in(
+    implementation, session
+):
+    """**The fifth read, and the one a friend request's tile asks** (#814): the
+    record's payload for every sender at once — each person's sports, the
+    published figures, and nobody rated in nothing."""
+
+    port = implementation.build(session)
+    both = await _rated(session, mu=3.40, sigma=0.30, sport=Sport.PADEL)
+    await _rated(session, mu=2.90, sigma=0.50, sport=Sport.TENNIS, player_id=both)
+    squash = await _rated(session, mu=4.10, sigma=0.40, sport=Sport.SQUASH)
+    nobody = new_uuid()
+
+    held = await port.ratings_of_each([both, squash, nobody])
+
+    assert set(held) == {both, squash}
+    assert set(held[both]) == {Sport.PADEL, Sport.TENNIS}
+    assert held[both][Sport.PADEL].mu == 3.40
+    assert held[both][Sport.TENNIS].mu == 2.90
+    assert set(held[squash]) == {Sport.SQUASH}
+    assert held[squash][Sport.SQUASH] == (await port.ratings_of(squash))[Sport.SQUASH]
+    assert held[squash][Sport.SQUASH].band_name == band_for(4.10).label
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_row_of_people_answers_only_about_ids_it_was_asked_about(
+    implementation, session
+):
+    port = implementation.build(session)
+    asked = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    await _rated(session, mu=2.10, sigma=0.30, sport=Sport.PADEL)
+
+    assert set(await port.ratings_of_each([asked])) == {asked}
+    assert await port.ratings_of_each([]) == {}
+
+
 @pytest.mark.parametrize("port", RATING_DEMANDS, ids=lambda port: port.__name__)
 def test_every_published_read_has_something_answering_it(port):
     """A port nothing implements is a demand nothing runs against.

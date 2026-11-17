@@ -54,6 +54,24 @@ class DomainEventStore(Protocol):
         self, *, aggregate_type: str, aggregate_id: UUID
     ) -> list[StoredDomainEvent]: ...
 
+    async def load_streams(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> Mapping[UUID, list[StoredDomainEvent]]:
+        """Each of these streams' events, oldest first — ``load_stream`` for a
+        batch (#814).
+
+        **Addressed, never searched**, as ``streams_present`` is: the caller
+        names every stream it wants, and the batch is **one statement however
+        many ids**, answering only about those. A stream that holds no event
+        is absent, the same answer as ``load_stream``'s empty list. Empty in,
+        empty out, and no statement.
+
+        For a read that replays many people's streams of one kind at once — a
+        Home tile naming every sport each sender holds a level in — where a
+        load each would be a statement per person.
+        """
+        ...
+
     async def streams_present(
         self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
     ) -> frozenset[UUID]:

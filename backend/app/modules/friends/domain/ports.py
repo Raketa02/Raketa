@@ -223,6 +223,14 @@ class FriendLevels(Protocol):
         """Each of these players rated in ``sport``; anybody unrated is absent."""
         ...
 
+    async def levels_of(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, tuple[FriendLevel, ...]]:
+        """Each of these players' Level in **every** sport they hold one in, in
+        the app's sport order (``Sport`` itself) — for a row of requests at
+        once, in one read (#814). Anybody rated in nothing is absent."""
+        ...
+
 
 @final
 @dataclass(frozen=True, slots=True)

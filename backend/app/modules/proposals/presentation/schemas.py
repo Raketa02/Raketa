@@ -1519,6 +1519,15 @@ class HomeFriendRequestGroupSchema(BaseModel):
     name: str
 
 
+class HomeFriendRequestLevelSchema(BaseModel):
+    """One sport on a request's sport-levels line — *● Padel 3,40*."""
+
+    sport: Sport
+    level: float = Field(
+        description="Their published Level in it, as RacketSkill published it."
+    )
+
+
 class HomeFriendRequestSchema(BaseModel):
     """One card in *FRIEND REQUESTS* — *Inés wants to be your friend · With you
     in Kazimierz crew · Padel 3,40 · ✦ 98*, **Not now** and **Accept**."""
@@ -1614,6 +1623,14 @@ class HomeFriendRequestSchema(BaseModel):
             "other card."
         ),
     )
+    levels: list[HomeFriendRequestLevelSchema] = Field(
+        description=(
+            "**Every sport they hold a published Level in**, in the app's sport "
+            "order, each with that Level — the tile's sport-levels line, *● Padel "
+            "3,40 · ● Tennis 2,90* (docs/adr/0205 §2). **Empty** when they hold "
+            "none, and the line is left out. `level` is the entry for `sport`."
+        )
+    )
 
     @classmethod
     def of(cls, request: HomeFriendRequest) -> "HomeFriendRequestSchema":
@@ -1639,6 +1656,10 @@ class HomeFriendRequestSchema(BaseModel):
             reliability_band=request.reliability_band,
             percent_even=request.percent_even,
             in_common=request.in_common,
+            levels=[
+                HomeFriendRequestLevelSchema(sport=one.sport, level=one.level)
+                for one in request.levels
+            ],
         )
 
 

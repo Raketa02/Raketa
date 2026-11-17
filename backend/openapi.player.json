@@ -13909,6 +13909,25 @@
         ],
         "title": "HomeFriendRequestGroupSchema"
       },
+      "HomeFriendRequestLevelSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their published Level in it, as RacketSkill published it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "HomeFriendRequestLevelSchema",
+        "description": "One sport on a request's sport-levels line \u2014 *\u25cf Padel 3,40*."
+      },
       "HomeFriendRequestSchema": {
         "properties": {
           "player_id": {
@@ -14047,6 +14066,14 @@
             ],
             "title": "In Common",
             "description": "With `from_same_vibe`: how many Social tags you two hold **today**, counted on this read \u2014 `0` once you share none. `null` on every other card."
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/HomeFriendRequestLevelSchema"
+            },
+            "type": "array",
+            "title": "Levels",
+            "description": "**Every sport they hold a published Level in**, in the app's sport order, each with that Level \u2014 the tile's sport-levels line, *\u25cf Padel 3,40 \u00b7 \u25cf Tennis 2,90* (docs/adr/0205 \u00a72). **Empty** when they hold none, and the line is left out. `level` is the entry for `sport`."
           }
         },
         "type": "object",
@@ -14067,7 +14094,8 @@
           "player_score",
           "reliability_band",
           "percent_even",
-          "in_common"
+          "in_common",
+          "levels"
         ],
         "title": "HomeFriendRequestSchema",
         "description": "One card in *FRIEND REQUESTS* \u2014 *In\u00e9s wants to be your friend \u00b7 With you\nin Kazimierz crew \u00b7 Padel 3,40 \u00b7 \u2726 98*, **Not now** and **Accept**."

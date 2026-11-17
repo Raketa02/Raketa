@@ -11,6 +11,9 @@
 > [#789](https://github.com/Raketa02/Raketa/issues/789) (Q131, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)) let anyone be asked, with no
 > daily limit, gave the request card three lines from Home's rows, and put a round friend button on
 > Home's people cards ([the home rows screens §8](../home-rows/the-screens.md#8-the-round-friend-button-and-its-sheets)).
+> On 2026-11-17, [#814](https://github.com/Raketa02/Raketa/issues/814) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §2, §10) gave the request card **every sport the sender holds a level in**
+> ([§6.2](#62-friend-requests--n-friends-5)).
 >
 > **What it is:** how each Friends screen looks and behaves. The rules are in
 > [the-mechanics.md](the-mechanics.md); where the two disagree on a rule, the mechanics win, and on a
@@ -146,6 +149,16 @@ place of the group line, even from a group-mate. *(Since 2026-11-14, Q131:)* a r
 Home's rows reads its row's line in the same place — *Your level in padel · 91% even*, *Found you
 among new players*, *6 things in common*, or their fallbacks
 ([the words §31.10](../matchmaking/the-words.md#3110-request-lines)).
+
+*(Since 2026-11-17, ADR-0205 §2, #814:)* **the card names every sport the sender holds a published
+level in**, in the app's sport order, drawn as elsewhere: *● Padel 3,40 · ● Tennis 2,90*, mono
+numbers, at most two lines, and **no line at all** when they hold none. Each is the Level the card's
+own sport shows, read live, so a level the sender gets after asking is on the next read. On the
+tile in *Needs your answer* this line stands **in place of** the group line and every found-by line
+above, which go (ADR-0205 §2); the face, the title and the reliability chip stay. The server sends
+`levels` on each of `GET /home`'s `friend_requests`, beside the `sport` and `level` an older app
+still draws; the tile is the player app's
+([#818](https://github.com/Raketa02/Raketa/issues/818)).
 
 #### 6.3 The sender's game, in Your games (designed, no mock)
 

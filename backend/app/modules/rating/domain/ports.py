@@ -225,6 +225,13 @@ class RatedPlayerQuery(Protocol):
     above, asked once a sport, is a replay per pair. It is a method of its own
     rather than ``estimates_for`` with the figures thrown away, because the
     figures are the cost.
+
+    **A fifth, for a row of people** (#814; ``docs/adr/0205`` §10). A friend
+    request's tile in *Needs your answer* names every sport its sender holds a
+    level in — the record's read, for every waiting sender at once. Asked a
+    sport at a time it would be the court read four times, a replay per pair;
+    so it is the record's payload over the batch's people, every pair's stream
+    loaded in **one** statement (``DomainEventStore.load_streams``).
     """
 
     async def estimates_for(
@@ -269,6 +276,19 @@ class RatedPlayerQuery(Protocol):
         A player with no rating in this sport is **absent from the answer**, on
         the rule every read here applies. Asked about ids the caller already
         holds, and answers only about those.
+        """
+        ...
+
+    async def ratings_of_each(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, Mapping[Sport, RatedSport]]:
+        """Each of these players' **published** rating in every sport they
+        hold one in — ``ratings_of`` for a batch, the same figures.
+
+        A sport a player holds no rating in is absent from their mapping, and a
+        player rated in nothing is **absent from the answer**, on the rule every
+        read here applies. Asked about ids the caller already holds, and answers
+        only about those. One statement however many people.
         """
         ...
 

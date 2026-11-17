@@ -150,6 +150,16 @@ class InMemoryEventStore:
         stream = self._streams.get((aggregate_type, aggregate_id), [])
         return [self._to_stored(row) for row in stream]
 
+    async def load_streams(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> Mapping[UUID, list[StoredDomainEvent]]:
+        # A stream holding nothing is absent, as the real query returns no row.
+        return {
+            aggregate_id: [self._to_stored(row) for row in stream]
+            for aggregate_id in dict.fromkeys(aggregate_ids)
+            if (stream := self._streams.get((aggregate_type, aggregate_id)))
+        }
+
     async def streams_present(
         self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
     ) -> frozenset[UUID]:

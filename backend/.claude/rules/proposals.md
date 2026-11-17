@@ -267,7 +267,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `FriendsRequestsOnHome` through `TagsInCommon` — `ProfileTagsInCommon`
   (`infrastructure/tags_in_common.py`), over the Player profile, with its row in
   `proposal_demands.py` — `0` once none is shared, *Found you through your tags*, `null` on
-  every other card) — saying what stands in place of the group line. **And `level_asks`**
+  every other card) — saying what stands in place of the group line — and since #814 every
+  card's `levels` (`HomeRequestLevel`: the requester's Level in each sport they hold one in, the
+  app's sport order, Friends' one batch read; `friends.md`). **And `level_asks`**
   (#764; ADR-0202 §4's 2026-11-07 amendment): *ASKED FOR A LEVEL*, between the friend requests
   and the reader's games — one card per sport, the sport with the newest ask first, each naming
   its askers newest first (`HomeLevelAsk`, `HomeLevelAsker`: id, nickname, photo) and no group,

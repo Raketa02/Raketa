@@ -43,6 +43,23 @@ async def test_a_table_read_under_an_alias_is_named_too(session_factory, stateme
     assert "discovery_players_1" in statement
 
 
+async def test_a_statement_is_found_by_what_it_was_bound_to(
+    session_factory, statements
+):
+    """One table, two contexts' rows: the text is the same, the binding is not
+    (#814)."""
+
+    async with session_factory() as session:
+        with statements.counting() as sent:
+            await session.execute(text("SELECT :kind"), {"kind": "skill_rating"})
+            await session.execute(text("SELECT :kind"), {"kind": "player_profile"})
+            await session.execute(text("SELECT 1"))
+
+    assert len(sent) == 3
+    assert len(sent.binding("skill_rating")) == 1
+    assert sent.binding("nothing bound") == []
+
+
 async def test_it_hears_every_statement_a_request_sends(
     client, statements, valid_signup_payload
 ):
